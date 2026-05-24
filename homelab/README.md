@@ -40,7 +40,7 @@ Full specs: [research/03-selected-hardware-m910q.md](research/03-selected-hardwa
 | 5 | Docker + Portainer CE | Step 4 | Install Docker engine, enable auto-start, deploy Portainer |
 | 6 | Hermes Agent install + config | Step 5 | ⚠️ Verify install URL against `github.com/nousresearch/hermes-agent` before running — see doc 04 |
 | 7 | Cloudflare Tunnel setup | Step 6 | Zero-trust tunnel for public access to web UIs |
-| 8 | Backup strategy | Step 7 | Install secondary SATA disk, configure Restic — see doc 05 |
+| 8 | Backup strategy | Step 7 | Install secondary SATA disk, configure Restic — see doc 10 |
 | 9 | Azure Arc enrolment | Step 8 | Register M910q in Azure — use least-privilege SP, see doc 07 |
 | 10 | Ollama + Bielik (Phase 2) | Step 9 | Local Polish LLM inference — only after Phase 1 is stable; see doc 08 |
 
@@ -57,6 +57,7 @@ Full specs: [research/03-selected-hardware-m910q.md](research/03-selected-hardwa
 | 07 | [07-azure-arc-and-cost.md](research/07-azure-arc-and-cost.md) | Azure Arc enrolment, physical vs cloud cost comparison | Gemini chat 2 |
 | 08 | [08-llm-server-hardware.md](research/08-llm-server-hardware.md) | Dedicated LLM server hardware paths; Minisforum X1 Lite selected (Phase 2) | Gemini chat 3 |
 | 09 | [09-os-decision.md](research/09-os-decision.md) | OS choice | Research |
+| 10 | [10-backup-strategy.md](research/10-backup-strategy.md) | Restic backup to secondary SATA disk, retention, disaster recovery | Research |
 
 ## Gemini Discussions
 
