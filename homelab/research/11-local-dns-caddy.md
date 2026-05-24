@@ -127,6 +127,24 @@ reverse_proxy gitea:3000 (inside Docker bridge network)
 | Certificate CA | Caddy's Internal PKI (ACME-based) | Self-contained, no external services |
 | Upstream DNS | Router + Google + Cloudflare in parallel | Resilience + speed via `all-servers` |
 
+## Alternatives Considered
+
+### Reverse Proxy Alternatives
+
+| Option | Verdict | Reason |
+|---|---|---|
+| **Nginx Proxy Manager** | Rejected | GUI-based only; config lives in SQLite, not in Git — breaks CaC |
+| **Traefik** | Rejected | Powerful but complex YAML config and dynamic service discovery overhead for a homelab |
+| **CoreDNS** | Rejected | Steep learning curve; more suited to Kubernetes environments |
+
+### DNS Alternatives
+
+| Option | Verdict | Reason |
+|---|---|---|
+| **Pi-hole** | Rejected | Good for ad-blocking but overkill for pure local resolution; heavy on resources |
+| **AdGuard Home** | Rejected | Modern alternative to Pi-hole, but still GUI-centric; not IaC-native |
+| **CoreDNS** | Rejected | Steep learning curve; overkill for a simple wildcard DNS use case |
+
 ## Open Questions
 
 - [ ] Does `systemd-resolved` need to be disabled entirely or can DNSMasq bind to a specific interface to avoid port 53 conflict?
