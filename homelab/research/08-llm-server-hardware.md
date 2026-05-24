@@ -2,7 +2,7 @@
 
 **Source**: Gemini 3.5 Flash conversation, May 21 2026  
 **Scope**: Homelab use cases, Bielik Polish LLM, dedicated LLM server hardware paths, AMD APU deep dive, 128 GB platforms  
-**Status**: ⏳ Far-future planning — not tied to any current purchase decision
+**Status**: 🎯 Phase 2 platform selected — Minisforum X1 Lite Barebone (€329 as of May 2026)
 
 ---
 
@@ -144,11 +144,49 @@ The processor supports 256 GB — the limit is the motherboard. Better alternati
 
 | Device | Max RAM | Barebone price | Extra features |
 |---|---|---|---|
-| **Minisforum X1 Lite** (X1-255) | 128 GB SO-DIMM | ~320–350 EUR | OCuLink port (future eGPU upgrade path) |
+| **Minisforum X1 Lite** (X1-255) ✅ **Selected** | 128 GB SO-DIMM | €329 Barebone (was €409) | OCuLink port (future eGPU upgrade path) |
 | **GMKtec NucBox K12** | 128 GB SO-DIMM | ~300–330 EUR | Flexible BIOS, aggressive pricing |
 | **Minisforum NAS N5** | 96 GB DDR5 | — | 5× HDD bays + 3× NVMe — NAS + LLM combo |
 
-**Verdict**: If buying Ryzen H 255 for LLM hosting with future 96/128 GB upgrade path → choose **Minisforum X1 Lite** over AI X1 (same price, OCuLink, 128 GB support).
+**Verdict**: **Minisforum X1 Lite** is the selected platform — same or lower price than AI X1 barebone, supports 128 GB, has OCuLink for future eGPU.
+
+---
+
+## ✅ Selected Platform: Minisforum X1 Lite
+
+**Product**: [Minisforum X1 Lite](https://minisforumpc.eu/products/minisforum-x1-lite-minipc)  
+**Price**: €329 Barebone (on sale from €409 as of May 2026)
+
+| Component | Spec |
+|---|---|
+| CPU | AMD Ryzen™ 7 255, 8C/16T (Hawk Point / Zen 4, AVX-512) |
+| GPU | AMD Radeon™ 780M (12 CU) — ROCm / Vulkan via llama.cpp |
+| Memory | DDR5-5600 MHz SO-DIMM, dual channel, **up to 128 GB** |
+| Storage | 2× M.2 2280 NVMe PCIe 4.0 x4 (up to 4 TB/slot) |
+| Expansion | OCuLink (future eGPU upgrade path) + USB4 |
+| Wireless | Wi-Fi 6E, Bluetooth 5.2 |
+
+### Target build — 96 GB config
+
+Buy barebone + own DDR5 SO-DIMMs. Always 2× sticks for dual-channel; single-channel halves iGPU bandwidth and cuts LLM throughput by 40–50%.
+
+| Item | Est. price |
+|---|---|
+| Barebone (X1 Lite) | €329 |
+| 2× 48 GB DDR5-5600 SO-DIMM | ~€180–230 |
+| 1 TB NVMe PCIe 4.0 | ~€70–100 |
+| **Total** | **~€580–660** |
+
+**BIOS**: allocate 48 GB as UMA Frame Buffer for Radeon 780M → 48 GB iGPU VRAM + ~47 GB system RAM for Ubuntu + Ollama container.
+
+**LLM capacity at 96 GB** (48 GB VRAM allocated):
+| Model | Fit | Speed |
+|---|---|---|
+| Bielik 4.5B Q4 | ✅ Fully in VRAM | 25–35 tok/s |
+| Bielik 11B Q4 | ✅ Fully in VRAM | 18–25 tok/s |
+| Qwen-2.5-Coder 14B Q4 | ✅ Fully in VRAM | 15–22 tok/s |
+| Llama-3 70B Q2 (~28 GB) | ✅ Fits | 8–12 tok/s |
+| DeepSeek V4 Flash 32B Q4 (~20 GB) | ✅ Fits | 15–20 tok/s |
 
 ---
 
@@ -181,5 +219,5 @@ When 64 GB is not enough (e.g. running DeepSeek V4 Flash or 70B+ models), the ne
 | Timeline | Action |
 |---|---|
 | **Now** | M910q + Bielik 4.5B via Ollama (CPU-only), MiniMax M2.7 via API for heavy tasks |
-| **Phase 2** | Evaluate dedicated LLM server — Minisforum X1 Lite barebone (~350 EUR) + 2×48 GB RAM (~230 EUR) = ~660 EUR total |
+| **Phase 2** | ✅ **Selected**: Minisforum X1 Lite Barebone (€329) + 2×48 GB DDR5-5600 SO-DIMM + 1 TB NVMe = ~€580–660 total |
 | **Phase 3** | If 96 GB still not enough → AMD Strix Halo (MS-S1 MAX) at ~15 000 PLN |
