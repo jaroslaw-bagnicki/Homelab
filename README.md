@@ -1,6 +1,6 @@
-# lab
+# Lab
 
-LLM & Agentic AI workload playground — experiments with prompts, agents, tools, and Foundries.
+Personal hub for small, independent mini-projects. Each sub-folder is a self-contained project — research notes, experiments, configs, or small tools.
 
 ## Subprojects
 
