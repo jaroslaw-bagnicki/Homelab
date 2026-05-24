@@ -3,7 +3,12 @@
 **Source**: Gemini 3.5 Flash conversation, May 20 2026  
 **Scope**: Ubuntu Server setup, Hermes Agent install, MiniMax M2.7 integration
 
-> ⚠️ **Verification needed**: Gemini described "Hermes Agent by Nous Research" with specific install URLs and config keys. Some details (e.g. `https://hermes-agent.org/install.sh`, `hermes web` command) may be AI-hallucinated and must be verified against the actual project repository before execution.
+> ⚠️ **Verification needed**: Gemini described "Hermes Agent by Nous Research" with specific install URLs and config keys. Some details (e.g. `https://hermes-agent.org/install.sh`, `hermes web` command) may be AI-hallucinated and **must be verified against the actual project repository before execution**.
+
+**→ Verify before running anything:**
+- Official repo: `https://github.com/nousresearch/hermes-agent`
+- Check for `install.sh`, README, and exact config.yaml format
+- If the URLs differ from what Gemini described, update this doc with the correct paths
 
 ---
 
@@ -69,7 +74,9 @@ The M910q i5-7500T has no discrete GPU. Running a large LLM locally is not feasi
 
 ## Step 4 — config.yaml (MiniMax M2.7)
 
-MiniMax M2.7 uses an OpenAI-compatible endpoint (`https://api.haimaker.ai/v1`).
+> ⚠️ **Verify the MiniMax API endpoint** before using it. The `https://api.haimaker.ai/v1` endpoint was described by Gemini — confirm it matches the official MiniMax developer documentation. If the endpoint differs, update the config below.
+
+MiniMax M2.7 uses an OpenAI-compatible endpoint:
 
 ```yaml
 # ~/.hermes/config.yaml

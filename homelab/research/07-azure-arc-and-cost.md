@@ -78,6 +78,31 @@ sudo bash install_linux_azcmagent.sh \
   --subscription-id "YOUR_SUBSCRIPTION_ID"
 ```
 
+### RBAC — Use a least-privilege service principal
+
+When enrolling the M910q, **do not use a subscription-level Contributor or Owner** for the Arc agent. Create a dedicated service principal with the minimum role needed.
+
+**Recommended RBAC role for Arc agent:**
+
+| Built-in role | Reason |
+|---|---|
+| **Virtual Machine Contributor** | Enough for Arc-enabled server — can read diagnostics, extensions, and system info |
+| **Reader** (minimal) | If the only goal is to see the machine in Azure Portal + ship logs to Log Analytics |
+
+> ❌ **Do not assign Contributor or Owner** to the Arc agent. A compromised homelab server with subscription-level write access is a severe risk. The agent runs as a systemd service on a machine exposed to the internet — keep the blast radius small.
+
+**Create a dedicated service principal for Arc:**
+
+```bash
+# Create a scoped SP for Arc enrollment only
+az ad sp create-for-rbac \
+  --role "Virtual Machine Contributor" \
+  --scope "/subscriptions/YOUR_SUB_ID/resourceGroups/homelab-rg" \
+  --display-name "homelab-arc-agent"
+```
+
+The `--scope` flag limits the SP's permissions to just the homelab resource group — not the entire subscription.
+
 4. Authenticate when prompted (device code flow)
 5. The machine appears in the Azure Portal within a few minutes
 
