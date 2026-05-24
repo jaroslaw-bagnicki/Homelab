@@ -60,6 +60,46 @@ hermes --version
 
 ---
 
+## Step 2b — Conclusion: Docker over Host installation
+
+Running Hermes Agent inside a Docker container is preferred over bare-metal host installation for this homelab. Reasons:
+
+| Concern | Host install | Docker container |
+|---|---|---|
+| Dependency isolation | ⚠️ Pollutes host Python/environment | ✅ Self-contained image |
+| Rollback on failure | ❌ Hard to undo | ✅ `docker stop` + remove old image |
+| Version pinning | ⚠️ Manual upgrade/undo | ✅ Pin exact image tag, atomic swap |
+| Conflict with other services | ⚠️ May conflict with Portainer/Hermes Python deps | ✅ Each container has own env |
+| Backup/migration | ❌ scattered across `/usr/local/bin`, `~/.hermes` | ✅ Entire state in named volume |
+| Homelab consistency | ❌ Every service installed differently | ✅ Same Compose pattern as all other services |
+| Removal | ⚠️ `rm -rf ~/.hermes` + uninstall script | ✅ `docker compose down` |
+
+The M910q is already running Docker for every other service. Adding Hermes as a container keeps the deployment model uniform: one `docker-compose.yml` per service, one restart policy, one backup method.
+
+For persistent state (SQLite RAG database, skills, preferences), use a bind mount or named volume:
+
+```yaml
+services:
+  hermes:
+    image: ghcr.io/nousresearch/hermes-agent:latest
+    container_name: hermes-agent
+    restart: unless-stopped
+    volumes:
+      - ~/.hermes:/root/.hermes    # persistent config + SQLite
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - HERMES_MODEL=minimax/minimax-m2.7
+      - HERMES_PROVIDER_BASE_URL=https://api.haimaker.ai/v1
+      - HERMES_API_KEY=YOUR_MINIMAX_API_KEY
+    ports:
+      - "3001:3000"               # WebUI
+      - "3002:3002"               # gateway (Telegram/Discord)
+```
+
+**Verdict**: Treat Hermes like every other service — Docker Compose, named volume for state, `unless-stopped` policy. Install the host binary only if specific kernel modules or device access (e.g. GPU passthrough, TUN/TAP for VPN) are required.
+
+---
+
 ## Step 3 — Architecture: Hybrid (Cloud inference + Local execution)
 
 The M910q i5-7500T has no discrete GPU. Running a large LLM locally is not feasible. Recommended architecture:
