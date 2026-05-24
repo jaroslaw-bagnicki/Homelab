@@ -47,6 +47,7 @@ Docker Compose with `restart: unless-stopped` is the right choice for a single-n
 | **Redis** | `redis:7-alpine` | 6379 | Cache / message queue |
 | **Gitea** | `gitea/gitea:latest` | 3000 | Lightweight self-hosted Git (~50 MB RAM) |
 | **Open WebUI** | `ghcr.io/open-webui/open-webui:main` | 3000 | ChatGPT-like UI, connects to Hermes API |
+| **Ollama** | `ollama/ollama:latest` | 11434 | Local LLM inference server (Phase 2 — Bielik, DeepSeek-R1) |
 
 ---
 
@@ -160,6 +161,60 @@ services:
 | Remaining headroom on 256 GB | ~180 GB |
 
 **Do not use a 128 GB SSD** — Docker layers alone can reach 40 GB under active agent use, and small drives TBW ratings are low enough to degrade within 1–2 years of 24/7 write-intensive operation.
+
+---
+
+## Backup Strategy
+
+The 256 GB SSD holds all service data. Without a backup plan, drive failure = total loss. Use the free 2.5" SATA bay in the M910q for a mirrored backup disk.
+
+### Hardware setup
+
+Install a 1 TB HDD or SSD in the secondary 2.5" SATA bay. This gives a full local mirror with no ongoing cloud cost.
+
+### Backup tool: Restic
+
+[Restic](https://restic.net) is a fast, encrypted, deduplicating backup client. Runs as a container with a simple cron schedule.
+
+```bash
+# ~/homelab/backups/docker-compose.yml
+services:
+  restic:
+    image: restic/restic:latest
+    container_name: restic-backup
+    restart: unless-stopped
+    environment:
+      - RESTIC_PASSWORD=YOUR_STRONG_PASSWORD
+      - BACKUP_RETENTION=--keep-daily=7 --keep-weekly=4 --keep-monthly=6
+    volumes:
+      - /home/ubuntu/homelab:/data:ro    # read-only mount of homelab dir
+      - /mnt/backup-disk:/backups         # secondary SATA disk
+    volumes_from:
+      - postgres_db:/mnt/backup-disk/postgres:ro
+    command: >
+      backup /data
+      --repo /backups/homelab
+      $BACKUP_RETENTION
+```
+
+### What to back up
+
+| Data | Priority | Notes |
+|---|---|---|
+| `~/homelab/` (all service configs + data volumes) | High | Everything in one portable folder |
+| PostgreSQL data directory | High | Included via volume read-only bind mount |
+| Ollama models (Phase 2) | Medium | Large — skip if disk is tight; models can be re-pulled |
+| Gitea repository data | High | Bare git repos, attachments |
+
+### Retention
+
+- **Daily** — last 7 days
+- **Weekly** — last 4 weeks
+- **Monthly** — last 6 months
+
+> Replace the secondary disk every 2–3 years or check SMART status quarterly with `smartctl`.
+
+---
 
 ---
 

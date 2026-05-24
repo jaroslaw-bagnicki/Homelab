@@ -27,6 +27,24 @@ Full specs: [research/03-selected-hardware-m910q.md](research/03-selected-hardwa
 | Networking | 🔍 Research | Cloudflare Tunnels + Tailscale — see doc 06 |
 | Azure integration | 🔍 Research | Azure Arc onboarding planned — see doc 07 |
 
+## TODO / Execution List
+
+> Ordered by dependency — earlier steps must complete before later steps begin.
+
+| # | Task | Depends on | Notes |
+|---|---|---|---|
+| 1 | **Purchase Lenovo ThinkCentre M910q** | — | i5-7500T / 16 GB / 256 GB — see doc 03 for selection criteria and Allegro search tips |
+| 2 | First-boot checklist | ✅ M910q | Inspect thermal paste, verify RAM/SATA, check PSU, flash BIOS — see doc 03 |
+| 3 | Install Ubuntu Server 24.04 LTS | ✅ M910q | Headless, no GUI, SSH only |
+| 4 | Base OS hardening | Step 3 | UFW firewall, fail2ban, unattended-upgrades, SSH key-based auth |
+| 5 | Docker + Portainer CE | Step 4 | Install Docker engine, enable auto-start, deploy Portainer |
+| 6 | Deploy Docker stack (Phase 1) | Step 5 | Pi-hole, Home Assistant, Nginx Proxy Manager, Gitea, PostgreSQL, Redis |
+| 7 | Cloudflare Tunnel setup | Step 6 | Zero-trust tunnel for public access to web UIs |
+| 8 | Azure Arc enrolment | Step 4 | Register M910q in Azure — use least-privilege SP, see doc 07 |
+| 9 | Hermes Agent install + config | Step 7 | ⚠️ Verify install URL against `github.com/nousresearch/hermes-agent` before running — see doc 04 |
+| 10 | Ollama + Bielik (Phase 2) | Step 9 | Local Polish LLM inference — only after Phase 1 is stable; see doc 08 |
+| 11 | Backup strategy | Step 10 | Install secondary SATA disk, configure Restic — see doc 05 |
+
 ## Research
 
 | # | Document | Topic | Source |
@@ -39,6 +57,7 @@ Full specs: [research/03-selected-hardware-m910q.md](research/03-selected-hardwa
 | 06 | [06-networking-connectivity.md](research/06-networking-connectivity.md) | CGNAT solutions: Cloudflare Tunnels, Tailscale, hybrid proxy | Gemini chat 2 |
 | 07 | [07-azure-arc-and-cost.md](research/07-azure-arc-and-cost.md) | Azure Arc enrolment, physical vs cloud cost comparison | Gemini chat 2 |
 | 08 | [08-llm-server-hardware.md](research/08-llm-server-hardware.md) | Dedicated LLM server hardware paths; Minisforum X1 Lite selected (Phase 2) | Gemini chat 3 |
+| 09 | [09-os-decision.md](research/09-os-decision.md) | OS choice | Research |
 
 ## Gemini Discussions
 
