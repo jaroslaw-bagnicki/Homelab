@@ -39,3 +39,11 @@ Full specs: [research/03-selected-hardware-m910q.md](research/03-selected-hardwa
 | 06 | [06-networking-connectivity.md](research/06-networking-connectivity.md) | CGNAT solutions: Cloudflare Tunnels, Tailscale, hybrid proxy | Gemini chat 2 |
 | 07 | [07-azure-arc-and-cost.md](research/07-azure-arc-and-cost.md) | Azure Arc enrolment, physical vs cloud cost comparison | Gemini chat 2 |
 | 08 | [08-llm-server-hardware.md](research/08-llm-server-hardware.md) | Dedicated LLM server hardware paths; Minisforum X1 Lite selected (Phase 2) | Gemini chat 3 |
+
+## Gemini Discussions
+
+| # | Link | Docs |
+|---|---|---|
+| 1 | [Gemini chat 1](https://gemini.google.com/share/076895cbd654) | 01, 02 |
+| 2 | [Gemini chat 2](https://gemini.google.com/share/6ea05b934c81) | 03, 04, 05, 06, 07 |
+| 3 | [Gemini chat 3](https://gemini.google.com/share/24e2d3af7b59) | 08 |
