@@ -28,6 +28,9 @@ argument-hint: 'Gemini share URL (https://gemini.google.com/share/...)'
 ### 1. Open the page
 Call `open_browser_page` with the Gemini share URL. Note the returned page ID.
 
+### 1.5. Accept cookie consent (if prompted)
+Call `read_page` on the page ID. If a cookie consent dialog ("Accept all" / "Reject all") is visible, click **Accept all** using its element reference before proceeding. The conversation content is not accessible until consent is given.
+
 ### 2. Read conversation content
 Call `read_page` on the page ID. The accessibility tree contains all conversation turns (user prompts and model responses) as text. Extract all turns.
 
