@@ -25,11 +25,12 @@ For a 24/7 Ubuntu Server homelab, the best candidates are business-grade **TFF (
 
 ## Budget Tiers
 
-### Tier 1 — Ultra-budget (~250–350 PLN)
+### Tier 1 — Ultra-budget (~250–350 PLN for 8 GB / ~550–650 PLN for 16 GB)
 
 - **CPU target**: Intel Core 6th or 7th gen with **"T" suffix** (35 W TDP) — e.g. i5-6500T, i5-7500T
 - **Examples**: HP EliteDesk 800 G3 Mini, Dell OptiPlex 5050 Micro, Lenovo M710q
 - **Good for**: Ubuntu Server, Docker (tens of containers), Pi-hole, Home Assistant, simple databases, NAS
+- **Note**: 8 GB listings are cheap; 16 GB versions command a significant premium — e.g. M910q i5-7500T / 16 GB / 256 GB NVMe found at 619 PLN (~150 EUR) as best Allegro price (May 2026)
 
 ### Tier 2 — Sweet Spot (~450–600 PLN)
 
@@ -66,18 +67,20 @@ This model is a **strong alternative** to Intel 8th gen — AMD Zen 2 platform (
 | Shader cores | 6 |
 | GPU clock | 1700 MHz |
 
-### M75q-2 vs Intel i5-8500T — Homelab Comparison
+### Three-Way Homelab Comparison
 
-| Dimension | Ryzen 3 PRO 4350GE | Core i5-8500T |
-|---|---|---|
-| Cores / Threads | 4C / **8T** | **6C** / 6T |
-| Concurrent workloads | ✅ More threads → better for many light containers | ✅ More cores → better for virtualisation |
-| Lithography | ✅ 7 nm (more efficient) | 14 nm |
-| Single-thread perf | ✅ Higher IPC (Zen 2) | Lower |
-| Video transcoding | ⚠️ VAAPI/NVENC possible but Docker config more complex | ✅ Intel QuickSync — well supported by Plex/Jellyfin |
-| Plex/Jellyfin HW transcode | ⚠️ Works, but setup more involved | ✅ Straightforward, widely documented |
+| Dimension | M910q — i5-7500T *(baseline)* | M75q-2 — Ryzen 3 PRO 4350GE | M720q — Core i5-8500T |
+|---|---|---|---|
+| Cores / Threads | 4C / 4T | 4C / **8T** | **6C** / 6T |
+| Concurrent workloads | ⚠️ 4T — weakest for many parallel containers | ✅ More threads → better for many light containers | ✅ More cores → better for virtualisation |
+| Lithography | 14 nm | ✅ 7 nm (most efficient) | 14 nm |
+| Single-thread perf | Lower IPC (Kaby Lake) | ✅ Higher IPC (Zen 2) | Middle |
+| Video transcoding | ✅ Intel QuickSync — well supported | ⚠️ VAAPI possible but Docker config more complex | ✅ Intel QuickSync — well supported |
+| Plex/Jellyfin HW transcode | ✅ Straightforward | ⚠️ Works, but setup more involved | ✅ Straightforward |
+| RAM max | 32 GB DDR4 | 64 GB DDR4 | 64 GB DDR4 |
+| Allegro price (16 GB) | 619 PLN (**selected**) | 859 PLN | 849 PLN |
 
-**Recommendation**: if video transcoding is not a priority → M75q-2 Ryzen is excellent value and slightly more capable overall. If Plex/Jellyfin transcoding matters → prefer Intel 8th gen with QuickSync.
+**Recommendation**: if video transcoding is not a priority → M75q-2 Ryzen is excellent value and slightly more capable overall. If Plex/Jellyfin transcoding matters → prefer Intel (M910q or M720q). M910q chosen for this project — mature platform, QuickSync included, widely available.
 
 ---
 

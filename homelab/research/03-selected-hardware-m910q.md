@@ -80,7 +80,7 @@ Intel 7th-gen CPUs are **not officially supported by Windows 11**. Windows 10 su
 | Cores / Threads | 4C / 4T | 4C / 8T |
 | Architecture | Kaby Lake 14 nm | Zen 2, 7 nm |
 | Video transcoding | ✅ Intel QuickSync (excellent) | ⚠️ VAAPI works but more complex Docker setup |
-| Second-hand price | ~400–550 PLN | ~500–700 PLN |
+| Second-hand price | ~550–650 PLN (16 GB) | ~500–700 PLN |
 | Linux maturity | ✅ Very well supported | ✅ Well supported |
 
 **Verdict for this project**: M910q i5-7500T chosen — QuickSync is a bonus and the platform is very mature for Ubuntu Server / Docker headless setups.
