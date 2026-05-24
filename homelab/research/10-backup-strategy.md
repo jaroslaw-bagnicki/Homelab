@@ -57,7 +57,21 @@ services:
 
 ---
 
-## Azure Backup (Post-Arc)
+## Restic vs Azure Backup
+
+| Concern | Restic (local SATA) | Azure Backup (MARS agent) |
+|---|---|---|
+| Backup target | Secondary SATA disk in M910q | Azure Recovery Services vault (cloud) |
+| Cost | One-time disk purchase (~150–250 PLN for 1 TB SSD) | Azure Vault storage ~€5–10/month |
+| Internet required | ❌ No (local only) | ✅ Yes — always-on connection |
+| Offline recovery | ✅ Yes — disk is local | ⚠️ Need internet + Azure portal to restore |
+| Setup complexity | Low — one Docker container | Medium — Azure subscription, vault, agent |
+| Encryption | ✅ AES-256 restic built-in | ✅ Microsoft-managed keys |
+| Retention | User-defined (daily/weekly/monthly) | Azure policy (daily/weekly/monthly) |
+| dedup | ✅ Yes | ✅ Yes |
+| Speed | Fast — local SATA | Depends on upload bandwidth |
+| Arc dependency | None | None (works without Arc) |
+| Best for | Fast recovery, no cloud cost, offline scenario | Offsite disaster recovery, multi-machine fleet |
 
 Once Azure Arc is enrolled, Azure Backup can layer on top for cloud-offsite redundancy:
 
