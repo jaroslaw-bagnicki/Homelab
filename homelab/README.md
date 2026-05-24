@@ -38,12 +38,11 @@ Full specs: [research/03-selected-hardware-m910q.md](research/03-selected-hardwa
 | 3 | Install Ubuntu Server 24.04 LTS | ✅ M910q | Headless, no GUI, SSH only |
 | 4 | Base OS hardening | Step 3 | UFW firewall, fail2ban, unattended-upgrades, SSH key-based auth |
 | 5 | Docker + Portainer CE | Step 4 | Install Docker engine, enable auto-start, deploy Portainer |
-| 6 | Deploy Docker stack (Phase 1) | Step 5 | Pi-hole, Home Assistant, Nginx Proxy Manager, Gitea, PostgreSQL, Redis |
+| 6 | Hermes Agent install + config | Step 5 | ⚠️ Verify install URL against `github.com/nousresearch/hermes-agent` before running — see doc 04 |
 | 7 | Cloudflare Tunnel setup | Step 6 | Zero-trust tunnel for public access to web UIs |
-| 8 | Azure Arc enrolment | Step 4 | Register M910q in Azure — use least-privilege SP, see doc 07 |
-| 9 | Hermes Agent install + config | Step 7 | ⚠️ Verify install URL against `github.com/nousresearch/hermes-agent` before running — see doc 04 |
-| 10 | Ollama + Bielik (Phase 2) | Step 9 | Local Polish LLM inference — only after Phase 1 is stable; see doc 08 |
-| 11 | Backup strategy | Step 10 | Install secondary SATA disk, configure Restic — see doc 05 |
+| 8 | Azure Arc enrolment | Step 7 | Register M910q in Azure — use least-privilege SP, see doc 07 |
+| 9 | Ollama + Bielik (Phase 2) | Step 8 | Local Polish LLM inference — only after Phase 1 is stable; see doc 08 |
+| 10 | Backup strategy | Step 7 | Install secondary SATA disk, configure Restic — see doc 05 |
 
 ## Research
 
