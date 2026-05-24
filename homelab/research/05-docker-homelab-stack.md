@@ -160,3 +160,32 @@ services:
 | Remaining headroom on 256 GB | ~180 GB |
 
 **Do not use a 128 GB SSD** — Docker layers alone can reach 40 GB under active agent use, and small drives TBW ratings are low enough to degrade within 1–2 years of 24/7 write-intensive operation.
+
+---
+
+## Use Cases (M910q Tiny — i5-7500T / 16 GB / Azure Arc baseline)
+
+| # | Use Case | Azure Arc angle |
+|---|---|---|
+| 1 | **GitOps & CI/CD runner** — GitHub Actions / GitLab Runner in Docker | Flux v2 / ArgoCD via Arc GitOps for declarative config |
+| 2 | **K3s cluster** — lightweight Kubernetes single-node | Register as Arc-enabled Kubernetes; central RBAC & monitoring |
+| 3 | **Edge telemetry gateway** — Prometheus, Grafana, Vector/Fluentbit | Azure Monitor Container Insights extension → Log Analytics |
+| 4 | **Local SLM hosting** — Ollama in Docker (Phi-3-mini, Qwen2.5-coder 3B/7B Q4) | — |
+| 5 | **Secure remote access** — Tailscale / Cloudflare Tunnels | — |
+| 6 | **DNS & ad-blocker** — Pi-hole / AdGuard Home | — |
+| 7 | **Self-hosted registry** — Gitea + Harbor (Docker image registry) | — |
+| 8 | **Secret management** — Vaultwarden (lightweight Bitwarden) | — |
+| 9 | **Home automation** — Home Assistant in Docker | Hermes Agent can interact via local HA API |
+| 10 | **Local DB for tests** — PostgreSQL / Redis / Azure SQL Edge | — |
+
+### Resource allocation (16 GB baseline)
+
+| Service | Est. RAM | Est. CPU |
+|---|---|---|
+| Ubuntu Server + Azure Arc agent | ~1.5 GB | Minimal (idle) |
+| Hermes Agent + UI (Docker) | ~1–2 GB | Depends on tasks |
+| K3s (optional, replaces plain Docker) | ~1.5 GB | Stable ~5–10% |
+| Ollama (Phi-3 / Qwen 7B loaded) | ~5–6 GB | 100% during generation |
+| Infrastructure (Tailscale, Pi-hole, Vaultwarden) | ~1 GB | Minimal |
+| Databases / telemetry (Postgres, Vector) | ~2 GB | Depends |
+| System reserve / cache | ~2–3 GB | — |

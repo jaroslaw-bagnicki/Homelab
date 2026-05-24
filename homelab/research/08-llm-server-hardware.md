@@ -6,37 +6,6 @@
 
 ---
 
-## 10 Homelab Use Cases (i5-7100T / 16 GB / Azure Arc baseline)
-
-For the M910q Tiny already selected as the primary homelab machine:
-
-| # | Use Case | Azure Arc angle |
-|---|---|---|
-| 1 | **GitOps & CI/CD runner** — GitHub Actions / GitLab Runner in Docker | Flux v2 / ArgoCD via Arc GitOps for declarative config |
-| 2 | **K3s cluster** — lightweight Kubernetes single-node | Register as Arc-enabled Kubernetes; central RBAC & monitoring |
-| 3 | **Edge telemetry gateway** — Prometheus, Grafana, Vector/Fluentbit | Azure Monitor Container Insights extension → Log Analytics |
-| 4 | **Local SLM hosting** — Ollama in Docker (Phi-3-mini, Qwen2.5-coder 3B/7B Q4) | — |
-| 5 | **Secure remote access** — Tailscale / Cloudflare Tunnels | — |
-| 6 | **DNS & ad-blocker** — Pi-hole / AdGuard Home | — |
-| 7 | **Self-hosted registry** — Gitea + Harbor (Docker image registry) | — |
-| 8 | **Secret management** — Vaultwarden (lightweight Bitwarden) | — |
-| 9 | **Home automation** — Home Assistant in Docker | Hermes Agent can interact via local HA API |
-| 10 | **Local DB for tests** — PostgreSQL / Redis / Azure SQL Edge | — |
-
-### Resource allocation (16 GB baseline)
-
-| Service | Est. RAM | Est. CPU |
-|---|---|---|
-| Ubuntu Server + Azure Arc agent | ~1.5 GB | Minimal (idle) |
-| Hermes Agent + UI (Docker) | ~1–2 GB | Depends on tasks |
-| K3s (optional, replaces plain Docker) | ~1.5 GB | Stable ~5–10% |
-| Ollama (Phi-3 / Qwen 7B loaded) | ~5–6 GB | 100% during generation |
-| Infrastructure (Tailscale, Pi-hole, Vaultwarden) | ~1 GB | Minimal |
-| Databases / telemetry (Postgres, Vector) | ~2 GB | Depends |
-| System reserve / cache | ~2–3 GB | — |
-
----
-
 ## Bielik — Polish LLM (SpeakLeash)
 
 Bielik is a Polish-language LLM. Best fit for Polish-language agentic tasks via Ollama on the M910q.
@@ -129,12 +98,12 @@ The **Minisforum AI X1** with the Ryzen 7 255 chip is **hard-limited to 64 GB DD
 
 ### Dedicated LLM server config (no Hermes, no containers)
 
-When used as a pure model server, Ubuntu idle RAM is ~0.4–0.6 GB. All remaining RAM is available for Ollama.
+When used as a pure model server, Ubuntu idle RAM is ~0.4–0.6 GB. Maximize VRAM — leave only the minimum system RAM (~8 GB) for OS + Ollama process.
 
 | BIOS VRAM allocation | OS RAM remaining | Models you can serve |
 |---|---|---|
-| 48 GB | 16 GB | Bielik 11B (Q4/Q5), Llama-3 8B, Qwen-2.5-Coder-14B at 20–35 tok/s |
-| 32 GB | 32 GB | Bielik 4.5B, all 8B models at max speed |
+| **~88 GB** (maximize) | **~8 GB** | Llama-3 70B Q4, Qwen 72B Q4, DeepSeek 32B — all fully in VRAM |
+| 64 GB | 32 GB | Bielik 11B, Qwen-2.5-Coder 14B, all 8B/13B models at full speed |
 
 ---
 
@@ -177,16 +146,32 @@ Buy barebone + own DDR5 SO-DIMMs. Always 2× sticks for dual-channel; single-cha
 | 1 TB NVMe PCIe 4.0 | ~€70–100 |
 | **Total** | **~€580–660** |
 
-**BIOS**: allocate 48 GB as UMA Frame Buffer for Radeon 780M → 48 GB iGPU VRAM + ~47 GB system RAM for Ubuntu + Ollama container.
+**BIOS**: maximize UMA Frame Buffer for Radeon 780M — allocate as much as possible and leave only the minimum system RAM needed. The system minimum for a dedicated LLM server is:
 
-**LLM capacity at 96 GB** (48 GB VRAM allocated):
+| Process | RAM |
+|---|---|
+| Ubuntu Server (idle) | ~0.5 GB |
+| Ollama server process | ~0.5 GB |
+| Vector DB for semantic prompt cache (ChromaDB / Qdrant) | ~0.5–2 GB |
+| OS kernel buffers + hugepages | ~2–3 GB |
+| **Total minimum** | **~4–6 GB** |
+
+→ Leave **~8 GB** for system; allocate the rest (~88 GB) as UMA Frame Buffer.  
+If the BIOS only supports 64 GB / 80 GB increments, use the highest available — 16 GB system RAM is comfortable headroom with no trade-off.
+
+> **KV cache vs semantic prompt cache — two different things:**
+> - **Ollama's KV cache** (attention tensors for in-flight inference) lives entirely in VRAM alongside the model weights. It does not consume system RAM.
+> - **Semantic prompt cache** (vector DB storing embeddings of past prompts/responses — ChromaDB, Qdrant, etc.) runs in system RAM. The index hot data is in RAM; embeddings are persisted on NVMe. At typical homelab scale this is ~0.5–2 GB RAM, comfortably within the ~8 GB system allocation.
+
+**LLM capacity** (~88 GB VRAM allocated, ~8 GB system):
 | Model | Fit | Speed |
 |---|---|---|
 | Bielik 4.5B Q4 | ✅ Fully in VRAM | 25–35 tok/s |
 | Bielik 11B Q4 | ✅ Fully in VRAM | 18–25 tok/s |
 | Qwen-2.5-Coder 14B Q4 | ✅ Fully in VRAM | 15–22 tok/s |
-| Llama-3 70B Q2 (~28 GB) | ✅ Fits | 8–12 tok/s |
-| DeepSeek V4 Flash 32B Q4 (~20 GB) | ✅ Fits | 15–20 tok/s |
+| Llama-3 70B Q4 (~40 GB) | ✅ Fully in VRAM | 12–18 tok/s |
+| DeepSeek V4 Flash 32B Q4 (~20 GB) | ✅ Fully in VRAM | 15–20 tok/s |
+| Qwen-2.5 72B Q4 (~44 GB) | ✅ Fully in VRAM | 10–15 tok/s |
 
 ---
 
@@ -211,6 +196,28 @@ When 64 GB is not enough (e.g. running DeepSeek V4 Flash or 70B+ models), the ne
 - **Cloud API alternative**: DeepSeek V4 Flash ~$0.14 per million tokens (OpenRouter / direct API)
 
 **Recommended hybrid strategy**: Run Bielik/small models locally for Polish-language and coding tasks; route large-context/complex requests from Hermes Agent to DeepSeek V4 Flash via API.
+
+---
+
+## Alternatives Considered
+
+### Minisforum UM870 Slim vs X1 Lite (May 2026)
+
+The **UM870 Slim** (Ryzen 7 8745H, ~€329–344 barebone) is a close alternative to the X1 Lite at a similar price point. Key differences:
+
+| Feature | X1 Lite ✅ Selected | UM870 Slim |
+|---|---|---|
+| CPU | Ryzen 7 255 (Hawk Point, Zen 4, XDNA NPU) | Ryzen 7 8745H (Hawk Point, Zen 4, **no NPU**) |
+| iGPU | Radeon 780M (12 CU) | Radeon 780M (12 CU) |
+| **Max RAM** | **128 GB** DDR5-5600 | **96 GB** DDR5-5600 |
+| OCuLink | ✅ Yes | ❌ No |
+| USB4 | ✅ Yes | ✅ Yes |
+| Barebone price | ~€329 | ~€329–344 |
+
+**Verdict**: UM870 Slim is a valid alternative if the target build stays at 96 GB and eGPU expansion is not needed. However, X1 Lite remains the better pick because:
+- 128 GB ceiling allows a future upgrade from 2×48 GB → 2×64 GB without replacing the machine
+- OCuLink preserves the eGPU upgrade path (Phase 3 option before buying a full Strix Halo platform)
+- Price is the same or lower
 
 ---
 
