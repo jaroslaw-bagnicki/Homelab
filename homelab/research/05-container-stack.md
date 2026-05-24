@@ -1,24 +1,33 @@
-# 05 — Docker Homelab Stack
+# 05 — Container Stack: Docker Compose → k3s
 
 **Source**: Gemini 3.5 Flash conversation, May 20 2026  
-**Scope**: Service catalogue, Docker Compose patterns, disk layout, restart policies
+**Updated**: May 24 2026  
+**Scope**: Service catalogue, Docker Compose patterns, disk layout, restart policies, k3s migration path
 
 ---
 
-## Why Docker Compose (not Swarm)
+## Container Orchestration: Docker Compose → k3s
 
-Docker Compose with `restart: unless-stopped` is the right choice for a single-node homelab. Docker Swarm adds cluster-orchestration overhead with no benefit when there is only one physical machine.
+**Plan**: Start with Docker Compose for rapid deployment and simplicity. Migrate to k3s once the base stack is stable and Azure Arc onboarding is complete.
 
-| Concern | Compose + unless-stopped | Docker Swarm |
+**Why k3s (future)**:
+- Familiar with AKS (Azure Kubernetes Service) — k3s API surface is identical
+- k3s can be onboarded to Azure Arc as a registered Kubernetes cluster — enables Azure Policy, Azure Monitor, central RBAC
+- Single-binary, lightweight — designed for edge/homelab
+
+| Concern | Compose | k3s |
 |---|---|---|
 | Auto-restart on crash | ✅ Yes | ✅ Yes |
 | Auto-restart on reboot | ✅ Yes | ✅ Yes |
-| High availability (failover) | ❌ No (single node) | ✅ (requires 2+ nodes) |
-| Persistent storage simplicity | ✅ Simple bind mounts | ⚠️ More complex |
-| Hermes `/var/run/docker.sock` access | ✅ Easy | ⚠️ Overlay network restrictions |
-| Zero-downtime rolling updates | ❌ Brief gap during `up -d` | ✅ Yes |
+| High availability (failover) | ❌ No (single node) | ❌ No (single node) |
+| Persistent storage simplicity | ✅ Simple bind mounts | ⚠️ StorageClass + PVCs |
+| Hermes `/var/run/docker.sock` access | ✅ Direct | ⚠️ Requires Docker socket or containerd config |
+| Zero-downtime rolling updates | ❌ Brief gap during `up -d` | ✅ Rolling updates |
+| Azure Arc integration | ❌ Agent only | ✅ Arc-enabled Kubernetes (full) |
+| Familiarity (AKS experience) | ❌ Different model | ✅ Same kubectl API, same concepts |
+| Migration complexity | — | Low — compose services map to k3s Deployments |
 
-**Verdict**: Stick with Compose. Add Swarm only when a second physical node joins the lab.
+**Verdict**: Start with Compose. Migrate to k3s post-Phase 1 stable. No urgency — move when comfortable.
 
 ---
 

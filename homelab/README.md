@@ -53,7 +53,7 @@ Full specs: [research/03-selected-hardware-m910q.md](research/03-selected-hardwa
 | 02 | [02-llm-requirements.md](research/02-llm-requirements.md) | LLM resource requirements & local-vs-API trade-offs | Gemini chat 1 |
 | 03 | [03-selected-hardware-m910q.md](research/03-selected-hardware-m910q.md) | M910q Tiny: detailed specs, ports, storage rationale | Gemini chat 2 |
 | 04 | [04-hermes-agent-setup.md](research/04-hermes-agent-setup.md) | Hermes Agent install plan, MiniMax M2.7 config, chat UIs | Gemini chat 2 |
-| 05 | [05-docker-homelab-stack.md](research/05-docker-homelab-stack.md) | Docker Compose service catalogue, disk layout, restart policies | Gemini chat 2 |
+| 05 | [05-container-stack.md](research/05-container-stack.md) | Docker Compose → k3s migration path, service catalogue, disk layout, restart policies | Gemini chat 2 |
 | 06 | [06-networking-connectivity.md](research/06-networking-connectivity.md) | CGNAT solutions: Cloudflare Tunnels, Tailscale, hybrid proxy | Gemini chat 2 |
 | 07 | [07-azure-arc-and-cost.md](research/07-azure-arc-and-cost.md) | Azure Arc enrolment, physical vs cloud cost comparison | Gemini chat 2 |
 | 08 | [08-llm-server-hardware.md](research/08-llm-server-hardware.md) | Dedicated LLM server hardware paths; Minisforum X1 Lite selected (Phase 2) | Gemini chat 3 |
