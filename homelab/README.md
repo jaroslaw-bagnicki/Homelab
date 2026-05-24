@@ -38,3 +38,4 @@ Full specs: [research/03-selected-hardware-m910q.md](research/03-selected-hardwa
 | 05 | [05-docker-homelab-stack.md](research/05-docker-homelab-stack.md) | Docker Compose service catalogue, disk layout, restart policies | Gemini chat 2 |
 | 06 | [06-networking-connectivity.md](research/06-networking-connectivity.md) | CGNAT solutions: Cloudflare Tunnels, Tailscale, hybrid proxy | Gemini chat 2 |
 | 07 | [07-azure-arc-and-cost.md](research/07-azure-arc-and-cost.md) | Azure Arc enrolment, physical vs cloud cost comparison | Gemini chat 2 |
+| 08 | [08-llm-server-hardware.md](research/08-llm-server-hardware.md) | Homelab use cases, Bielik Polish LLM, dedicated LLM server hardware paths (AMD APU / Apple Silicon / GPU), Minisforum AI X1 analysis | Gemini chat 3 |
