@@ -21,7 +21,7 @@ Full specs: [research/03-selected-hardware-m910q.md](research/03-selected-hardwa
 | Area | Status | Notes |
 |---|---|---|
 | Hardware selection | ✅ Selected | Lenovo M910q Tiny — see doc 03 |
-| OS & base stack | ⬜ Not started | Ubuntu Server 24.04 LTS planned |
+| OS & base stack | ✅ Selected | Ubuntu Server 24.04 LTS + Docker — see docs 05, 09 |
 | LLM / AI stack | 🔍 Research | MiniMax M2.7 (cloud API) via Hermes Agent — see doc 04 |
 | Docker services | 🔍 Research | Stack defined — see doc 05 |
 | Networking | 🔍 Research | Cloudflare Tunnels + Tailscale — see doc 06 |
