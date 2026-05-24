@@ -63,6 +63,29 @@ Intel 7th-gen CPUs are **not officially supported by Windows 11**. Windows 10 su
 
 ---
 
+## WiFi Card — Intel 3165NGW vs 9560NGW
+
+Both are M.2 A/E key cards compatible with the M910q Tiny. Linux support via `iwlwifi` driver (included in Ubuntu kernel).
+
+| Feature | Intel 3165NGW | Intel 9560NGW |
+|---|---|---|
+| WiFi standard | 802.11ac 1×1 | 802.11ac 2×2 |
+| Max speed | 433 Mbps | 867 Mbps |
+| Bluetooth | 4.2 | 5.0 |
+| Release era | ~2015 (Skylake) | ~2017 (Kaby Lake R/Coffee Lake) |
+| Antenna count | 1 | 2 |
+
+### Recommendation: 9560NGW
+
+Even for a headless server where throughput isn't critical, the **9560NGW wins** on:
+
+- **2×2 MIMO** — better range and wall penetration for a home server accessed from multiple locations
+- **Bluetooth 5.0** — useful for pairing keyboards or USB dongles without occupying USB ports
+
+The 3165 is acceptable if the price difference is significant (< 10 PLN). Otherwise, 9560 is the better long-term choice.
+
+---
+
 ## First-Boot Checklist
 
 - [ ] Open case (tool-less), blow out dust
@@ -70,5 +93,6 @@ Intel 7th-gen CPUs are **not officially supported by Windows 11**. Windows 10 su
 - [ ] Verify RAM slots and free SATA bay
 - [ ] Check PSU is included (missing in some budget Allegro listings; OEM replacement ~30–50 PLN)
 - [ ] Flash BIOS to latest version before OS install
+- [ ] Install WiFi card (if not included) — 9560NGW recommended
 
 ---
