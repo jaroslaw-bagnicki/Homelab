@@ -28,19 +28,19 @@ argument-hint: 'Gemini share URL (https://gemini.google.com/share/...)'
 ### 1. Open the page
 Call `open_browser_page` with the Gemini share URL. Note the returned page ID.
 
-### 1.5. Accept cookie consent (if prompted)
+### 2. Accept cookie consent (if prompted)
 Call `read_page` on the page ID. If a cookie consent dialog ("Accept all" / "Reject all") is visible, click **Accept all** using its element reference before proceeding. The conversation content is not accessible until consent is given.
 
-### 2. Read conversation content
+### 3. Read conversation content
 Call `read_page` on the page ID. The accessibility tree contains all conversation turns (user prompts and model responses) as text. Extract all turns.
 
-### 3. Scroll for long threads
+### 4. Scroll for long threads
 If the thread is long, call `navigate_page` with `type: scroll`, `direction: down`, then `read_page` again. Repeat until the full conversation is captured.
 
-### 4. Screenshot for visual content
+### 5. Screenshot for visual content
 If any turn contains spec tables, hardware comparisons, or structured data that the accessibility tree renders poorly, call `screenshot_page` to capture it visually and read it from the image.
 
-### 5. Synthesise the summary
+### 6. Synthesise the summary
 Write a structured Markdown document covering:
 
 - **Topic** — what the conversation was about (1–2 sentences)
