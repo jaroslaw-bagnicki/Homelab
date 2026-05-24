@@ -44,10 +44,19 @@ If any turn contains spec tables, hardware comparisons, or structured data that 
 Write a structured Markdown document covering:
 
 - **Topic** — what the conversation was about (1–2 sentences)
-- **Key findings** — bullet list of the main facts, conclusions, or recommendations
-- **Decisions made** — any explicit choices or selections reached during the thread
-- **Open questions** — unresolved items or follow-up research areas
+- **Key findings** — detailed bullet list of the main facts, conclusions, configurations, and recommendations; include specific values, flags, image names, file paths, and commands as code-formatted inline text
+- **Decisions made** — explicit choices or selections reached during the thread, with the rejected alternatives and the reasons for rejection in a table or list
+- **Alternatives considered** — for each major decision, list other options evaluated and why they were rejected; use a table with columns: Option, Verdict, Reason
+- **Open questions** — unresolved items, follow-up research areas, or known unknowns
 - **Source** — bare link to the original Gemini share URL
+
+**Detail level bar:** every section should be self-contained and specific enough that a future reader (including yourself) can implement the recommendations without referring back to the original thread. Code snippets, config values, version numbers, and TLD choices must all be present in the doc — not just implied.
+
+**Structure adapts to content:**
+- Hardware research → include a spec comparison table
+- Conceptual discussion → structured findings list with reasoning
+- Step-by-step guide → numbered procedure with code blocks for each step
+- Architecture decision → include a component flow or request path diagram in text form
 
 Adapt the structure to the content — a hardware research thread warrants a spec table; a conceptual discussion warrants a findings list.
 
