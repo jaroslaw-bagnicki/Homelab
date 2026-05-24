@@ -73,6 +73,87 @@ services:
 | Arc dependency | None | None (works without Arc) |
 | Best for | Fast recovery, no cloud cost, offline scenario | Offsite disaster recovery, multi-machine fleet |
 
+## Middle Option: Restic → Local Disk + Azure Blob Offsite Copy
+
+**Concept**: Primary backup stays on local SATA disk (fast restore). A scheduled cron job runs a second Restic backup pass to Azure Blob Storage for offsite protection against fire/theft.
+
+**How it works**: Restic uses a [repository on Azure Blob Storage](https://restic.readthedocs.io/en/latest/045_backups_tuning_backup_parameters.html#backups-to-microsoft-azure-blob-storage) via the Azure native REST backend — no rclone needed.
+
+```bash
+# Environment for Azure Blob-backed restic repo
+export AZURE_STORAGE_ACCOUNT="yourstorageaccount"
+export AZURE_STORAGE_KEY="your-storage-key"
+
+# Backup to Azure Blob (georedundant by default)
+restic backup /data \
+  --repo "azure:container-name:/backups/homelab" \
+  $BACKUP_RETENTION
+```
+
+**Cost comparison (Azure Blob Storage — LRS)**
+
+| Usage | Price (North Europe) |
+|---|---|
+| 200 GB × €0.02 / GB / month | ~€4 / month |
+| 500 GB × €0.02 / GB / month | ~€10 / month |
+| 1 TB × €0.02 / GB / month | ~€20 / month |
+
+**vs Azure Backup full agent**:
+- Azure Backup = ~€9–13/month (instance + storage)
+- Azure Blob alone = ~€4–20/month for 200 GB–1 TB (storage only, no agent management)
+
+| Concern | Restic → Blob | Azure Backup (MARS) |
+|---|---|---|
+| Cost | ~€4–10/month (blob only) | ~€9–13/month (instance + storage) |
+| Management | Manual cron + restic | Azure Vault + agent |
+| Retention | Restic policy (in-repo) | Azure policy |
+| Encryption | AES-256 (restic) | Microsoft-managed |
+| Arc dependency | None | None |
+| Backup complexity | Medium — env vars + cron | Low — agent installer |
+
+**Verdict**: Restic → local disk + optional Azure Blob upload is the best of both worlds — fast local restore, cheap offsite copy. Azure Backup adds unnecessary vault management overhead for a single-node homelab.
+
+To schedule the blob upload, add a second container or cron service:
+
+```yaml
+services:
+  restic-local:
+    image: restic/restic:latest
+    container_name: restic-backup
+    restart: unless-stopped
+    volumes:
+      - /home/ubuntu/homelab:/data:ro
+      - /mnt/backup-disk:/backups
+    environment:
+      - RESTIC_PASSWORD=YOUR_STRONG_PASSWORD
+    command: >
+      backup /data --repo /backups/homelab
+      --keep-daily=7 --keep-weekly=4 --keep-monthly=6
+
+  restic-azure:
+    image: restic/restic:latest
+    container_name: restic-azure-backup
+    restart: unless-stopped
+    volumes:
+      - /home/ubuntu/homelab:/data:ro
+    environment:
+      - RESTIC_PASSWORD=YOUR_STRONG_PASSWORD
+      - AZURE_STORAGE_ACCOUNT=yourstorageaccount
+      - AZURE_STORAGE_KEY=your-storage-key
+    volumes_from: []
+    command: >
+      backup /data
+      --repo "azure:container-name:/backups/homelab"
+      --keep-daily=7 --keep-weekly=4 --keep-monthly=6
+    # Run weekly only via external cron or label
+    profiles:
+      - offsite
+```
+
+Run `restic-azure` on a weekly cron schedule to avoid daily upload costs.
+
+---
+
 Once Azure Arc is enrolled, Azure Backup can layer on top for cloud-offsite redundancy:
 
 | Capability | Without Arc | With Arc |
