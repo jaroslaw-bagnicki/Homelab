@@ -40,9 +40,9 @@ Full specs: [research/03-selected-hardware-m910q.md](research/03-selected-hardwa
 | 5 | Docker + Portainer CE | Step 4 | Install Docker engine, enable auto-start, deploy Portainer |
 | 6 | Hermes Agent install + config | Step 5 | ⚠️ Verify install URL against `github.com/nousresearch/hermes-agent` before running — see doc 04 |
 | 7 | Cloudflare Tunnel setup | Step 6 | Zero-trust tunnel for public access to web UIs |
-| 8 | Azure Arc enrolment | Step 7 | Register M910q in Azure — use least-privilege SP, see doc 07 |
-| 9 | Ollama + Bielik (Phase 2) | Step 8 | Local Polish LLM inference — only after Phase 1 is stable; see doc 08 |
-| 10 | Backup strategy | Step 6 | Install secondary SATA disk, configure Restic — see doc 05 |
+| 8 | Backup strategy | Step 7 | Install secondary SATA disk, configure Restic — see doc 05 |
+| 9 | Azure Arc enrolment | Step 8 | Register M910q in Azure — use least-privilege SP, see doc 07 |
+| 10 | Ollama + Bielik (Phase 2) | Step 9 | Local Polish LLM inference — only after Phase 1 is stable; see doc 08 |
 
 ## Research
 
