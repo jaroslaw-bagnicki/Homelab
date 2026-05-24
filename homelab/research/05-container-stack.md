@@ -15,19 +15,19 @@
 - k3s can be onboarded to Azure Arc as a registered Kubernetes cluster — enables Azure Policy, Azure Monitor, central RBAC
 - Single-binary, lightweight — designed for edge/homelab
 
-| Concern | Compose | k3s |
-|---|---|---|
-| Auto-restart on crash | ✅ Yes | ✅ Yes |
-| Auto-restart on reboot | ✅ Yes | ✅ Yes |
-| High availability (failover) | ❌ No (single node) | ❌ No (single node) |
-| Persistent storage simplicity | ✅ Simple bind mounts | ⚠️ StorageClass + PVCs |
-| Hermes `/var/run/docker.sock` access | ✅ Direct | ⚠️ Requires Docker socket or containerd config |
-| Zero-downtime rolling updates | ❌ Brief gap during `up -d` | ✅ Rolling updates |
-| Azure Arc integration | ❌ Agent only | ✅ Arc-enabled Kubernetes (full) |
-| Familiarity (AKS experience) | ❌ Different model | ✅ Same kubectl API, same concepts |
-| Migration complexity | — | Low — compose services map to k3s Deployments |
+| Concern | Compose | Swarm | k3s |
+|---|---|---|---|
+| Auto-restart on crash | ✅ Yes | ✅ Yes | ✅ Yes |
+| Auto-restart on reboot | ✅ Yes | ✅ Yes | ✅ Yes |
+| High availability (failover) | ❌ No (single node) | ⚠️ Manager × 3 needed | ❌ No (single node) |
+| Persistent storage simplicity | ✅ Simple bind mounts | ⚠️ Bind mounts + volume plugins | ⚠️ StorageClass + PVCs |
+| Hermes `/var/run/docker.sock` access | ✅ Direct | ⚠️ Docker-in-Docker needed | ⚠️ Requires Docker socket or containerd config |
+| Zero-downtime rolling updates | ❌ Brief gap during `up -d` | ⚠️ Rolling update via `docker service update` | ✅ Rolling updates |
+| Azure Arc integration | ❌ Agent only | ❌ Agent only | ✅ Arc-enabled Kubernetes (full) |
+| Familiarity (AKS experience) | ❌ Different model | ❌ Different model | ✅ Same kubectl API, same concepts |
+| Setup complexity | Very low — single file | Medium — requires manager + worker init | Low — single binary, less than k8s |
 
-**Verdict**: Start with Compose. Migrate to k3s post-Phase 1 stable. No urgency — move when comfortable.
+**Verdict**: Start with Compose. Migrate to k3s post-Phase 1 stable. No urgency — move when comfortable. Swarm is not worth the overhead for a single-node homelab.
 
 ---
 
