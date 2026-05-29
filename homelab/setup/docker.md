@@ -4,7 +4,7 @@
 
 ## Prerequisites
 
-- [ ] Base OS is set up and hardened (see [runbook.md](runbook.md))
+- [ ] Base OS is set up and hardened (see [init.md](init.md))
 - [ ] SSH access via `ssh jarek@homelab.local` or `ssh homelab`
 - [ ] Server is up to date: `sudo apt update && sudo apt upgrade -y`
 
