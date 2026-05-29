@@ -12,10 +12,13 @@
 
 ## 1. Prepare the DNSMasq Config
 
-### 1.1 Create a project directory
+### 1.1 Create the project directory
+
+All Docker service configs live under one directory:
 
 ```bash
-mkdir -p ~/docker/dnsmasq && cd ~/docker/dnsmasq
+sudo mkdir -p /opt/docker && sudo chown jarek:jarek /opt/docker
+cd /opt/docker
 ```
 
 ### 1.2 Create `dnsmasq.conf`
@@ -64,6 +67,10 @@ services:
       - 8.8.8.8
     cap_add:
       - NET_ADMIN
+
+networks:
+  homelab_net:
+    name: homelab_net
 ```
 
 ---

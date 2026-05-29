@@ -12,26 +12,12 @@
 
 ## 1. Prepare the Caddy Config
 
-### 1.1 Create a project directory
+All commands run from `/opt/docker/` — the same directory as DNSMasq.
+
+### 1.1 Create `Caddyfile`
 
 ```bash
-mkdir -p ~/docker/caddy && cd ~/docker/caddy
-```
-
-### 1.2 Create a shared Docker network
-
-So Caddy can reach other containers by their container name:
-
-```bash
-docker network create homelab_net
-```
-
-> Add `networks: - homelab_net` to any service you want Caddy to proxy to.
-
-### 1.3 Create `Caddyfile`
-
-```bash
-nano Caddyfile
+cd /opt/docker && nano Caddyfile
 ```
 
 ```Caddyfile
@@ -47,14 +33,17 @@ portainer.home.lan {
 }
 ```
 
-### 1.4 Create `docker-compose.yml`
+### 1.2 Add Caddy to `docker-compose.yml`
+
+Add the Caddy service to the existing `/opt/docker/docker-compose.yml`:
 
 ```bash
 nano docker-compose.yml
 ```
 
+Append under `services:`:
+
 ```yaml
-services:
   caddy:
     image: caddy:2-alpine
     container_name: caddy_proxy
@@ -73,11 +62,9 @@ services:
 volumes:
   caddy_data:
   caddy_config:
-
-networks:
-  homelab_net:
-    external: true
 ```
+
+The `networks` section at the bottom already exists (created by the DNSMasq setup). Keep it as-is.
 
 ---
 
@@ -92,7 +79,7 @@ docker network connect homelab_net portainer
 ## 3. Start Caddy
 
 ```bash
-docker compose up -d
+cd /opt/docker && docker compose up -d
 ```
 
 ### Verify
