@@ -29,6 +29,15 @@ Full specs: [research/03-selected-hardware-m910q.md](research/03-selected-hardwa
 | Networking | 🔍 Research | Cloudflare Tunnels + Tailscale; mDNS/Avahi installed — see docs 06, 12 |
 | Azure integration | 🔍 Research | Azure Arc onboarding planned — see doc 07 |
 
+## Setup Runbooks
+
+Step-by-step guides in [`setup/`](setup/):
+
+| # | Runbook | Topic |
+|---|---|---|
+| 1 | [runbook.md](setup/runbook.md) | Ubuntu install, static IP, SSH, LVM resize, mDNS, SSH key, hardening |
+| 2 | [runbook-docker.md](setup/runbook-docker.md) | Docker Engine + Portainer CE |
+
 ## TODO / Execution List
 
 > Ordered by dependency — earlier steps must complete before later steps begin.
@@ -39,7 +48,7 @@ Full specs: [research/03-selected-hardware-m910q.md](research/03-selected-hardwa
 | 2 | First-boot checklist | ✅ Done | Inspect thermal paste, verify RAM/SATA, check PSU, flash BIOS — see doc 03 |
 | 3 | ✅ Install Ubuntu Server + initial setup | ✅ Done | Windows backup, BIOS fix, static IP, SSH, LVM resize, user config — see doc 12 |
 | 4 | Base OS hardening | Step 3 (ready) | UFW firewall, fail2ban, unattended-upgrades, SSH key-based auth — advisory ready in doc 12 |
-| 5 | Docker + Portainer CE | Step 4 | Install Docker engine, enable auto-start, deploy Portainer |
+| 5 | Docker + Portainer CE | Step 4 | Install Docker engine, enable auto-start, deploy Portainer — see [runbook-docker.md](setup/runbook-docker.md) |
 | 6 | Hermes Agent install + config | Step 5 | ⚠️ Verify install URL against `github.com/nousresearch/hermes-agent` before running — see doc 04 |
 | 7 | Cloudflare Tunnel setup | Step 6 | Zero-trust tunnel for public access to web UIs |
 | 8 | Backup strategy | Step 7 | Install secondary SATA disk, configure Restic — see doc 10 |

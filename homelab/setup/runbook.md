@@ -304,7 +304,11 @@ Unattended-Upgrade::Automatic-Reboot-Time "04:00";
 - [ ] SSH works with IP: `ssh jarek@192.168.2.200`
 - [ ] SSH works with hostname: `ssh jarek@homelab.local` or `ssh homelab`
 - [ ] Full disk space available: `df -h /` → ~232 GB
+- [ ] mDNS/Avahi is running: `sudo systemctl status avahi-daemon` → `active (running)`
 - [ ] SSH key login works (no password prompt)
+- [ ] UFW is active and allowing SSH: `sudo ufw status verbose` → `Status: active`, `22/tcp ALLOW IN`
+- [ ] Fail2ban is running and monitoring SSH: `sudo fail2ban-client status sshd` → shows jail status
+- [ ] Unattended-upgrades is active: `sudo systemctl status unattended-upgrades` → `active (running)`
 
 ---
 
