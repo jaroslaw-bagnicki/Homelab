@@ -1,6 +1,6 @@
 # Homelab Setup — Local DNS (DNSMasq)
 
-> Runbook for deploying DNSMasq in Docker to resolve `*.home.lan` domains to the homelab server.
+> Runbook for deploying DNSMasq in Docker to resolve `*.home` domains to the homelab server.
 
 ## Prerequisites
 
@@ -30,8 +30,8 @@ nano dnsmasq.conf
 Paste the following (adjust the router IP if needed):
 
 ```conf
-# Wildcard: all .home.lan domains resolve to homelab server
-address=/.home.lan/192.168.2.200
+# Wildcard: all .home domains resolve to homelab server
+address=/.home/192.168.2.200
 
 # Upstream forwarders
 server=192.168.2.1    # router (DHCP/names)
@@ -56,15 +56,13 @@ nano docker-compose.yml
 services:
   dnsmasq:
     image: 4km3/dnsmasq:latest
-    container_name: homelab_dns
+    container_name: dns
     restart: always
     ports:
       - "53:53/udp"
       - "53:53/tcp"
     volumes:
       - ./dnsmasq.conf:/etc/dnsmasq.conf
-    dns:
-      - 8.8.8.8
     cap_add:
       - NET_ADMIN
 
@@ -103,10 +101,10 @@ docker compose up -d
 ### Verify it's running
 
 ```bash
-docker ps --filter name=homelab_dns
+docker ps --filter name=dns
 ```
 
-Expected: container `homelab_dns` with status `Up`.
+Expected: container `dns` with status `Up`.
 
 ### Test local resolution from the server
 
@@ -120,7 +118,7 @@ Expected: returns `192.168.2.200`.
 
 ## 4. Configure Server to Use DNSMasq
 
-The server needs to point its DNS to itself so containers and system services resolve `.home.lan`.
+The server needs to point its DNS to itself so containers and system services resolve `.home`.
 
 ### 4.1 Edit Netplan config
 
@@ -151,17 +149,17 @@ Expected: replies from `192.168.2.200`.
 
 ---
 
-## 5. Configure Laptop DNS
+## 5. Configure Router DHCP DNS (Recommended)
 
-For `*.home.lan` to work from your laptop, configure your laptop to use the homelab server as a DNS server.
+Set the Tenda router to hand out `192.168.2.200` as the default DNS to all devices.
 
-### Windows 11
-
-1. Open **Settings** → **Network & internet** → **Wi-Fi** (or **Ethernet**).
-2. Select your active connection → **Hardware properties** → **DNS server assignment** → **Edit**.
-3. Switch from **Automatic (DHCP)** to **Manual**, turn **IPv4** on.
-4. Set **Preferred DNS** to `192.168.2.200`, **Alternate** to `1.1.1.1`.
+1. Open `http://192.168.2.1` in a browser and log in.
+2. Go to **Advanced Settings** → **DHCP Server**.
+3. Set **Primary DNS** to `192.168.2.200`.
+4. Set **Secondary DNS** to `1.1.1.1` (fallback if the homelab is down).
 5. Save.
+
+Existing devices will pick up the new DNS when they renew their lease (reconnect Wi-Fi or `ipconfig /renew` on Windows).
 
 ### Verify
 
@@ -171,16 +169,16 @@ nslookup portainer.home.lan
 
 Expected: returns `192.168.2.200`.
 
-Now open `http://portainer.home.lan:9000` in your browser — it should reach Portainer via the local domain name (no SSH tunnel needed once you also point port 80/443 through the service).
+> If you can't set the router DNS, configure each device manually (Settings → network → set DNS to `192.168.2.200`).
 
 ---
 
 ## 6. Verification Checklist
 
-- [ ] DNSMasq container running: `docker ps --filter name=homelab_dns`
-- [ ] Local resolution works: `nslookup portainer.home.lan 127.0.0.1` → `192.168.2.200`
-- [ ] Server uses its own DNS: `ping -c 1 portainer.home.lan` works
-- [ ] Laptop resolves `*.home.lan`: `nslookup portainer.home.lan` → `192.168.2.200`
+- [ ] DNSMasq container running: `docker ps --filter name=dns`
+- [ ] Local resolution works: `nslookup portainer.home 127.0.0.1` → `192.168.2.200`
+- [ ] Server uses its own DNS: `ping -c 1 portainer.home` works
+- [ ] Devices resolve `*.home`: `nslookup portainer.home` → `192.168.2.200`
 
 ---
 

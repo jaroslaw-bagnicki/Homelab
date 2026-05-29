@@ -10,7 +10,7 @@ Designing a local DNS solution with wildcard routing and a Configuration-as-Code
 
 DNSMasq running in Docker is the recommended lightweight DNS solution:
 
-- Maps local domains (e.g. `*.home.lan`) to the homelab server IP via a single wildcard rule
+- Maps local domains (e.g. `*.home`) to the homelab server IP via a single wildcard rule
 - Forwards unknown queries to upstream DNS (router, Google 8.8.8.8, Cloudflare 1.1.1.1) with built-in caching
 - Cache-size of 2000 entries is optimal for homelab use
 - One docker-compose service plus one `dnsmasq.conf` file — fully IaC
@@ -40,8 +40,8 @@ services:
 
 **dnsmasq.conf for wildcard routing:**
 ```conf
-# Wildcard: all .home.lan domains resolve to homelab server
-address=/.home.lan/192.168.1.100
+# Wildcard: all .home domains resolve to homelab server
+address=/.home/192.168.1.100
 
 # Upstream forwarders
 server=192.168.1.1    # router (DHCP/names)
@@ -62,7 +62,7 @@ Caddy was selected over Nginx Proxy Manager and Traefik because:
 
 - **True CaC**: entire config in one `Caddyfile` — no GUI, no SQLite state
 - **Minimal syntax**: no boilerplate for headers, websockets, or redirects — one `reverse_proxy` directive per service
-- **Automatic local TLS**: built-in Internal CA generates and renews certificates for `.home.lan` domains
+- **Automatic local TLS**: built-in Internal CA generates and renews certificates for `.home` domains
 - **HTTP/3 (QUIC)** supported out of the box
 
 **Caddy docker-compose + Caddyfile:**
@@ -88,11 +88,11 @@ services:
 # Global settings for local TLS
 { local_certs }
 
-gitea.home.lan {
+gitea.home {
     reverse_proxy gitea:3000
 }
 
-portainer.home.lan {
+portainer.home {
     reverse_proxy https://portainer:9443 {
         transport http {
             tls_insecure_skip_verify
@@ -100,7 +100,7 @@ portainer.home.lan {
     }
 }
 
-hermes.home.lan {
+hermes.home {
     reverse_proxy hermes_agent:8080
 }
 ```
@@ -108,11 +108,11 @@ hermes.home.lan {
 ### Full Request Flow
 
 ```
-Client browser → gitea.home.lan
+Client browser → gitea.home
     ↓
-DNSMasq wildcard /.home.lan/ → 192.168.1.100 (homelab server IP)
+DNSMasq wildcard /.home/ → 192.168.1.100 (homelab server IP)
     ↓
-Caddy on :443, checks Host header → matches gitea.home.lan block
+Caddy on :443, checks Host header → matches gitea.home block
     ↓
 reverse_proxy gitea:3000 (inside Docker bridge network)
 ```
@@ -123,7 +123,7 @@ reverse_proxy gitea:3000 (inside Docker bridge network)
 |---|---|---|
 | Local DNS | DNSMasq in Docker | Lightweight, IaC, wildcard support |
 | Reverse Proxy | Caddy | CaC, auto-TLS, minimal config |
-| Domain TLD | `.home.lan` | Not used by public DNS, avoids mDNS conflicts |
+| Domain TLD | `.home` | Not used by public DNS, avoids mDNS conflicts |
 | Certificate CA | Caddy's Internal PKI (ACME-based) | Self-contained, no external services |
 | Upstream DNS | Router + Google + Cloudflare in parallel | Resilience + speed via `all-servers` |
 

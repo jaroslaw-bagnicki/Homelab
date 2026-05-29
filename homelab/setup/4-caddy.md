@@ -1,10 +1,10 @@
 # Homelab Setup — Caddy Reverse Proxy
 
-> Runbook for deploying Caddy as a reverse proxy with automatic TLS for `*.home.lan` services.
+> Runbook for deploying Caddy as a reverse proxy with automatic TLS for `*.home` services.
 
 ## Prerequisites
 
-- [ ] DNSMasq deployed and resolving `*.home.lan` (see [3-dns.md](3-dns.md))
+- [ ] DNSMasq deployed and resolving `*.home` (see [3-dns.md](3-dns.md))
 - [ ] Docker Engine installed (see [2-docker.md](2-docker.md))
 - [ ] SSH access via `ssh jarek@homelab.local`
 
@@ -24,7 +24,7 @@ cd /opt/docker && nano Caddyfile
 # Global settings for local TLS
 { local_certs }
 
-portainer.home.lan {
+portainer.home {
     reverse_proxy https://portainer:9443 {
         transport http {
             tls_insecure_skip_verify
@@ -97,11 +97,11 @@ Expected: container `caddy_proxy` with status `Up`.
 As you deploy new containers, add entries to `Caddyfile`:
 
 ```Caddyfile
-gitea.home.lan {
+gitea.home {
     reverse_proxy gitea:3000
 }
 
-hermes.home.lan {
+hermes.home {
     reverse_proxy hermes_agent:8080
 }
 ```
@@ -118,8 +118,8 @@ docker exec caddy_proxy caddy reload
 
 - [ ] Caddy container running: `docker ps --filter name=caddy_proxy`
 - [ ] Caddy serves port 80: `curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1` → should not be 000
-- [ ] Portainer reachable via domain: `curl -sI http://portainer.home.lan` (from a device using DNSMasq)
-- [ ] TLS cert issued: `curl -sI https://portainer.home.lan` should show HTTPS
+- [ ] Portainer reachable via domain: `curl -sI http://portainer.home` (from a device using DNSMasq)
+- [ ] TLS cert issued: `curl -sI https://portainer.home` should show HTTPS
 
 ---
 
