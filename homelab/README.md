@@ -37,6 +37,8 @@ Step-by-step guides in [`setup/`](setup/):
 |---|---|---|
 | 1 | [1-init.md](setup/1-init.md) | Ubuntu install, static IP, SSH, LVM resize, mDNS, SSH key, hardening |
 | 2 | [2-docker.md](setup/2-docker.md) | Docker Engine + Portainer CE |
+| 3 | [3-dns.md](setup/3-dns.md) | Local DNS (DNSMasq) |
+| 4 | [4-caddy.md](setup/4-caddy.md) | Caddy reverse proxy with TLS |
 
 ## TODO / Execution List
 
