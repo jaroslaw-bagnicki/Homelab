@@ -2,61 +2,62 @@
 
 > Step-by-step checklist for setting up the Lenovo ThinkCentre M910q Tiny after receiving the hardware.
 
-## Prerequisites
+## 0. Create a Bootable USB with Ubuntu Server + Clonezilla
 
-- [ ] M910q Tiny received, inspected (thermal paste, RAM, SATA, PSU, BIOS)
-- [ ] Ubuntu Server 24.04 LTS installed (headless, no GUI)
-- [ ] Connected to network via Ethernet (mesh node — subnet `192.168.2.0/24`)
-- [ ] Laptop on the same network with SSH client available
+> Do this on your laptop **before** touching the server.
+
+- **Goal**: One 64 GB pendrive with both ISOs — Ubuntu Server for installation and Clonezilla/Rescuezilla for future system backups.
+- **Tool**: **YUMI** (exFAT/UEFI edition) — multiboot USB creator.
+
+**Steps**:
+
+1. Download **Ubuntu Server 24.04 LTS ISO** and **Rescuezilla ISO** (graphical Clonezilla).
+2. Run YUMI, select the pendrive, choose "Try Unlisted ISO" (or Rescuezilla from the list), and add the Rescuezilla ISO.
+3. Add the Ubuntu Server ISO to the same pendrive via YUMI.
+4. Eject the pendrive — it's ready.
+
+> **Alternative**: If YUMI causes boot issues, use **Rufus** to write a single ISO per pendrive instead.
+
+**Usage**: Boot from the pendrive → YUMI's menu lets you pick which ISO to launch — Rescuezilla for backup/restore or Ubuntu Server for installation.
+
+**Backup process** (when needed later): Boot into Rescuezilla → Backup → select source disk → all partitions → save image to an external 2.5" USB HDD.
+
+## Prerequisites
 
 ---
 
-## 1. Static IP Address
+## 1. Install Ubuntu Server — LAN Configuration
 
-Ubuntu Server's installer (Subiquity) can configure this during install. If already done, skip to step 2. If you need to change it post-install:
+> These steps happen **during** the Ubuntu Server 24.04 LTS installation (Subiquity installer).
 
-### 1.1 Find the network interface name
+### 1.1 Boot from USB
 
-```bash
-ip link
-```
+1. Insert the bootable USB and power on the server.
+2. Press **F12** (or `Fn + F12`) at startup to open the Boot Menu.
+3. Select the USB drive and choose **Ubuntu Server** from the YUMI menu.
 
-Look for the interface starting with `en` (e.g. `enp0s31f6`). Ignore `lo`.
+### 1.2 Configure static IP in the installer
 
-### 1.2 Edit Netplan config
+When the installer reaches the **Network connections** screen:
 
-```bash
-sudo nano /etc/netplan/00-installer-config.yaml
-```
+1. The interface (`enp0s31f6`) will show an auto-assigned DHCP IP (e.g. `192.168.2.47`).
+2. Select the interface and choose **Edit IPv4**.
+3. Change from **Automatic (DHCP)** to **Manual**.
+4. Enter the following values:
 
-Replace the contents with (adjust values to your network):
+   | Field | Value |
+   |---|---|
+   | **Subnet** | `192.168.2.0/24` |
+   | **Address** | `192.168.2.200` |
+   | **Gateway** | `192.168.2.1` |
+   | **Name servers** | `1.1.1.1, 8.8.8.8` |
+   | **Search domains** | (leave empty) |
 
-```yaml
-network:
-  version: 2
-  renderer: networkd
-  ethernets:
-    enp0s31f6:              # ← your interface name
-      dhcp4: no
-      addresses:
-        - 192.168.2.200/24  # ← desired static IP
-      routes:
-        - to: default
-          via: 192.168.2.1  # ← your gateway
-      nameservers:
-        addresses: [1.1.1.1, 8.8.8.8]
-```
+5. Select **Save** and proceed with the rest of the installation.
 
-> **YAML warning**: use spaces only, never tabs.
+### 1.3 Verify after installation
 
-### 1.3 Apply
-
-```bash
-sudo netplan try       # test — reverts on timeout if connectivity lost
-sudo netplan apply     # make permanent
-```
-
-### 1.4 Verify
+Once installed and rebooted, log in and confirm:
 
 ```bash
 ip addr show enp0s31f6
@@ -91,6 +92,26 @@ sudo ufw allow ssh
 ```
 
 > Do **not** enable UFW yet — do that after SSH key auth is set up (step 5).
+
+After enabling UFW later, verify with:
+
+```bash
+sudo ufw status verbose
+```
+
+Expected output:
+
+```
+Status: active
+Logging: on (low)
+Default: deny (incoming), allow (outgoing), disabled (routed)
+New profiles: skip
+
+To                         Action      From
+--                         ------      ----
+22/tcp                     ALLOW IN    Anywhere
+22/tcp (v6)                ALLOW IN    Anywhere (v6)
+```
 
 ---
 
@@ -139,7 +160,7 @@ Edit `~/.ssh/config` on your **laptop**:
 ```text
 Host homelab
     HostName 192.168.2.200
-    User admin
+    User jarek
     IdentityFile ~/.ssh/id_ed25519
 ```
 
@@ -156,7 +177,7 @@ Accept the default location (`~/.ssh/id_ed25519`).
 ### 5.3 Copy the public key to the server
 
 ```bash
-ssh-copy-id -i ~/.ssh/id_ed25519.pub admin@192.168.2.200
+ssh-copy-id -i ~/.ssh/id_ed25519.pub jarek@192.168.2.200
 ```
 
 Enter your server password when prompted.
@@ -164,7 +185,7 @@ Enter your server password when prompted.
 ### 5.4 Test key-based login
 
 ```bash
-ssh admin@192.168.2.200
+ssh jarek@192.168.2.200
 ```
 
 If it logs in **without asking for a password** (or only asks for the key passphrase), it worked.
@@ -195,11 +216,71 @@ sudo systemctl restart ssh
 
 ---
 
+## 6. Base OS Hardening
+
+### 6.1 Enable UFW
+
+```bash
+sudo ufw enable
+sudo ufw status verbose
+```
+
+Expected: `Status: active` and `22/tcp ALLOW IN` listed.
+
+### 6.2 Install & configure Fail2ban
+
+```bash
+sudo apt update && sudo apt install fail2ban -y
+sudo cp /etc/fail2ban/jail.conf /etc/fail2ban/jail.local
+```
+
+Edit the SSH jail config:
+
+```bash
+sudo nano /etc/fail2ban/jail.local
+```
+
+Find the `[sshd]` section and set:
+
+```ini
+[sshd]
+enabled = true
+port = ssh
+filter = sshd
+logpath = %(sshd_log)s
+maxretry = 3
+findtime = 10m
+bantime = 1h
+```
+
+Restart:
+
+```bash
+sudo systemctl restart fail2ban
+sudo systemctl status fail2ban
+```
+
+### 6.3 Configure unattended-upgrades
+
+```bash
+sudo apt install unattended-upgrades -y
+sudo dpkg-reconfigure --priority=low unattended-upgrades
+```
+
+Optionally enable auto-reboot for kernel updates in `/etc/apt/apt.conf.d/50unattended-upgrades`:
+
+```
+Unattended-Upgrade::Automatic-Reboot "true";
+Unattended-Upgrade::Automatic-Reboot-Time "04:00";
+```
+
+---
+
 ## Verification Checklist
 
 - [ ] Static IP is reachable: `ping 192.168.2.200`
-- [ ] SSH works with IP: `ssh admin@192.168.2.200`
-- [ ] SSH works with hostname (via Avahi or config): `ssh homelab` / `ssh admin@homelab.local`
+- [ ] SSH works with IP: `ssh jarek@192.168.2.200`
+- [ ] SSH works with hostname (via Avahi or config): `ssh homelab` / `ssh jarek@homelab.local`
 - [ ] Full disk space available: `df -h /` → ~232 GB
 - [ ] SSH key login works (no password prompt)
 
@@ -209,6 +290,5 @@ sudo systemctl restart ssh
 
 After this runbook is complete, proceed to:
 
-- **Base OS hardening**: UFW, fail2ban, unattended-upgrades
 - **Docker + Portainer CE** (see execution list in README)
 - **Hermes Agent install**
