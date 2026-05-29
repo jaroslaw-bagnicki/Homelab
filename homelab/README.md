@@ -80,3 +80,12 @@ Step-by-step guides in [`setup/`](setup/):
 | 2 | [Gemini chat 2](https://gemini.google.com/share/6ea05b934c81) | 03, 04, 05, 06, 07 |
 | 3 | [Gemini chat 3](https://gemini.google.com/share/24e2d3af7b59) | 08 |
 | 4 | [Gemini chat 4](https://gemini.google.com/share/3bec83a4906e) | 12 |
+
+---
+
+## Changelog
+
+| Date | What |
+|---|---|
+| 2026-05-29 | Initial setup complete — Ubuntu Server 24.04 |
+| 2026-05-29 | Docker Engine + Portainer CE deployed and running |

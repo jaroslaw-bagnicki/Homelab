@@ -120,12 +120,22 @@ Expected output: `portainer` container listed with status `Up` and port `9000`.
 
 1. SSH into the server: `ssh jarek@homelab.local`
 2. Access Portainer locally: `curl -s http://127.0.0.1:9000` should return HTML.
-3. To access from your laptop, create an SSH tunnel:
+3. To access Portainer's web UI from your laptop, create an **SSH tunnel** — this forwards a port on your laptop to the server, bypassing the localhost-only bind:
+
    ```powershell
-   ssh -L 9000:127.0.0.1:9000 homelab
+   ssh -L 9000:127.0.0.1:9000 jarek@homelab.local
    ```
-4. Open `http://localhost:9000` in your laptop's browser.
-5. Create an admin user (pick a strong password) and select **Get Started** → **Local** environment.
+
+   | Part | Meaning |
+   |---|---|
+   | `-L 9000` | Listen on your laptop's port 9000 |
+   | `127.0.0.1:9000` | Forward to the server's localhost port 9000 (where Portainer listens) |
+   | `jarek@homelab.local` | SSH user + mDNS hostname of the server |
+
+   > Keep this SSH session open — closing it kills the tunnel. Open a separate terminal for the tunnel and leave it running.
+
+4. With the tunnel active, open `http://localhost:9000` in your laptop's browser.
+5. Create an admin user (pick a strong password) and select **Get Started** → **Local** to manage the Docker socket.
 
 ---
 
