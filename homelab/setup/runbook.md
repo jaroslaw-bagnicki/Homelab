@@ -159,7 +159,7 @@ Edit `~/.ssh/config` on your **laptop**:
 
 ```text
 Host homelab
-    HostName 192.168.2.200
+    HostName homelab.local
     User jarek
     IdentityFile ~/.ssh/id_ed25519
 ```
@@ -176,16 +176,38 @@ Accept the default location (`~/.ssh/id_ed25519`).
 
 ### 5.3 Copy the public key to the server
 
+**Option A** — `ssh-copy-id` (Linux/macOS):
+
 ```bash
-ssh-copy-id -i ~/.ssh/id_ed25519.pub jarek@192.168.2.200
+ssh-copy-id -i ~/.ssh/id_ed25519.pub jarek@homelab.local
 ```
 
-Enter your server password when prompted.
+**Option B** — Manual (Windows 11 — `ssh-copy-id` is not available by default):
+
+1. Display the public key:
+   ```powershell
+   type $env:USERPROFILE\.ssh\id_ed25519.pub
+   ```
+   Select and copy the full output (starts with `ssh-ed25519`).
+
+2. SSH into the server with your password:
+   ```powershell
+   ssh jarek@homelab.local
+   ```
+|
+3. On the server, append the key to authorized keys:
+   ```bash
+   mkdir -p ~/.ssh && chmod 700 ~/.ssh
+   echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILPC7bboMwWtvq47ouyxv2YdqDvRJGsnm+KFwAqscbD5 lenovo-slim" >> ~/.ssh/authorized_keys
+   chmod 600 ~/.ssh/authorized_keys
+   ```
+
+4. Log out: `exit`
 
 ### 5.4 Test key-based login
 
 ```bash
-ssh jarek@192.168.2.200
+ssh jarek@homelab.local
 ```
 
 If it logs in **without asking for a password** (or only asks for the key passphrase), it worked.
@@ -280,7 +302,7 @@ Unattended-Upgrade::Automatic-Reboot-Time "04:00";
 
 - [ ] Static IP is reachable: `ping 192.168.2.200`
 - [ ] SSH works with IP: `ssh jarek@192.168.2.200`
-- [ ] SSH works with hostname (via Avahi or config): `ssh homelab` / `ssh jarek@homelab.local`
+- [ ] SSH works with hostname: `ssh jarek@homelab.local` or `ssh homelab`
 - [ ] Full disk space available: `df -h /` → ~232 GB
 - [ ] SSH key login works (no password prompt)
 
