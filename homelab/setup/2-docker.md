@@ -71,15 +71,16 @@ docker run hello-world
 
 Docker manipulates `iptables` directly, bypassing UFW rules. A container publishing a port (e.g. `-p 8080:80`) will be reachable from the LAN even if UFW blocks that port.
 
-**Mitigations** (pick one):
+**Strategy for this homelab**: bind every container to **localhost only** (`-p 127.0.0.1:...`) and expose them through a single **Caddy reverse proxy** container that binds to ports 80/443 on all interfaces. This keeps UFW effective and gives a single entry point with automatic TLS.
 
-| Approach | How |
+Caddy config is documented in [research/11-local-dns-caddy.md](../research/11-local-dns-caddy.md) and will be set up after Portainer.
+
+**Other options** (not used here):
+
+| Approach | Verdict |
 |---|---|
-| **Bind to localhost** | `-p 127.0.0.1:8080:80` — then reverse-proxy through a container that's exposed deliberately |
-| **ufw-docker** | Third-party script that integrates UFW with Docker rules |
-| **Cloudflare Tunnel** | Expose only through tunnel; no open ports at all |
-
-For this homelab, **binding to localhost + reverse proxy** is the recommended pattern.
+| **ufw-docker** | Not needed — Caddy approach is cleaner |
+| **Cloudflare Tunnel** | Will be evaluated later for public access |
 
 ---
 
