@@ -21,15 +21,12 @@ cd /opt/docker && nano Caddyfile
 ```
 
 ```Caddyfile
-# Global settings for local TLS
-{ local_certs }
+{
+    local_certs
+}
 
 portainer.home {
-    reverse_proxy https://portainer:9443 {
-        transport http {
-            tls_insecure_skip_verify
-        }
-    }
+    reverse_proxy portainer:9000
 }
 ```
 
@@ -46,7 +43,7 @@ Append under `services:`:
 ```yaml
   caddy:
     image: caddy:2-alpine
-    container_name: caddy_proxy
+    container_name: caddy
     restart: always
     ports:
       - "80:80"
@@ -85,10 +82,10 @@ cd /opt/docker && docker compose up -d
 ### Verify
 
 ```bash
-docker ps --filter name=caddy_proxy
+docker ps --filter name=caddy
 ```
 
-Expected: container `caddy_proxy` with status `Up`.
+Expected: container `caddy` with status `Up`.
 
 ---
 
@@ -109,14 +106,14 @@ hermes.home {
 Then reload Caddy:
 
 ```bash
-docker exec caddy_proxy caddy reload
+docker exec caddy caddy reload
 ```
 
 ---
 
 ## 5. Verification Checklist
 
-- [ ] Caddy container running: `docker ps --filter name=caddy_proxy`
+- [ ] Caddy container running: `docker ps --filter name=caddy`
 - [ ] Caddy serves port 80: `curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1` → should not be 000
 - [ ] Portainer reachable via domain: `curl -sI http://portainer.home` (from a device using DNSMasq)
 - [ ] TLS cert issued: `curl -sI https://portainer.home` should show HTTPS

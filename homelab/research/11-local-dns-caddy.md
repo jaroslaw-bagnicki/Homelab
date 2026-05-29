@@ -70,7 +70,7 @@ Caddy was selected over Nginx Proxy Manager and Traefik because:
 services:
   caddy:
     image: caddy:2-alpine
-    container_name: caddy_proxy
+    container_name: caddy
     restart: always
     ports:
       - "80:80"
@@ -85,19 +85,16 @@ services:
 ```
 
 ```Caddyfile
-# Global settings for local TLS
-{ local_certs }
+{
+    local_certs
+}
 
 gitea.home {
     reverse_proxy gitea:3000
 }
 
 portainer.home {
-    reverse_proxy https://portainer:9443 {
-        transport http {
-            tls_insecure_skip_verify
-        }
-    }
+    reverse_proxy portainer:9000
 }
 
 hermes.home {

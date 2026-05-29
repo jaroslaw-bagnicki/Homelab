@@ -65,6 +65,8 @@ services:
       - ./dnsmasq.conf:/etc/dnsmasq.conf
     cap_add:
       - NET_ADMIN
+    networks:
+      - homelab_net
 
 networks:
   homelab_net:
@@ -73,32 +75,36 @@ networks:
 
 ---
 
-## 2. Handle Port 53 Conflict
+## 2. Pull the Image
 
-Ubuntu's `systemd-resolved` listens on port 53 by default. DNSMasq can't bind until this is freed.
+Pull the image **before** stopping `systemd-resolved` (while DNS still works):
 
-### Option A — Stop systemd-resolved (simpler)
+```bash
+cd /opt/docker && docker pull 4km3/dnsmasq:latest
+```
+
+---
+
+## 3. Handle Port 53 Conflict & Start DNSMasq
+
+Ubuntu's `systemd-resolved` listens on port 53 by default. DNSMasq can't bind until it's freed.
+
+### 3.1 Stop systemd-resolved
 
 ```bash
 sudo systemctl stop systemd-resolved
 sudo systemctl disable systemd-resolved
 ```
 
-> This removes local DNS resolution until DNSMasq is running. The server itself will use DNSMasq after step 4.
+> The server won't have DNS until DNSMasq starts and is configured in Netplan (step 4).
 
-### Option B — Let DNSMasq bind to the container IP only
-
-If you prefer keeping `systemd-resolved`, add `network_mode: host` is not clean. Stick with Option A for a homelab.
-
----
-
-## 3. Start DNSMasq
+### 3.2 Start DNSMasq
 
 ```bash
 docker compose up -d
 ```
 
-### Verify it's running
+### 3.3 Verify it's running
 
 ```bash
 docker ps --filter name=dns
@@ -106,50 +112,17 @@ docker ps --filter name=dns
 
 Expected: container `dns` with status `Up`.
 
-### Test local resolution from the server
+### 3.4 Test local resolution
 
 ```bash
-nslookup portainer.home.lan 127.0.0.1
+nslookup portainer.home 127.0.0.1
 ```
 
 Expected: returns `192.168.2.200`.
 
 ---
 
-## 4. Configure Server to Use DNSMasq
-
-The server needs to point its DNS to itself so containers and system services resolve `.home`.
-
-### 4.1 Edit Netplan config
-
-```bash
-sudo nano /etc/netplan/00-installer-config.yaml
-```
-
-Find the `nameservers` section and add `127.0.0.1` as the first DNS:
-
-```yaml
-      nameservers:
-        addresses: [127.0.0.1, 1.1.1.1, 8.8.8.8]
-```
-
-### 4.2 Apply
-
-```bash
-sudo netplan apply
-```
-
-### 4.3 Test
-
-```bash
-ping -c 1 portainer.home.lan
-```
-
-Expected: replies from `192.168.2.200`.
-
----
-
-## 5. Configure Router DHCP DNS (Recommended)
+## 4. Configure Router DHCP DNS (Recommended)
 
 Set the Tenda router to hand out `192.168.2.200` as the default DNS to all devices.
 
@@ -164,7 +137,7 @@ Existing devices will pick up the new DNS when they renew their lease (reconnect
 ### Verify
 
 ```powershell
-nslookup portainer.home.lan
+nslookup portainer.home
 ```
 
 Expected: returns `192.168.2.200`.
@@ -173,7 +146,7 @@ Expected: returns `192.168.2.200`.
 
 ---
 
-## 6. Verification Checklist
+## 5. Verification Checklist
 
 - [ ] DNSMasq container running: `docker ps --filter name=dns`
 - [ ] Local resolution works: `nslookup portainer.home 127.0.0.1` → `192.168.2.200`
