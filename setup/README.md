@@ -10,3 +10,4 @@ Step-by-step guides for configuring the homelab server.
 | 4 | [4-caddy.md](4-caddy.md) | Caddy reverse proxy with TLS |
 | 5 | [5-cloudflare-tunnel.md](5-cloudflare-tunnel.md) | Cloudflare Tunnel for public HTTPS access |
 | 6 | [6-azure-arc.md](6-azure-arc.md) | Azure Arc hybrid server enrollment |
+| 7 | [7-azure-monitor.md](7-azure-monitor.md) | Azure Monitor metrics and log collection |
