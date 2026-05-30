@@ -4,16 +4,18 @@
 
 ## Prerequisites
 
-- [ ] Docker Engine installed (see [2-docker.md](2-docker.md))
-- [ ] Caddy reverse proxy running (see [4-caddy.md](4-caddy.md))
+- [ ] Docker Engine + Docker Compose installed (see [2-docker.md](2-docker.md))
+- [ ] Services (dnsmasq, Caddy) deployed in a shared `docker-compose.yml` under `/opt/docker/` (see [3-dns.md](3-dns.md), [4-caddy.md](4-caddy.md))
 - [ ] SSH access via `ssh jarek@homelab.local`
-- [ ] A domain name registered and using Cloudflare nameservers
+- [ ] A domain name delegated to Cloudflare DNS
 
 ---
 
 ## 1. Connect Your Domain to Cloudflare DNS
 
-The tunnel requires Cloudflare DNS to route traffic. If you already have a domain registered elsewhere (OVH, Namecheap, GoDaddy, etc.), you don't need to transfer it — just delegate DNS to Cloudflare.
+The tunnel requires Cloudflare DNS to route traffic. If you already have a domain registered elsewhere, you don't need to transfer it — just delegate DNS to Cloudflare.
+
+> **Actual setup**: domain `example.com` registered at a registrar, delegated to Cloudflare nameservers.
 
 ### 1.1 Add your domain to Cloudflare
 
@@ -31,13 +33,13 @@ elsa.ns.cloudflare.com
 remy.ns.cloudflare.com
 ```
 
-Log into your current registrar's control panel, find the **DNS servers** / **Nameservers** section for your domain, and:
+Log into your current registrar's control panel, find the **DNS servers** / **Nameservers** section, and:
 
 1. Replace the existing nameservers with the two Cloudflare ones
 2. Remove any old nameservers
 3. Save
 
-> Propagation can take a few hours depending on the TTL of your old NS records. Cloudflare's own DNS will respond immediately, but other resolvers may still serve cached entries.
+> Propagation can take a few hours depending on the TTL of your old NS records. Cloudflare's own DNS responds immediately, but other resolvers may serve cached entries until TTL expires. Verify with `Resolve-DnsName -Name example.com -Type NS -Server 1.1.1.1`.
 
 ---
 
@@ -85,10 +87,10 @@ TUNNEL_TOKEN=eyJ...  # paste your token here
 ### 3.3 Add cloudflared to `docker-compose.yml`
 
 ```bash
-nano docker-compose.yml
+nano /opt/docker/docker-compose.yml
 ```
 
-Append under `services:`:
+Add the `cloudflared` service under `services:`:
 
 ```yaml
   cloudflared:
@@ -102,7 +104,9 @@ Append under `services:`:
       - homelab_net
 ```
 
-> No `ports:` section needed — this container makes a single **outbound** connection to Cloudflare's edge. No firewall changes required.
+> No `ports:` section needed — the container makes a single **outbound** QUIC connection to Cloudflare's edge. No UFW allow-in rules required.
+
+If you have other services (like Portainer) that were started as standalone containers, add them to `docker-compose.yml` as well so they join the `homelab_net` network and are reachable by container name from the tunnel.
 
 ### 3.4 Start the tunnel
 
@@ -132,7 +136,7 @@ In the Cloudflare Zero Trust portal:
    | Field | Example value | Notes |
    |---|---|---|
    | **Subdomain** | `portainer` | The subdomain you want to use |
-   | **Domain** | `yourdomain.pl` | Your registered domain |
+   | **Domain** | `example.com` | Your registered domain |
    | **Path** | (leave empty) | Leave empty for root access |
    | **Type** | `HTTP` | Always HTTP — Cloudflare edge handles HTTPS |
    | **URL** | `portainer:9000` | Docker container name + internal port |
@@ -143,8 +147,9 @@ Repeat for each service you want to expose. Use the Docker container name as the
 
 | Service | Subdomain | URL |
 |---|---|---|
-| Portainer | `portainer.yourdomain.pl` | `portainer:9000` |
-| Caddy (all services) | `*.yourdomain.pl` | `caddy:80` |
+| Portainer | `portainer.example.com` | `portainer:9000` |
+
+> **Note**: The target container must be on the `homelab_net` network. If it was originally started standalone (e.g. `docker run`), either connect it with `docker network connect homelab_net <container>` or move it into `docker-compose.yml`.
 
 ---
 
@@ -159,7 +164,7 @@ In the Cloudflare Zero Trust portal → **Tunnels** → **Public Hostname** → 
 | Field | Value |
 |---|---|
 | **Subdomain** | `*` |
-| **Domain** | `yourdomain.pl` |
+| **Domain** | `example.com` |
 | **Type** | `HTTP` |
 | **URL** | `caddy:80` |
 
@@ -172,11 +177,11 @@ cd /opt/docker && nano Caddyfile
 ```
 
 ```Caddyfile
-portainer.yourdomain.pl {
+portainer.example.com {
     reverse_proxy portainer:9000
 }
 
-hermes.yourdomain.pl {
+hermes.example.com {
     reverse_proxy hermes_agent:8080
 }
 ```
@@ -189,7 +194,7 @@ docker exec caddy caddy reload
 
 > Caddy will attempt to fetch real TLS certificates from Let's Encrypt / ZeroSSL for your public domain. If you see an error like `HTTP challenge rejected`, make sure port 80 is reachable from the internet (it won't be behind CGNAT without a tunnel). With the wildcard tunnel, Cloudflare terminates TLS at its edge, so Caddy receives plain HTTP — use `tls internal` to skip external certificate challenges if needed.
 
-**Alternative for non-Caddy services** (e.g. if you prefer a dedicated reverse proxy UI): deploy **Nginx Proxy Manager** (`jc21/nginx-proxy-manager`) instead of Caddy for the public domain, and keep Caddy for the local `*.home` domain.
+**Alternative**: if you prefer a dedicated reverse proxy UI, deploy **Nginx Proxy Manager** (`jc21/nginx-proxy-manager`) instead of Caddy for the public domain, and keep Caddy for local `*.home`.
 
 ---
 
@@ -199,14 +204,14 @@ Protect sensitive panels (Portainer, Hermes, etc.) with Cloudflare's Zero Trust 
 
 1. In the Zero Trust portal, go to **Access** → **Applications** → **Add an application**.
 2. Choose **Self-hosted**.
-3. Set **Application domain** to e.g. `portainer.yourdomain.pl`.
+3. Set **Application domain** to e.g. `portainer.example.com`.
 4. Configure a policy:
    - **Policy name**: `My email`
    - **Action**: `Allow`
    - **Rule**: `Emails ending in` → `your-email@example.com`
 5. Click **Add application**.
 
-Now anyone visiting `portainer.yourdomain.pl` will be prompted to authenticate (via email code, Google, GitHub, etc.) before Cloudflare forwards the request to your server. Free tier supports up to 50 users.
+Now anyone visiting `portainer.example.com` will be prompted to authenticate (via email code, Google, GitHub, etc.) before Cloudflare forwards the request to your server. Free tier supports up to 50 users.
 
 ---
 
@@ -214,9 +219,9 @@ Now anyone visiting `portainer.yourdomain.pl` will be prompted to authenticate (
 
 - [ ] Cloudflare Tunnel container running: `docker ps --filter name=cloudflare-tunnel`
 - [ ] Tunnel shows **Healthy** in Cloudflare Zero Trust portal
-- [ ] `https://portainer.yourdomain.pl` loads the Portainer login page in a browser
-- [ ] SSL certificate is valid (auto-provisioned by Cloudflare — green lock in browser)
-- [ ] If using wildcard + Caddy: `https://hermes.yourdomain.pl` also resolves correctly
+- [ ] `https://portainer.example.com` loads the Portainer login page with a valid SSL certificate (green lock)
+- [ ] All compose services are running: `cd /opt/docker && docker compose ps`
+- [ ] If using wildcard + Caddy: `https://hermes.example.com` also resolves correctly
 - [ ] If using Cloudflare Access: auth prompt appears before the service loads
 
 ---
