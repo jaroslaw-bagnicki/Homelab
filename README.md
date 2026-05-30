@@ -27,14 +27,12 @@ A home lab server built on a second-hand mini PC, running Ubuntu Server as the b
 | 2026‑05‑29 | Docker | ⭐⭐ | Engine + Portainer CE |
 | 2026‑05‑29 | DNSMasq | ⭐ | `*.home` resolution |
 | 2026‑05‑29 | Caddy | ⭐ | Reverse proxy with auto-TLS |
-| 2026‑05‑30 | Cloudflare Tunnel | ⭐⭐ | Remote HTTPS access via `portainer.cloud5.ovh` |
+| 2026‑05‑30 | Cloudflare Tunnel | ⭐⭐ | Remote HTTPS access via custom domain |
 | 2026‑05‑30 | Azure Arc | ⭐⭐ | Hybrid server enrollment, cert-based auth |
 
 ---
 
 ## What's Next
-
-Ordered by dependency and effort. See [setup/README.md](homelab/setup/README.md) for runbooks.
 
 | # | Workload | Effort | Notes |
 |---|---|---|---|
