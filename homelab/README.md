@@ -71,12 +71,12 @@ Ordered by dependency and effort. Runbooks in [`setup/`](setup/):
 
 | # | Workload | Effort | Notes |
 |---|---|---|---|
-| 5 | **Cloudflare Tunnel** | ⭐ Small | Remote HTTPS access, needed before monitoring |
-| 6 | **Azure Arc** | ⭐ Small | Register in Azure while it's fresh |
-| 7 | **Monitoring** (Netdata/cAdvisor) | ⭐⭐ Medium | Visibility before adding complex workloads |
-| 8 | **Backup strategy** (Restic) | ⭐⭐ Medium | Protect everything before Hermes Agent |
-| 9 | **Hermes Agent** | ⭐⭐⭐ Large | Most complex — last |
-| 10 | **Ollama + Bielik** (Phase 2) | ⭐⭐⭐ Large | Needs dedicated LLM server hardware |
+| 5 | **Cloudflare Tunnel** | ⭐ | Remote HTTPS access, needed before monitoring |
+| 6 | **Azure Arc** | ⭐ | Register in Azure while it's fresh |
+| 7 | **Monitoring** (ELK/Prometheus/Seq) | ⭐⭐⭐ | Needs research — explore options first |
+| 8 | **Backup strategy** (Restic) | ⭐⭐ | Protect everything before Hermes Agent |
+| 9 | **Hermes Agent** | ⭐⭐⭐ | Most complex — last |
+| 10 | **Ollama + Bielik** (Phase 2) | ⭐⭐⭐ | Needs dedicated LLM server hardware |
 
 ---
 
