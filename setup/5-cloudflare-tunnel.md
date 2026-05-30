@@ -11,13 +11,33 @@
 
 ---
 
-## 1. Register a Domain with Cloudflare DNS
+## 1. Connect Your Domain to Cloudflare DNS
 
-If you don't already have a domain, register one at [Cloudflare Registrar](https://www.cloudflare.com/products/registrar/).
+The tunnel requires Cloudflare DNS to route traffic. If you already have a domain registered elsewhere (OVH, Namecheap, GoDaddy, etc.), you don't need to transfer it — just delegate DNS to Cloudflare.
 
-> Typical cost: ~10–15 PLN/year for a `.pl` domain. Cloudflare sells domains at cost — no markup.
+### 1.1 Add your domain to Cloudflare
 
-**If your domain is already registered elsewhere**, transfer it to Cloudflare or at least delegate the DNS to Cloudflare's nameservers. The tunnel needs Cloudflare DNS to route traffic.
+1. Go to the [Cloudflare Dashboard](https://dash.cloudflare.com/).
+2. Click **Add a site** and enter your domain name.
+3. Select the **Free** plan.
+4. Cloudflare will scan existing DNS records — review them and confirm.
+
+### 1.2 Replace nameservers at your registrar
+
+Cloudflare will display two nameservers, e.g.:
+
+```
+elsa.ns.cloudflare.com
+remy.ns.cloudflare.com
+```
+
+Log into your current registrar's control panel, find the **DNS servers** / **Nameservers** section for your domain, and:
+
+1. Replace the existing nameservers with the two Cloudflare ones
+2. Remove any old nameservers
+3. Save
+
+> Propagation can take a few hours depending on the TTL of your old NS records. Cloudflare's own DNS will respond immediately, but other resolvers may still serve cached entries.
 
 ---
 
