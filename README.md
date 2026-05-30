@@ -34,17 +34,18 @@ Ordered by dependency and effort. See [setup/README.md](homelab/setup/README.md)
 
 ## What's Done
 
-| Date | Workload | Effort | Notes | Link |
-|---|---|---|---|---|
-| 2026-05-20 | Research | ⭐⭐⭐ | Hardware, LLM, OS decisions | [homelab/research/](homelab/research/) |
-| 2026-05-24 | Purchase | ⭐ | M910q ordered on Allegro | — |
-| 2026-05-29 | Base setup | ⭐⭐ | Ubuntu, static IP, SSH, LVM, mDNS, hardening | [homelab/setup/1-init.md](homelab/setup/1-init.md) |
-| 2026-05-29 | Docker | ⭐⭐ | Engine + Portainer CE | [homelab/setup/2-docker.md](homelab/setup/2-docker.md) |
-| 2026-05-29 | DNSMasq | ⭐ | `*.home` resolution | [homelab/setup/3-dns.md](homelab/setup/3-dns.md) |
-| 2026-05-29 | Caddy | ⭐ | Reverse proxy with auto-TLS | [homelab/setup/4-caddy.md](homelab/setup/4-caddy.md) |
+| Date | Workload | Effort | Notes |
+|---|---|---|---|
+| 2026‑05‑20 | Research | ⭐⭐⭐ | Hardware, LLM, OS decisions |
+| 2026‑05‑24 | Purchase | ⭐ | M910q ordered on Allegro |
+| 2026‑05‑29 | Base setup | ⭐⭐ | Ubuntu, static IP, SSH, LVM, mDNS, hardening |
+| 2026‑05‑29 | Docker | ⭐⭐ | Engine + Portainer CE |
+| 2026‑05‑29 | DNSMasq | ⭐ | `*.home` resolution |
+| 2026‑05‑29 | Caddy | ⭐ | Reverse proxy with auto-TLS |
 
 ---
 
-## Setup Runbooks
+## Links
 
-See [homelab/setup/README.md](homelab/setup/README.md) for the full runbook index.
+- [Research index](research/README.md)
+- [Setup runbooks](setup/README.md)

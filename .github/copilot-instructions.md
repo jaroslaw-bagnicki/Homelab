@@ -1,8 +1,8 @@
-# lab — Copilot Instructions
+# Homelab — Copilot Instructions
 
 ## Project Overview
 
-**lab** is a personal hub for small, independent mini-projects. Each sub-folder is a self-contained project — research notes, experiments, configs, or small tools. Projects are added organically as new topics emerge.
+**Homelab** is a personal hub for small, independent mini-projects. Each sub-folder is a self-contained project — research notes, experiments, configs, or small tools. Projects are added organically as new topics emerge.
 
 | Folder | Description |
 |---|---|
@@ -12,18 +12,19 @@
 
 - Research docs: `homelab/research/` — numbered Markdown files (`01-*.md`, `02-*.md`, …)
 - Each area has a `README.md` as the index
-- For research output structure, use the `research-output` skill
+- For research output structure, use the `research-output` skill — see `.github/skills/research-output/SKILL.md` for the required structure
 
 ## Issue Tracking
 
-- **Task tracking**: GitHub Issues (`https://github.com/jaroslaw-bagnicki/lab/issues`)
+- **Task tracking**: GitHub Issues (`https://github.com/jaroslaw-bagnicki/Homelab/issues`)
 - **When creating an issue**: use a clear title, add relevant labels, and include a brief **Why / What** description
 - **Reference issues in commits**: use `#NNN` in commit messages to link them automatically — use `Closes #NNN` to auto-close on merge commit
 
 ## Git Workflow
 
-- **GitHub repository**: `https://github.com/jaroslaw-bagnicki/lab` (owner: `jaroslaw-bagnicki`, repo: `lab`)
+- **GitHub repository**: `https://github.com/jaroslaw-bagnicki/Homelab` (owner: `jaroslaw-bagnicki`, repo: `Homelab`)
 - **Always use GitHub MCP tools** for GitHub operations — never GitKraken MCP tools for GitHub
+- **If a GitHub MCP tool call fails**, report the error to the user and do not attempt the operation via any other tool or CLI
 - **Always commit directly to `main`** — no feature branches, no PRs
 - **Commit message format**: `(type) description` with parentheses. Common types: `docs`, `feat`, `fix`, `chore`, `refactor`
 - **Never rebase** unless explicitly asked
@@ -40,12 +41,13 @@
 - **Command-line Azure access**: Always use **Azure PowerShell** (`Az` module) — never Azure CLI (`az`)
 - Use `Az` PowerShell cmdlets (e.g., `Get-AzResourceGroup`, `New-AzResourceGroup`) in any generated scripts or commands
 - **Bicep validation**: Use the `mcp_bicep_get_bicep_file_diagnostics` MCP tool to validate Bicep files — never `az bicep build`
+- **If validation returns errors**, fix all reported issues and re-validate before committing the file
 
 ## Code Guidelines
 
 ### Bicep
 
-- **Always use the latest API version** for every resource type — look it up via the provider catalog before writing any new resource declaration
+- **Always use the latest stable (non-preview) API version** for every resource type — look it up via the provider catalog before writing any new resource declaration
 - **No `@description` decorators** — use self-explanatory param names instead
 - **Collocate resources by lifecycle** — group resources that are created/deleted together in the same module, not by resource type
 - Use `parent:` property for child resources, never `/` in the `name`
