@@ -82,11 +82,11 @@ Ordered by dependency and effort. Runbooks in [`setup/`](setup/):
 
 ## What's Done
 
-| Date | Workload | Effort | Notes |
-|---|---|---|---|
-| 2026-05-20 | Research | ⭐⭐⭐ | Hardware shortlist, LLM requirements, OS decision |
-| 2026-05-24 | Purchase | ⭐ | M910q ordered on Allegro |
-| 2026-05-29 | Base setup | ⭐⭐ | Ubuntu, static IP, SSH, LVM, mDNS, hardening |
-| 2026-05-29 | Docker | ⭐⭐ | Engine + Portainer CE |
-| 2026-05-29 | DNSMasq | ⭐ | `*.home` resolution |
-| 2026-05-29 | Caddy | ⭐ | Reverse proxy with auto-TLS |
+| Date | Workload | Effort | Notes | Link |
+|---|---|---|---|---|
+| 2026-05-20 | Research | ⭐⭐⭐ | Hardware, LLM, OS decisions | [research/](research/) |
+| 2026-05-24 | Purchase | ⭐ | M910q ordered on Allegro | — |
+| 2026-05-29 | Base setup | ⭐⭐ | Ubuntu, static IP, SSH, LVM, mDNS, hardening | [1-init.md](setup/1-init.md) |
+| 2026-05-29 | Docker | ⭐⭐ | Engine + Portainer CE | [2-docker.md](setup/2-docker.md) |
+| 2026-05-29 | DNSMasq | ⭐ | `*.home` resolution | [3-dns.md](setup/3-dns.md) |
+| 2026-05-29 | Caddy | ⭐ | Reverse proxy with auto-TLS | [4-caddy.md](setup/4-caddy.md) |
