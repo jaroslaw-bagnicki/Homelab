@@ -60,18 +60,30 @@ Copy the public certificate to your laptop so Azure PowerShell can upload it:
 scp jarek@homelab.local:~/homelab-arc-agent.crt .
 ```
 
-### 2.2 Create the service principal with the certificate
+### 2.2 Assign both required roles
 
-Run this from your laptop with Azure PowerShell connected:
+The Portal requires **Azure Connected Machine Onboarding** (to register) *and* **Virtual Machine Contributor** (to manage):
 
 ```powershell
-# Create the service principal
-$sp = New-AzADServicePrincipal `
-  -DisplayName "homelab-arc-agent" `
-  -Role "Virtual Machine Contributor" `
+$sp = Get-AzADServicePrincipal -DisplayName "homelab-arc-agent"
+
+New-AzRoleAssignment -ServicePrincipalName $sp.AppId `
+  -RoleDefinitionName "Virtual Machine Contributor" `
   -Scope "/subscriptions/a8a36bc1-79a7-49fe-9faa-92220103c66f/resourceGroups/homelab-rg"
 
-# Read the cert and upload to the App Registration (not the SP)
+New-AzRoleAssignment -ServicePrincipalName $sp.AppId `
+  -RoleDefinitionName "Azure Connected Machine Onboarding" `
+  -Scope "/subscriptions/a8a36bc1-79a7-49fe-9faa-92220103c66f/resourceGroups/homelab-rg"
+```
+
+> The Portal checks for the Onboarding role when generating the script. Without it, you'll get \"We couldn't find a service principal with the 'Azure Connected Machine Onboarding' role assigned.\"
+
+### 2.3 Upload the certificate to the App Registration
+
+The Arc agent reads the certificate from the **App Registration** (application object), not the service principal:
+
+```powershell
+$sp = Get-AzADServicePrincipal -DisplayName "homelab-arc-agent"
 $certFile = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new("homelab-arc-agent.crt")
 $certValue = [System.Convert]::ToBase64String(
   [System.IO.File]::ReadAllBytes("homelab-arc-agent.crt")
@@ -86,9 +98,7 @@ New-AzADAppCredential `
 Write-Host "App ID: $($sp.AppId)"
 ```
 
-> **Why `New-AzADAppCredential` and not `New-AzADServicePrincipalCredential`?** The Azure Arc enrollment script reads the certificate from the **App Registration** (the application object), not from the service principal. Uploading to the SP alone will not work — the cert won't appear under **App Registrations** → **Certificates & secrets** in the Azure Portal.
-
-Save the **App ID** — you'll need it in the enrollment script.
+> Use `-ApplicationId` (not `-ObjectId`) and `.ToUniversalTime()` — the cmdlet rejects local-timezone dates with \"Key credential end date is invalid\".
 
 ---
 
@@ -97,27 +107,70 @@ Save the **App ID** — you'll need it in the enrollment script.
 In the Azure Portal:
 
 1. Go to **Azure Arc** → **Servers** → **Add** → **Add a single server**.
-2. Select **Linux** as the target platform.
-3. Choose the resource group (`homelab-rg`).
-4. For the authentication method, select **Service Principal**.
-5. Enter the service principal's Application ID and secret from step 2.
-6. Click **Download script** — it saves as `install_linux_azcmagent.sh` (or similar).
+2. Select **Linux** → choose `homelab-rg`.
+3. For authentication, select **Service Principal** and pick `homelab-arc-agent`.
+4. Download the script (saves as `OnboardingScript.sh`).
 
-Copy the script to the server:
+The Portal script uses `--service-principal-secret`, but we're using **certificate auth**. So only use it for the installer download, then connect manually. Copy it to the server:
 
 ```bash
-scp install_linux_azcmagent.sh jarek@homelab.local:~/
+scp OnboardingScript.sh jarek@homelab.local:~/
 ```
 
 ---
 
-## 4. Run the Enrollment Script
+## 4. Install the Agent and Connect
 
-SSH into the server and run:
+### 4.1 Install the Azure Connected Machine Agent
+
+Run the Portal script — it downloads and installs the agent:
 
 ```bash
 ssh jarek@homelab.local
-sudo bash ~/install_linux_azcmagent.sh
+sudo bash ~/OnboardingScript.sh
+```
+
+If it fails with *"unsupported Linux distribution: Ubuntu 26.04"*, install from Microsoft's repo manually:
+
+```bash
+wget -q https://packages.microsoft.com/config/ubuntu/22.04/packages-microsoft-prod.deb -O /tmp/packages-microsoft-prod.deb
+sudo dpkg -i /tmp/packages-microsoft-prod.deb
+sudo apt-get update
+sudo apt-get install -y azcmagent
+```
+
+Verify:
+
+```bash
+azcmagent version
+```
+
+### 4.2 Combine cert with private key
+
+The `--service-principal-cert` parameter needs both certificate and private key in one file:
+
+```bash
+cat ~/homelab-arc-agent.crt ~/homelab-arc-agent.key > ~/homelab-arc-agent.pem
+```
+
+### 4.3 Connect to Azure Arc
+
+```bash
+sudo azcmagent connect \
+  --service-principal-id 525b1595-071d-469f-a2c6-0680cda35b4b \
+  --service-principal-cert /home/jarek/homelab-arc-agent.pem \
+  --resource-group homelab-rg \
+  --tenant-id b48c71d0-46cf-4171-ad02-1ed785ba425d \
+  --location polandcentral \
+  --subscription-id a8a36bc1-79a7-49fe-9faa-92220103c66f
+```
+
+> Use the **full path** (`/home/jarek/...`) — `sudo` does not expand `~/`.
+
+### 4.4 Verify
+
+```bash
+sudo azcmagent show
 ```
 
 The script will:
