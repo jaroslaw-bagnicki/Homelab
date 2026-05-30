@@ -28,7 +28,8 @@ Ordered by dependency and effort. See [setup/README.md](homelab/setup/README.md)
 | 7 | **Monitoring** (ELK/Prometheus/Seq) | ⭐⭐⭐ | Needs research — explore options first |
 | 8 | **Backup strategy** (Restic) | ⭐⭐ | Protect everything before Hermes Agent |
 | 9 | **Hermes Agent** | ⭐⭐⭐ | Most complex — last |
-| 10 | **Ollama + Bielik** (Phase 2) | ⭐⭐⭐ | Needs dedicated LLM server hardware |
+| 10 | **Gitea** | ⭐ | Self-hosted Git with web UI for personal repos |
+| 11 | **Ollama + Bielik** (Phase 2) | ⭐⭐⭐ | Needs dedicated LLM server hardware |
 
 ---
 
