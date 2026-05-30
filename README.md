@@ -23,8 +23,7 @@ Ordered by dependency and effort. See [setup/README.md](homelab/setup/README.md)
 
 | # | Workload | Effort | Notes |
 |---|---|---|---|
-| 5 | **Cloudflare Tunnel** | ⭐ | Remote HTTPS access, needed before monitoring |
-| 6 | **Azure Arc** | ⭐ | Register in Azure while it's fresh |
+| 5 | **Azure Arc** | ⭐ | Register in Azure while it's fresh |
 | 7 | **Monitoring** (ELK/Prometheus/Seq) | ⭐⭐⭐ | Needs research — explore options first |
 | 8 | **Backup strategy** (Restic) | ⭐⭐ | Protect everything before Hermes Agent |
 | 9 | **Hermes Agent** | ⭐⭐⭐ | Most complex — last |
@@ -43,6 +42,7 @@ Ordered by dependency and effort. See [setup/README.md](homelab/setup/README.md)
 | 2026‑05‑29 | Docker | ⭐⭐ | Engine + Portainer CE |
 | 2026‑05‑29 | DNSMasq | ⭐ | `*.home` resolution |
 | 2026‑05‑29 | Caddy | ⭐ | Reverse proxy with auto-TLS |
+| 2026‑05‑30 | Cloudflare Tunnel | ⭐ | Remote HTTPS access via `portainer.cloud5.ovh` |
 
 ---
 

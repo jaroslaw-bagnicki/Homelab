@@ -9,3 +9,4 @@ Step-by-step guides for configuring the homelab server.
 | 3 | [3-dns.md](3-dns.md) | Local DNS (DNSMasq) |
 | 4 | [4-caddy.md](4-caddy.md) | Caddy reverse proxy with TLS |
 | 5 | [5-cloudflare-tunnel.md](5-cloudflare-tunnel.md) | Cloudflare Tunnel for public HTTPS access |
+| 6 | [6-azure-arc.md](6-azure-arc.md) | Azure Arc hybrid server enrollment |
