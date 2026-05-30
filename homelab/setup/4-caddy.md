@@ -111,12 +111,46 @@ docker exec caddy caddy reload
 
 ---
 
-## 5. Verification Checklist
+## 5. Trust Caddy's Root CA on Your Laptop
+
+Caddy's internal CA issues certificates valid for 7 days (auto-renewed). To avoid security warnings, install the root CA in your system's trust store.
+
+### 5.1 Fetch the root certificate
+
+```bash
+ssh jarek@homelab.local "docker exec caddy cat /data/caddy/pki/authorities/local/root.crt" > caddy-root.crt
+```
+
+### 5.2 Install on Windows
+
+**Option A — PowerShell (Run as Administrator):**
+
+```powershell
+Import-Certificate -FilePath .\caddy-root.crt -CertStoreLocation Cert:\LocalMachine\Root
+```
+
+**Option B — GUI:**
+
+1. Press **Win+R**, type `certlm.msc`, press Enter.
+2. Expand **Trusted Root Certification Authorities** → **Certificates**.
+3. Right-click → **All Tasks** → **Import**.
+4. Browse to `caddy-root.crt`, finish the wizard.
+
+### 5.3 Verify
+
+Open `https://portainer.home` — the browser should show a green lock with no warnings.
+
+> The root CA is valid for 10 years. You only need to do this once per laptop.
+
+---
+
+## 6. Verification Checklist
 
 - [ ] Caddy container running: `docker ps --filter name=caddy`
 - [ ] Caddy serves port 80: `curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1` → should not be 000
 - [ ] Portainer reachable via domain: `curl -sI http://portainer.home` (from a device using DNSMasq)
 - [ ] TLS cert issued: `curl -sI https://portainer.home` should show HTTPS
+- [ ] Root CA trusted on laptop: `https://portainer.home` shows green lock
 
 ---
 
