@@ -173,14 +173,28 @@ In the Cloudflare Zero Trust portal → **Tunnels** → **Public Hostname** → 
 All subdomain routing now happens **locally** in Caddy — no more Cloudflare config changes per service.
 
 ```bash
-cd /opt/docker && nano Caddyfile
+nano /opt/docker/Caddyfile
 ```
 
 ```Caddyfile
-portainer.example.com {
+{
+    local_certs
+}
+
+portainer.home {
     reverse_proxy portainer:9000
 }
 
+http://*.example.com {
+    respond 404
+}
+```
+
+> **Important**: The `http://` prefix is required because Cloudflare terminates TLS at its edge and forwards plain HTTP through the tunnel. Without it, Caddy's automatic HTTP→HTTPS redirect causes an infinite loop. Requests for unconfigured subdomains return a clean 404.
+
+To add a new service, insert a specific block **above** the wildcard (more specific wins):
+
+```Caddyfile
 hermes.example.com {
     reverse_proxy hermes_agent:8080
 }
@@ -189,10 +203,10 @@ hermes.example.com {
 Reload Caddy:
 
 ```bash
-docker exec caddy caddy reload
+docker compose -f /opt/docker/docker-compose.yml restart caddy
 ```
 
-> Caddy will attempt to fetch real TLS certificates from Let's Encrypt / ZeroSSL for your public domain. If you see an error like `HTTP challenge rejected`, make sure port 80 is reachable from the internet (it won't be behind CGNAT without a tunnel). With the wildcard tunnel, Cloudflare terminates TLS at its edge, so Caddy receives plain HTTP — use `tls internal` to skip external certificate challenges if needed.
+> Use `docker compose restart` instead of `caddy reload` — the latter fails when the config was loaded from file rather than the API.
 
 **Alternative**: if you prefer a dedicated reverse proxy UI, deploy **Nginx Proxy Manager** (`jc21/nginx-proxy-manager`) instead of Caddy for the public domain, and keep Caddy for local `*.home`.
 
