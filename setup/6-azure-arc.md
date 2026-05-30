@@ -2,6 +2,8 @@
 
 > Runbook for registering the homelab server in Azure Arc — a single pane of glass for hybrid management, monitoring, and policy.
 
+> **Note on certificate auth**: This runbook uses a certificate-based service principal for enrollment. For a single homelab server this is overkill — a simple client secret would work just as well. The cert approach was chosen under the mistaken assumption that the certificate would be used for ongoing communication, but the Arc agent provisions its own MSI certificate after enrollment.
+
 ## Prerequisites
 
 - [ ] An Azure subscription with Contributor or Owner access
@@ -44,14 +46,19 @@ openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
 
 # Verify the certificate
 openssl x509 -in homelab-arc-agent.crt -noout -text | head -5
+
+# Combine cert + private key into a single PEM file (used later for connect)
+cat ~/homelab-arc-agent.crt ~/homelab-arc-agent.key > ~/homelab-arc-agent.pem
+chmod 600 ~/homelab-arc-agent.pem
 ```
 
-This creates two files in your home directory (`~/`):
+This creates three files in your home directory (`~/`):
 
 | File | Purpose | Keep? |
 |---|---|---|
 | `~/homelab-arc-agent.crt` | Public certificate — uploaded to Azure AD | ✅ Safe to share |
-| `~/homelab-arc-agent.key` | Private key — needed by the Arc agent on the server | ⚠️ **Do not share, never commit** |
+| `~/homelab-arc-agent.key` | Private key — used by the Arc agent | ⚠️ **Do not share, never commit** |
+| `~/homelab-arc-agent.pem` | Combined cert + key for `azcmagent connect` | 🔒 `chmod 600` |
 
 Copy the public certificate to your laptop so Azure PowerShell can upload it:
 
@@ -145,15 +152,9 @@ Verify:
 azcmagent version
 ```
 
-### 4.2 Combine cert with private key
+### 4.2 Connect to Azure Arc
 
-The `--service-principal-cert` parameter needs both certificate and private key in one file:
-
-```bash
-cat ~/homelab-arc-agent.crt ~/homelab-arc-agent.key > ~/homelab-arc-agent.pem
-```
-
-### 4.3 Connect to Azure Arc
+The `.pem` file was already created during cert generation (§2.1). Now connect:
 
 ```bash
 sudo azcmagent connect \
