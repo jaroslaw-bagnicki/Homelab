@@ -17,21 +17,6 @@ A home lab server built on a second-hand mini PC, running Ubuntu Server as the b
 
 ---
 
-## What's Next
-
-Ordered by dependency and effort. See [setup/README.md](homelab/setup/README.md) for runbooks.
-
-| # | Workload | Effort | Notes |
-|---|---|---|---|
-| 5 | **Azure Arc** | ⭐ | Register in Azure while it's fresh |
-| 7 | **Monitoring** (ELK/Prometheus/Seq) | ⭐⭐⭐ | Needs research — explore options first |
-| 8 | **Backup strategy** (Restic) | ⭐⭐ | Protect everything before Hermes Agent |
-| 9 | **Hermes Agent** | ⭐⭐⭐ | Most complex — last |
-| 10 | **Gitea** | ⭐ | Self-hosted Git with web UI for personal repos |
-| 11 | **Ollama + Bielik** (Phase 2) | ⭐⭐⭐ | Needs dedicated LLM server hardware |
-
----
-
 ## What's Done
 
 | Date | Workload | Effort | Notes |
@@ -42,7 +27,22 @@ Ordered by dependency and effort. See [setup/README.md](homelab/setup/README.md)
 | 2026‑05‑29 | Docker | ⭐⭐ | Engine + Portainer CE |
 | 2026‑05‑29 | DNSMasq | ⭐ | `*.home` resolution |
 | 2026‑05‑29 | Caddy | ⭐ | Reverse proxy with auto-TLS |
-| 2026‑05‑30 | Cloudflare Tunnel | ⭐ | Remote HTTPS access via `portainer.cloud5.ovh` |
+| 2026‑05‑30 | Cloudflare Tunnel | ⭐⭐ | Remote HTTPS access via `portainer.cloud5.ovh` |
+| 2026‑05‑30 | Azure Arc | ⭐⭐ | Hybrid server enrollment, cert-based auth |
+
+---
+
+## What's Next
+
+Ordered by dependency and effort. See [setup/README.md](homelab/setup/README.md) for runbooks.
+
+| # | Workload | Effort | Notes |
+|---|---|---|---|
+| 5 | **Monitoring** (Azure Monitor) | ⭐ | Metrics and logs via Arc — see [runbook](setup/7-azure-monitor.md) |
+| 6 | **Backup strategy** (Restic) | ⭐⭐ | Protect everything before Hermes Agent |
+| 7 | **Hermes Agent** | ⭐⭐⭐ | Most complex — last |
+| 8 | **Gitea** | ⭐ | Self-hosted Git with web UI for personal repos |
+| 9 | **Ollama + Bielik** (Phase 2) | ⭐⭐⭐ | Needs dedicated LLM server hardware |
 
 ---
 
