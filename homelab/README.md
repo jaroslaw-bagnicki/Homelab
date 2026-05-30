@@ -22,12 +22,14 @@ Full specs: [research/03-selected-hardware-m910q.md](research/03-selected-hardwa
 |---|---|---|
 | Hardware selection | ✅ Selected | Lenovo M910q Tiny — see doc 03 |
 | OS & base stack | ✅ Installed | Ubuntu Server 24.04 LTS installed, LVM resized to full 232 GB — see doc 12 |
-| First-boot setup | ✅ Done | Windows backup, BIOS fix, static IP, SSH, user config, LVM resize — see doc 12 |
-| Base OS hardening | 🔧 In progress | Advisory given (UFW, fail2ban, unattended-upgrades, SSH keys) — see doc 12 |
+| First-boot setup | ✅ Done | Windows backup, BIOS fix, static IP, SSH, LVM resize — see doc 12 |
+| Base OS hardening | ✅ Done | UFW, fail2ban, unattended-upgrades, SSH keys |
+| Docker + Portainer CE | ✅ Done | Docker Engine + Portainer CE deployed |
+| Local DNS | ✅ Done | DNSMasq resolving `*.home` |
+| Caddy reverse proxy | ✅ Done | Auto-TLS for `*.home` services |
 | LLM / AI stack | 🔍 Research | MiniMax M2.7 (cloud API) via Hermes Agent — see doc 04 |
-| Docker services | 🔍 Research | Stack defined — see doc 05 |
-| Networking | 🔍 Research | Cloudflare Tunnels + Tailscale; mDNS/Avahi installed — see docs 06, 12 |
-| Azure integration | 🔍 Research | Azure Arc onboarding planned — see doc 07 |
+| Cloudflare Tunnel | 🔍 Planned | Zero-trust tunnel for remote access |
+| Azure integration | 🔍 Planned | Azure Arc onboarding — see doc 07 |
 
 ## Setup Runbooks
 
@@ -48,11 +50,12 @@ Step-by-step guides in [`setup/`](setup/):
 |---|---|---|---|
 | 1 | **Purchase Lenovo ThinkCentre M910q** | — | i5-7500T / 16 GB / 256 GB — see doc 03 for selection criteria and Allegro search tips |
 | 2 | First-boot checklist | ✅ Done | Inspect thermal paste, verify RAM/SATA, check PSU, flash BIOS — see doc 03 |
-| 3 | ✅ Install Ubuntu Server + initial setup | ✅ Done | Windows backup, BIOS fix, static IP, SSH, LVM resize, user config — see doc 12 |
-| 4 | Base OS hardening | Step 3 (ready) | UFW firewall, fail2ban, unattended-upgrades, SSH key-based auth — advisory ready in doc 12 |
-| 5 | Docker + Portainer CE | Step 4 | Install Docker engine, enable auto-start, deploy Portainer — see [2-docker.md](setup/2-docker.md) |
-| 6 | Hermes Agent install + config | Step 5 | ⚠️ Verify install URL against `github.com/nousresearch/hermes-agent` before running — see doc 04 |
-| 7 | Cloudflare Tunnel setup | Step 6 | Zero-trust tunnel for public access to web UIs |
+| 3 | ✅ Ubuntu Server + initial setup | ✅ Done | Static IP, SSH, LVM resize, mDNS, hardening — see [1-init.md](setup/1-init.md) |
+| 4 | ✅ Base OS hardening | ✅ Done | UFW, fail2ban, unattended-upgrades, SSH keys |
+| 5 | ✅ Docker + Portainer CE | ✅ Done | See [2-docker.md](setup/2-docker.md) |
+| 6 | ✅ Local DNS (DNSMasq) | ✅ Done | `*.home` resolution — see [3-dns.md](setup/3-dns.md) |
+| 7 | ✅ Caddy reverse proxy | ✅ Done | Auto-TLS for `*.home` — see [4-caddy.md](setup/4-caddy.md) |
+| 8 | Cloudflare Tunnel setup | Step 7 | Zero-trust tunnel for public access |
 | 8 | Backup strategy | Step 7 | Install secondary SATA disk, configure Restic — see doc 10 |
 | 9 | Azure Arc enrolment | Step 8 | Register M910q in Azure — use least-privilege SP, see doc 07 |
 | 10 | Ollama + Bielik (Phase 2) | Step 9 | Local Polish LLM inference — only after Phase 1 is stable; see doc 08 |
@@ -60,14 +63,30 @@ Step-by-step guides in [`setup/`](setup/):
 ## Research
 
 See [research/README.md](research/README.md) for the full document index and Gemini discussion links.
+---
+
+## What's Next
+
+Ordered by dependency and effort. Runbooks in [`setup/`](setup/):
+
+| # | Workload | Effort | Notes |
+|---|---|---|---|
+| 5 | **Cloudflare Tunnel** | ⭐ Small | Remote HTTPS access, needed before monitoring |
+| 6 | **Azure Arc** | ⭐ Small | Register in Azure while it's fresh |
+| 7 | **Monitoring** (Netdata/cAdvisor) | ⭐⭐ Medium | Visibility before adding complex workloads |
+| 8 | **Backup strategy** (Restic) | ⭐⭐ Medium | Protect everything before Hermes Agent |
+| 9 | **Hermes Agent** | ⭐⭐⭐ Large | Most complex — last |
+| 10 | **Ollama + Bielik** (Phase 2) | ⭐⭐⭐ Large | Needs dedicated LLM server hardware |
 
 ---
 
-## Changelog
+## What's Done
 
-| Date | What |
-|---|---|
-| 2026-05-20 | Research phase started — hardware shortlist, LLM requirements, OS decision |
-| 2026-05-24 | M910q selected — ordered on Allegro |
-| 2026-05-29 | Initial setup complete — Ubuntu Server 24.04 |
-| 2026-05-29 | Docker Engine + Portainer CE deployed and running |
+| Date | Workload | Effort | Notes |
+|---|---|---|---|
+| 2026-05-20 | Research | ⭐⭐⭐ | Hardware shortlist, LLM requirements, OS decision |
+| 2026-05-24 | Purchase | ⭐ | M910q ordered on Allegro |
+| 2026-05-29 | Base setup | ⭐⭐ | Ubuntu, static IP, SSH, LVM, mDNS, hardening |
+| 2026-05-29 | Docker | ⭐⭐ | Engine + Portainer CE |
+| 2026-05-29 | DNSMasq | ⭐ | `*.home` resolution |
+| 2026-05-29 | Caddy | ⭐ | Reverse proxy with auto-TLS |
