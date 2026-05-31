@@ -29,6 +29,7 @@ A home lab server built on a second-hand mini PC, running Ubuntu Server as the b
 | 2026‑05‑29 | Caddy | ⭐ | Reverse proxy with auto-TLS |
 | 2026‑05‑30 | Cloudflare Tunnel | ⭐⭐ | Remote HTTPS access via custom domain |
 | 2026‑05‑30 | Azure Arc | ⭐⭐ | Hybrid server enrollment, cert-based auth |
+| 2026‑05‑31 | GHCR in Portainer | ⭐ | GitHub Container Registry access — see [runbook](runbooks/2a-ghcr-portainer.md) |
 
 ---
 
@@ -36,9 +37,8 @@ A home lab server built on a second-hand mini PC, running Ubuntu Server as the b
 
 | # | Workload | Effort | Notes |
 |---|---|---|---|
-| 6a | **Monitoring** (Azure Monitor) | ⭐ | Metrics and logs via Arc — see [runbook](setup/6a-azure-monitor.md) |
+| 6a | **Monitoring** (Azure Monitor) | ⭐ | Metrics and logs via Arc — see [runbook](runbooks/6a-azure-monitor.md) |
 | 6 | **Backup strategy** (Restic) | ⭐⭐ | Protect everything before Hermes Agent |
-| 2a | **GHCR in Portainer** | ⭐ | GitHub Container Registry access — see [runbook](setup/2a-ghcr-portainer.md) |
 | 7 | **Hermes Agent** | ⭐⭐⭐ | Most complex — last |
 | 8 | **Gitea** | ⭐ | Self-hosted Git with web UI for personal repos |
 | 9 | **Ollama + Bielik** (Phase 2) | ⭐⭐⭐ | Needs dedicated LLM server hardware |
@@ -48,4 +48,4 @@ A home lab server built on a second-hand mini PC, running Ubuntu Server as the b
 ## Links
 
 - [Research index](research/README.md)
-- [Setup runbooks](setup/README.md)
+- [Runbooks](runbooks/README.md)
