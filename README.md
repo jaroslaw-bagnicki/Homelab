@@ -36,8 +36,9 @@ A home lab server built on a second-hand mini PC, running Ubuntu Server as the b
 
 | # | Workload | Effort | Notes |
 |---|---|---|---|
-| 5 | **Monitoring** (Azure Monitor) | ⭐ | Metrics and logs via Arc — see [runbook](setup/7-azure-monitor.md) |
+| 6a | **Monitoring** (Azure Monitor) | ⭐ | Metrics and logs via Arc — see [runbook](setup/6a-azure-monitor.md) |
 | 6 | **Backup strategy** (Restic) | ⭐⭐ | Protect everything before Hermes Agent |
+| 2a | **GHCR in Portainer** | ⭐ | GitHub Container Registry access — see [runbook](setup/2a-ghcr-portainer.md) |
 | 7 | **Hermes Agent** | ⭐⭐⭐ | Most complex — last |
 | 8 | **Gitea** | ⭐ | Self-hosted Git with web UI for personal repos |
 | 9 | **Ollama + Bielik** (Phase 2) | ⭐⭐⭐ | Needs dedicated LLM server hardware |
