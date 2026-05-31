@@ -16,7 +16,6 @@
 
 ## Issue Tracking
 
-- **Task tracking**: GitHub Issues (`https://github.com/jaroslaw-bagnicki/Homelab/issues`)
 - **When creating an issue**: use a clear title, add relevant labels, and include a brief **Why / What** description
 - **Reference issues in commits**: use `#NNN` in commit messages to link them automatically — use `Closes #NNN` to auto-close on merge commit
 
