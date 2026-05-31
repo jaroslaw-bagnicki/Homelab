@@ -159,12 +159,14 @@ Edit `~/.ssh/config` on your **laptop**:
 
 ```text
 Host homelab
-    HostName homelab.local
+    HostName 192.168.2.200
     User jarek
     IdentityFile ~/.ssh/id_ed25519
 ```
 
 Now you can connect with just `ssh homelab`.
+
+> **Why direct IP?** Windows mDNS resolution for `homelab.local` can take ~5s. Using `HostName 192.168.2.200` in the SSH config bypasses resolution entirely — connections complete in ~400ms.
 
 ### 5.2 Generate an SSH key pair (on laptop — if you don't already have one)
 
@@ -226,7 +228,12 @@ Find and set:
 PasswordAuthentication no
 ChallengeResponseAuthentication no
 PubkeyAuthentication yes
+UseDNS no
+GSSAPIAuthentication no
 ```
+
+- `UseDNS no` — disables reverse DNS lookups on connecting clients (avoids timeouts when no PTR record exists)
+- `GSSAPIAuthentication no` — disables Kerberos/GSSAPI auth attempts (unnecessary on a local network)
 
 Restart SSH:
 
@@ -243,11 +250,27 @@ sudo systemctl restart ssh
 ### 6.1 Enable UFW
 
 ```bash
+# Allow SSH only from local subnet before enabling
+sudo ufw allow from 192.168.2.0/24 to any port 22 proto tcp
+
 sudo ufw enable
 sudo ufw status verbose
 ```
 
-Expected: `Status: active` and `22/tcp ALLOW IN` listed.
+Expected:
+
+```
+Status: active
+Logging: on (low)
+Default: deny (incoming), allow (outgoing), disabled (routed)
+New profiles: skip
+
+To                         Action      From
+--                         ------      ----
+22/tcp                     ALLOW IN    192.168.2.0/24
+```
+
+> Restricting SSH to `192.168.2.0/24` ensures connections are only accepted from the local network. Remote SSH via the public internet (already blocked by CGNAT anyway) is explicitly denied at the firewall level.
 
 ### 6.2 Install & configure Fail2ban
 
@@ -306,7 +329,7 @@ Unattended-Upgrade::Automatic-Reboot-Time "04:00";
 - [ ] Full disk space available: `df -h /` → ~232 GB
 - [ ] mDNS/Avahi is running: `sudo systemctl status avahi-daemon` → `active (running)`
 - [ ] SSH key login works (no password prompt)
-- [ ] UFW is active and allowing SSH: `sudo ufw status verbose` → `Status: active`, `22/tcp ALLOW IN`
+- [ ] UFW is active with subnet-restricted SSH: `sudo ufw status verbose` → `Status: active`, `22/tcp ALLOW IN 192.168.2.0/24`
 - [ ] Fail2ban is running and monitoring SSH: `sudo fail2ban-client status sshd` → shows jail status
 - [ ] Unattended-upgrades is active: `sudo systemctl status unattended-upgrades` → `active (running)`
 
@@ -318,3 +341,54 @@ After this runbook is complete, proceed to:
 
 - **Docker + Portainer CE** (see execution list in README)
 - **Hermes Agent install**
+
+---
+
+## Amendments & Post-Setup Tweaks
+
+Findings and configuration changes applied after the initial setup, captured here so they aren't lost on a rebuild.
+
+### SSH: Restrict to local subnet
+
+The default `sudo ufw allow ssh` opens port 22 to **anywhere**. Changed to restrict to the local subnet:
+
+```bash
+sudo ufw delete allow ssh
+sudo ufw allow from 192.168.2.0/24 to any port 22 proto tcp
+```
+
+### SSH: Disable slow lookups
+
+`UseDNS` and `GSSAPIAuthentication` default to `yes` in OpenSSH, causing ~5s delays on connections that trigger reverse DNS or Kerberos timeouts. Disabled in `/etc/ssh/sshd_config`:
+
+```bash
+sudo sed -i 's/^#UseDNS no/UseDNS no/' /etc/ssh/sshd_config
+sudo sed -i 's/^#GSSAPIAuthentication no/GSSAPIAuthentication no/' /etc/ssh/sshd_config
+sudo systemctl restart ssh
+```
+
+### SSH: Client-side speed fix
+
+Windows mDNS resolution of `homelab.local` can add ~5s to every connection. Fixed via `~/.ssh/config` on the Windows client:
+
+```text
+Host homelab
+    HostName 192.168.2.200
+    User jarek
+    IdentityFile ~/.ssh/id_ed25519
+```
+
+Benchmark (5 runs, `ssh jarek@homelab`): **avg 666 ms** — sub-second connections.
+
+### Verification commands
+
+```bash
+# Confirm SSH is subnet-restricted
+sudo ufw status verbose | grep 22/tcp
+
+# Confirm UseDNS and GSSAPI are disabled
+sudo sshd -T | grep -E 'usedns|gssapiauthentication'
+
+# Connection speed test (from Windows)
+Measure-Command { ssh -o ConnectTimeout=5 jarek@homelab "echo connected" }
+```
