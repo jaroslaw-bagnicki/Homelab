@@ -35,6 +35,7 @@
 - **Use placeholders**: Replace credentials with `[REDACTED]`, `YOUR_API_KEY_HERE`, or environment variables
 - **Scripts**: accept credentials as parameters or read from the environment — never hardcode
 - **Review before commit**: always check for exposed credentials before committing
+- **Sanitize real domain names** — replace any real personal domain (e.g. `my-domain.net`) with `example.com` in all documentation, configs, and code before committing. The repo is public.
 
 ## Azure Tooling
 
