@@ -19,17 +19,17 @@ A home lab server built on a second-hand mini PC, running Ubuntu Server as the b
 
 ## What's Done
 
-| Date | Workload | Effort | Notes |
-|---|---|---|---|
-| 2026‑05‑20 | Research | ⭐⭐⭐ | Hardware, LLM, OS decisions |
-| 2026‑05‑24 | Purchase | ⭐ | M910q ordered on Allegro |
-| 2026‑05‑29 | Base setup | ⭐⭐ | Ubuntu, static IP, SSH, LVM, mDNS, hardening |
-| 2026‑05‑29 | Docker | ⭐⭐ | Engine + Portainer CE |
-| 2026‑05‑29 | DNSMasq | ⭐ | `*.home` resolution |
-| 2026‑05‑29 | Caddy | ⭐ | Reverse proxy with auto-TLS |
-| 2026‑05‑30 | Cloudflare Tunnel | ⭐⭐ | Remote HTTPS access via custom domain |
-| 2026‑05‑30 | Azure Arc | ⭐⭐ | Hybrid server enrollment, cert-based auth |
-| 2026‑05‑31 | GHCR in Portainer | ⭐ | GitHub Container Registry access — see [runbook](runbooks/2a-ghcr-portainer.md) |
+| Date | Workload | Effort | # | Notes |
+|---|---|---|---|---|
+| 2026‑05‑20 | Research | ⭐⭐⭐ | — | Hardware, LLM, OS decisions |
+| 2026‑05‑24 | Purchase | ⭐ | — | M910q ordered on Allegro |
+| 2026‑05‑29 | Base setup | ⭐⭐ | [1](runbooks/1-init.md) | Ubuntu, static IP, SSH, LVM, mDNS, hardening |
+| 2026‑05‑29 | Docker | ⭐⭐ | [2](runbooks/2-docker.md) | Engine + Portainer CE |
+| 2026‑05‑29 | DNSMasq | ⭐ | [3](runbooks/3-dns.md) | `*.home` resolution |
+| 2026‑05‑29 | Caddy | ⭐ | [4](runbooks/4-caddy.md) | Reverse proxy with auto-TLS |
+| 2026‑05‑30 | Cloudflare Tunnel | ⭐⭐ | [5](runbooks/5-cloudflare-tunnel.md) | Remote HTTPS access via custom domain |
+| 2026‑05‑30 | Azure Arc | ⭐⭐ | [6](runbooks/6-azure-arc.md) | Hybrid server enrollment, cert-based auth |
+| 2026‑05‑31 | GHCR in Portainer | ⭐ | [2a](runbooks/2a-ghcr-portainer.md) | GitHub Container Registry access |
 
 ---
 
@@ -38,10 +38,11 @@ A home lab server built on a second-hand mini PC, running Ubuntu Server as the b
 | # | Workload | Effort | Notes |
 |---|---|---|---|
 | 6a | **Monitoring** (Azure Monitor) | ⭐ | Metrics and logs via Arc — see [runbook](runbooks/6a-azure-monitor.md) |
-| 6 | **Backup strategy** (Restic) | ⭐⭐ | Protect everything before Hermes Agent |
-| 7 | **Hermes Agent** | ⭐⭐⭐ | Most complex — last |
-| 8 | **Gitea** | ⭐ | Self-hosted Git with web UI for personal repos |
-| 9 | **Ollama + Bielik** (Phase 2) | ⭐⭐⭐ | Needs dedicated LLM server hardware |
+| 7 | **Backup strategy** (Restic) | ⭐⭐ | Protect everything before Hermes Agent |
+| 8 | **Hermes Agent** | ⭐⭐⭐ | Most complex — last |
+| 9 | **SQL Server** | ⭐⭐ | Developer Edition in Docker — see [runbook](runbooks/9-mssql-dev.md) |
+| 10 | **Gitea** | ⭐⭐ | Self-hosted Git with web UI for personal repos |
+| - | **Ollama + Bielik** (Phase 2) | ⭐⭐⭐ | Needs dedicated LLM server hardware |
 
 ---
 
