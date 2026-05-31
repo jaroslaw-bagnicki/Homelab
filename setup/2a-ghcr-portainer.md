@@ -49,47 +49,32 @@ Portainer authenticates to GHCR using a **GitHub username + PAT (classic)** — 
 
 Portainer will test the credentials against `ghcr.io`. A green success message confirms the registry is reachable.
 
+> **CE limitation**: The **Browse** button and registry access management are Portainer Business Edition features. In Community Edition (CE), you cannot browse registry contents from the UI, but you can still pull images by specifying the full image path (e.g. `ghcr.io/owner/image:tag`) — authentication and pulls work normally.
+
 ---
 
 ## 3. Verify It Works
 
 ### 3.1 Pull an image from GHCR
 
-From the Portainer sidebar, go to **Images** → enter a GHCR image path:
+From the Portainer sidebar, go to **Images** → click **Pull image**:
 
-```
-ghcr.io/open-webui/open-webui:main
-```
+1. Set **Registry** to `GHCR`
+2. Enter the image path **without** the `ghcr.io/` prefix (Portainer prepends the registry URL automatically):
 
-Click **Pull**. The image should download successfully (no `401 Unauthorized` or `denied` errors).
+   ```
+   jaroslaw-bagnicki/plutus-api:dev-1dc7962
+   ```
+
+The image should download successfully (no `401 Unauthorized` or `denied` errors).
 
 ### 3.2 Verify in the registry list
 
-Go back to **Settings** → **Registries**. `GHCR` should be listed with status **Connected**.
+Go back to **Settings** → **Registries**. `GHCR` should be listed with the blue **authentication-enabled** badge.
 
 ---
 
-## 4. Using GHCR in Stacks / Compose Files
-
-Once the registry is configured in Portainer, you can reference GHCR images directly in your `docker-compose.yml`:
-
-```yaml
-services:
-  open-webui:
-    image: ghcr.io/open-webui/open-webui:main
-    container_name: open-webui
-    restart: unless-stopped
-    ports:
-      - 127.0.0.1:3000:8080
-    volumes:
-      - ./open-webui-data:/app/backend/data
-```
-
-Portainer will use the stored GHCR credentials to pull the image automatically when you deploy the stack.
-
----
-
-## 5. Token Rotation
+## 4. Token Rotation
 
 GitHub PATs expire. When the token expires:
 
@@ -105,5 +90,5 @@ GitHub PATs expire. When the token expires:
 ## Checkpoint
 
 - [ ] PAT (classic) created with `read:packages` scope
-- [ ] GHCR registry added in Portainer with green "connected" status
+- [ ] GHCR registry added in Portainer with blue "authentication-enabled" badge
 - [ ] Successfully pulled an image from `ghcr.io` via Portainer UI
