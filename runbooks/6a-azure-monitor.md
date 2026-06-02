@@ -4,56 +4,51 @@
 
 ## Prerequisites
 
-- [ ] Server registered in Azure Arc (see [6-azure-arc.md](6-azure-arc.md))
-- [ ] Server shows status **Connected** in Azure Portal → **Azure Arc** → **Servers**
-- [ ] Azure subscription with Contributor access
+- [x] Server registered in Azure Arc (see [6-azure-arc.md](6-azure-arc.md))
+- [x] Server shows status **Connected** in Azure Portal → **Azure Arc** → **Servers**
+- [x] Azure subscription with Contributor access
 
 ---
 
-## 1. Create a Log Analytics Workspace
+## 1. Deploy Infrastructure with Bicep
 
-Log Analytics stores metrics and logs from the server. Run from your laptop with Azure PowerShell:
+The monitoring stack is defined as **Bicep + PowerShell** in [`runbooks/AzureResources/`](AzureResources/).
+
+| File | Purpose |
+|---|---|
+| `main.bicep` | Log Analytics workspace, Data Collection Rule (DCR), and DCR association |
+| `Deploy-HomelabAzResources.ps1` | Deploys the Bicep template |
+| `Install-AzureMonitorAgent.ps1` | Installs the AMA extension (separate step — see below) |
+
+### What `main.bicep` creates
+
+- **Log Analytics workspace** (`homelab-law`) — stores metrics and logs (PerGB2018 tier)
+- **Data Collection Rule** (`homelab-vm-dcr`) — collects CPU, memory, and disk performance counters every 60s, sends them to the LAW
+- **DCR Association** — links the rule to the Arc-enabled server `homelab`
+
+### Deploy
 
 ```powershell
-New-AzOperationalInsightsWorkspace `
-  -ResourceGroupName "homelab-rg" `
-  -Name "homelab-law" `
-  -Location "polandcentral" `
-  -Sku "PerGB2018"
+.\runbooks\AzureResources\Deploy-HomelabAzResources.ps1
 ```
 
-> The **PerGB2018** tier includes 5 GB/month free ingestion — plenty for a single homelab server. Costs above that are ~$2.76/GB.
+The `location` parameter is required (passed via the script — hardcoded to `polandcentral`).
+
+> **PerGB2018** tier includes 5 GB/month free ingestion — plenty for a single homelab server. Costs above that are ~$2.76/GB.
 
 ---
 
 ## 2. Install the Azure Monitor Agent
 
-The agent can be installed as an Arc extension via the Portal or PowerShell.
-
-### Option A — From the Portal (recommended for first-time setup)
-
-1. Go to **Azure Arc** → **Servers** → click `homelab`.
-2. In the monitoring banner, click **Configure** (or go to **Monitor** → **VM Insights** → **Configure**).
-3. Select the Log Analytics workspace `homelab-law`.
-4. Click **Configure**. The Azure Monitor Agent extension will be pushed to the server automatically.
-
-Wait 5–10 minutes for metrics to appear.
-
-### Option B — Via PowerShell
+The AMA extension (`AzureMonitorLinuxAgent`) is **not available** in `polandcentral` through the HybridCompute resource provider, so it cannot be deployed via Bicep. It must be installed via PowerShell using the `Az.ConnectedMachine` module.
 
 ```powershell
-Set-AzVMExtension `
-  -ResourceGroupName "homelab-rg" `
-  -Location "polandcentral" `
-  -VMName "homelab" `
-  -Name "AzureMonitorAgent" `
-  -ExtensionType "AzureMonitorLinuxAgent" `
-  -Publisher "Microsoft.Azure.Monitor" `
-  -TypeHandlerVersion "1.0" `
-  -MachineType "HybridMachine"
+.\runbooks\AzureResources\Install-AzureMonitorAgent.ps1
 ```
 
-> Use `-MachineType "HybridMachine"` for Arc-enabled servers (not regular Azure VMs).
+This runs `New-AzConnectedMachineExtension` on the Arc server `homelab`. The extension installs the Azure Monitor Agent which forwards telemetry according to the DCR.
+
+> **Note**: `Set-AzVMExtension -MachineType HybridMachine` does **not** work — the `-MachineType` parameter is not available in the current Az module. Use `Az.ConnectedMachine` instead.
 
 ---
 
@@ -93,6 +88,12 @@ sudo azcmagent show
 
 Look for `Extensions:` in the output — you should see `AzureMonitorLinuxAgent` listed.
 
+### Via PowerShell
+
+```powershell
+Get-AzConnectedMachineExtension -ResourceGroupName "homelab-rg" -MachineName "homelab"
+```
+
 ---
 
 ## 5. View and Query Logs
@@ -113,8 +114,8 @@ This confirms the server is heartbeating to Log Analytics.
 
 ## 6. Verification Checklist
 
-- [ ] Log Analytics workspace created: `Get-AzOperationalInsightsWorkspace -ResourceGroupName "homelab-rg"`
-- [ ] Azure Monitor Agent extension installed on server: `sudo azcmagent show` → lists `AzureMonitorLinuxAgent`
+- [x] Log Analytics workspace created
+- [ ] Azure Monitor Agent extension installed (`azcmagent show` or `Get-AzConnectedMachineExtension`)
 - [ ] Metrics visible in Portal: CPU, memory, availability charts show data
 - [ ] Log Analytics receives heartbeats: `Heartbeat | where Computer == "homelab"` returns results
 - [ ] VM Insights charts show performance data
