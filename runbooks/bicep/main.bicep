@@ -1,7 +1,7 @@
 param location string
 
 // Reference to the existing Arc-enabled server
-resource arcServer 'Microsoft.HybridCompute/machines@2025-06-01' existing = {
+resource arcServer 'Microsoft.HybridCompute/machines@2024-07-10' existing = {
   name: 'homelab'
 }
 
@@ -17,17 +17,20 @@ resource law 'Microsoft.OperationalInsights/workspaces@2025-07-01' = {
   }
 }
 
-// Azure Monitor Agent extension on the Arc server
-resource ama 'Microsoft.HybridCompute/machines/extensions@2025-06-01' = {
-  parent: arcServer
-  name: 'AzureMonitorAgent'
-  location: location
-  properties: {
-    publisher: 'Microsoft.Azure.Monitor'
-    type: 'AzureMonitorLinuxAgent'
-    typeHandlerVersion: '1.32'
-  }
-}
+// Azure Monitor Agent extension — commented out because the publisher/type
+// combination (Microsoft.Azure.Monitor / AzureMonitorLinuxAgent) is not
+// available in polandcentral via the HybridCompute RP. Install via PowerShell
+// with Set-AzVMExtension -MachineType HybridMachine instead.
+// resource ama 'Microsoft.HybridCompute/machines/extensions@2024-07-10' = {
+//   parent: arcServer
+//   name: 'AzureMonitorAgent'
+//   location: location
+//   properties: {
+//     publisher: 'Microsoft.Azure.Monitor'
+//     type: 'AzureMonitorLinuxAgent'
+//     autoUpgradeMinorVersion: true
+//   }
+// }
 
 // Data Collection Rule — defines what telemetry to collect and where to send it
 resource dcr 'Microsoft.Insights/dataCollectionRules@2024-03-11' = {
