@@ -20,7 +20,9 @@ resource law 'Microsoft.OperationalInsights/workspaces@2025-07-01' = {
 // Azure Monitor Agent extension — commented out because the publisher/type
 // combination (Microsoft.Azure.Monitor / AzureMonitorLinuxAgent) is not
 // available in polandcentral via the HybridCompute RP. Install via PowerShell
-// with Set-AzVMExtension -MachineType HybridMachine instead.
+// with New-AzConnectedMachineExtension instead.
+// See Install-AzureMonitorAgent.ps1 and
+// https://learn.microsoft.com/en-us/azure/azure-arc/servers/manage-vm-extensions
 // resource ama 'Microsoft.HybridCompute/machines/extensions@2024-07-10' = {
 //   parent: arcServer
 //   name: 'AzureMonitorAgent'
