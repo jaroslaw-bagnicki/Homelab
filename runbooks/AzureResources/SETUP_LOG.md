@@ -50,9 +50,12 @@ Initial Azure context was on **Bagnicki.net** tenant — switched to **Cloud5** 
 | 6 | `sudo systemctl restart extd` + retry v1.41.0 | ⏳ In progress — package downloaded and validated, installing... |
 
 **Root causes identified**:
-1. AMA v1.40.3 doesn't support Ubuntu 26.04
-2. Arc agent extd service (`gc_linux_service`) has a memory corruption bug (double free) — triggered on restart
-3. No standalone `azure-monitor-agent` apt package exists for Ubuntu 26.04
+- **AMA does not support Ubuntu 26.04 at all** — confirmed: even v1.41.0 fails with the same error
+- GitHub issue: [Azure/azure-linux-extensions#2173](https://github.com/Azure/azure-linux-extensions/issues/2173) (opened 2026-05-13, Microsoft ICM #807185069, no fix yet)
+- Broader pattern: other extensions (e.g. VMSnapshot #2172) also fail on 26.04 — the extensions team hasn't caught up yet
+- Ubuntu 26.04 ships Python 3.14 which removed `crypt`/`imp` modules, breaking extensions that depend on older Python versions
+- Arc agent extd service (`gc_linux_service`) has a memory corruption bug (double free) — triggered on restart
+- No standalone `azure-monitor-agent` apt package exists for Ubuntu 26.04
 
 ### 5. Key commands used
 
