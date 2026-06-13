@@ -17,8 +17,7 @@ Run from your laptop or a machine with the Az PowerShell module installed.
 ### 1.0 Set the correct subscription
 
 ```powershell
-Connect-AzAccount -TenantId cloud5.ovh
-Set-AzContext -SubscriptionId a8a36bc1-79a7-49fe-9faa-92220103c66f
+Connect-AzAccount -Subscription Cloud5-default
 ```
 
 ### 1.1 Create the storage account
@@ -31,14 +30,14 @@ New-AzStorageAccount -ResourceGroupName homelab-rg `
   -Location polandcentral `
   -SkuName Standard_LRS `
   -Kind StorageV2 `
-  -AccessTier Cool
+  -AccessTier Hot
 ```
 
 Requirements met by this command:
 - **Account kind**: StorageV2
 - **Performance**: Standard (default)
 - **Replication**: LRS
-- **Tier**: Cool
+- **Tier**: Hot (general-purpose; no early-deletion penalty)
 
 ### 1.2 Create the `backups` container
 
@@ -292,7 +291,7 @@ Run `check` quarterly to detect data corruption.
 
 ---
 
-## 7. Cost Estimates (Azure Blob Cool — LRS)
+## 7. Cost Estimates (Azure Blob Hot — LRS)
 
 | Data | Storage /mo | Egress (restore) |
 |---|---|---|
