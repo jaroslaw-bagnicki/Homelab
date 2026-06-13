@@ -12,22 +12,23 @@
 
 ## 1. Provision the Azure Storage Account and Container
 
-### 1.1 Create a resource group (if needed)
+Run from your laptop or a machine with the Az PowerShell module installed.
 
-Run from your laptop or a machine with the Az PowerShell module installed:
+### 1.0 Set the correct subscription
 
 ```powershell
-Connect-AzAccount
-New-AzResourceGroup -Name rg-homelab-backup -Location polandcentral
+Connect-AzAccount -TenantId cloud5.ovh
+Set-AzContext -SubscriptionId a8a36bc1-79a7-49fe-9faa-92220103c66f
 ```
 
-> Change `-Location` if you prefer a different Azure region.
+### 1.1 Create the storage account
 
-### 1.2 Create the storage account
+The resource group `homelab-rg` already exists. Create the storage account inside it:
 
 ```powershell
-New-AzStorageAccount -ResourceGroupName rg-homelab-backup `
-  -Name "sthomelabbackup" `
+New-AzStorageAccount -ResourceGroupName homelab-rg `
+  -Name "homelabcloud5" `
+  -Location polandcentral `
   -SkuName Standard_LRS `
   -Kind StorageV2 `
   -AccessTier Cool
@@ -39,21 +40,19 @@ Requirements met by this command:
 - **Replication**: LRS
 - **Tier**: Cool
 
-> Pick a globally unique storage account name (e.g. `st<your initials>homelabbackup`).
-
-### 1.3 Create the `backups` container
+### 1.2 Create the `backups` container
 
 ```powershell
-$ctx = (Get-AzStorageAccount -ResourceGroupName rg-homelab-backup -Name "sthomelabbackup").Context
+$ctx = (Get-AzStorageAccount -ResourceGroupName homelab-rg -Name "homelabcloud5").Context
 New-AzStorageContainer -Name backups -Context $ctx -Permission Off
 ```
 
 `-Permission Off` means private — no anonymous access.
 
-### 1.4 Retrieve the storage account key
+### 1.3 Retrieve the storage account key
 
 ```powershell
-Get-AzStorageAccountKey -ResourceGroupName rg-homelab-backup -Name "sthomelabbackup" `
+Get-AzStorageAccountKey -ResourceGroupName homelab-rg -Name "homelabcloud5" `
   | Select-Object -First 1 -ExpandProperty Value
 ```
 
@@ -69,7 +68,7 @@ Pull the Restic image and create the repository directly on Azure Blob:
 
 ```bash
 sudo docker run --rm \
-  -e AZURE_STORAGE_ACCOUNT=yourstorageaccount \
+  -e AZURE_STORAGE_ACCOUNT=homelabcloud5 \
   -e AZURE_STORAGE_KEY="your-storage-key" \
   restic/restic:latest \
   init --repo azure:backups:/homelab
@@ -83,7 +82,7 @@ You'll be prompted for a **repository password**. Choose a strong one and store 
 
 ```bash
 sudo docker run --rm \
-  -e AZURE_STORAGE_ACCOUNT=yourstorageaccount \
+  -e AZURE_STORAGE_ACCOUNT=homelabcloud5 \
   -e AZURE_STORAGE_KEY="your-storage-key" \
   restic/restic:latest \
   snapshots --repo azure:backups:/homelab
@@ -107,7 +106,7 @@ Add:
 
 ```env
 RESTIC_PASSWORD=your-strong-password
-AZURE_STORAGE_ACCOUNT=yourstorageaccount
+AZURE_STORAGE_ACCOUNT=homelabcloud5
 AZURE_STORAGE_KEY=your-storage-key
 ```
 
