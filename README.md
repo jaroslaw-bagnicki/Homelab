@@ -31,6 +31,7 @@ A home lab server built on a second-hand mini PC, running Ubuntu Server as the b
 | 2026‑05‑30 | Azure Arc | ⭐⭐ | [6](runbooks/6-azure-arc.md) | Hybrid server enrollment, cert-based auth |
 | 2026‑05‑31 | GHCR in Portainer | ⭐ | [2a](runbooks/2a-ghcr-portainer.md) | GitHub Container Registry access |
 | 2026‑05‑31 | Hello World demo | ⭐ | [4a](runbooks/4a-hello-world.md) | Reverse proxy demo via Caddy + Cloudflare |
+| 2026‑06‑13 | Restic backup | ⭐⭐ | [7](runbooks/7-restic-backup.md) | Local SATA + optional Azure Blob offsite |
 
 ---
 
@@ -39,8 +40,7 @@ A home lab server built on a second-hand mini PC, running Ubuntu Server as the b
 | # | Workload | Effort | Notes |
 |---|---|---|---|
 | 6a | **Monitoring** (Azure Monitor) | ⭐ | Metrics and logs via Arc — see [runbook](runbooks/6a-azure-monitor.md) |
-| 7 | **Backup strategy** (Restic) | ⭐⭐ | Protect everything before Hermes Agent |
-| 8 | **Hermes Agent** | ⭐⭐⭐ | Most complex — last |
+| 7 | **Hermes Agent** | ⭐⭐⭐ | Most complex — last |
 | 9 | **SQL Server** | ⭐⭐ | Developer Edition in Docker — see [runbook](runbooks/9-mssql-dev.md) |
 | 10 | **Gitea** | ⭐⭐ | Self-hosted Git with web UI for personal repos |
 | - | **Ollama + Bielik** (Phase 2) | ⭐⭐⭐ | Needs dedicated LLM server hardware |
