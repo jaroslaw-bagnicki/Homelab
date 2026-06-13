@@ -13,5 +13,4 @@ Step-by-step guides for configuring the homelab server.
 | 5 | [5-cloudflare-tunnel.md](5-cloudflare-tunnel.md) | Cloudflare Tunnel for public HTTPS access |
 | 6 | [6-azure-arc.md](6-azure-arc.md) | Azure Arc hybrid server enrollment |
 | 6a | [6a-azure-monitor.md](6a-azure-monitor.md) | Azure Monitor metrics and log collection (supplements step 6) |
-| 7 | [7-github-mcp.md](7-github-mcp.md) | Remote GitHub MCP Server for VS Code |
 | 9 | [9-mssql-dev.md](9-mssql-dev.md) | SQL Server Developer Edition in Docker |
