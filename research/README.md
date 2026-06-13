@@ -14,6 +14,7 @@
 | 10 | [10-backup-strategy.md](10-backup-strategy.md) | Restic backup to secondary SATA disk, retention, disaster recovery | Research |
 | 11 | [11-local-dns-caddy.md](11-local-dns-caddy.md) | Local DNS via Caddy, mDNS for `.homelab.local` resolution | Research |
 | 12 | [12-first-boot-setup.md](12-first-boot-setup.md) | First-boot: backup, BIOS, static IP, SSH, LVM resize, hardening | Gemini chat 4 |
+| 13 | [13-ansible-adoption.md](13-ansible-adoption.md) | Ansible adoption for GitOps host config, DR strategy, Ubuntu 26→24 downgrade | Gemini chat 5 |
 
 ## Gemini Discussions
 
@@ -23,3 +24,4 @@
 | 2 | [Gemini chat 2](https://gemini.google.com/share/6ea05b934c81) | 03, 04, 05, 06, 07 |
 | 3 | [Gemini chat 3](https://gemini.google.com/share/24e2d3af7b59) | 08 |
 | 4 | [Gemini chat 4](https://gemini.google.com/share/3bec83a4906e) | 12 |
+| 5 | [Gemini chat 5](https://gemini.google.com/share/ffa774d97c3e) | 13 |
