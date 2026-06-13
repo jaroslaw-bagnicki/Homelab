@@ -4,8 +4,8 @@
 
 ## Prerequisites
 
-- [ ] Docker Engine + Compose running (see [2-docker.md](2-docker.md))
-- [ ] SSH access via `ssh jarek@homelab.local`
+- [ ] SSH access via `ssh jarek@homelab`
+- [ ] Azure CLI installed on the server (see [2-docker.md](2-docker.md) for general server access)
 - [ ] Azure subscription (any region) + `Az` PowerShell module installed on your local machine
 
 ---
@@ -65,103 +65,114 @@ New-AzRoleAssignment `
 
 ---
 
-## 2. Initialize the Restic Repository on Azure Blob
+## 2. Install Restic (Official Binary)
 
-On the homelab server, run the Restic container with managed identity authentication:
+> **Why not `apt`?** The Ubuntu package is compiled without the Azure Blob backend — see [this forum thread](https://forum.restic.net/t/version-0-16-4-and-azure-blob/7864/4). The official release from GitHub includes all backends.
+
+SSH into the server and download the latest release:
 
 ```bash
-ssh jarek@homelab.local
-sudo docker run --rm \
-  -e AZURE_STORAGE_ACCOUNT=homelabcloud5 \
-  -e AZURE_USE_MANAGED_IDENTITY_CREDENTIAL=true \
-  restic/restic:latest \
-  init --repo azure:backups:/homelab
+ssh jarek@homelab
+
+curl -LO https://github.com/restic/restic/releases/download/v0.18.1/restic_0.18.1_linux_amd64.bz2
+bunzip2 restic_0.18.1_linux_amd64.bz2
+chmod +x restic_0.18.1_linux_amd64
+sudo mv restic_0.18.1_linux_amd64 /usr/local/bin/restic
+```
+
+Verify Azure backend is available:
+
+```bash
+restic version
+restic help | grep azure
+```
+
+Expected output includes `azure` — see [Azure Blob Storage docs](https://restic.readthedocs.io/en/latest/030_preparing_a_new_repo.html#microsoft-azure-blob-storage) for details.
+
+---
+
+## 3. Initialize the Repository
+
+### 3.1 Log in with Azure CLI (managed identity)
+
+```bash
+az login --identity
+```
+
+Expected: logged in as `systemAssignedIdentity` with the Arc server's managed identity.
+
+### 3.2 Create the Restic repo
+
+```bash
+AZURE_ACCOUNT_NAME=homelabcloud5 AZURE_FORCE_CLI_CREDENTIAL=true \
+  restic -r azure:backups:/ init
 ```
 
 You'll be prompted for a **repository password**. Choose a strong one and store it in your password manager — you'll need it for every restore.
 
-> **Security note**: The `RESTIC_PASSWORD` is the only secret. Azure auth is handled by the Arc managed identity — no keys, no certs.
-
-### Verify
+### 3.3 Verify
 
 ```bash
-sudo docker run --rm \
-  -e AZURE_STORAGE_ACCOUNT=homelabcloud5 \
-  -e AZURE_USE_MANAGED_IDENTITY_CREDENTIAL=true \
-  restic/restic:latest \
-  snapshots --repo azure:backups:/homelab
+AZURE_ACCOUNT_NAME=homelabcloud5 AZURE_FORCE_CLI_CREDENTIAL=true \
+  restic -r azure:backups:/ snapshots
 ```
 
-Enter the password. Expected output: `no snapshots found` (or an empty list).
+Expected output: `no snapshots found` (or an empty list).
 
 ---
 
-## 3. Add Restic to Docker Compose
+## 4. Configure the Backup
 
-All commands run from `/opt/docker/`.
+Create a directory for config and a backup script for scheduled runs.
 
-### 3.1 Create a `.env` file with credentials
+### 4.1 Create config file
 
 ```bash
-nano /opt/docker/.env
+sudo mkdir -p /etc/restic
+sudo nano /etc/restic/env
 ```
 
 Add:
 
 ```env
 RESTIC_PASSWORD=your-strong-password
-AZURE_STORAGE_ACCOUNT=homelabcloud5
-AZURE_USE_MANAGED_IDENTITY_CREDENTIAL=true
+AZURE_ACCOUNT_NAME=homelabcloud5
+AZURE_FORCE_CLI_CREDENTIAL=true
+RESTIC_REPOSITORY=azure:backups:/
 ```
 
-> Generate a strong password: `openssl rand -base64 32`. The Arc managed identity handles Azure auth — no keys, no secrets, no certs to store.
+> Generate a strong password with `openssl rand -base64 32`. Lock it down: `sudo chmod 600 /etc/restic/env`.
 
-### 3.2 Add the Restic service
+### 4.2 Create the backup wrapper script
 
 ```bash
-nano docker-compose.yml
+sudo nano /usr/local/bin/homelab-backup
 ```
-
-Append under `services:`:
-
-```yaml
-  restic:
-    image: restic/restic:latest
-    container_name: restic
-    profiles:
-      - backup
-    env_file:
-      - .env
-    environment:
-      - AZURE_STORAGE_ACCOUNT=${AZURE_STORAGE_ACCOUNT}
-      - AZURE_USE_MANAGED_IDENTITY_CREDENTIAL=${AZURE_USE_MANAGED_IDENTITY_CREDENTIAL}
-    volumes:
-      - /opt/docker:/data/homelab-config:ro
-      - /var/lib/docker/volumes:/data/docker-volumes:ro
-    command: >
-      backup /data
-      --repo azure:backups:/homelab
-      --keep-daily=7 --keep-weekly=4 --keep-monthly=6
-      --exclude /data/docker-volumes/portainer_data/*
-```
-
-> **What's backed up**: The entire `/opt/docker/` directory (compose files, Caddyfile, configs) and all Docker volumes (service data, databases). The Portainer volume is excluded since Portainer manages its own snapshots.
-
-### 3.3 Verify the Compose config
 
 ```bash
-docker compose config
+#!/bin/bash
+set -euo pipefail
+
+export $(sudo cat /etc/restic/env | xargs)
+
+restic backup \
+  /opt/docker \
+  /var/lib/docker/volumes \
+  --exclude /var/lib/docker/volumes/portainer_data/* \
+  --keep-daily=7 --keep-weekly=4 --keep-monthly=6
 ```
 
-No errors expected.
+```bash
+sudo chmod +x /usr/local/bin/homelab-backup
+```
+
+> **What's backed up**: The entire `/opt/docker/` directory (compose files, Caddyfile, configs) and all Docker volumes. Portainer's internal data is excluded since Portainer manages its own snapshots.
 
 ---
 
-## 4. Schedule Daily Backups (Systemd Timer)
+## 5. Schedule Daily Backups (Systemd Timer)
 
-Use a systemd timer to run `restic` every day.
-
-### 4.1 Create the service unit
+### 5.1 Create the service unit
 
 ```bash
 sudo nano /etc/systemd/system/restic-backup.service
@@ -170,21 +181,17 @@ sudo nano /etc/systemd/system/restic-backup.service
 ```ini
 [Unit]
 Description=Restic backup — daily snapshot to Azure Blob
-After=docker.service
-Requires=docker.service
 
 [Service]
 Type=oneshot
-WorkingDirectory=/opt/docker
-ExecStart=/usr/bin/docker compose run --rm restic
-User=jarek
-Group=docker
+ExecStart=/usr/local/bin/homelab-backup
+User=root
 
 [Install]
 WantedBy=multi-user.target
 ```
 
-### 4.2 Create the timer unit
+### 5.2 Create the timer unit
 
 ```bash
 sudo nano /etc/systemd/system/restic-backup.timer
@@ -206,7 +213,7 @@ WantedBy=timers.target
 
 > `RandomizedDelaySec=1h` spreads the backup time to avoid predictable schedules. `Persistent=true` runs a missed backup immediately after boot.
 
-### 4.3 Enable and start the timer
+### 5.3 Enable and start the timer
 
 ```bash
 sudo systemctl daemon-reload
@@ -214,14 +221,14 @@ sudo systemctl enable restic-backup.timer
 sudo systemctl start restic-backup.timer
 ```
 
-### 4.4 Verify
+### 5.4 Verify
 
 ```bash
 sudo systemctl status restic-backup.timer
 sudo systemctl list-timers --all | grep restic
 ```
 
-### 4.5 Run a manual backup
+### 5.5 Run a manual backup
 
 ```bash
 sudo systemctl start restic-backup.service
@@ -236,65 +243,56 @@ journalctl -u restic-backup.service
 
 ---
 
-## 5. Test Restore Procedure
+## 6. Test Restore Procedure
 
-### 5.1 List snapshots
-
-```bash
-sudo docker run --rm \
-  --env-file /opt/docker/.env \
-  restic/restic:latest \
-  snapshots --repo azure:backups:/homelab
-```
-
-### 5.2 Restore to a temporary directory
+### 6.1 List snapshots
 
 ```bash
-sudo docker run --rm \
-  -v /tmp/restic-restore:/restore \
-  --env-file /opt/docker/.env \
-  restic/restic:latest \
-  restore latest --target /restore --repo azure:backups:/homelab
+sudo cat /etc/restic/env | xargs restic snapshots
 ```
 
-### 5.3 Verify restored data
+### 6.2 Restore to a temporary directory
+
+```bash
+sudo mkdir -p /tmp/restic-restore
+sudo cat /etc/restic/env | xargs restic restore latest --target /tmp/restic-restore
+```
+
+### 6.3 Verify restored data
 
 ```bash
 ls -la /tmp/restic-restore/
 ```
 
-### 5.4 Clean up
+### 6.4 Clean up
 
 ```bash
 sudo rm -rf /tmp/restic-restore
 ```
 
-### 5.5 Check repository integrity
+### 6.5 Check repository integrity
 
 ```bash
-sudo docker run --rm \
-  --env-file /opt/docker/.env \
-  restic/restic:latest \
-  check --repo azure:backups:/homelab
+sudo cat /etc/restic/env | xargs restic check
 ```
 
 Run `check` quarterly to detect data corruption.
 
 ---
 
-## 6. Maintenance
+## 7. Maintenance
 
 | Action | Frequency | Command |
 |---|---|---|
-| List snapshots | As needed | `sudo docker run --rm --env-file /opt/docker/.env restic/restic:latest snapshots --repo azure:backups:/homelab` |
-| Check repo integrity | Quarterly | `sudo docker run --rm --env-file /opt/docker/.env restic/restic:latest check --repo azure:backups:/homelab --read-data` |
-| Prune old snapshots | Auto (retention flags in command) | Restic keeps 7 daily, 4 weekly, 6 monthly |
+| List snapshots | As needed | `sudo cat /etc/restic/env \| xargs restic snapshots` |
+| Check repo integrity | Quarterly | `sudo cat /etc/restic/env \| xargs restic check --read-data` |
+| Prune old snapshots | Auto (retention flags) | Restic keeps 7 daily, 4 weekly, 6 monthly |
 
 > `--read-data` reads every pack file — it's I/O intensive and uses egress bandwidth. Run during low usage.
 
 ---
 
-## 7. Cost Estimates (Azure Blob Hot — LRS)
+## 8. Cost Estimates (Azure Blob Hot — LRS)
 
 | Data | Storage /mo | Egress (restore) |
 |---|---|---|
@@ -306,12 +304,12 @@ Restic deduplication significantly reduces stored data for incremental backups �
 
 ---
 
-## Verification Checklist
+## 9. Verification Checklist
 
 - [ ] Azure storage account + container created
-- [ ] Restic repo initialized on Azure Blob: `restic snapshots --repo azure:backups:/homelab`
-- [ ] Compose config valid: `docker compose config`
-- [ ] `.env` file has credentials (not in version control)
+- [ ] Restic repo initialized: `sudo cat /etc/restic/env \| xargs restic snapshots`
+- [ ] Config file locked: `sudo ls -la /etc/restic/env` (permissions `-rw-------`)
+- [ ] Backup script executable: `sudo /usr/local/bin/homelab-backup`
 - [ ] Systemd timer active: `sudo systemctl status restic-backup.timer`
 - [ ] First backup completed: `journalctl -u restic-backup.service | tail`
 - [ ] Restore procedure tested: files match source

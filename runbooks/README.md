@@ -13,5 +13,5 @@ Step-by-step guides for configuring the homelab server.
 | 5 | [5-cloudflare-tunnel.md](5-cloudflare-tunnel.md) | Cloudflare Tunnel for public HTTPS access |
 | 6 | [6-azure-arc.md](6-azure-arc.md) | Azure Arc hybrid server enrollment |
 | 6a | [6a-azure-monitor.md](6a-azure-monitor.md) | Azure Monitor metrics and log collection (supplements step 6) |
-| 7 | [7-restic-backup.md](7-restic-backup.md) | Restic backup to Azure Blob Storage with systemd timer |
+| 7 | [7-restic-backup.md](7-restic-backup.md) | Restic backup to Azure Blob (native binary, systemd timer, Arc managed identity) |
 | 9 | [9-mssql-dev.md](9-mssql-dev.md) | SQL Server Developer Edition in Docker |
