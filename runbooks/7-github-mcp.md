@@ -38,15 +38,35 @@ After installation, toggle **Agent mode** in the Copilot chat panel and the serv
 
 ---
 
-## 2. Manual Configuration
+## 2. Workspace Config (`mcp.json`)
 
-If the one-click install doesn't work, add the server to VS Code's MCP settings manually.
+This repo includes a `.vscode/mcp.json` file with the server pre-configured.
+VS Code automatically picks it up when you open the workspace.
 
-### 2.1 Open MCP Settings
+### 2.1 Project-level config
 
-Press `Ctrl+Shift+P` → **MCP: Add Server** → paste the config below.
+[`.vscode/mcp.json`](../.vscode/mcp.json) — no action needed:
 
-Or edit the user settings JSON directly:
+```json
+{
+  "servers": {
+    "github": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/"
+    }
+  }
+}
+```
+
+> **OAuth flow**: VS Code will prompt you to authenticate via GitHub OAuth on
+> first use — no token management needed.
+
+## 3. User-Level Config (Alternative)
+
+If you prefer global/user-level config instead of the workspace file, add the
+server to VS Code's user settings:
+
+Press `Ctrl+Shift+P` → **Preferences: Open User Settings (JSON)** → add:
 
 ```json
 {
@@ -61,10 +81,7 @@ Or edit the user settings JSON directly:
 }
 ```
 
-> **OAuth flow**: When using the config above (no `Authorization` header), VS Code will
-> prompt you to authenticate via GitHub OAuth on first use — no token management needed.
-
-### 2.2 Alternative: PAT Authentication
+### 3.1 PAT Authentication
 
 If you prefer using a Personal Access Token instead of OAuth:
 
@@ -97,7 +114,7 @@ Enable the permissions you're comfortable granting to AI tools.
 
 ---
 
-## 3. Toolset Configuration (Optional)
+## 4. Toolset Configuration (Optional)
 
 By default, the server enables toolsets for: `context`, `repos`, `issues`, `pull_requests`, `users`.
 
@@ -145,7 +162,7 @@ To use **all** toolsets: `X-GitHub-Toolsets: all`
 
 ---
 
-## 4. Insiders Mode
+## 5. Insiders Mode
 
 To get early access to new/experimental tools, use the insiders endpoint:
 
@@ -166,7 +183,7 @@ Or via header: `"X-MCP-Insiders": "true"`
 
 ---
 
-## 5. Verify
+## 6. Verify
 
 1. Toggle **Agent mode** in the Copilot chat panel
 2. Ask Copilot: _What issues are assigned to me in this repo?_
