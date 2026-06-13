@@ -31,7 +31,7 @@ A home lab server built on a second-hand mini PC, running Ubuntu Server as the b
 | 2026‑05‑30 | Azure Arc | ⭐⭐ | [6](runbooks/6-azure-arc.md) | Hybrid server enrollment, cert-based auth |
 | 2026‑05‑31 | GHCR in Portainer | ⭐ | [2a](runbooks/2a-ghcr-portainer.md) | GitHub Container Registry access |
 | 2026‑05‑31 | Hello World demo | ⭐ | [4a](runbooks/4a-hello-world.md) | Reverse proxy demo via Caddy + Cloudflare |
-| 2026‑06‑13 | Restic backup | ⭐⭐ | [7](runbooks/7-restic-backup.md) | Local SATA + optional Azure Blob offsite |
+| 2026‑06‑13 | Restic backup | ⭐⭐ | [7](runbooks/7-restic-backup.md) | Daily snapshots to Azure Blob Storage |
 
 ---
 
