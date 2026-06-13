@@ -54,10 +54,11 @@ The homelab server is enrolled in Azure Arc (see [6-azure-arc.md](6-azure-arc.md
 
 ```powershell
 $principalId = (Get-AzConnectedMachine -ResourceGroupName homelab-rg -Name "homelab").Identity.PrincipalId
+$sa = Get-AzStorageAccount -ResourceGroupName homelab-rg -Name "homelabcloud5"
 New-AzRoleAssignment `
   -ObjectId $principalId `
   -RoleDefinitionName "Storage Blob Data Contributor" `
-  -Scope "/subscriptions/a8a36bc1-79a7-49fe-9faa-92220103c66f/resourceGroups/homelab-rg/providers/Microsoft.Storage/storageAccounts/homelabcloud5"
+  -Scope $sa.Id
 ```
 
 > **Storage Blob Data Contributor** allows Restic to read, write, and delete blobs — everything needed for backup, restore, check, and prune. The Arc agent handles token acquisition automatically — no keys, no secrets, no certificates to manage.
