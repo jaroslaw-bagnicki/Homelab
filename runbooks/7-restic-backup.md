@@ -53,7 +53,7 @@ New-AzStorageContainer -Name backups -Context $ctx -Permission Off
 The homelab server is enrolled in Azure Arc (see [6-azure-arc.md](6-azure-arc.md)), so it already has a system-assigned managed identity. Find its object ID:
 
 ```powershell
-$arcMachine = Get-AzConnectedMachine -ResourceGroupName homelab-rg -Name (Read-Host "Enter the Arc server name")
+$arcMachine = Get-AzConnectedMachine -ResourceGroupName homelab-rg -Name "homelab"
 $arcMachine.Identity.PrincipalId
 ```
 
