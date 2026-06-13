@@ -48,22 +48,14 @@ New-AzStorageContainer -Name backups -Context $ctx -Permission Off
 
 `-Permission Off` means private — no anonymous access.
 
-### 1.3 Get the Arc managed identity principal ID
+### 1.3 Assign RBAC role to the Arc managed identity
 
-The homelab server is enrolled in Azure Arc (see [6-azure-arc.md](6-azure-arc.md)), so it already has a system-assigned managed identity. Find its object ID:
-
-```powershell
-$arcMachine = Get-AzConnectedMachine -ResourceGroupName homelab-rg -Name "homelab"
-$arcMachine.Identity.PrincipalId
-```
-
-> Run this from your local machine. The output is the managed identity's **principal ID** — you need it for the RBAC assignment.
-
-### 1.4 Assign RBAC role to the managed identity
+The homelab server is enrolled in Azure Arc (see [6-azure-arc.md](6-azure-arc.md)), so it already has a system-assigned managed identity. Grant it access to the storage account:
 
 ```powershell
+$principalId = (Get-AzConnectedMachine -ResourceGroupName homelab-rg -Name "homelab").Identity.PrincipalId
 New-AzRoleAssignment `
-  -ObjectId "<principal-id-from-step-1.3>" `
+  -ObjectId $principalId `
   -RoleDefinitionName "Storage Blob Data Contributor" `
   -Scope "/subscriptions/a8a36bc1-79a7-49fe-9faa-92220103c66f/resourceGroups/homelab-rg/providers/Microsoft.Storage/storageAccounts/homelabcloud5"
 ```
