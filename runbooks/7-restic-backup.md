@@ -53,10 +53,10 @@ New-AzStorageContainer -Name backups -Context $ctx -Permission Off
 The homelab server is enrolled in Azure Arc (see [6-azure-arc.md](6-azure-arc.md)), so it already has a system-assigned managed identity. Grant it access to the storage account:
 
 ```powershell
-$principalId = (Get-AzConnectedMachine -ResourceGroupName homelab-rg -Name "homelab").Identity.PrincipalId
+$connectedMachine = Get-AzConnectedMachine -ResourceGroupName homelab-rg -Name "homelab"
 $sa = Get-AzStorageAccount -ResourceGroupName homelab-rg -Name "homelabcloud5"
 New-AzRoleAssignment `
-  -ObjectId $principalId `
+  -ObjectId $connectedMachine.IdentityPrincipalId `
   -RoleDefinitionName "Storage Blob Data Contributor" `
   -Scope $sa.Id
 ```
