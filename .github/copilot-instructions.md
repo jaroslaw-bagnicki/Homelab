@@ -16,8 +16,15 @@
 
 ## Issue Tracking
 
+- **When to create an issue**: features, bugs, or ideas that span more than one session
+- **When NOT to create an issue**: one-shot `(docs)` or `(chore)` commits, ongoing research (use `research/` docs for that)
 - **When creating an issue**: use a clear title, add relevant labels, and include a brief **Why / What** description
 - **Reference issues in commits**: use `#NNN` in commit messages to link them automatically — use `Closes #NNN` to auto-close on merge commit
+- **Labels**: `enhancement` (new feature), `bug` (broken), `chore` (maintenance/tooling), `research` (investigation)
+- **README progress table = public status board** — shows at a glance what's done (dated rows) and what's next (undated rows). Only items that are **completed** or **actively being worked on** belong here.
+- **Issues = the backlog** — capture ideas, bugs, and multi-session work that isn't in the README table yet. An issue becomes a README "What's Next" row when you're ready to start it.
+- **Typical flow**: idea → issue → move to README "What's Next" when starting → move to "What's Done" when finished → close the issue
+- When adding a completed row to "What's Done", link the **runbook** (not the issue) — `[runbook](runbooks/N-name.md)` — so the table points to the implementation, not the ticket
 
 ## Git Workflow
 
