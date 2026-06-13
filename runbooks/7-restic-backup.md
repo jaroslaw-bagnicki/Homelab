@@ -6,34 +6,60 @@
 
 - [ ] Docker Engine + Compose running (see [2-docker.md](2-docker.md))
 - [ ] SSH access via `ssh jarek@homelab.local`
-- [ ] Azure subscription with a storage account (Hot or Cool tier, LRS)
+- [ ] Azure subscription (any region) + `Az` PowerShell module installed on your local machine
 
 ---
 
-## 1. Create the Azure Blob Storage Container
+## 1. Provision the Azure Storage Account and Container
 
-### 1.1 Identify or create a storage account
+### 1.1 Create a resource group (if needed)
 
-You can use an existing storage account or create a new one through the Azure Portal.
+Run from your laptop or a machine with the Az PowerShell module installed:
 
-Requirements:
-- **Account kind**: StorageV2 (general purpose v2)
-- **Performance**: Standard
-- **Replication**: LRS (redundancy isn't needed — Restic handles dedup)
-- **Tier**: Cool (lower storage cost; restore frequency is low)
+```powershell
+Connect-AzAccount
+New-AzResourceGroup -Name rg-homelab-backup -Location northeurope
+```
 
-### 1.2 Create a container for backups
+> Pick a location close to your homelab's Azure region. `northeurope` is typical for EU-based setups.
 
-In the Azure Portal, navigate to your storage account → **Containers** → **+ Container**:
+### 1.2 Create the storage account
 
-- **Name**: `backups`
-- **Public access level**: Private (no anonymous access)
+```powershell
+New-AzStorageAccount -ResourceGroupName rg-homelab-backup `
+  -Name "sthomelabbackup" `
+  -SkuName Standard_LRS `
+  -Kind StorageV2 `
+  -AccessTier Cool
+```
 
-### 1.3 Get the storage account key
+Requirements met by this command:
+- **Account kind**: StorageV2
+- **Performance**: Standard (default)
+- **Replication**: LRS
+- **Tier**: Cool
 
-Go to **Access keys** in the storage account and copy either key. You'll need:
-- The **Storage account name**
-- The **Key** (either key1 or key2)
+> Pick a globally unique storage account name (e.g. `st<your initials>homelabbackup`).
+
+### 1.3 Create the `backups` container
+
+```powershell
+$ctx = (Get-AzStorageAccount -ResourceGroupName rg-homelab-backup -Name "sthomelabbackup").Context
+New-AzStorageContainer -Name backups -Context $ctx -Permission Off
+```
+
+`-Permission Off` means private — no anonymous access.
+
+### 1.4 Retrieve the storage account key
+
+```powershell
+Get-AzStorageAccountKey -ResourceGroupName rg-homelab-backup -Name "sthomelabbackup" `
+  | Select-Object -First 1 -ExpandProperty Value
+```
+
+Save the output — you'll need the **storage account name** and this **key** for step 2.
+
+> Alternatively, copy the key from the Azure Portal: storage account → **Access keys** → copy either key1 or key2.
 
 ---
 
