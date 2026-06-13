@@ -41,6 +41,7 @@ A home lab server built on a second-hand mini PC, running Ubuntu Server as the b
 |---|---|---|---|
 | 6a | **Monitoring** (Azure Monitor) | ⭐ | Metrics and logs via Arc — see [runbook](runbooks/6a-azure-monitor.md) |
 | 7 | **Hermes Agent** | ⭐⭐⭐ | Most complex — last |
+| 8 | **Key Vault** | ⭐ | Central secret storage for homelab — see [#6](https://github.com/jaroslaw-bagnicki/Homelab/issues/6) |
 | 9 | **SQL Server** | ⭐⭐ | Developer Edition in Docker — see [runbook](runbooks/9-mssql-dev.md) |
 | 10 | **Gitea** | ⭐⭐ | Self-hosted Git with web UI for personal repos |
 | - | **Ollama + Bielik** (Phase 2) | ⭐⭐⭐ | Needs dedicated LLM server hardware |
