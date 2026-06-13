@@ -18,10 +18,10 @@ Run from your laptop or a machine with the Az PowerShell module installed:
 
 ```powershell
 Connect-AzAccount
-New-AzResourceGroup -Name rg-homelab-backup -Location northeurope
+New-AzResourceGroup -Name rg-homelab-backup -Location polandcentral
 ```
 
-> Pick a location close to your homelab's Azure region. `northeurope` is typical for EU-based setups.
+> Change `-Location` if you prefer a different Azure region.
 
 ### 1.2 Create the storage account
 
