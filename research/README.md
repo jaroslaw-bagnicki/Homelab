@@ -15,6 +15,7 @@
 | 11 | [11-local-dns-caddy.md](11-local-dns-caddy.md) | Local DNS via Caddy, mDNS for `.homelab.local` resolution | Research |
 | 12 | [12-first-boot-setup.md](12-first-boot-setup.md) | First-boot: backup, BIOS, static IP, SSH, LVM resize, hardening | Gemini chat 4 |
 | 13 | [13-ansible-adoption.md](13-ansible-adoption.md) | Ansible adoption for GitOps host config, DR strategy, Ubuntu 26→24 downgrade | Gemini chat 5 |
+| 14 | [14-backup-cost-comparison.md](14-backup-cost-comparison.md) | Restic+Blob vs Azure Backup Arc cost comparison | Research |
 
 ## Gemini Discussions
 
