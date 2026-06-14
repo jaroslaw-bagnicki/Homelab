@@ -5,7 +5,7 @@
 ## Prerequisites
 
 - [ ] SSH access via `ssh jarek@homelab`
-- [ ] Server has `curl`, `bzip2`, `nano` (or `vim`): `sudo apt install -y curl bzip2 nano`
+- [ ] Server has `curl` and `bzip2`: `sudo apt install -y curl bzip2`
 - [ ] Azure CLI installed on the server (see [2-docker.md](2-docker.md) for general server access)
 - [ ] Azure subscription + `Az` PowerShell module installed on your local machine
 
@@ -132,15 +132,24 @@ Create a directory for config and a backup script for scheduled runs.
 sudo mkdir -p /etc/restic
 ```
 
-Write the config (adjust values as needed):
+Write the config:
 
 ```bash
-sudo tee /etc/restic/env << 'EOF'
+sudo nano /etc/restic/env
+```
+
+Add:
+
+```env
 RESTIC_PASSWORD=your-strong-password
 AZURE_ACCOUNT_NAME=homelabcloud5
 AZURE_FORCE_CLI_CREDENTIAL=true
 RESTIC_REPOSITORY=azure:backups:/
-EOF
+```
+
+Then lock the file:
+
+```bash
 sudo chmod 600 /etc/restic/env
 ```
 
@@ -149,7 +158,12 @@ sudo chmod 600 /etc/restic/env
 ### 4.2 Create the backup wrapper script
 
 ```bash
-sudo tee /usr/local/bin/homelab-backup << 'SCRIPT'
+sudo nano /usr/local/bin/homelab-backup
+```
+
+Add:
+
+```bash
 #!/bin/bash
 set -euo pipefail
 
@@ -159,7 +173,11 @@ restic backup \
   /var/lib/docker/volumes \
   --exclude /var/lib/docker/volumes/portainer_data/* \
   --keep-daily=7 --keep-weekly=4 --keep-monthly=6
-SCRIPT
+```
+
+Then make it executable:
+
+```bash
 sudo chmod +x /usr/local/bin/homelab-backup
 ```
 
