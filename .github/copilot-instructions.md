@@ -10,7 +10,15 @@
 
 ## Documentation
 
-- Research docs: `homelab/research/` — numbered Markdown files (`01-*.md`, `02-*.md`, …)
+- **Decision log (`docs/decisions/`)** — **source of truth** for all settled design decisions.
+  ADRs (Architecture Decision Records) record what was decided, when, why, and what
+  alternatives were considered. When the agent needs to answer "why did we pick X
+  over Y?", consult `docs/decisions/README.md` first — the decision log takes
+  precedence over research docs and code comments for design rationale.
+- Research docs: `homelab/research/` — numbered Markdown files (`01-*.md`, `02-*.md`, …).
+  Useful for exploratory context, but ADRs in `docs/decisions/` supersede research
+  docs once a direction is settled.
+- Runbooks: `runbooks/` — implementation instructions and operational procedures
 - Each area has a `README.md` as the index
 - For research output structure, use the `research-output` skill — see `.github/skills/research-output/SKILL.md` for the required structure
 
