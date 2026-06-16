@@ -18,6 +18,9 @@ Without a lightweight decision log, the project is at risk of:
 - Re-debating settled questions in future sessions
 - Losing the rationale behind past choices when context fades
 - Having no canonical place to look up "why did we pick X over Y"
+- Starving the AI agent of structured context — without ADRs, the agent has
+  only research docs and runbooks to infer design rationale from, which are
+  noisy, unstructured, and often omit trade-off reasoning
 
 The [MADR](https://adr.github.io/madr/) format (Markdown Any Decision Records)
 is a well-known lightweight ADR approach used successfully in the Prospera
@@ -40,6 +43,8 @@ Adopt the MADR format for the Homelab project's decision log.
 
 - Future decisions have a discoverable, indexed home — no more hunting through
   research docs for settled answers
+- The AI agent gets structured, high-signal context — ADRs directly answer
+  "why was X chosen?" without needing to parse verbose research documents
 - Decision log is plain Markdown — no tooling dependency, works in any editor
 - Lightweight overhead — one file per decision, one row added to README
 - No backfilling of past decisions — only forward-looking records from this
