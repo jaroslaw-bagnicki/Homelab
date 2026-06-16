@@ -8,7 +8,7 @@
 ## Context
 
 The homelab server (Lenovo ThinkCentre M910q, Ubuntu Server) was registered in
-Azure Arc ([ADR 260530](260530-hybrid-cloud-azure-arc.md)), making it visible in
+Azure Arc ([ADR 260524](260524-hybrid-cloud-azure-arc.md)), making it visible in
 the Azure Portal alongside other Azure resources. The next step was to enable
 basic monitoring — CPU, memory, and disk metrics — without standing up a
 separate monitoring stack.
