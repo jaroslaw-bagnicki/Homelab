@@ -29,5 +29,5 @@ Significant architectural and technology choices recorded in
 | 5 | 2026-05-24 | [OS Decision — Ubuntu Server 24.04 LTS](260524-05-os-decision-ubuntu-server.md) | Implemented |
 | 4 | 2026-05-24 | [Hybrid Cloud Strategy — Physical Homelab + Minimal Azure](260524-04-hybrid-cloud-azure-arc.md) | Implemented |
 | 3 | 2026-05-24 | [Container Strategy — Docker Compose First, k3s Path](260524-03-container-strategy.md) | Implemented |
-| 2 | 2026-05-24 (amended 2026-06-13) | [Backup Strategy — Restic to Local SATA + Azure Blob](260524-02-backup-strategy-restic-blob.md) | In Progress |
+| 2 | 2026-05-24 | [Backup Strategy — Restic to Local SATA + Azure Blob](260524-02-backup-strategy-restic-blob.md) | In Progress |
 | 1 | 2026-05-20 | [Hardware Selection — Lenovo ThinkCentre M910q Tiny](260520-01-hardware-selection-m910q.md) | Implemented |

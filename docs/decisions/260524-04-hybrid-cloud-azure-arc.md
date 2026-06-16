@@ -1,6 +1,6 @@
 # Hybrid Cloud Strategy — Physical Homelab + Minimal Azure
 
-**Date:** 2026-05-24
+**Date:** 2026-05-24  
 **Status:** Implemented
 
 ---

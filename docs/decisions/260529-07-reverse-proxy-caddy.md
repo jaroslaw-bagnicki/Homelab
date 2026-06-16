@@ -1,6 +1,6 @@
 # Reverse Proxy — Caddy with Auto-TLS and Configuration-as-Code
 
-**Date:** 2026-05-29
+**Date:** 2026-05-29  
 **Status:** Implemented
 
 ---

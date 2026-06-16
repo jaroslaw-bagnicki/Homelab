@@ -5,7 +5,7 @@
 
 # Title — Short, Descriptive Name
 
-**Date:** YYYY-MM-DD
+**Date:** YYYY-MM-DD  
 **Status:** Proposed | Accepted | Implemented | Deferred | Superseded | Deprecated
 
 ---

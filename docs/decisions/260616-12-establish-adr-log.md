@@ -1,6 +1,6 @@
 # Establish Lightweight ADR Log in MADR Format
 
-**Date:** 2026-06-16
+**Date:** 2026-06-16  
 **Status:** Accepted
 
 ---
