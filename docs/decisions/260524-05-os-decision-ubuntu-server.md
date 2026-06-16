@@ -1,6 +1,6 @@
 # OS Decision — Ubuntu Server 24.04 LTS
 
-**Date:** 2026-05-24
+**Date:** 2026-05-24  
 **Status:** Implemented
 
 ---

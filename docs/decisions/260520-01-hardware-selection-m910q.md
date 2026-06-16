@@ -1,6 +1,6 @@
 # Hardware Selection — Lenovo ThinkCentre M910q Tiny
 
-**Date:** 2026-05-20
+**Date:** 2026-05-20  
 **Status:** Implemented
 
 ---

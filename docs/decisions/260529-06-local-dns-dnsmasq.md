@@ -1,6 +1,6 @@
 # Local DNS Resolution — DNSMasq with Wildcard `.home` Domains
 
-**Date:** 2026-05-29
+**Date:** 2026-05-29  
 **Status:** Implemented
 
 ---
