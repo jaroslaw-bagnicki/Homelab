@@ -46,5 +46,5 @@ Key elements of the approach:
 
 ---
 
-**Reference:** `research/13-ansible-adoption.md`
+**Reference:** `research/13-ansible-adoption.md`  
 **Supersedes:** runbooks as the automation source of truth (`runbooks/1-init.md` etc. retain reference value only)

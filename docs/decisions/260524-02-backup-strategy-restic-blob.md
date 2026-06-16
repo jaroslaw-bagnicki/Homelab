@@ -1,7 +1,7 @@
 # Backup Strategy — Restic to Local SATA + Azure Blob
 
 **Date:** 2026-05-24  
-**Last amended:** 2026-06-13
+**Last amended:** 2026-06-13  
 **Status:** In Progress
 
 ---
