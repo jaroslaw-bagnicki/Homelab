@@ -2,8 +2,12 @@
 name: adr-authoring
 description: >-
   Authoring and maintaining Architecture Decision Records (ADRs) in MADR format
-  for the Homelab project. Covers filename convention, required sections, status
-  values, README index maintenance, and commit conventions.
+  for the Homelab project. ADRs serve a dual purpose: (1) human-readable
+  decision log, and (2) structured, high-signal context for the AI agent —
+  directly answering "why was X chosen?" without requiring the agent to parse
+  verbose research documents.
+  Covers filename convention, required sections, status values, README index
+  maintenance, and commit conventions.
   USE FOR: creating a new ADR, updating an existing ADR, reviewing an ADR,
   deciding whether a decision warrants an ADR, fixing a malformed ADR.
   DO NOT USE FOR: writing research docs (use research-output skill), writing
@@ -21,6 +25,13 @@ Architecture Decision Records (ADRs) capture significant decisions with lasting
 consequences. Follow the [MADR](https://adr.github.io/madr/) (Markdown Any Decision
 Records) lightweight format.
 
+ADRs serve a **dual purpose**:
+1. **Human decision log** — indexed reference for the project maintainer
+2. **Agent context** — structured, high-signal input for the AI coding agent.
+   Every ADR directly answers "why was X chosen?" so the agent can make
+   informed follow-up recommendations without needing to dig through verbose
+   research documents or infer rationale from code alone.
+
 ---
 
 ## When to write an ADR
@@ -32,6 +43,8 @@ Write an ADR when a decision:
 - Has **cost, complexity, or risk implications** — hosting choice, tool adoption,
   architecture pattern, security model
 - Is worth **referencing from future research docs, runbooks, or issues**
+- Provides **context for the AI agent** — ADRs directly answer "why" questions
+  that the agent needs for informed, context-aware suggestions
 
 **No ADR needed for:** standard operating procedures, one-shot configuration tweaks,
 tool version bumps, typos or formatting fixes.
