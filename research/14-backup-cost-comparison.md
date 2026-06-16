@@ -9,7 +9,7 @@
 
 The M910q homelab server is enrolled in Azure Arc (see [07-azure-arc-and-cost.md](07-azure-arc-and-cost.md)). This opens two cloud off-site backup paths:
 
-1. **Restic → Azure Blob Storage** (already implemented — see [runbook 7](../runbooks/7-restic-backup.md))
+1. **Restic → Azure Blob Storage** (partially set up — see [runbook 7](../runbooks/7-restic-backup.md))
 2. **Azure Backup (MARS agent)** on the Arc-connected machine
 
 Both use the same Azure subscription (`Cloud5-default`) and same resource group (`homelab-rg`). Both require the server to be connected to the internet during backup windows.
@@ -151,7 +151,7 @@ Assumptions:
 | **12–13× cheaper** | No $10/month instance fee. Only pay for actual storage used. |
 | **Dedup advantage** | Restic's block-level dedup is ideal for Docker volume snapshots — far less storage than Azure Backup's compression-only approach. |
 | **Full portability** | Blobs are standard Azure Storage — can be downloaded, copied, or restored with any blob tool. No vendor lock-in. |
-| **Already implemented** | Runbook 7 is deployed and working. Adding Azure Backup would be a second parallel system. |
+| **Partially set up** | Restic binary and config exist on the server; systemd timer and first backup still pending. Adding Azure Backup would be a second parallel system. |
 
 **When Azure Backup would make sense:**
 

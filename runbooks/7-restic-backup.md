@@ -307,15 +307,15 @@ Run `check` quarterly to detect data corruption.
 
 ---
 
-## 8. Cost Estimates (Azure Blob Hot — LRS)
+## 8. Cost Estimates (Azure Blob Hot — LRS, USD)
 
 | Data | Storage /mo | Egress (restore) |
 |---|---|---|
-| 10 GB | ~€0.20 | ~€0.05 |
-| 50 GB | ~€1.00 | ~€0.25 |
-| 200 GB | ~€4.00 | ~€1.00 |
+| 10 GB | ~$0.18 | ~$0.05 |
+| 50 GB | ~$0.90 | ~$0.23 |
+| 200 GB | ~$3.60 | ~$0.90 |
 
-Restic deduplication significantly reduces stored data for incremental backups — expect 30–50% of the raw source size.
+Pricing: $0.018/GB/month (Hot tier, LRS, pay-as-you-go). Restic deduplication significantly reduces stored data for incremental backups — expect 30–50% of the raw source size.
 
 ---
 
