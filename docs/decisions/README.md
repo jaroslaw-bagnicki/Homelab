@@ -20,7 +20,7 @@ Significant architectural and technology choices recorded in
 | 2026-06-16 | [Establish Lightweight ADR Log in MADR Format](260616-establish-adr-log.md) | Accepted |
 | 2026-06-13 | [Ansible for Host Configuration Management](260613-ansible-host-config.md) | Accepted |
 | 2026-06-13 | [Ticketing System — GitHub Issues](260613-ticketing-github-issues.md) | Implemented |
-| 2026-06-13 | [Backup Strategy — Restic to Local SATA + Azure Blob](260613-backup-strategy-restic-blob.md) | In Progress |
+| 2026-05-24 (amended 2026-06-13) | [Backup Strategy — Restic to Local SATA + Azure Blob](260524-backup-strategy-restic-blob.md) | In Progress |
 | 2026-06-02 | [Azure Monitor via Arc for Homelab Monitoring](260602-azure-monitor-via-arc.md) | Implemented |
 | 2026-05-30 | [Hybrid Cloud Strategy — Physical Homelab + Minimal Azure](260530-hybrid-cloud-azure-arc.md) | Implemented |
 | 2026-05-30 | [Remote Access — Cloudflare Tunnel for Inbound HTTPS](260530-remote-access-cloudflare-tunnel.md) | Implemented |
