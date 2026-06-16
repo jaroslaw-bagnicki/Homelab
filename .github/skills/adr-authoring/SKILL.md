@@ -54,14 +54,14 @@ tool version bumps, typos or formatting fixes.
 ## File naming
 
 ```
-docs/decisions/YYMMDD-N-kebab-case-title.md
+docs/decisions/YYMMDD-NN-kebab-case-title.md
 ```
 
 - `YYMMDD` — date the decision was made (e.g. `260616`)
-- `N` — sequential number within the same date (01, 02, …)
+- `NN` — globally sequential number (01, 02, …) across all ADRs, assigned chronologically from oldest to newest
 - `kebab-case-title` — short, descriptive title
 
-**Example:** `260616-1-establish-adr-log.md`
+**Example:** `260616-12-establish-adr-log.md`
 
 ---
 
