@@ -17,6 +17,7 @@ Significant architectural and technology choices recorded in
 
 | Date | ADR | Status |
 |------|-----|--------|
+| 2026-06-02 | [Azure Monitor via Arc for Homelab Monitoring](260602-azure-monitor-via-arc.md) | Implemented |
 | 2026-06-16 | [Establish Lightweight ADR Log in MADR Format](260616-establish-adr-log.md) | Accepted |
 | 2026-06-13 | [Ticketing System — GitHub Issues](260613-ticketing-github-issues.md) | Implemented |
 | 2026-06-13 | [Backup Strategy — Restic to Local SATA + Azure Blob](260613-backup-strategy-restic-blob.md) | Implemented |
