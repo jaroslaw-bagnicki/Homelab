@@ -19,6 +19,7 @@ Significant architectural and technology choices recorded in
 |------|-----|--------|
 | # | Date | ADR | Status |
 |---|------|-----|--------|
+| 13 | 2026-06-16 | [Use Hetzner CPX31 VPS as Ansible Playground](260616-13-vps-hetzner-playground.md) | Accepted |
 | 12 | 2026-06-16 | [Establish Lightweight ADR Log in MADR Format](260616-12-establish-adr-log.md) | Accepted |
 | 11 | 2026-06-13 | [Ticketing System — GitHub Issues](260613-11-ticketing-github-issues.md) | Implemented |
 | 10 | 2026-06-13 | [Ansible for Host Configuration Management](260613-10-ansible-host-config.md) | Accepted |

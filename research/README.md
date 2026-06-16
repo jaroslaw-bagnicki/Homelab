@@ -16,6 +16,7 @@
 | 12 | [12-first-boot-setup.md](12-first-boot-setup.md) | First-boot: backup, BIOS, static IP, SSH, LVM resize, hardening | Gemini chat 4 |
 | 13 | [13-ansible-adoption.md](13-ansible-adoption.md) | Ansible adoption for GitOps host config, DR strategy, Ubuntu 26→24 downgrade | Gemini chat 5 |
 | 14 | [14-backup-cost-comparison.md](14-backup-cost-comparison.md) | Restic+Blob vs Azure Backup Arc cost comparison | Research |
+| 15 | [15-vps-selection.md](15-vps-selection.md) | Budget VPS selection for Ansible playground; Hetzner CPX31 with snapshot destroy/recreate | Gemini chat 6 |
 
 ## Gemini Discussions
 
@@ -26,3 +27,4 @@
 | 3 | [Gemini chat 3](https://gemini.google.com/share/24e2d3af7b59) | 08 |
 | 4 | [Gemini chat 4](https://gemini.google.com/share/3bec83a4906e) | 12 |
 | 5 | [Gemini chat 5](https://gemini.google.com/share/ffa774d97c3e) | 13 |
+| 6 | [Gemini chat 6](https://gemini.google.com/share/a4b01a2b65b2) | 15 |
