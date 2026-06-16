@@ -18,3 +18,11 @@ Significant architectural and technology choices recorded in
 | Date | ADR | Status |
 |------|-----|--------|
 | 2026-06-16 | [Establish Lightweight ADR Log in MADR Format](260616-establish-adr-log.md) | Accepted |
+| 2026-06-13 | [Backup Strategy — Restic to Local SATA + Azure Blob](260613-backup-strategy-restic-blob.md) | Implemented |
+| 2026-05-30 | [Hybrid Cloud Strategy — Physical Homelab + Minimal Azure](260530-hybrid-cloud-azure-arc.md) | Implemented |
+| 2026-05-30 | [Remote Access — Cloudflare Tunnel for Inbound HTTPS](260530-remote-access-cloudflare-tunnel.md) | Implemented |
+| 2026-05-29 | [Reverse Proxy — Caddy with Auto-TLS and CaC](260529-reverse-proxy-caddy.md) | Implemented |
+| 2026-05-29 | [Local DNS — DNSMasq with Wildcard `.home` Domains](260529-local-dns-dnsmasq.md) | Implemented |
+| 2026-05-24 | [Container Strategy — Docker Compose First, k3s Path](260524-container-strategy.md) | Implemented |
+| 2026-05-24 | [OS Decision — Ubuntu Server 24.04 LTS](260524-os-decision-ubuntu-server.md) | Implemented |
+| 2026-05-20 | [Hardware Selection — Lenovo ThinkCentre M910q Tiny](260520-hardware-selection-m910q.md) | Implemented |
