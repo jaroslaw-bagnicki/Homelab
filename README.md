@@ -11,6 +11,8 @@ them to the physical hardware.
 This is my sandbox — a place to tinker with technologies I don't use at work,
 self-host AI agents, and keep learning for the joy of it.
 
+Key design decisions are recorded in the [decision log](docs/decisions/README.md).
+
 ## Goals
 
 - 🎮 **Have fun** — tinkering for the joy of it, no deadlines
