@@ -108,7 +108,7 @@ The following steps will be automated via Ansible playbooks, not done manually:
 - **fail2ban** — 3 retries, 1h ban on SSH
 - **Docker Engine** — official repo, `labadmin` in docker group
 - **Common tools** — git, curl, htop, etc.
-- **Timezone & NTP** — Europe/Warsaw
+- **NTP** — ensure time sync is enabled (timezone stays UTC on servers)
 - **Verification** — SSH config, UFW, fail2ban, Docker, listening ports
 
 See [research 13: Ansible Adoption](../research/13-ansible-adoption.md) for the
