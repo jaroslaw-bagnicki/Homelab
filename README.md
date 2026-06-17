@@ -2,7 +2,14 @@
 
 > **Have fun. Sharpen the saw. Experiment with AI workloads.**
 
-A home lab server built on a second-hand mini PC, running Ubuntu Server as the base OS. This is my sandbox — a place to tinker with technologies I don't use at work, self-host AI agents, and keep learning for the joy of it.
+A home lab server built on a second-hand mini PC, currently running Ubuntu
+Server, with a planned clean rebuild on **Ubuntu 24.04 LTS** managed via
+**Ansible** for declarative, GitOps-style host configuration. A disposable
+[Contabo Cloud VPS](runbooks/10-vps-playground.md) serves as a safe playground
+for developing Ansible playbooks before applying them to the physical hardware.
+
+This is my sandbox — a place to tinker with technologies I don't use at work,
+self-host AI agents, and keep learning for the joy of it.
 
 ## Goals
 
@@ -10,10 +17,16 @@ A home lab server built on a second-hand mini PC, running Ubuntu Server as the b
 - 🔧 **Sharpen the saw** — supplement and extend my Operations and DevOps expertise by running infrastructure hands-on
 - 🤖 **Experiment with AI workloads** — run Hermes Agent with cloud/hybrid LLMs, and eventually local inference on dedicated hardware
 
-## Selected Hardware
+## Tech Stack
 
-**Lenovo ThinkCentre M910q Tiny** — i5-7500T / 16 GB DDR4 / 256 GB SSD  
-4C/4T, 35 W TDP, Intel HD 630 with QuickSync, ~7–10 W idle, ~150 EUR second-hand.
+The physical server is a **Lenovo ThinkCentre M910q Tiny** (i5-7500T, 16 GB RAM).
+It will be rebuilt from scratch on **Ubuntu 24.04 LTS**, managed entirely via
+**Ansible** playbooks — developed and tested on a disposable **Contabo Cloud
+VPS 10** playground before touching the hardware.
+
+Applications run in **Docker Compose** with a future path to **k3s**. The server
+is enrolled in **Azure Arc** for cloud-side monitoring and policy, and exposed
+to the internet via **Cloudflare Tunnel** behind a **Caddy** reverse proxy.
 
 ---
 
