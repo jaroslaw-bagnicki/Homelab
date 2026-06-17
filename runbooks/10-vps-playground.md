@@ -100,7 +100,29 @@ echo "127.0.1.1 cloudlab" | sudo tee -a /etc/hosts
 
 ---
 
-## 6. Remaining Setup (via Ansible)
+## 6. Map VPS IP to Hostname (on your laptop)
+
+Add the following entry to your laptop's `hosts` file so you can SSH by name
+instead of IP:
+
+**Terminal (as Administrator):**
+```powershell
+code "$env:SystemRoot\System32\drivers\etc\hosts"
+```
+
+Add this line at the end of the file:
+```
+173.249.27.13 cloudlab
+```
+
+Verify:
+```powershell
+ssh labadmin@cloudlab -o PreferredAuthentications=publickey
+```
+
+---
+
+## 7. Remaining Setup (via Ansible)
 
 The following steps will be automated via Ansible playbooks, not done manually:
 
