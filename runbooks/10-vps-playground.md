@@ -26,41 +26,57 @@ apt update && apt upgrade -y
 
 ---
 
-## 2. Create a Non-Root User with Sudo
+## 2. Map VPS IP to Hostname (on your laptop)
 
-Create the admin user that Ansible will use:
+Open your hosts file as Administrator:
+
+```powershell
+code "$env:SystemRoot\System32\drivers\etc\hosts"
+```
+
+Add this line at the end:
+```
+173.249.27.13 cloudlab
+```
+
+All subsequent steps use `cloudlab` instead of the raw IP.
+
+---
+
+## 3. Create labadmin User (on VPS as root)
 
 ```bash
-adduser labadmin
+adduser labadmin --disabled-password
 usermod -aG sudo labadmin
+echo "labadmin ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/labadmin
+chmod 440 /etc/sudoers.d/labadmin
+passwd --lock labadmin
+```
+
+## 4. Upload SSH Key (from your laptop)
+
+```powershell
+ssh root@cloudlab "mkdir -p ~labadmin/.ssh && chown labadmin:labadmin ~labadmin/.ssh && chmod 700 ~labadmin/.ssh"
+type $env:USERPROFILE\.ssh\id_ed25519.pub | ssh root@cloudlab "cat >> ~labadmin/.ssh/authorized_keys && chown labadmin:labadmin ~labadmin/.ssh/authorized_keys && chmod 600 ~labadmin/.ssh/authorized_keys"
 ```
 
 Verify:
-```bash
-su - labadmin
+```powershell
+ssh labadmin@cloudlab
 sudo whoami   # should print "root"
 ```
 
 ---
 
-## 3. Upload Your SSH Public Key
+## 5. Harden SSH
 
-From your **laptop** (PowerShell), copy your Ed25519 public key to the new user:
+Open the config in nano:
 
-```powershell
-type $env:USERPROFILE\.ssh\id_ed25519.pub | ssh root@173.249.27.13 "mkdir -p ~labadmin/.ssh && cat >> ~labadmin/.ssh/authorized_keys && chown -R labadmin:labadmin ~labadmin/.ssh && chmod 700 ~labadmin/.ssh && chmod 600 ~labadmin/.ssh/authorized_keys"
-```
-
-Test key login:
 ```bash
-ssh labadmin@173.249.27.13
+sudo nano /etc/ssh/sshd_config
 ```
 
----
-
-## 4. Harden SSH
-
-Edit `/etc/ssh/sshd_config` and set these **critical** lines:
+Find and change/set these **critical** lines:
 
 ```ini
 PermitRootLogin no
@@ -76,7 +92,8 @@ ClientAliveInterval 300
 ClientAliveCountMax 2
 ```
 
-Restart SSH:
+Save (`Ctrl+O`, `Enter`, `Ctrl+X`) and restart SSH:
+
 ```bash
 sudo systemctl restart ssh
 ```
@@ -88,7 +105,7 @@ sudo systemctl restart ssh
 
 ---
 
-## 5. Set Hostname
+## 6. Set Hostname
 
 ```bash
 sudo hostnamectl set-hostname cloudlab
@@ -96,28 +113,6 @@ sudo hostnamectl set-hostname cloudlab
 # Optional: add hostname to /etc/hosts so sudo and hostname -f resolve
 # quickly without hitting DNS
 echo "127.0.1.1 cloudlab" | sudo tee -a /etc/hosts
-```
-
----
-
-## 6. Map VPS IP to Hostname (on your laptop)
-
-Add the following entry to your laptop's `hosts` file so you can SSH by name
-instead of IP:
-
-**Terminal (as Administrator):**
-```powershell
-code "$env:SystemRoot\System32\drivers\etc\hosts"
-```
-
-Add this line at the end of the file:
-```
-173.249.27.13 cloudlab
-```
-
-Verify:
-```powershell
-ssh labadmin@cloudlab
 ```
 
 ---
