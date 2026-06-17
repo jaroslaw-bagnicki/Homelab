@@ -15,6 +15,9 @@
   // ── VS Code customizations ────────────────────────────────────────
   "customizations": {
     "vscode": {
+      "settings": {
+        "workbench.colorTheme": "Default Dark Modern"
+      },
       "extensions": [
         "ms-azuretools.vscode-bicep",          // Bicep language support
         "ms-vscode.powershell",                 // PowerShell IDE
@@ -24,6 +27,7 @@
         "github.vscode-pull-request-github",    // PR/issue integration
         "github.copilot",                       // GitHub Copilot code completions
         "github.copilot-chat",                  // GitHub Copilot Chat
+        "vizards.deepseek-v4-for-copilot",      // DeepSeek V4 model picker for Copilot Chat
         "ms-azuretools.vscode-azure-mcp-server" // Azure MCP Server (resource mgmt, queries)
       ]
     }
