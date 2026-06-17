@@ -19,10 +19,12 @@
         "ms-azuretools.vscode-bicep",          // Bicep language support
         "ms-vscode.powershell",                 // PowerShell IDE
         "redhat.ansible",                       // Ansible playbook support
-        "yzhang.markdown-all-in-one",           // Markdown editing helpers
         "bierner.markdown-mermaid",             // Mermaid diagram rendering
         "ms-azuretools.vscode-docker",          // Docker Explorer
-        "github.vscode-pull-request-github"     // PR/issue integration
+        "github.vscode-pull-request-github",    // PR/issue integration
+        "github.copilot",                       // GitHub Copilot code completions
+        "github.copilot-chat",                  // GitHub Copilot Chat
+        "ms-azuretools.vscode-azure-mcp-server" // Azure MCP Server (resource mgmt, queries)
       ]
     }
   },
