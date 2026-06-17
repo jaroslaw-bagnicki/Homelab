@@ -33,6 +33,7 @@ A home lab server built on a second-hand mini PC, running Ubuntu Server as the b
 | 2026‑05‑31 | Hello World demo | ⭐ | [4a](runbooks/4a-hello-world.md) | Reverse proxy demo via Caddy + Cloudflare |
 | 2026‑06‑13 | Restic backup | ⭐⭐ | [7](runbooks/7-restic-backup.md) | Daily snapshots to Azure Blob Storage |
 | 2026‑06‑16 | Decision log | ⭐ | [#7](https://github.com/jaroslaw-bagnicki/Homelab/issues/7) | ADR log in MADR format — see [docs/decisions/](docs/decisions/) |
+| 2026‑06‑17 | VPS playground | ⭐⭐ | [10](runbooks/10-vps-playground.md) | Contabo Cloud VPS 10 as Ansible dev/test sandbox — see [ADR 13](docs/decisions/260616-13-vps-playground.md) |
 
 ---
 
@@ -45,12 +46,13 @@ A home lab server built on a second-hand mini PC, running Ubuntu Server as the b
 | 8 | **Key Vault** | ⭐ | Central secret storage for homelab — see [#6](https://github.com/jaroslaw-bagnicki/Homelab/issues/6) |
 | 9 | **SQL Server** | ⭐⭐ | Developer Edition in Docker — see [runbook](runbooks/9-mssql-dev.md) |
 | 10 | **Gitea** | ⭐⭐ | Self-hosted Git with web UI for personal repos |
+| 11 | **Ansible playbooks** | ⭐⭐⭐ | Develop & test via cloudlab playground — see [#9](https://github.com/jaroslaw-bagnicki/Homelab/issues/9) |
 | - | **Ollama + Bielik** (Phase 2) | ⭐⭐⭐ | Needs dedicated LLM server hardware |
 
 ---
 
 ## Links
 
-- [Research index](research/READ
-- [Decision log](docs/decisions/README.md)ME.md)
+- [Research index](docs/research/README.md)
+- [Decision log](docs/decisions/README.md)
 - [Runbooks](runbooks/README.md)

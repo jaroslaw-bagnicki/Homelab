@@ -21,7 +21,7 @@ Key factors:
 - **Deployment model — TBD** — Whether to run Restic as a native binary with systemd timer or as a Docker container is still being evaluated. The official binary includes the Azure Blob backend (the `apt` package does not); a container avoids this issue entirely
 
 Rejected alternatives:
-- **Azure Backup (MARS agent)** — $10/month protected instance fee + $0.0224/GB for storage; 5–10× the cost of Restic + Blob for this scale (see [research doc 14](../research/14-backup-cost-comparison.md))
+- **Azure Backup (MARS agent)** — $10/month protected instance fee + $0.0224/GB for storage; 5–10× the cost of Restic + Blob for this scale (see [research doc 14](research/14-backup-cost-comparison.md))
 - **Local-only backup** — no protection against fire, theft, or physical destruction of the server
 - **Cloud-only backup** — restore requires internet download; slow for large volumes; monthly cloud egress costs if restoring frequently
 - **rsync + cron** — no deduplication, no encryption built-in, no snapshot management

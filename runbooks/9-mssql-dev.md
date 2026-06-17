@@ -180,7 +180,7 @@ docker exec mssql-dev /opt/mssql-tools18/bin/sqlpackage \
 
 ### Option B — Volume-level backup (via Restic)
 
-If you're using Restic or another volume backup tool (see [10-backup-strategy.md](../research/10-backup-strategy.md)), the `mssql_data` volume is captured as part of your regular backup sweep.
+If you're using Restic or another volume backup tool (see [10-backup-strategy.md](../docs/research/10-backup-strategy.md)), the `mssql_data` volume is captured as part of your regular backup sweep.
 
 ---
 
@@ -205,8 +205,8 @@ If you're using Restic or another volume backup tool (see [10-backup-strategy.md
 | Secure credential management | Store SA password in Azure Key Vault, retrieve via Arc managed identity |
 | Expose via Caddy (SQL protocol is not HTTP, but you could proxy a web admin tool like **Azure Data Studio web** or **SQL Server Management Studio** via Remote Desktop) | [4-caddy.md](4-caddy.md) |
 | Monitor SQL Server via Azure Arc | [6a-azure-monitor.md](6a-azure-monitor.md) |
-| Volume backups | [10-backup-strategy.md](../research/10-backup-strategy.md) |
-| Upgrade to k3s (future) | [05-container-stack.md](../research/05-container-stack.md) |
+| Volume backups | [10-backup-strategy.md](../docs/research/10-backup-strategy.md) |
+| Upgrade to k3s (future) | [05-container-stack.md](../docs/research/05-container-stack.md) |
 
 ---
 

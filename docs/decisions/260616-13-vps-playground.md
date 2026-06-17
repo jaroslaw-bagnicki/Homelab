@@ -10,7 +10,7 @@
 The homelab server (Lenovo ThinkCentre M910q Tiny, Ubuntu 24.04 LTS) needs to be
 **rebuilt from scratch** — downgrading from Ubuntu 26.x to 24.04 LTS and adopting
 **Ansible** for declarative, GitOps-style host configuration management (see
-[research 13](../research/13-ansible-adoption.md)). Applying untested Ansible
+[research 13](research/13-ansible-adoption.md)). Applying untested Ansible
 playbooks directly to the production homelab risks downtime, misconfiguration,
 and data loss.
 
@@ -74,8 +74,8 @@ separate and nuke-able.
 ---
 
 **References:**
-- [Research 15: VPS Selection](../research/15-vps-selection.md) — detailed provider comparison, corrected pricing tables, and analysis
-- [Research 13: Ansible Adoption](../research/13-ansible-adoption.md) — Ansible strategy for the homelab
+- [Research 15: VPS Selection](research/15-vps-selection.md) — detailed provider comparison, corrected pricing tables, and analysis
+- [Research 13: Ansible Adoption](research/13-ansible-adoption.md) — Ansible strategy for the homelab
 - [ADR 4: Hybrid Cloud Strategy](260524-04-hybrid-cloud-azure-arc.md) — Azure Arc enrolment for post-provisioning management
 
 **Pricing sources (verified 2026-06-16):**
