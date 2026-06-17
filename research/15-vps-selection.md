@@ -114,6 +114,17 @@ For intermittent use (e.g. 20–30 hours/month), Hetzner's hourly billing + snap
 
 ---
 
+## Verified Pricing Sources
+
+Prices verified on 2026-06-16 directly from provider websites:
+
+| Provider | Plan | Source |
+|---|---|---|
+| **Contabo** | Cloud VPS 10 | [contabo.com/en/upsell-vps-10-20/](https://contabo.com/en/upsell-vps-10-20/) |
+| **Hetzner** | CX33 / CAX21 (Cost-Optimized) | [hetzner.com/cloud/cost-optimized](https://www.hetzner.com/cloud/cost-optimized) |
+
+> **Note**: The Gemini conversation quoted Hetzner CPX31 at ~€8.70/mo, but the actual CPX31 is €62.99/mo. The ~€9 bracket is the **Cost-Optimized** tier (CX33/CAX21) — older shared hardware, not the regular Cloud line.
+
 ## Source
 
 https://gemini.google.com/share/a4b01a2b65b2
