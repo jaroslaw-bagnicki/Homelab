@@ -1,0 +1,35 @@
+{
+  "name": "Homelab",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
+
+  // ── Features ──────────────────────────────────────────────────────
+  "features": {
+    // Docker CLI + Docker Compose (bind-mounts host Docker socket)
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {},
+    // PowerShell 7 — needed for Az module and repo scripts
+    "ghcr.io/devcontainers/features/powershell:1": {},
+    // Azure CLI — for Bicep validation and ad-hoc queries
+    "ghcr.io/devcontainers/features/azure-cli:1": {}
+  },
+
+  // ── VS Code customizations ────────────────────────────────────────
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-azuretools.vscode-bicep",          // Bicep language support
+        "ms-vscode.powershell",                 // PowerShell IDE
+        "redhat.ansible",                       // Ansible playbook support
+        "yzhang.markdown-all-in-one",           // Markdown editing helpers
+        "bierner.markdown-mermaid",             // Mermaid diagram rendering
+        "ms-azuretools.vscode-docker",          // Docker Explorer
+        "github.vscode-pull-request-github"     // PR/issue integration
+      ]
+    }
+  },
+
+  // ── Post-create: install Ansible, Az PowerShell, Bicep CLI ────────
+  "postCreateCommand": "sudo apt-get update && sudo apt-get install -y ansible && pwsh -Command 'Install-Module -Name Az, Az.ConnectedMachine -Force -AllowClobber -Scope CurrentUser' && curl -fsSL -o /tmp/bicep https://github.com/Azure/bicep/releases/latest/download/bicep-linux-x64 && chmod +x /tmp/bicep && sudo mv /tmp/bicep /usr/local/bin/bicep",
+
+  // ── Remote user ───────────────────────────────────────────────────
+  "remoteUser": "vscode"
+}
