@@ -73,7 +73,7 @@ Docker manipulates `iptables` directly, bypassing UFW rules. A container publish
 
 **Strategy for this homelab**: bind every container to **localhost only** (`-p 127.0.0.1:...`) and expose them through a single **Caddy reverse proxy** container that binds to ports 80/443 on all interfaces. This keeps UFW effective and gives a single entry point with automatic TLS.
 
-Caddy config is documented in [research/11-local-dns-caddy.md](../research/11-local-dns-caddy.md) and will be set up after Portainer.
+Caddy config is documented in [research/11-local-dns-caddy.md](../docs/research/11-local-dns-caddy.md) and will be set up after Portainer.
 
 **Other options** (not used here):
 
