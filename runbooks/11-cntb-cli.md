@@ -9,7 +9,7 @@
 
 ## 1. Download & Install
 
-### Windows
+> ⚠️ Requires **PowerShell as Administrator** — `C:\Program Files` is a protected folder.
 
 Download the zip from the [latest release](https://github.com/contabo/cntb/releases/tag/v1.6):
 
@@ -20,18 +20,8 @@ Invoke-WebRequest -Uri "https://github.com/contabo/cntb/releases/download/v1.6/c
 # Extract to a folder on PATH
 Expand-Archive -Path "$env:TEMP\cntb.zip" -DestinationPath "$env:ProgramFiles\cntb" -Force
 
-# Add to PATH (current session)
-$env:Path += ";$env:ProgramFiles\cntb"
-
-# Add to PATH (permanent — requires admin)
+# Add to PATH permanently
 [Environment]::SetEnvironmentVariable("PATH", "$env:PATH;$env:ProgramFiles\cntb", "Machine")
-```
-
-### Linux (on the VPS or WSL)
-
-```bash
-curl -L "https://github.com/contabo/cntb/releases/download/v1.6/cntb_v1.6_linux_amd64.tar.gz" | tar xz
-sudo mv cntb /usr/local/bin/
 ```
 
 ### Verify
@@ -68,8 +58,11 @@ Test:
 cntb help
 ```
 
-> ⚠️ **Never commit credentials.** The `~/.cntb.yaml` file contains secrets —
-> keep it out of version control.
+> ⚠️ **Security concern:** The Contabo API uses the same credentials as your
+> Customer Control Panel account. The password is stored in **plain text** in
+> `~/.cntb.yaml` — never commit this file or share it. Consider creating a
+> dedicated **API user** with limited scope if available, rather than using
+> your master account credentials.
 
 ---
 
@@ -87,19 +80,35 @@ cntb completion powershell > "$env:USERPROFILE\Documents\WindowsPowerShell\cntb.
 
 ---
 
-## 4. Common Commands
+## 4. Managing SSH Keys
 
-### List available images
+SSH keys are stored in Contabo's **secrets** system. They can be managed via
+the CLI or the [web portal](https://new.contabo.com/account/secret-management/ssh-keys).
 
-```bash
-cntb get images
+### List stored keys
+
+```powershell
+cntb get secrets --type ssh
 ```
 
-### List available products (plans)
+### Add your laptop's public key
 
-```bash
-cntb get products
+```powershell
+cntb create secret `
+  --name "laptop" `
+  --type ssh `
+  --value (Get-Content "$env:USERPROFILE\.ssh\id_ed25519.pub")
 ```
+
+### Delete a key
+
+```powershell
+cntb delete secret <secret-id>
+```
+
+---
+
+## 6. Common Commands
 
 ### List instances
 
@@ -107,74 +116,36 @@ cntb get products
 cntb get instances
 ```
 
-### Create a new instance with Cloud-Init
+Sample output:
 
-```bash
-cntb create instance `
-  --imageId "<image-id>" `
-  --productId "<product-id>" `
-  --region "EU" `
-  --sshKeys "1,2" `
-  --userData 'ssh_authorized_keys:
-  - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA...'
+```
+INSTANCEID  NAME        DISPLAYNAME  STATUS  IMAGEID                               REGION  PRODUCTID  IPV4
+203378858   vmi3378858  cloudlab     running d64d5c6c-9dda-4e38-8174-0ee282474d8a  EU      V92        173.249.27.13
 ```
 
-### Start / Stop instance
+### Available images
 
 ```bash
-cntb start instance <instance-id>
-cntb stop instance <instance-id>
-```
-
-### Delete instance
-
-```bash
-cntb delete instance <instance-id>
+cntb get images
 ```
 
 ---
 
-## 5. Mapping Product IDs to Plans
+## 7. Restore-to-Clean Workflow
 
-Find the `productId` for your plan:
+To reset the `cloudlab` playground to a clean OS state (keeps IP, deletes all data):
 
 ```bash
-cntb get products | Select-String "VPS"
+cntb reinstall instance 203378858 `  # cloudlab
+  --imageId "d64d5c6c-9dda-4e38-8174-0ee282474d8a" `  # ubuntu-24.04
+  --sshKeys "394288" `  # lenovo-slim
+  --defaultUser "root"
 ```
 
-Common product IDs for Contabo Cloud VPS 10 (4 vCPU, 8 GB RAM):
+Then run Ansible playbooks against the same IP (see [runbook 10](10-vps-playground.md)).
 
-| Plan | Product ID |
-|---|---|
-| Cloud VPS 10 — 75 GB NVMe | `V92` |
-| Cloud VPS 10 — 150 GB SSD | varies — check `cntb get products` |
-
----
-
-## 6. Destroy-Recreate Workflow (Playground)
-
-For the `cloudlab` playground VPS, the disposable workflow is:
-
-**Teardown:**
-```bash
-cntb delete instance <instance-id>
-```
-
-**Provision from scratch:**
-```bash
-cntb create instance `
-  --imageId "<ubuntu-2404-image-id>" `
-  --productId "V92" `
-  --region "EU" `
-  --sshKeys "1" `
-  --userData 'packages:
-  - qemu-guest-agent'
-```
-
-Then run Ansible playbooks against the new IP (see [runbook 10](10-vps-playground.md)).
-
-> The instance ID for the current `cloudlab` VPS can be found with:
-> `cntb get instances`
+> **Image reference:** `d64d5c6c-9dda-4e38-8174-0ee282474d8a` = Ubuntu 24.04 (LTS), 600 MB
+> List all available images with `cntb get images`.
 
 ---
 
