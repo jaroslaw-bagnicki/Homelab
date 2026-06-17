@@ -2,11 +2,11 @@
 
 > **Have fun. Sharpen the saw. Experiment with AI workloads.**
 
-A home lab server built on a second-hand mini PC, currently running Ubuntu
-Server, with a planned clean rebuild on **Ubuntu 24.04 LTS** managed via
-**Ansible** for declarative, GitOps-style host configuration. A disposable
-[Contabo Cloud VPS](runbooks/10-vps-playground.md) serves as a safe playground
-for developing Ansible playbooks before applying them to the physical hardware.
+A home lab server built on a second-hand mini PC, running Linux server, with a planned
+clean rebuild managed via **Ansible** for declarative, GitOps-style host
+configuration. A disposable VPS playground
+serves as a safe playground for developing Ansible playbooks before applying
+them to the physical hardware.
 
 This is my sandbox — a place to tinker with technologies I don't use at work,
 self-host AI agents, and keep learning for the joy of it.
@@ -19,14 +19,13 @@ self-host AI agents, and keep learning for the joy of it.
 
 ## Tech Stack
 
-The physical server is a **Lenovo ThinkCentre M910q Tiny** (i5-7500T, 16 GB RAM).
-It will be rebuilt from scratch on **Ubuntu 24.04 LTS**, managed entirely via
-**Ansible** playbooks — developed and tested on a disposable **Contabo Cloud
-VPS 10** playground before touching the hardware.
+The physical server is a **[Lenovo ThinkCentre M910q Tiny](docs/decisions/260520-01-hardware-selection-m910q.md)** (i5-7500T, 16 GB RAM).
+It will be rebuilt from scratch on **[Ubuntu 24.04 LTS](docs/decisions/260524-05-os-decision-ubuntu-server.md)**, managed entirely via
+**[Ansible](docs/decisions/260613-10-ansible-host-config.md)** playbooks — developed and tested on a disposable **[Contabo Cloud VPS 10](docs/decisions/260616-13-vps-playground.md)** before touching the hardware.
 
-Applications run in **Docker Compose** with a future path to **k3s**. The server
-is enrolled in **Azure Arc** for cloud-side monitoring and policy, and exposed
-to the internet via **Cloudflare Tunnel** behind a **Caddy** reverse proxy.
+Applications run in **[Docker Compose](docs/decisions/260524-03-container-strategy.md)** with a future path to **k3s**. The server
+is enrolled in **[Azure Arc](docs/decisions/260524-04-hybrid-cloud-azure-arc.md)** for cloud-side monitoring and policy, and exposed
+to the internet via **[Cloudflare Tunnel](docs/decisions/260530-08-remote-access-cloudflare-tunnel.md)** behind a **[Caddy](docs/decisions/260529-07-reverse-proxy-caddy.md)** reverse proxy.
 
 ---
 
