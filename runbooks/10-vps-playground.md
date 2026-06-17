@@ -84,6 +84,10 @@ PubkeyAuthentication yes
 PasswordAuthentication no
 ```
 
+> ⚠️ Contabo images may have `PasswordAuthentication` set in
+> `/etc/ssh/sshd_config.d/50-cloud-init.conf` as well — check that file too
+> and ensure it's set to `no` there, or delete the file. The last value wins.
+
 Optionally, add these for extra hardening:
 
 ```ini
