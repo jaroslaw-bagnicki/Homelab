@@ -15,3 +15,4 @@ Step-by-step guides for configuring the homelab server.
 | 6a | [6a-azure-monitor.md](6a-azure-monitor.md) | Azure Monitor metrics and log collection (supplements step 6) |
 | 7 | [7-restic-backup.md](7-restic-backup.md) | Restic backup to Azure Blob (native binary, systemd timer, Arc managed identity) |
 | 9 | [9-mssql-dev.md](9-mssql-dev.md) | SQL Server Developer Edition in Docker |
+| 10 | [10-vps-playground.md](10-vps-playground.md) | Contabo VPS initial setup — SSH hardening, UFW, fail2ban, Docker, Ansible target |
