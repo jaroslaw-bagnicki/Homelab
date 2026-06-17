@@ -51,9 +51,9 @@ From your **laptop** (PowerShell), copy your Ed25519 public key to the new user:
 type $env:USERPROFILE\.ssh\id_ed25519.pub | ssh root@173.249.27.13 "mkdir -p ~labadmin/.ssh && cat >> ~labadmin/.ssh/authorized_keys && chown -R labadmin:labadmin ~labadmin/.ssh && chmod 700 ~labadmin/.ssh && chmod 600 ~labadmin/.ssh/authorized_keys"
 ```
 
-Test key-only login:
+Test key login:
 ```bash
-ssh labadmin@173.249.27.13 -o PreferredAuthentications=publickey
+ssh labadmin@173.249.27.13
 ```
 
 ---
@@ -117,7 +117,7 @@ Add this line at the end of the file:
 
 Verify:
 ```powershell
-ssh labadmin@cloudlab -o PreferredAuthentications=publickey
+ssh labadmin@cloudlab
 ```
 
 ---
