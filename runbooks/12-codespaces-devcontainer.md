@@ -1,0 +1,102 @@
+# GitHub Codespaces & Dev Container Setup
+
+> How to use the Homelab dev container for browser-based development — no local
+> install needed.
+
+## Overview
+
+The repository includes a `.devcontainer/devcontainer.json` that defines a
+consistent development environment. Opening the repo in a GitHub Codespace
+automatically provisions a cloud VM with all tools pre-configured.
+
+This is especially useful when working from a **corporate/locked-down machine**
+where cloning the repo or installing tooling isn't practical — just open the
+repo in a Codespace and use VS Code in the browser.
+
+## Quick Start
+
+1. Navigate to [github.com/jaroslaw-bagnicki/Homelab](https://github.com/jaroslaw-bagnicki/Homelab)
+2. Click the **Code** button → **Codespaces** tab → **Create codespace on main**
+3. Wait for the dev container to build (~2–3 min on first build, instant after that)
+4. You're in — browser VS Code with everything ready
+
+## What's Included
+
+### Base image
+
+`mcr.microsoft.com/devcontainers/base:ubuntu-24.04` — the same OS version
+running on the homelab server.
+
+### Features (via devcontainers/features)
+
+| Feature | Purpose |
+|---|---|
+| `docker-outside-of-docker` | Docker CLI + Compose (bind-mounts host socket) |
+| `powershell` | PowerShell 7 — default terminal profile |
+| `azure-cli` | Azure CLI for ad-hoc queries |
+| `github-cli` | GitHub CLI for PR/issue management |
+
+### VS Code extensions
+
+Bicep, PowerShell, Ansible, Mermaid, Docker, GitHub PR, Copilot, Copilot Chat,
+DeepSeek V4 for Copilot Chat, Azure MCP Server.
+
+### Post-create scripts (`.devcontainer/scripts/`)
+
+| Script | What it installs | Idempotent? |
+|---|---|---|
+| `setup-ansible.sh` | Ansible via `apt` | ✅ skips if `ansible-playbook` exists |
+| `setup-bicep.sh` | Bicep CLI standalone binary | ✅ skips if `bicep --version` works |
+| `setup-azps.ps1` | Az PowerShell module | ✅ skips if already listed by `Get-Module` |
+
+> [!NOTE]
+> The Az PowerShell script runs in the **background** because the module is
+> large and takes several minutes. Check progress with:
+> ```bash
+> tail -f /tmp/install-az.log
+> ```
+
+## Verifying the Setup
+
+Run these checks in the Codespace terminal:
+
+```bash
+ansible --version        # Ansible
+bicep --version          # Bicep CLI
+docker --version         # Docker CLI
+git --version            # Git
+pwsh -c '$PSVersionTable.PSVersion'  # PowerShell 7
+pwsh -c 'Get-Module -ListAvailable Az'  # Az PowerShell
+az version              # Azure CLI
+```
+
+## Corporate Machine Tips
+
+- **No install needed** — everything runs in the browser at
+  `github.com/codespaces`
+- **Persist your Codespace** — stop instead of deleting; it'll be
+  faster to resume next time
+- **Settings sync** — VS Code settings/extensions sync via GitHub
+  account, so your theme and keybindings carry over
+- **Git credentials** — authenticated automatically via GitHub; `git push`
+  works out of the box
+
+## Troubleshooting
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| Codespace won't build | `postCreateCommand` timeout | Rebuild container from the command palette: `Dev Containers: Rebuild Container` |
+| Az cmdlets unavailable | Background install not finished | Check `tail -f /tmp/install-az.log` |
+| `bicep` command not found | Script not run yet | Run `bash .devcontainer/scripts/setup-bicep.sh` manually |
+| Docker permission denied | Docker socket not mounted | Ensure `docker-outside-of-docker` feature is enabled |
+
+## Dev Container Architecture
+
+```
+.devcontainer/
+├── devcontainer.json          # Main config — image, features, extensions, scripts
+└── scripts/
+    ├── setup-ansible.sh       # Ansible via apt (idempotent)
+    ├── setup-bicep.sh         # Bicep CLI binary (idempotent)
+    └── setup-azps.ps1         # Az PowerShell module (idempotent, backgrounded)
+```
