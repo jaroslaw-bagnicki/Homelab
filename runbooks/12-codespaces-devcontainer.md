@@ -15,10 +15,19 @@ repo in a Codespace and use VS Code in the browser.
 
 ## Quick Start
 
-1. Navigate to [github.com/jaroslaw-bagnicki/Homelab](https://github.com/jaroslaw-bagnicki/Homelab)
-2. Click the **Code** button → **Codespaces** tab → **Create codespace on main**
-3. Wait for the dev container to build (~2–3 min on first build, instant after that)
-4. You're in — browser VS Code with everything ready
+### Create or resume your Codespace
+
+1. Go to [github.com/codespaces](https://github.com/codespaces)
+   - **First time**: Click **Create codespace on jaroslaw-bagnicki/Homelab**
+   - **Returning**: Click the existing `Homelab` codespace to resume (usually instant)
+2. Wait for the environment to initialize (~2–3 min on first build, seconds if resuming)
+3. You're now in browser VS Code with the full dev container environment
+
+### You're ready to go
+
+VS Code runs in the browser with all tools pre-loaded. Open terminals (Ctrl+``), 
+edit files, and commit to the repo — everything is authenticated and ready. 
+See [Verifying the Setup](#verifying-the-setup) to confirm tools are available.
 
 ## What's Included
 
