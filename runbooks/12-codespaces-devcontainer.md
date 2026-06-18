@@ -89,6 +89,31 @@ az version              # Azure CLI
 | Az cmdlets unavailable | Background install not finished | Check `tail -f /tmp/install-az.log` |
 | `bicep` command not found | Script not run yet | Run `bash .devcontainer/scripts/setup-bicep.sh` manually |
 | Docker permission denied | Docker socket not mounted | Ensure `docker-outside-of-docker` feature is enabled |
+| Copilot Chat threads disappeared after rebuild | Container filesystem is ephemeral | Session history is stored on the container overlay filesystem, which is wiped on rebuild. Threads cannot be recovered. To preserve threads across rebuilds, see the [Session persistence](#session-persistence) section below. |
+
+## Session Persistence
+
+> [!IMPORTANT]
+> **Copilot Chat threads are NOT persisted** between dev container rebuilds. All
+> chat history is stored in the container's ephemeral filesystem at
+> `~/.vscode-remote/data/User/globalStorage/github.copilot-chat/` and is lost
+> when you rebuild the container.
+
+### Workarounds
+
+- **GitHub Copilot Cloud Sync** (recommended) — Recent versions of GitHub Copilot Chat
+  (late 2025+) support cloud-synced conversation history when signed in. Threads
+  may automatically restore after a rebuild. Check VS Code settings:
+  `GitHub Copilot: Configure` → `github.copilot-chat.experimental.historySync`.
+
+- **Backup to persistent storage** — Before rebuilding, manually export important
+  threads from the chat history or take screenshots. The `/workspaces/.codespaces/shared/`
+  directory survives container rebuilds — you could set up devcontainer lifecycle
+  hooks to back up and restore the session store automatically.
+
+- **Use Settings Sync** — Persist your VS Code settings, extensions, and keybindings
+  via Settings Sync (gear icon → Settings Sync is On). This preserves your
+  environment but not the chat history itself.
 
 ## Dev Container Architecture
 
