@@ -17,3 +17,4 @@ Step-by-step guides for configuring the homelab server.
 | 9 | [9-mssql-dev.md](9-mssql-dev.md) | SQL Server Developer Edition in Docker |
 | 10 | [10-vps-playground.md](10-vps-playground.md) | Contabo VPS initial setup — SSH hardening, UFW, fail2ban, Docker, Ansible target |
 | 11 | [11-cntb-cli.md](11-cntb-cli.md) | Contabo CLI (`cntb`) — install, configure OAuth2, common commands, destroy/recreate workflow |
+| 12 | [12-codespaces-devcontainer.md](12-codespaces-devcontainer.md) | GitHub Codespaces & Dev Container setup — browser-based dev, no local install |
