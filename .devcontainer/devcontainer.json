@@ -9,14 +9,22 @@
     // PowerShell 7 — needed for Az module and repo scripts
     "ghcr.io/devcontainers/features/powershell:1": {},
     // Azure CLI — for Bicep validation and ad-hoc queries
-    "ghcr.io/devcontainers/features/azure-cli:1": {}
+    "ghcr.io/devcontainers/features/azure-cli:1": {},
+    // GitHub CLI — for PR/issue management, repo operations
+    "ghcr.io/devcontainers/features/github-cli:1": {}
   },
 
   // ── VS Code customizations ────────────────────────────────────────
   "customizations": {
     "vscode": {
       "settings": {
-        "workbench.colorTheme": "Default Dark Modern"
+        "workbench.colorTheme": "Dark Modern",
+        "terminal.integrated.defaultProfile.linux": "pwsh",
+        "terminal.integrated.profiles.linux": {
+          "pwsh": {
+            "path": "/usr/bin/pwsh"
+          }
+        }
       },
       "extensions": [
         "ms-azuretools.vscode-bicep",          // Bicep language support
@@ -33,8 +41,11 @@
     }
   },
 
-  // ── Post-create: install Ansible, Az PowerShell, Bicep CLI ────────
-  "postCreateCommand": "sudo apt-get update && sudo apt-get install -y ansible && pwsh -Command 'Install-Module -Name Az, Az.ConnectedMachine -Force -AllowClobber -Scope CurrentUser' && curl -fsSL -o /tmp/bicep https://github.com/Azure/bicep/releases/latest/download/bicep-linux-x64 && chmod +x /tmp/bicep && sudo mv /tmp/bicep /usr/local/bin/bicep",
+  // ── Post-create scripts ──────────────────────────────────────────
+  // Fast steps (Ansible, Bicep) run synchronously.
+  // Az PowerShell is backgrounded — huge module, can take minutes.
+  // Check Az progress: tail -f /tmp/install-az.log
+  "postCreateCommand": "bash .devcontainer/scripts/setup-ansible.sh && bash .devcontainer/scripts/setup-bicep.sh && nohup pwsh -File .devcontainer/scripts/setup-azps.ps1 > /tmp/install-az.log 2>&1 &",
 
   // ── Remote user ───────────────────────────────────────────────────
   "remoteUser": "vscode"
