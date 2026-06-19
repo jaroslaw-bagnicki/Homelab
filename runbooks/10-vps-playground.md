@@ -66,6 +66,19 @@ ssh labadmin@cloudlab
 sudo whoami   # should print "root"
 ```
 
+## 4b. Upload Azure SSH Key
+
+Generate the key pair and store the private key in Key Vault:
+```powershell
+./runbooks/AzureResources/New-AzureSshKey.ps1
+```
+
+Push the public key from the Azure resource to the VPS:
+```powershell
+$sshKey = Get-AzSshKey -ResourceGroupName homelab-rg -Name cloudlab-vps-key
+ssh labadmin@cloudlab "echo '$($sshKey.publicKey)' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
+```
+
 ---
 
 ## 5. Harden SSH
@@ -134,6 +147,32 @@ The following steps will be automated via Ansible playbooks, not done manually:
 
 See [research 13: Ansible Adoption](../docs/research/13-ansible-adoption.md) for the
 playbook structure. The playbooks will target `cloudlab` (the hostname set above).
+
+---
+
+## 8. SSH from DevContainer
+
+Load the private key from Key Vault into ssh-agent (run once per session):
+
+```powershell
+Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name cloudlab-vps-key-priv -AsPlainText | ssh-add -
+```
+
+Create `~/.ssh/config` (one-time setup):
+
+```powershell
+@"
+Host cloudlab
+    HostName 173.249.27.13
+    User labadmin
+"@ | Set-Content ~/.ssh/config
+```
+
+Connect:
+
+```powershell
+ssh cloudlab
+```
 
 ---
 
