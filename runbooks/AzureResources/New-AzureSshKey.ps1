@@ -3,7 +3,7 @@
 
 $rg   = 'homelab-rg'
 $loc  = 'polandcentral'
-$kv   = 'homelab-kv'
+$kv   = 'homelab-bysxdb-kv'
 $keyName = 'cloudlab-vps-key'
 
 New-AzSshKey -ResourceGroupName $rg -Location $loc -Name $keyName -SshKeyType Ed25519

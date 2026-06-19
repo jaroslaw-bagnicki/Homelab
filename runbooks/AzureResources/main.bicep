@@ -1,5 +1,7 @@
 param location string
 
+var suffix = take(uniqueString(tenant().tenantId), 6)
+
 // Reference to the existing Arc-enabled server
 resource arcServer 'Microsoft.HybridCompute/machines@2024-07-10' existing = {
   name: 'homelab'
@@ -83,5 +85,20 @@ resource dcrAssociation 'Microsoft.Insights/dataCollectionRuleAssociations@2024-
   scope: arcServer
   properties: {
     dataCollectionRuleId: dcr.id
+  }
+}
+
+// Key Vault — stores secrets (SSH keys, etc.), RBAC-only (no access policies)
+resource kv 'Microsoft.KeyVault/vaults@2026-02-01' = {
+  name: 'homelab-${suffix}-kv'
+  location: location
+  properties: {
+    sku: {
+      name: 'standard'
+      family: 'A'
+    }
+    tenantId: subscription().tenantId
+    enableRbacAuthorization: true
+    softDeleteRetentionInDays: 7
   }
 }
