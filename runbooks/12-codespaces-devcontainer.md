@@ -29,6 +29,54 @@ VS Code runs in the browser with all tools pre-loaded. Open terminals (Ctrl+``),
 edit files, and commit to the repo — everything is authenticated and ready. 
 See [Verifying the Setup](#verifying-the-setup) to confirm tools are available.
 
+## Opening an Existing Codespace via CLI
+
+If the codespace already exists (created from the GitHub web UI or a previous
+session), open it directly from the terminal using the GitHub CLI (`gh`).
+
+### List available Codespaces
+
+```bash
+gh codespace list
+```
+
+Shows all your codespaces with their name, repository, branch, and state
+(`Available` — ready to open, `Shutdown` — needs a moment to resume).
+
+### Open a Codespace in VS Code
+
+Opens the codespace in your **local VS Code desktop** app:
+
+```bash
+gh codespace code
+```
+
+If you have multiple codespaces, you'll be prompted to pick one. You can also
+specify by name:
+
+```bash
+gh codespace code --codespace $CODESPACE_NAME
+```
+
+### Shut down a Codespace
+
+Stops the codespace to preserve disk and core hours:
+
+```bash
+gh codespace stop
+```
+
+If you have multiple codespaces, you'll be prompted to pick one. To stop a
+specific one:
+
+```bash
+gh codespace stop --codespace $CODESPACE_NAME
+```
+
+> [!TIP]
+> To skip the interactive prompt when you have multiple codespaces, pass
+> `--codespace` with the name from `gh codespace list`, or use `-c` shorthand.
+
 ## What's Included
 
 ### Base image
