@@ -13,6 +13,7 @@ Significant architectural and technology choices recorded in
 
 | # | Date | ADR | Status |
 |---|------|-----|--------|
+| 14 | 2026-06-18 | [Adopt GitHub Codespaces for Occasional Remote Work](260618-14-codespaces-adoption.md) | Implemented |
 | 13 | 2026-06-16 | [Use Contabo Cloud VPS 10 as Ansible Playground for Homelab](260616-13-vps-playground.md) | Implemented |
 | 12 | 2026-06-16 | [Establish Lightweight ADR Log in MADR Format](260616-12-establish-adr-log.md) | Implemented |
 | 11 | 2026-06-13 | [Ticketing System — GitHub Issues](260613-11-ticketing-github-issues.md) | Implemented |
