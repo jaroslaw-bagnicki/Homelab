@@ -21,3 +21,32 @@
 2026-06-20 02:32:39,841 p=37489 u=vscode n=ansible | changed: [cloudlab]
 2026-06-20 02:32:39,850 p=37489 u=vscode n=ansible | PLAY RECAP *********************************************************************
 2026-06-20 02:32:39,850 p=37489 u=vscode n=ansible | cloudlab                   : ok=6    changed=2    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+2026-06-20 06:18:31,508 p=9671 u=vscode n=ansible | PLAY [Configure cloudlab VPS] **************************************************
+2026-06-20 06:18:31,520 p=9671 u=vscode n=ansible | TASK [Gathering Facts] *********************************************************
+2026-06-20 06:18:35,885 p=9671 u=vscode n=ansible | ok: [cloudlab]
+2026-06-20 06:18:35,896 p=9671 u=vscode n=ansible | TASK [common : Set hostname to inventory name] *********************************
+2026-06-20 06:18:37,272 p=9671 u=vscode n=ansible | ok: [cloudlab]
+2026-06-20 06:18:37,276 p=9671 u=vscode n=ansible | TASK [common : Add hostname to /etc/hosts for sudo performance] ****************
+2026-06-20 06:18:38,025 p=9671 u=vscode n=ansible | ok: [cloudlab]
+2026-06-20 06:18:38,030 p=9671 u=vscode n=ansible | TASK [common : Set timezone to Etc/UTC] ****************************************
+2026-06-20 06:18:38,943 p=9671 u=vscode n=ansible | ok: [cloudlab]
+2026-06-20 06:18:38,956 p=9671 u=vscode n=ansible | TASK [common : Ensure systemd-timesyncd is running] ****************************
+2026-06-20 06:18:40,159 p=9671 u=vscode n=ansible | ok: [cloudlab]
+2026-06-20 06:18:40,166 p=9671 u=vscode n=ansible | TASK [security : UFW default deny incoming] ************************************
+2026-06-20 06:18:41,369 p=9671 u=vscode n=ansible | ok: [cloudlab]
+2026-06-20 06:18:41,375 p=9671 u=vscode n=ansible | TASK [security : UFW allow SSH] ************************************************
+2026-06-20 06:18:42,637 p=9671 u=vscode n=ansible | changed: [cloudlab]
+2026-06-20 06:18:42,641 p=9671 u=vscode n=ansible | TASK [security : Enable UFW] ***************************************************
+2026-06-20 06:18:44,392 p=9671 u=vscode n=ansible | changed: [cloudlab]
+2026-06-20 06:18:44,396 p=9671 u=vscode n=ansible | TASK [security : Install fail2ban] *********************************************
+2026-06-20 06:19:18,488 p=9671 u=vscode n=ansible | changed: [cloudlab]
+2026-06-20 06:19:18,494 p=9671 u=vscode n=ansible | TASK [security : Deploy fail2ban jail config] **********************************
+2026-06-20 06:19:20,055 p=9671 u=vscode n=ansible | changed: [cloudlab]
+2026-06-20 06:19:20,064 p=9671 u=vscode n=ansible | TASK [security : Ensure fail2ban is running] ***********************************
+2026-06-20 06:19:21,145 p=9671 u=vscode n=ansible | ok: [cloudlab]
+2026-06-20 06:19:21,159 p=9671 u=vscode n=ansible | RUNNING HANDLER [security : Reload UFW] ****************************************
+2026-06-20 06:19:24,368 p=9671 u=vscode n=ansible | changed: [cloudlab]
+2026-06-20 06:19:24,373 p=9671 u=vscode n=ansible | RUNNING HANDLER [security : Restart fail2ban] **********************************
+2026-06-20 06:19:25,810 p=9671 u=vscode n=ansible | changed: [cloudlab]
+2026-06-20 06:19:25,818 p=9671 u=vscode n=ansible | PLAY RECAP *********************************************************************
+2026-06-20 06:19:25,818 p=9671 u=vscode n=ansible | cloudlab                   : ok=13   changed=6    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
