@@ -1,0 +1,7 @@
+---
+azure_monitor_resource_group: homelab-rg
+azure_monitor_location: polandcentral
+azure_monitor_extension_name: AzureMonitorAgent
+azure_monitor_extension_type: AzureMonitorLinuxAgent
+azure_monitor_extension_publisher: Microsoft.Azure.Monitor
+azure_monitor_extension_version: "1.41"

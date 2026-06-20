@@ -1,7 +1,7 @@
 # Azure Monitor via Arc for Homelab Monitoring
 
 **Date:** 2026-06-02  
-**Status:** Deferred
+**Status:** Implemented (partial)
 
 ---
 
