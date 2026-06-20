@@ -1,0 +1,23 @@
+2026-06-20 02:27:34,686 p=34855 u=vscode n=ansible | Using /workspaces/Homelab/ansible/ansible.cfg as config file
+2026-06-20 02:27:34,975 p=34855 u=vscode n=ansible | PLAY [Configure cloudlab VPS] **************************************************
+2026-06-20 02:27:34,988 p=34855 u=vscode n=ansible | TASK [Gathering Facts] *********************************************************
+2026-06-20 02:27:35,303 p=34855 u=vscode n=ansible | fatal: [cloudlab]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: labadmin@173.249.27.13: Permission denied (publickey).", "unreachable": true}
+2026-06-20 02:27:35,308 p=34855 u=vscode n=ansible | 	to retry, use: --limit @/workspaces/Homelab/ansible/playbook.retry
+
+2026-06-20 02:27:35,308 p=34855 u=vscode n=ansible | PLAY RECAP *********************************************************************
+2026-06-20 02:27:35,308 p=34855 u=vscode n=ansible | cloudlab                   : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0   
+2026-06-20 02:32:29,377 p=37489 u=vscode n=ansible | PLAY [Configure cloudlab VPS] **************************************************
+2026-06-20 02:32:29,384 p=37489 u=vscode n=ansible | TASK [Gathering Facts] *********************************************************
+2026-06-20 02:32:33,515 p=37489 u=vscode n=ansible | ok: [cloudlab]
+2026-06-20 02:32:33,528 p=37489 u=vscode n=ansible | TASK [common : Set hostname to inventory name] *********************************
+2026-06-20 02:32:35,004 p=37489 u=vscode n=ansible | ok: [cloudlab]
+2026-06-20 02:32:35,009 p=37489 u=vscode n=ansible | TASK [common : Add hostname to /etc/hosts for sudo performance] ****************
+2026-06-20 02:32:35,892 p=37489 u=vscode n=ansible | ok: [cloudlab]
+2026-06-20 02:32:35,913 p=37489 u=vscode n=ansible | TASK [common : Set timezone to Etc/UTC] ****************************************
+2026-06-20 02:32:37,194 p=37489 u=vscode n=ansible | changed: [cloudlab]
+2026-06-20 02:32:37,199 p=37489 u=vscode n=ansible | TASK [common : Ensure systemd-timesyncd is running] ****************************
+2026-06-20 02:32:38,554 p=37489 u=vscode n=ansible | ok: [cloudlab]
+2026-06-20 02:32:38,569 p=37489 u=vscode n=ansible | RUNNING HANDLER [common : Restart systemd-timesyncd] ***************************
+2026-06-20 02:32:39,841 p=37489 u=vscode n=ansible | changed: [cloudlab]
+2026-06-20 02:32:39,850 p=37489 u=vscode n=ansible | PLAY RECAP *********************************************************************
+2026-06-20 02:32:39,850 p=37489 u=vscode n=ansible | cloudlab                   : ok=6    changed=2    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   

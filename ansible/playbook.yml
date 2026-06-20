@@ -1,0 +1,6 @@
+---
+- name: Configure cloudlab VPS
+  hosts: cloudlab
+  become: true
+  roles:
+    - common
