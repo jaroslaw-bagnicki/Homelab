@@ -6,3 +6,4 @@
     - common
     - security
     - docker_host
+    - azure_arc
