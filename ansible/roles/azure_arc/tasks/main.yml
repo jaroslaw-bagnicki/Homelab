@@ -20,6 +20,7 @@
 
 - name: Fetch SPN client secret from Key Vault
   ansible.builtin.shell: |
+    Set-AzContext -TenantId {{ arc_tenant_id }} -SubscriptionId {{ arc_subscription_id }} | Out-Null
     $secret = Get-AzKeyVaultSecret -VaultName {{ arc_keyvault_name }} -Name {{ arc_spn_secret_name }} -AsPlainText
     Write-Output $secret
   args:
@@ -31,12 +32,13 @@
 - name: Connect to Azure Arc
   ansible.builtin.shell: |
     sudo azcmagent connect \
+      --tenant-id {{ arc_tenant_id }} \
+      --subscription-id {{ arc_subscription_id }} \
+      --location {{ arc_location }} \
+      --resource-group {{ arc_resource_group }} \
       --service-principal-id {{ arc_spn_id }} \
       --service-principal-secret '{{ arc_spn_secret.stdout }}' \
-      --resource-group {{ arc_resource_group }} \
-      --tenant-id {{ arc_tenant_id }} \
-      --location {{ arc_location }} \
-      --subscription-id {{ arc_subscription_id }}
+      --machine-name {{ arc_machine_name }}
   args:
     executable: /bin/bash
   register: arc_connect_result
