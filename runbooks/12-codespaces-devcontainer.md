@@ -135,7 +135,7 @@ The dev container includes the SSH key for `cloudlab` (the Contabo VPS). Run thi
 ### Start ssh-agent and load the SSH key
 
 ```powershell
-./runbooks/AzureResources/Start-SshAgent.ps1
+./scripts/Import-SshKey.ps1
 ```
 
 > Alternatively, the manual steps are:
