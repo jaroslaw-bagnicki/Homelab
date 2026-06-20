@@ -150,32 +150,6 @@ playbook structure. The playbooks will target `cloudlab` (the hostname set above
 
 ---
 
-## 8. SSH from DevContainer
-
-Load the private key from Key Vault into ssh-agent (run once per session):
-
-```powershell
-Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name cloudlab-vps-key-priv -AsPlainText | ssh-add -
-```
-
-Create `~/.ssh/config` (one-time setup):
-
-```powershell
-@"
-Host cloudlab
-    HostName 173.249.27.13
-    User labadmin
-"@ | Set-Content ~/.ssh/config
-```
-
-Connect:
-
-```powershell
-ssh cloudlab
-```
-
----
-
 ## Next Steps
 
 - [ ] Write Ansible inventory and `host_vars/cloudlab.yml` for this VPS

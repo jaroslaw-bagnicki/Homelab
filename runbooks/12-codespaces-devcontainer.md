@@ -127,6 +127,46 @@ pwsh -c 'Get-Module -ListAvailable Az'  # Az PowerShell
 az version              # Azure CLI
 ```
 
+## SSH to the VPS from the DevContainer
+
+The dev container includes the SSH key for `cloudlab` (the Contabo VPS). Run this
+**once per session** to start `ssh-agent` and load the key:
+
+### Start ssh-agent and load the SSH key
+
+```powershell
+./runbooks/AzureResources/Start-SshAgent.ps1
+```
+
+> Alternatively, the manual steps are:
+> ```powershell
+> ssh-agent | ForEach-Object {
+>     if ($_ -match 'SSH_AUTH_SOCK=(.*?);') { $env:SSH_AUTH_SOCK = $Matches[1] }
+>     if ($_ -match 'SSH_AGENT_PID=(.*?);') { $env:SSH_AGENT_PID = $Matches[1] }
+> }
+> Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name cloudlab-vps-key-priv -AsPlainText | ssh-add -
+> ```
+
+### Create SSH config (one-time setup)
+
+Run this **once** (not per-session):
+
+```powershell
+@"
+Host cloudlab
+    HostName 173.249.27.13
+    User labadmin
+"@ | Set-Content ~/.ssh/config
+```
+
+Connect:
+
+```powershell
+ssh cloudlab
+```
+
+---
+
 ## Corporate Machine Tips
 
 - **No install needed** — everything runs in the browser at
