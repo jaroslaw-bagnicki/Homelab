@@ -45,10 +45,10 @@
   changed_when: "'Already connected' not in arc_connect_result.stdout"
 
 - name: Verify Arc connection
-  ansible.builtin.command: sudo azcmagent show
+  ansible.builtin.command: sudo azcmagent show --json
   register: arc_show
   changed_when: false
 
 - name: Display connection status
   ansible.builtin.debug:
-    msg: "Arc status: {{ arc_show.stdout }}"
+    msg: "Arc status: {{ (arc_show.stdout | from_json).status }}"
