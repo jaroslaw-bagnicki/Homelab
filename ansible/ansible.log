@@ -440,3 +440,24 @@
 }
 2026-06-20 14:37:44,127 p=27610 u=vscode n=ansible | PLAY RECAP **********************************************************************************************************************
 2026-06-20 14:37:44,127 p=27610 u=vscode n=ansible | cloudlab                   : ok=8    changed=2    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+2026-06-20 14:39:54,546 p=29172 u=vscode n=ansible | PLAY [Enroll cloudlab in Azure Arc] *********************************************************************************************
+2026-06-20 14:39:54,554 p=29172 u=vscode n=ansible | TASK [Gathering Facts] **********************************************************************************************************
+2026-06-20 14:39:57,483 p=29172 u=vscode n=ansible | ok: [cloudlab]
+2026-06-20 14:39:57,511 p=29172 u=vscode n=ansible | TASK [azure_arc : Install azcmagent dependencies] *******************************************************************************
+2026-06-20 14:40:01,844 p=29172 u=vscode n=ansible | ok: [cloudlab]
+2026-06-20 14:40:01,858 p=29172 u=vscode n=ansible | TASK [azure_arc : Add Microsoft package repo] ***********************************************************************************
+2026-06-20 14:40:05,042 p=29172 u=vscode n=ansible | ok: [cloudlab]
+2026-06-20 14:40:05,049 p=29172 u=vscode n=ansible | TASK [azure_arc : Install azcmagent] ********************************************************************************************
+2026-06-20 14:40:09,228 p=29172 u=vscode n=ansible | ok: [cloudlab]
+2026-06-20 14:40:09,235 p=29172 u=vscode n=ansible | TASK [azure_arc : Fetch SPN client secret from Key Vault] ***********************************************************************
+2026-06-20 14:40:12,001 p=29172 u=vscode n=ansible | changed: [cloudlab -> localhost]
+2026-06-20 14:40:12,011 p=29172 u=vscode n=ansible | TASK [azure_arc : Connect to Azure Arc] *****************************************************************************************
+2026-06-20 14:40:14,294 p=29172 u=vscode n=ansible | changed: [cloudlab]
+2026-06-20 14:40:14,300 p=29172 u=vscode n=ansible | TASK [azure_arc : Verify Arc connection] ****************************************************************************************
+2026-06-20 14:40:15,641 p=29172 u=vscode n=ansible | ok: [cloudlab]
+2026-06-20 14:40:15,647 p=29172 u=vscode n=ansible | TASK [azure_arc : Display connection status] ************************************************************************************
+2026-06-20 14:40:15,681 p=29172 u=vscode n=ansible | ok: [cloudlab] => {
+    "msg": "Arc status: Connected"
+}
+2026-06-20 14:40:15,700 p=29172 u=vscode n=ansible | PLAY RECAP **********************************************************************************************************************
+2026-06-20 14:40:15,700 p=29172 u=vscode n=ansible | cloudlab                   : ok=8    changed=2    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
