@@ -1,2 +1,3 @@
-# Ansible retry files (generated when a playbook fails)
+# Ansible
 ansible/**/*.retry
+ansible/ansible.log

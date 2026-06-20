@@ -5,5 +5,5 @@
   roles:
     - common
     - security
-    - docker_host
     - azure_arc
+    - docker_host
