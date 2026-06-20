@@ -4,7 +4,8 @@
     Get-AzConnectedMachineExtension `
       -ResourceGroupName {{ azure_monitor_resource_group }} `
       -MachineName {{ inventory_hostname }} `
-      | Where-Object Name -eq '{{ azure_monitor_extension_name }}'
+      | Where-Object Name -eq '{{ azure_monitor_extension_name }}' `
+      | ConvertTo-Json -Depth 5 -EnumsAsStrings
   args:
     executable: pwsh
   delegate_to: localhost
@@ -12,6 +13,11 @@
   register: ama_check
   failed_when: false
   changed_when: false
+
+- name: Display AMA extension check result
+  ansible.builtin.debug:
+    var: ama_check.stdout
+  when: ama_check.stdout | length > 0
 
 - name: Install AMA extension on Arc-enabled server
   ansible.builtin.shell: |
@@ -22,7 +28,8 @@
       -Name {{ azure_monitor_extension_name }} `
       -ExtensionType {{ azure_monitor_extension_type }} `
       -Publisher {{ azure_monitor_extension_publisher }} `
-      -TypeHandlerVersion {{ azure_monitor_extension_version }}
+      -TypeHandlerVersion {{ azure_monitor_extension_version }} `
+      | ConvertTo-Json -Depth 5 -EnumsAsStrings
   args:
     executable: pwsh
   delegate_to: localhost
