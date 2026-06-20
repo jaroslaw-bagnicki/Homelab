@@ -10,13 +10,13 @@
 #>
 
 # Ensure correct tenant and subscription context
-Set-AzContext -Tenant "cloud5.ovh" -SubscriptionName "Cloud5-default"
+Set-AzContext -Tenant "cloud5.ovh" -SubscriptionName "Cloud5-default" | Out-Null
 
 # App Registration: homelab-arc-agent
 # https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationMenuBlade/~/Credentials/appId/525b1595-071d-469f-a2c6-0680cda35b4b
 $appId = "525b1595-071d-469f-a2c6-0680cda35b4b"
 $kvName = "homelab-bysxdb-kv"
-$secretName = "cloudlab-arc-secret"
+$secretName = "arc-enrollment-secret"
 
 $endDate = (Get-Date).AddYears(1)
 
@@ -25,10 +25,14 @@ Write-Host "Context: tenant $($context.Tenant.Id) / sub $($context.Subscription.
 Write-Host "  Authenticated as: $($context.Account.Id)" -ForegroundColor Gray
 Write-Host "Creating client secret for App Registration 'homelab-arc-agent' ($appId) ..." -ForegroundColor Yellow
 
-# Generate a new client secret
+# Generate a new client secret with display name
+# https://learn.microsoft.com/en-us/dotnet/api/microsoft.azure.powershell.cmdlets.resources.msgraph.models.apiv10.microsoftgraphpasswordcredential
 $credential = New-AzADAppCredential `
     -ApplicationId $appId `
-    -EndDate $endDate
+    -PasswordCredentials @{
+        DisplayName = $secretName
+        EndDateTime = $endDate
+    }
 
 if (-not $credential.SecretText) {
     Write-Error "Failed to create client secret — secret text is empty."
@@ -37,8 +41,9 @@ if (-not $credential.SecretText) {
 
 Write-Host "Client secret created successfully." -ForegroundColor Green
 Write-Host "  Display name: $($credential.DisplayName)"
-Write-Host "  Start date:   $($credential.StartDate)"
-Write-Host "  End date:     $($credential.EndDate)"
+Write-Host "  Secret ID:    $($credential.KeyId)"
+Write-Host "  Start:        $($credential.StartDateTime)"
+Write-Host "  End:          $($credential.EndDateTime)"
 
 # Upload to Key Vault
 Write-Host "Uploading to Key Vault $kvName/$secretName ..." -ForegroundColor Yellow
