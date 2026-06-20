@@ -1,9 +1,10 @@
 ---
 # Azure Arc configuration
-arc_resource_group: homelab-rg
-arc_location: polandcentral
-arc_subscription_id: a8a36bc1-79a7-49fe-9faa-92220103c66f
 arc_tenant_id: b48c71d0-46cf-4171-ad02-1ed785ba425d
+arc_subscription_id: a8a36bc1-79a7-49fe-9faa-92220103c66f
+arc_location: polandcentral
+arc_resource_group: homelab-rg
 arc_spn_id: 525b1595-071d-469f-a2c6-0680cda35b4b
-arc_spn_secret_name: cloudlab-arc-secret
+arc_spn_secret_name: arc-enrollment-secret
 arc_keyvault_name: homelab-bysxdb-kv
+arc_machine_name: cloudlab
