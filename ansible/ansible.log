@@ -461,3 +461,105 @@
 }
 2026-06-20 14:40:15,700 p=29172 u=vscode n=ansible | PLAY RECAP **********************************************************************************************************************
 2026-06-20 14:40:15,700 p=29172 u=vscode n=ansible | cloudlab                   : ok=8    changed=2    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+2026-06-20 14:42:53,778 p=31325 u=vscode n=ansible | PLAY [Enroll cloudlab in Azure Arc] *********************************************************************************************
+2026-06-20 14:42:53,796 p=31325 u=vscode n=ansible | TASK [Gathering Facts] **********************************************************************************************************
+2026-06-20 14:42:57,781 p=31325 u=vscode n=ansible | ok: [cloudlab]
+2026-06-20 14:42:57,796 p=31325 u=vscode n=ansible | TASK [azure_arc : Install azcmagent dependencies] *******************************************************************************
+2026-06-20 14:43:02,180 p=31325 u=vscode n=ansible | ok: [cloudlab]
+2026-06-20 14:43:02,187 p=31325 u=vscode n=ansible | TASK [azure_arc : Add Microsoft package repo] ***********************************************************************************
+2026-06-20 14:43:05,215 p=31325 u=vscode n=ansible | ok: [cloudlab]
+2026-06-20 14:43:05,230 p=31325 u=vscode n=ansible | TASK [azure_arc : Install azcmagent] ********************************************************************************************
+2026-06-20 14:43:09,003 p=31325 u=vscode n=ansible | ok: [cloudlab]
+2026-06-20 14:43:09,013 p=31325 u=vscode n=ansible | TASK [azure_arc : Fetch SPN client secret from Key Vault] ***********************************************************************
+2026-06-20 14:43:11,845 p=31325 u=vscode n=ansible | changed: [cloudlab -> localhost]
+2026-06-20 14:43:11,853 p=31325 u=vscode n=ansible | TASK [azure_arc : Connect to Azure Arc] *****************************************************************************************
+2026-06-20 14:43:50,251 p=31325 u=vscode n=ansible | changed: [cloudlab]
+2026-06-20 14:43:50,258 p=31325 u=vscode n=ansible | TASK [azure_arc : Verify Arc connection] ****************************************************************************************
+2026-06-20 14:43:51,355 p=31325 u=vscode n=ansible | ok: [cloudlab]
+2026-06-20 14:43:51,361 p=31325 u=vscode n=ansible | TASK [azure_arc : Display connection status] ************************************************************************************
+2026-06-20 14:43:51,400 p=31325 u=vscode n=ansible | ok: [cloudlab] => {
+    "msg": "Arc status: Connected"
+}
+2026-06-20 14:43:51,419 p=31325 u=vscode n=ansible | PLAY RECAP **********************************************************************************************************************
+2026-06-20 14:43:51,420 p=31325 u=vscode n=ansible | cloudlab                   : ok=8    changed=2    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+2026-06-20 14:46:12,658 p=32871 u=vscode n=ansible | PLAY [Enroll cloudlab in Azure Arc] ******************************************************************************************************************
+2026-06-20 14:46:12,674 p=32871 u=vscode n=ansible | TASK [Gathering Facts] *******************************************************************************************************************************
+2026-06-20 14:46:16,336 p=32871 u=vscode n=ansible | ok: [cloudlab]
+2026-06-20 14:46:16,349 p=32871 u=vscode n=ansible | TASK [azure_arc : Install azcmagent dependencies] ****************************************************************************************************
+2026-06-20 14:46:20,707 p=32871 u=vscode n=ansible | ok: [cloudlab]
+2026-06-20 14:46:20,714 p=32871 u=vscode n=ansible | TASK [azure_arc : Add Microsoft package repo] ********************************************************************************************************
+2026-06-20 14:46:23,720 p=32871 u=vscode n=ansible | ok: [cloudlab]
+2026-06-20 14:46:23,732 p=32871 u=vscode n=ansible | TASK [azure_arc : Install azcmagent] *****************************************************************************************************************
+2026-06-20 14:46:28,244 p=32871 u=vscode n=ansible | ok: [cloudlab]
+2026-06-20 14:46:28,250 p=32871 u=vscode n=ansible | TASK [azure_arc : Fetch SPN client secret from Key Vault] ********************************************************************************************
+2026-06-20 14:46:32,527 p=32871 u=vscode n=ansible | changed: [cloudlab -> localhost]
+2026-06-20 14:46:32,536 p=32871 u=vscode n=ansible | TASK [azure_arc : Connect to Azure Arc] **************************************************************************************************************
+2026-06-20 14:46:35,033 p=32871 u=vscode n=ansible | changed: [cloudlab]
+2026-06-20 14:46:35,050 p=32871 u=vscode n=ansible | TASK [azure_arc : Verify Arc connection] *************************************************************************************************************
+2026-06-20 14:46:36,277 p=32871 u=vscode n=ansible | ok: [cloudlab]
+2026-06-20 14:46:36,288 p=32871 u=vscode n=ansible | TASK [azure_arc : Display connection status] *********************************************************************************************************
+2026-06-20 14:46:36,361 p=32871 u=vscode n=ansible | ok: [cloudlab] => {
+    "arc_show.stdout | from_json": {
+        "agentAutoUpgradeTaskStatus": "enabled, id: /etc/cron.d/azcmagent_autoupgrade",
+        "agentErrorCode": "",
+        "agentErrorDetails": "",
+        "agentErrorTime": "",
+        "agentVersion": "1.65.03439.1127",
+        "cloud": "AzureCloud",
+        "cloudMetadata": null,
+        "cloudProvider": "N/A",
+        "correlationId": "876f85e9-51a4-4d07-8658-334a1c37dda8",
+        "disabledFeatures": null,
+        "gatewayUrl": "",
+        "httpsProxy": "",
+        "identityKeyStore": "Default",
+        "lastHeartbeat": "2026-06-20T14:43:49Z",
+        "location": "polandcentral",
+        "logs": "/var/opt/azcmagent/log/himds.log",
+        "manufacturer": "QEMU",
+        "model": "Standard PC (i440FX + PIIX, 1996)",
+        "mysql": "false",
+        "pgsql": "false",
+        "portalPage": "https://portal.azure.com/#@b48c71d0-46cf-4171-ad02-1ed785ba425d/resource/subscriptions/a8a36bc1-79a7-49fe-9faa-92220103c66f/resourceGroups/homelab-rg/providers/Microsoft.HybridCompute/machines/cloudlab/overview",
+        "proxyBypass": "",
+        "resourceGroup": "homelab-rg",
+        "resourceId": "/subscriptions/a8a36bc1-79a7-49fe-9faa-92220103c66f/resourceGroups/homelab-rg/providers/Microsoft.HybridCompute/machines/cloudlab",
+        "resourceName": "cloudlab",
+        "resourceNamespace": "Microsoft.HybridCompute",
+        "services": [
+            {
+                "displayName": "Agent Service",
+                "serviceName": "himdsd",
+                "startupType": "enabled",
+                "status": "active"
+            },
+            {
+                "displayName": "Azure Arc Proxy",
+                "serviceName": "arcproxyd",
+                "startupType": "enabled",
+                "status": "active"
+            },
+            {
+                "displayName": "Extension Service",
+                "serviceName": "extd",
+                "startupType": "enabled",
+                "status": "active"
+            },
+            {
+                "displayName": "GC Service",
+                "serviceName": "gcad",
+                "startupType": "enabled",
+                "status": "active"
+            }
+        ],
+        "sql": "false",
+        "status": "Connected",
+        "subscriptionId": "a8a36bc1-79a7-49fe-9faa-92220103c66f",
+        "tenantId": "b48c71d0-46cf-4171-ad02-1ed785ba425d",
+        "upstreamProxy": "",
+        "vmId": "b4353635-3a6f-4d34-b5d6-291aa675b56b",
+        "vmUuid": "a477d7b5-f896-4453-8200-3b1c8c7cc0bf"
+    }
+}
+2026-06-20 14:46:36,394 p=32871 u=vscode n=ansible | PLAY RECAP *******************************************************************************************************************************************
+2026-06-20 14:46:36,395 p=32871 u=vscode n=ansible | cloudlab                   : ok=8    changed=2    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   

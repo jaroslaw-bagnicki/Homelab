@@ -51,4 +51,4 @@
 
 - name: Display connection status
   ansible.builtin.debug:
-    msg: "Arc status: {{ (arc_show.stdout | from_json).status }}"
+    var: arc_show.stdout | from_json
