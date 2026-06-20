@@ -1,0 +1,52 @@
+---
+- name: Install azcmagent dependencies
+  ansible.builtin.apt:
+    name:
+      - ca-certificates
+      - curl
+      - gnupg
+    state: present
+    update_cache: yes
+
+- name: Add Microsoft package repo
+  ansible.builtin.apt:
+    deb: https://packages.microsoft.com/config/ubuntu/22.04/packages-microsoft-prod.deb
+
+- name: Install azcmagent
+  ansible.builtin.apt:
+    name: azcmagent
+    state: present
+    update_cache: yes
+
+- name: Fetch SPN client secret from Key Vault
+  ansible.builtin.shell: |
+    $secret = Get-AzKeyVaultSecret -VaultName {{ arc_keyvault_name }} -Name {{ arc_spn_secret_name }} -AsPlainText
+    Write-Output $secret
+  args:
+    executable: pwsh
+  delegate_to: localhost
+  register: arc_spn_secret
+  no_log: true
+
+- name: Connect to Azure Arc
+  ansible.builtin.shell: |
+    sudo azcmagent connect \
+      --service-principal-id {{ arc_spn_id }} \
+      --service-principal-secret '{{ arc_spn_secret.stdout }}' \
+      --resource-group {{ arc_resource_group }} \
+      --tenant-id {{ arc_tenant_id }} \
+      --location {{ arc_location }} \
+      --subscription-id {{ arc_subscription_id }}
+  args:
+    executable: /bin/bash
+  register: arc_connect_result
+  changed_when: "'Already connected' not in arc_connect_result.stdout"
+
+- name: Verify Arc connection
+  ansible.builtin.command: sudo azcmagent show
+  register: arc_show
+  changed_when: false
+
+- name: Display connection status
+  ansible.builtin.debug:
+    msg: "Arc status: {{ arc_show.stdout | regex_search('Status: (\\w+)', '\\1') | first | default('unknown') }}"
