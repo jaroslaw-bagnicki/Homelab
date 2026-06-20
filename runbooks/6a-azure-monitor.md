@@ -18,6 +18,19 @@
 
 ---
 
+## Execution Order
+
+There are two independent steps — **Bicep** (DCR association) and **Ansible** (AMA install). The order matters for how quickly metrics appear, but both orders work:
+
+| Order | Flow | When metrics appear |
+|---|---|---|
+| **New VPS enrollment** (natural) | Ansible installs AMA first → Bicep creates DCR association later | A few minutes after Bicep runs (AMA polls for new DCRs every few minutes) |
+| **Retroactive setup** (existing Arc server) | Bicep creates DCR association first → Ansible installs AMA | Immediately after AMA install (DCR already exists, agent picks it up on first poll) |
+
+During VPS enrollment via `playbook.yml`, Ansible runs `azure_arc` → `azure_monitor` in sequence, so AMA gets installed right after Arc enrolment. The DCR association is created separately when you deploy the Bicep — the AMA agent will discover it on its next polling cycle.
+
+---
+
 ## 1. Deploy Shared Infrastructure with Bicep
 
 The monitoring stack is defined as **Bicep + PowerShell** in [`runbooks/AzureResources/`](AzureResources/).
