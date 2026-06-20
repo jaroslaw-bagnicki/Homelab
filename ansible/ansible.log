@@ -50,3 +50,77 @@
 2026-06-20 06:19:25,810 p=9671 u=vscode n=ansible | changed: [cloudlab]
 2026-06-20 06:19:25,818 p=9671 u=vscode n=ansible | PLAY RECAP *********************************************************************
 2026-06-20 06:19:25,818 p=9671 u=vscode n=ansible | cloudlab                   : ok=13   changed=6    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+2026-06-20 06:26:23,361 p=14209 u=vscode n=ansible | PLAY [Configure cloudlab VPS] **************************************************************************************************
+2026-06-20 06:26:23,370 p=14209 u=vscode n=ansible | TASK [Gathering Facts] *********************************************************************************************************
+2026-06-20 06:26:26,754 p=14209 u=vscode n=ansible | ok: [cloudlab]
+2026-06-20 06:26:26,765 p=14209 u=vscode n=ansible | TASK [common : Set hostname to inventory name] *********************************************************************************
+2026-06-20 06:26:28,084 p=14209 u=vscode n=ansible | ok: [cloudlab]
+2026-06-20 06:26:28,088 p=14209 u=vscode n=ansible | TASK [common : Add hostname to /etc/hosts for sudo performance] ****************************************************************
+2026-06-20 06:26:28,833 p=14209 u=vscode n=ansible | ok: [cloudlab]
+2026-06-20 06:26:28,837 p=14209 u=vscode n=ansible | TASK [common : Set timezone to Etc/UTC] ****************************************************************************************
+2026-06-20 06:26:29,721 p=14209 u=vscode n=ansible | ok: [cloudlab]
+2026-06-20 06:26:29,731 p=14209 u=vscode n=ansible | TASK [common : Ensure systemd-timesyncd is running] ****************************************************************************
+2026-06-20 06:26:30,893 p=14209 u=vscode n=ansible | ok: [cloudlab]
+2026-06-20 06:26:30,902 p=14209 u=vscode n=ansible | TASK [security : UFW default deny incoming] ************************************************************************************
+2026-06-20 06:26:34,123 p=14209 u=vscode n=ansible | ok: [cloudlab]
+2026-06-20 06:26:34,128 p=14209 u=vscode n=ansible | TASK [security : UFW allow SSH] ************************************************************************************************
+2026-06-20 06:26:35,343 p=14209 u=vscode n=ansible | ok: [cloudlab]
+2026-06-20 06:26:35,347 p=14209 u=vscode n=ansible | TASK [security : Enable UFW] ***************************************************************************************************
+2026-06-20 06:26:37,095 p=14209 u=vscode n=ansible | ok: [cloudlab]
+2026-06-20 06:26:37,101 p=14209 u=vscode n=ansible | TASK [security : Install fail2ban] *********************************************************************************************
+2026-06-20 06:26:41,009 p=14209 u=vscode n=ansible | ok: [cloudlab]
+2026-06-20 06:26:41,016 p=14209 u=vscode n=ansible | TASK [security : Deploy fail2ban jail config] **********************************************************************************
+2026-06-20 06:26:42,711 p=14209 u=vscode n=ansible | ok: [cloudlab]
+2026-06-20 06:26:42,715 p=14209 u=vscode n=ansible | TASK [security : Ensure fail2ban is running] ***********************************************************************************
+2026-06-20 06:26:43,635 p=14209 u=vscode n=ansible | ok: [cloudlab]
+2026-06-20 06:26:43,643 p=14209 u=vscode n=ansible | TASK [docker_host : Remove old Docker packages (Ubuntu repo)] ******************************************************************
+2026-06-20 06:26:45,003 p=14209 u=vscode n=ansible | ok: [cloudlab]
+2026-06-20 06:26:45,007 p=14209 u=vscode n=ansible | TASK [docker_host : Install dependencies for Docker repo] **********************************************************************
+2026-06-20 06:26:48,561 p=14209 u=vscode n=ansible | ok: [cloudlab]
+2026-06-20 06:26:48,566 p=14209 u=vscode n=ansible | TASK [docker_host : Add Docker GPG key] ****************************************************************************************
+2026-06-20 06:27:09,850 p=14209 u=vscode n=ansible | fatal: [cloudlab]: FAILED! => {"changed": false, "cmd": "/usr/bin/apt-key --keyring /etc/apt/keyrings/docker.asc adv --list-public-keys --keyid-format=long", "msg": "Unable to list public keys", "rc": 1, "stderr": "Warning: apt-key is deprecated. Manage keyring files in trusted.gpg.d instead (see apt-key(8)).\nmv: cannot stat '/etc/apt/keyrings/docker.asc': No such file or directory\n", "stderr_lines": ["Warning: apt-key is deprecated. Manage keyring files in trusted.gpg.d instead (see apt-key(8)).", "mv: cannot stat '/etc/apt/keyrings/docker.asc': No such file or directory"], "stdout": "Executing: /tmp/apt-key-gpghome.VWVQuBH02p/gpg.1.sh --list-public-keys --keyid-format=long\n", "stdout_lines": ["Executing: /tmp/apt-key-gpghome.VWVQuBH02p/gpg.1.sh --list-public-keys --keyid-format=long"]}
+2026-06-20 06:27:09,854 p=14209 u=vscode n=ansible | 	to retry, use: --limit @/workspaces/Homelab/ansible/playbook.retry
+
+2026-06-20 06:27:09,854 p=14209 u=vscode n=ansible | PLAY RECAP *********************************************************************************************************************
+2026-06-20 06:27:09,855 p=14209 u=vscode n=ansible | cloudlab                   : ok=13   changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0   
+2026-06-20 06:28:09,166 p=15265 u=vscode n=ansible | PLAY [Configure cloudlab VPS] **************************************************************************************************
+2026-06-20 06:28:09,175 p=15265 u=vscode n=ansible | TASK [Gathering Facts] *********************************************************************************************************
+2026-06-20 06:28:12,249 p=15265 u=vscode n=ansible | ok: [cloudlab]
+2026-06-20 06:28:12,260 p=15265 u=vscode n=ansible | TASK [common : Set hostname to inventory name] *********************************************************************************
+2026-06-20 06:28:13,693 p=15265 u=vscode n=ansible | ok: [cloudlab]
+2026-06-20 06:28:13,697 p=15265 u=vscode n=ansible | TASK [common : Add hostname to /etc/hosts for sudo performance] ****************************************************************
+2026-06-20 06:28:14,475 p=15265 u=vscode n=ansible | ok: [cloudlab]
+2026-06-20 06:28:14,479 p=15265 u=vscode n=ansible | TASK [common : Set timezone to Etc/UTC] ****************************************************************************************
+2026-06-20 06:28:15,409 p=15265 u=vscode n=ansible | ok: [cloudlab]
+2026-06-20 06:28:15,414 p=15265 u=vscode n=ansible | TASK [common : Ensure systemd-timesyncd is running] ****************************************************************************
+2026-06-20 06:28:16,665 p=15265 u=vscode n=ansible | ok: [cloudlab]
+2026-06-20 06:28:16,674 p=15265 u=vscode n=ansible | TASK [security : UFW default deny incoming] ************************************************************************************
+2026-06-20 06:28:20,036 p=15265 u=vscode n=ansible | ok: [cloudlab]
+2026-06-20 06:28:20,041 p=15265 u=vscode n=ansible | TASK [security : UFW allow SSH] ************************************************************************************************
+2026-06-20 06:28:21,291 p=15265 u=vscode n=ansible | ok: [cloudlab]
+2026-06-20 06:28:21,295 p=15265 u=vscode n=ansible | TASK [security : Enable UFW] ***************************************************************************************************
+2026-06-20 06:28:22,802 p=15265 u=vscode n=ansible | ok: [cloudlab]
+2026-06-20 06:28:22,807 p=15265 u=vscode n=ansible | TASK [security : Install fail2ban] *********************************************************************************************
+2026-06-20 06:28:26,755 p=15265 u=vscode n=ansible | ok: [cloudlab]
+2026-06-20 06:28:26,760 p=15265 u=vscode n=ansible | TASK [security : Deploy fail2ban jail config] **********************************************************************************
+2026-06-20 06:28:28,308 p=15265 u=vscode n=ansible | ok: [cloudlab]
+2026-06-20 06:28:28,312 p=15265 u=vscode n=ansible | TASK [security : Ensure fail2ban is running] ***********************************************************************************
+2026-06-20 06:28:29,334 p=15265 u=vscode n=ansible | ok: [cloudlab]
+2026-06-20 06:28:29,341 p=15265 u=vscode n=ansible | TASK [docker_host : Remove old Docker packages (Ubuntu repo)] ******************************************************************
+2026-06-20 06:28:30,786 p=15265 u=vscode n=ansible | ok: [cloudlab]
+2026-06-20 06:28:30,790 p=15265 u=vscode n=ansible | TASK [docker_host : Install dependencies for Docker repo] **********************************************************************
+2026-06-20 06:28:34,250 p=15265 u=vscode n=ansible | ok: [cloudlab]
+2026-06-20 06:28:34,255 p=15265 u=vscode n=ansible | TASK [docker_host : Create keyrings directory] *********************************************************************************
+2026-06-20 06:28:34,970 p=15265 u=vscode n=ansible | ok: [cloudlab]
+2026-06-20 06:28:34,975 p=15265 u=vscode n=ansible | TASK [docker_host : Download Docker GPG key] ***********************************************************************************
+2026-06-20 06:28:35,991 p=15265 u=vscode n=ansible | changed: [cloudlab]
+2026-06-20 06:28:35,996 p=15265 u=vscode n=ansible | TASK [docker_host : Add Docker apt repository] *********************************************************************************
+2026-06-20 06:28:46,214 p=15265 u=vscode n=ansible | changed: [cloudlab]
+2026-06-20 06:28:46,223 p=15265 u=vscode n=ansible | TASK [docker_host : Install Docker packages] ***********************************************************************************
+2026-06-20 06:29:13,179 p=15265 u=vscode n=ansible | changed: [cloudlab]
+2026-06-20 06:29:13,184 p=15265 u=vscode n=ansible | TASK [docker_host : Add users to docker group] *********************************************************************************
+2026-06-20 06:29:14,211 p=15265 u=vscode n=ansible | changed: [cloudlab] => (item=labadmin)
+2026-06-20 06:29:14,217 p=15265 u=vscode n=ansible | TASK [docker_host : Ensure Docker is running] **********************************************************************************
+2026-06-20 06:29:15,277 p=15265 u=vscode n=ansible | ok: [cloudlab]
+2026-06-20 06:29:15,298 p=15265 u=vscode n=ansible | PLAY RECAP *********************************************************************************************************************
+2026-06-20 06:29:15,299 p=15265 u=vscode n=ansible | cloudlab                   : ok=19   changed=4    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
