@@ -20,11 +20,8 @@
 
 - name: Fetch SPN client secret from Key Vault
   ansible.builtin.shell: |
-    Import-Module Az.KeyVault -Force
     Set-AzContext -TenantId {{ arc_tenant_id }} -SubscriptionId {{ arc_subscription_id }} | Out-Null
-    $secret = Get-AzKeyVaultSecret -VaultName {{ arc_keyvault_name }} -Name {{ arc_spn_secret_name }} -AsPlainText
-    if (-not $secret) { throw "Secret not found in Key Vault" }
-    Write-Output $secret
+    Get-AzKeyVaultSecret -VaultName {{ arc_keyvault_name }} -Name {{ arc_spn_secret_name }} -AsPlainText
   args:
     executable: pwsh
   delegate_to: localhost
