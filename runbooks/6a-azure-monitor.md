@@ -117,11 +117,11 @@ This confirms the server is heartbeating to Log Analytics.
 
 - [x] Log Analytics workspace created
 - [x] DCR created
-- [ ] DCR association exists for each target server
-- [ ] Azure Monitor Agent extension installed (`azcmagent show` or `Get-AzConnectedMachineExtension`)
-- [ ] Metrics visible in Portal: CPU, memory, availability charts show data
-- [ ] Log Analytics receives heartbeats: `Heartbeat | where Computer == "<server>"` returns results
-- [ ] VM Insights charts show performance data (optional)
+- [x] DCR association exists for each target server
+- [x] Azure Monitor Agent extension installed (`azcmagent show` or `Get-AzConnectedMachineExtension`)
+- [x] Metrics visible in Portal: CPU, memory, disk charts show data
+- [x] Log Analytics receives heartbeats: `Heartbeat | where Computer == "<server>"` returns results
+- [x] VM Insights charts show performance data (log-based classic)
 
 ---
 
