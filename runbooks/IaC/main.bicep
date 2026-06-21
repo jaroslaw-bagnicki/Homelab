@@ -39,7 +39,9 @@ resource law 'Microsoft.OperationalInsights/workspaces@2025-07-01' = {
 //   }
 // }
 
-// Data Collection Rule — defines what telemetry to collect and where to send it
+// Data Collection Rule — uses the VM Insights meta-counter that expands to the full
+// standard counter set. Matches the DCR shape from:
+// https://learn.microsoft.com/en-us/azure/azure-monitor/vm/vm-enable-monitoring
 resource dcr 'Microsoft.Insights/dataCollectionRules@2024-03-11' = {
   name: 'homelab-vm-dcr'
   location: location
@@ -48,15 +50,13 @@ resource dcr 'Microsoft.Insights/dataCollectionRules@2024-03-11' = {
     dataSources: {
       performanceCounters: [
         {
-          name: 'linuxPerfCounters'
+          name: 'VMInsightsPerfCounters'
           streams: [
             'Microsoft-InsightsMetrics'
           ]
           samplingFrequencyInSeconds: 60
           counterSpecifiers: [
-            '\\Processor\\% Processor Time'
-            '\\Memory\\% Used Memory'
-            '\\Disk\\% Used Space'
+            '\\VmInsights\\DetailedMetrics'
           ]
         }
       ]
