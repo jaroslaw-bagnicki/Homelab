@@ -16,7 +16,6 @@ Idempotent — safe to re-run on an already-deployed resource group. Only adds o
 |---|---|
 | `main.bicep` | All Azure resource definitions |
 | `Deploy-HomelabAzResources.ps1` | Deploys `main.bicep` via `New-AzResourceGroupDeployment` |
-| `SETUP_LOG.md` | Historical session log (2026-06-02) — initial deployment notes |
 
 ## What `main.bicep` creates
 
@@ -49,7 +48,8 @@ Ansible runs first (on the bare host), then Bicep deploys cloud resources. The A
 
 ## Known limitations
 
-- **Ubuntu 26.04 not supported**: AMA fails on the physical `homelab` server (Ubuntu 26.04) with `Unsupported operating system` (exit code 51). Tracked upstream: [Azure/azure-linux-extensions#2173](https://github.com/Azure/azure-linux-extensions/issues/2173)
+- **Ubuntu 26.04 not supported**: AMA fails on the physical `homelab` server (Ubuntu 26.04) with `Unsupported operating system` (exit code 51). Root cause: Ubuntu 26.04 ships Python 3.14 which removed `crypt`/`imp` modules, breaking extensions that depend on older Python versions. Tracked upstream: [Azure/azure-linux-extensions#2173](https://github.com/Azure/azure-linux-extensions/issues/2173)
+- **Arc agent `extd` crash**: The `gc_linux_service` (extd service) has a memory corruption bug (`double free or corruption`) triggered on restart. If extension deployment gets stuck at "Creating", restart the service on the Arc server: `sudo systemctl restart extd`
 - `cloudlab` (Ubuntu 24.04) is fully supported — no issues expected
 
 ---
