@@ -48,6 +48,8 @@ to the internet via **[Cloudflare Tunnel](docs/decisions/260530-08-remote-access
 | 2026‑06‑13 | Restic backup | ⭐⭐ | [7](runbooks/7-restic-backup.md) | Daily snapshots to Azure Blob Storage |
 | 2026‑06‑16 | Decision log | ⭐ | [#7](https://github.com/jaroslaw-bagnicki/Homelab/issues/7) | ADR log in MADR format — see [docs/decisions/](docs/decisions/) |
 | 2026‑06‑17 | VPS playground | ⭐⭐ | [10](runbooks/10-vps-playground.md) | Contabo Cloud VPS 10 as Ansible dev/test sandbox — see [ADR 13](docs/decisions/260616-13-vps-playground.md) |
+| 2026‑06‑21 | Ansible playbooks | ⭐⭐⭐ | [ansible/](ansible/README.md) | common, security, azure_arc, docker_host roles developed & tested on cloudlab — see [#9](https://github.com/jaroslaw-bagnicki/Homelab/issues/9) |
+| 2026‑06‑21 | Azure Monitor | ⭐⭐ | [6a](runbooks/6a-azure-monitor.md) | VM Insights working on cloudlab via `\VmInsights\DetailedMetrics` meta-counter — Bicep-managed |
 
 ---
 
@@ -55,12 +57,10 @@ to the internet via **[Cloudflare Tunnel](docs/decisions/260530-08-remote-access
 
 | # | Workload | Effort | Notes |
 |---|---|---|---|
-| 6a | **Monitoring** (Azure Monitor) | ⭐ | Metrics and logs via Arc — see [runbook](runbooks/6a-azure-monitor.md) |
 | 7 | **Hermes Agent** | ⭐⭐⭐ | Most complex — last |
 | 8 | **Key Vault** | ⭐ | Central secret storage for homelab — see [#6](https://github.com/jaroslaw-bagnicki/Homelab/issues/6) |
 | 9 | **SQL Server** | ⭐⭐ | Developer Edition in Docker — see [runbook](runbooks/9-mssql-dev.md) |
 | 10 | **Gitea** | ⭐⭐ | Self-hosted Git with web UI for personal repos |
-| 11 | **Ansible playbooks** | ⭐⭐⭐ | Develop & test via cloudlab playground — see [#9](https://github.com/jaroslaw-bagnicki/Homelab/issues/9) |
 | - | **Ollama + Bielik** (Phase 2) | ⭐⭐⭐ | Needs dedicated LLM server hardware |
 
 ---
@@ -69,4 +69,6 @@ to the internet via **[Cloudflare Tunnel](docs/decisions/260530-08-remote-access
 
 - [Research index](docs/research/README.md)
 - [Decision log](docs/decisions/README.md)
+- [Ansible playbooks & roles](ansible/README.md)
+- [Bicep infrastructure](bicep/README.md)
 - [Runbooks](runbooks/README.md)
