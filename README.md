@@ -31,6 +31,21 @@ to the internet via **[Cloudflare Tunnel](docs/decisions/260530-08-remote-access
 
 ---
 
+## Project Structure
+
+| Folder | Purpose |
+|---|---|
+| [`ansible/`](ansible/README.md) | Host provisioning — playbooks, roles (common, security, docker_host, azure_arc), inventory |
+| [`bicep/`](bicep/README.md) | Cloud-side IaC — Log Analytics, DCR, AMA extensions, Key Vault |
+| [`docs/decisions/`](docs/decisions/README.md) | Architecture Decision Records (ADRs) — design rationale, settled decisions |
+| [`docs/research/`](docs/research/README.md) | Exploratory research — topic investigations, comparisons, trade-off analyses |
+| [`runbooks/`](runbooks/README.md) | Step-by-step implementation guides referenced from the progress table |
+| [`scripts/`](scripts/) | Standalone PowerShell utilities (SSH key management, Arc client secrets) |
+
+Ansible runs first on the bare host (OS config, Docker, Arc agent). Bicep deploys cloud resources after Arc enrolment. The decision log is the source of truth for design rationale. Runbooks capture implementation steps. Research docs capture exploratory context that predates settled decisions.
+
+---
+
 ## What's Done
 
 | Date | Workload | Effort | # | Notes |
