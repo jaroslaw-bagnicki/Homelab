@@ -26,13 +26,13 @@ Everything after Arc enrollment is a single Bicep deployment:
 | 1. Arc enrollment | Ansible (`azure_arc` role) | Registers server in Azure Arc |
 | 2. Deploy monitoring | Bicep (`Deploy-HomelabAzResources.ps1`) | AMA extension + DCR + DCR associations |
 
-Bicep deploys the AMA extension on the Arc server, the Data Collection Rule with `\VmInsights\DetailedMetrics`, and the DCR-to-machine association — all in one `az deployment group create` call.
+Bicep deploys the AMA extension on the Arc server, the Data Collection Rule with `\VmInsights\DetailedMetrics`, and the DCR-to-machine association — all in one `New-AzResourceGroupDeployment` call.
 
 ---
 
 ## 1. Deploy Monitoring Stack with Bicep
 
-The monitoring stack is defined as **Bicep + PowerShell** in [`bicep/`](../bicep/).
+The monitoring stack is defined as **Bicep + PowerShell** in [`bicep/`](../../bicep/).
 
 | File | Purpose |
 |---|---|

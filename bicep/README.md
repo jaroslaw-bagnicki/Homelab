@@ -26,7 +26,6 @@ Idempotent — safe to re-run on an already-deployed resource group. Only adds o
 | DCR associations | `{machine}-vm-dcr-association` | One per Arc server, links each to the shared DCR |
 | Azure Monitor Agent | `AzureMonitorAgent` | One AMA extension per Arc server (`AzureMonitorLinuxAgent`, auto-upgrade enabled) |
 | Key Vault | `homelab-{suffix}-kv` | RBAC-only, stores SSH keys and secrets |
-| SSH public key | `cloudlab-vps-key` | Azure-managed SSH key for VPS access |
 
 ## Relationship to Ansible
 
@@ -55,7 +54,7 @@ Ansible runs first (on the bare host), then Bicep deploys cloud resources. The A
 ---
 
 **References:**
-- [Runbook 6a: Azure Monitor Setup](../runbooks/6a-azure-monitor.md)
+- [Runbook 6a: Azure Monitor Setup](../docs/runbooks/6a-azure-monitor.md)
 - [ADR 09: Azure Monitor via Arc](../docs/decisions/260602-09-azure-monitor-via-arc.md)
 - [Research 17: Arc VM Insights root cause](../docs/research/17-arc-vm-insights-setup.md)
 - [VM enable monitoring docs](https://learn.microsoft.com/en-us/azure/azure-monitor/vm/vm-enable-monitoring)
