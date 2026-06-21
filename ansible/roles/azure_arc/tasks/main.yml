@@ -37,7 +37,7 @@
       --location {{ arc_location }} \
       --resource-group {{ arc_resource_group }} \
       --service-principal-id {{ arc_spn_id }} \
-      --service-principal-secret '{{ arc_spn_secret.stdout }}' \
+      --service-principal-secret "{{ arc_spn_secret.stdout | trim }}" \
       --resource-name {{ arc_machine_name }}
   args:
     executable: /bin/bash
