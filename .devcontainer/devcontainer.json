@@ -45,7 +45,7 @@
   // Fast steps (Ansible, Bicep) run synchronously.
   // Az PowerShell is backgrounded — huge module, can take minutes.
   // Check Az progress: tail -f /tmp/install-az.log
-  "postCreateCommand": "bash .devcontainer/scripts/setup-ansible.sh && bash .devcontainer/scripts/setup-bicep.sh && nohup pwsh -File .devcontainer/scripts/setup-azps.ps1 > /tmp/install-az.log 2>&1 &",
+  "postCreateCommand": "bash .devcontainer/scripts/setup-ansible.sh && bash .devcontainer/scripts/setup-bicep.sh && pwsh -File .devcontainer/scripts/setup-profile.ps1 && nohup pwsh -File .devcontainer/scripts/setup-azps.ps1 > /tmp/install-az.log 2>&1 &",
 
   // ── Remote user ───────────────────────────────────────────────────
   "remoteUser": "vscode"
