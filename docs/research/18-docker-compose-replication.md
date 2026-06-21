@@ -125,26 +125,6 @@ Use the existing Ansible setup to copy static files from the repo and run `docke
 
 ---
 
-## Recommendation
+## Summary
 
-**Option A — Ansible role with `docker_compose_v2`** — is the clear winner. It aligns with the project's existing Ansible-based GitOps pattern, was already envisioned in the DR flow, and handles per-host differences cleanly through Jinja2 templating and host variables.
-
-**Implementation plan:**
-
-1. **Create `ansible/roles/docker_services/`** with templates for `docker-compose.yml`, `Caddyfile`, `dnsmasq.conf`
-2. **Add `host_vars/`** with per-host variables (`homelab_ip`, `upstream_dns`)
-3. **Add the role to `playbook.yml`** after `docker_host`, before `azure_arc`
-4. **Handle `TUNNEL_TOKEN`** — fetch from Key Vault at runtime, write to `.env`
-5. **Drop the `/opt/docker/.env` file** from the repo (`.gitignore`) — it's a secret
-
----
-
-## Key Decisions
-
-| Decision | Rationale |
-|---|---|
-| Use `docker_compose_v2` module, not `command` | Idempotent — only recreates containers when config changes |
-| Template config files, don't copy static | `homelab_ip` differs per host; Jinja2 handles this |
-| Separate `docker_services` role from `docker_host` | `docker_host` installs Docker Engine; `docker_services` deploys the stack — different lifecycles |
-| Fetch `TUNNEL_TOKEN` from Key Vault | Already use KV for Arc SPN secret — consistent pattern |
-| Place role after `docker_host`, before `azure_arc` | Docker must be installed first; Arc enrolment is the final step |
+All four options are viable for different trade-offs. Option A is the most GitOps-aligned and builds on the existing Ansible investment. Option B is a simpler alternative if Portainer-native management is preferred post-bootstrap. The decision between them — along with implementation details like role structure, secret handling, and playbook ordering — belongs in an ADR.
