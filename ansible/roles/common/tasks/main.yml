@@ -1,0 +1,22 @@
+---
+- name: Set hostname to inventory name
+  ansible.builtin.hostname:
+    name: "{{ inventory_hostname }}"
+
+- name: Add hostname to /etc/hosts for sudo performance
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    line: "127.0.1.1 {{ inventory_hostname }}"
+    regexp: "^127\\.0\\.1\\.1\\s+"
+    state: present
+
+- name: Set timezone to Etc/UTC
+  ansible.builtin.timezone:
+    name: Etc/UTC
+  notify: Restart systemd-timesyncd
+
+- name: Ensure systemd-timesyncd is running
+  ansible.builtin.service:
+    name: systemd-timesyncd
+    state: started
+    enabled: yes
