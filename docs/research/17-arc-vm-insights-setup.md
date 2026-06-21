@@ -86,6 +86,8 @@ counterSpecifiers: [
 
 After redeployment, the AMA will start sending VM Insights-tagged data to `InsightsMetrics`, and the portal's classic log-based charts should populate within minutes.
 
+**Verified 2026-06-21**: After Bicep redeployment with the `\VmInsights\DetailedMetrics` counter, the `cloudlab` Insights page shows live CPU, Memory, and Disk charts. Classic log-based monitoring confirmed working.
+
 ---
 
 ## References
