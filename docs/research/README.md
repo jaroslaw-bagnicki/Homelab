@@ -19,6 +19,7 @@
 | 15 | [15-vps-selection.md](15-vps-selection.md) | Budget VPS selection for Ansible playground; Hetzner CPX31 with snapshot destroy/recreate | Gemini chat 6 |
 | 16 | [16-github-codespaces-devcontainers.md](16-github-codespaces-devcontainers.md) | GitHub Codespaces & Dev Containers setup for Homelab dev environment | Gemini chat 7 |
 | 17 | [17-arc-vm-insights-setup.md](17-arc-vm-insights-setup.md) | Why Arc VM Insights shows "No Data" despite data flowing to LAW — portal onboarding gap | Research |
+| 18 | [18-docker-compose-replication.md](18-docker-compose-replication.md) | Options for replicating Cloudlab docker-compose stack to Homelab after rebuild — Ansible role vs Portainer vs rsync | Research |
 
 ## Gemini Discussions
 
