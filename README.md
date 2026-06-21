@@ -39,7 +39,7 @@ to the internet via **[Cloudflare Tunnel](docs/decisions/260530-08-remote-access
 | [`bicep/`](bicep/README.md) | Cloud-side IaC — Log Analytics, DCR, AMA extensions, Key Vault |
 | [`docs/decisions/`](docs/decisions/README.md) | Architecture Decision Records (ADRs) — design rationale, settled decisions |
 | [`docs/research/`](docs/research/README.md) | Exploratory research — topic investigations, comparisons, trade-off analyses |
-| [`runbooks/`](runbooks/README.md) | Step-by-step implementation guides referenced from the progress table |
+| [`docs/runbooks/`](docs/runbooks/README.md) | Step-by-step implementation guides referenced from the progress table |
 | [`scripts/`](scripts/) | Standalone PowerShell utilities (SSH key management, Arc client secrets) |
 
 Ansible runs first on the bare host (OS config, Docker, Arc agent). Bicep deploys cloud resources after Arc enrolment. The decision log is the source of truth for design rationale. Runbooks capture implementation steps. Research docs capture exploratory context that predates settled decisions.
@@ -52,19 +52,20 @@ Ansible runs first on the bare host (OS config, Docker, Arc agent). Bicep deploy
 |---|---|---|---|---|
 | 2026‑05‑20 | Research | ⭐⭐⭐ | — | Hardware, LLM, OS decisions |
 | 2026‑05‑24 | Purchase | ⭐ | — | M910q ordered on Allegro |
-| 2026‑05‑29 | Base setup | ⭐⭐ | [1](runbooks/1-init.md) | Ubuntu, static IP, SSH, LVM, mDNS, hardening |
-| 2026‑05‑29 | Docker | ⭐⭐ | [2](runbooks/2-docker.md) | Engine + Portainer CE |
-| 2026‑05‑29 | DNSMasq | ⭐ | [3](runbooks/3-dns.md) | `*.home` resolution |
-| 2026‑05‑29 | Caddy | ⭐ | [4](runbooks/4-caddy.md) | Reverse proxy with auto-TLS |
-| 2026‑05‑30 | Cloudflare Tunnel | ⭐⭐ | [5](runbooks/5-cloudflare-tunnel.md) | Remote HTTPS access via custom domain |
-| 2026‑05‑30 | Azure Arc | ⭐⭐ | [6](runbooks/6-azure-arc.md) | Hybrid server enrollment, cert-based auth |
-| 2026‑05‑31 | GHCR in Portainer | ⭐ | [2a](runbooks/2a-ghcr-portainer.md) | GitHub Container Registry access |
-| 2026‑05‑31 | Hello World demo | ⭐ | [4a](runbooks/4a-hello-world.md) | Reverse proxy demo via Caddy + Cloudflare |
-| 2026‑06‑13 | Restic backup | ⭐⭐ | [7](runbooks/7-restic-backup.md) | Daily snapshots to Azure Blob Storage |
+| 2026‑05‑29 | Base setup | ⭐⭐ | [1](docs/runbooks/1-init.md) | Ubuntu, static IP, SSH, LVM, mDNS, hardening |
+| 2026‑05‑29 | Docker | ⭐⭐ | [2](docs/runbooks/2-docker.md) | Engine + Portainer CE |
+| 2026‑05‑29 | DNSMasq | ⭐ | [3](docs/runbooks/3-dns.md) | `*.home` resolution |
+| 2026‑05‑29 | Caddy | ⭐ | [4](docs/runbooks/4-caddy.md) | Reverse proxy with auto-TLS |
+| 2026‑05‑30 | Cloudflare Tunnel | ⭐⭐ | [5](docs/runbooks/5-cloudflare-tunnel.md) | Remote HTTPS access via custom domain |
+| 2026‑05‑30 | Azure Arc | ⭐⭐ | [6](docs/runbooks/6-azure-arc.md) | Hybrid server enrollment, cert-based auth |
+| 2026‑05‑31 | GHCR in Portainer | ⭐ | [2a](docs/runbooks/2a-ghcr-portainer.md) | GitHub Container Registry access |
+| 2026‑05‑31 | Hello World demo | ⭐ | [4a](docs/runbooks/4a-hello-world.md) | Reverse proxy demo via Caddy + Cloudflare |
+| 2026‑06‑13 | Restic backup | ⭐⭐ | [7](docs/runbooks/7-restic-backup.md) | Daily snapshots to Azure Blob Storage |
 | 2026‑06‑16 | Decision log | ⭐ | [#7](https://github.com/jaroslaw-bagnicki/Homelab/issues/7) | ADR log in MADR format — see [docs/decisions/](docs/decisions/) |
-| 2026‑06‑17 | VPS playground | ⭐⭐ | [10](runbooks/10-vps-playground.md) | Contabo Cloud VPS 10 as Ansible dev/test sandbox — see [ADR 13](docs/decisions/260616-13-vps-playground.md) |
+| 2026‑06‑17 | VPS playground | ⭐⭐ | [10](docs/runbooks/10-vps-playground.md) | Contabo Cloud VPS 10 as Ansible dev/test sandbox — see [ADR 13](docs/decisions/260616-13-vps-playground.md) |
+| 2026‑06‑20 | Key Vault | ⭐ | [bicep/](bicep/README.md) | RBAC-only vault `homelab-{suffix}-kv` provisioned alongside Bicep infrastructure — see [#6](https://github.com/jaroslaw-bagnicki/Homelab/issues/6) |
 | 2026‑06‑20 | Ansible playbooks | ⭐⭐⭐ | [ansible/](ansible/README.md) | common, security, azure_arc, docker_host roles developed & tested on cloudlab — see [#9](https://github.com/jaroslaw-bagnicki/Homelab/issues/9) |
-| 2026‑06‑21 | Azure Monitor | ⭐⭐ | [6a](runbooks/6a-azure-monitor.md) | VM Insights working on cloudlab via `\VmInsights\DetailedMetrics` meta-counter — Bicep-managed |
+| 2026‑06‑21 | Azure Monitor | ⭐⭐ | [6a](docs/runbooks/6a-azure-monitor.md) | VM Insights working on cloudlab via `\VmInsights\DetailedMetrics` meta-counter — Bicep-managed |
 
 ---
 
@@ -72,9 +73,8 @@ Ansible runs first on the bare host (OS config, Docker, Arc agent). Bicep deploy
 
 | # | Workload | Effort | Notes |
 |---|---|---|---|
-| 7 | **Hermes Agent** | ⭐⭐⭐ | Most complex — last |
-| 8 | **Key Vault** | ⭐ | Central secret storage for homelab — see [#6](https://github.com/jaroslaw-bagnicki/Homelab/issues/6) |
-| 9 | **SQL Server** | ⭐⭐ | Developer Edition in Docker — see [runbook](runbooks/9-mssql-dev.md) |
+| 8 | **Hermes Agent** | ⭐⭐⭐ | Most complex — last |
+| 9 | **SQL Server** | ⭐⭐ | Developer Edition in Docker — see [runbook](docs/runbooks/9-mssql-dev.md) |
 | 10 | **Gitea** | ⭐⭐ | Self-hosted Git with web UI for personal repos |
 | - | **Ollama + Bielik** (Phase 2) | ⭐⭐⭐ | Needs dedicated LLM server hardware |
 
@@ -86,4 +86,4 @@ Ansible runs first on the bare host (OS config, Docker, Arc agent). Bicep deploy
 - [Decision log](docs/decisions/README.md)
 - [Ansible playbooks & roles](ansible/README.md)
 - [Bicep infrastructure](bicep/README.md)
-- [Runbooks](runbooks/README.md)
+- [Runbooks](docs/runbooks/README.md)

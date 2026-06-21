@@ -3,17 +3,17 @@ param location string
 var suffix = take(uniqueString(tenant().tenantId), 6)
 
 // Reference to existing Arc-enabled servers
-resource arcServerHomelab 'Microsoft.HybridCompute/machines@2025-06-01' existing = {
+resource arcServerHomelab 'Microsoft.HybridCompute/machines@2025-01-13' existing = {
   name: 'homelab'
 }
 
-resource arcServerCloudlab 'Microsoft.HybridCompute/machines@2025-06-01' existing = {
+resource arcServerCloudlab 'Microsoft.HybridCompute/machines@2025-01-13' existing = {
   name: 'cloudlab'
 }
 
 // Azure Monitor Agent extension — installed on each Arc-enabled server.
 // The AMA collects the performance counters defined in the DCR below.
-resource amaHomelab 'Microsoft.HybridCompute/machines/extensions@2025-06-01' = {
+resource amaHomelab 'Microsoft.HybridCompute/machines/extensions@2025-01-13' = {
   parent: arcServerHomelab
   name: 'AzureMonitorAgent'
   location: location
@@ -24,7 +24,7 @@ resource amaHomelab 'Microsoft.HybridCompute/machines/extensions@2025-06-01' = {
   }
 }
 
-resource amaCloudlab 'Microsoft.HybridCompute/machines/extensions@2025-06-01' = {
+resource amaCloudlab 'Microsoft.HybridCompute/machines/extensions@2025-01-13' = {
   parent: arcServerCloudlab
   name: 'AzureMonitorAgent'
   location: location
