@@ -8,6 +8,11 @@
 |---|---|
 | `homelab/` | Home lab server research — hardware, OS, local LLM/agent stack |
 
+## Dev Container
+
+- **Default terminal shell is PowerShell (`pwsh`)** — run `.ps1` scripts directly (e.g. `.devcontainer/scripts/setup-azps.ps1`), never wrap with `pwsh -File`
+- Run bash scripts with `bash script.sh` when needed
+
 ## Documentation
 
 - **Decision log (`docs/decisions/`)** — **source of truth** for all settled design decisions.
