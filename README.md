@@ -60,7 +60,6 @@ Ansible runs first on the bare host (OS config, Docker, Arc agent). Bicep deploy
 | 2026‑05‑30 | Azure Arc | ⭐⭐ | [6](docs/runbooks/6-azure-arc.md) | Hybrid server enrollment, cert-based auth |
 | 2026‑05‑31 | GHCR in Portainer | ⭐ | [2a](docs/runbooks/2a-ghcr-portainer.md) | GitHub Container Registry access |
 | 2026‑05‑31 | Hello World demo | ⭐ | [4a](docs/runbooks/4a-hello-world.md) | Reverse proxy demo via Caddy + Cloudflare |
-| 2026‑06‑13 | Restic backup | ⭐⭐ | [7](docs/runbooks/7-restic-backup.md) | Daily snapshots to Azure Blob Storage |
 | 2026‑06‑16 | Decision log | ⭐ | [#7](https://github.com/jaroslaw-bagnicki/Homelab/issues/7) | ADR log in MADR format — see [docs/decisions/](docs/decisions/) |
 | 2026‑06‑17 | VPS playground | ⭐⭐ | [10](docs/runbooks/10-vps-playground.md) | Contabo Cloud VPS 10 as Ansible dev/test sandbox — see [ADR 13](docs/decisions/260616-13-vps-playground.md) |
 | 2026‑06‑20 | Key Vault | ⭐ | [bicep/](bicep/README.md) | RBAC-only vault `homelab-{suffix}-kv` provisioned alongside Bicep infrastructure — see [#6](https://github.com/jaroslaw-bagnicki/Homelab/issues/6) |
@@ -73,6 +72,7 @@ Ansible runs first on the bare host (OS config, Docker, Arc agent). Bicep deploy
 
 | # | Workload | Effort | Notes |
 |---|---|---|---|
+| 7 | **Restic backup** (redo) | ⭐⭐ | Daily snapshots to Azure Blob Storage — see [runbook](docs/runbooks/7-restic-backup.md) |
 | 8 | **Hermes Agent** | ⭐⭐⭐ | Most complex — last |
 | 9 | **SQL Server** | ⭐⭐ | Developer Edition in Docker — see [runbook](docs/runbooks/9-mssql-dev.md) |
 | 10 | **Gitea** | ⭐⭐ | Self-hosted Git with web UI for personal repos |
