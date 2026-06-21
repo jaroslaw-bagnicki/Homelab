@@ -58,6 +58,23 @@
 - **Bicep validation**: Use the `mcp_bicep_get_bicep_file_diagnostics` MCP tool to validate Bicep files — never `az bicep build`
 - **If validation returns errors**, fix all reported issues and re-validate before committing the file
 
+## Review Remarks Workflow
+
+When asked to process PR review remarks:
+
+1. Fetch all review comments from the PR using the available GitHub MCP tools
+2. Present a resolution proposal as a Markdown table with columns: `#`, `Remark`, `Resolution`
+3. Wait for user confirmation before applying any changes
+4. Apply only the accepted resolutions; commit and push
+5. Reply to each review thread via GitHub MCP tools with the resolution taken (accepted or rejected with reason)
+
+## Azure Tooling
+
+- **Command-line Azure access**: Always use **Azure PowerShell** (`Az` module) — never Azure CLI (`az`)
+- Use `Az` PowerShell cmdlets (e.g., `Get-AzResourceGroup`, `New-AzResourceGroup`) in any generated scripts or commands
+- **Bicep validation**: Use the `mcp_bicep_get_bicep_file_diagnostics` MCP tool to validate Bicep files — never `az bicep build`
+- **If validation returns errors**, fix all reported issues and re-validate before committing the file
+
 ## Code Guidelines
 
 ### Bicep
