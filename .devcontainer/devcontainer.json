@@ -7,7 +7,7 @@
     // Docker CLI + Docker Compose (bind-mounts host Docker socket)
     "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {},
     // PowerShell 7 — needed for Az module and repo scripts
-    "ghcr.io/devcontainers/features/powershell:1": {},
+    "ghcr.io/devcontainers/features/powershell:2.0.2": {},
     // Azure CLI — for Bicep validation and ad-hoc queries
     "ghcr.io/devcontainers/features/azure-cli:1": {},
     // GitHub CLI — for PR/issue management, repo operations
