@@ -32,7 +32,7 @@ Bicep deploys the AMA extension on the Arc server, the Data Collection Rule with
 
 ## 1. Deploy Monitoring Stack with Bicep
 
-The monitoring stack is defined as **Bicep + PowerShell** in [`runbooks/AzureResources/`](AzureResources/).
+The monitoring stack is defined as **Bicep + PowerShell** in [`bicep/`](../bicep/).
 
 | File | Purpose |
 |---|---|
@@ -50,7 +50,7 @@ The monitoring stack is defined as **Bicep + PowerShell** in [`runbooks/AzureRes
 ### Deploy
 
 ```powershell
-.\runbooks\AzureResources\Deploy-HomelabAzResources.ps1
+.\bicep\Deploy-HomelabAzResources.ps1
 ```
 
 > The Bicep deployment is **incremental** — re-running it on an already-deployed resource group only adds or updates resources.

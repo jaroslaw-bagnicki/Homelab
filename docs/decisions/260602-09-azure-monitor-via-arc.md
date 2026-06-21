@@ -31,7 +31,7 @@ Use **Azure Monitor** via the Arc-connected server with the following stack:
 | Data collection | Azure Monitor Agent extension | `AzureMonitorLinuxAgent` on Arc server |
 | Routing | Data Collection Rule (`homelab-vm-dcr`) | CPU, memory, disk perf counters @ 60s, sent to LAW |
 | Delivery | Bicep + PowerShell | `main.bicep` for LAW + DCR, separate script for AMA |
-| IaC location | `runbooks/AzureResources/` | Collocated with deployment scripts |
+| IaC location | `bicep/` | Collocated with deployment scripts |
 
 The AMA extension is **not deployed via Bicep** — the publisher/type combination
 is unavailable in `polandcentral` through the HybridCompute resource provider.
