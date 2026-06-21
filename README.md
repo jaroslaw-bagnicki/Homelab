@@ -72,10 +72,11 @@ Ansible runs first on the bare host (OS config, Docker, Arc agent). Bicep deploy
 
 | # | Workload | Effort | Notes |
 |---|---|---|---|
-| 7 | **Restic backup** (redo) | ⭐⭐ | Daily snapshots to Azure Blob Storage — see [runbook](docs/runbooks/7-restic-backup.md) |
-| 8 | **Hermes Agent** | ⭐⭐⭐ | Most complex — last |
-| 9 | **SQL Server** | ⭐⭐ | Developer Edition in Docker — see [runbook](docs/runbooks/9-mssql-dev.md) |
-| 10 | **Gitea** | ⭐⭐ | Self-hosted Git with web UI for personal repos |
+| [#13](https://github.com/jaroslaw-bagnicki/Homelab/issues/13) | **Restic backup** (redo) | ⭐⭐ | Daily snapshots to Azure Blob Storage — see [runbook](docs/runbooks/7-restic-backup.md) |
+| [#14](https://github.com/jaroslaw-bagnicki/Homelab/issues/14) | **Docker-Compose role** | ⭐⭐ | Ansible `docker_services` role for replicating the stack — see [research](docs/research/18-docker-compose-replication.md) |
+|  | **Hermes Agent** | ⭐⭐⭐ | Most complex — last |
+|  | **SQL Server** | ⭐⭐ | Developer Edition in Docker — see [runbook](docs/runbooks/9-mssql-dev.md) |
+|  | **Gitea** | ⭐⭐ | Self-hosted Git with web UI for personal repos |
 | - | **Ollama + Bielik** (Phase 2) | ⭐⭐⭐ | Needs dedicated LLM server hardware |
 
 ---
