@@ -1,0 +1,9 @@
+---
+- name: Configure cloudlab VPS
+  hosts: cloudlab
+  become: true
+  roles:
+    - common
+    - security
+    - azure_arc
+    - docker_host

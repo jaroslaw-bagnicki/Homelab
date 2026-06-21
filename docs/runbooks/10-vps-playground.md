@@ -70,7 +70,7 @@ sudo whoami   # should print "root"
 
 Generate the key pair and store the private key in Key Vault:
 ```powershell
-./runbooks/AzureResources/New-AzureSshKey.ps1
+./scripts/New-AzureSshKey.ps1
 ```
 
 Push the public key from the Azure resource to the VPS:
@@ -155,7 +155,8 @@ playbook structure. The playbooks will target `cloudlab` (the hostname set above
 - [ ] Write Ansible inventory and `host_vars/cloudlab.yml` for this VPS
 - [ ] Develop Ansible roles: `common` (tools, timezone), `security` (UFW, fail2ban), `docker_host`
 - [ ] Run playbooks against `cloudlab` to apply remaining setup
-- [ ] Enrol in Azure Arc (see [runbook 6](6-azure-arc.md))
+- [x] Enrol in Azure Arc (see [runbook 6](6-azure-arc.md))
+- [x] Enable Azure Monitor via `azure_monitor` Ansible role (see [runbook 6a](6a-azure-monitor.md))
 - [ ] Test destroy-reimage-reconfigure cycle with `cntb` CLI
 - [ ] Once playbooks are validated, apply to the physical homelab
 

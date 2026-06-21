@@ -1,0 +1,6 @@
+---
+- name: Enroll cloudlab in Azure Arc
+  hosts: cloudlab
+  become: true
+  roles:
+    - azure_arc
