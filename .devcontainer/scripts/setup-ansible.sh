@@ -2,12 +2,12 @@
 # ── Install Ansible (idempotent) ────────────────────────────────────
 set -euo pipefail
 
-if command -v ansible-playbook &>/dev/null; then
-  echo ":: Ansible already installed — skipping."
+if command -v ansible-playbook &>/dev/null && command -v ansible-lint &>/dev/null; then
+  echo ":: Ansible + ansible-lint already installed — skipping."
   exit 0
 fi
 
-echo ":: Installing Ansible..."
+echo ":: Installing Ansible + ansible-lint..."
 sudo apt-get update
-sudo apt-get install -y ansible
-echo ":: Ansible installed."
+sudo apt-get install -y ansible ansible-lint
+echo ":: Ansible + ansible-lint installed."
