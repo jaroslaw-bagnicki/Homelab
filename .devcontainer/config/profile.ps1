@@ -1,4 +1,4 @@
-# ── Homelab: auto-start ssh-agent and load VPS key ─────────────────
+# ── Homelab: auto-start ssh-agent, ensure Azure context, load VPS key ─
 # Runs once per session — idempotent, non-interactive.
 
 # Start ssh-agent if not already running
@@ -10,7 +10,12 @@ if (-not $env:SSH_AUTH_SOCK -or -not (Test-Path $env:SSH_AUTH_SOCK)) {
   }
 }
 
-# Load VPS key from Key Vault if Az is connected and key not already loaded
+# Ensure Azure context exists — prompts device auth once per token lifetime
+if (-not (Get-AzContext)) {
+  Connect-AzAccount -UseDeviceAuthentication -Tenant cloud5.ovh
+}
+
+# Load VPS key from Key Vault
 if ($env:SSH_AUTH_SOCK -and (Get-AzContext -ErrorAction SilentlyContinue)) {
   $loadedKeys = ssh-add -l 2>$null
   if ($LASTEXITCODE -ne 0 -or $loadedKeys -match 'The agent has no identities') {
