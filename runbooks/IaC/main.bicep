@@ -3,41 +3,54 @@ param location string
 var suffix = take(uniqueString(tenant().tenantId), 6)
 
 // Reference to existing Arc-enabled servers
-resource arcServerHomelab 'Microsoft.HybridCompute/machines@2024-07-10' existing = {
+resource arcServerHomelab 'Microsoft.HybridCompute/machines@2025-06-01' existing = {
   name: 'homelab'
 }
 
-resource arcServerCloudlab 'Microsoft.HybridCompute/machines@2024-07-10' existing = {
+resource arcServerCloudlab 'Microsoft.HybridCompute/machines@2025-06-01' existing = {
   name: 'cloudlab'
 }
 
-// Log Analytics workspace — stores metrics and logs
-resource law 'Microsoft.OperationalInsights/workspaces@2025-07-01' = {
-  name: 'homelab-law'
+// Azure Monitor Agent extension — installed on each Arc-enabled server.
+// The AMA collects the performance counters defined in the DCR below.
+resource amaHomelab 'Microsoft.HybridCompute/machines/extensions@2025-06-01' = {
+  parent: arcServerHomelab
+  name: 'AzureMonitorAgent'
   location: location
   properties: {
-    sku: {
-      name: 'PerGB2018'
-    }
+    publisher: 'Microsoft.Azure.Monitor'
+    type: 'AzureMonitorLinuxAgent'
+    enableAutomaticUpgrade: true
   }
 }
 
-// Azure Monitor Agent extension — commented out because the publisher/type
-// combination (Microsoft.Azure.Monitor / AzureMonitorLinuxAgent) is not
-// available in polandcentral via the HybridCompute RP. Install via Ansible's
-// azure_monitor role which delegates to New-AzConnectedMachineExtension.
-// See ansible/roles/azure_monitor/ and
-// https://learn.microsoft.com/en-us/azure/azure-arc/servers/manage-vm-extensions
-// resource ama 'Microsoft.HybridCompute/machines/extensions@2024-07-10' = {
-//   parent: arcServer
-//   name: 'AzureMonitorAgent'
-//   location: location
-//   properties: {
-//     publisher: 'Microsoft.Azure.Monitor'
-//     type: 'AzureMonitorLinuxAgent'
-//     autoUpgradeMinorVersion: true
-//   }
-// }
+resource amaCloudlab 'Microsoft.HybridCompute/machines/extensions@2025-06-01' = {
+  parent: arcServerCloudlab
+  name: 'AzureMonitorAgent'
+  location: location
+  properties: {
+    publisher: 'Microsoft.Azure.Monitor'
+    type: 'AzureMonitorLinuxAgent'
+    enableAutomaticUpgrade: true
+  }
+}
+
+// Link the DCR to each Arc-enabled server
+resource dcrAssociationHomelab 'Microsoft.Insights/dataCollectionRuleAssociations@2024-03-11' = {
+  name: 'homelab-vm-dcr-association'
+  scope: arcServerHomelab
+  properties: {
+    dataCollectionRuleId: dcr.id
+  }
+}
+
+resource dcrAssociationCloudlab 'Microsoft.Insights/dataCollectionRuleAssociations@2024-03-11' = {
+  name: 'cloudlab-vm-dcr-association'
+  scope: arcServerCloudlab
+  properties: {
+    dataCollectionRuleId: dcr.id
+  }
+}
 
 // Data Collection Rule — uses the VM Insights meta-counter that expands to the full
 // standard counter set. Matches the DCR shape from:
@@ -82,20 +95,14 @@ resource dcr 'Microsoft.Insights/dataCollectionRules@2024-03-11' = {
   }
 }
 
-// Link the DCR to each Arc-enabled server
-resource dcrAssociationHomelab 'Microsoft.Insights/dataCollectionRuleAssociations@2024-03-11' = {
-  name: 'homelab-vm-dcr-association'
-  scope: arcServerHomelab
+// Log Analytics workspace — stores metrics and logs
+resource law 'Microsoft.OperationalInsights/workspaces@2025-07-01' = {
+  name: 'homelab-law'
+  location: location
   properties: {
-    dataCollectionRuleId: dcr.id
-  }
-}
-
-resource dcrAssociationCloudlab 'Microsoft.Insights/dataCollectionRuleAssociations@2024-03-11' = {
-  name: 'cloudlab-vm-dcr-association'
-  scope: arcServerCloudlab
-  properties: {
-    dataCollectionRuleId: dcr.id
+    sku: {
+      name: 'PerGB2018'
+    }
   }
 }
 

@@ -1,49 +1,49 @@
 # Azure Monitor Setup
 
-> Runbook for enabling monitoring on Arc-connected servers — CPU, memory, disk metrics, and log collection via Azure Monitor. Uses a shared Log Analytics workspace + Data Collection Rule; each Arc server gets its own DCR association and AMA extension.
+> Runbook for enabling monitoring on Arc-connected servers — CPU, memory, disk metrics, and log collection via Azure Monitor. The full monitoring stack (AMA extension, DCR, DCR associations) is deployed via Bicep. Ansible handles only Arc enrollment.
 
 ## Servers
 
 | Server | OS | Arc Status | AMA Status |
 |---|---|---|---|
 | `homelab` (physical) | Ubuntu 26.04 LTS | ✅ Connected | ❌ Unsupported OS — blocked upstream ([#2173](https://github.com/Azure/azure-linux-extensions/issues/2173)) |
-| `cloudlab` (Contabo VPS) | Ubuntu 24.04 LTS | ✅ Connected | ⬜ Not yet installed |
+| `cloudlab` (Contabo VPS) | Ubuntu 24.04 LTS | ✅ Connected | ✅ Installed via Bicep |
 
 ## Prerequisites
 
 - [x] Target server registered in Azure Arc (see [6-azure-arc.md](6-azure-arc.md))
 - [x] Server shows status **Connected** in Azure Portal → **Azure Arc** → **Servers**
 - [x] Azure subscription with Contributor access
-- [x] Dev container (or control machine) with `Az.ConnectedMachine` PowerShell module
 
 ---
 
 ## Execution Order
 
-There are two independent steps — **Bicep** (DCR association) and **Ansible** (AMA install). The order matters for how quickly metrics appear, but both orders work:
+Everything after Arc enrollment is a single Bicep deployment:
 
-| Order | Flow | When metrics appear |
+| Step | Tool | What |
 |---|---|---|
-| **New VPS enrollment** (natural) | Ansible installs AMA first → Bicep creates DCR association later | A few minutes after Bicep runs (AMA polls for new DCRs every few minutes) |
-| **Retroactive setup** (existing Arc server) | Bicep creates DCR association first → Ansible installs AMA | Immediately after AMA install (DCR already exists, agent picks it up on first poll) |
+| 1. Arc enrollment | Ansible (`azure_arc` role) | Registers server in Azure Arc |
+| 2. Deploy monitoring | Bicep (`Deploy-HomelabAzResources.ps1`) | AMA extension + DCR + DCR associations |
 
-During VPS enrollment via `playbook.yml`, Ansible runs `azure_arc` → `azure_monitor` in sequence, so AMA gets installed right after Arc enrolment. The DCR association is created separately when you deploy the Bicep — the AMA agent will discover it on its next polling cycle.
+Bicep deploys the AMA extension on the Arc server, the Data Collection Rule with `\VmInsights\DetailedMetrics`, and the DCR-to-machine association — all in one `az deployment group create` call.
 
 ---
 
-## 1. Deploy Shared Infrastructure with Bicep
+## 1. Deploy Monitoring Stack with Bicep
 
 The monitoring stack is defined as **Bicep + PowerShell** in [`runbooks/AzureResources/`](AzureResources/).
 
 | File | Purpose |
 |---|---|
-| `main.bicep` | Log Analytics workspace, Data Collection Rule (DCR), and DCR associations |
+| `main.bicep` | AMA extensions, Log Analytics workspace, Data Collection Rule, DCR associations |
 | `Deploy-HomelabAzResources.ps1` | Deploys the Bicep template (parameterless) |
 
 ### What `main.bicep` creates
 
+- **Azure Monitor Agent extensions** — `AzureMonitorLinuxAgent` on each Arc server
 - **Log Analytics workspace** (`homelab-law`) — PerGB2018 tier (5 GB/month free)
-- **Data Collection Rule** (`homelab-vm-dcr`) — CPU, memory, disk perf counters every 60s → LAW
+- **Data Collection Rule** (`homelab-vm-dcr`) — `\VmInsights\DetailedMetrics` meta-counter every 60s → LAW
 - **DCR Associations** — one per Arc server (`homelab`, `cloudlab`), linking each to the shared DCR
 - **Key Vault** (`homelab-{suffix}-kv`) — RBAC-only, stores secrets (SSH keys, etc.)
 
@@ -53,76 +53,13 @@ The monitoring stack is defined as **Bicep + PowerShell** in [`runbooks/AzureRes
 .\runbooks\AzureResources\Deploy-HomelabAzResources.ps1
 ```
 
-> The Bicep deployment is **incremental** — re-running it on an already-deployed resource group only adds missing resources (e.g. a new DCR association for a newly enrolled server).
+> The Bicep deployment is **incremental** — re-running it on an already-deployed resource group only adds or updates resources.
 
 > **PerGB2018** tier includes 5 GB/month free ingestion — plenty for a two-server setup. Costs above that are ~$2.76/GB.
 
 ---
 
-## 2. Install the Azure Monitor Agent via Ansible
-
-The AMA extension (`AzureMonitorLinuxAgent`) is **not available** in `polandcentral` through the HybridCompute resource provider, so it cannot be deployed via Bicep. The **`azure_monitor` Ansible role** handles this by delegating `New-AzConnectedMachineExtension` to the control machine (dev container).
-
-### Add a new server to the playbook
-
-If the target is not already in `playbook.yml`, add the role:
-
-```yaml
-roles:
-    - azure_monitor
-```
-
-### Run the playbook
-
-```powershell
-ansible-playbook ansible/playbooks/playbook.yml --tags azure_monitor
-```
-
-Or run the full playbook (idempotent — skips if AMA is already installed):
-
-```powershell
-ansible-playbook ansible/playbooks/playbook.yml
-```
-
-### What the role does
-
-1. Checks if `AzureMonitorAgent` extension is already installed on the Arc server.
-2. If not, runs `New-AzConnectedMachineExtension` from the control machine (delegated localhost).
-3. Prints the installation result.
-
-### Manual fallback
-
-If Ansible is not available, install directly via PowerShell:
-
-```powershell
-New-AzConnectedMachineExtension `
-  -ResourceGroupName homelab-rg `
-  -Location polandcentral `
-  -MachineName "cloudlab" `
-  -Name AzureMonitorAgent `
-  -ExtensionType AzureMonitorLinuxAgent `
-  -Publisher Microsoft.Azure.Monitor `
-  -TypeHandlerVersion "1.41"
-```
-
-> **Note**: `Set-AzVMExtension -MachineType HybridMachine` does **not** work — the `-MachineType` parameter is not available in the current Az module. Use `Az.ConnectedMachine` instead.
-
----
-
-## 3. Enable VM Insights (Optional)
-
-VM Insights provides pre-built charts for CPU, memory, disk, and network.
-
-1. In the Portal, go to **Azure Arc** → **Servers** → your server → **Monitor** → **VM Insights**.
-2. Click **Enable**.
-3. Select `homelab-law` as the Log Analytics workspace.
-4. Click **Configure**.
-
-After a few minutes, the **Performance** tab will show live CPU, memory, and disk charts.
-
----
-
-## 4. Verify
+## 2. Verify
 
 ### In the Portal
 
@@ -167,7 +104,7 @@ This confirms the server is heartbeating to Log Analytics.
 
 ---
 
-## 5. Known Limitations
+## 3. Known Limitations
 
 - **Ubuntu 26.04 not supported**: AMA v1.40.3 and v1.41.0 both fail with `Unsupported operating system: ubuntu 26.04` (exit code 51). The physical homelab (Ubuntu 26.04) cannot receive the AMA extension until Microsoft adds support.
   - Tracked: [Azure/azure-linux-extensions#2173](https://github.com/Azure/azure-linux-extensions/issues/2173)
@@ -176,7 +113,7 @@ This confirms the server is heartbeating to Log Analytics.
 
 ---
 
-## 6. Verification Checklist
+## 4. Verification Checklist
 
 - [x] Log Analytics workspace created
 - [x] DCR created
