@@ -48,7 +48,7 @@ to the internet via **[Cloudflare Tunnel](docs/decisions/260530-08-remote-access
 | 2026‑06‑13 | Restic backup | ⭐⭐ | [7](runbooks/7-restic-backup.md) | Daily snapshots to Azure Blob Storage |
 | 2026‑06‑16 | Decision log | ⭐ | [#7](https://github.com/jaroslaw-bagnicki/Homelab/issues/7) | ADR log in MADR format — see [docs/decisions/](docs/decisions/) |
 | 2026‑06‑17 | VPS playground | ⭐⭐ | [10](runbooks/10-vps-playground.md) | Contabo Cloud VPS 10 as Ansible dev/test sandbox — see [ADR 13](docs/decisions/260616-13-vps-playground.md) |
-| 2026‑06‑21 | Ansible playbooks | ⭐⭐⭐ | [ansible/](ansible/README.md) | common, security, azure_arc, docker_host roles developed & tested on cloudlab — see [#9](https://github.com/jaroslaw-bagnicki/Homelab/issues/9) |
+| 2026‑06‑20 | Ansible playbooks | ⭐⭐⭐ | [ansible/](ansible/README.md) | common, security, azure_arc, docker_host roles developed & tested on cloudlab — see [#9](https://github.com/jaroslaw-bagnicki/Homelab/issues/9) |
 | 2026‑06‑21 | Azure Monitor | ⭐⭐ | [6a](runbooks/6a-azure-monitor.md) | VM Insights working on cloudlab via `\VmInsights\DetailedMetrics` meta-counter — Bicep-managed |
 
 ---
