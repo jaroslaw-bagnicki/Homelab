@@ -1,0 +1,4 @@
+Host cloudlab
+    HostName 173.249.27.13
+    User labadmin
+    StrictHostKeyChecking accept-new
