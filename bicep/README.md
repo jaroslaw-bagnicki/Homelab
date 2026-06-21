@@ -33,8 +33,8 @@ Idempotent — safe to re-run on an already-deployed resource group. Only adds o
 | Layer | Tool | Scope |
 |---|---|---|
 | Host provisioning | Ansible | OS hardening, Docker, Arc agent binary |
+| Arc enrollment | Ansible (`azure_arc` role) | Installs `azcmagent`, fetches SPN secret from Key Vault, runs `azcmagent connect` |
 | Cloud-side resources | Bicep | Monitoring, extensions, DCRs, Key Vault |
-| Arc enrollment | Manual (post-Ansible) | `azcmagent connect` with service principal |
 
 Ansible runs first (on the bare host), then Bicep deploys cloud resources. The Arc agent must be enrolled in Azure before Bicep can deploy the AMA extension.
 
