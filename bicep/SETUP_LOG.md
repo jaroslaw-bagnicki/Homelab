@@ -25,7 +25,7 @@ Initial Azure context was on **Bagnicki.net** tenant — switched to **Cloud5** 
 
 ### 3. Bicep infrastructure deployed
 
-**Files** (all in `runbooks/AzureResources/`):
+**Files** (all in `bicep/`):
 
 | File | Purpose |
 |---|---|
@@ -61,7 +61,7 @@ Initial Azure context was on **Bagnicki.net** tenant — switched to **Cloud5** 
 
 ```powershell
 # Deploy infrastructure
-.\runbooks\AzureResources\Deploy-HomelabAzResources.ps1
+.\bicep\Deploy-HomelabAzResources.ps1
 
 # Install AMA extension (after removing failed attempt)
 Remove-AzConnectedMachineExtension -ResourceGroupName homelab-rg -MachineName homelab -Name AzureMonitorAgent
@@ -77,9 +77,9 @@ New-AzConnectedMachineExtension `
 
 ### 6. Files created/modified
 
-- `runbooks/AzureResources/main.bicep` — new
-- `runbooks/AzureResources/Deploy-HomelabAzResources.ps1` — new
-- `runbooks/AzureResources/Install-AzureMonitorAgent.ps1` — new
+- `bicep/main.bicep` — new
+- `bicep/Deploy-HomelabAzResources.ps1` — new
+- `bicep/Install-AzureMonitorAgent.ps1` — new
 - `runbooks/6a-azure-monitor.md` — updated with Bicep approach
 
 ### 7. Commits

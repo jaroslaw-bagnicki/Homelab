@@ -70,7 +70,7 @@ sudo whoami   # should print "root"
 
 Generate the key pair and store the private key in Key Vault:
 ```powershell
-./runbooks/AzureResources/New-AzureSshKey.ps1
+./scripts/New-AzureSshKey.ps1
 ```
 
 Push the public key from the Azure resource to the VPS:
