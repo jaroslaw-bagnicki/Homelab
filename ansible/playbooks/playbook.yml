@@ -6,5 +6,4 @@
     - common
     - security
     - azure_arc
-    - azure_monitor
     - docker_host
