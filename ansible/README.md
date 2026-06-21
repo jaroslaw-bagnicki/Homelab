@@ -38,7 +38,7 @@ Configures UFW with default-deny incoming policy and explicit SSH allow on confi
 
 ### `azure_arc`
 
-Installs the Azure Connected Machine Agent (`azcmagent`) from Microsoft's Ubuntu 22.04 package repo. Does **not** enroll the agent — enrollment requires credentials and is done post-playbook via the runbook ([6-azure-arc.md](../runbooks/6-azure-arc.md)).
+Installs `azcmagent` from Microsoft's Ubuntu 22.04 package repo, fetches the SPN client secret from Key Vault, and enrolls the machine in Azure Arc via `azcmagent connect`.
 
 ### `docker_host`
 
@@ -48,7 +48,7 @@ Removes any OS-package Docker remnants, adds the official Docker repository, ins
 
 | Playbook | Roles | When to use |
 |---|---|---|
-| `playbook.yml` | common → security → azure_arc → docker_host | First-time VPS provision after initial SSH hardening (see [runbook 10](../runbooks/10-vps-playground.md)) |
+| `playbook.yml` | common → security → azure_arc → docker_host | First-time VPS provision after initial SSH hardening (see [runbook 10](../docs/runbooks/10-vps-playground.md)) |
 | `playbook-arc.yml` | azure_arc | Adding Arc to an already-configured host |
 
 ## Inventory
@@ -65,4 +65,4 @@ The hostname `cloudlab` must resolve locally — add it to `C:\Windows\System32\
 **References:**
 - [Research 13: Ansible Adoption](../docs/research/13-ansible-adoption.md)
 - [ADR 10: Ansible Host Config](../docs/decisions/260613-10-ansible-host-config.md)
-- [Runbook 10: VPS Playground](../runbooks/10-vps-playground.md)
+- [Runbook 10: VPS Playground](../docs/runbooks/10-vps-playground.md)
