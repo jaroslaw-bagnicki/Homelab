@@ -20,6 +20,7 @@
 | 16 | [16-github-codespaces-devcontainers.md](16-github-codespaces-devcontainers.md) | GitHub Codespaces & Dev Containers setup for Homelab dev environment | Gemini chat 7 |
 | 17 | [17-arc-vm-insights-setup.md](17-arc-vm-insights-setup.md) | Why Arc VM Insights shows "No Data" despite data flowing to LAW — portal onboarding gap | Research |
 | 18 | [18-docker-compose-replication.md](18-docker-compose-replication.md) | Options for replicating Cloudlab docker-compose stack to Homelab after rebuild — Ansible role vs Portainer vs rsync | Research |
+| 19 | [19-copilot-desktop-agentic.md](19-copilot-desktop-agentic.md) | GitHub Copilot Desktop app for agentic Homelab dev — MCP, BYOK, Skills, DR automation, Entra ID, secret mgmt | Gemini chat 8 |
 
 ## Gemini Discussions
 
@@ -32,3 +33,4 @@
 | 5 | [Gemini chat 5](https://gemini.google.com/share/ffa774d97c3e) | 13 |
 | 6 | [Gemini chat 6](https://gemini.google.com/share/a4b01a2b65b2) | 15 |
 | 7 | [Gemini chat 7](https://gemini.google.com/share/536c3e9635ff) | 16 |
+| 8 | [Gemini chat 8](https://gemini.google.com/share/05578e63c66c) | 19 |
