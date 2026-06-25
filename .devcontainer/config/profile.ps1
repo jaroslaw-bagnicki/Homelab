@@ -1,6 +1,9 @@
 # ── Homelab: auto-start ssh-agent, ensure Azure context, load VPS key ─
 # Runs once per session — idempotent, non-interactive.
 
+# Opencode
+$env:PATH = "/home/vscode/.opencode/bin:$env:PATH"
+
 # Start ssh-agent if not already running
 if (-not $env:SSH_AUTH_SOCK -or -not (Test-Path $env:SSH_AUTH_SOCK)) {
   $agentOutput = ssh-agent
