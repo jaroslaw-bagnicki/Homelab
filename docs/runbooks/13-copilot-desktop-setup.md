@@ -12,13 +12,9 @@
 | 2 | 🧠 Configure DeepSeek V4 Pro/Flash custom provider | ADR written | ✅ |
 | 3 | 🐳 Test repo in Copilot Desktop app (Git worktree) | Copilot Desktop installed | ✅ |
 | 4 | 🔑 Test GitHub MCP + Azure MCP connectivity | Copilot Desktop working | ✅ |
-| 5 | 🔍 Spike: Research Azure auth for agentic workflows | MCP connectivity test | ✅ |
-| 6 | 🔐 Validate OS keychain secret storage | MCP working, API keys configured | ▶️ |
+| 5 | 🔍 Spike: Research Azure auth for agentic workflows | MCP connectivity test | ⏭️ |
 | 6 | 🔐 Validate OS keychain secret storage | MCP working, API keys configured | ⏭️ |
 | 7 | 📋 Report findings → update ADR to `Deferred` | All above complete | ✅ |
-| 5 | 🔑 Test GitHub MCP + Azure MCP connectivity | Azure auth spike | ⬜ |
-| 6 | 🔐 Validate OS keychain secret storage | MCP working, API keys configured | ⬜ |
-| 7 | 📋 Report findings → update ADR to `Accepted`/`Deferred` | All above complete | ⬜ |
 
 **Already done:** Copilot Desktop Tech Preview installed on Windows.
 
