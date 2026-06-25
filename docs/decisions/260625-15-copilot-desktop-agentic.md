@@ -1,4 +1,4 @@
-# Adopt GitHub Copilot Desktop for Agentic Development
+# Evaluate GitHub Copilot Desktop for Agentic Development
 
 **Date:** 2026-06-25
 **Status:** Deferred
@@ -15,15 +15,15 @@ multi-step tasks without constant human-in-the-loop intervention.
 
 GitHub announced **Copilot Desktop** (Technical Preview) at Microsoft Build 2026 —
 a standalone, agent-native desktop app with native MCP support, Background
-Automations (scheduled tasks), custom LLM providers (BYOK), Dev Container sandboxing,
+Automations (scheduled tasks), custom LLM providers (BYOK), Git worktree sessions,
 and Agent Skills that can execute scripts autonomously.
 
-See [research 19](docs/research/19-copilot-desktop-agentic.md) for the full
+See [research 19](../research/19-copilot-desktop-agentic.md) for the full
 architectural analysis and provider comparisons.
 
 ## Decision
 
-Adopt **GitHub Copilot Desktop** (Technical Preview) as the primary agentic
+Evaluate **GitHub Copilot Desktop** (Technical Preview) as the primary agentic
 development environment for the Homelab project.
 
 The goal is to gain hands-on experience with autonomous agentic workflows —
@@ -34,13 +34,9 @@ boosting project velocity beyond what human-curated chat sessions can achieve.
 
 - **Custom LLM provider:** DeepSeek V4 Pro via BYOK OpenAI-compatible endpoint
   (cost-driven — adopted in May after testing MiniMax, Kimi, GLM alternatives)
-- **Dev Container:** Existing `.devcontainer/devcontainer.json` will be tested
-  in the Local Sandbox; if Dev Container Features are unsupported, convert to
-  a custom Dockerfile. A pre-built image pushed to GHCR is planned for fast
-  Background Automation cold starts.
 - **Azure authentication:** Method TBD — Workload Identity Federation (OIDC)
   preferred but depends on Copilot Desktop runtime support. Interim fallback:
-  `containerEnv` with a gitignored `.env` file on the Windows host.
+  environment variables on the Windows host.
 - **Codespaces:** Retained as a complementary fallback for emergency browser-based
   access (ADR 14 remains `Implemented`).
 - **Platform:** Windows daily-driver workstation. The homelab server runs the
@@ -96,7 +92,7 @@ following architectural limitations were identified:
 |---|---|---|
 | **No Dev Container support** | Sessions run in Git worktrees — no per-project tool isolation, no `containerEnv` secret scoping, no reproducible toolchain | Codespaces/VS Code retain this capability |
 | **Custom BYOK providers blocked in cloud sandboxes** | DeepSeek V4 (our chosen cost-effective provider) only works in local sessions; cloud sandboxes force Claude/GPT pricing | Use local sessions, but lose cloud isolation |
-| **MCP configs are global** | `AZURE_CLIENT_SECRET` and other env vars are shared across ALL projects in the app — no per-project MPC isolation | Not mitigatable in current app architecture |
+| **MCP configs are global** | `AZURE_CLIENT_SECRET` and other env vars are shared across ALL projects in the app — no per-project MCP isolation | Not mitigatable in current app architecture |
 | **No `.vscode/mcp.json` support** | MCP server configs can't be version-controlled or shared; every contributor must manually re-add them | VS Code/Codespaces workflow unaffected |
 | **Local sandboxing unavailable on Windows** | Requires Windows Insiders build — standard Windows gets no OS-level sandboxing for local sessions | Use Cloud sandboxes (but lose BYOK) or switch to macOS/Linux |
 
@@ -117,7 +113,7 @@ this repository.
 
 **Deferred.** Revisit when:
 1. Dev Container support is added (per-project tool/secret isolation)
-2. Per-project MCP configs are supported (`.mcp.json` at repo root)
+2. Per-project MCP configs are supported (`.vscode/mcp.json` at repo root)
 3. Local sandboxing is available on standard Windows builds
 
 In the meantime, the existing **Codespaces + VS Code + Dev Containers** workflow
