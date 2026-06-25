@@ -9,7 +9,7 @@
 | Step | Action | Depends On | Status |
 |------|--------|------------|--------|
 | 1 | ✍️ Write ADR #15 — status `Proposed` | Research #19 | ✅ |
-| 2 | 🧠 Configure DeepSeek V4 Pro custom provider | ADR written | ⬜ |
+| 2 | 🧠 Configure DeepSeek V4 Pro custom provider | ADR written | ✅ |
 | 3 | 🐳 Test `devcontainer.json` in Local Sandbox | Copilot Desktop installed | ⬜ |
 | 4 | 🔍 Spike: Research Azure auth for agentic workflows | Dev Container working | ⬜ |
 | 5 | 🔑 Test GitHub MCP + Azure MCP connectivity | Azure auth spike | ⬜ |
@@ -28,28 +28,38 @@ Reference research #19. Capture open questions surfaced in grill session.
 
 ### Step 2: Configure DeepSeek V4 Pro
 
-Add custom provider config to Copilot Desktop settings:
+1. In Copilot Desktop, go to **Settings → Model providers**
+2. Click **Add provider** with:
+   - **Display name:** `DeepSeek`
+   - **Base URL:** `https://api.deepseek.com/v1`
+   - **API key:** `${env:DEEPSEEK_API_KEY}`
+3. Set `DEEPSEEK_API_KEY` as a Windows **User environment variable** (not terminal session), then restart the app
+4. Once the provider is added, click **Add custom model** twice and configure:
 
-```json
-{
-  "github.copilot.custom_providers": {
-    "deepseek": {
-      "type": "openai",
-      "base_url": "https://api.deepseek.com/v1",
-      "api_key": "${env:DEEPSEEK_API_KEY}",
-      "models": {
-        "deepseek-v4-pro": {
-          "context_window": 128000,
-          "supports_tools": true,
-          "supports_streaming": true
-        }
-      }
-    }
-  }
-}
-```
+   **Model 1 — deepseek-v4-flash:**
 
-Set `DEEPSEEK_API_KEY` env var on Windows host. Verify model appears in model picker.
+   | Field | Value |
+   |---|---|
+   | Display name | `deepseek-v4-flash` |
+   | Wire model | *(leave empty)* |
+   | Max prompt tokens | `840000` |
+   | Max output tokens | `128000` |
+
+   **Model 2 — deepseek-v4-pro:**
+
+   | Field | Value |
+   |---|---|
+   | Display name | `deepseek-v4-pro` |
+   | Wire model | *(leave empty)* |
+   | Max prompt tokens | `840000` |
+   | Max output tokens | `128000` |
+
+   > Token limits per [DeepSeek Copilot CLI integration docs](https://api-docs.deepseek.com/quick_start/agent_integrations/copilot_cli#optional-token-limits) — 840K prompt / 128K output prevents runaway token burn in agentic loops while staying within the 1M context window.
+
+5. Click **Test** — should show "Connection OK"
+6. Verify model appears in the model picker (branch indicator shows `deepseek-v4-flash - DeepSeek`)
+
+> **Alternative (VS Code only):** The `vizards.deepseek-v4-for-copilot` extension is already in the devcontainer for Codespaces/VS Code use.
 
 ### Step 3: Test Dev Container in Local Sandbox
 
