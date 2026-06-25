@@ -1,7 +1,7 @@
 # Adopt GitHub Copilot Desktop as Primary Agentic Development Environment
 
-**Date:** 2025-06-25
-**Status:** Proposed
+**Date:** 2026-06-25
+**Status:** Deferred
 
 ---
 
@@ -85,16 +85,41 @@ boosting project velocity beyond what human-curated chat sessions can achieve.
 - **Codespaces as primary** — retained as fallback (ADR 14), not as the
   agentic development environment
 
-## Open Questions
+## Evaluation Findings (2026-06-25)
 
-- Azure OIDC support from Copilot Desktop runtime? (spike required)
-- Does `gh copilot task schedule` work with the app closed?
-- Is the free Copilot quota sufficient for weekly multi-step DR runs?
-- DeepSeek V4 Pro tool calling API compatibility with Copilot Desktop runtime?
-- Does `allowed-tools: [shell]` bypass approval prompts in Technical Preview?
-- Copilot Desktop Linux support at launch?
+After hands-on evaluation of the Copilot Desktop app Technical Preview, the
+following architectural limitations were identified:
 
----
+### Rejection Rationale
 
-> **Remember:** Update status to `Accepted` or `Deferred` after evaluation.
-> Register this ADR in `docs/decisions/README.md`.
+| Limitation | Impact | Mitigation?
+|---|---|---|
+| **No Dev Container support** | Sessions run in Git worktrees — no per-project tool isolation, no `containerEnv` secret scoping, no reproducible toolchain | Codespaces/VS Code retain this capability |
+| **Custom BYOK providers blocked in cloud sandboxes** | DeepSeek V4 (our chosen cost-effective provider) only works in local sessions; cloud sandboxes force Claude/GPT pricing | Use local sessions, but lose cloud isolation |
+| **MCP configs are global** | `AZURE_CLIENT_SECRET` and other env vars are shared across ALL projects in the app — no per-project MPC isolation | Not mitigatable in current app architecture |
+| **No `.vscode/mcp.json` support** | MCP server configs can't be version-controlled or shared; every contributor must manually re-add them | VS Code/Codespaces workflow unaffected |
+| **Local sandboxing unavailable on Windows** | Requires Windows Insiders build — standard Windows gets no OS-level sandboxing for local sessions | Use Cloud sandboxes (but lose BYOK) or switch to macOS/Linux |
+
+### What Worked Well
+
+- **DeepSeek V4 Pro/Flash** via custom provider — works perfectly in local sessions
+- **GitHub MCP** — natively integrated via `gh` CLI, no config needed
+- **Azure MCP** (`@azure/mcp` npm package) — works via STDIO transport, detects subscription
+- **Git worktree isolation** — each session gets its own branch/directory
+- **Agentic workflow features** — Interactive/Plan/Autopilot modes, Skills, multi-session
+
+### Verdict
+
+The Copilot Desktop app is promising but **not ready for Homelab adoption** in its
+Technical Preview state. The lack of Dev Container support and per-project MCP
+isolation are critical blockers for a multi-project development environment like
+this repository.
+
+**Deferred.** Revisit when:
+1. Dev Container support is added (per-project tool/secret isolation)
+2. Per-project MCP configs are supported (`.mcp.json` at repo root)
+3. Local sandboxing is available on standard Windows builds
+
+In the meantime, the existing **Codespaces + VS Code + Dev Containers** workflow
+(ADR 14) remains the primary development environment, augmented with the
+`vizards.deepseek-v4-for-copilot` extension for DeepSeek model access.
