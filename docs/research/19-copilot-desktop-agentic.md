@@ -25,12 +25,15 @@ The Copilot Desktop app is a standalone, agent-native desktop experience that mo
 Copilot beyond an IDE assistant into a full agentic work environment. It features:
 
 - **Dedicated GUI** with Canvas view, in-app browser, code preview, terminal
-- **Isolated sandboxes** (Local Sandboxes via Docker + Dev Containers, Cloud Sessions
-  via lightweight Mission Control runtime)
+- **Session isolation via Git worktrees** — each session runs in its own Git worktree
+  and branch. No Dev Container support (see §3 for details).
+- **Cloud sandboxes** (public preview) — fully isolated GitHub-hosted Linux
+  environments built on Azure Container Apps Sandboxes
 - **Native MCP support** — both STDIO (local) and HTTP/SSE (remote) transports
 - **Agent Skills** — on-demand `.github/skills/` with executable scripts
 - **Background Automations** — scheduled/cron agent tasks
 - **BYOK (Bring Your Own Key)** — custom LLM providers via OpenAI-compatible endpoints
+  (local sessions only; cloud sandboxes use native GitHub models only)
 
 ### 2. MCP (Model Context Protocol) Support
 
@@ -50,17 +53,32 @@ flow on first use.
 
 ### 3. Dev Container Integration
 
-The app fully supports Dev Containers for local execution sandboxing:
+> **Correction (2026-06-25):** The initial research from Gemini stated the app supported Dev
+> Containers. After consulting the official docs at
+> [docs.github.com/en/copilot](https://docs.github.com/en/copilot/concepts/agents/github-copilot-app),
+> **the app does NOT use Dev Containers.** Sessions run in Git worktrees or cloud sandboxes.
+> The `devcontainer.json` is only relevant for VS Code/Codespaces.
 
-- Reads `.devcontainer/devcontainer.json` from the repository
-- Uses local Docker/Podman daemon to build and run the container
-- Agent executes terminal commands inside the container, not on the host
-- In-app browser with automatic port mapping from container to host
-- Prevents path conflicts (Linux commands vs Windows host, etc.)
+The app provides three session execution modes:
 
-**Cloud sessions do NOT use Dev Containers** — cloud agents operate on code/AST
-level in lightweight runtimes via Mission Control. The Dev Container is used
-**locally** for validation, compilation, and testing.
+| Mode | Description | Sandboxed? | Custom models? |
+|---|---|---|---|
+| New worktree | Dedicated Git worktree + branch on local filesystem | No | ✅ Yes |
+| Local repository | Operates on current checkout directly | No | ✅ Yes |
+| Cloud sandbox | Fully isolated Linux env hosted by GitHub (Azure Container Apps) | ✅ Yes | ❌ Native models only |
+
+**Key implications:**
+- **Local sessions** (worktree/repo) provide no OS-level sandboxing on Windows
+  (local sandboxing via Copilot CLI requires macOS, Linux, or Windows Insiders builds)
+- **Cloud sandboxes** are sandboxed but do NOT support custom BYOK providers — only
+  GitHub's native models (Claude, GPT-4o, etc.). This means DeepSeek cannot be used
+  in cloud sandbox sessions.
+- The app is built on **GitHub Copilot CLI** — the `/sandbox enable` command for
+  local OS-level sandboxing applies to Terminal sessions, not the Desktop app GUI.
+
+For cost-sensitive agentic workflows with DeepSeek, use **New worktree** (local) mode.
+For Background Automations requiring isolation, cloud sandboxes are an option but
+incur Claude/GPT pricing.
 
 ### 4. Custom LLM Providers (BYOK)
 
@@ -71,6 +89,11 @@ The app supports three provider types:
 | OpenAI-compatible | `openai` | Any endpoint with OpenAI Chat Completions API — includes DeepSeek, Ollama, vLLM, Foundry Local |
 | Anthropic | `anthropic` | Direct Claude API integration |
 | Azure | `azure` | Azure OpenAI Service with enterprise data isolation |
+
+**Cloud sandbox limitation:** Custom BYOK providers are only available in **local
+sessions** (New worktree, Local repository). Cloud sandboxes use GitHub's native
+models only (Claude, GPT-4o). This means DeepSeek cannot be used in cloud sandbox
+sessions — if cost control via DeepSeek is a priority, use local worktree sessions.
 
 **Requirements for custom models:**
 - Tool Calling (Function Calling) support — must generate JSON tool calls natively
@@ -255,16 +278,22 @@ diffs to Desktop app → local Dev Container compiles, tests, and validates.
 
 ## Open Questions
 
-- Whether the Copilot Desktop Technical Preview is available on Linux, or only
-  macOS/Windows at launch
 - How `gh copilot task schedule` behaves when the Desktop app is closed — does
   it rely on the local machine being on, or can it schedule cloud-side?
 - Whether the free Copilot quota (monthly interactions) is sufficient for weekly
   multi-step DR runs, or whether a Copilot Enterprise/Pro plan is required
-- Exact API compatibility of DeepSeek V4 Pro tool calling — needs testing with
-  the actual Copilot Desktop runtime
 - Whether `allowed-tools: [shell]` in a Skill definition bypasses the approval
   prompt entirely in the Technical Preview
+
+## Answered Questions
+
+| Question | Answer | Source |
+|---|---|---|
+| Linux support? | ✅ Supported — macOS, Linux, Windows all supported | [Official docs](https://docs.github.com/en/copilot/concepts/agents/github-copilot-app) |
+| Dev Container support? | ❌ Not supported — uses Git worktrees instead | [Official docs](https://docs.github.com/en/copilot/concepts/agents/github-copilot-app) |
+| Cloud sandboxes support custom BYOK providers? | ❌ No — native GitHub models only (Claude, GPT-4o) | Tested during setup |
+| DeepSeek V4 Pro tool calling compatibility? | ✅ Works — tested successfully in local sessions | Tested during setup |
+| Local sandboxing on Windows? | ❌ Not supported — requires Windows Insiders build | [Sandbox docs](https://docs.github.com/en/copilot/concepts/about-cloud-and-local-sandboxes) |
 
 ## Source
 
