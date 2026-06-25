@@ -27,16 +27,17 @@
         }
       },
       "extensions": [
-        "ms-azuretools.vscode-bicep",          // Bicep language support
-        "ms-vscode.powershell",                 // PowerShell IDE
-        "redhat.ansible",                       // Ansible playbook support
-        "bierner.markdown-mermaid",             // Mermaid diagram rendering
-        "ms-azuretools.vscode-docker",          // Docker Explorer
-        "github.vscode-pull-request-github",    // PR/issue integration
-        "github.copilot",                       // GitHub Copilot code completions
-        "github.copilot-chat",                  // GitHub Copilot Chat
-        "vizards.deepseek-v4-for-copilot",      // DeepSeek V4 model picker for Copilot Chat
-        "ms-azuretools.vscode-azure-mcp-server" // Azure MCP Server (resource mgmt, queries)
+        "ms-azuretools.vscode-bicep",
+        "ms-vscode.powershell",
+        "redhat.ansible",
+        "bierner.markdown-mermaid",
+        "ms-azuretools.vscode-docker",
+        "github.vscode-pull-request-github",
+        "github.copilot",
+        "github.copilot-chat",
+        "vizards.deepseek-v4-for-copilot",
+        "ms-azuretools.vscode-azure-mcp-server",
+        "sst-dev.opencode"
       ]
     }
   },
