@@ -1,4 +1,4 @@
-# Adopt GitHub Copilot Desktop as Primary Agentic Development Environment
+# Adopt GitHub Copilot Desktop for Agentic Development
 
 **Date:** 2026-06-25
 **Status:** Deferred
