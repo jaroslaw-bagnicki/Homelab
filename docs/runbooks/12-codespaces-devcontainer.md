@@ -187,6 +187,8 @@ ssh cloudlab
 | `bicep` command not found | Script not run yet | Run `bash .devcontainer/scripts/setup-bicep.sh` manually |
 | Docker permission denied | Docker socket not mounted | Ensure `docker-outside-of-docker` feature is enabled |
 | Copilot Chat threads disappeared after rebuild | Container filesystem is ephemeral | Session history is stored on the container overlay filesystem, which is wiped on rebuild. Threads cannot be recovered. To preserve threads across rebuilds, see the [Session persistence](#session-persistence) section below. |
+| OpenCode sessions disappeared after rebuild | Symlink persistence not yet applied | OpenCode runtime data is symlinked to `/workspaces/.opencode` on every container create — if sessions vanished, the `setup-opencode-persist.ps1` script in `postCreateCommand` may have been removed. See [runbook 15](15-opencode-session-persistence.md) for the full procedure. |
+| OpenCode sessions survived a rebuild — verify | Working as designed | Confirm via the [runbook 15 verification steps](15-opencode-session-persistence.md#verification) — symlinks point at `/workspaces/.opencode/*`, DB integrity is `ok`. |
 
 ## Session Persistence
 
@@ -211,6 +213,23 @@ ssh cloudlab
 - **Use Settings Sync** — Persist your VS Code settings, extensions, and keybindings
   via Settings Sync (gear icon → Settings Sync is On). This preserves your
   environment but not the chat history itself.
+
+### OpenCode sessions ARE persisted
+
+Unlike Copilot Chat, **OpenCode sessions survive Dev Container rebuilds** by
+default. They are symlinked to `/workspaces/.opencode` (a sibling of the repo on
+the Codespaces persistent disk) by `.devcontainer/scripts/setup-opencode-persist.ps1`,
+which is wired into `postCreateCommand`. The same script runs idempotently on
+every container create — first run migrates data, subsequent runs are no-ops.
+
+For the full setup, verification, and Azure Blob backup procedure see
+[runbook 15: OpenCode session persistence + backup](15-opencode-session-persistence.md).
+
+| Persistence layer | What survives | Where it lives |
+|---|---|---|
+| Container filesystem | Nothing — wiped on rebuild | (none) |
+| `/workspaces` (Codespaces disk) | Everything under it | `/workspaces/.opencode/{share,state,config,cache}` (symlinked) |
+| `homelabcloud5/opencode-backups` (Azure Blob) | Tarball snapshots | Manual `Backup-OpencodeData.ps1` invocation |
 
 ## Dev Container Architecture
 
