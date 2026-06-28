@@ -16,7 +16,11 @@ $rgScope = "/subscriptions/$SubscriptionId/resourceGroups/$ResourceGroupName"
 $kvScope = "$rgScope/providers/Microsoft.KeyVault/vaults/$KeyVaultName"
 $endDate = (Get-Date).ToUniversalTime().AddDays($SecretLifetimeDays)
 
-$sp = Get-AzADServicePrincipal -DisplayName $DisplayName -ErrorAction SilentlyContinue
+$existing = @(Get-AzADServicePrincipal -DisplayName $DisplayName -ErrorAction SilentlyContinue)
+if ($existing.Count -gt 1) {
+  throw "Multiple service principals named '$DisplayName' found ($($existing.Count)). Disambiguate manually before re-running."
+}
+$sp = $existing[0]
 if ($sp) {
   Write-Warning "Service principal '$DisplayName' already exists (AppId $($sp.AppId)). Rotating its credential."
   $cred = New-AzADSpCredential -ObjectId $sp.Id -EndDate $endDate
