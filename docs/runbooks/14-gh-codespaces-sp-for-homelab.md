@@ -240,7 +240,7 @@ output. Or re-run quarterly with `-SecretLifetimeDays 90`.
 │  profile.ps1                   ← Connect-AzAccount -            │
 │                                  ServicePrincipal using env vars│
 │                                                                 │
-│  opencode.json → mcp.azure     ← npx -y @azure/mcp@latest       │
+│  opencode.json → mcp.azure-mcp ← npx -y @azure/mcp@latest       │
 │                                  server start                   │
 │                                  (EnvironmentCredential reads   │
 │                                   AZURE_* env vars)             │
