@@ -13,7 +13,16 @@ if (-not $env:SSH_AUTH_SOCK -or -not (Test-Path $env:SSH_AUTH_SOCK)) {
   }
 }
 
-# Authenticate via Codespaces-provided Service Principal when present, else fall back to device auth
+# ── Azure authentication ──────────────────────────────────────────
+# The Codespace injects three env vars from repo-level Codespaces
+# secrets (AZURE_TENANT_ID / AZURE_CLIENT_ID / AZURE_CLIENT_SECRET)
+# when present. See docs/runbooks/14-gh-codespaces-sp-for-homelab.md
+# and docs/decisions/260628-16-gh-codespaces-sp-for-homelab.md for
+# how the underlying homelab-codespaces-sp is provisioned, stored
+# in homelab-bysxdb-kv, and granted Contributor on homelab-rg plus
+# Key Vault Secrets User on the vault. When the env vars are present,
+# authenticate silently as the SP — no interactive prompt. Otherwise
+# fall back to device auth against the cloud5.ovh tenant.
 if (-not (Get-AzContext)) {
   if ($env:AZURE_TENANT_ID -and $env:AZURE_CLIENT_ID -and $env:AZURE_CLIENT_SECRET) {
     $secureSecret = ConvertTo-SecureString $env:AZURE_CLIENT_SECRET -AsPlainText -Force
