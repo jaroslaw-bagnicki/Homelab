@@ -19,10 +19,14 @@ $existing = Get-AzADServicePrincipal -DisplayName $DisplayName -ErrorAction Sile
 if ($existing) {
   Write-Warning "Service principal '$DisplayName' already exists (AppId $($existing.AppId)). Rotating its credential."
   $sp   = $existing
-  $cred = New-AzADSpCredential -ObjectId $sp.Id -EndDate $endDate -DisplayName "codespaces-$(Get-Date -Format 'yyyyMMdd')"
+  # New-AzADSpCredential generates a new random password; the SecretText is the new credential value
+  $cred = New-AzADSpCredential -ObjectId $sp.Id -EndDate $endDate
+  # Refresh $sp to pick up the new credential
+  $sp   = Get-AzADServicePrincipal -ObjectId $sp.Id
 } else {
+  # Default signature auto-generates a password credential; the SecretText is on $sp.PasswordCredentials
   $sp   = New-AzADServicePrincipal -DisplayName $DisplayName -Role Contributor -Scope $rgScope
-  $cred = New-AzADSpCredential -ObjectId $sp.Id -EndDate $endDate -DisplayName "codespaces-$(Get-Date -Format 'yyyyMMdd')"
+  $cred = $sp.PasswordCredentials[0]
 }
 
 $roleAssigned = Get-AzRoleAssignment -ObjectId $sp.Id -Scope $rgScope -RoleDefinitionName 'Contributor' -ErrorAction SilentlyContinue
@@ -38,9 +42,9 @@ Set-AzKeyVaultSecret -VaultName $KeyVaultName -Name 'codespaces-sp-tenant-id'   
 Set-AzKeyVaultSecret -VaultName $KeyVaultName -Name 'codespaces-sp-client-id'     -SecretValue $clientSecret | Out-Null
 Set-AzKeyVaultSecret -VaultName $KeyVaultName -Name 'codespaces-sp-client-secret' -SecretValue $credSecret   | Out-Null
 
-$verifyTenant = (Get-AzKeyVaultSecret -VaultName $KeyVaultName -Name 'codespaces-sp-tenant-id'     -AsPlainText).SecretValue
-$verifyClient = (Get-AzKeyVaultSecret -VaultName $KeyVaultName -Name 'codespaces-sp-client-id'     -AsPlainText).SecretValue
-$verifySecret = (Get-AzKeyVaultSecret -VaultName $KeyVaultName -Name 'codespaces-sp-client-secret' -AsPlainText).SecretValue
+$verifyTenant = Get-AzKeyVaultSecret -VaultName $KeyVaultName -Name 'codespaces-sp-tenant-id'     -AsPlainText
+$verifyClient = Get-AzKeyVaultSecret -VaultName $KeyVaultName -Name 'codespaces-sp-client-id'     -AsPlainText
+$verifySecret = Get-AzKeyVaultSecret -VaultName $KeyVaultName -Name 'codespaces-sp-client-secret' -AsPlainText
 
 Write-Host ""
 Write-Host "================================================================" -ForegroundColor Cyan
