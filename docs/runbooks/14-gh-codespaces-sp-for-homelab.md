@@ -60,6 +60,22 @@ New-AzRoleAssignment -SignInName (Get-AzContext).Account.Id `
   -Scope "/subscriptions/a8a36bc1-79a7-49fe-9faa-92220103c66f/resourceGroups/homelab-rg/providers/Microsoft.KeyVault/vaults/homelab-bysxdb-kv"
 ```
 
+### Additional role: Storage Blob Data Contributor (added 2026-06-28 for OpenCode backups)
+
+Required so `scripts/Backup-OpencodeData.ps1` (see [runbook 15](15-opencode-session-persistence.md)) can upload tarballs to `homelabcloud5/opencode-backups/`:
+
+- `Storage Blob Data Contributor` on `/subscriptions/a8a36bc1-79a7-49fe-9faa-92220103c66f/resourceGroups/homelab-rg/providers/Microsoft.Storage/storageAccounts/homelabcloud5`
+
+This is **separate from the control-plane `Contributor` role on the RG** — data-plane access on Storage accounts is not implied by control-plane roles (same rule that makes the Key Vault data-plane role separate).
+
+Grant idempotently via `scripts/Add-HomelabOpencodeBackupStorage.ps1`. **Prerequisite:** the `homelabcloud5` storage account must already exist (deploy it first per [runbook 7](7-restic-backup.md) — issue #13). The script throws with a clear remediation message if the SA is missing.
+
+Why a separate script rather than folding into `Set-HomelabCodespacesSp.ps1`:
+
+- `Set-HomelabCodespacesSp.ps1` rotates the SP's password credential on re-run. Re-running it just to add a role would invalidate the Codespaces secret and force a re-sync to GitHub.
+- Each permission grant has its own lifecycle. Keeping them in dedicated scripts means `Add-HomelabOpencodeBackupStorage.ps1` can be re-run safely without touching the SP credential.
+```
+
 ---
 
 ## One-time bootstrap
