@@ -46,11 +46,21 @@ container via GitHub Codespaces repository secrets.
 
 ### Scope and credentials
 
-- **RBAC role:** `Contributor` on
-  `/subscriptions/a8a36bc1-79a7-49fe-9faa-92220103c66f/resourceGroups/homelab-rg`
-  — the Homelab project's resource group. Not subscription-wide, not
-  Reader-only. The agent needs to create and modify Azure resources
-  inside the project's RG during the Opencode evaluation.
+- **RBAC roles:**
+  - `Contributor` on
+    `/subscriptions/a8a36bc1-79a7-49fe-9faa-92220103c66f/resourceGroups/homelab-rg`
+    — the Homelab project's resource group (control plane). Not
+    subscription-wide, not Reader-only. The agent needs to create and
+    modify Azure resources inside the project's RG during the Opencode
+    evaluation.
+  - `Key Vault Secrets User` on
+    `homelab-bysxdb-kv` (data plane) — **separate** from the
+    control-plane `Contributor` above. Azure RBAC for data plane
+    (Key Vault secrets, Storage blobs) is not implied by control-plane
+    roles. Without this role, the SP cannot read `cloudlab-vps-key-priv`
+    (the SSH key loaded by `profile.ps1`) or any other secret value
+    in the vault. Required so the Codespace can pull project secrets
+    the same way the interactive `Az` session does.
 - **Credential type:** **Client secret** (password credential), not a
   certificate. The Microsoft Graph Bicep extension v1.0 GA does not expose
   the `addPassword` action as a Bicep resource (issue #38 closed as
@@ -61,8 +71,9 @@ container via GitHub Codespaces repository secrets.
 ### Bootstrap tool
 
 - **Azure PowerShell only** — `New-AzADServicePrincipal` +
-  `New-AzADSpCredential` + `New-AzRoleAssignment` + `Set-AzKeyVaultSecret`.
-  No Azure CLI (project rule from `copilot-instructions.md`: "Always use Az
+  `New-AzADSpCredential` + `New-AzRoleAssignment` (×2: control plane on
+  the RG + data plane on the KV) + `Set-AzKeyVaultSecret`. No Azure CLI
+  (project rule from `copilot-instructions.md`: "Always use Az
   PowerShell — never Azure CLI"). No Microsoft Graph SDK install needed —
   the `Az` module's `Az.Resources` and `Az.KeyVault` cmdlets are already
   shipped with the module the dev container installs.

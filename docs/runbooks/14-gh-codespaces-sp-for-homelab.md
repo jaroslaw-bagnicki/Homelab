@@ -11,7 +11,7 @@
 |---|---|
 | **Trigger** | Opencode evaluation (MCP server), but the SP is a **Homelab project asset**, not tool-specific — reusable by any Codespace workload touching `homelab-rg` |
 | **SP display name** | `homelab-codespaces-sp` |
-| **RBAC role** | `Contributor` on `/subscriptions/a8a36bc1-79a7-49fe-9faa-92220103c66f/resourceGroups/homelab-rg` |
+| **RBAC role** | `Contributor` on `/subscriptions/a8a36bc1-79a7-49fe-9faa-92220103c66f/resourceGroups/homelab-rg` (control plane) + `Key Vault Secrets User` on `homelab-bysxdb-kv` (data plane) |
 | **KV (source of truth)** | `homelab-bysxdb-kv` (RBAC-only, pre-existing) |
 | **KV secret names** | `codespaces-sp-tenant-id`, `codespaces-sp-client-id`, `codespaces-sp-client-secret` |
 | **Codespaces secret names** | `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET` (Azure SDK contract — non-renameable) |
@@ -78,10 +78,11 @@ pwsh -File scripts/Set-HomelabCodespacesSp.ps1 `
 The script will:
 
 1. Create `homelab-codespaces-sp` (or rotate the credential if it already exists)
-2. Assign `Contributor` on `homelab-rg` (idempotent)
-3. Write the 3 values to `homelab-bysxdb-kv` under `codespaces-sp-*`
-4. Read them back to verify
-5. Print the 3 values for you to paste into GitHub
+2. Assign `Contributor` on `homelab-rg` (idempotent, control-plane)
+3. Assign `Key Vault Secrets User` on `homelab-bysxdb-kv` (idempotent, data-plane)
+4. Write the 3 values to `homelab-bysxdb-kv` under `codespaces-sp-*`
+5. Read them back to verify
+6. Print the 3 values for you to paste into GitHub
 
 ### Step 2 — Add the 3 values to GitHub Codespaces secrets
 
@@ -133,6 +134,8 @@ PS> (Get-AzContext).Account
 # Expect: Type=ServicePrincipal, Id=<the SP's appId>
 PS> Get-AzRoleAssignment -ObjectId (Get-AzContext).Account.Id.Replace('-','')
 # Expect: RoleDefinitionName=Contributor, Scope ends with /resourceGroups/homelab-rg
+PS> Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name cloudlab-vps-key-priv -AsPlainText | Select-Object -First 1
+# Expect: a multi-line SSH private key, NOT a Forbidden error
 ```
 
 ### Opencode + Azure MCP
@@ -198,7 +201,7 @@ output. Or re-run quarterly with `-SecretLifetimeDays 90`.
 │      │     • New-AzADSpCredential      (generates secret)       │
 │      │                                                          │
 │      └─► Az.KeyVault cmdlets                                    │
-│            • Set-AzKeyVaultSecret × 3 → homelab-bysxdb-kv      │
+│            • Set-AzKeyVaultSecret × 3 → homelab-bysxdb-kv       │
 └─────────────────────────────────────────────────────────────────┘
                                 │
                                 │  you paste the 3 values
@@ -208,7 +211,7 @@ output. Or re-run quarterly with `-SecretLifetimeDays 90`.
 │  Settings → Secrets and variables → Codespaces                  │
 │                                                                 │
 │  Repository secrets: AZURE_TENANT_ID, AZURE_CLIENT_ID,          │
-│                      AZURE_CLIENT_SECRET                       │
+│                      AZURE_CLIENT_SECRET                        │
 └─────────────────────────────────────────────────────────────────┘
                                 │
                                 │  Codespaces injects as env vars
@@ -216,15 +219,15 @@ output. Or re-run quarterly with `-SecretLifetimeDays 90`.
 ┌─────────────────────────────────────────────────────────────────┐
 │  Dev container (Codespace)                                      │
 │                                                                 │
-│  /tmp/install-azmcp.log        ← prereq-check summary          │
+│  /tmp/install-azmcp.log        ← prereq-check summary           │
 │                                                                 │
-│  profile.ps1                   ← Connect-AzAccount -           │
+│  profile.ps1                   ← Connect-AzAccount -            │
 │                                  ServicePrincipal using env vars│
 │                                                                 │
-│  opencode.json → mcp.azure     ← npx -y @azure/mcp@latest      │
-│                                  server start                  │
-│                                  (EnvironmentCredential reads  │
-│                                   AZURE_* env vars)            │
+│  opencode.json → mcp.azure     ← npx -y @azure/mcp@latest       │
+│                                  server start                   │
+│                                  (EnvironmentCredential reads   │
+│                                   AZURE_* env vars)             │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -241,6 +244,7 @@ output. Or re-run quarterly with `-SecretLifetimeDays 90`.
 | `npx -y @azure/mcp@latest server start` runs but every tool call returns `AADSTS700016: Application ... was not found` | Wrong `AZURE_CLIENT_ID` (typo, or pasted the `ObjectId` instead of the `AppId`) | Re-run the script, copy the exact `AZURE_CLIENT_ID` it prints (it's `appId`, not the GUID object ID) |
 | Azure MCP tools succeed but `Get-AzContext` shows no account | You opened a new pwsh session after a Codespace restart; the profile ran but context isn't cached | Run any `Az` cmdlet — `Connect-AzAccount` will fire and cache. Or `Disconnect-AzAccount; . $PROFILE` to force a re-run |
 | SP can read `homelab-rg` but not other RGs | Working as designed — scope is intentionally limited to `homelab-rg` | If you need broader scope, update the `-RoleAssignment` step in the script (re-run with no other changes; the role assignment is idempotent) |
+| `Get-AzKeyVaultSecret` returns `Forbidden` inside the Codespace | SP lacks `Key Vault Secrets User` data-plane role on the vault (control-plane `Contributor` does not grant data-plane access) | Re-run the bootstrap script — the `Key Vault Secrets User` assignment step is idempotent |
 | Forgot to paste one of the 3 values | Partial Codespaces secret config | Add the missing secret, then rebuild the Codespace |
 
 ---
