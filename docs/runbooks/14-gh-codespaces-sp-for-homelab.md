@@ -270,7 +270,7 @@ output. Or re-run quarterly with `-SecretLifetimeDays 90`.
 | Path | What |
 |---|---|
 | `scripts/Set-HomelabCodespacesSp.ps1` | NEW — bootstrap + rotation script |
-| `opencode.json` | adds `azure` MCP entry (local stdio, env-driven) |
+| `opencode.json` | adds `azure-mcp` MCP entry (local stdio, env-driven) |
 | `.devcontainer/devcontainer.json` | adds Node feature, adds prereq-check to `postCreateCommand` |
 | `.devcontainer/scripts/setup-azure-mcp-prereqs.sh` | NEW — masked env-var check + npx availability |
 | `.devcontainer/config/profile.ps1` | SP-aware `Connect-AzAccount` (falls back to device-auth) |
