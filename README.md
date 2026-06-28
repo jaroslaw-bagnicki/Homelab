@@ -66,6 +66,7 @@ Ansible runs first on the bare host (OS config, Docker, Arc agent). Bicep deploy
 | 2026‑06‑20 | Ansible playbooks | ⭐⭐⭐ | [ansible/](ansible/README.md) | common, security, azure_arc, docker_host roles developed & tested on cloudlab — see [#9](https://github.com/jaroslaw-bagnicki/Homelab/issues/9) |
 | 2026‑06‑21 | Azure Monitor | ⭐⭐ | [6a](docs/runbooks/6a-azure-monitor.md) | VM Insights working on cloudlab via `\VmInsights\DetailedMetrics` meta-counter — Bicep-managed |
 | 2026‑06‑28 | Codespaces SP | ⭐ | [14](docs/runbooks/14-gh-codespaces-sp-for-homelab.md) | `homelab-codespaces-sp` provisioned, stored in `homelab-bysxdb-kv`, consumed via Codespaces repo secrets — enables Azure MCP for Opencode eval — see [ADR 16](docs/decisions/260628-16-gh-codespaces-sp-for-homelab.md) |
+| 2026‑06‑28 | Opencode adoption | ⭐ | [15](docs/runbooks/15-opencode-session-persistence.md) | OpenCode runtime data persisted via symlinks to `/workspaces/.opencode` (sibling of repo) and backed up on-demand to `homelabcloud5/opencode-backups` — survives both Dev Container rebuilds and Codespace deletion |
 
 ---
 
