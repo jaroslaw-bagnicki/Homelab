@@ -217,7 +217,7 @@ After the four steps above, open OpenCode — the restored session list should i
 | Path | Purpose |
 |---|---|
 | `.devcontainer/scripts/setup-opencode-persist.ps1` | Symlink the four OpenCode data dirs to `/workspaces/.opencode/*`; one-time migration + idempotent re-runs |
-| `.devcontainer/scripts/setup-opencode.sh` | One-line idempotent wrapper around the official installer (`curl -fsSL https://opencode.ai/install \| bash`); runs after persistence script so symlinks are in place before OpenCode writes its first-run config |
+| `.devcontainer/scripts/setup-opencode.sh` | Idempotent install of the OpenCode CLI binary via the official installer; skips if `~/.opencode/bin/opencode` already exists, runs `curl -fsSL https://opencode.ai/install \| bash` otherwise, verifies the binary post-install |
 | `.devcontainer/devcontainer.json` | `postCreateCommand` chains `setup-opencode-persist.ps1` then `setup-opencode.sh` then the existing setup scripts |
 | `scripts/Backup-OpencodeData.ps1` | Manual backup to Azure Blob via Az PowerShell |
 | `scripts/Add-HomelabOpencodeBackupStorage.ps1` | One-time deploy: creates `opencode-backups` container + grants SP role |
