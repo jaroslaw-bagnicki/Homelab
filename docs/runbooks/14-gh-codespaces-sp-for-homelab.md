@@ -55,8 +55,8 @@ to subscription Owners via the Entra default). If `Set-AzKeyVaultSecret`
 returns `Forbidden`, grant the role with:
 
 ```powershell
-New-AzRoleAssignment -ObjectId (Get-AzContext).Account.Id \
-  -RoleDefinitionName 'Key Vault Secrets Officer' \
+New-AzRoleAssignment -ObjectId (Get-AzContext).Account.Id `
+  -RoleDefinitionName 'Key Vault Secrets Officer' `
   -Scope "/subscriptions/a8a36bc1-79a7-49fe-9faa-92220103c66f/resourceGroups/homelab-rg/providers/Microsoft.KeyVault/vaults/homelab-bysxdb-kv"
 ```
 
@@ -132,7 +132,7 @@ tail -f /tmp/install-azmcp.log
 pwsh
 PS> (Get-AzContext).Account
 # Expect: Type=ServicePrincipal, Id=<the SP's appId>
-PS> Get-AzRoleAssignment -ObjectId (Get-AzContext).Account.Id.Replace('-','')
+PS> Get-AzRoleAssignment -ServicePrincipalName (Get-AzContext).Account.Id
 # Expect: RoleDefinitionName=Contributor, Scope ends with /resourceGroups/homelab-rg
 PS> Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name cloudlab-vps-key-priv -AsPlainText | Select-Object -First 1
 # Expect: a multi-line SSH private key, NOT a Forbidden error
