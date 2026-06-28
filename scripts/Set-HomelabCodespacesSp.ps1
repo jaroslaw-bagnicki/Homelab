@@ -34,6 +34,16 @@ if (-not $roleAssigned) {
   New-AzRoleAssignment -ObjectId $sp.Id -Scope $rgScope -RoleDefinitionName 'Contributor' | Out-Null
 }
 
+# Data-plane role on the Key Vault — without it, the SP can manage the vault
+# itself (control plane) but cannot read any secret value. Required so the
+# Codespace can read the SSH key (cloudlab-vps-key-priv) from profile.ps1
+# and so the agent can read any future secrets stored in the same vault.
+$kvScope   = "/subscriptions/$SubscriptionId/resourceGroups/$ResourceGroupName/providers/Microsoft.KeyVault/vaults/$KeyVaultName"
+$kvRoleAssigned = Get-AzRoleAssignment -ObjectId $sp.Id -Scope $kvScope -RoleDefinitionName 'Key Vault Secrets User' -ErrorAction SilentlyContinue
+if (-not $kvRoleAssigned) {
+  New-AzRoleAssignment -ObjectId $sp.Id -Scope $kvScope -RoleDefinitionName 'Key Vault Secrets User' | Out-Null
+}
+
 $tenantSecret = ConvertTo-SecureString $TenantId        -AsPlainText -Force
 $clientSecret = ConvertTo-SecureString $sp.AppId        -AsPlainText -Force
 $credSecret   = ConvertTo-SecureString $cred.SecretText -AsPlainText -Force
@@ -65,4 +75,5 @@ Write-Host "AZURE_CLIENT_ID     = $verifyClient"     -ForegroundColor Green
 Write-Host "AZURE_CLIENT_SECRET = $verifySecret"     -ForegroundColor Green
 Write-Host ""
 Write-Host "Role : Contributor on $rgScope"                                   -ForegroundColor Yellow
+Write-Host "Role : Key Vault Secrets User on $kvScope"                       -ForegroundColor Yellow
 Write-Host ""
