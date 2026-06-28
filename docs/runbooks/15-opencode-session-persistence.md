@@ -74,6 +74,36 @@ ls /workspaces/.opencode/share/
 git -C /workspaces/Homelab status --porcelain | grep -i opencode || echo "OK: no git noise"
 ```
 
+### Test the durability claim
+
+The verification steps above only confirm the *current* state is correct. To
+prove the persistence actually survives a rebuild, perform this round-trip:
+
+1. **Send a marker message.** In OpenCode, start a new session and send a
+   recognizable prompt like `durability-test-marker-<timestamp>`. Note the
+   session title and the time you sent it.
+2. **Confirm the session is in the DB.**
+   ```bash
+   sqlite3 /workspaces/.opencode/share/opencode.db \
+     "SELECT id, title, time_updated FROM session ORDER BY time_updated DESC LIMIT 3"
+   # Expected: your marker session is at the top
+   ```
+3. **Trigger a rebuild.** In VS Code: `Dev Containers: Rebuild Container`
+   (Command Palette → type "Rebuild Container" → select the Dev Containers
+   command). This destroys the container and re-creates it from the image,
+   re-running `postCreateCommand` (including `setup-opencode-persist.ps1`).
+4. **Re-open OpenCode.** Look in the session picker for your marker session.
+   It should be listed with the same title and timestamp.
+5. **If the session is missing:**
+   - Check `git -C /workspaces/Homelab log --oneline -5` to confirm the
+     persistence commit landed in the branch you're rebuilding from
+   - Verify `setup-opencode-persist.ps1` ran during `postCreateCommand`:
+     look in the Codespaces creation log for `:: linked /home/vscode/.local/...`
+   - Verify symlinks are in place (the standard verification steps above)
+   - If symlinks exist but data is missing in `/workspaces/.opencode/`, the
+     first-run migration may have failed; restore from the latest Azure Blob
+     backup (see [Restore](#restore) below)
+
 ### Recovery
 
 | Symptom | Fix |
