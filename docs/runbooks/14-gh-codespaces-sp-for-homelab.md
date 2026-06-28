@@ -55,7 +55,7 @@ to subscription Owners via the Entra default). If `Set-AzKeyVaultSecret`
 returns `Forbidden`, grant the role with:
 
 ```powershell
-New-AzRoleAssignment -ObjectId (Get-AzContext).Account.Id `
+New-AzRoleAssignment -SignInName (Get-AzContext).Account.Id `
   -RoleDefinitionName 'Key Vault Secrets Officer' `
   -Scope "/subscriptions/a8a36bc1-79a7-49fe-9faa-92220103c66f/resourceGroups/homelab-rg/providers/Microsoft.KeyVault/vaults/homelab-bysxdb-kv"
 ```
