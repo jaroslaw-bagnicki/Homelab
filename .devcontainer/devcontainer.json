@@ -11,7 +11,9 @@
     // Azure CLI — for Bicep validation and ad-hoc queries
     "ghcr.io/devcontainers/features/azure-cli:1": {},
     // GitHub CLI — for PR/issue management, repo operations
-    "ghcr.io/devcontainers/features/github-cli:1": {}
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    // Node.js LTS — needed for npx-driven MCP servers (Azure MCP)
+    "ghcr.io/devcontainers/features/node:2": {}
   },
 
   // ── VS Code customizations ────────────────────────────────────────
@@ -46,7 +48,7 @@
   // Fast steps (Ansible, Bicep) run synchronously.
   // Az PowerShell is backgrounded — huge module, can take minutes.
   // Check Az progress: tail -f /tmp/install-az.log
-  "postCreateCommand": "bash .devcontainer/scripts/setup-ansible.sh && bash .devcontainer/scripts/setup-bicep.sh && pwsh -File .devcontainer/scripts/setup-profile.ps1 && nohup pwsh -File .devcontainer/scripts/setup-azps.ps1 > /tmp/install-az.log 2>&1 &",
+  "postCreateCommand": "bash .devcontainer/scripts/setup-ansible.sh && bash .devcontainer/scripts/setup-bicep.sh && bash .devcontainer/scripts/setup-azure-mcp-prereqs.sh && pwsh -File .devcontainer/scripts/setup-profile.ps1 && nohup pwsh -File .devcontainer/scripts/setup-azps.ps1 > /tmp/install-az.log 2>&1 &",
 
   // ── Remote user ───────────────────────────────────────────────────
   "remoteUser": "vscode"
