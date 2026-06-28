@@ -13,9 +13,15 @@ if (-not $env:SSH_AUTH_SOCK -or -not (Test-Path $env:SSH_AUTH_SOCK)) {
   }
 }
 
-# Ensure Azure context exists — prompts device auth once per token lifetime
+# Authenticate via Codespaces-provided Service Principal when present, else fall back to device auth
 if (-not (Get-AzContext)) {
-  Connect-AzAccount -UseDeviceAuthentication -Tenant cloud5.ovh
+  if ($env:AZURE_TENANT_ID -and $env:AZURE_CLIENT_ID -and $env:AZURE_CLIENT_SECRET) {
+    $secureSecret = ConvertTo-SecureString $env:AZURE_CLIENT_SECRET -AsPlainText -Force
+    $credential   = New-Object System.Management.Automation.PSCredential($env:AZURE_CLIENT_ID, $secureSecret)
+    Connect-AzAccount -ServicePrincipal -Tenant $env:AZURE_TENANT_ID -Credential $credential | Out-Null
+  } else {
+    Connect-AzAccount -UseDeviceAuthentication -Tenant cloud5.ovh
+  }
 }
 
 # Load VPS key from Key Vault
