@@ -124,7 +124,7 @@ populate the env at container-creation time). The boot sequence will:
 1. Install Node.js via the `devcontainer` Node feature (needed for `npx`)
 2. Run `.devcontainer/scripts/setup-azure-mcp-prereqs.sh` — writes a
    masked summary of the 3 env vars + npx version to `/tmp/install-azmcp.log`
-3. Run `setup-profile.ps1` — `Connect-AzAccount -ServicePrincipal` using the 3
+3. Run `.devcontainer/scripts/setup-profile.ps1` — `Connect-AzAccount -ServicePrincipal` using the 3
    env vars, so interactive `Az` cmdlets also run as the SP
 4. Opencode launches → reads `opencode.json` → spawns
    `npx -y @azure/mcp@latest server start` with the 3 env vars passed through
