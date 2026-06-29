@@ -11,7 +11,9 @@
     // Azure CLI — for Bicep validation and ad-hoc queries
     "ghcr.io/devcontainers/features/azure-cli:1": {},
     // GitHub CLI — for PR/issue management, repo operations
-    "ghcr.io/devcontainers/features/github-cli:1": {}
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    // Node.js LTS — needed for npx-driven MCP servers (Azure MCP)
+    "ghcr.io/devcontainers/features/node:2": {}
   },
 
   // ── VS Code customizations ────────────────────────────────────────
@@ -27,16 +29,17 @@
         }
       },
       "extensions": [
-        "ms-azuretools.vscode-bicep",          // Bicep language support
-        "ms-vscode.powershell",                 // PowerShell IDE
-        "redhat.ansible",                       // Ansible playbook support
-        "bierner.markdown-mermaid",             // Mermaid diagram rendering
-        "ms-azuretools.vscode-docker",          // Docker Explorer
-        "github.vscode-pull-request-github",    // PR/issue integration
-        "github.copilot",                       // GitHub Copilot code completions
-        "github.copilot-chat",                  // GitHub Copilot Chat
-        "vizards.deepseek-v4-for-copilot",      // DeepSeek V4 model picker for Copilot Chat
-        "ms-azuretools.vscode-azure-mcp-server" // Azure MCP Server (resource mgmt, queries)
+        "ms-azuretools.vscode-bicep",
+        "ms-vscode.powershell",
+        "redhat.ansible",
+        "bierner.markdown-mermaid",
+        "ms-azuretools.vscode-docker",
+        "github.vscode-pull-request-github",
+        "github.copilot",
+        "github.copilot-chat",
+        "vizards.deepseek-v4-for-copilot",
+        "ms-azuretools.vscode-azure-mcp-server",
+        "sst-dev.opencode"
       ]
     }
   },
@@ -45,7 +48,7 @@
   // Fast steps (Ansible, Bicep) run synchronously.
   // Az PowerShell is backgrounded — huge module, can take minutes.
   // Check Az progress: tail -f /tmp/install-az.log
-  "postCreateCommand": "bash .devcontainer/scripts/setup-ansible.sh && bash .devcontainer/scripts/setup-bicep.sh && pwsh -File .devcontainer/scripts/setup-profile.ps1 && nohup pwsh -File .devcontainer/scripts/setup-azps.ps1 > /tmp/install-az.log 2>&1 &",
+  "postCreateCommand": "bash .devcontainer/scripts/setup-ansible.sh && bash .devcontainer/scripts/setup-bicep.sh && bash .devcontainer/scripts/setup-azure-mcp-prereqs.sh && pwsh -File .devcontainer/scripts/setup-profile.ps1 && nohup pwsh -File .devcontainer/scripts/setup-azps.ps1 > /tmp/install-az.log 2>&1 &",
 
   // ── Remote user ───────────────────────────────────────────────────
   "remoteUser": "vscode"

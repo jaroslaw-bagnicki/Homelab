@@ -1,7 +1,7 @@
 # 04 — Hermes Agent: Installation & Configuration Plan
 
 **Source**: Gemini 3.5 Flash conversation, May 20 2026  
-**Scope**: Ubuntu Server setup, Hermes Agent install, MiniMax M2.7 integration
+**Scope**: Ubuntu Server setup, Hermes Agent install, MiniMax M3 integration
 
 > ⚠️ **Verification needed**: Gemini described "Hermes Agent by Nous Research" with specific install URLs and config keys. Some details (e.g. `https://hermes-agent.org/install.sh`, `hermes web` command) may be AI-hallucinated and **must be verified against the actual project repository before execution**.
 
@@ -88,9 +88,9 @@ services:
       - ~/.hermes:/root/.hermes    # persistent config + SQLite
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
-      - HERMES_MODEL=minimax/minimax-m2.7
-      - HERMES_PROVIDER_BASE_URL=https://api.haimaker.ai/v1
-      - HERMES_API_KEY=YOUR_MINIMAX_API_KEY
+      - HERMES_MODEL=MiniMax-M3
+      - HERMES_PROVIDER_BASE_URL=https://api.minimaxi.com/v1
+      - HERMES_API_KEY=YOUR_TOKEN_PLAN_SUBSCRIPTION_KEY
     ports:
       - "3001:3000"               # WebUI
       - "3002:3002"               # gateway (Telegram/Discord)
@@ -112,23 +112,21 @@ The M910q i5-7500T has no discrete GPU. Running a large LLM locally is not feasi
 
 ---
 
-## Step 4 — config.yaml (MiniMax M2.7)
+## Step 4 — config.yaml (MiniMax M3)
 
-> ⚠️ **Verify the MiniMax API endpoint** before using it. The `https://api.haimaker.ai/v1` endpoint was described by Gemini — confirm it matches the official MiniMax developer documentation. If the endpoint differs, update the config below.
-
-MiniMax M2.7 uses an OpenAI-compatible endpoint:
+MiniMax M3 uses an OpenAI-compatible endpoint:
 
 ```yaml
 # ~/.hermes/config.yaml
 
 # Primary model
-model: "minimax/minimax-m2.7"
+model: "MiniMax-M3"
 
 providers:
   custom:
     minimax:
-      base_url: "https://api.haimaker.ai/v1"
-      api_key: "YOUR_MINIMAX_API_KEY"
+      base_url: "https://api.minimaxi.com/v1"
+      api_key: "YOUR_TOKEN_PLAN_SUBSCRIPTION_KEY"
       temperature: 0.3          # lower = more precise tool calls
       max_tokens: 8192
 
@@ -150,28 +148,28 @@ source ~/.bashrc
 
 ---
 
-## Step 5 — MiniMax M2.7 via CLI wizard (alternative)
+## Step 5 — MiniMax M3 via CLI wizard (alternative)
 
 ```bash
 hermes model
 # Choose: Custom endpoint
-# Base URL: https://api.haimaker.ai/v1
-# Model identifier: minimax/minimax-m2.7
-# Enter API key when prompted
+# Base URL: https://api.minimaxi.com/v1
+# Model identifier: MiniMax-M3
+# Enter subscription key when prompted
 ```
 
 ---
 
-## MiniMax M2.7 Model Notes
+## MiniMax M3 Model Notes
 
 | Parameter | Value |
 |---|---|
-| Release | March 2026, MiniMax |
-| Architecture | MoE — 10B active / 230B total params |
-| Strengths | Multi-step agent loops, CLI/file-system understanding, tool calls |
-| Benchmarks | Strong on Terminal Bench 2, SWE-Pro |
-| API standard | OpenAI-compatible |
-| Cost | Very low per token (check current pricing at [MiniMax portal](https://api.haimaker.ai)) |
+| Release | June 2026, MiniMax |
+| Architecture | Frontier Coding — native multimodal, 1M context |
+| Strengths | Agent reasoning, tool calling, coding, multimodal chat, long context |
+| Benchmarks | Frontier-level on coding and agent benchmarks |
+| API standard | OpenAI-compatible (`https://api.minimaxi.com/v1`) and Anthropic-compatible (`https://api.minimaxi.com/anthropic`) |
+| Cost | Check [Token Plan pricing](https://platform.minimaxi.com/subscribe/token-plan) |
 
 ---
 
