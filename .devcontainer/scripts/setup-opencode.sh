@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# ── Install OpenCode CLI (idempotent) ───────────────────────────────
+# ── Install OpenCode CLI (idempotent, inspectable) ──────────────────
 set -euo pipefail
 
 OPENCODE_BIN="$HOME/.opencode/bin/opencode"
@@ -12,18 +12,29 @@ if [ -x "$OPENCODE_BIN" ]; then
   exit 0
 fi
 
-echo ":: Installing OpenCode CLI..."
-# The official installer is a bash script. curl flags:
-#   -f  fail silently on HTTP errors (no body output for 4xx/5xx)
+echo ":: Downloading official installer to a temp file (for inspection / replay if needed)"
+# Download the installer to a temp file first instead of piping `curl | bash`
+# directly. This makes the exact script content available on disk for
+# inspection, debugging, or replay if something goes wrong mid-install.
+# The temp file is removed by the EXIT trap below (success or failure).
+installer="$(mktemp --suffix=-opencode-install.sh)"
+trap 'rm -f "$installer"' EXIT
+
+# curl flags:
+#   -f  fail on HTTP errors (no body output for 4xx/5xx)
 #   -s  silent — suppress progress meter
 #   -S  show errors even when silent
 #   -L  follow redirects
-# Pipe straight into bash to execute the downloaded script.
-curl -fsSL "$INSTALL_URL" | bash
+curl -fsSL -o "$installer" "$INSTALL_URL"
+
+echo ":: Running installer"
+bash "$installer"
 
 # Sanity-check the install actually produced the expected binary.
 if [ ! -x "$OPENCODE_BIN" ]; then
   echo ":: ERROR: opencode binary not found at $OPENCODE_BIN after install." >&2
+  echo "::       Installer script preserved at $installer for inspection." >&2
+  trap - EXIT
   exit 1
 fi
 
