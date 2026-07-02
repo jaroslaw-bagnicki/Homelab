@@ -1,0 +1,30 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "provider": {
+    "deepseek": {
+      "name": "DeepSeek"
+    },
+    "minimax-coding-plan": {
+      "name": "MiniMax (coding plan)"
+    }
+  },
+  "mcp": {
+    "github-mcp": {
+      "type": "remote",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "headers": {
+        "Authorization": "Bearer {env:GH_PAT}"
+      }
+    },
+    "azure-mcp": {
+      "type": "local",
+      "command": ["npx", "-y", "@azure/mcp@latest", "server", "start"],
+      "environment": {
+        "AZURE_TENANT_ID":     "{env:AZURE_TENANT_ID}",
+        "AZURE_CLIENT_ID":     "{env:AZURE_CLIENT_ID}",
+        "AZURE_CLIENT_SECRET": "{env:AZURE_CLIENT_SECRET}"
+      },
+      "enabled": true
+    }
+  }
+}

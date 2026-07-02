@@ -13,6 +13,8 @@ Significant architectural and technology choices recorded in
 
 | # | Date | ADR | Status |
 |---|------|-----|--------|
+| 17 | 2026-06-28 | [Adopt OpenCode for Agentic Homelab Development](260628-17-adopt-opencode.md) | Implemented |
+| 16 | 2026-06-28 | [GH Codespaces Service Principal for Homelab](260628-16-gh-codespaces-sp-for-homelab.md) | Implemented |
 | 15 | 2026-06-25 | [Evaluate GitHub Copilot Desktop for Agentic Development](260625-15-copilot-desktop-agentic.md) | Deferred |
 | 14 | 2026-06-18 | [Adopt GitHub Codespaces for Occasional Remote Work](260618-14-codespaces-adoption.md) | Implemented |
 | 13 | 2026-06-16 | [Use Contabo Cloud VPS 10 as Ansible Playground for Homelab](260616-13-vps-playground.md) | Implemented |
