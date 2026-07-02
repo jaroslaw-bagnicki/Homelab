@@ -40,8 +40,14 @@ if (-not (Get-AzStorageContainer -Name $ContainerName -Context $ctx -ErrorAction
   Write-Host ":: container '$ContainerName' already exists" -ForegroundColor Yellow
 }
 
-# 3. Grant the Codespaces SP the data-plane role (idempotent)
-$sp = Get-AzADServicePrincipal -DisplayName $CodespacesSpDisplayName -ErrorAction SilentlyContinue
+# 3. Grant the Codespaces SP the data-plane role (idempotent).
+# Disambiguate multiple SPs that match the display name (matches the guard
+# in scripts/Set-HomelabCodespacesSp.ps1).
+$existing = @(Get-AzADServicePrincipal -DisplayName $CodespacesSpDisplayName -ErrorAction SilentlyContinue)
+if ($existing.Count -gt 1) {
+  throw "Multiple service principals named '$CodespacesSpDisplayName' found ($($existing.Count)). Disambiguate manually before re-running."
+}
+$sp = $existing[0]
 if (-not $sp) {
   throw "Service principal '$CodespacesSpDisplayName' not found. Run scripts/Set-HomelabCodespacesSp.ps1 first."
 }

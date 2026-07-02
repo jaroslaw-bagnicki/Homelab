@@ -106,17 +106,21 @@ foreach ($name in $paths.Keys) {
             }
             # Everything else in share/ (snapshot, repos, tool-output, log, auth.json):
             # tar pipe, excluding opencode.db and its WAL/SHM (SQLite regenerates those).
+            # Extract into $stagingDir directly so files land in the staging dir
+            # (the first tar packages them as $srcLeaf/... which is "opencode/...",
+            # so extracting into $stagingDir produces $stagingDir/opencode/...).
             & tar -cf - `
               --exclude='opencode.db' `
               --exclude='opencode.db-wal' `
               --exclude='opencode.db-shm' `
               -C $srcParent $srcLeaf `
-              | & tar -xf - -C (Split-Path -Parent $stagingDir)
+              | & tar -xf - -C $stagingDir
             if ($LASTEXITCODE -ne 0) { throw "tar extraction failed for $name (exit $LASTEXITCODE)" }
           }
           else {
-            # state/, config/, cache/ — pure tar pipe, no SQLite DB
-            & tar -cf - -C $srcParent $srcLeaf | & tar -xf - -C (Split-Path -Parent $stagingDir)
+            # state/, config/, cache/ — pure tar pipe, no SQLite DB. Same
+            # staging-dir extraction rule as the share branch above.
+            & tar -cf - -C $srcParent $srcLeaf | & tar -xf - -C $stagingDir
             if ($LASTEXITCODE -ne 0) { throw "tar migration failed for $name (exit $LASTEXITCODE)" }
           }
         }
@@ -126,7 +130,12 @@ foreach ($name in $paths.Keys) {
           throw
         }
 
-        # Migration succeeded — atomic rename staging -> final (POSIX rename(2))
+        # Migration succeeded — atomic rename staging -> final (POSIX rename(2)).
+        # The target dir was pre-created (empty) at the top of the script;
+        # rename(2) requires it not to exist, so drop the empty stub first.
+        if (Test-Path -LiteralPath $targetDir) {
+          Remove-Item -LiteralPath $targetDir -Force
+        }
         Rename-Item -LiteralPath $stagingDir -NewName (Split-Path -Leaf $targetDir)
         Write-Host "::   staged -> $targetDir"
 
