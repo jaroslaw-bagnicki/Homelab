@@ -42,7 +42,9 @@ Write-Host ":: archiving $OcRoot → $localTar"
 # setup-opencode-persist.ps1 for the rationale on tar vs Copy-Item).
 $parent = Split-Path -Parent $OcRoot
 $leaf   = Split-Path -Leaf $OcRoot
-& tar -czf $localTar -C $parent $leaf
+# tar is the comment-stated GNU tar at /usr/bin/tar (also resolves from PATH
+# on Ubuntu 24.04 but the explicit path guarantees the right binary).
+& /usr/bin/tar -czf $localTar -C $parent $leaf
 if ($LASTEXITCODE -ne 0) { throw "tar failed with exit code $LASTEXITCODE" }
 
 Write-Host ":: uploading to https://${StorageAccountName}.blob.core.windows.net/${ContainerName}/${blobName}"
@@ -62,5 +64,5 @@ Set-AzStorageBlobContent -File $localTar -Container $ContainerName -Blob $blobNa
 
 Remove-Item -Force $localTar
 Write-Host ":: backup complete: ${blobName}"
-Write-Host ":: list:   az storage blob list --account-name $StorageAccountName --container-name $ContainerName --auth-mode login --output table"
+Write-Host ":: list:   Get-AzStorageBlob -Container $ContainerName -Context (Get-AzStorageAccount -Name $StorageAccountName -ResourceGroupName $ResourceGroupName).Context"
 Write-Host ":: restore: see runbook 15"

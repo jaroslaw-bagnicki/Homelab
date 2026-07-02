@@ -11,7 +11,7 @@
 | **Trigger** | OpenCode sessions lost on every container rebuild; `/workspaces` destroyed on Codespace deletion |
 | **Persistence** | Symlink `~/.local/{share,state}/opencode`, `~/.config/opencode`, `~/.cache/opencode` → `/workspaces/.opencode/*` |
 | **Backup** | Tarball `/workspaces/.opencode` → `homelabcloud5/opencode-backups/` via Az PowerShell |
-| **Restore** | `az storage blob download` + `tar -xzf` + re-run symlink script (manual, documented below) |
+| **Restore** | `Get-AzStorageBlobContent` + `tar -xzf` + re-run symlink script (manual, documented below) |
 | **Trigger points** | `postCreateCommand` for symlinks; manual invocation for backup |
 | **Storage target** | Azure Blob, region `polandcentral`, container `homelabcloud5/opencode-backups` |
 | **Auth** | Codespaces SP via env vars (`AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`) |
@@ -151,18 +151,13 @@ The script:
 
 ### Inspect existing backups
 
-```bash
-az storage blob list \
-  --account-name homelabcloud5 \
-  --container-name opencode-backups \
-  --auth-mode login \
-  --output table
-```
-
-Or with the SP already authenticated via `Connect-AzAccount`:
-
 ```powershell
-Get-AzStorageBlob -Container opencode-backups -Context (Get-AzStorageAccount -Name homelabcloud5 -ResourceGroupName homelab-rg).Context |
+Connect-AzAccount -ServicePrincipal `
+  -TenantId     $env:AZURE_TENANT_ID `
+  -Credential (New-Object PSCredential($env:AZURE_CLIENT_ID, (ConvertTo-SecureString $env:AZURE_CLIENT_SECRET -AsPlainText -Force))) | Out-Null
+
+Get-AzStorageBlob -Container opencode-backups `
+  -Context (Get-AzStorageAccount -Name homelabcloud5 -ResourceGroupName homelab-rg).Context |
   Select-Object Name, Length, LastModified |
   Format-Table -AutoSize
 ```
@@ -173,26 +168,29 @@ Get-AzStorageBlob -Container opencode-backups -Context (Get-AzStorageAccount -Na
 
 ### From a backup blob
 
-```bash
-# 1. List backups
-az storage blob list \
-  --account-name homelabcloud5 \
-  --container-name opencode-backups \
-  --auth-mode login \
-  --output table
+```powershell
+# 1. Authenticate (if not already)
+Connect-AzAccount -ServicePrincipal `
+  -TenantId     $env:AZURE_TENANT_ID `
+  -Credential (New-Object PSCredential($env:AZURE_CLIENT_ID, (ConvertTo-SecureString $env:AZURE_CLIENT_SECRET -AsPlainText -Force))) | Out-Null
 
-# 2. Download the one you want
-az storage blob download \
-  --account-name homelabcloud5 \
-  --container-name opencode-backups \
-  --name opencode-20260628T120000Z.tar.gz \
-  --file /tmp/restore.tar.gz \
-  --auth-mode login
+# 2. List backups (pick the timestamp you want)
+$ctx = (Get-AzStorageAccount -Name homelabcloud5 -ResourceGroupName homelab-rg).Context
+Get-AzStorageBlob -Container opencode-backups -Context $ctx |
+  Select-Object Name, Length, LastModified |
+  Format-Table -AutoSize
 
-# 3. Extract over /workspaces
-sudo tar -xzf /tmp/restore.tar.gz -C /workspaces/
+# 3. Download the chosen tarball
+Get-AzStorageBlobContent `
+  -Container opencode-backups `
+  -Blob 'opencode-20260628T120000Z.tar.gz' `
+  -Context $ctx |
+  Out-Null     # writes /tmp/opencode-<ts>.tar.gz and prints ContentLength
 
-# 4. Re-establish symlinks (in case extraction disturbed them)
+# 4. Extract over /workspaces
+sudo tar -xzf /tmp/opencode-20260628T120000Z.tar.gz -C /workspaces/
+
+# 5. Re-establish symlinks (in case extraction disturbed them)
 pwsh -File .devcontainer/scripts/setup-opencode-persist.ps1
 ```
 

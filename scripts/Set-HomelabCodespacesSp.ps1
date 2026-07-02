@@ -44,7 +44,10 @@ $secrets = @{
 $verify = $secrets.Keys | ForEach-Object {
   $name  = $_
   $value = $secrets[$name]
-  Set-AzKeyVaultSecret -VaultName $KeyVaultName -Name $name -SecretValue (ConvertTo-SecureString $value -AsPlainText -Force) | Out-Null
+    # Tag the secret with the SP credential's expiry so the vault reflects the
+    # rotation deadline. Most relevant for codespaces-sp-client-secret; harmless
+    # on the tenant-id / client-id secrets (they don't rotate).
+    Set-AzKeyVaultSecret -VaultName $KeyVaultName -Name $name -SecretValue (ConvertTo-SecureString $value -AsPlainText -Force) -Expires $endDate | Out-Null
   [pscustomobject]@{ Name = $name; Value = (Get-AzKeyVaultSecret -VaultName $KeyVaultName -Name $name -AsPlainText) }
 }
 
