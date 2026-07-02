@@ -19,3 +19,5 @@ Step-by-step guides for configuring the homelab server.
 | 11 | [11-cntb-cli.md](11-cntb-cli.md) | Contabo CLI (`cntb`) — install, configure OAuth2, common commands, destroy/recreate workflow |
 | 12 | [12-codespaces-devcontainer.md](12-codespaces-devcontainer.md) | GitHub Codespaces & Dev Container setup — browser-based dev, no local install |
 | 13 | [13-copilot-desktop-setup.md](13-copilot-desktop-setup.md) | Copilot Desktop agentic dev environment — execution plan for issue #15 |
+| 14 | [14-gh-codespaces-sp-for-homelab.md](14-gh-codespaces-sp-for-homelab.md) | GH Codespaces Service Principal for Homelab — bootstrap, KV persistence, rotation, Azure MCP auth — see [ADR 16](../decisions/260628-16-gh-codespaces-sp-for-homelab.md) |
+| 15 | [15-opencode-session-persistence.md](15-opencode-session-persistence.md) | OpenCode session persistence + Azure Blob backup — survives Dev Container rebuilds and Codespace deletion (symlinks OpenCode runtime data to `/workspaces/.opencode`) |
