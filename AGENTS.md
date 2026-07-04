@@ -46,6 +46,21 @@ operating on its own.
 
 Autonomous sessions always work on a **feature branch inside a git worktree**. This isolates agent work from `main`, lets multiple agents run in parallel without contention, and keeps the primary checkout clean.
 
+### Sync `main` with remote (do this first, every session)
+
+Before any worktree setup or detection, ensure local `main` reflects remote `main`. Otherwise the feature branch starts from a stale base and conflicts appear later.
+
+1. `git fetch origin`
+2. From the **primary checkout** (not from a worktree), on `main`:
+
+   ```
+   git merge --ff-only origin/main
+   ```
+
+3. **If fast-forward fails** (unpushed local commits on `main`, or diverged history): stop, report the divergence to the user, and ask — do **not** force, rebase, or commit on `main` autonomously
+
+If the session was already started in a worktree on a feature branch, switch back to the primary checkout (`cd ..` from a worktree added via the path below, or use the `workdir` parameter) before running the sync.
+
 ### Detect — am I already in a worktree?
 
 Run first:
