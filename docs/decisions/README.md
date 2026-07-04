@@ -13,6 +13,7 @@ Significant architectural and technology choices recorded in
 
 | # | Date | ADR | Status |
 |---|------|-----|--------|
+| 18 | 2026-07-04 | [Run OpenCode as a Docker Sandbox (Homelab / Cloudlab)](260704-18-opencode-docker-sandbox.md) | Proposed |
 | 17 | 2026-06-28 | [Adopt OpenCode for Agentic Homelab Development](260628-17-adopt-opencode.md) | Implemented |
 | 16 | 2026-06-28 | [GH Codespaces Service Principal for Homelab](260628-16-gh-codespaces-sp-for-homelab.md) | Implemented |
 | 15 | 2026-06-25 | [Evaluate GitHub Copilot Desktop for Agentic Development](260625-15-copilot-desktop-agentic.md) | Deferred |
