@@ -64,5 +64,5 @@ The hostname `cloudlab` must resolve locally — add it to `C:\Windows\System32\
 
 **References:**
 - [Research 13: Ansible Adoption](../docs/research/13-ansible-adoption.md)
-- [ADR 10: Ansible Host Config](../docs/decisions/260613-10-ansible-host-config.md)
+- [ADR 10: Ansible Host Config](../docs/decisions/10-ansible-host-config.md)
 - [Runbook 10: VPS Playground](../docs/runbooks/10-vps-playground.md)

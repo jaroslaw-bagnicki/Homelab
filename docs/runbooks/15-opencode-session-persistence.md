@@ -296,5 +296,5 @@ via an environment variable in `devcontainer.json` rather than hardcoding it.
 
 - [Runbook 7: Restic backup to Azure Blob](7-restic-backup.md) — creates `homelabcloud5`
 - [Runbook 14: Codespaces SP for Homelab](14-gh-codespaces-sp-for-homelab.md) — SP creation; the "Additional role" subsection documents the storage role grant
-- [ADR 16: Codespaces SP for Homelab](../decisions/260628-16-gh-codespaces-sp-for-homelab.md)
+- [ADR 16: Codespaces SP for Homelab](../decisions/16-gh-codespaces-sp-for-homelab.md)
 - [Research 14: Backup cost comparison](../research/14-backup-cost-comparison.md)

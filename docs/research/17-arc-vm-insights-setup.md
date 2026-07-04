@@ -94,5 +94,5 @@ After redeployment, the AMA will start sending VM Insights-tagged data to `Insig
 
 - [Enable VM monitoring with Azure Monitor Agent](https://learn.microsoft.com/en-us/azure/azure-monitor/vm/vm-enable-monitoring) — the canonical DCR shape for VM Insights with AMA
 - [Cloud Adoption Framework: Arc server monitoring](https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/scenarios/hybrid/arc-enabled-servers/eslz-management-and-monitoring-arc-server)
-- [ADR 09: Azure Monitor via Arc](https://github.com/jaroslaw-bagnicki/Homelab/blob/main/docs/decisions/260602-09-azure-monitor-via-arc.md)
+- [ADR 09: Azure Monitor via Arc](https://github.com/jaroslaw-bagnicki/Homelab/blob/main/docs/decisions/09-azure-monitor-via-arc.md)
 - [Runbook 6a: Azure Monitor Setup](https://github.com/jaroslaw-bagnicki/Homelab/blob/main/runbooks/6a-azure-monitor.md)

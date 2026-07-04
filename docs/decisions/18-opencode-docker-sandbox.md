@@ -1,6 +1,6 @@
 # Run OpenCode as a Docker Sandbox (Homelab / Cloudlab)
 
-**Date:** 2026-07-04
+**Date:** 2026-07-04  
 **Status:** Proposed
 
 ---
@@ -148,10 +148,10 @@ Out of scope for this decision:
 ---
 
 > **References:**
-> - [ADR 17 — Adopt OpenCode](260628-17-adopt-opencode.md)
-> - [ADR 13 — VPS Playground (Cloudlab)](260616-13-vps-playground.md)
-> - [ADR 08 — Cloudflare Tunnel](260530-08-remote-access-cloudflare-tunnel.md)
-> - [ADR 07 — Caddy Reverse Proxy](260529-07-reverse-proxy-caddy.md)
-> - [ADR 02 — Backup Strategy](260524-02-backup-strategy-restic-blob.md)
-> - [ADR 01 — Hardware Selection (M910q)](260520-01-hardware-selection-m910q.md)
+> - [ADR 17 — Adopt OpenCode](17-adopt-opencode.md)
+> - [ADR 13 — VPS Playground (Cloudlab)](13-vps-playground.md)
+> - [ADR 08 — Cloudflare Tunnel](08-remote-access-cloudflare-tunnel.md)
+> - [ADR 07 — Caddy Reverse Proxy](07-reverse-proxy-caddy.md)
+> - [ADR 02 — Backup Strategy](02-backup-strategy-restic-blob.md)
+> - [ADR 01 — Hardware Selection (M910q)](01-hardware-selection-m910q.md)
 > - [Research 20 — OpenCode Hosting Comparison](../research/20-opencode-hosting-codespaces-vs-homelab.md)

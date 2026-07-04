@@ -163,7 +163,7 @@ playbook structure. The playbooks will target `cloudlab` (the hostname set above
 ---
 
 **References:**
-- [ADR 13: Use Contabo Cloud VPS 10 as Ansible Playground](../docs/decisions/260616-13-vps-playground.md)
+- [ADR 13: Use Contabo Cloud VPS 10 as Ansible Playground](../docs/decisions/13-vps-playground.md)
 - [Research 15: VPS Selection](../docs/research/15-vps-selection.md)
 - [Research 13: Ansible Adoption](../docs/research/13-ansible-adoption.md)
 - [Contabo VNC Console](https://my.contabo.com/) — emergency out-of-band access

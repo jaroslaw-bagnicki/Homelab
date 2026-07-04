@@ -55,6 +55,6 @@ Ansible runs first (on the bare host), then Bicep deploys cloud resources. The A
 
 **References:**
 - [Runbook 6a: Azure Monitor Setup](../docs/runbooks/6a-azure-monitor.md)
-- [ADR 09: Azure Monitor via Arc](../docs/decisions/260602-09-azure-monitor-via-arc.md)
+- [ADR 09: Azure Monitor via Arc](../docs/decisions/09-azure-monitor-via-arc.md)
 - [Research 17: Arc VM Insights root cause](../docs/research/17-arc-vm-insights-setup.md)
 - [VM enable monitoring docs](https://learn.microsoft.com/en-us/azure/azure-monitor/vm/vm-enable-monitoring)

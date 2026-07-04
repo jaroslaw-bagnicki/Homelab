@@ -21,13 +21,13 @@ Key design decisions are recorded in the [decision log](docs/decisions/README.md
 
 ## Tech Stack
 
-The physical server is a **[Lenovo ThinkCentre M910q Tiny](docs/decisions/260520-01-hardware-selection-m910q.md)** (i5-7500T, 16 GB RAM).
-It will be rebuilt from scratch on **[Ubuntu 24.04 LTS](docs/decisions/260524-05-os-decision-ubuntu-server.md)**, managed entirely via
-**[Ansible](docs/decisions/260613-10-ansible-host-config.md)** playbooks — developed and tested on a disposable **[Contabo Cloud VPS 10](docs/decisions/260616-13-vps-playground.md)** before touching the hardware.
+The physical server is a **[Lenovo ThinkCentre M910q Tiny](docs/decisions/01-hardware-selection-m910q.md)** (i5-7500T, 16 GB RAM).
+It will be rebuilt from scratch on **[Ubuntu 24.04 LTS](docs/decisions/05-os-decision-ubuntu-server.md)**, managed entirely via
+**[Ansible](docs/decisions/10-ansible-host-config.md)** playbooks — developed and tested on a disposable **[Contabo Cloud VPS 10](docs/decisions/13-vps-playground.md)** before touching the hardware.
 
-Applications run in **[Docker Compose](docs/decisions/260524-03-container-strategy.md)** with a future path to **k3s**. The server
-is enrolled in **[Azure Arc](docs/decisions/260524-04-hybrid-cloud-azure-arc.md)** for cloud-side monitoring and policy, and exposed
-to the internet via **[Cloudflare Tunnel](docs/decisions/260530-08-remote-access-cloudflare-tunnel.md)** behind a **[Caddy](docs/decisions/260529-07-reverse-proxy-caddy.md)** reverse proxy.
+Applications run in **[Docker Compose](docs/decisions/03-container-strategy.md)** with a future path to **k3s**. The server
+is enrolled in **[Azure Arc](docs/decisions/04-hybrid-cloud-azure-arc.md)** for cloud-side monitoring and policy, and exposed
+to the internet via **[Cloudflare Tunnel](docs/decisions/08-remote-access-cloudflare-tunnel.md)** behind a **[Caddy](docs/decisions/07-reverse-proxy-caddy.md)** reverse proxy.
 
 ---
 
@@ -61,11 +61,11 @@ Ansible runs first on the bare host (OS config, Docker, Arc agent). Bicep deploy
 | 2026‑05‑31 | GHCR in Portainer | ⭐ | [2a](docs/runbooks/2a-ghcr-portainer.md) | GitHub Container Registry access |
 | 2026‑05‑31 | Hello World demo | ⭐ | [4a](docs/runbooks/4a-hello-world.md) | Reverse proxy demo via Caddy + Cloudflare |
 | 2026‑06‑16 | Decision log | ⭐ | [#7](https://github.com/jaroslaw-bagnicki/Homelab/issues/7) | ADR log in MADR format — see [docs/decisions/](docs/decisions/) |
-| 2026‑06‑17 | VPS playground | ⭐⭐ | [10](docs/runbooks/10-vps-playground.md) | Contabo Cloud VPS 10 as Ansible dev/test sandbox — see [ADR 13](docs/decisions/260616-13-vps-playground.md) |
+| 2026‑06‑17 | VPS playground | ⭐⭐ | [10](docs/runbooks/10-vps-playground.md) | Contabo Cloud VPS 10 as Ansible dev/test sandbox — see [ADR 13](docs/decisions/13-vps-playground.md) |
 | 2026‑06‑20 | Key Vault | ⭐ | [bicep/](bicep/README.md) | RBAC-only vault `homelab-{suffix}-kv` provisioned alongside Bicep infrastructure — see [#6](https://github.com/jaroslaw-bagnicki/Homelab/issues/6) |
 | 2026‑06‑20 | Ansible playbooks | ⭐⭐⭐ | [ansible/](ansible/README.md) | common, security, azure_arc, docker_host roles developed & tested on cloudlab — see [#9](https://github.com/jaroslaw-bagnicki/Homelab/issues/9) |
 | 2026‑06‑21 | Azure Monitor | ⭐⭐ | [6a](docs/runbooks/6a-azure-monitor.md) | VM Insights working on cloudlab via `\VmInsights\DetailedMetrics` meta-counter — Bicep-managed |
-| 2026‑06‑28 | Codespaces SP | ⭐ | [14](docs/runbooks/14-gh-codespaces-sp-for-homelab.md) | `homelab-codespaces-sp` provisioned, stored in `homelab-bysxdb-kv`, consumed via Codespaces repo secrets — enables Azure MCP for Opencode eval — see [ADR 16](docs/decisions/260628-16-gh-codespaces-sp-for-homelab.md) |
+| 2026‑06‑28 | Codespaces SP | ⭐ | [14](docs/runbooks/14-gh-codespaces-sp-for-homelab.md) | `homelab-codespaces-sp` provisioned, stored in `homelab-bysxdb-kv`, consumed via Codespaces repo secrets — enables Azure MCP for Opencode eval — see [ADR 16](docs/decisions/16-gh-codespaces-sp-for-homelab.md) |
 | 2026‑06‑28 | Opencode adoption | ⭐ | [15](docs/runbooks/15-opencode-session-persistence.md) | OpenCode runtime data persisted via symlinks to `/workspaces/.opencode` (sibling of repo) and backed up on-demand to `homelabcloud5/opencode-backups` — survives both Dev Container rebuilds and Codespace deletion |
 | 2026‑07‑04 | Docker Services role | ⭐⭐ | [16](docs/runbooks/16-docker-services-ansible-role.md) | Ansible `docker_services` role — deploys Portainer, Caddy, and Hello World on Cloudlab via `docker_compose_v2` — see [#14](https://github.com/jaroslaw-bagnicki/Homelab/issues/14) |
 

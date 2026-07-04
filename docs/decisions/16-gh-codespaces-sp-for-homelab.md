@@ -1,6 +1,6 @@
 # GH Codespaces Service Principal for Homelab
 
-**Date:** 2026-06-28
+**Date:** 2026-06-28  
 **Status:** Implemented
 
 ---

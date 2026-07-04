@@ -17,7 +17,7 @@ if (-not $env:SSH_AUTH_SOCK -or -not (Test-Path $env:SSH_AUTH_SOCK)) {
 # The Codespace injects three env vars from repo-level Codespaces
 # secrets (AZURE_TENANT_ID / AZURE_CLIENT_ID / AZURE_CLIENT_SECRET)
 # when present. See docs/runbooks/14-gh-codespaces-sp-for-homelab.md
-# and docs/decisions/260628-16-gh-codespaces-sp-for-homelab.md for
+# and docs/decisions/16-gh-codespaces-sp-for-homelab.md for
 # how the underlying homelab-codespaces-sp is provisioned, stored
 # in homelab-bysxdb-kv, and granted Contributor on homelab-rg plus
 # Key Vault Secrets User on the vault. When the env vars are present,

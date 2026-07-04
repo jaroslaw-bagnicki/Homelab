@@ -1,6 +1,6 @@
 ---
 # Copy this file to create a new ADR. Keep TEMPLATE.md unchanged.
-# Filename: docs/decisions/YYMMDD-NN-kebab-case-title.md (e.g. 260616-12-establish-adr-log.md)
+# Filename: docs/decisions/NN-kebab-case-title.md (e.g. 12-establish-adr-log.md)
 ---
 
 # Title — Short, Descriptive Name
