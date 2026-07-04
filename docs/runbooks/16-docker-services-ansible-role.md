@@ -16,9 +16,10 @@
 | File | Purpose |
 |---|---|
 | `ansible/roles/docker_services/defaults/main.yml` | `docker_dir: /opt/docker` |
-| `ansible/roles/docker_services/tasks/main.yml` | Create directory → template files → `docker compose up` |
+| `ansible/roles/docker_services/tasks/main.yml` | Create directory → template files → `docker compose up` (handlers restart Caddy on config changes) |
+| `ansible/roles/docker_services/handlers/main.yml` | `Restart Caddy` (on Caddyfile change), `Redeploy docker services` (on compose change) |
 | `ansible/roles/docker_services/templates/docker-compose.yml.j2` | Service definitions: portainer, caddy, hello + homelab_net + volumes |
-| `ansible/roles/docker_services/templates/Caddyfile.j2` | Reverse proxy placeholder (DNS and TLS deferred to #23, #24) |
+| `ansible/roles/docker_services/templates/Caddyfile.j2` | `http:// { respond "Caddy works." }` placeholder — DNS/TLS deferred to #23, #24 |
 
 ---
 
@@ -59,7 +60,7 @@ roles:
 
 - [ ] Role is idempotent: second run reports `changed=0`
 - [ ] Portainer running on localhost: `docker ps --filter name=portainer` → status `Up`, ports `127.0.0.1:9000->9000/tcp`
-- [ ] Caddy listening on port 80: `curl -s -o /dev/null -w '%{http_code}' http://173.249.27.13` → `200`
+- [ ] Caddy listening on port 80: `curl -s http://173.249.27.13` → `Caddy works.`
 - [ ] Caddy listening on port 443: `curl -sk -o /dev/null -w '%{http_code}' https://173.249.27.13` → returns HTTP code (no TLS cert yet, but port is open)
 - [ ] Portainer NOT exposed publicly: `curl -s --connect-timeout 5 http://173.249.27.13:9000` → connection refused or timeout
 - [ ] All containers running: `docker ps` shows `portainer`, `caddy`, and `hello` all `Up`
