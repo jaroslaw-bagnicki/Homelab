@@ -44,64 +44,46 @@ operating on its own.
 
 ## Worktree Workflow
 
-Autonomous sessions always work on a **feature branch inside a git worktree**. This isolates agent work from `main`, lets multiple agents run in parallel without contention, and keeps the primary checkout clean.
+Autonomous sessions always work on a **feature branch inside a git worktree** — `main` stays for merged, reviewed work only, and multiple agents can run in parallel without contention.
 
-### Sync `main` with remote (do this first, every session)
-
-Before any worktree setup or detection, ensure local `main` reflects remote `main`. Otherwise the feature branch starts from a stale base and conflicts appear later.
+### Sync `main` with remote (first, every session)
 
 1. `git fetch origin`
-2. From the **primary checkout** (not from a worktree), on `main`:
+2. From the primary checkout, on `main`: `git merge --ff-only origin/main`
+3. If FF fails (unpushed local commits or diverged history): stop and report to the user — never force, rebase, or commit on `main` autonomously
 
-   ```
-   git merge --ff-only origin/main
-   ```
+If the session was started in a worktree on a feature branch, switch back to the primary checkout (`cd ..` or use the `workdir` parameter) before syncing.
 
-3. **If fast-forward fails** (unpushed local commits on `main`, or diverged history): stop, report the divergence to the user, and ask — do **not** force, rebase, or commit on `main` autonomously
-
-If the session was already started in a worktree on a feature branch, switch back to the primary checkout (`cd ..` from a worktree added via the path below, or use the `workdir` parameter) before running the sync.
-
-### Detect — am I already in a worktree?
-
-Run first:
+### Detect / setup
 
 ```
-git rev-parse --show-toplevel        # absolute path of current worktree
+git rev-parse --show-toplevel        # current worktree path
 git rev-parse --abbrev-ref HEAD      # current branch
 ```
 
-- If `HEAD` is `main` AND the path matches the primary checkout → **not set up**, do the setup below
+- If `HEAD` is `main` AND path matches the primary checkout → not set up:
+
+  ```
+  git worktree add ../Homelab-<short-topic> -b <type>/<short-kebab-topic>
+  ```
+
+  Use the bash tool's `workdir` parameter for all subsequent commands inside the new worktree.
+
 - Otherwise → already in a worktree on a feature branch, skip setup
-
-### Setup (only if not already set up)
-
-```
-git worktree add ../Homelab-<short-topic> -b <type>/<short-kebab-topic>
-```
-
-Then run all subsequent commands inside the new worktree using the bash tool's `workdir` parameter (preferred) or by `cd`-ing into it. Verify with `pwd` and `git rev-parse --abbrev-ref HEAD`.
 
 ### Branch naming
 
-- `<type>/<short-kebab-topic>` — match the commit `type` you will use. Examples: `docs/add-adr-19`, `feat/local-llm-stack`, `fix/ansible-vps-timeout`
-- Keep topics short and specific
-
-### Working model
-
-- All file edits, commits, and pushes happen inside the worktree
-- Multiple autonomous sessions can run in parallel, each on its own branch + worktree
-- `main` is for merged, reviewed work only — never the working branch for an autonomous session
+`<type>/<short-kebab-topic>` matching the eventual commit `type`. Examples: `docs/add-adr-19`, `feat/local-llm-stack`, `fix/ansible-vps-timeout`.
 
 ### Merge back to `main` (when user asks)
 
-1. Inside the worktree: `git fetch origin && git rebase origin/main`
-2. From the primary checkout: `git merge --ff-only <branch>`
-3. `git worktree remove ../Homelab-<short-topic>`
-4. `git branch -d <branch>`
+1. In worktree: `git fetch origin && git rebase origin/main`
+2. In primary checkout: `git merge --ff-only <branch>`
+3. `git worktree remove ../Homelab-<short-topic>` then `git branch -d <branch>`
 
-### Exceptions — work on `main` directly only when user explicitly says so
+### Exceptions
 
-Phrases like "commit to main", "no worktree", "skip the worktree step", "do it directly". When in doubt, use a worktree — cleanup cost is trivial.
+Work on `main` directly only when the user says so ("commit to main", "no worktree", "skip the worktree step", etc). When in doubt, use a worktree — cleanup is trivial.
 
 ## Security
 
