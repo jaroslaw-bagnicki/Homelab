@@ -25,7 +25,6 @@
   docs once a direction is settled.
 - Runbooks: `runbooks/` — implementation instructions and operational procedures
 - Each area has a `README.md` as the index
-- For research output structure, use the `research-output` skill — see `.github/skills/research-output/SKILL.md` for the required structure
 
 ## Issue Tracking
 
