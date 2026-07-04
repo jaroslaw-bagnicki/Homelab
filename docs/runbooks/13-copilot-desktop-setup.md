@@ -61,6 +61,30 @@ Reference research #19. Capture open questions surfaced in grill session.
 
 > **Alternative (VS Code only):** The `vizards.deepseek-v4-for-copilot` extension is already in the devcontainer for Codespaces/VS Code use.
 
+### Alternative: dev container / Codespaces
+
+For agentic workflows that run inside the dev container (e.g. `sst-dev.opencode` extension),
+the Windows user env var does not propagate. Wire the key via a Codespaces secret and
+`containerEnv`:
+
+1. Create / rename a Codespaces secret to `DEEPSEEK_API_KEY` (exact spelling) at
+   <https://github.com/settings/codespaces> (user) or the repo's Settings → Secrets → Codespaces.
+   `DEEPSEEK_APIKEY` (no underscore) will not be picked up.
+2. The dev container reads it via `containerEnv` in `.devcontainer/devcontainer.json`:
+   ```jsonc
+   "containerEnv": {
+     "DEEPSEEK_API_KEY": "${secret:DEEPSEEK_API_KEY}"
+   }
+   ```
+3. Rebuild the dev container. In a fresh shell, verify the key landed:
+   ```bash
+   echo "len=$(echo -n "$DEEPSEEK_API_KEY" | wc -c)  prefix=$(printf '%s' "$DEEPSEEK_API_KEY" | head -c 10)"
+   ```
+   Expect `len=51+` and `prefix=sk-...`. Then `/models` in the OpenCode TUI and pick a real
+   DeepSeek model (`deepseek-chat` for V3, `deepseek-reasoner` for R1).
+4. Optional: clean up any stale `~/.local/share/opencode/auth.json` so the env var is the
+   single source of truth.
+
 ### Step 3: Test Repo in Copilot Desktop App
 
 The Copilot Desktop app does **not** use Dev Containers. Sessions run in **Git worktrees** or
