@@ -16,6 +16,11 @@
     "ghcr.io/devcontainers/features/node:2": {}
   },
 
+  // ── Container env (Codespaces secrets surface here) ──────────────
+  "containerEnv": {
+    "DEEPSEEK_API_KEY": "${secret:DEEPSEEK_API_KEY}"
+  },
+
   // ── VS Code customizations ────────────────────────────────────────
   "customizations": {
     "vscode": {
