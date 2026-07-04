@@ -35,7 +35,7 @@ to the internet via **[Cloudflare Tunnel](docs/decisions/260530-08-remote-access
 
 | Folder | Purpose |
 |---|---|
-| [`ansible/`](ansible/README.md) | Host provisioning — playbooks, roles (common, security, docker_host, docker_services, azure_arc), inventory |
+| [`ansible/`](ansible/README.md) | Host provisioning — playbooks, roles (common, security, azure_arc, docker_host, docker_services), inventory |
 | [`bicep/`](bicep/README.md) | Cloud-side IaC — Log Analytics, DCR, AMA extensions, Key Vault |
 | [`docs/decisions/`](docs/decisions/README.md) | Architecture Decision Records (ADRs) — design rationale, settled decisions |
 | [`docs/research/`](docs/research/README.md) | Exploratory research — topic investigations, comparisons, trade-off analyses |
