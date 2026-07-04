@@ -1,0 +1,13 @@
+---
+- name: Restart Caddy
+  community.docker.docker_compose_v2:
+    project_src: "{{ docker_dir }}"
+    services:
+      - caddy
+    state: restarted
+
+- name: Redeploy docker services
+  community.docker.docker_compose_v2:
+    project_src: "{{ docker_dir }}"
+    state: present
+    pull: always

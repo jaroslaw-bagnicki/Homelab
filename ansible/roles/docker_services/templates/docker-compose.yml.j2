@@ -1,0 +1,43 @@
+services:
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    restart: always
+    ports:
+      - "127.0.0.1:9000:9000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+    networks:
+      - homelab_net
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: caddy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - {{ docker_dir }}/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - homelab_net
+
+  hello:
+    image: nginxdemos/hello:latest
+    container_name: hello
+    restart: always
+    networks:
+      - homelab_net
+
+volumes:
+  portainer_data:
+  caddy_data:
+  caddy_config:
+
+networks:
+  homelab_net:
+    name: homelab_net

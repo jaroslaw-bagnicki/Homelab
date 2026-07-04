@@ -21,3 +21,4 @@ Step-by-step guides for configuring the homelab server.
 | 13 | [13-copilot-desktop-setup.md](13-copilot-desktop-setup.md) | Copilot Desktop agentic dev environment — execution plan for issue #15 |
 | 14 | [14-gh-codespaces-sp-for-homelab.md](14-gh-codespaces-sp-for-homelab.md) | GH Codespaces Service Principal for Homelab — bootstrap, KV persistence, rotation, Azure MCP auth — see [ADR 16](../decisions/260628-16-gh-codespaces-sp-for-homelab.md) |
 | 15 | [15-opencode-session-persistence.md](15-opencode-session-persistence.md) | OpenCode session persistence + Azure Blob backup — survives Dev Container rebuilds and Codespace deletion (symlinks OpenCode runtime data to `/workspaces/.opencode`) |
+| 16 | [16-docker-services-ansible-role.md](16-docker-services-ansible-role.md) | Ansible `docker_services` role — deploys Portainer, Caddy, and Hello World on Cloudlab via `docker_compose_v2` |
