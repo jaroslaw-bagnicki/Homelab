@@ -35,7 +35,7 @@ to the internet via **[Cloudflare Tunnel](docs/decisions/260530-08-remote-access
 
 | Folder | Purpose |
 |---|---|
-| [`ansible/`](ansible/README.md) | Host provisioning — playbooks, roles (common, security, docker_host, azure_arc), inventory |
+| [`ansible/`](ansible/README.md) | Host provisioning — playbooks, roles (common, security, docker_host, docker_services, azure_arc), inventory |
 | [`bicep/`](bicep/README.md) | Cloud-side IaC — Log Analytics, DCR, AMA extensions, Key Vault |
 | [`docs/decisions/`](docs/decisions/README.md) | Architecture Decision Records (ADRs) — design rationale, settled decisions |
 | [`docs/research/`](docs/research/README.md) | Exploratory research — topic investigations, comparisons, trade-off analyses |
@@ -67,6 +67,7 @@ Ansible runs first on the bare host (OS config, Docker, Arc agent). Bicep deploy
 | 2026‑06‑21 | Azure Monitor | ⭐⭐ | [6a](docs/runbooks/6a-azure-monitor.md) | VM Insights working on cloudlab via `\VmInsights\DetailedMetrics` meta-counter — Bicep-managed |
 | 2026‑06‑28 | Codespaces SP | ⭐ | [14](docs/runbooks/14-gh-codespaces-sp-for-homelab.md) | `homelab-codespaces-sp` provisioned, stored in `homelab-bysxdb-kv`, consumed via Codespaces repo secrets — enables Azure MCP for Opencode eval — see [ADR 16](docs/decisions/260628-16-gh-codespaces-sp-for-homelab.md) |
 | 2026‑06‑28 | Opencode adoption | ⭐ | [15](docs/runbooks/15-opencode-session-persistence.md) | OpenCode runtime data persisted via symlinks to `/workspaces/.opencode` (sibling of repo) and backed up on-demand to `homelabcloud5/opencode-backups` — survives both Dev Container rebuilds and Codespace deletion |
+| 2026‑07‑04 | Docker Services role | ⭐⭐ | [16](docs/runbooks/16-docker-services-ansible-role.md) | Ansible `docker_services` role — deploys Portainer, Caddy, and Hello World on Cloudlab via `docker_compose_v2` — see [#14](https://github.com/jaroslaw-bagnicki/Homelab/issues/14) |
 
 ---
 
@@ -75,7 +76,6 @@ Ansible runs first on the bare host (OS config, Docker, Arc agent). Bicep deploy
 | # | Workload | Effort | Notes |
 |---|---|---|---|
 | [#13](https://github.com/jaroslaw-bagnicki/Homelab/issues/13) | **Restic backup** (redo) | ⭐⭐ | Daily snapshots to Azure Blob Storage — see [runbook](docs/runbooks/7-restic-backup.md) |
-| [#14](https://github.com/jaroslaw-bagnicki/Homelab/issues/14) | **Docker-Compose role** | ⭐⭐ | Ansible `docker_services` role for replicating the stack — see [research](docs/research/18-docker-compose-replication.md) |
 |  | **Hermes Agent** | ⭐⭐⭐ | Most complex — last |
 |  | **SQL Server** | ⭐⭐ | Developer Edition in Docker — see [runbook](docs/runbooks/9-mssql-dev.md) |
 |  | **Gitea** | ⭐⭐ | Self-hosted Git with web UI for personal repos |
