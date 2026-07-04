@@ -36,11 +36,57 @@ operating on its own.
 - **GitHub repository**: `https://github.com/jaroslaw-bagnicki/Homelab` (owner: `jaroslaw-bagnicki`, repo: `Homelab`)
 - **Always use GitHub MCP tools** for GitHub operations — never GitKraken MCP tools for GitHub
 - **If a GitHub MCP tool call fails**, report the error to the user and do not attempt the operation via any other tool or CLI
-- **Always commit directly to `main`** — no feature branches, no PRs
+- **Work on a feature branch in a worktree** — see [Worktree Workflow](#worktree-workflow) below; do not commit to `main` from an autonomous session
 - **Commit message format**: `(type) description` with parentheses. Common types: `docs`, `feat`, `fix`, `chore`, `refactor`
-- **Never rebase** unless explicitly asked
+- **Never rebase** unless explicitly asked (the rebase step in [Worktree Workflow](#worktree-workflow) merge-back is the standard carve-out)
 - **Never push** unless explicitly asked
 - **Scope commits tightly** — one logical change per commit; do not bundle unrelated edits
+
+## Worktree Workflow
+
+Autonomous sessions always work on a **feature branch inside a git worktree**. This isolates agent work from `main`, lets multiple agents run in parallel without contention, and keeps the primary checkout clean.
+
+### Detect — am I already in a worktree?
+
+Run first:
+
+```
+git rev-parse --show-toplevel        # absolute path of current worktree
+git rev-parse --abbrev-ref HEAD      # current branch
+```
+
+- If `HEAD` is `main` AND the path matches the primary checkout → **not set up**, do the setup below
+- Otherwise → already in a worktree on a feature branch, skip setup
+
+### Setup (only if not already set up)
+
+```
+git worktree add ../Homelab-<short-topic> -b <type>/<short-kebab-topic>
+```
+
+Then run all subsequent commands inside the new worktree using the bash tool's `workdir` parameter (preferred) or by `cd`-ing into it. Verify with `pwd` and `git rev-parse --abbrev-ref HEAD`.
+
+### Branch naming
+
+- `<type>/<short-kebab-topic>` — match the commit `type` you will use. Examples: `docs/add-adr-19`, `feat/local-llm-stack`, `fix/ansible-vps-timeout`
+- Keep topics short and specific
+
+### Working model
+
+- All file edits, commits, and pushes happen inside the worktree
+- Multiple autonomous sessions can run in parallel, each on its own branch + worktree
+- `main` is for merged, reviewed work only — never the working branch for an autonomous session
+
+### Merge back to `main` (when user asks)
+
+1. Inside the worktree: `git fetch origin && git rebase origin/main`
+2. From the primary checkout: `git merge --ff-only <branch>`
+3. `git worktree remove ../Homelab-<short-topic>`
+4. `git branch -d <branch>`
+
+### Exceptions — work on `main` directly only when user explicitly says so
+
+Phrases like "commit to main", "no worktree", "skip the worktree step", "do it directly". When in doubt, use a worktree — cleanup cost is trivial.
 
 ## Security
 
@@ -80,7 +126,7 @@ operating on its own.
 - **Ask only when blocked or when a choice materially changes the deliverable** — use the question tool sparingly
 - **Plan first for non-trivial work**: enter plan mode, gather context, present the plan, exit plan mode, then execute
 - **Verify after changes** — run any documented lint, test, or typecheck command before declaring the task done
-- **Commit when work is done** — completed work should land on `main` in scoped commits matching the repo convention; do not leave changes uncommitted
+- **Commit when work is done** — completed work lands on the feature branch in scoped commits matching the repo convention; do not leave changes uncommitted
 - **Surface findings as concise summaries** — short status with file paths and commit refs; not essays
 - **Discover skills via the skill tool** — repo skills live under `.opencode/skills/` (symlinked to `.github/skills/`); load a skill only when its description matches the current task
 - **Do not create issues proactively** — issue creation is reserved for multi-session work the user explicitly asks to track; for one-shot fixes or docs changes, a commit is enough
