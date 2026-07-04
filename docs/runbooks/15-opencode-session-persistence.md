@@ -1,8 +1,7 @@
-# OpenCode Session Persistence + Backup in Codespaces
+# OpenCode in Codespaces
 
-> Survive Dev Container rebuilds by symlinking OpenCode runtime data into
-> the Codespaces persistent disk, and back up to Azure Blob Storage for
-> off-Codespace protection.
+> Session persistence across Dev Container rebuilds, Azure Blob backup,
+> and remote access via web server + Desktop app.
 
 ## Overview
 
@@ -197,6 +196,77 @@ pwsh -File .devcontainer/scripts/setup-opencode-persist.ps1
 ### Verify the restore
 
 After the four steps above, open OpenCode — the restored session list should include whatever was captured in the backup tarball.
+
+---
+
+## OpenCode Web Server + Desktop App
+
+Launch OpenCode as a web server inside the Dev Container and connect from the
+OpenCode Desktop app (or any browser) on your local machine.
+
+### Commands
+
+| Command | Behavior |
+|---|---|
+| `opencode serve` | Starts an HTTP server with the REST API **and** Web UI. Does not launch a browser. [Docs](https://opencode.ai/docs/server/) |
+| `opencode web` | Same as `serve`, but also auto-opens the browser (calls `xdg-open` on Linux). [Docs](https://opencode.ai/docs/web/) |
+
+Both expose the full OpenAPI 3.1 spec at `/doc` and the Web UI at the root. The
+Web UI is functionally identical to the OpenCode Desktop app. Use `serve` inside
+a Dev Container (where `xdg-open` would fail) and `web` on a local machine.
+
+### Start the server
+
+```bash
+cd /workspaces/Homelab
+opencode serve --hostname 0.0.0.0 --port 4096
+```
+
+- `--hostname 0.0.0.0` binds to all interfaces so VS Code can forward the port
+- `--port 4096` uses a fixed port (VS Code auto-detects and forwards it)
+- Optionally set `OPENCODE_SERVER_PASSWORD` to require basic auth (username defaults to `opencode`)
+
+### Connect from your local machine
+
+VS Code **automatically forwards port 4096** from the Dev Container to your host
+machine. Open in your browser:
+
+```
+http://localhost:4096
+```
+
+The web UI is functionally identical to the OpenCode Desktop app.
+
+To use the native **OpenCode Desktop app** with a remote server, configure it to
+point at `http://localhost:4096` if the app supports a custom server URL.
+Otherwise, use the browser-based web UI at the same address.
+
+> **Tip:** If you also want a terminal TUI attached to the same server, run
+> `opencode attach http://localhost:4096` in another Dev Container terminal.
+> The TUI and web UI share the same sessions and state.
+
+### Custom port (if 4096 is in use)
+
+```bash
+opencode serve --hostname 0.0.0.0 --port 4123
+```
+
+Then in VS Code's **Ports** tab, manually add port `4123` and set visibility
+to `Private`.
+
+### Security
+
+For a password-protected server:
+
+```bash
+OPENCODE_SERVER_PASSWORD=yourpassword opencode serve --hostname 0.0.0.0 --port 4096
+```
+
+The username defaults to `opencode`. To change it, also set
+`OPENCODE_SERVER_USERNAME`.
+
+For Codespaces, store the password as a **Codespaces secret** and reference it
+via an environment variable in `devcontainer.json` rather than hardcoding it.
 
 ---
 
