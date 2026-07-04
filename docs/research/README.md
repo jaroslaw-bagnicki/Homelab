@@ -21,6 +21,7 @@
 | 17 | [17-arc-vm-insights-setup.md](17-arc-vm-insights-setup.md) | Why Arc VM Insights shows "No Data" despite data flowing to LAW — portal onboarding gap | Research |
 | 18 | [18-docker-compose-replication.md](18-docker-compose-replication.md) | Options for replicating Cloudlab docker-compose stack to Homelab after rebuild — Ansible role vs Portainer vs rsync | Research |
 | 19 | [19-copilot-desktop-agentic.md](19-copilot-desktop-agentic.md) | GitHub Copilot Desktop app for agentic Homelab dev — MCP, BYOK, Skills, DR automation, Entra ID, secret mgmt | Gemini chat 8 |
+| 20 | [20-opencode-hosting-codespaces-vs-homelab.md](20-opencode-hosting-codespaces-vs-homelab.md) | OpenCode hosting — Codespaces vs M910q vs Cloudlab; server mode, sandboxing, dependencies, backup, automation | Research |
 
 ## Gemini Discussions
 
