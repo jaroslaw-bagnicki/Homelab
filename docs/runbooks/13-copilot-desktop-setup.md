@@ -1,7 +1,7 @@
 # Copilot Desktop Setup — Execution Plan
 
 > Issue: [#15](https://github.com/jaroslaw-bagnicki/Homelab/issues/15)
-> ADR: [ADR #15](../decisions/260625-15-copilot-desktop-agentic.md)
+> ADR: [ADR #15](../decisions/15-copilot-desktop-agentic.md)
 > Research: [Research #19](../research/19-copilot-desktop-agentic.md)
 
 ## Plan
@@ -22,7 +22,7 @@
 
 ### Step 1: Write ADR #15
 
-Create `docs/decisions/260625-15-copilot-desktop-agentic.md` with status `Proposed`.
+Create `docs/decisions/15-copilot-desktop-agentic.md` with status `Proposed`.
 One decision: "Adopt GitHub Copilot Desktop as the primary agentic development environment for Homelab."
 Reference research #19. Capture open questions surfaced in grill session.
 

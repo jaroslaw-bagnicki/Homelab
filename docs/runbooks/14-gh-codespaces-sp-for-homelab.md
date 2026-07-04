@@ -19,7 +19,7 @@
 | **Credential type** | Client secret (password credential), not certificate |
 | **Default lifetime** | 365 days (rotate via the same script) |
 
-See [ADR 16](../decisions/260628-16-gh-codespaces-sp-for-homelab.md) for the design rationale.
+See [ADR 16](../decisions/16-gh-codespaces-sp-for-homelab.md) for the design rationale.
 
 ---
 
@@ -274,4 +274,4 @@ output. Or re-run quarterly with `-SecretLifetimeDays 90`.
 | `.devcontainer/devcontainer.json` | adds Node feature, adds prereq-check to `postCreateCommand` |
 | `.devcontainer/scripts/setup-azure-mcp-prereqs.sh` | NEW — masked env-var check + npx availability |
 | `.devcontainer/config/profile.ps1` | SP-aware `Connect-AzAccount` (falls back to device-auth) |
-| `docs/decisions/260628-16-gh-codespaces-sp-for-homelab.md` | NEW — design rationale |
+| `docs/decisions/16-gh-codespaces-sp-for-homelab.md` | NEW — design rationale |

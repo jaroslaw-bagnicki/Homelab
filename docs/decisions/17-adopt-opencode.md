@@ -1,6 +1,6 @@
 # Adopt OpenCode for Agentic Homelab Development
 
-**Date:** 2026-06-28
+**Date:** 2026-06-28  
 **Status:** Implemented
 
 ---
