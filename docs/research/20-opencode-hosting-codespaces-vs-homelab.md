@@ -4,15 +4,24 @@ model: DeepSeek V4 Pro
 date: 2026-07-04
 ---
 
-# OpenCode Hosting — Codespaces vs Homelab vs Cloudlab
+# OpenCode Hosting — Codespaces vs Homelab/Cloudlab
 
 ## Topic
 
-A comparison of where to run OpenCode as a persistent, agentic development server
-for the Homelab project — GitHub Codespaces, the physical M910q server, or the
-Contabo Cloudlab VPS. The evaluation covers server-mode daemon operation, git
-project access, multi-project workspace support, sandboxing, dependency
-installation, session backup, and background automation.
+A comparison of where and how to run OpenCode as a persistent, agentic
+development server — GitHub Codespaces vs running on the Homelab/Cloudlab
+hosts, and within those hosts, as a bare host service vs a Docker container.
+The evaluation covers server-mode daemon operation, git project access,
+multi-project workspace support, sandboxing, dependency installation, session
+backup, and background automation.
+
+**Homelab and Cloudlab are treated interchangeably** — Cloudlab is the dev
+environment for Homelab (ADR 13), running the same Ansible-managed stack.
+Both run Ubuntu 24.04, both have Docker and Caddy. Cloudlab is the deployment
+target for the OpenCode sandbox; the Homelab M910q could serve the same role
+but is intentionally kept focused on production services. SSH access to both
+hosts is required regardless of where OpenCode runs — the agent needs to
+execute Ansible playbooks against the M910q and manage the Cloudlab VPS itself.
 
 The conversation started from the existing decision to adopt OpenCode in
 Codespaces (ADR 17) and progressively added constraints that reshaped the
@@ -57,130 +66,201 @@ persistent daemon conflicts with the platform's core design:
 **Codespaces remain valid as interactive fallback** (ADR 14's original purpose)
 but cannot serve as the OpenCode server host.
 
-### 2. Homelab M910q — ruled out by sandbox + hardware constraints
+### 2. Homelab / Cloudlab as OpenCode hosts
 
-The M910q (i5-7500T, 4C/4T, 16 GB RAM, 256 GB NVMe) is already running the
-production Docker stack (Caddy, DNSMasq, Portainer, Gitea, etc.). Adding
-OpenCode sandbox containers would exceed its capacity:
+Both Homelab (M910q) and Cloudlab (Contabo VPS 10) run Ubuntu 24.04 with
+Docker and Caddy, managed via Ansible. They differ in role: the M910q runs
+production services, Cloudlab is the dev/playground environment. Either could
+host OpenCode; Cloudlab is the preferred target to keep the M910q focused.
 
-- **CPU contention** — 4C/4T without Hyper-Threading (ADR 01). Production
-  Docker stack + one or more sandbox containers would push against the ceiling.
-- **RAM pressure** — 16 GB shared between production services and sandboxes.
-- **Storage** — 256 GB NVMe is already tight (ADR 01). Sandbox images + git
-  clones + session DBs compound this.
+OpenCode can be deployed in two modes on these hosts:
 
-The M910q remains focused on production services.
+#### 2a. Host service (bare metal, Ansible-managed)
 
-### 3. Contabo Cloudlab VPS — selected for OpenCode server
+OpenCode installed directly on the host via an Ansible role, running as a
+`systemd` service. Projects are cloned to the host filesystem. Caddy
+reverse-proxies the WebUI. The entire setup is declarative and reproducible
+via the same Ansible workflow that already manages both hosts.
 
-The existing Contabo Cloud VPS 10 (4 vCPU, 8 GB RAM, 75 GB NVMe, €5.50/mo,
-ADR 13) is already provisioned, Ansible-managed, and serves as the Ansible
-playground. Repurposing part of its capacity for OpenCode sandboxes adds no
-cost.
+**Pros:** No Docker overhead. Direct filesystem access to all projects. Simplest
+Ansible integration — `ansible-playbook` runs natively on the same host.
+Declarative and reproducible via the existing Ansible infrastructure.
 
-| Factor | Assessment |
+**Cons:** No sandbox isolation — OpenCode has access to the host filesystem,
+SSH keys, and Docker socket. Dependency conflicts possible between OpenCode's
+tooling and host packages. Cleanup means reverting Ansible state, not just
+removing a container.
+
+#### 2b. Docker container (sandbox)
+
+OpenCode runs as a container via the official image `ghcr.io/anomalyco/opencode`
+(or a custom extension of it with project tooling). Projects are bind-mounted
+or cloned inside a Docker volume. Caddy reverse-proxies to the container port.
+
+**Pros:** Sandbox isolation — no host access, no Docker socket. Reproducible —
+the image is the single source of truth. Easy teardown (`docker rm`). Matches
+the Codespaces model (containerized dev environment). Session data lives in a
+named Docker volume, trivially backed up.
+
+**Cons:** Slightly more setup (Dockerfile, compose file, image build). Tooling
+must be baked into the image or installed at container start. SSH to M910q and
+Cloudlab still works — the sandbox is just another SSH client.
+
+### 3. Windows workstation
+
+The primary daily-driver workstation (Windows 11) could run OpenCode locally
+as a desktop application or via WSL. This is how it's used today for
+interactive TUI sessions (ADR 17's Codespaces-based workflow).
+
+**Pros:** Zero latency — everything runs on local hardware. No network
+dependency for the agent itself (only for LLM API calls). Direct access to
+local files, Windows credential store (DPAPI), and VS Code. Fastest
+interactive experience.
+
+**Cons:** Not a server — the workstation sleeps, reboots, or goes offline.
+No 24/7 availability; background automations only run when the machine is
+awake. Not accessible from other machines (laptop, tablet, phone) without
+additional remote desktop setup. No sandbox isolation unless running inside
+WSL or a VM.
+
+### 3. Sandbox dependency installation strategy
+
+The sandbox needs two categories of tools:
+
+| Category | Provided by |
 |---|---|
-| Server mode | ✅ 24/7 host. OpenCode runs as a `systemd`-managed Docker container behind Caddy. |
-| GitHub repos | ✅ Cloned inside sandbox container via `GH_PAT`. |
-| Multi-project | ✅ All repos cloned into one sandbox; one OpenCode instance serves all. |
-| Sandbox | ✅ Docker container — no host mounts, no `--privileged`, no Docker socket. |
-| Dependencies | ✅ Installed via custom Docker image built from `devcontainer.json` spec (single source of truth). Ansible role automates build and deploy. |
-| Backup | ✅ `systemd` timer tars the Docker volume → `restic` to Azure Blob (ADR 02). |
-| Ansible access | ✅ SSH from sandbox to M910q via KV-stored key (same as Codespaces today). |
-| Cost | ✅ €5.50/mo already paid — no incremental cost. |
-| Resilience | ✅ Separate host from production M910q — one failing doesn't take down the other. |
+| OpenCode runtime (server, WebUI, MCP, sessions, API) | Official image `ghcr.io/anomalyco/opencode` |
+| Project tooling (Ansible, Az PowerShell, Bicep, Azure CLI, GitHub CLI, Node.js) | Custom Dockerfile extending the official image |
 
-### 4. Sandbox dependency installation strategy
+**Approach: custom Dockerfile extending the official image.**
 
-The sandbox needs the same tooling as the Codespace: Ansible, Az PowerShell,
-Bicep, Azure CLI, GitHub CLI, Node.js, PowerShell, Docker CLI, OpenCode.
+OpenCode publishes an official Docker image at `ghcr.io/anomalyco/opencode`,
+and has first-class headless server support via `opencode serve` (API-only) and
+`opencode web` (API + built-in browser WebUI). The official image provides the
+OpenCode runtime; a thin custom Dockerfile adds the project-specific tooling
+the agent needs to invoke via bash:
 
-**Selected approach: Ansible role builds a Docker image from the existing
-`devcontainer.json` spec.**
-
-The `.devcontainer/devcontainer.json` already defines all tooling via Dev
-Container Features + post-create scripts. Instead of duplicating this in a
-standalone Dockerfile, an Ansible role (`opencode_sandbox/`) uses the
-`devcontainer` CLI to build an image directly from the spec:
-
-```
-devcontainer build --workspace-folder . --image-name opencode-sandbox:latest
+```dockerfile
+FROM ghcr.io/anomalyco/opencode:latest
+RUN apt-get update && apt-get install -y ansible ansible-lint curl git jq
+RUN curl -fsSL -o /usr/local/bin/bicep \
+    https://github.com/Azure/bicep/releases/latest/download/bicep-linux-x64 \
+    && chmod +x /usr/local/bin/bicep
+# PowerShell, Az module, Node.js — heavier layers, candidates for a separate build stage
 ```
 
-This eliminates duplication — `devcontainer.json` remains the single source of
-truth for all tooling. The same image works for Codespaces (interactive) and
-the Cloudlab sandbox (headless server).
+This is cleaner than the earlier `devcontainer.json`-derived approach —
+`devcontainer.json` carries VS Code extensions, IDE settings, and user-setup
+logic that is irrelevant for a headless server. It remains the source of truth
+for Codespaces (interactive dev); the Dockerfile is the source of truth for the
+sandbox (headless server).
 
-**For future projects:** adding a tool to `devcontainer.json` + rebuilding the
-image propagates the change to all projects in the shared sandbox. If a project
-needs a conflicting tool (e.g., different Python version), that's the trigger
-to graduate to per-project sandboxes via per-project Dockerfiles that extend
-the base image.
+**For future projects:** adding a tool to the Dockerfile + rebuilding the image
+propagates the change. If a project needs a conflicting dependency, that's the
+trigger for per-project sandboxes with per-project Dockerfiles.
+
+### 4. Headless automation via `opencode run`
+
+OpenCode's CLI supports non-interactive agent execution against a running server:
+
+```bash
+opencode run --attach http://localhost:4096 --agent homelab \
+  "Run the weekly DR validation and report results"
+```
+
+This enables scheduled background tasks via `systemd` timers on the host that
+`docker exec` into the sandbox — something impossible in Codespaces.
 
 ### 5. Architecture overview
 
 ```
-Cloudlab VPS (Contabo, €5.50/mo)
-├── docker compose
-│   └── opencode-sandbox (single container, all projects)
-│       ├── /workspaces/homelab       (volume mount)
-│       ├── /workspaces/project-b     (volume mount, future)
-│       └── /home/vscode/.opencode    (Docker volume, session persistence)
+Cloudlab VPS (Contabo, €5.50/mo) — Ansible-managed, Ubuntu 24.04
+├── Docker
+│   └── opencode-sandbox (ghcr.io/anomalyco/opencode + project tooling)
+│       ├── /workspaces/              (bind-mounted or volume, all git repos)
+│       ├── opencode-data/            (Docker volume, session persistence)
+│       └── opencode web --hostname 0.0.0.0 --port 4096
 ├── Caddy (reverse proxy)
-│   └── opencode.example.com → opencode-sandbox:3000
+│   └── opencode.example.com → opencode-sandbox:4096
 ├── Cloudflare Tunnel (secure remote access)
-├── systemd timer → restic backup → Azure Blob (homelabcloud5/opencode-backups/)
-└── SSH → M910q (Ansible playbook execution)
+├── systemd timer → docker exec opencode restic → Azure Blob
+├── SSH → M910q (Ansible playbook execution)
+└── SSH → self (Cloudlab management via Ansible)
 
 M910q (production)
 ├── Docker stack (Caddy, DNSMasq, Portainer, Gitea, etc.)
-└── No OpenCode overhead
+└── No OpenCode overhead — Cloudlab handles it
+
+Windows workstation (primary interactive client)
+├── OpenCode Desktop App or VS Code → connects to Cloudlab server
+│   └── opencode attach https://opencode.example.com
+├── Also runs OpenCode TUI locally for quick interactive sessions
+└── Connects from anywhere via Cloudflare Tunnel
+
+Codespaces (interactive fallback only)
+└── ADR 14 / ADR 17 — emergency browser-based access
 ```
 
 ### 6. Comparison summary
 
-| Dimension | Codespaces | M910q | Cloudlab |
-|---|---|---|---|
-| Server mode (daemon) | ❌ Idle timeout | ✅ | ✅ |
-| GitHub repos | ✅ | ✅ | ✅ |
-| Multi-project workspace | ❌ 1:1 repo model | ⚠️ HW constrained | ✅ |
-| Sandbox isolation | ✅ (already a container) | ⚠️ HW constrained | ✅ |
-| Dependencies from devcontainer.json | ✅ Native | ⚠️ Extra setup | ✅ Ansible role |
-| Regular backup | ❌ No cron | ✅ systemd timer | ✅ systemd timer |
-| Background automations | ❌ | ✅ | ✅ |
-| Ansible access | ⚠️ SSH hop | ✅ Local | ⚠️ SSH to M910q |
-| Hardware headroom | 4 vCPU / 16 GB dedicated | 4C/4T / 16 GB shared | 4 vCPU / 8 GB dedicated |
-| Cost (24/7) | ~€60/mo (paid tier) | ~€0 incremental | €5.50/mo (already paid) |
-| Separation from production | ✅ | ❌ Same host | ✅ Separate host |
+| Dimension | Codespaces | Homelab / Cloudlab (host service) | Homelab / Cloudlab (Docker container) | Windows workstation |
+|---|---|---|---|---|
+| Server mode (daemon) | ❌ Idle timeout | ✅ `systemd` service, 24/7 | ✅ Docker container, 24/7 | ❌ Sleeps/reboots; not 24/7 |
+| GitHub repos | ✅ Native clone | ✅ `git clone` via `GH_PAT` | ✅ `git clone` via `GH_PAT` | ✅ Native clone |
+| Multi-project workspace | ❌ 1:1 repo model | ✅ All repos on host filesystem | ✅ All repos in bind-mounted dir | ✅ Local filesystem |
+| Sandbox isolation | ✅ (Codespace IS a container) | ❌ Full host access | ✅ Container isolation | ❌ No isolation (unless WSL/VM) |
+| Dependencies | ✅ `devcontainer.json` Features | ✅ Ansible role — declarative | ✅ Baked into Docker image | ⚠️ Manual install or WSL |
+| Regular backup | ❌ No cron | ✅ `systemd` timer + `restic` | ✅ `systemd` timer + `restic` (Docker volume) | ⚠️ Manual or local backup only |
+| Background automations | ❌ | ✅ `systemd` timer triggers `opencode run` | ✅ `systemd` timer → `docker exec opencode run` | ❌ Only when machine is awake |
+| SSH to M910q + Cloudlab | ✅ Via KV-stored key | ✅ Native SSH | ✅ SSH from inside container (same key) | ✅ Native SSH |
+| Reproducibility | ✅ Full rebuild from `devcontainer.json` | ✅ Ansible role — declarative, idempotent | ✅ Image is single source of truth | ❌ Ad-hoc install, state drifts |
+| Cleanup | ✅ Delete Codespace | ✅ Revert Ansible state | ✅ `docker rm` + delete volume | ❌ Manual uninstall |
+| Cost (24/7) | ~€60/mo (paid tier) | ~€0 M910q / €5.50/mo Cloudlab | ~€0 M910q / €5.50/mo Cloudlab | ~€0 (hardware already owned) |
+| Separation from production | ✅ | ❌ M910q: same host as prod services | ✅ M910q: container isolated from host | ✅ Separate machine |
+| Remote access from other machines | ✅ Browser-based (any device) | ✅ WebUI via Caddy + Cloudflare Tunnel | ✅ WebUI via Caddy + Cloudflare Tunnel | ❌ Workstation only (or RDP/VNC overhead) |
 
 ---
 
 ## Decision Path
 
 1. **Started:** OpenCode in Codespaces (ADR 17) — working, but TUI-only.
-2. **Added server mode** → Codespaces eliminated (idle timeout).
-3. **Added sandbox** → M910q eliminated (hardware contention).
-4. **Selected:** Cloudlab VPS — already provisioned, already Ansible-managed,
-   €5.50/mo already paid, sufficient headroom for one shared sandbox container.
+2. **Added server mode** → Codespaces eliminated (idle timeout, no cron).
+3. **Compared host service vs Docker container** → Docker container selected for
+   sandbox isolation and clean teardown. Both are Ansible-managed, so
+   reproducibility is a wash; the differentiator is that host service grants
+   OpenCode full access to the host (filesystem, SSH keys, Docker socket),
+   which violates the sandbox requirement.
+4. **Considered Windows workstation** → good for interactive TUI sessions (zero
+   latency, local files) but fails on server mode and remote access. Not a
+   24/7 host; can't be reached from other machines without RDP/VPN overhead.
+   Best role: primary interactive client that attaches to the Cloudlab server.
+5. **Selected Cloudlab as deployment target** — already provisioned, already
+   Ansible-managed, €5.50/mo already paid. M910q kept focused on production
+   services but could serve the same role if needed.
+6. **Selected official image + custom Dockerfile** over devcontainer.json-derived
+   image — cleaner separation: OpenCode runtime from `ghcr.io/anomalyco/opencode`,
+   project tooling from a thin custom layer.
 
 ---
 
 ## Open Questions
 
-- **OpenCode server mode MCP behavior:** Does OpenCode in server mode handle
-  MCP tool invocations the same way as TUI mode? Specifically, local stdio MCP
-  servers (Azure MCP via `npx`) — do they spawn inside the sandbox container
+- **Official image internals:** What base does `ghcr.io/anomalyco/opencode` use?
+  Does it have `apt` for adding project tooling, or is it a distroless/scratch
+  image that requires a multi-stage build?
+- **OpenCode server mode MCP behavior:** Does `opencode serve`/`opencode web`
+  handle MCP tool invocations the same way as TUI mode? Specifically, local
+  stdio MCP servers (Azure MCP via `npx`) — do they spawn inside the container
   and use the container's env vars?
 - **OpenCode Desktop App connectivity:** Does the Desktop App connect to a
-  remote OpenCode server, or only to a local one? If remote is supported, what
-  authentication mechanism?
+  remote OpenCode server (`opencode attach`), or only to a local one? If
+  remote is supported, does it work through Caddy + Cloudflare Tunnel?
 - **Per-project sandbox graduation trigger:** At what point does a single shared
   sandbox become insufficient — conflicting tool versions, resource isolation,
   or security boundaries between projects?
-- **Background automation in sandbox:** Can OpenCode server mode trigger
-  headless agent tasks (scheduled via systemd timer on the host that
-  `docker exec`s into the sandbox)? Does OpenCode support a CLI invocation
-  mode for scripted agent runs?
+- **Headless automation:** Confirmed via `opencode run --attach`. Need to test
+  whether it works with `--agent` flag to select a specific agent, and whether
+  the exit code reflects success/failure (needed for `systemd` service health).
 
 ---
 
