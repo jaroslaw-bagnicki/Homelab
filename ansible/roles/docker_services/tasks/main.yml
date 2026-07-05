@@ -11,44 +11,28 @@
     state: directory
     mode: "0755"
 
-- name: Fetch cloudflared tunnel token from Key Vault
-  ansible.builtin.shell: |
-    Get-AzKeyVaultSecret -VaultName {{ arc_keyvault_name }} -Name {{ cloudflared_token_secret_name }} -AsPlainText -InformationAction SilentlyContinue
-  args:
-    executable: pwsh
-  delegate_to: localhost
-  become: false
-  register: cloudflared_tunnel_token_raw
-  changed_when: false
-  no_log: true
-
-- name: Fetch Cloudflare Origin Certificate from Key Vault
-  ansible.builtin.shell: |
-    Get-AzKeyVaultSecret -VaultName {{ arc_keyvault_name }} -Name {{ cloudflared_origin_cert_secret_name }} -AsPlainText -InformationAction SilentlyContinue
-  args:
-    executable: pwsh
-  delegate_to: localhost
-  become: false
-  register: cloudflared_origin_cert_raw
-  changed_when: false
-  no_log: true
-
-- name: Fetch Cloudflare Origin Certificate key from Key Vault
-  ansible.builtin.shell: |
-    Get-AzKeyVaultSecret -VaultName {{ arc_keyvault_name }} -Name {{ cloudflared_origin_key_secret_name }} -AsPlainText -InformationAction SilentlyContinue
-  args:
-    executable: pwsh
-  delegate_to: localhost
-  become: false
-  register: cloudflared_origin_key_raw
-  changed_when: false
-  no_log: true
-
-- name: Strip Az context banner from secrets
+- name: Set cloudflared tunnel token from Key Vault
+  vars:
+    vault_url: "https://{{ arc_keyvault_name }}.vault.azure.net"
   ansible.builtin.set_fact:
-    cloudflared_tunnel_token: "{{ cloudflared_tunnel_token_raw.stdout_lines | reject('match', '^:: ') | join('\n') | trim }}"
-    cloudflared_origin_cert: "{{ cloudflared_origin_cert_raw.stdout_lines | reject('match', '^:: ') | join('\n') | trim }}"
-    cloudflared_origin_key: "{{ cloudflared_origin_key_raw.stdout_lines | reject('match', '^:: ') | join('\n') | trim }}"
+    cloudflared_tunnel_token: "{{ lookup('azure.azcollection.azure_keyvault_secret', cloudflared_token_secret_name, vault_url=vault_url) }}"
+  delegate_to: localhost
+  no_log: true
+
+- name: Set cloudflared Origin Certificate from Key Vault
+  vars:
+    vault_url: "https://{{ arc_keyvault_name }}.vault.azure.net"
+  ansible.builtin.set_fact:
+    cloudflared_origin_cert: "{{ lookup('azure.azcollection.azure_keyvault_secret', cloudflared_origin_cert_secret_name, vault_url=vault_url) }}"
+  delegate_to: localhost
+  no_log: true
+
+- name: Set cloudflared Origin Certificate key from Key Vault
+  vars:
+    vault_url: "https://{{ arc_keyvault_name }}.vault.azure.net"
+  ansible.builtin.set_fact:
+    cloudflared_origin_key: "{{ lookup('azure.azcollection.azure_keyvault_secret', cloudflared_origin_key_secret_name, vault_url=vault_url) }}"
+  delegate_to: localhost
   no_log: true
 
 - name: Ensure certs directory exists in {{ docker_dir }}
@@ -73,21 +57,21 @@
 
 - name: Write cloudflared .env file
   ansible.builtin.copy:
-    content: "TUNNEL_TOKEN={{ cloudflared_tunnel_token | trim }}\n"
+    content: "TUNNEL_TOKEN={{ cloudflared_tunnel_token }}\n"
     dest: "{{ docker_dir }}/.env"
     mode: "0600"
   no_log: true
 
 - name: Write Cloudflare Origin Certificate
   ansible.builtin.copy:
-    content: "{{ cloudflared_origin_cert | trim }}\n"
+    content: "{{ cloudflared_origin_cert }}\n"
     dest: "{{ docker_dir }}/certs/origin.pem"
     mode: "0644"
   no_log: true
 
 - name: Write Cloudflare Origin Certificate key
   ansible.builtin.copy:
-    content: "{{ cloudflared_origin_key | trim }}\n"
+    content: "{{ cloudflared_origin_key }}\n"
     dest: "{{ docker_dir }}/certs/origin.key"
     mode: "0600"
   no_log: true
