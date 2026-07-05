@@ -55,6 +55,12 @@
     state: present
     pull: always
 
+- name: Restart Portainer to clear security timeout
+  community.docker.docker_container:
+    name: portainer
+    state: started
+    restart: true
+
 - name: Set Portainer admin password from Key Vault
   vars:
     vault_url: "https://{{ arc_keyvault_name }}.vault.azure.net"
@@ -63,7 +69,7 @@
   delegate_to: localhost
   no_log: true
 
-- name: Wait for Portainer API to become ready on host
+- name: Wait for Portainer to listen on port 9000
   ansible.builtin.wait_for:
     host: 127.0.0.1
     port: 9000

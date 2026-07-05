@@ -1,10 +1,9 @@
 ---
 - name: Restart Caddy
-  community.docker.docker_compose_v2:
-    project_src: "{{ docker_dir }}"
-    services:
-      - caddy
-    state: restarted
+  community.docker.docker_container:
+    name: caddy
+    state: started
+    restart: true
 
 - name: Restart cloudflared
   community.docker.docker_compose_v2:
