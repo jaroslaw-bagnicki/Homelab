@@ -13,6 +13,7 @@ Significant architectural and technology choices recorded in
 
 | # | Date | ADR | Status |
 |---|------|-----|--------|
+| 19 | 2026-07-05 | [HTTPS-only origin via Cloudflare Tunnel + Cloudflare Origin CA on Cloudlab](19-cloudflare-tunnel-https-origin.md) | Accepted |
 | 18 | 2026-07-04 | [Run OpenCode as a Docker Sandbox (Homelab / Cloudlab)](18-opencode-docker-sandbox.md) | Proposed |
 | 17 | 2026-06-28 | [Adopt OpenCode for Agentic Homelab Development](17-adopt-opencode.md) | Implemented |
 | 16 | 2026-06-28 | [GH Codespaces Service Principal for Homelab](16-gh-codespaces-sp-for-homelab.md) | Implemented |
