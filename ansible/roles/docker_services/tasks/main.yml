@@ -13,7 +13,6 @@
 
 - name: Fetch all cloudflared secrets from Key Vault
   ansible.builtin.shell: |
-    Set-AzContext -TenantId {{ arc_tenant_id }} -SubscriptionId {{ arc_subscription_id }} | Out-Null
     @{
       tunnel_token = [string](Get-AzKeyVaultSecret -VaultName {{ arc_keyvault_name }} -Name {{ cloudflared_token_secret_name }} -AsPlainText)
       origin_cert  = [string](Get-AzKeyVaultSecret -VaultName {{ arc_keyvault_name }} -Name {{ cloudflared_origin_cert_secret_name }} -AsPlainText)
@@ -27,11 +26,16 @@
   changed_when: false
   no_log: true
 
-- name: Parse cloudflared secrets into individual facts
+- name: Parse cloudflared secrets from JSON in stdout
   ansible.builtin.set_fact:
-    cloudflared_tunnel_token: "{{ (cloudflared_secrets_raw.stdout | from_json).tunnel_token }}"
-    cloudflared_origin_cert: "{{ (cloudflared_secrets_raw.stdout | from_json).origin_cert }}"
-    cloudflared_origin_key: "{{ (cloudflared_secrets_raw.stdout | from_json).origin_key }}"
+    cloudflared_secrets: "{{ (cloudflared_secrets_raw.stdout | regex_search('\\{[\\s\\S]*?\\}')) | from_json }}"
+  no_log: true
+
+- name: Set individual secret facts
+  ansible.builtin.set_fact:
+    cloudflared_tunnel_token: "{{ cloudflared_secrets.tunnel_token }}"
+    cloudflared_origin_cert: "{{ cloudflared_secrets.origin_cert }}"
+    cloudflared_origin_key: "{{ cloudflared_secrets.origin_key }}"
   no_log: true
 
 - name: Ensure certs directory exists in {{ docker_dir }}

@@ -2,7 +2,7 @@
 - name: UFW default deny incoming
   community.general.ufw:
     default: deny
-    direction: in
+    direction: incoming
 
 - name: UFW allow SSH
   community.general.ufw:
