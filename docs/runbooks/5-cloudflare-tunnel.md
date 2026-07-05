@@ -1,5 +1,9 @@
 # Homelab Setup — Cloudflare Tunnel
 
+> **Superseded by [runbook 16](16-docker-services-ansible-role.md) and [issue #25](https://github.com/jaroslaw-bagnicki/Homelab/issues/25).**
+> The `cloudflared` container is now managed by the `docker_services` Ansible role; manual edits to `/opt/docker/docker-compose.yml` will be overwritten on the next playbook run.
+> This runbook remains as historical reference for the original manual deployment.
+
 > Runbook for exposing homelab services publicly via Cloudflare Tunnel — no open router ports or public IP needed.
 
 ## Prerequisites

@@ -13,6 +13,7 @@ Significant architectural and technology choices recorded in
 
 | # | Date | ADR | Status |
 |---|------|-----|--------|
+| 19 | 2026-07-05 | [HTTPS-only origin via Cloudflare Tunnel + Cloudflare Origin CA on Cloudlab](19-cloudflare-tunnel-https-origin.md) | Accepted |
 | 18 | 2026-07-04 | [Run OpenCode as a Docker Sandbox (Homelab / Cloudlab)](18-opencode-docker-sandbox.md) | Proposed |
 | 17 | 2026-06-28 | [Adopt OpenCode for Agentic Homelab Development](17-adopt-opencode.md) | Implemented |
 | 16 | 2026-06-28 | [GH Codespaces Service Principal for Homelab](16-gh-codespaces-sp-for-homelab.md) | Implemented |
@@ -23,7 +24,7 @@ Significant architectural and technology choices recorded in
 | 11 | 2026-06-13 | [Ticketing System — GitHub Issues](11-ticketing-github-issues.md) | Implemented |
 | 10 | 2026-06-13 | [Ansible for Host Configuration Management](10-ansible-host-config.md) | Implemented |
 | 9 | 2026-06-02 | [Azure Monitor via Arc for Homelab Monitoring](09-azure-monitor-via-arc.md) | Implemented (partial) |
-| 8 | 2026-05-30 | [Remote Access — Cloudflare Tunnel for Inbound HTTPS](08-remote-access-cloudflare-tunnel.md) | Implemented |
+| 8 | 2026-05-30 | [Remote Access — Cloudflare Tunnel for Inbound HTTPS](08-remote-access-cloudflare-tunnel.md) | Superseded by [ADR 19](19-cloudflare-tunnel-https-origin.md) |
 | 7 | 2026-05-29 | [Reverse Proxy — Caddy with Auto-TLS and Configuration-as-Code](07-reverse-proxy-caddy.md) | Implemented |
 | 6 | 2026-05-29 | [Local DNS Resolution — DNSMasq with Wildcard `.home` Domains](06-local-dns-dnsmasq.md) | Implemented |
 | 5 | 2026-05-24 | [OS Decision — Ubuntu Server 24.04 LTS](05-os-decision-ubuntu-server.md) | Implemented |

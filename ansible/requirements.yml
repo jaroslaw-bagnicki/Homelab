@@ -3,3 +3,5 @@ collections:
     version: "3.7.0"
   - name: community.general
     version: ">=7.0.0"
+  - name: azure.azcollection
+    version: ">=1.19.0"
