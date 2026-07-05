@@ -16,13 +16,19 @@ services:
     container_name: caddy
     restart: always
     ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp"
+      - "127.0.0.1:8080:8080"
     volumes:
-      - {{ docker_dir }}/Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
+      - "{{ docker_dir }}/Caddyfile:/etc/caddy/Caddyfile:ro"
+    networks:
+      - homelab_net
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    restart: always
+    env_file:
+      - "{{ docker_dir }}/.env"
+    command: tunnel --no-autoupdate run
     networks:
       - homelab_net
 
@@ -35,8 +41,6 @@ services:
 
 volumes:
   portainer_data:
-  caddy_data:
-  caddy_config:
 
 networks:
   homelab_net:

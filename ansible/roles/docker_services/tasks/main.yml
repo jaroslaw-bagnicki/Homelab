@@ -1,9 +1,23 @@
 ---
+- name: Validate inventory_hostname is in supported set
+  ansible.builtin.assert:
+    that:
+      - inventory_hostname in ['homelab', 'cloudlab']
+    fail_msg: "inventory_hostname '{{ inventory_hostname }}' is not in the supported set {homelab, cloudlab}. Update the assertion in tasks/main.yml."
+
 - name: Ensure Docker service directory exists
   ansible.builtin.file:
     path: "{{ docker_dir }}"
     state: directory
     mode: "0755"
+
+- name: Set cloudflared tunnel token from Key Vault
+  vars:
+    vault_url: "https://{{ arc_keyvault_name }}.vault.azure.net"
+  ansible.builtin.set_fact:
+    cloudflared_tunnel_token: "{{ lookup('azure.azcollection.azure_keyvault_secret', cloudflared_token_secret_name, vault_url=vault_url) }}"
+  delegate_to: localhost
+  no_log: true
 
 - name: Template docker-compose.yml
   ansible.builtin.template:
@@ -18,6 +32,22 @@
     dest: "{{ docker_dir }}/Caddyfile"
     mode: "0644"
   notify: Restart Caddy
+
+- name: Write cloudflared .env file
+  ansible.builtin.copy:
+    content: "TUNNEL_TOKEN={{ cloudflared_tunnel_token }}\n"
+    dest: "{{ docker_dir }}/.env"
+    mode: "0600"
+  no_log: true
+  notify: Restart cloudflared
+
+- name: Ensure .env is excluded from any future git init
+  ansible.builtin.lineinfile:
+    path: "{{ docker_dir }}/.gitignore"
+    line: ".env"
+    create: true
+    state: present
+    mode: "0600"
 
 - name: Deploy docker services
   community.docker.docker_compose_v2:

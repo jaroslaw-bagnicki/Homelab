@@ -6,6 +6,13 @@
       - caddy
     state: restarted
 
+- name: Restart cloudflared
+  community.docker.docker_compose_v2:
+    project_src: "{{ docker_dir }}"
+    services:
+      - cloudflared
+    state: restarted
+
 - name: Redeploy docker services
   community.docker.docker_compose_v2:
     project_src: "{{ docker_dir }}"
