@@ -8,6 +8,11 @@ https://hello.ctb.cloud5.ovh {
     reverse_proxy hello:80
 }
 
+https:// {
+    tls /etc/caddy/certs/origin.pem /etc/caddy/certs/origin.key
+    respond "Caddy works."
+}
+
 :8080 {
     respond "Caddy debug: OK"
 }
