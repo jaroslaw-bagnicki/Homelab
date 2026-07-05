@@ -96,7 +96,7 @@ Before the first `ansible-playbook` run, complete these steps in the [Cloudflare
 Navigate: **Zero Trust** → **Networks** → **Tunnels** → **Create a tunnel**
 
 - Connector type: **Cloudflared**
-- Name: `cloudlab-tunnel` (or any name — the value of `cloudflared_env` matches the inventory hostname, e.g. `cloudlab`)
+- Name: `cloudlab-tunnel` (any name works — the role's defaults derive Key Vault secret names from `inventory_hostname` via the `cloudflared_*_secret_name` vars)
 
 Click **Save tunnel**. **Copy the tunnel token** (shown once) — store in a temp file.
 
