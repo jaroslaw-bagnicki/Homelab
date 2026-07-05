@@ -6,6 +6,12 @@ http://hello.cloud5.ovh {
     reverse_proxy hello:80
 }
 
+http://portainer.cloud5.ovh {
+    reverse_proxy portainer:9000 {
+        header_up X-Forwarded-Proto https
+    }
+}
+
 :8080 {
     respond "Caddy debug: OK"
 }
