@@ -11,26 +11,12 @@
     state: directory
     mode: "0755"
 
-- name: Set cloudflared tunnel token from Key Vault
+- name: Set cloudflared secret facts from Key Vault
   vars:
     vault_url: "https://{{ arc_keyvault_name }}.vault.azure.net"
   ansible.builtin.set_fact:
     cloudflared_tunnel_token: "{{ lookup('azure.azcollection.azure_keyvault_secret', cloudflared_token_secret_name, vault_url=vault_url) }}"
-  delegate_to: localhost
-  no_log: true
-
-- name: Set cloudflared Origin Certificate from Key Vault
-  vars:
-    vault_url: "https://{{ arc_keyvault_name }}.vault.azure.net"
-  ansible.builtin.set_fact:
     cloudflared_origin_cert: "{{ lookup('azure.azcollection.azure_keyvault_secret', cloudflared_origin_cert_secret_name, vault_url=vault_url) }}"
-  delegate_to: localhost
-  no_log: true
-
-- name: Set cloudflared Origin Certificate key from Key Vault
-  vars:
-    vault_url: "https://{{ arc_keyvault_name }}.vault.azure.net"
-  ansible.builtin.set_fact:
     cloudflared_origin_key: "{{ lookup('azure.azcollection.azure_keyvault_secret', cloudflared_origin_key_secret_name, vault_url=vault_url) }}"
   delegate_to: localhost
   no_log: true
