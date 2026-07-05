@@ -55,12 +55,6 @@
     state: present
     pull: always
 
-- name: Restart Portainer to clear security timeout
-  community.docker.docker_container:
-    name: portainer
-    state: started
-    restart: true
-
 - name: Set Portainer admin password from Key Vault
   vars:
     vault_url: "https://{{ arc_keyvault_name }}.vault.azure.net"
@@ -91,4 +85,3 @@
   register: portainer_init
   changed_when: portainer_init.status == 200
   no_log: true
-  delegate_to: cloudlab
