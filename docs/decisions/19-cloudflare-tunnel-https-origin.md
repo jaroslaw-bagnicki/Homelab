@@ -13,7 +13,7 @@ Cloudlab (Contabo VPS) needs HTTPS ingress matching Homelab's pattern (ADR 08 â€
 - Mixes public CA validation with a private VPS
 - Doesn't match Homelab's pattern (ADR 08), making the two environments diverge
 
-Issue #25 introduces a Cloudflare Tunnel on Cloudlab (separate from Homelab's `homelab-tunnel`) using a different external DNS scope (`ctb.cloud5.ovh` vs Homelab's `*.cloud5.ovh`). With Tunnel, CF edge terminates TLS from clients; the connection from cloudflared to Caddy is internal (Docker network). This changes the trust model and the cert requirements.
+Issue #25 introduces a Cloudflare Tunnel on Cloudlab (separate from Homelab's `homelab-tunnel`) using a different external DNS scope (`cloud5.ovh` vs Homelab's `*.cloud5.ovh`). With Tunnel, CF edge terminates TLS from clients; the connection from cloudflared to Caddy is internal (Docker network). This changes the trust model and the cert requirements.
 
 ## Decision
 

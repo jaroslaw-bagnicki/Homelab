@@ -32,7 +32,7 @@
 | Portainer | `portainer/portainer-ce:latest` | `127.0.0.1:9000:9000` | `homelab_net` | Localhost-only UI |
 | Caddy | `caddy:2-alpine` | `127.0.0.1:443:443`, `127.0.0.1:443:443/udp`, `127.0.0.1:8080:8080` | `homelab_net` | Loopback-only HTTPS + debug endpoint; reads Origin cert from `{{ docker_dir }}/certs/` bind mount |
 | cloudflared | `cloudflare/cloudflared:latest` | none (outbound QUIC only) | `homelab_net` | Reads `TUNNEL_TOKEN` from `{{ docker_dir }}/.env` bind mount |
-| Hello | `nginxdemos/hello:latest` | none (proxied internally) | `homelab_net` | Reverse-proxied via Caddyfile for `hello.ctb.cloud5.ovh` |
+| Hello | `nginxdemos/hello:latest` | none (proxied internally) | `homelab_net` | Reverse-proxied via Caddyfile for `hello.cloud5.ovh` |
 
 Caddy serves HTTPS only (no port 80 listener). cloudflared makes a single outbound QUIC connection to Cloudflare edge. Public HTTPS terminates at CF edge; clients see CF's public cert.
 
@@ -76,8 +76,8 @@ roles:
 - [ ] All 4 containers running: `docker ps` shows `portainer`, `caddy`, `cloudflared`, `hello` all `Up`
 - [ ] cloudflared connected: `docker logs cloudflared 2>&1 | grep -i 'connection.*registered'` shows a successful registration
 - [ ] Local Caddy debug endpoint works: from the VPS, `curl -s http://127.0.0.1:8080` returns `Caddy debug: OK`
-- [ ] HTTPS through Cloudflare Tunnel works: from any internet device, `curl -sI https://ctb.cloud5.ovh` returns `HTTP/2 200` with a valid CF edge cert
-- [ ] Hello service reachable through tunnel: from any internet device, `curl -sI https://hello.ctb.cloud5.ovh` returns `HTTP/2 200` (proxied to `hello` container)
+- [ ] HTTPS through Cloudflare Tunnel works: from any internet device, `curl -sI https://cloud5.ovh` returns `HTTP/2 200` with a valid CF edge cert
+- [ ] Hello service reachable through tunnel: from any internet device, `curl -sI https://hello.cloud5.ovh` returns `HTTP/2 200` (proxied to `hello` container)
 - [ ] Portainer NOT exposed publicly: `curl -s --connect-timeout 5 http://173.249.27.13:9000` → connection refused or timeout
 - [ ] Direct HTTP blocked: `curl -s --connect-timeout 5 http://173.249.27.13` → connection refused (UFW deny 80)
 - [ ] File permissions correct on the VPS:
@@ -105,7 +105,7 @@ Click **Save tunnel**. **Copy the tunnel token** (shown once) — store in a tem
 Navigate: **SSL/TLS** → **Origin Server** → **Create Certificate**
 
 - Private key type: **RSA**
-- Hostnames (add both): `*.ctb.cloud5.ovh` AND `ctb.cloud5.ovh`
+- Hostnames (add both): `*.cloud5.ovh` AND `cloud5.ovh`
 - Validity: **15 years**
 
 Click **Create**. **Copy the certificate (PEM) and private key** (each shown once) — store in temp files.
@@ -115,13 +115,13 @@ Click **Create**. **Copy the certificate (PEM) and private key** (each shown onc
 Skip the "install connector" wizard. In the tunnel detail page → **Public Hostnames** tab → **Add a public hostname** for each service you want to expose:
 
 - Subdomain: the service name (e.g. `hello`) or empty for the apex
-- Domain: `ctb.cloud5.ovh`
+- Domain: `cloud5.ovh`
 - Service: **HTTPS**
 - URL: `https://caddy:443`
 
 Repeat for each service. The CF dashboard auto-creates the corresponding DNS CNAME record.
 
-> **Note:** Cloudflare free tier does not support multi-level wildcards (`*.ctb.cloud5.ovh`). Each new service requires its own public hostname entry.
+> **Note:** Cloudflare free tier does not support multi-level wildcards (`*.cloud5.ovh`). Each new service requires its own public hostname entry.
 
 ### 6.4 — Store 3 secrets in Azure Key Vault
 
@@ -168,13 +168,13 @@ In the CF dashboard, **Zero Trust** → **Networks** → **Tunnels** → `cloudl
 
 ## Adding New Services
 
-To expose a new service (e.g. `portainer.ctb.cloud5.ovh`) through the tunnel:
+To expose a new service (e.g. `portainer.cloud5.ovh`) through the tunnel:
 
-1. **CF dashboard**: add a new public hostname on the tunnel (`portainer.ctb.cloud5.ovh` → `https://caddy:443`)
+1. **CF dashboard**: add a new public hostname on the tunnel (`portainer.cloud5.ovh` → `https://caddy:443`)
 2. **CF dashboard**: regenerate the Origin cert with the new SAN, store new PEM in KV (overwrite `cloudflared-origin-cert-cloudlab`)
 3. **Caddyfile.j2**: add a new site block:
    ```
-   https://portainer.ctb.cloud5.ovh {
+   https://portainer.cloud5.ovh {
        tls /etc/caddy/certs/origin.pem /etc/caddy/certs/origin.key
        reverse_proxy portainer:9000
    }

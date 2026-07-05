@@ -1,9 +1,9 @@
-https://ctb.cloud5.ovh {
+https://cloud5.ovh {
     tls /etc/caddy/certs/origin.pem /etc/caddy/certs/origin.key
     respond "Caddy works."
 }
 
-https://hello.ctb.cloud5.ovh {
+https://hello.cloud5.ovh {
     tls /etc/caddy/certs/origin.pem /etc/caddy/certs/origin.key
     reverse_proxy hello:80
 }
