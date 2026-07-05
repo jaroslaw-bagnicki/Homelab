@@ -1,7 +1,7 @@
-# HTTPS-only origin via Cloudflare Tunnel + Cloudflare Origin CA on Cloudlab
+# Cloudflare Tunnel HTTP origin with Caddy reverse proxy on Cloudlab
 
 **Date:** 2026-07-05
-**Status:** Accepted
+**Status:** Accepted (revised 2026-07-05)
 
 ---
 
@@ -15,19 +15,32 @@ Cloudlab (Contabo VPS) needs HTTPS ingress matching Homelab's pattern (ADR 08 �
 
 Issue #25 introduces a Cloudflare Tunnel on Cloudlab (separate from Homelab's `homelab-tunnel`) using a different external DNS scope (`cloud5.ovh` vs Homelab's `*.cloud5.ovh`). With Tunnel, CF edge terminates TLS from clients; the connection from cloudflared to Caddy is internal (Docker network). This changes the trust model and the cert requirements.
 
-## Decision
+## Decision (revised 2026-07-05)
 
 - **cloudflared** is deployed by the Ansible `docker_services` role as a fourth container alongside portainer, caddy, hello
 - **Cloudflare Tunnel** is the only public ingress path; direct public IP exposure is not used
-- Caddy uses a **Cloudflare Origin CA certificate** for TLS to origin (not Let's Encrypt, not self-signed, not Caddy-issued)
-- **CF SSL/TLS mode: Full (Strict)** — required so CF edge validates the Origin CA cert on origin
-- **Caddy binds 127.0.0.1:443 only** (loopback); no external port 80/443/8080 binding. Loopback-only 8080 is used for a local debug endpoint
-- **Caddyfile serves HTTPS only** (no `http://` block). Per-host site blocks reference the Origin cert explicitly via the `tls` directive (no ACME attempt)
+- **cloudflared connects to Caddy via HTTP** (`http://caddy:80`) — TLS is terminated at CF edge; the connection between cloudflared and Caddy is internal Docker network traffic
+- **Caddyfile serves plain HTTP** — no TLS, no cert directives. Caddy proxies internal services and serves responses directly
+- **Dashboard tunnel config** points all hostnames to `http://caddy:80` — no HTTPS origin URL (eliminates TLS SNI mismatch between `caddy` hostname and cert SANs)
 - **UFW denies inbound 80** (defense in depth — tunnel handles all public traffic)
 - **UFW allows outbound UDP/7844** (cloudflared's QUIC connection to CF edge)
-- **CF edge "Always Use HTTPS"** is enabled — public HTTP requests get 301-redirected to HTTPS at CF edge, before reaching the tunnel
 
-The cert is provisioned once in the CF dashboard (SSL/TLS → Origin Server → Create Certificate) and the PEM + private key are stored in Azure Key Vault `homelab-bysxdb-kv` as secrets `cloudflared-origin-cert-cloudlab` and `cloudflared-origin-key-cloudlab`. Validity: 15 years. No renewal automation needed.
+### Original HTTPS-to-origin approach (superseded)
+
+The original design attempted HTTPS between cloudflared and Caddy using a **Cloudflare Origin CA certificate**. This was abandoned because:
+
+1. **SNI mismatch**: cloudflared connects with TLS SNI=`caddy` (derived from the dashboard ingress rule URL `https://caddy:443`). The cert's SANs cover only `*.cloud5.ovh` and `cloud5.ovh` — not `caddy`.
+2. **No config-file override**: cloudflared v2026.6.1 config parser discards `originRequest` fields for dashboard-managed tunnels (`--origin-server-name`, `--no-tls-verify`, and config.yml `originRequest` settings are all ignored).
+3. **No dashboard setting**: the CF Zero Trust dashboard does not expose an "Origin Server Name" field for public hostname TLS settings.
+
+After exhausting CLI flags, config files, and dashboard options, the simplest and most reliable solution was to switch the tunnel origin URL to `http://caddy:80` and drop TLS between cloudflared and Caddy entirely. Public traffic remains HTTPS (CF terminates at edge); internal Docker traffic is plain HTTP on a private network.
+
+### Why this is acceptable
+
+- **PUBLIC traffic**: CF edge terminates TLS for all cloud5.ovh hostnames. Clients never see the internal HTTP connection.
+- **Internal traffic**: cloudflared and Caddy communicate over the `homelab_net` Docker bridge network. No untrusted parties can intercept traffic on this network.
+- **No cert management**: eliminates cert provisioning, renewal, SAN management, KV secret management, and TLS compatibility debugging.
+- **Matches ADR 08**: this is the same pattern used for the original Homelab setup (CF terminates TLS, plain HTTP to origin).
 
 ## Alternatives considered
 
@@ -39,14 +52,14 @@ The cert is provisioned once in the CF dashboard (SSL/TLS → Origin Server → 
 ## Consequences
 
 - All public HTTPS traffic terminates at CF edge; clients see CF's public edge cert (trusted)
-- Caddy presents the CF Origin CA cert to cloudflared (over the Docker network, not visible to external clients)
-- Direct-IP testing via SSH port-forward (e.g., `ssh -L 8443:127.0.0.1:443 cloudlab`) requires the `-k` flag — the CF Origin CA is not in the local trust store by default
-- Port 80 is not bound externally; CF Tunnel is the only ingress path
-- The Origin cert is valid for 15 years — no cert renewal automation, no ACME challenge to debug
-- Operator must provision the Origin cert in CF dashboard and store PEM + key in KV before the first Ansible run
-- The `cloudflared` container joins the `homelab_net` Docker network — the same network Caddy and other services use, allowing name-based routing within the stack
-- All public traffic routes through Cloudflare (single point of trust and latency hop) — consistent with ADR 08
-- Future services exposed publicly only need: (a) a new CF public hostname rule, (b) a new Caddyfile site block, (c) a new SAN in the Origin cert
+- cloudflared connects to Caddy over HTTP on `homelab_net` Docker network (no TLS between origin and proxy)
+- Caddyfile is simpler: plain HTTP blocks (no `tls` directives, no cert files to mount)
+- No cert provisioning, no cert renewal, no KV cert fetches — only the tunnel token is stored in KV
+- The Ansible role fetches a single secret from KV (tunnel token) via `azure.azcollection.azure_keyvault_secret` lookup
+- Direct-IP testing via SSH port-forward works on `http://127.0.0.1:8080` (debug endpoint)
+- Port 80 is not exposed externally; CF Tunnel is the only ingress path
+- All public traffic routes through Cloudflare (single point of trust + latency hop) — consistent with ADR 08
+- Future services need only a Caddyfile `http://` block + CF dashboard DNS record (if not covered by wildcard)
 
 ## References
 
