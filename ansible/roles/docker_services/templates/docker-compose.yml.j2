@@ -16,12 +16,9 @@ services:
     container_name: caddy
     restart: always
     ports:
-      - "127.0.0.1:443:443"
-      - "127.0.0.1:443:443/udp"
       - "127.0.0.1:8080:8080"
     volumes:
       - "{{ docker_dir }}/Caddyfile:/etc/caddy/Caddyfile:ro"
-      - "{{ docker_dir }}/certs:/etc/caddy/certs:ro"
     networks:
       - homelab_net
 

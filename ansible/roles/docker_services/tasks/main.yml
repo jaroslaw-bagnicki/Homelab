@@ -11,21 +11,13 @@
     state: directory
     mode: "0755"
 
-- name: Set cloudflared secret facts from Key Vault
+- name: Set cloudflared tunnel token from Key Vault
   vars:
     vault_url: "https://{{ arc_keyvault_name }}.vault.azure.net"
   ansible.builtin.set_fact:
     cloudflared_tunnel_token: "{{ lookup('azure.azcollection.azure_keyvault_secret', cloudflared_token_secret_name, vault_url=vault_url) }}"
-    cloudflared_origin_cert: "{{ lookup('azure.azcollection.azure_keyvault_secret', cloudflared_origin_cert_secret_name, vault_url=vault_url) }}"
-    cloudflared_origin_key: "{{ lookup('azure.azcollection.azure_keyvault_secret', cloudflared_origin_key_secret_name, vault_url=vault_url) }}"
   delegate_to: localhost
   no_log: true
-
-- name: Ensure certs directory exists in {{ docker_dir }}
-  ansible.builtin.file:
-    path: "{{ docker_dir }}/certs"
-    state: directory
-    mode: "0755"
 
 - name: Template docker-compose.yml
   ansible.builtin.template:
@@ -49,32 +41,13 @@
   no_log: true
   notify: Restart cloudflared
 
-- name: Write Cloudflare Origin Certificate
-  ansible.builtin.copy:
-    content: "{{ cloudflared_origin_cert }}\n"
-    dest: "{{ docker_dir }}/certs/origin.pem"
-    mode: "0644"
-  no_log: true
-  notify: Restart Caddy
-
-- name: Write Cloudflare Origin Certificate key
-  ansible.builtin.copy:
-    content: "{{ cloudflared_origin_key }}\n"
-    dest: "{{ docker_dir }}/certs/origin.key"
-    mode: "0600"
-  no_log: true
-  notify: Restart Caddy
-
-- name: Ensure secrets are excluded from any future git init
+- name: Ensure .env is excluded from any future git init
   ansible.builtin.lineinfile:
     path: "{{ docker_dir }}/.gitignore"
-    line: "{{ item }}"
+    line: ".env"
     create: true
     state: present
     mode: "0600"
-  loop:
-    - ".env"
-    - "certs/"
 
 - name: Deploy docker services
   community.docker.docker_compose_v2:
