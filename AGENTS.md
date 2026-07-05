@@ -158,3 +158,11 @@ The boundary between planning (read-only) and implementation (build) must be cle
 - **Concept elaboration.** Define domain terms on first use (TLS SNI, Origin CA, CF edge, apex, SAN, Strict SSL, etc.) — one sentence, plain language. If the user asks "what is X?", stop and explain before continuing.
 - **One recommendation, not option menus.** Pick the best approach and recommend it with a brief rationale. Only offer multiple options when the user must make a genuine tradeoff.
 - **No live/direct changes during plan phase.** All implementation happens after the plan is fully accepted. Do not edit the live VPS, services, or infrastructure while the plan is still being discussed. Live edits during planning create unreproducible drift.
+
+## Ansible Verification
+
+- **ansible-lint before commit.** Run `ansible-lint ansible/roles/<role>/` on every changed role before committing. Lint failures are fatal and must be resolved.
+- **Live playbook test before merge.** For non-trivial Ansible changes, run `ansible-playbook playbook.yml --diff` against the target host before opening the PR. Bugs in tasks (idempotency, output parsing, module parameters) only surface at runtime.
+- **Post-merge deployment.** After the PR is merged, re-run the playbook to ensure the live host matches the merged code.
+- **Pre-flight: fix world-writable workspace.** If the dev container workspace is world-writable (default), Ansible refuses to read `ansible.cfg`. Run `chmod 755 /workspaces/Homelab /workspaces/Homelab/ansible` before `ansible-playbook`.
+- **Never commit `ansible/ansible.log`.** The file is `.gitignore`'d but may have been tracked before. Untrack it with `git rm --cached ansible/ansible.log` if it appears in `git status`.
