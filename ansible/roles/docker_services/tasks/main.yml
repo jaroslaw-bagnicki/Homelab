@@ -77,13 +77,18 @@
     timeout: 30
   changed_when: false
 
-- name: Init Portainer admin user  # noqa command-instead-of-module
-  ansible.builtin.shell:
-    cmd: >
-      curl -sf -X POST http://127.0.0.1:9000/api/users/admin/init
-      -H 'Content-Type: application/json'
-      -d '{"Username":"admin","Password":"{{ portainer_admin_password }}"}'
+- name: Init Portainer admin user
+  ansible.builtin.uri:
+    url: http://127.0.0.1:9000/api/users/admin/init
+    method: POST
+    body_format: json
+    body:
+      Username: admin
+      Password: "{{ portainer_admin_password }}"
+    status_code:
+      - 200
+      - 409
   register: portainer_init
-  changed_when: portainer_init.rc == 0
-  failed_when: portainer_init.rc != 0 and portainer_init.rc != 22
+  changed_when: portainer_init.status == 200
   no_log: true
+  delegate_to: cloudlab
