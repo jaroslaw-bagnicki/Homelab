@@ -37,7 +37,7 @@
   ansible.builtin.apt:
     name: fail2ban
     state: present
-    update_cache: yes
+    update_cache: true
 
 - name: Deploy fail2ban jail config
   ansible.builtin.template:
@@ -52,4 +52,4 @@
   ansible.builtin.service:
     name: fail2ban
     state: started
-    enabled: yes
+    enabled: true
