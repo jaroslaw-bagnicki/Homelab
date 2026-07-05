@@ -31,7 +31,7 @@ services:
     restart: always
     env_file:
       - "{{ docker_dir }}/.env"
-    command: tunnel --no-autoupdate --no-tls-verify run
+    command: tunnel --no-autoupdate run
     networks:
       - homelab_net
 
