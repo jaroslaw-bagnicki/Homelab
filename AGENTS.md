@@ -149,3 +149,12 @@ When asked to process PR review remarks, follow this human-in-the-loop flow:
 - **Surface findings as concise summaries** — short status with file paths and commit refs; not essays
 - **Discover skills via the skill tool** — repo skills live under `.opencode/skills/` (symlinked to `.github/skills/`); load a skill only when its description matches the current task
 - **Do not create issues proactively** — issue creation is reserved for multi-session work the user explicitly asks to track; for one-shot fixes or docs changes, a commit is enough
+
+## Plan → Build Transition
+
+The boundary between planning (read-only) and implementation (build) must be clear:
+
+- **Step-by-step plan acceptance.** Present one plan step at a time. Do not move to the next step until the user accepts the current one. Never present multiple steps in one message unless asked.
+- **Concept elaboration.** Define domain terms on first use (TLS SNI, Origin CA, CF edge, apex, SAN, Strict SSL, etc.) — one sentence, plain language. If the user asks "what is X?", stop and explain before continuing.
+- **One recommendation, not option menus.** Pick the best approach and recommend it with a brief rationale. Only offer multiple options when the user must make a genuine tradeoff.
+- **No live/direct changes during plan phase.** All implementation happens after the plan is fully accepted. Do not edit the live VPS, services, or infrastructure while the plan is still being discussed. Live edits during planning create unreproducible drift.
