@@ -18,10 +18,10 @@
 | File | Purpose |
 |---|---|
 | `ansible/roles/docker_services/defaults/main.yml` | Role defaults: `docker_dir`, `arc_*` (tenant/sub/vault), `cloudflared_*_secret_name` |
-| `ansible/roles/docker_services/tasks/main.yml` | Validate host → ensure `docker_dir` → fetch 3 KV secrets → write `.env`/certs/Caddyfile → `docker compose up` |
+| `ansible/roles/docker_services/tasks/main.yml` | Validate host → ensure `docker_dir` → fetch tunnel token from KV → write `.env` → template files → `docker compose up` |
 | `ansible/roles/docker_services/handlers/main.yml` | `Restart Caddy` (on Caddyfile change), `Redeploy docker services` (on compose change) |
 | `ansible/roles/docker_services/templates/docker-compose.yml.j2` | Service definitions: portainer, caddy, **cloudflared**, hello + `homelab_net` + `portainer_data` |
-| `ansible/roles/docker_services/templates/Caddyfile.j2` | Per-host HTTPS site blocks + `:8080` local debug endpoint |
+| `ansible/roles/docker_services/templates/Caddyfile.j2` | Per-host HTTP site blocks + `:8080` local debug endpoint |
 
 ---
 
@@ -30,11 +30,11 @@
 | Service | Image | Port binding | Network | Notes |
 |---|---|---|---|---|
 | Portainer | `portainer/portainer-ce:latest` | `127.0.0.1:9000:9000` | `homelab_net` | Localhost-only UI |
-| Caddy | `caddy:2-alpine` | `127.0.0.1:443:443`, `127.0.0.1:443:443/udp`, `127.0.0.1:8080:8080` | `homelab_net` | Loopback-only HTTPS + debug endpoint; reads Origin cert from `{{ docker_dir }}/certs/` bind mount |
-| cloudflared | `cloudflare/cloudflared:latest` | none (outbound QUIC only) | `homelab_net` | Reads `TUNNEL_TOKEN` from `{{ docker_dir }}/.env` bind mount |
+| Caddy | `caddy:2-alpine` | `127.0.0.1:8080:8080` | `homelab_net` | Loopback-only 8080 debug endpoint. No external port 80/443 — all public traffic arrives through the Cloudflare Tunnel |
+| cloudflared | `cloudflare/cloudflared:latest` | none (outbound QUIC only) | `homelab_net` | Reads `TUNNEL_TOKEN` from `{{ docker_dir }}/.env` |
 | Hello | `nginxdemos/hello:latest` | none (proxied internally) | `homelab_net` | Reverse-proxied via Caddyfile for `hello.cloud5.ovh` |
 
-Caddy serves HTTPS only (no port 80 listener). cloudflared makes a single outbound QUIC connection to Cloudflare edge. Public HTTPS terminates at CF edge; clients see CF's public cert.
+Caddy serves plain HTTP for tunnel traffic (cloudflared connects to `http://caddy:80`). Cloudflare terminates public TLS at the edge. The debug endpoint on 8080 is for local health checks without the tunnel.
 
 ---
 
@@ -80,10 +80,7 @@ roles:
 - [ ] Hello service reachable through tunnel: from any internet device, `curl -sI https://hello.cloud5.ovh` returns `HTTP/2 200` (proxied to `hello` container)
 - [ ] Portainer NOT exposed publicly: `curl -s --connect-timeout 5 http://173.249.27.13:9000` → connection refused or timeout
 - [ ] Direct HTTP blocked: `curl -s --connect-timeout 5 http://173.249.27.13` → connection refused (UFW deny 80)
-- [ ] File permissions correct on the VPS:
-  - `ls -la /opt/docker/.env` → mode `0600`
-  - `ls -la /opt/docker/certs/origin.pem` → mode `0644`
-  - `ls -la /opt/docker/certs/origin.key` → mode `0600`
+- [ ] `.env` file permissions correct: `ls -la /opt/docker/.env` → mode `0600`
 
 ---
 
@@ -100,67 +97,7 @@ Navigate: **Zero Trust** → **Networks** → **Tunnels** → **Create a tunnel*
 
 Click **Save tunnel**. **Copy the tunnel token** (shown once) — store in a temp file.
 
-### 6.2 — Create CF Origin Certificate
 
-Navigate: **SSL/TLS** → **Origin Server** → **Create Certificate**
-
-- Private key type: **RSA**
-- Hostnames (add both): `*.cloud5.ovh` AND `cloud5.ovh`
-- Validity: **15 years**
-
-Click **Create**. **Copy the certificate (PEM) and private key** (each shown once) — store in temp files.
-
-### 6.3 — Configure public hostnames on the tunnel
-
-Skip the "install connector" wizard. In the tunnel detail page → **Public Hostnames** tab → **Add a public hostname** for each service you want to expose:
-
-- Subdomain: the service name (e.g. `hello`) or empty for the apex
-- Domain: `cloud5.ovh`
-- Service: **HTTPS**
-- URL: `https://caddy:443`
-
-Repeat for each service. The CF dashboard auto-creates the corresponding DNS CNAME record.
-
-> **Note:** Cloudflare free tier does not support multi-level wildcards (`*.cloud5.ovh`). Each new service requires its own public hostname entry.
-
-### 6.4 — Store 3 secrets in Azure Key Vault
-
-Open a PowerShell session in the dev container (Az context auto-loads via `.devcontainer/config/profile.ps1`):
-
-```powershell
-Set-AzKeyVaultSecret -VaultName homelab-bysxdb-kv `
-  -Name cloudflared-tunnel-token-cloudlab `
-  -SecretValue ((Get-Content -Raw /tmp/cloudflared-tunnel-token.txt) | ConvertTo-SecureString -AsPlainText -Force)
-
-Set-AzKeyVaultSecret -VaultName homelab-bysxdb-kv `
-  -Name cloudflared-origin-cert-cloudlab `
-  -SecretValue ((Get-Content -Raw /tmp/cloudflared-origin-cert-cloudlab.pem) | ConvertTo-SecureString -AsPlainText -Force)
-
-Set-AzKeyVaultSecret -VaultName homelab-bysxdb-kv `
-  -Name cloudflared-origin-key-cloudlab `
-  -SecretValue ((Get-Content -Raw /tmp/cloudflared-origin-key-cloudlab.key) | ConvertTo-SecureString -AsPlainText -Force)
-
-Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name cloudflared-tunnel-token-cloudlab -AsPlainText | Out-Null
-Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name cloudflared-origin-cert-cloudlab -AsPlainText | Out-Null
-Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name cloudflared-origin-key-cloudlab -AsPlainText | Out-Null
-Write-Host "All 3 secrets present in KV."
-```
-
-Sanitize the temp files: `shred -u /tmp/cloudflared-tunnel-token.txt /tmp/cloudflared-origin-cert-cloudlab.pem /tmp/cloudflared-origin-key-cloudlab.key`.
-
-### 6.5 — Set CF SSL/TLS encryption mode
-
-Navigate: **SSL/TLS** → **Overview** → **Encryption mode: Full (Strict)**.
-
-Required for CF edge to validate the Origin CA cert you provisioned in §6.2.
-
-### 6.6 — Enable "Always Use HTTPS" at CF edge
-
-Navigate: **SSL/TLS** → **Edge Certificates** → toggle **Always Use HTTPS** to **ON**.
-
-Public HTTP requests get 301-redirected to HTTPS at CF edge before entering the tunnel.
-
-### 6.7 — Verify the tunnel
 
 In the CF dashboard, **Zero Trust** → **Networks** → **Tunnels** → `cloudlab-tunnel` → **Connectors** tab. After the first `ansible-playbook` run, the **Connectors** tab should show `cloudlab` with status **Active**. If **Inactive** or **Down**, debug via `docker logs cloudflared` on the VPS.
 
@@ -170,16 +107,14 @@ In the CF dashboard, **Zero Trust** → **Networks** → **Tunnels** → `cloudl
 
 To expose a new service (e.g. `portainer.cloud5.ovh`) through the tunnel:
 
-1. **CF dashboard**: add a new public hostname on the tunnel (`portainer.cloud5.ovh` → `https://caddy:443`)
-2. **CF dashboard**: regenerate the Origin cert with the new SAN, store new PEM in KV (overwrite `cloudflared-origin-cert-cloudlab`)
-3. **Caddyfile.j2**: add a new site block:
-   ```
-   https://portainer.cloud5.ovh {
-       tls /etc/caddy/certs/origin.pem /etc/caddy/certs/origin.key
+1. **Caddyfile.j2**: add a new HTTP site block:
+   ```Caddyfile
+   http://portainer.cloud5.ovh {
        reverse_proxy portainer:9000
    }
    ```
-4. **Run the playbook** — idempotent re-deploy
+2. **CF dashboard** (if not using wildcard): add a new public hostname on the tunnel
+3. **Run the playbook** — idempotent re-deploy
 
 ---
 
@@ -197,4 +132,4 @@ To expose a new service (e.g. `portainer.cloud5.ovh`) through the tunnel:
 - [ADR 07 — Reverse Proxy: Caddy](../decisions/07-reverse-proxy-caddy.md)
 - [ADR 08 — Remote Access: Cloudflare Tunnel](../decisions/08-remote-access-cloudflare-tunnel.md)
 - [ADR 10 — Ansible for Host Configuration Management](../decisions/10-ansible-host-config.md)
-- [ADR 19 — HTTPS-only origin via Cloudflare Tunnel + Cloudflare Origin CA on Cloudlab](../decisions/19-cloudflare-tunnel-https-origin.md)
+- [ADR 19 — Cloudflare Tunnel HTTP origin with Caddy reverse proxy on Cloudlab](../decisions/19-cloudflare-tunnel-https-origin.md)
