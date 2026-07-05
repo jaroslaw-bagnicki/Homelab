@@ -46,9 +46,9 @@
 
 - name: Strip Az context banner from secrets
   ansible.builtin.set_fact:
-    cloudflared_tunnel_token: "{{ cloudflared_tunnel_token_raw.stdout | regex_replace('^:: .*$', '', multiline=True) | trim }}"
-    cloudflared_origin_cert: "{{ cloudflared_origin_cert_raw.stdout | regex_replace('^:: .*$', '', multiline=True) | trim }}"
-    cloudflared_origin_key: "{{ cloudflared_origin_key_raw.stdout | regex_replace('^:: .*$', '', multiline=True) | trim }}"
+    cloudflared_tunnel_token: "{{ cloudflared_tunnel_token_raw.stdout_lines | reject('match', '^:: ') | join('\n') | trim }}"
+    cloudflared_origin_cert: "{{ cloudflared_origin_cert_raw.stdout_lines | reject('match', '^:: ') | join('\n') | trim }}"
+    cloudflared_origin_key: "{{ cloudflared_origin_key_raw.stdout_lines | reject('match', '^:: ') | join('\n') | trim }}"
   no_log: true
 
 - name: Ensure certs directory exists in {{ docker_dir }}
