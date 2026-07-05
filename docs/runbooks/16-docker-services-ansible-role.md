@@ -91,11 +91,11 @@ roles:
 
 ## 6. Cloudflare Dashboard Setup (manual, one-time)
 
-Before the first `ansible-playbook` run, complete these steps in the [Cloudflare dashboard](https://dash.cloudflare.com/) and [Azure portal](https://portal.azure.com/). The role fails loudly if any KV secret is missing.
+Before the first `ansible-playbook` run, complete these steps in the [Cloudflare dashboard (cloud5.ovh)](https://dash.cloudflare.com/b7208cffa068d8f825142ea9fd426558/cloud5.ovh) and [Azure portal](https://portal.azure.com/). The role fails loudly if any KV secret is missing.
 
 ### 6.1 — Create Cloudflare Tunnel
 
-Navigate: **Zero Trust** → **Networks** → **Tunnels** → **Create a tunnel**
+Navigate: [**Zero Trust** → **Networks** → **Tunnels**](https://dash.cloudflare.com/b7208cffa068d8f825142ea9fd426558/tunnels/9558d789-1623-4b9e-ac67-3a1170ec9c0b/overview) → **Create a tunnel**
 
 - Connector type: **Cloudflared**
 - Name: `cloudlab-tunnel` (any name works — the role's defaults derive Key Vault secret names from `inventory_hostname` via the `cloudflared_*_secret_name` vars)
@@ -104,7 +104,7 @@ Click **Save tunnel**. **Copy the tunnel token** (shown once) — store in a tem
 
 
 
-In the CF dashboard, **Zero Trust** → **Networks** → **Tunnels** → `cloudlab-tunnel` → **Connectors** tab. After the first `ansible-playbook` run, the **Connectors** tab should show `cloudlab` with status **Active**. If **Inactive** or **Down**, debug via `docker logs cloudflared` on the VPS.
+In the CF dashboard, [**Zero Trust** → **Networks** → **Tunnels** → `cloudlab-tunnel` → **Connectors** tab](https://dash.cloudflare.com/b7208cffa068d8f825142ea9fd426558/tunnels/9558d789-1623-4b9e-ac67-3a1170ec9c0b/overview). After the first `ansible-playbook` run, the **Connectors** tab should show `cloudlab` with status **Active**. If **Inactive** or **Down**, debug via `docker logs cloudflared` on the VPS.
 
 ---
 

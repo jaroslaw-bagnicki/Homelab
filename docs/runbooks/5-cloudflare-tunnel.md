@@ -23,7 +23,7 @@ The tunnel requires Cloudflare DNS to route traffic. If you already have a domai
 
 ### 1.1 Add your domain to Cloudflare
 
-1. Go to the [Cloudflare Dashboard](https://dash.cloudflare.com/).
+1. Go to the [Cloudflare Dashboard (cloud5.ovh)](https://dash.cloudflare.com/b7208cffa068d8f825142ea9fd426558/cloud5.ovh).
 2. Click **Add a site** and enter your domain name.
 3. Select the **Free** plan.
 4. Cloudflare will scan existing DNS records — review them and confirm.
@@ -49,7 +49,7 @@ Log into your current registrar's control panel, find the **DNS servers** / **Na
 
 ## 2. Create a Tunnel in the Cloudflare Dashboard
 
-1. Open the [Cloudflare Zero Trust portal](https://one.dash.cloudflare.com/).
+1. Open the [Cloudflare Zero Trust portal](https://one.dash.cloudflare.com/) or go directly to the [cloudlab-tunnel overview](https://dash.cloudflare.com/b7208cffa068d8f825142ea9fd426558/tunnels/9558d789-1623-4b9e-ac67-3a1170ec9c0b/overview).
 2. Go to **Networks** → **Tunnels**.
 3. Click **Create a tunnel**.
 4. Choose **Cloudflared** as the connector type.
@@ -126,7 +126,7 @@ docker logs cloudflare-tunnel --tail 5
 
 Expected output: a log line like `Registered tunnel connection` or `Connected to ...`.
 
-In the Cloudflare Zero Trust portal → **Networks** → **Tunnels**, the tunnel should show status **Healthy**.
+In the Cloudflare Zero Trust portal → **Networks** → **Tunnels**, the tunnel should show status **Healthy** — [cloudlab-tunnel dashboard](https://dash.cloudflare.com/b7208cffa068d8f825142ea9fd426558/tunnels/9558d789-1623-4b9e-ac67-3a1170ec9c0b/overview).
 
 ---
 
