@@ -106,6 +106,24 @@ Click **Save tunnel**. **Copy the tunnel token** (shown once) — store in a tem
 
 In the CF dashboard, [**Zero Trust** → **Networks** → **Tunnels** → `cloudlab-tunnel` → **Connectors** tab](https://dash.cloudflare.com/b7208cffa068d8f825142ea9fd426558/tunnels/9558d789-1623-4b9e-ac67-3a1170ec9c0b/overview). After the first `ansible-playbook` run, the **Connectors** tab should show `cloudlab` with status **Active**. If **Inactive** or **Down**, debug via `docker logs cloudflared` on the VPS.
 
+### 6.2 — Cloudflare Access policy for admin services (recommended)
+
+Admin-facing services (Portainer, anything with full-host control) sit behind the same tunnel+Caddy path but should be wrapped with a **Cloudflare Access** policy at the edge. This adds identity-verified single-use JWT enforcement *before* traffic reaches the backend — the browser never speaks directly to Portainer until the user passes the Access gate.
+
+**Scope the policy per-hostname** so the rule only applies to the public surface you want to gate. The dashboard walks you through:
+
+- **Zero Trust → Access → Applications** → **Add an application** → **Self-hosted**
+- Application name: e.g. `portainer` (display only)
+- **Application domain**: `portainer.cloud5.ovh` (matches the public hostname exactly — subdomain scoping, no wildcard)
+- **Session duration**: short (e.g. 24 hours) and **Apply HTTP-only, Secure** cookie attributes
+- **Identity providers**: link the IdP you want — email one-time PIN works fine for a single-user lab; add OIDC / Google / GitHub later if multi-user
+- **Policy**: at minimum an **Allow** rule keyed to your email/identity; for stricter posture add **Require country** or **IP range**
+- **Block / Allow ordering**: leave Access's defaults; the implicit deny covers anything not matched
+
+After saving, a hit on `https://portainer.cloud5.ovh/` from an unauthenticated browser returns a 302 to `https://<team>.cloudflareaccess.com/...` for IdP login. With a valid session, traffic flows through to Caddy → Portainer as normal.
+
+**Why this matters**: the tunnel → Caddy hop carries plaintext HTTP internally (per [ADR 19](../decisions/19-cloudflare-tunnel-https-origin.md)). Cloudflare Access closes the trust gap at the edge without touching the in-cluster network — no Caddy mTLS, no per-service auth glue, no application code changes.
+
 ---
 
 ## Adding New Services
@@ -119,7 +137,8 @@ To expose a new service (e.g. `portainer.cloud5.ovh`) through the tunnel:
    }
    ```
 2. **CF dashboard** (if not using wildcard): add a new public hostname on the tunnel
-3. **Run the playbook** — idempotent re-deploy
+3. **Cloudflare Access**: if the service is admin-facing, add an Access policy scoped to the new hostname (see §6.2 above)
+4. **Run the playbook** — idempotent re-deploy
 
 ---
 
