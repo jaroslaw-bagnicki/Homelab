@@ -1,7 +1,7 @@
 # Remote Access — Cloudflare Tunnel for Inbound HTTPS
 
-**Date:** 2026-05-30  
-**Status:** Implemented
+**Date:** 2026-05-30
+**Status:** Superseded by [ADR 19 — HTTPS-only origin via Cloudflare Tunnel + Cloudflare Origin CA on Cloudlab](19-cloudflare-tunnel-https-origin.md)
 
 ---
 
@@ -38,3 +38,20 @@ Architecture:
 - Services are accessible from anywhere without VPN; useful for casual access but means services are internet-exposed (mitigated by Cloudflare Access policies)
 - Tunnel token (long-lived credential) must be stored securely — compromised token allows tunnel impersonation until revoked
 - Caddy handles internal `.home` traffic; Cloudflare tunnel handles external `example.com` traffic — two parallel ingress paths
+
+## Superseded by ADR 19
+
+The original V1 design sends plain HTTP from cloudflared to Caddy (CF edge terminates TLS, then forwards plain HTTP through the tunnel). This design has known weaknesses:
+
+- **No end-to-end TLS** between CF edge and the origin web server — defense in depth is reduced
+- **CF SSL mode downgrade** required: "Full (Strict)" is not possible with a plain-HTTP origin; the "Full" mode is required instead, which accepts any cert (including self-signed)
+- **Inconsistent with ADR 07** (Caddy as the reverse proxy) — Caddy can terminate TLS; making it do so aligns the architecture
+
+[ADR 19](19-cloudflare-tunnel-https-origin.md) replaces this design for **all** new deployments. The pattern: cloudflared talks to Caddy over `https://caddy:443`, Caddy presents a **Cloudflare Origin CA certificate** to validate against CF's Origin CA trust store, and CF SSL mode stays at **Full (Strict)**.
+
+The physical Homelab (M910q) currently runs the V1 design; its migration to V2 is tracked as a follow-up issue (see project issue tracker).
+
+## References
+
+- [ADR 07 — Reverse Proxy: Caddy with Auto-TLS and Configuration-as-Code](../decisions/07-reverse-proxy-caddy.md)
+- [ADR 19 — HTTPS-only origin via Cloudflare Tunnel + Cloudflare Origin CA on Cloudlab](19-cloudflare-tunnel-https-origin.md) (replacement)
