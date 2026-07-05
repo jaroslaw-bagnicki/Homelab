@@ -8,6 +8,11 @@
 - [ ] `docker_host` role completed (Docker Engine + Compose plugin installed) — see [2-docker.md](2-docker.md)
 - [ ] `security` role completed (UFW configured) — see runbook §4
 - [ ] `community.docker` collection installed (`ansible-galaxy collection install -r ansible/requirements.yml`)
+- [ ] **Python packages for KV lookup** — the `azure.azcollection.azure_keyvault_secret` lookup requires `azure-identity` and `azure-keyvault-secrets`:
+  ```bash
+  sudo apt install -y python3-pip
+  pip3 install --break-system-packages azure-identity azure-keyvault-secrets
+  ```
 - [ ] SSH access to `cloudlab` via `ansible_user: labadmin`
 - [ ] **Cloudflare dashboard setup completed** — see §6 (one-time, manual)
 
