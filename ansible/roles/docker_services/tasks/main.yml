@@ -11,31 +11,44 @@
     state: directory
     mode: "0755"
 
-- name: Fetch all cloudflared secrets from Key Vault
+- name: Fetch cloudflared tunnel token from Key Vault
   ansible.builtin.shell: |
-    @{
-      tunnel_token = [string](Get-AzKeyVaultSecret -VaultName {{ arc_keyvault_name }} -Name {{ cloudflared_token_secret_name }} -AsPlainText)
-      origin_cert  = [string](Get-AzKeyVaultSecret -VaultName {{ arc_keyvault_name }} -Name {{ cloudflared_origin_cert_secret_name }} -AsPlainText)
-      origin_key   = [string](Get-AzKeyVaultSecret -VaultName {{ arc_keyvault_name }} -Name {{ cloudflared_origin_key_secret_name }} -AsPlainText)
-    } | ConvertTo-Json -Compress
+    Get-AzKeyVaultSecret -VaultName {{ arc_keyvault_name }} -Name {{ cloudflared_token_secret_name }} -AsPlainText -InformationAction SilentlyContinue
   args:
     executable: pwsh
   delegate_to: localhost
   become: false
-  register: cloudflared_secrets_raw
+  register: cloudflared_tunnel_token_raw
   changed_when: false
   no_log: true
 
-- name: Parse cloudflared secrets from JSON in stdout
-  ansible.builtin.set_fact:
-    cloudflared_secrets: "{{ (cloudflared_secrets_raw.stdout | regex_search('\\{[\\s\\S]*?\\}')) | from_json }}"
+- name: Fetch Cloudflare Origin Certificate from Key Vault
+  ansible.builtin.shell: |
+    Get-AzKeyVaultSecret -VaultName {{ arc_keyvault_name }} -Name {{ cloudflared_origin_cert_secret_name }} -AsPlainText -InformationAction SilentlyContinue
+  args:
+    executable: pwsh
+  delegate_to: localhost
+  become: false
+  register: cloudflared_origin_cert_raw
+  changed_when: false
   no_log: true
 
-- name: Set individual secret facts
+- name: Fetch Cloudflare Origin Certificate key from Key Vault
+  ansible.builtin.shell: |
+    Get-AzKeyVaultSecret -VaultName {{ arc_keyvault_name }} -Name {{ cloudflared_origin_key_secret_name }} -AsPlainText -InformationAction SilentlyContinue
+  args:
+    executable: pwsh
+  delegate_to: localhost
+  become: false
+  register: cloudflared_origin_key_raw
+  changed_when: false
+  no_log: true
+
+- name: Strip Az context banner from secrets
   ansible.builtin.set_fact:
-    cloudflared_tunnel_token: "{{ cloudflared_secrets.tunnel_token }}"
-    cloudflared_origin_cert: "{{ cloudflared_secrets.origin_cert }}"
-    cloudflared_origin_key: "{{ cloudflared_secrets.origin_key }}"
+    cloudflared_tunnel_token: "{{ cloudflared_tunnel_token_raw.stdout | regex_replace('^:: .*$', '', multiline=True) | trim }}"
+    cloudflared_origin_cert: "{{ cloudflared_origin_cert_raw.stdout | regex_replace('^:: .*$', '', multiline=True) | trim }}"
+    cloudflared_origin_key: "{{ cloudflared_origin_key_raw.stdout | regex_replace('^:: .*$', '', multiline=True) | trim }}"
   no_log: true
 
 - name: Ensure certs directory exists in {{ docker_dir }}
