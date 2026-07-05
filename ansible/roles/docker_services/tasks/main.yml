@@ -54,3 +54,34 @@
     project_src: "{{ docker_dir }}"
     state: present
     pull: always
+
+- name: Set Portainer admin password from Key Vault
+  vars:
+    vault_url: "https://{{ arc_keyvault_name }}.vault.azure.net"
+  ansible.builtin.set_fact:
+    portainer_admin_password: "{{ lookup('azure.azcollection.azure_keyvault_secret', portainer_admin_password_secret_name, vault_url=vault_url) }}"
+  delegate_to: localhost
+  no_log: true
+
+- name: Wait for Portainer to listen on port 9000
+  ansible.builtin.wait_for:
+    host: 127.0.0.1
+    port: 9000
+    delay: 3
+    timeout: 30
+  changed_when: false
+
+- name: Init Portainer admin user
+  ansible.builtin.uri:
+    url: http://127.0.0.1:9000/api/users/admin/init
+    method: POST
+    body_format: json
+    body:
+      Username: admin
+      Password: "{{ portainer_admin_password }}"
+    status_code:
+      - 200
+      - 409
+  register: portainer_init
+  changed_when: portainer_init.status == 200
+  no_log: true

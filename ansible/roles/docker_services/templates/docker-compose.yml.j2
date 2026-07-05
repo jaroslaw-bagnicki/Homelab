@@ -3,6 +3,7 @@ services:
     image: portainer/portainer-ce:latest
     container_name: portainer
     restart: always
+    command: --no-setup-token
     ports:
       - "127.0.0.1:9000:9000"
     volumes:
