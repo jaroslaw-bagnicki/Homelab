@@ -10,6 +10,24 @@
     port: "{{ security_ssh_port }}"
     proto: tcp
 
+- name: UFW deny inbound TCP/80
+  community.general.ufw:
+    rule: deny
+    direction: in
+    proto: tcp
+    to_port: "80"
+    comment: "block direct HTTP — Cloudflare Tunnel is the only ingress path"
+  when: security_ufw_deny_inbound_tcp_80 | bool
+
+- name: UFW allow outbound UDP to Cloudflare Tunnel QUIC port
+  community.general.ufw:
+    rule: allow
+    direction: out
+    proto: udp
+    to_port: "{{ security_cloudflared_quic_port }}"
+    comment: "cloudflared QUIC to Cloudflare edge"
+  when: security_cloudflared_outbound_enabled | bool
+
 - name: Enable UFW
   community.general.ufw:
     state: enabled

@@ -2,3 +2,7 @@
 security_ssh_port: 22
 fail2ban_max_retries: 3
 fail2ban_ban_time: 1h
+
+security_ufw_deny_inbound_tcp_80: true
+security_cloudflared_outbound_enabled: true
+security_cloudflared_quic_port: 7844

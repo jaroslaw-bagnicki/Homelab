@@ -1,7 +1,40 @@
 ---
+- name: Validate inventory_hostname is in supported set
+  ansible.builtin.assert:
+    that:
+      - inventory_hostname in ['homelab', 'cloudlab']
+    fail_msg: "inventory_hostname '{{ inventory_hostname }}' is not in the supported set {homelab, cloudlab}. Update the assertion in tasks/main.yml."
+
 - name: Ensure Docker service directory exists
   ansible.builtin.file:
     path: "{{ docker_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Fetch all cloudflared secrets from Key Vault
+  ansible.builtin.shell: |
+    Set-AzContext -TenantId {{ arc_tenant_id }} -SubscriptionId {{ arc_subscription_id }} | Out-Null
+    @{
+      tunnel_token = [string](Get-AzKeyVaultSecret -VaultName {{ arc_keyvault_name }} -Name {{ cloudflared_token_secret_name }} -AsPlainText)
+      origin_cert  = [string](Get-AzKeyVaultSecret -VaultName {{ arc_keyvault_name }} -Name {{ cloudflared_origin_cert_secret_name }} -AsPlainText)
+      origin_key   = [string](Get-AzKeyVaultSecret -VaultName {{ arc_keyvault_name }} -Name {{ cloudflared_origin_key_secret_name }} -AsPlainText)
+    } | ConvertTo-Json -Compress
+  args:
+    executable: pwsh
+  delegate_to: localhost
+  become: false
+  register: cloudflared_secrets_raw
+  no_log: true
+
+- name: Parse cloudflared secrets into individual facts
+  ansible.builtin.set_fact:
+    cloudflared_tunnel_token: "{{ (cloudflared_secrets_raw.stdout | from_json).tunnel_token }}"
+    cloudflared_origin_cert: "{{ (cloudflared_secrets_raw.stdout | from_json).origin_cert }}"
+    cloudflared_origin_key: "{{ (cloudflared_secrets_raw.stdout | from_json).origin_key }}"
+
+- name: Ensure {{ docker_dir }}/certs directory exists
+  ansible.builtin.file:
+    path: "{{ docker_dir }}/certs"
     state: directory
     mode: "0755"
 
@@ -18,6 +51,38 @@
     dest: "{{ docker_dir }}/Caddyfile"
     mode: "0644"
   notify: Restart Caddy
+
+- name: Write cloudflared .env file
+  ansible.builtin.copy:
+    content: "TUNNEL_TOKEN={{ cloudflared_tunnel_token | trim }}\n"
+    dest: "{{ docker_dir }}/.env"
+    mode: "0600"
+  no_log: true
+
+- name: Write Cloudflare Origin Certificate
+  ansible.builtin.copy:
+    content: "{{ cloudflared_origin_cert | trim }}\n"
+    dest: "{{ docker_dir }}/certs/origin.pem"
+    mode: "0644"
+  no_log: true
+
+- name: Write Cloudflare Origin Certificate key
+  ansible.builtin.copy:
+    content: "{{ cloudflared_origin_key | trim }}\n"
+    dest: "{{ docker_dir }}/certs/origin.key"
+    mode: "0600"
+  no_log: true
+
+- name: Ensure secrets are excluded from any future git init
+  ansible.builtin.lineinfile:
+    path: "{{ docker_dir }}/.gitignore"
+    line: "{{ item }}"
+    create: true
+    state: present
+    mode: "0600"
+  loop:
+    - ".env"
+    - "certs/"
 
 - name: Deploy docker services
   community.docker.docker_compose_v2:

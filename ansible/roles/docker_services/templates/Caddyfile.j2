@@ -1,6 +1,13 @@
-http:// {
+https://ctb.cloud5.ovh {
+    tls /etc/caddy/certs/origin.pem /etc/caddy/certs/origin.key
     respond "Caddy works."
 }
 
-# DNS (A record for cloudlab.cloud5.ovh) and Let's Encrypt TLS deferred to #23, #24
-# Replace the respond line above with reverse_proxy routes as services are deployed.
+https://hello.ctb.cloud5.ovh {
+    tls /etc/caddy/certs/origin.pem /etc/caddy/certs/origin.key
+    reverse_proxy hello:80
+}
+
+:8080 {
+    respond "Caddy debug: OK"
+}
