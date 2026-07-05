@@ -47,6 +47,7 @@
     dest: "{{ docker_dir }}/.env"
     mode: "0600"
   no_log: true
+  notify: Restart cloudflared
 
 - name: Write Cloudflare Origin Certificate
   ansible.builtin.copy:
@@ -54,6 +55,7 @@
     dest: "{{ docker_dir }}/certs/origin.pem"
     mode: "0644"
   no_log: true
+  notify: Restart Caddy
 
 - name: Write Cloudflare Origin Certificate key
   ansible.builtin.copy:
@@ -61,6 +63,7 @@
     dest: "{{ docker_dir }}/certs/origin.key"
     mode: "0600"
   no_log: true
+  notify: Restart Caddy
 
 - name: Ensure secrets are excluded from any future git init
   ansible.builtin.lineinfile:

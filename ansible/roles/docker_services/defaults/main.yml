@@ -1,8 +1,6 @@
 ---
 docker_dir: /opt/docker
 
-arc_tenant_id: b48c71d0-46cf-4171-ad02-1ed785ba425d
-arc_subscription_id: a8a36bc1-79a7-49fe-9faa-92220103c66f
 arc_keyvault_name: homelab-bysxdb-kv
 
 cloudflared_token_secret_name: "cloudflared-tunnel-token-{{ inventory_hostname }}"

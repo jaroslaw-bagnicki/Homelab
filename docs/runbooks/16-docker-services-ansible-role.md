@@ -21,7 +21,7 @@
 | `ansible/roles/docker_services/tasks/main.yml` | Validate host → ensure `docker_dir` → fetch 3 KV secrets → write `.env`/certs/Caddyfile → `docker compose up` |
 | `ansible/roles/docker_services/handlers/main.yml` | `Restart Caddy` (on Caddyfile change), `Redeploy docker services` (on compose change) |
 | `ansible/roles/docker_services/templates/docker-compose.yml.j2` | Service definitions: portainer, caddy, **cloudflared**, hello + `homelab_net` + `portainer_data` |
-| `ansible/roles/docker_services/templates/Caddyfile.j2` | HTTPS site blocks (wildcard + per-host) + `:8080` local debug endpoint |
+| `ansible/roles/docker_services/templates/Caddyfile.j2` | Per-host HTTPS site blocks + `:8080` local debug endpoint |
 
 ---
 

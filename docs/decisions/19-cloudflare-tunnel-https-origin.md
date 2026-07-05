@@ -22,7 +22,7 @@ Issue #25 introduces a Cloudflare Tunnel on Cloudlab (separate from Homelab's `h
 - Caddy uses a **Cloudflare Origin CA certificate** for TLS to origin (not Let's Encrypt, not self-signed, not Caddy-issued)
 - **CF SSL/TLS mode: Full (Strict)** — required so CF edge validates the Origin CA cert on origin
 - **Caddy binds 127.0.0.1:443 only** (loopback); no external port 80/443/8080 binding. Loopback-only 8080 is used for a local debug endpoint
-- **Caddyfile serves HTTPS only** (no `http://` block). Wildcard block references the Origin cert explicitly via the `tls` directive (no ACME attempt)
+- **Caddyfile serves HTTPS only** (no `http://` block). Per-host site blocks reference the Origin cert explicitly via the `tls` directive (no ACME attempt)
 - **UFW denies inbound 80** (defense in depth — tunnel handles all public traffic)
 - **UFW allows outbound UDP/7844** (cloudflared's QUIC connection to CF edge)
 - **CF edge "Always Use HTTPS"** is enabled — public HTTP requests get 301-redirected to HTTPS at CF edge, before reaching the tunnel
