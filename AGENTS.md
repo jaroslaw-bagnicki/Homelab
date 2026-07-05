@@ -149,6 +149,7 @@ When asked to process PR review remarks, follow this human-in-the-loop flow:
 - **Surface findings as concise summaries** — short status with file paths and commit refs; not essays
 - **Discover skills via the skill tool** — repo skills live under `.opencode/skills/` (symlinked to `.github/skills/`); load a skill only when its description matches the current task
 - **Do not create issues proactively** — issue creation is reserved for multi-session work the user explicitly asks to track; for one-shot fixes or docs changes, a commit is enough
+- **Never merge a PR, locally or remotely** — opening a PR is the final step of the agent's work; the human reviews and merges via the GitHub UI. This includes `merge_pull_request` calls, `git merge`, and any equivalent. Do not assume implicit merge permission even if the work appears "done". The same rule applies to PRs the agent authored across multiple sessions or that "look ready".
 
 ## Plan → Build Transition
 
