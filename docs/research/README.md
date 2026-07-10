@@ -22,6 +22,7 @@
 | 18 | 2026‑06‑21 | [18-docker-compose-replication.md](18-docker-compose-replication.md) | Options for replicating Cloudlab docker-compose stack to Homelab after rebuild — Ansible role vs Portainer vs rsync | Research |
 | 19 | 2026‑06‑25 | [19-copilot-desktop-agentic.md](19-copilot-desktop-agentic.md) | GitHub Copilot Desktop app for agentic Homelab dev — MCP, BYOK, Skills, DR automation, Entra ID, secret mgmt | Gemini chat 8 |
 | 20 | 2026‑07‑04 | [20-opencode-hosting-codespaces-vs-homelab.md](20-opencode-hosting-codespaces-vs-homelab.md) | OpenCode hosting — Codespaces vs M910q vs Cloudlab; server mode, sandboxing, dependencies, backup, automation | Research |
+| 21 | 2026‑07‑08 | [21-opencode-sandboxed-homelab-architecture.md](21-opencode-sandboxed-homelab-architecture.md) | OpenCode sandboxed architecture on Homelab — per-project instances, Docker Sandboxes, Caddy wildcard routing, network isolation | Gemini chats 9–13 |
 
 ## Gemini Discussions
 
@@ -34,4 +35,8 @@
 | 5 | [Gemini chat 5](https://gemini.google.com/share/ffa774d97c3e) | 13 |
 | 6 | [Gemini chat 6](https://gemini.google.com/share/a4b01a2b65b2) | 15 |
 | 7 | [Gemini chat 7](https://gemini.google.com/share/536c3e9635ff) | 16 |
-| 8 | [Gemini chat 8](https://gemini.google.com/share/05578e63c66c) | 19 |
+| 8 | [Gemini chat 8](https://gemini.google.com/share/05578e63c66c) | 19 || 9 | [Gemini chat 9](https://gemini.google.com/share/215b0e334b18) | 21 |
+| 10 | [Gemini chat 10](https://gemini.google.com/share/9ab700c799ef) | 21 |
+| 11 | [Gemini chat 11](https://gemini.google.com/share/68b9117edd0e) | 21 |
+| 12 | [Gemini chat 12](https://gemini.google.com/share/a4fcdc245489) | 21 |
+| 13 | [Gemini chat 13](https://gemini.google.com/share/6b9bfa24d3a2) | 21 |
