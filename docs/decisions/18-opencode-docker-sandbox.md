@@ -94,9 +94,17 @@ fallback and occasional GitHub Copilot workspace per ADR 17.
    `OPENCODE_SERVER_PASSWORD`. Caddy basic auth or Cloudflare Access SSO can be
    layered later if needed. Caddy has no native Entra ID support.
 
-9. **Backups out of scope initially.** Session persistence is handled by named
-   Docker volumes. Backup strategy will be added as a follow-up once the
-   instances are stable.
+9. **Secrets sourced from Azure Key Vault via Ansible.** The existing
+   `homelab-bysxdb-kv` Key Vault (ADR 16) remains the source of truth for
+   instance credentials and project secrets. Ansible fetches them at deploy
+   time using the `azure.azcollection.azure_keyvault_secret` lookup and
+   injects them as Compose environment variables. No secrets are committed to
+   the repository, and each instance only receives the secrets it needs
+   (Homelab instance never sees Prospera credentials and vice versa).
+
+10. **Backups out of scope initially.** Session persistence is handled by named
+    Docker volumes. Backup strategy will be added as a follow-up once the
+    instances are stable.
 
 ---
 
