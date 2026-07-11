@@ -13,11 +13,14 @@ deployed in GitHub Codespaces. That decision explicitly scoped out two areas:
 - **Background automations / scheduled agent tasks** — not investigated
 - **Cross-machine session sharing** — local to one Codespace
 
-Subsequent evaluation ([Research 20](../research/20-opencode-hosting-codespaces-vs-homelab.md))
-identified that Codespaces cannot serve as a persistent OpenCode server:
-idle timeout (~30 min), no cron, and the 1:1 repo model block server-mode
-operation, multi-project workspaces, scheduled automations, and cross-project
-backup.
+This ADR builds on two research files: [Research 20](../research/20-opencode-hosting-codespaces-vs-homelab.md),
+which compared Codespaces and Cloudlab/Homelab hosting, and [Research 21](../research/21-opencode-sandboxed-homelab-architecture.md),
+which explored instance topology, isolation primitives, and ingress design.
+
+[Research 20](../research/20-opencode-hosting-codespaces-vs-homelab.md) identified
+that Codespaces cannot serve as a persistent OpenCode server: idle timeout
+(~30 min), no cron, and the 1:1 repo model block server-mode operation,
+multi-project workspaces, scheduled automations, and cross-project backup.
 
 New requirements emerged that reshape the hosting decision:
 
@@ -32,10 +35,10 @@ New requirements emerged that reshape the hosting decision:
 Both the Homelab M910q (ADR 01) and the Contabo Cloudlab VPS (ADR 13) run
 Ubuntu 24.04 with Docker and Caddy, managed via Ansible.
 
-Research 21 then explored whether to run one shared or multiple per-project
-instances, what isolation primitive to use, and how to integrate the new
-instances with the existing Cloudflare Tunnel + Caddy ingress. This ADR records
-the settled design.
+[Research 21](../research/21-opencode-sandboxed-homelab-architecture.md) then
+explored whether to run one shared or multiple per-project instances, what
+isolation primitive to use, and how to integrate the new instances with the
+existing Cloudflare Tunnel + Caddy ingress. This ADR records the settled design.
 
 ---
 
