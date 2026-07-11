@@ -278,3 +278,4 @@ Codespaces (interactive fallback only)
 - [ADR 17 — OpenCode Adoption](../decisions/17-adopt-opencode.md)
 - [Research 16 — Codespaces & Dev Containers](16-github-codespaces-devcontainers.md)
 - [Research 19 — Copilot Desktop Agentic](19-copilot-desktop-agentic.md)
+- [Research 21 — OpenCode Sandboxed Architecture on Homelab](21-opencode-sandboxed-homelab-architecture.md) — **supersedes the single-shared-instance assumption below**; read this doc for the per-project, multi-instance evolution

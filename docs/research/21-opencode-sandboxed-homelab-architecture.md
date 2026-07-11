@@ -27,10 +27,12 @@ from 2026-07-08 explore:
 - how to route dynamic OpenCode instances through Caddy behind the existing
   Cloudflare Tunnel wildcard.
 
-The conclusion is a concrete target architecture: **per-project OpenCode
-sandboxes on Cloudlab, isolated in a dedicated Docker network, exposed through
-a dedicated Caddy ingress instance, with `*-oc.example.com` wildcard routing
-via Cloudflare Tunnel.**
+The conclusion is a concrete near-term architecture: **per-project OpenCode
+server instances on Cloudlab, isolated in a dedicated Docker network, exposed
+through a dedicated Caddy ingress instance, with `*-oc.example.com` wildcard
+routing via the existing management Caddy.** Docker AI Sandboxes (`sbx`) are
+kept as the future isolation target once the basic Compose-based deployment is
+proven.
 
 ---
 
@@ -39,11 +41,12 @@ via Cloudflare Tunnel.**
 | # | Constraint | Why it matters |
 |---|------------|----------------|
 | 1 | OpenCode must run **server-side** (`opencode serve`/`opencode web`), not only as an ephemeral TUI | Enables Desktop app and browser access from any device |
-| 2 | The agent must be **sandboxed** — no direct host filesystem, Docker socket, or SSH-key access | Prevents a compromised or misguided agent from damaging production services |
+| 2 | The agent must be **isolated** — host access only through explicit, narrow paths | Prevents a compromised or misguided agent from damaging production services |
 | 3 | At least two projects with radically different toolchains must be supported: **Homelab** (Ansible, Bicep, Docker, Linux) and **Prospera** (.NET, SQL, Azure) | Tooling, secrets, and stability requirements differ |
 | 4 | Existing ingress is **Cloudflare Tunnel + Caddy** with a `*.example.com` wildcard certificate (ADR 08, ADR 20) | New instances should reuse the wildcard, not require per-hostname DNS edits |
 | 5 | Infrastructure is **Ansible-managed** Ubuntu 24.04 on Cloudlab (ADR 13) | New components must fit the existing role-based automation |
-| 6 | Sessions and repositories must survive container restarts and be backup-able | Aligns with ADR 02 (Restic) and ADR 17 (persistence) |
+| 6 | Sessions and repositories must survive container restarts | Aligns with ADR 17 (persistence) |
+| 7 | Backups and SBX evaluation are out of scope for the initial setup | Keep the first deployment small and iterable |
 
 ---
 
@@ -81,14 +84,25 @@ file, named volumes, and subdomain.
 
 ---
 
-### 2. Docker AI Sandboxes (`sbx`) are the preferred isolation primitive
+### 2. Runtime model: Docker Compose now, Docker AI Sandboxes (`sbx`) later
 
-Docker Sandboxes run each agent session inside a **microVM** with its own
-kernel, dedicated Docker daemon, isolated network stack, and root filesystem.
-This is stronger isolation than a standard container (shared kernel) and is
-explicitly designed for autonomous coding agents.
+The initial deployment uses **standard Docker Compose containers**. This
+matches the existing Homelab stack (ADR 03), is simpler to manage with Ansible,
+and avoids KVM availability questions on the Contabo VPS.
 
-**Relevant `sbx` facts:**
+**Why defer `sbx`?**
+
+- KVM may not be exposed on the Cloudlab VPS; verify before committing.
+- Ansible, Caddy, and volume backup patterns are already proven for Compose.
+- `sbx` tooling (`docker-sbx` package, governance config, `sbx login` OAuth)
+  adds steps that are best tackled after the basic server is working.
+
+**When to adopt `sbx`:** once the Compose-based deployment is stable and KVM
+is confirmed. The migration path is then to replace the Compose service image
+with `docker/sandbox-templates:opencode` or run `sbx` side-by-side for
+high-risk tasks.
+
+**Relevant `sbx` facts for the future evaluation:**
 
 | Fact | Detail |
 |------|--------|
@@ -102,18 +116,11 @@ explicitly designed for autonomous coding agents.
 | MCP | Native MCP catalog support |
 | Cost | Free for local/individual use; paid tiers add governance/audit |
 
-**Server vs. workstation:** `sbx` is not workstation-only. It runs on any
-Linux host with KVM enabled (VT-x/AMD-V), including the Cloudlab VPS.
-Installation is via the `docker-sbx` package from the Docker repository plus
-KVM group membership for the deploy user.
-
-**Important caveat for the Homelab sandbox:** the Homelab agent *must not* be
-given the host Docker socket (`/var/run/docker.sock`). Inside a sandbox the
-agent can have its own isolated Docker daemon, but mounting the host socket
-would void the isolation. For Homelab work that needs to drive the host's
-Docker stack, the agent should generate Ansible playbooks or Compose files and
-execute them via a narrow, audited path (e.g. `ansible-playbook` over SSH or a
-dedicated deployment user), not by directly manipulating the host daemon.
+**Important caveat for the Homelab agent:** even inside `sbx`, the agent *must
+not* be given the host Docker socket (`/var/run/docker.sock`). For Homelab
+work that needs to drive the host's Docker stack, the agent should generate
+Ansible playbooks or Compose files and execute them via SSH, not by directly
+manipulating the host daemon.
 
 ---
 
@@ -239,27 +246,26 @@ The existing Cloudflare Tunnel already terminates `*.example.com` and forwards
 to the Homelab Caddy. Adding new OpenCode instances should not require editing
 Tunnel config or DNS.
 
-**Recommended target architecture:**
+**Recommended near-term architecture:**
 
 ```text
 Cloudflare Edge (*.example.com)
         │
         ▼
 ┌──────────────────┐
-│  cloudflared     │  (connected to both mgmt_net and opencode_net)
+│  cloudflared     │  (mgmt_net only)
 └────────┬─────────┘
          │
-    ┌────┴────┐
-    ▼         ▼
-┌─────────┐ ┌──────────────┐
-│ caddy   │ │ caddy-opencode│  (dedicated ingress for agent traffic)
-│ (main)  │ │ (:80, opencode_net only)
-└────┬────┘ └───────┬──────┘
-     │              │
-     ▼              ▼
- Portainer    opencode-homelab
- other mgmt   opencode-prospera
- services     future sandboxes
+         ▼
+    ┌─────────┐          ┌──────────────┐
+    │ caddy   │──────────│ caddy-opencode│  (dedicated ingress for agent traffic)
+    │ (main)  │ (proxy)  │ (:80, opencode_net only)
+    └────┬────┘          └───────┬──────┘
+         │                        │
+         ▼                        ▼
+  Portainer, etc.         opencode-homelab
+  (mgmt_net)              opencode-prospera
+                          (opencode_net)
 ```
 
 **Why a dedicated `caddy-opencode`?**
@@ -267,31 +273,44 @@ Cloudflare Edge (*.example.com)
 - Agent containers live in a separate Docker network (`opencode_net`) from
   infrastructure services (`mgmt_net`).
 - A compromised agent cannot scan or reach Portainer, databases, or the main
-  ingress from inside the Docker network.
+  ingress from inside the agent network.
 - The main Caddy config stays clean; OpenCode routing is one wildcard rule.
 - Operational independence — breaking the main Caddy does not break agents.
 
-**Cloudflare Tunnel config (`config.yml`):**
+**Network attachment:**
 
-```yaml
-tunnel: <tunnel-id>
-credentials-file: /home/nonroot/.cloudflared/<tunnel-id>.json
+| Container | Networks | Reason |
+|-----------|----------|--------|
+| `cloudflared` | `mgmt_net` | Trust boundary stays simple |
+| `caddy-main` | `mgmt_net` + `opencode_net` | Holds wildcard, proxies agent subdomains to `caddy-opencode` |
+| `caddy-opencode` | `opencode_net` | Only reverse-proxies agent traffic |
+| `opencode-homelab`, `opencode-prospera` | `opencode_net` | No mgmt network access |
 
-ingress:
-  - hostname: "*-oc.example.com"
-    service: http://caddy-opencode:80
-  - hostname: "*.example.com"
-    service: http://caddy-main:80
-  - service: http_status:404
-```
-
-**`caddy-opencode` Caddyfile:**
+**`caddy-main` Caddyfile (wildcard split):**
 
 ```caddy
 :80 {
     @opencode expression `{labels.2}.endsWith("-oc")`
 
     handle @opencode {
+        reverse_proxy http://caddy-opencode:80 {
+            header_up Host {http.request.host}
+        }
+    }
+
+    handle {
+        # Portainer, monitoring, and other management routes
+    }
+}
+```
+
+**`caddy-opencode` Caddyfile:**
+
+```caddy
+:80 {
+    @instance expression `{labels.2}.endsWith("-oc")`
+
+    handle @instance {
         reverse_proxy http://opencode-{labels.2}:8080 {
             header_up Host {http.request.host}
         }
@@ -312,10 +331,14 @@ services:
     image: opencode-server:latest
     container_name: opencode-prospera
     restart: unless-stopped
+    environment:
+      - OPENCODE_SERVER_PASSWORD=${OPENCODE_PROSPERA_PASSWORD}
     networks:
       - opencode_net
     volumes:
       - opencode_prospera_data:/root/.local/share/opencode
+      - opencode_prospera_state:/root/.local/state/opencode
+      - opencode_prospera_config:/root/.config/opencode
       - /home/user/projects/prospera:/workspace
 
 networks:
@@ -397,16 +420,19 @@ with `no_log: true`.
 
 | # | Decision | Rationale |
 |---|----------|-----------|
-| 1 | **Two (or more) per-project OpenCode server instances** instead of one shared instance | Different criticality, tooling, secrets, and stability needs for Homelab vs Prospera |
+| 1 | **Two per-project OpenCode server instances** (`opencode-homelab`, `opencode-prospera`) instead of one shared instance | Different criticality, tooling, secrets, and stability needs for Homelab vs Prospera |
 | 2 | **Run on Cloudlab**, not on the M910q production host | Keeps production host focused; Cloudlab is already Ansible-managed and paid for |
-| 3 | **Use Docker AI Sandboxes (`sbx`) for short agent tasks** and **Compose-managed containers for long-lived server instances** | Sandboxes give strongest isolation; containers give persistence and server mode |
-| 4 | **Base the server image on the official OpenCode image** (`ghcr.io/anomalyco/opencode` or `docker/sandbox-templates:opencode`) and add a thin custom Dockerfile for project tooling | Avoids bloated devcontainer-derived images; clean separation of runtime vs tools |
-| 5 | **Keep `.devcontainer/` in each repo** for Codespaces and sandbox customization, but use a separate Dockerfile for the headless server | `devcontainer.json` is IDE-oriented; server needs are different |
-| 6 | **Expose instances via `*-oc.example.com` wildcard** routed through a **dedicated `caddy-opencode` ingress** | Reuses existing Cloudflare Tunnel wildcard; isolates agent traffic from infrastructure network |
-| 7 | **Place all OpenCode containers in a dedicated Docker network (`opencode_net`)** separate from `mgmt_net` | Limits blast radius of a compromised agent |
+| 3 | **Use standard Docker Compose containers for the initial deployment**; defer `sbx` to a future evaluation | Simpler ops, no KVM dependency, fits existing Ansible/Compose patterns |
+| 4 | **Base the server image on the official OpenCode image** (`ghcr.io/anomalyco/opencode`) and add a thin custom Dockerfile for project tooling | Avoids bloated devcontainer-derived images; clean separation of runtime vs tools |
+| 5 | **Keep `.devcontainer/` in each repo** for Codespaces and future `sbx` customization, but use a separate Dockerfile for the headless server | `devcontainer.json` is IDE-oriented; server needs are different |
+| 6 | **Expose instances via `*-oc.example.com` wildcard** routed through a **dedicated `caddy-opencode` ingress**; `caddy-main` owns the wildcard and proxies agent subdomains | Reuses existing Cloudflare Tunnel wildcard; isolates agent traffic from infrastructure network |
+| 7 | **Place all OpenCode containers in a dedicated Docker network (`opencode_net`)** separate from `mgmt_net`; `caddy-main` bridges the two | Limits blast radius of a compromised agent |
 | 8 | **Use Git worktrees for parallel agent tasks** inside each instance | Lightweight isolation of working directories without full clones |
-| 9 | **Persist session state in named Docker volumes** and back them up with Restic / Azure Blob | Aligns with ADR 02 and runbook 15 |
-| 10 | **Never mount the host Docker socket into an agent container** | Would nullify sandbox isolation |
+| 9 | **Persist session state in named Docker volumes** | Survives container restarts and rebuilds |
+| 10 | **Never mount the host Docker socket into an agent container**; Homelab agent applies changes via SSH/Ansible | Preserves isolation; Ansible is already the deployment tool |
+| 11 | **Authentication via OpenCode's built-in `OPENCODE_SERVER_PASSWORD`** for now; Caddy basic auth or Cloudflare Access SSO can be added later | Simplest first step; Caddy has no native Entra ID support |
+| 12 | **Backups out of scope for the initial setup** | Keep the first deployment small; revisit once instances are stable |
+| 13 | **Codespaces remains an emergency fallback and occasional GitHub Copilot workspace** | ADR 17 and runbook 15 stay in place |
 
 ---
 
@@ -415,12 +441,14 @@ with `no_log: true`.
 | Option | Verdict | Reason |
 |--------|---------|--------|
 | Single shared OpenCode instance for all projects | Rejected | Mixes financial secrets with infra secrets; shared failure domain; conflicting toolchains |
-| Run OpenCode directly on the host as a `systemd` service | Rejected | No sandbox isolation; agent has host filesystem, SSH keys, Docker socket access |
+| Run OpenCode directly on the host as a `systemd` service | Rejected | No container isolation; agent has host filesystem, SSH keys, Docker socket access |
 | Host OpenCode on the M910q | Rejected for now | M910q is the production host; Cloudlab is the designated playground |
 | Use Caddy Docker Proxy for dynamic routing | Rejected | Adds a custom Caddy build and label complexity; static wildcard rule is simpler and uses the official image |
 | One Caddy instance for everything | Rejected | Would place agent traffic and management traffic in the same network, reducing isolation |
 | Use `devcontainer.json` as the server image source | Rejected | Carries IDE-specific weight irrelevant for a headless server |
 | Continue using Codespaces as the primary OpenCode host | Rejected | Codespaces suspend after idle timeout and cannot run persistent daemons economically (Research 20) |
+| Start with `sbx` instead of Docker Compose | Deferred | KVM availability and `sbx` operational overhead are unknown; Compose is the proven first step |
+| Mount host Docker socket into the Homelab container | Rejected | Would void isolation; SSH/Ansible already provides a controlled deployment path |
 
 ---
 
@@ -465,6 +493,10 @@ with `no_log: true`.
 | `prospera-oc.example.com` | `opencode-prospera` | `opencode_net` | `/workspace/prospera` |
 | `<name>-oc.example.com` | `opencode-<name>` | `opencode_net` | `/workspace/<name>` |
 
+**Authentication:** OpenCode's built-in `OPENCODE_SERVER_PASSWORD` per instance. Caddy basic auth or Cloudflare Access can be layered later.
+
+**Backups:** Out of scope for the initial setup; add Restic or Azure Blob snapshots once instances are stable.
+
 ---
 
 ## Implementation sketch
@@ -482,7 +514,7 @@ with `no_log: true`.
 | `docker/opencode-prospera/docker-compose.yml` | Prospera instance |
 | `.env.opencode.example` | Example environment variables (secrets are placeholders) |
 
-### Dockerfile template
+### Dockerfile template (Homelab instance)
 
 ```dockerfile
 FROM ghcr.io/anomalyco/opencode:latest
@@ -505,6 +537,9 @@ RUN curl -fsSL -o /usr/local/bin/bicep \
 EXPOSE 8080
 CMD ["opencode", "serve", "--hostname", "0.0.0.0", "--port", "8080"]
 ```
+
+The Prospera instance would use a separate Dockerfile with .NET SDK and
+SQL/database migration tools instead of Ansible/Bicep.
 
 ### Ansible variables (host_vars/cloudlab.yml)
 
@@ -531,19 +566,16 @@ opencode_instances:
 3. **Desktop app remote attach.** Can the OpenCode Desktop app connect to a
    remote server through Caddy + Cloudflare Tunnel, or is the web UI the only
    remote option?
-4. **Authentication at the edge.** Should the `caddy-opencode` ingress add
-   basic auth in front of OpenCode, or should OpenCode's own
-   `OPENCODE_SERVER_PASSWORD` be the single gate?
-5. **Backup granularity.** Should each instance's named volumes be backed up
-   separately (Prospera more frequently) or together as one Restic snapshot?
-6. **Host Docker access for Homelab agent.** When the agent needs to affect
-   the host Docker stack, is the correct path (a) generate files and run
-   `ansible-playbook` via SSH, (b) a narrow `docker` deployment user with
-   socket access on a separate socket, or (c) avoid it entirely and keep
-   sandbox work as dry-run/syntax validation?
-7. **`sbx` vs Compose server interplay.** Will short `sbx run` tasks and the
-   long-lived server share the same OpenCode state (SQLite DB), or are they
-   separate runtime models?
+4. **`sbx` readiness on Cloudlab.** Is KVM exposed on the Contabo VPS? Does
+   the `docker-sbx` package install cleanly on Ubuntu 24.04?
+5. **Prospera toolchain.** Which exact .NET version, database tools, and SQL
+   migration workflow does Prospera need inside its OpenCode container?
+6. **Cloudflare Access vs Caddy basic auth.** If SSO is needed later, is
+   Cloudflare Access the preferred path, or would a self-hosted OAuth2 Proxy
+   be acceptable?
+7. **Backup strategy.** Once initial setup is stable, should backups use the
+   existing Restic role, the Azure Blob tarball pattern from runbook 15, or
+   both?
 8. **Cloudflare Tunnel wildcard precedence.** The `*-oc.example.com` rule must
    appear before the `*.example.com` rule in `config.yml`; document and test
    this ordering.
@@ -552,9 +584,8 @@ opencode_instances:
 
 ## References
 
-- [ADR 17 — Adopt OpenCode](../decisions/17-adopt-opencode.md) (the decision this research supplements)
-- [Research 20 — OpenCode Hosting: Codespaces vs Homelab/Cloudlab](20-opencode-hosting-codespaces-vs-homelab.md)
-- [Runbook 15 — OpenCode Session Persistence + Backup in Codespaces](../runbooks/15-opencode-session-persistence.md)
+- [ADR 17 — Adopt OpenCode](../decisions/17-adopt-opencode.md) (the decision this research supplements; Codespaces remains the emergency/secondary environment)
+- [Research 20 — OpenCode Hosting: Codespaces vs Homelab/Cloudlab](20-opencode-hosting-codespaces-vs-homelab.md) — **predecessor evaluation that selected Cloudlab + Docker + Caddy/Tunnel; this doc extends it to per-project instances, network isolation, and a near-term Compose-first deployment with `sbx` deferred**
 - [ADR 02 — Backup Strategy (Restic + Azure Blob)](../decisions/02-backup-strategy-restic-blob.md)
 - [ADR 07 — Reverse Proxy (Caddy)](../decisions/07-reverse-proxy-caddy.md)
 - [ADR 08 — Remote Access (Cloudflare Tunnel)](../decisions/08-remote-access-cloudflare-tunnel.md)
