@@ -2,28 +2,28 @@
 
 | # | Date | Document | Topic | Source |
 |---|------|----------|-------|--------|
-| 01 | 2026‑05‑20 | [01-hardware-mini-pc.md](01-hardware-mini-pc.md) | Second-hand mini PC shortlist & general guidance | Gemini chat 1 |
-| 02 | 2026‑05‑20 | [02-llm-requirements.md](02-llm-requirements.md) | LLM resource requirements & local-vs-API trade-offs | Gemini chat 1 |
-| 03 | 2026‑05‑20 | [03-selected-hardware-m910q.md](03-selected-hardware-m910q.md) | M910q Tiny: detailed specs, ports, storage rationale | Gemini chat 2 |
-| 04 | 2026‑05‑24 | [04-hermes-agent-setup.md](04-hermes-agent-setup.md) | Hermes Agent install plan, MiniMax M2.7 config, chat UIs | Gemini chat 2 |
-| 05 | 2026‑05‑24 | [05-container-stack.md](05-container-stack.md) | Docker Compose → k3s migration path, service catalogue, disk layout, restart policies | Gemini chat 2 |
-| 06 | 2026‑05‑29 | [06-networking-connectivity.md](06-networking-connectivity.md) | CGNAT solutions: Cloudflare Tunnels, Tailscale, hybrid proxy | Gemini chat 2 |
-| 07 | 2026‑05‑24 | [07-azure-arc-and-cost.md](07-azure-arc-and-cost.md) | Azure Arc enrolment, physical vs cloud cost comparison | Gemini chat 2 |
-| 08 | 2026‑05‑27 | [08-llm-server-hardware.md](08-llm-server-hardware.md) | Dedicated LLM server hardware paths; Minisforum X1 Lite selected (Phase 2) | Gemini chat 3 |
-| 09 | 2026‑05‑24 | [09-os-decision.md](09-os-decision.md) | OS choice | Research |
-| 10 | 2026‑05‑24 | [10-backup-strategy.md](10-backup-strategy.md) | Restic backup to secondary SATA disk, retention, disaster recovery | Research |
-| 11 | 2026‑05‑29 | [11-local-dns-caddy.md](11-local-dns-caddy.md) | Local DNS via Caddy, mDNS for `.homelab.local` resolution | Research |
-| 12 | 2026‑06‑01 | [12-first-boot-setup.md](12-first-boot-setup.md) | First-boot: backup, BIOS, static IP, SSH, LVM resize, hardening | Gemini chat 4 |
-| 13 | 2026‑06‑13 | [13-ansible-adoption.md](13-ansible-adoption.md) | Ansible adoption for GitOps host config, DR strategy, Ubuntu 26→24 downgrade | Gemini chat 5 |
-| 14 | 2026‑06‑05 | [14-backup-cost-comparison.md](14-backup-cost-comparison.md) | Restic+Blob vs Azure Backup Arc cost comparison | Research |
-| 15 | 2026‑06‑16 | [15-vps-selection.md](15-vps-selection.md) | Budget VPS selection for Ansible playground; Hetzner CPX31 with snapshot destroy/recreate | Gemini chat 6 |
-| 16 | 2026‑06‑18 | [16-github-codespaces-devcontainers.md](16-github-codespaces-devcontainers.md) | GitHub Codespaces & Dev Containers setup for Homelab dev environment | Gemini chat 7 |
-| 17 | 2026‑06‑21 | [17-arc-vm-insights-setup.md](17-arc-vm-insights-setup.md) | Why Arc VM Insights shows "No Data" despite data flowing to LAW — portal onboarding gap | Research |
-| 18 | 2026‑06‑21 | [18-docker-compose-replication.md](18-docker-compose-replication.md) | Options for replicating Cloudlab docker-compose stack to Homelab after rebuild — Ansible role vs Portainer vs rsync | Research |
-| 19 | 2026‑06‑25 | [19-copilot-desktop-agentic.md](19-copilot-desktop-agentic.md) | GitHub Copilot Desktop app for agentic Homelab dev — MCP, BYOK, Skills, DR automation, Entra ID, secret mgmt | Gemini chat 8 |
-| 20 | 2026‑07‑04 | [20-opencode-hosting-codespaces-vs-homelab.md](20-opencode-hosting-codespaces-vs-homelab.md) | OpenCode hosting — Codespaces vs M910q vs Cloudlab; server mode, sandboxing, dependencies, backup, automation | Research |
-| 21 | 2026‑07‑08 | [21-opencode-sandboxed-homelab-architecture.md](21-opencode-sandboxed-homelab-architecture.md) | OpenCode sandboxed architecture on Homelab — per-project instances, Docker Sandboxes, Caddy wildcard routing, network isolation | Gemini chats 9–13 |
 | 22 | 2026‑07‑11 | [22-infisical-for-homelab-secret-management.md](22-infisical-for-homelab-secret-management.md) | Infisical for Homelab secret management — evaluation, Docker deployment, and OpenCode integration concepts | Web research + OpenCode thread |
+| 21 | 2026‑07‑08 | [21-opencode-sandboxed-homelab-architecture.md](21-opencode-sandboxed-homelab-architecture.md) | OpenCode sandboxed architecture on Homelab — per-project instances, Docker Sandboxes, Caddy wildcard routing, network isolation | Gemini chats 9–13 |
+| 20 | 2026‑07‑04 | [20-opencode-hosting-codespaces-vs-homelab.md](20-opencode-hosting-codespaces-vs-homelab.md) | OpenCode hosting — Codespaces vs M910q vs Cloudlab; server mode, sandboxing, dependencies, backup, automation | Research |
+| 19 | 2026‑06‑25 | [19-copilot-desktop-agentic.md](19-copilot-desktop-agentic.md) | GitHub Copilot Desktop app for agentic Homelab dev — MCP, BYOK, Skills, DR automation, Entra ID, secret mgmt | Gemini chat 8 |
+| 18 | 2026‑06‑21 | [18-docker-compose-replication.md](18-docker-compose-replication.md) | Options for replicating Cloudlab docker-compose stack to Homelab after rebuild — Ansible role vs Portainer vs rsync | Research |
+| 17 | 2026‑06‑21 | [17-arc-vm-insights-setup.md](17-arc-vm-insights-setup.md) | Why Arc VM Insights shows "No Data" despite data flowing to LAW — portal onboarding gap | Research |
+| 16 | 2026‑06‑18 | [16-github-codespaces-devcontainers.md](16-github-codespaces-devcontainers.md) | GitHub Codespaces & Dev Containers setup for Homelab dev environment | Gemini chat 7 |
+| 15 | 2026‑06‑16 | [15-vps-selection.md](15-vps-selection.md) | Budget VPS selection for Ansible playground; Hetzner CPX31 with snapshot destroy/recreate | Gemini chat 6 |
+| 14 | 2026‑06‑05 | [14-backup-cost-comparison.md](14-backup-cost-comparison.md) | Restic+Blob vs Azure Backup Arc cost comparison | Research |
+| 13 | 2026‑06‑13 | [13-ansible-adoption.md](13-ansible-adoption.md) | Ansible adoption for GitOps host config, DR strategy, Ubuntu 26→24 downgrade | Gemini chat 5 |
+| 12 | 2026‑06‑01 | [12-first-boot-setup.md](12-first-boot-setup.md) | First-boot: backup, BIOS, static IP, SSH, LVM resize, hardening | Gemini chat 4 |
+| 11 | 2026‑05‑29 | [11-local-dns-caddy.md](11-local-dns-caddy.md) | Local DNS via Caddy, mDNS for `.homelab.local` resolution | Research |
+| 10 | 2026‑05‑24 | [10-backup-strategy.md](10-backup-strategy.md) | Restic backup to secondary SATA disk, retention, disaster recovery | Research |
+| 09 | 2026‑05‑24 | [09-os-decision.md](09-os-decision.md) | OS choice | Research |
+| 08 | 2026‑05‑27 | [08-llm-server-hardware.md](08-llm-server-hardware.md) | Dedicated LLM server hardware paths; Minisforum X1 Lite selected (Phase 2) | Gemini chat 3 |
+| 07 | 2026‑05‑24 | [07-azure-arc-and-cost.md](07-azure-arc-and-cost.md) | Azure Arc enrolment, physical vs cloud cost comparison | Gemini chat 2 |
+| 06 | 2026‑05‑29 | [06-networking-connectivity.md](06-networking-connectivity.md) | CGNAT solutions: Cloudflare Tunnels, Tailscale, hybrid proxy | Gemini chat 2 |
+| 05 | 2026‑05‑24 | [05-container-stack.md](05-container-stack.md) | Docker Compose → k3s migration path, service catalogue, disk layout, restart policies | Gemini chat 2 |
+| 04 | 2026‑05‑24 | [04-hermes-agent-setup.md](04-hermes-agent-setup.md) | Hermes Agent install plan, MiniMax M2.7 config, chat UIs | Gemini chat 2 |
+| 03 | 2026‑05‑20 | [03-selected-hardware-m910q.md](03-selected-hardware-m910q.md) | M910q Tiny: detailed specs, ports, storage rationale | Gemini chat 2 |
+| 02 | 2026‑05‑20 | [02-llm-requirements.md](02-llm-requirements.md) | LLM resource requirements & local-vs-API trade-offs | Gemini chat 1 |
+| 01 | 2026‑05‑20 | [01-hardware-mini-pc.md](01-hardware-mini-pc.md) | Second-hand mini PC shortlist & general guidance | Gemini chat 1 |
 
 ## Gemini Discussions
 
