@@ -36,7 +36,6 @@ operating on its own.
 - **GitHub repository**: `https://github.com/jaroslaw-bagnicki/Homelab` (owner: `jaroslaw-bagnicki`, repo: `Homelab`)
 - **Always use GitHub MCP tools** for GitHub operations — never GitKraken MCP tools for GitHub
 - **If a GitHub MCP tool call fails**, report the error to the user and do not attempt the operation via any other tool or CLI
-- **Never call `gh api`** for GitHub operations — use only the relevant `gh` subcommand (`gh issue view`, `gh issue edit`, `gh pr view`, `gh pr merge`, `gh api graphql`, etc.) or the GitHub MCP tools. `gh api` exists for generic REST passthrough only and bypasses the typed subcommands the agent already has.
 - **Work on a feature branch in a worktree** — see [Worktree Workflow](#worktree-workflow) below; do not commit to `main` from an autonomous session
 - **Commit message format**: `(type) description` with parentheses. Common types: `docs`, `feat`, `fix`, `chore`, `refactor`
 - **Never rebase** unless explicitly asked (the rebase step in [Worktree Workflow](#worktree-workflow) merge-via-PR is the standard carve-out)
