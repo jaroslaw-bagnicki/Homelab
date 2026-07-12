@@ -11,6 +11,13 @@
     state: directory
     mode: "0755"
 
+- name: Ensure declared Docker networks exist
+  community.docker.docker_network:
+    name: "{{ item.name }}"
+    state: present
+    driver: "{{ item.driver | default('bridge') }}"
+  loop: "{{ docker_services_networks }}"
+
 - name: Set cloudflared tunnel token from Key Vault
   vars:
     vault_url: "https://{{ arc_keyvault_name }}.vault.azure.net"
