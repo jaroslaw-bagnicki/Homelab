@@ -9,8 +9,6 @@ portainer_admin_password_secret_name: "portainer-admin-password"
 
 opencode_public_domain: example.com
 
-opencode_subdomain_suffix: oc
-
 docker_services_networks:
   - name: homelab_net
   - name: opencode_net

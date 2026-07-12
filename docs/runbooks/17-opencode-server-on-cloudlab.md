@@ -16,7 +16,7 @@
 
 | File | Purpose |
 |---|---|
-| `ansible/roles/docker_opencode_ingress/defaults/main.yml` | `opencode_public_domain: example.com`, `opencode_subdomain_suffix: oc` |
+| `ansible/roles/docker_opencode_ingress/defaults/main.yml` | `opencode_public_domain: example.com` |
 | `ansible/roles/docker_opencode_ingress/tasks/main.yml` | Assert host → ensure `/etc/opencode/ingress` → ensure `opencode_net` → template `Caddyfile.j2` + `docker-compose.yml.j2` → deploy `caddy-opencode` |
 | `ansible/roles/docker_opencode_ingress/handlers/main.yml` | `Restart caddy-opencode` |
 | `ansible/roles/docker_opencode_ingress/templates/Caddyfile.j2` | Per-instance `handle @inst_<name>` block for `*.<name>-oc.<domain>`, reverse-proxy to `opencode-<name>:4096` via Docker DNS on `opencode_net` |
@@ -34,11 +34,11 @@
 
 | File | Purpose |
 |---|---|
-| `ansible/host_vars/cloudlab.yml` | `opencode_public_domain` + `opencode_subdomain_suffix` overrides + `opencode_instances:` list (homelab, prospera) |
+| `ansible/host_vars/cloudlab.yml` | `opencode_public_domain: cloud5.ovh` override + `opencode_instances:` list (homelab, prospera) |
 
 ### `docker_services` integration
 
-The existing `docker_services` role gains two vars (`opencode_public_domain`, `opencode_subdomain_suffix`) plus a new wildcard site block in `Caddyfile.j2` that proxies `*-oc.<domain>` traffic to `caddy-opencode:80`. The caddy container joins the external `opencode_net` to reach the dedicated ingress.
+The existing `docker_services` role gains `opencode_public_domain` (default `example.com`, overridden to `cloud5.ovh` via host_vars) plus a new wildcard site block in `Caddyfile.j2` that proxies `*-oc.<domain>` traffic to `caddy-opencode:80`. The `oc` suffix is hardcoded in the Caddyfile template. The caddy container joins the external `opencode_net` to reach the dedicated ingress.
 
 ## 2. Services
 
@@ -137,7 +137,7 @@ Both roles are guarded by `inventory_hostname in ['homelab', 'cloudlab']` (mirro
 - [ ] Via Cloudflare Tunnel: `curl -u opencode:$PASSWORD https://homelab-oc.cloud5.ovh/global/health` → `{"healthy":true,...}`
 - [ ] Via Cloudflare Tunnel: same check against `https://prospera-oc.cloud5.ovh/global/health`
 
-The `cloud5.ovh` literal in this runbook reflects the cloudlab deployment. The `opencode_public_domain` Ansible var controls it; substitute accordingly when targeting a different host. The `oc` suffix in hostnames is configured by the `opencode_subdomain_suffix` Ansible var.
+The `cloud5.ovh` literal in this runbook reflects the cloudlab deployment. The `opencode_public_domain` Ansible var controls it; substitute accordingly when targeting a different host. The `oc` suffix is hardcoded in the Caddyfile template.
 
 ## 8. Cloudflare Tunnel DNS prerequisites
 

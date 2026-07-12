@@ -12,7 +12,7 @@ http://portainer.cloud5.ovh {
     }
 }
 
-http://*-{{ opencode_subdomain_suffix }}.{{ opencode_public_domain }} {
+http://*-oc.{{ opencode_public_domain }} {
     reverse_proxy caddy-opencode:80 {
         header_up Host {host}
         header_up X-Forwarded-Proto https

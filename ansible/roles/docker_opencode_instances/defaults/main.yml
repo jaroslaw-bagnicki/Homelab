@@ -1,6 +1,4 @@
 ---
 opencode_instances_dir: /var/lib/opencode/instances
-
 opencode_keyvault_name: homelab-bysxdb-kv
-
 opencode_password_secret_template: "opencode-{name}-server-password"

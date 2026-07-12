@@ -1,6 +1,6 @@
-{
+:80 {
     {% for inst in opencode_instances %}
-    handle @inst_{{ inst.name | replace('-', '_') }} host {{ inst.name }}-{{ opencode_subdomain_suffix }}.{{ opencode_public_domain }} {
+    handle @inst_{{ inst.name }} host {{ inst.name }}-oc.{{ opencode_public_domain }} {
         reverse_proxy http://opencode-{{ inst.name }}:4096 {
             header_up Host {http.request.host}
             transport http {
