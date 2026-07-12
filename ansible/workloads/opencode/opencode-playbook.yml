@@ -11,7 +11,7 @@
 # either source wins idempotently.
 #
 # Run standalone:
-#   ansible-playbook ansible/workloads/opencode/opencode_playbook.yml
+#   ansible-playbook ansible/workloads/opencode/opencode-playbook.yml
 #
 # See:
 #   ansible/workloads/opencode/README.md        ansible-side facts
