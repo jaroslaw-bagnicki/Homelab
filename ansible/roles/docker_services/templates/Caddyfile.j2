@@ -13,12 +13,15 @@ http://portainer.cloud5.ovh {
 }
 
 http://*-oc.{{ opencode_public_domain }} {
-    reverse_proxy caddy-opencode:80 {
-        header_up Host {host}
-        header_up X-Forwarded-Proto https
-        transport http {
-            dial_timeout 5s
-            response_header_timeout 30s
+    route {
+        @oc host_regexp ^.+-oc\.{{ opencode_public_domain | regex_escape }}$
+        reverse_proxy @oc http://caddy-opencode:80 {
+            header_up Host {host}
+            header_up X-Forwarded-Proto https
+            transport http {
+                dial_timeout 5s
+                response_header_timeout 30s
+            }
         }
     }
 }
