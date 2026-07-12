@@ -35,13 +35,13 @@ All OpenCode containers attach only to `opencode_net`.
 
 /var/lib/opencode/instances/            # data tree root (role default: opencode_instances_dir)
 └── <name>/                             # per instance
-    ├── data/                           # bind-mounted → ~/.local/share/opencode
-    ├── state/                          # bind-mounted → ~/.local/state/opencode
-    ├── config/                         # bind-mounted → ~/.config/opencode
+    ├── data/                           # bind-mounted → /root/.local/share/opencode
+    ├── state/                          # bind-mounted → /root/.local/state/opencode
+    ├── config/                         # bind-mounted → /root/.config/opencode
     └── workspace/                      # bind-mounted → /workspace
 ```
 
-Per-instance directories owned by `1000:1000` (matches the typical UID of the `opencode` user inside the upstream image). Verify on the host with `docker run --rm ghcr.io/anomalyco/opencode:latest id` and adjust ownership if mismatched.
+Container process runs as `root` (uid 0). Bind-mounted directories on the host are owned by `labadmin:labadmin` (uid 1000); root inside the container can write regardless.
 
 ## Secrets
 
