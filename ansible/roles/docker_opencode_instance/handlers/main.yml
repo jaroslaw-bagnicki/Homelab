@@ -1,0 +1,14 @@
+---
+- name: Restart opencode instance
+  community.docker.docker_container:
+    name: "opencode-{{ item.name }}"
+    state: started
+    restart: true
+  loop: "{{ opencode_instances }}"
+
+- name: Redeploy opencode instances
+  community.docker.docker_compose_v2:
+    project_src: "{{ opencode_instances_root }}/{{ item.name }}"
+    state: present
+    pull: "{{ opencode_instance_pull | default(true) }}"
+  loop: "{{ opencode_instances }}"

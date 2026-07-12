@@ -1,0 +1,12 @@
+---
+- name: Restart caddy-opencode
+  community.docker.docker_container:
+    name: "{{ opencode_ingress_container_name }}"
+    state: started
+    restart: true
+
+- name: Redeploy opencode ingress
+  community.docker.docker_compose_v2:
+    project_src: "{{ opencode_ingress_dir }}"
+    state: present
+    pull: "{{ opencode_ingress_pull | default(true) }}"

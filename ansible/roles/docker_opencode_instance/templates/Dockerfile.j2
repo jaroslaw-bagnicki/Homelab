@@ -1,0 +1,35 @@
+{% raw %}FROM ghcr.io/anomalyco/opencode:latest
+
+ARG INSTANCE_NAME=generic
+ARG WORKSPACE_DIR=/workspace
+ARG OPENCODE_PORT=4096
+
+ENV OPENCODE_SERVER_HOSTNAME=0.0.0.0 \
+    OPENCODE_SERVER_PORT=${OPENCODE_PORT}
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        ansible \
+        ansible-lint \
+        ca-certificates \
+        curl \
+        git \
+        jq \
+        openssh-client \
+        sudo \
+    && curl -fsSL -o /usr/local/bin/bicep \
+        https://github.com/Azure/bicep/releases/latest/download/bicep-linux-x64 \
+    && chmod +x /usr/local/bin/bicep \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* \
+    && useradd -m -s /bin/bash opencode \
+    && mkdir -p ${WORKSPACE_DIR} \
+    && chown -R opencode:opencode /home/opencode ${WORKSPACE_DIR}
+
+USER opencode
+WORKDIR ${WORKSPACE_DIR}
+
+EXPOSE ${OPENCODE_PORT}
+
+CMD ["opencode", "serve", "--hostname", "0.0.0.0", "--port", "${OPENCODE_PORT}"]
+{% endraw %}

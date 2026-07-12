@@ -1,0 +1,21 @@
+---
+opencode_instances:
+  - name: homelab
+    compose_file: ../../docker/opencode-homelab/docker-compose.yml
+    image: opencode-server:latest
+    port: 4096
+    workspace_owner: labadmin
+    workspace_group: labadmin
+    api_key_env_vars:
+      - OPENAI_API_KEY
+      - ANTHROPIC_API_KEY
+      - OPENCODE_ZEN_API_KEY
+  - name: prospera
+    compose_file: ../../docker/opencode-prospera/docker-compose.yml
+    image: opencode-server:latest
+    port: 4096
+    workspace_owner: labadmin
+    workspace_group: labadmin
+    api_key_env_vars:
+      - OPENAI_API_KEY
+      - ANTHROPIC_API_KEY

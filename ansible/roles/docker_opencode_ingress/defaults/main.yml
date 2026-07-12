@@ -1,0 +1,12 @@
+---
+opencode_ingress_dir: /opt/opencode/ingress
+
+opencode_ingress_image: caddy:2-alpine
+
+opencode_ingress_container_name: caddy-opencode
+
+opencode_network_name: opencode_net
+
+opencode_root_domain: cloud5.ovh
+
+opencode_subdomain_prefix: oc

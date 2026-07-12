@@ -1,0 +1,40 @@
+services:
+  build:
+    image: opencode-server:latest
+    container_name: opencode-server-build
+    build:
+      context: ../opencode-server
+      dockerfile: Dockerfile
+    networks:
+      - opencode_net
+    profiles:
+      - buildonly
+
+  opencode-prospera:
+    image: opencode-server:latest
+    container_name: opencode-prospera
+    restart: always
+    build:
+      context: ../opencode-server
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    networks:
+      opencode_net:
+        aliases:
+          - opencode-prospera
+    volumes:
+      - opencode_prospera_data:/home/opencode/.local/share/opencode
+      - opencode_prospera_state:/home/opencode/.local/state/opencode
+      - opencode_prospera_config:/home/opencode/.config/opencode
+      - /opt/opencode/workspaces/prospera:/workspace
+
+volumes:
+  opencode_prospera_data:
+  opencode_prospera_state:
+  opencode_prospera_config:
+
+networks:
+  opencode_net:
+    external: true
+    name: opencode_net

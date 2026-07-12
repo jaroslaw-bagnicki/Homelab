@@ -1,0 +1,40 @@
+services:
+  build:
+    image: opencode-server:latest
+    container_name: opencode-server-build
+    build:
+      context: ../opencode-server
+      dockerfile: Dockerfile
+    networks:
+      - opencode_net
+    profiles:
+      - buildonly
+
+  opencode-homelab:
+    image: opencode-server:latest
+    container_name: opencode-homelab
+    restart: always
+    build:
+      context: ../opencode-server
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    networks:
+      opencode_net:
+        aliases:
+          - opencode-homelab
+    volumes:
+      - opencode_homelab_data:/home/opencode/.local/share/opencode
+      - opencode_homelab_state:/home/opencode/.local/state/opencode
+      - opencode_homelab_config:/home/opencode/.config/opencode
+      - /opt/opencode/workspaces/homelab:/workspace
+
+volumes:
+  opencode_homelab_data:
+  opencode_homelab_state:
+  opencode_homelab_config:
+
+networks:
+  opencode_net:
+    external: true
+    name: opencode_net

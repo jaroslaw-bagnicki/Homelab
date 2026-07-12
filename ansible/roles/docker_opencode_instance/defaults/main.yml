@@ -1,0 +1,21 @@
+---
+opencode_instances_root: /opt/opencode
+
+opencode_server_port: 4096
+
+opencode_server_image_default: opencode-server:latest
+
+opencode_keyvault_name: homelab-bysxdb-kv
+
+opencode_password_secret_template: "opencode-{name}-server-password"
+
+opencode_api_key_secret_template: "opencode-{name}-api-key"
+
+opencode_api_key_env_vars:
+  - OPENAI_API_KEY
+  - ANTHROPIC_API_KEY
+  - OPENCODE_ZEN_API_KEY
+
+opencode_workspace_root: /opt/opencode/workspaces
+
+opencode_instances: []

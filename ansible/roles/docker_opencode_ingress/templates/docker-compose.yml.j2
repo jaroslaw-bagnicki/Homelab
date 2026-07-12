@@ -1,0 +1,22 @@
+services:
+  caddy-opencode:
+    image: {{ opencode_ingress_image }}
+    container_name: {{ opencode_ingress_container_name }}
+    restart: always
+    ports:
+      - "127.0.0.1:8090:8080"
+    volumes:
+      - {{ opencode_ingress_dir }}/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_opencode_data:/data
+      - caddy_opencode_config:/config
+    networks:
+      - {{ opencode_network_name }}
+
+volumes:
+  caddy_opencode_data:
+  caddy_opencode_config:
+
+networks:
+  {{ opencode_network_name }}:
+    external: true
+    name: {{ opencode_network_name }}

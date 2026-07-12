@@ -1,0 +1,119 @@
+---
+- name: Validate opencode_instances list is non-empty
+  ansible.builtin.assert:
+    that:
+      - opencode_instances | length > 0
+    fail_msg: "opencode_instances list is empty. Define at least one instance in host_vars/{{ inventory_hostname }}.yml."
+
+- name: Validate each opencode_instance entry
+  ansible.builtin.assert:
+    that:
+      - item.name is defined and item.name | length > 0
+      - item.compose_file is defined and item.compose_file | length > 0
+      - item.image is defined and item.image | length > 0
+    fail_msg: "opencode_instances entries must define name, compose_file and image. Offending entry: {{ item | default('undefined') }}"
+  loop: "{{ opencode_instances }}"
+  loop_control:
+    label: "{{ item.name | default('undefined') }}"
+
+- name: Ensure per-instance root directory exists
+  ansible.builtin.file:
+    path: "{{ opencode_instances_root }}/{{ item.name }}"
+    state: directory
+    mode: "0755"
+  loop: "{{ opencode_instances }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Ensure per-instance workspace directory exists
+  ansible.builtin.file:
+    path: "{{ opencode_workspace_root }}/{{ item.name }}"
+    state: directory
+    mode: "0755"
+    owner: "{{ item.workspace_owner | default('root') }}"
+    group: "{{ item.workspace_group | default('root') }}"
+  loop: "{{ opencode_instances }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Stage compose file for instance
+  ansible.builtin.copy:
+    src: "{{ item.compose_file }}"
+    dest: "{{ opencode_instances_root }}/{{ item.name }}/docker-compose.yml"
+    mode: "0644"
+  loop: "{{ opencode_instances }}"
+  loop_control:
+    label: "{{ item.name }}"
+  notify: Redeploy opencode instances
+
+- name: Stage Dockerfile for instance image build
+  ansible.builtin.copy:
+    src: "{{ item.dockerfile | default('') }}"
+    dest: "{{ opencode_instances_root }}/{{ item.name }}/Dockerfile"
+    mode: "0644"
+  when: item.dockerfile is defined and item.dockerfile | length > 0
+  loop: "{{ opencode_instances }}"
+  loop_control:
+    label: "{{ item.name }}"
+  notify: Redeploy opencode instances
+
+- name: Fetch instance password from Key Vault
+  vars:
+    vault_url: "https://{{ opencode_keyvault_name }}.vault.azure.net"
+    secret_name: "{{ opencode_password_secret_template | format(name=item.name) }}"
+  ansible.builtin.set_fact:
+    opencode_instance_password: "{{ lookup('azure.azcollection.azure_keyvault_secret', secret_name, vault_url=vault_url) }}"
+  delegate_to: localhost
+  no_log: true
+  loop: "{{ opencode_instances }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Fetch optional API keys from Key Vault
+  vars:
+    vault_url: "https://{{ opencode_keyvault_name }}.vault.azure.net"
+    secret_name: "{{ opencode_api_key_secret_template | format(name=item.0.name, env=item.1) }}"
+  ansible.builtin.set_fact:
+    opencode_instance_api_key_value: "{{ lookup('azure.azcollection.azure_keyvault_secret', secret_name, vault_url=vault_url) | default('', true) }}"
+  when: opencode_api_key_env_vars | length > 0
+  delegate_to: localhost
+  no_log: true
+  loop: "{{ opencode_instances | subelements('api_key_env_vars', skip_missing=True) | default([], true) }}"
+
+- name: Write per-instance .env file
+  ansible.builtin.template:
+    src: env.j2
+    dest: "{{ opencode_instances_root }}/{{ item.name }}/.env"
+    mode: "0600"
+  loop: "{{ opencode_instances }}"
+  loop_control:
+    label: "{{ item.name }}"
+  notify: Restart opencode instance
+  no_log: true
+
+- name: Deploy opencode instances
+  community.docker.docker_compose_v2:
+    project_src: "{{ opencode_instances_root }}/{{ item.name }}"
+    state: present
+    pull: "{{ opencode_instance_pull | default(true) }}"
+  loop: "{{ opencode_instances }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Wait for each opencode instance health endpoint
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ opencode_server_port }}/global/health"
+    method: GET
+    headers:
+      Host: "{{ item.name }}-{{ opencode_subdomain_prefix | default('oc') }}.{{ opencode_root_domain | default('cloud5.ovh') }}"
+    status_code:
+      - 200
+      - 401
+  register: opencode_health_check
+  retries: 12
+  delay: 5
+  until: opencode_health_check.status in [200, 401]
+  loop: "{{ opencode_instances }}"
+  loop_control:
+    label: "{{ item.name }}"
+  changed_when: false
