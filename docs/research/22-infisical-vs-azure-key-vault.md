@@ -1,7 +1,8 @@
-# Infisical vs Azure Key Vault for OpenCode Secret Management
+# Infisical for Homelab Secret Management: Evaluation, Deployment, and OpenCode Integration
 
-**Date:** 2026‑07‑11
-**Source:** Web research (Infisical docs, Microsoft Learn)
+**Date:** 2026‑07‑11  
+**Updated:** 2026‑07‑12  
+**Source:** Web research (Infisical docs, Microsoft Learn) and OpenCode MiMo V2.5 research thread at https://opncd.ai/share/i6qtTYlZ (re-read same day to capture additional API, plugin, and agent-mode credential threads)
 
 ---
 
@@ -40,11 +41,94 @@ never mix. Each OpenCode instance would receive only its own project’s secrets
 ### Self-hosting basics
 
 - Official Docker Compose template available.
-- Requires a Postgres database (can run in the same Compose file).
+- Requires **Postgres** and **Redis** (both can run in the same Compose file).
+  The thread clarifies this explicitly; the single Docker image needs external
+  Postgres and Redis.
+- Required base environment variables:
+  - `ENCRYPTION_KEY`
+  - `AUTH_SECRET`
+  - `DB_CONNECTION_URI`
+  - `REDIS_URL`
+  - `SITE_URL`
+- Minimum hardware is modest: Raspberry Pi 4, mini PC, NAS with Docker support,
+  or small VPS.
 - Supports SMTP for email, but optional for local-only use.
 - Web UI, CLI, SDKs, and REST API are all available in the self-hosted edition.
 - Dynamic secrets, secret rotation, and secret scanning are enterprise/paid
   features; static secret CRUD and project RBAC are open-source.
+
+### Machine identities and Docker container RBAC
+
+Infisical supports **Machine Identities** for workload authentication. For
+Docker containers, the typical flow is:
+
+1. Create one Machine Identity per container/service in the Infisical dashboard.
+2. Configure **Universal Auth** (Client ID + Client Secret) for that identity.
+3. Assign roles at the project level with scoped permissions (project,
+   environment, and folder/path).
+4. At container startup, authenticate with the Infisical CLI:
+   ```dockerfile
+   CMD ["infisical", "run", "--projectId", "<id>", "--", "npm", "start"]
+   ```
+5. Pass credentials via environment variables:
+   ```bash
+   docker run \
+     -e INFISICAL_MACHINE_CLIENT_ID=<client-id> \
+     -e INFISICAL_MACHINE_CLIENT_SECRET=<client-secret> \
+     your-image
+   ```
+
+**RBAC scoping options:**
+
+- **Project-level** — identity can access only assigned project(s).
+- **Environment-level** — restrict to specific environments (dev, staging, prod).
+- **Path-level** — restrict to specific folders such as `/database`.
+- **Custom roles** — define exact permissions (read-only, read-write, etc.).
+
+Other auth methods include Kubernetes Auth, AWS/GCP/Azure workload identity,
+and OIDC Auth. This gives per-container identity with least-privilege access.
+
+### REST API exposure inside Docker networks
+
+The self-hosted Infisical container exposes a REST API that other containers in
+the same Docker network can consume. Operational defaults from the thread:
+
+- **Default port:** `8080` (configurable via `PORT`).
+- **Bind address:** set `HOST=0.0.0.0` to listen on all interfaces; the default
+  is localhost-only and would not be reachable from other containers.
+- **Internal URL:** `http://infisical:8080` when the service is named
+  `infisical` in the same Compose network.
+- **Consumption options:** Infisical CLI, language SDKs, or direct REST calls
+  such as `curl http://infisical:8080/api/v1/secrets`.
+- **Authentication:** Machine Identities via Universal Auth (Client ID +
+  Client Secret) to obtain short-lived access tokens.
+
+Example Compose snippet:
+
+```yaml
+services:
+  infisical:
+    image: infisical/infisical:latest
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8080
+    networks:
+      - homelab
+
+  my-app:
+    image: my-app
+    environment:
+      - INFISICAL_API_URL=http://infisical:8080
+    networks:
+      - homelab
+
+networks:
+  homelab:
+```
+
+This means Infisical can sit on the same internal Docker network as the
+workloads it serves, avoiding the need to expose the secret API to the public
+internet.
 
 ### Ansible integration
 
@@ -59,6 +143,34 @@ Infisical provides an official Ansible collection (`infisical.vault`) on Galaxy:
 
 This is comparable to the `azure.azcollection.azure_keyvault_secret` lookup
 used today, with the extra step of maintaining a self-hosted service.
+
+### OpenCode plugin integration concept
+
+The thread also explored whether an OpenCode plugin should integrate with
+Infisical. OpenCode's plugin system supports custom tools, `shell.env` hooks,
+and 25+ lifecycle events. A plugin could expose tools such as:
+
+| Feature | Hook/Method | Value |
+|---|---|---|
+| `infisical_get_secret` | Custom tool | AI fetches a secret on-demand |
+| `infisical_list_secrets` | Custom tool | Browse available project secrets |
+| Env var injection | `shell.env` | Auto-inject secrets into shell commands |
+| Secret validation | `tool.execute.before` | Verify required secrets exist before running |
+| Project auto-switch | `session.created` | Detect context and switch Infisical project |
+
+Potential use cases include OpenCode fetching `DB_PASSWORD` while writing code,
+injecting secrets during `docker compose up` instead of using `.env` files,
+syncing secrets for new project setup, and validating required secrets before
+deployment.
+
+Trade-offs:
+
+- **Pros:** secrets never on disk in plaintext; centralized management with
+  audit; per-session credential scoping; works with a self-hosted Infisical
+  instance.
+- **Cons:** adds dependency on Infisical availability; requires securely
+  managing the Machine Identity's own credentials (secret-zero problem);
+  plugin complexity for what may be a small credential set.
 
 ---
 
@@ -140,6 +252,31 @@ cost.
 
 ---
 
+## Validation notes from the OpenCode thread
+
+The research thread confirmed several operational points relevant to a Homelab
+deployment:
+
+1. **Self-hosting is viable on modest hardware** — a mini PC or small VPS is
+   sufficient, matching the existing Cloudlab VPS footprint.
+2. **Redis is a hard dependency** alongside Postgres for the Docker image.
+   This should be included in any Compose file or Ansible role.
+3. **Project-level isolation is first-class**, not a naming convention. This
+   directly satisfies the requirement that different OpenCode instances (or
+   other workloads) must not share secret scope.
+4. **Docker containers authenticate cleanly** via Machine Identities using
+   Universal Auth. The `INFISICAL_MACHINE_CLIENT_ID` and
+   `INFISICAL_MACHINE_CLIENT_SECRET` pattern fits the existing Homelab pattern
+   of passing secrets into containers via environment variables.
+5. **Path-level RBAC** allows a single project to host multiple secret groups
+   (for example `/database`, `/redis`, `/smtp`) without exposing all secrets to
+   every consumer.
+6. **REST API is reachable on the internal Docker network** once `HOST=0.0.0.0`
+   is set, so workloads can pull secrets without public exposure.
+7. **OpenCode plugin integration is feasible** via custom tools and the
+   `shell.env` hook, but the value depends on credential count and rotation
+   frequency.
+
 ## Recommendation
 
 **Keep Azure Key Vault as the initial secret backend** for OpenCode per ADR 18.
@@ -155,6 +292,71 @@ via naming convention and RBAC.
 3. Azure cost or operational concerns outweigh the convenience of a managed
    service.
 4. Dynamic secrets or richer project-level RBAC become necessary.
+
+### Agent-mode credential provisioning concept
+
+A later part of the thread explored using Infisical to feed **Azure service
+principal credentials** and **GitHub SSH keys** into the OpenCode agent in
+agent mode. This is feasible and conceptually attractive, but security-heavy.
+
+**Credential patterns:**
+
+- Azure SP: standard env vars `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`,
+  `AZURE_CLIENT_SECRET`.
+- GitHub: private SSH key loaded into `ssh-agent` via `SSH_AUTH_SOCK` so the
+  key never touches disk.
+
+**Conceptual flow:**
+
+1. OpenCode plugin calls Infisical SDK using a Machine Identity.
+2. Azure SP secrets are passed into the `shell.env` hook.
+3. SSH private keys are loaded into `ssh-agent` (not written to files).
+4. Agent runs `az login --service-principal`, `terraform apply`, or `git`
+   commands with credentials available only in memory.
+
+**Security considerations from the thread:**
+
+- **Credential exposure in tool output.** If `infisical_get_secret` returns the
+  raw value, it may leak into conversation history, shared sessions, or logs.
+  Tools should return confirmation messages and push values directly to env
+  vars or `ssh-agent`.
+- **Agent mode privilege.** Any command the agent runs can read env vars.
+  Scope credentials to specific projects/commands rather than globally.
+- **SSH key lifecycle.** Keys loaded into `ssh-agent` persist until removed.
+  Consider `ssh-add -x` or time-limited keys, and use Infisical rotation.
+- **Multi-project scoping.** Options include a single Infisical project with
+  folder paths (`/azure/*`, `/github/*`), multiple projects per workload, or
+  per-directory project mapping in plugin config.
+
+**Verdict:** feasible and useful for dynamic or rotating credentials across
+many services. For a static set of 2–3 credentials, the simpler Infisical CLI
+approach (`eval "$(infisical export)"` in shell init, plus SSH agent
+forwarding) is likely enough.
+
+---
+
+## Re-evaluation trigger list
+
+Consider moving from Azure Key Vault to Infisical if any of the following
+become true:
+
+1. The number of OpenCode instances or projects grows beyond two, making vault
+   naming conventions unwieldy.
+2. A hard requirement emerges that secrets must not leave the self-hosted
+   perimeter.
+3. Azure cost or operational concerns outweigh the convenience of a managed
+   service.
+4. Dynamic secrets or richer project-level RBAC become necessary.
+5. You want workloads on the internal Docker network to fetch secrets from a
+   local API rather than calling Azure.
+6. You want to experiment with an OpenCode plugin that sources secrets from a
+   self-hosted store.
+
+## Recommendation
+
+**Keep Azure Key Vault as the initial secret backend** for OpenCode per ADR 18.
+It is already integrated, managed, and sufficient for two-project separation
+via naming convention and RBAC.
 
 Infisical is a strong fallback because its deployment model (Docker Compose,
 official Ansible collection, project/environment separation) aligns well with
