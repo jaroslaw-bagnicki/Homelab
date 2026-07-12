@@ -79,17 +79,13 @@ Subsequent runs with no template, image, or KV change report `changed=0`. Passwo
 1. `docker_opencode_ingress` — verifies `opencode_net`, runs Caddyfile template, deploys `caddy-opencode` via docker compose.
 2. `docker_opencode_instances` — reads `opencode_instances` from host_vars, ensures per-instance data dirs, fetches passwords from KV, deploys containers, polls `/global/health`.
 
-Both roles idempotently declare `opencode_net`. The main `playbook.yml` also declares it via pre_tasks. First writer wins.
+Both roles idempotently declare `opencode_net`. Whichever role runs first creates it; the other is a no-op.
 
 ## Vars consumed
 
 - `opencode_instances` — list of `{name: ...}` rows from host_vars. Adding an instance = one row.
 - `opencode_public_domain` — declared in each role's defaults (sanitized) and overridden per host.
 - `opencode_keyvault_name`, `opencode_password_secret_template`, `opencode_instances_dir` — role defaults.
-
-## Sequencing note
-
-Run after the base playbook has been applied (`common`, `security`, `azure_arc`, `docker_host`, `docker_services`). The OpenCode workload does not depend on the base playbook beyond network attachment.
 
 ## Operational runbook
 
