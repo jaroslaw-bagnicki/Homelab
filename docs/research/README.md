@@ -23,7 +23,7 @@
 | 19 | 2026‑06‑25 | [19-copilot-desktop-agentic.md](19-copilot-desktop-agentic.md) | GitHub Copilot Desktop app for agentic Homelab dev — MCP, BYOK, Skills, DR automation, Entra ID, secret mgmt | Gemini chat 8 |
 | 20 | 2026‑07‑04 | [20-opencode-hosting-codespaces-vs-homelab.md](20-opencode-hosting-codespaces-vs-homelab.md) | OpenCode hosting — Codespaces vs M910q vs Cloudlab; server mode, sandboxing, dependencies, backup, automation | Research |
 | 21 | 2026‑07‑08 | [21-opencode-sandboxed-homelab-architecture.md](21-opencode-sandboxed-homelab-architecture.md) | OpenCode sandboxed architecture on Homelab — per-project instances, Docker Sandboxes, Caddy wildcard routing, network isolation | Gemini chats 9–13 |
-| 22 | 2026‑07‑11 | [22-infisical-vs-azure-key-vault.md](22-infisical-vs-azure-key-vault.md) | Infisical self-hosted vs Azure Key Vault for OpenCode secret management | Web research |
+| 22 | 2026‑07‑11 | [22-infisical-for-homelab-secret-management.md](22-infisical-for-homelab-secret-management.md) | Infisical for Homelab secret management — evaluation, Docker deployment, and OpenCode integration concepts | Web research + OpenCode thread |
 
 ## Gemini Discussions
 
