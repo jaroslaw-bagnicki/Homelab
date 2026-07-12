@@ -14,7 +14,7 @@ http://portainer.cloud5.ovh {
 
 :80 {
     route {
-        @oc host_regexp ^.+-oc\.{{ opencode_public_domain | regex_escape }}$
+        @oc expression {http.request.host}.endsWith('-oc.{{ opencode_public_domain }}')
         reverse_proxy @oc http://caddy-opencode:80 {
             header_up Host {host}
             header_up X-Forwarded-Proto https

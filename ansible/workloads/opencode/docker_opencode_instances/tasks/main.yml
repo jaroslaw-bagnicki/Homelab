@@ -19,7 +19,7 @@
 - name: Fetch instance passwords from Key Vault
   vars:
     vault_url: "https://{{ opencode_keyvault_name }}.vault.azure.net"
-    secret_name: "{{ opencode_password_secret_template | format(name=item.name) }}"
+    secret_name: "{{ opencode_password_secret_template | format(item.name) }}"
   ansible.builtin.set_fact:
     opencode_instance_passwords: >-
       {{ opencode_instance_passwords | default({}) | combine({
@@ -36,6 +36,7 @@
   community.docker.docker_container:
     name: "opencode-{{ item.name }}"
     image: ghcr.io/anomalyco/opencode:latest
+    command: ["serve", "--port", "4096", "--hostname", "0.0.0.0"]
     state: started
     restart_policy: always
     pull: true
@@ -55,9 +56,11 @@
   no_log: true
 
 - name: Wait for each opencode instance health endpoint
+  vars:
+    auth_header: "Authorization: Basic {{ ('opencode:' + hostvars['localhost']['opencode_instance_passwords'][item.name]) | b64encode }}"
   community.docker.docker_container_exec:
-    container: "opencode-{{ item.name }}"
-    command: ["wget", "-qO-", "http://127.0.0.1:4096/global/health"]
+    container: "caddy-opencode"
+    command: "wget -qO- --header '{{ auth_header }}' http://opencode-{{ item.name }}:4096/global/health"
   register: opencode_health
   retries: 12
   delay: 5

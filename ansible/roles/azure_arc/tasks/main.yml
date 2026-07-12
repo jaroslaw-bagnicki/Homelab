@@ -19,14 +19,8 @@
     update_cache: yes
 
 - name: Fetch SPN client secret from Key Vault
-  ansible.builtin.shell: |
-    Set-AzContext -TenantId {{ arc_tenant_id }} -SubscriptionId {{ arc_subscription_id }} | Out-Null
-    Get-AzKeyVaultSecret -VaultName {{ arc_keyvault_name }} -Name {{ arc_spn_secret_name }} -AsPlainText
-  args:
-    executable: pwsh
-  delegate_to: localhost
-  become: false
-  register: arc_spn_secret
+  ansible.builtin.set_fact:
+    arc_spn_secret: "{{ lookup('azure.azcollection.azure_keyvault_secret', arc_spn_secret_name, vault_url='https://' ~ arc_keyvault_name ~ '.vault.azure.net') }}"
   no_log: true
 
 - name: Connect to Azure Arc
@@ -37,7 +31,7 @@
       --location {{ arc_location }} \
       --resource-group {{ arc_resource_group }} \
       --service-principal-id {{ arc_spn_id }} \
-      --service-principal-secret "{{ arc_spn_secret.stdout | trim }}" \
+      --service-principal-secret "{{ arc_spn_secret }}" \
       --resource-name {{ arc_machine_name }}
   args:
     executable: /bin/bash
