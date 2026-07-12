@@ -6,3 +6,7 @@ arc_keyvault_name: homelab-bysxdb-kv
 cloudflared_token_secret_name: "cloudflared-tunnel-token-{{ inventory_hostname }}"
 
 portainer_admin_password_secret_name: "portainer-admin-password"
+
+opencode_public_domain: example.com
+
+opencode_subdomain_pattern: oc
