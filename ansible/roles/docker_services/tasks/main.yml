@@ -11,11 +11,12 @@
     state: directory
     mode: "0755"
 
-- name: Ensure opencode_net Docker network exists
+- name: Ensure declared Docker networks exist
   community.docker.docker_network:
-    name: opencode_net
+    name: "{{ item.name }}"
     state: present
-    driver: bridge
+    driver: "{{ item.driver | default('bridge') }}"
+  loop: "{{ docker_services_networks }}"
 
 - name: Set cloudflared tunnel token from Key Vault
   vars:
