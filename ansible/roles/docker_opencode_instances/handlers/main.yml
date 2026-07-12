@@ -1,7 +1,0 @@
----
-- name: Restart opencode instance
-  community.docker.docker_container:
-    name: "opencode-{{ item.name }}"
-    state: started
-    restart: true
-  loop: "{{ opencode_instances }}"

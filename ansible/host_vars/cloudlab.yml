@@ -1,6 +1,6 @@
 ---
 opencode_public_domain: cloud5.ovh
-opencode_subdomain_pattern: oc
+opencode_subdomain_suffix: oc
 
 opencode_instances:
   - name: homelab

@@ -21,8 +21,9 @@
     vault_url: "https://{{ opencode_keyvault_name }}.vault.azure.net"
     secret_name: "{{ opencode_password_secret_template | format(name=item.name) }}"
   ansible.builtin.set_fact:
-    opencode_instance_password: "{{ lookup('azure.azcollection.azure_keyvault_secret', secret_name, vault_url=vault_url) }}"
+    opencode_instance_password_{{ item.name }}: "{{ lookup('azure.azcollection.azure_keyvault_secret', secret_name, vault_url=vault_url) }}"
   delegate_to: localhost
+  delegate_facts: true
   no_log: true
   loop: "{{ opencode_instances }}"
   loop_control:
