@@ -11,6 +11,12 @@
     state: directory
     mode: "0755"
 
+- name: Ensure opencode_net Docker network exists
+  community.docker.docker_network:
+    name: opencode_net
+    state: present
+    driver: bridge
+
 - name: Set cloudflared tunnel token from Key Vault
   vars:
     vault_url: "https://{{ arc_keyvault_name }}.vault.azure.net"
