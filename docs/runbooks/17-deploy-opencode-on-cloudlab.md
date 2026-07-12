@@ -108,20 +108,23 @@ Subsequent runs with no template, image, or KV change report `changed=0`. Passwo
 
 ## 6. Playbook Integration
 
-`docker_opencode_ingress` and `docker_opencode_instances` append to `ansible/playbooks/playbook.yml` after `docker_services`:
+The OpenCode workload is **decoupled** from the main playbook. Run two steps:
 
-```yaml
-roles:
-  - common
-  - security
-  - azure_arc
-  - docker_host
-  - docker_services
-  - docker_opencode_ingress
-  - docker_opencode_instances
+```bash
+ansible-playbook ansible/playbooks/playbook.yml          # base setup
+ansible-playbook ansible/opencode_workload/opencode_workload.yml  # OpenCode workload
 ```
 
-Both roles are guarded by `inventory_hostname in ['homelab', 'cloudlab']` (mirroring `docker_services`).
+`opencode_net` is self-declared independently in two places:
+
+1. `ansible/playbooks/playbook.yml` pre_tasks — ensures the network before any role runs.
+2. `ansible/opencode_workload/docker_opencode_ingress/tasks/main.yml` — `community.docker.docker_network` task.
+
+Both declarations are idempotent. First writer wins; the second is a no-op. The network survives both playbook runs.
+
+The OpenCode workload playbook itself has no pre_tasks. The two co-located roles (`docker_opencode_ingress`, `docker_opencode_instances`) handle their own network and KV requirements.
+
+The runbook workflow is `bash` shell commands on a host with `ansible-playbook` installed. Inside the dev container or against cloudlab SSH, the two-step order produces an idempotent deployment: running the workload twice without changes reports `changed=0`.
 
 ## 7. Verification Checklist
 
