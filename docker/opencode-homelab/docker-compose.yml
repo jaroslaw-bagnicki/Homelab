@@ -27,7 +27,7 @@ services:
       - opencode_homelab_data:/home/opencode/.local/share/opencode
       - opencode_homelab_state:/home/opencode/.local/state/opencode
       - opencode_homelab_config:/home/opencode/.config/opencode
-      - /opt/opencode/workspaces/homelab:/workspace
+      - /var/lib/opencode/workspaces/homelab:/workspace
 
 volumes:
   opencode_homelab_data:

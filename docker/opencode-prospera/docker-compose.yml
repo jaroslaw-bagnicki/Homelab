@@ -27,7 +27,7 @@ services:
       - opencode_prospera_data:/home/opencode/.local/share/opencode
       - opencode_prospera_state:/home/opencode/.local/state/opencode
       - opencode_prospera_config:/home/opencode/.config/opencode
-      - /opt/opencode/workspaces/prospera:/workspace
+      - /var/lib/opencode/workspaces/prospera:/workspace
 
 volumes:
   opencode_prospera_data:

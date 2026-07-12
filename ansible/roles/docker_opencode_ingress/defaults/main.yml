@@ -1,5 +1,5 @@
 ---
-opencode_ingress_dir: /opt/opencode/ingress
+opencode_ingress_dir: /etc/opencode/ingress
 
 opencode_ingress_image: caddy:2-alpine
 

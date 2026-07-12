@@ -1,5 +1,5 @@
 ---
-opencode_instances_root: /opt/opencode
+opencode_instances_root: /etc/opencode/instances
 
 opencode_server_port: 4096
 
@@ -16,6 +16,6 @@ opencode_api_key_env_vars:
   - ANTHROPIC_API_KEY
   - OPENCODE_ZEN_API_KEY
 
-opencode_workspace_root: /opt/opencode/workspaces
+opencode_workspace_root: /var/lib/opencode/workspaces
 
 opencode_instances: []

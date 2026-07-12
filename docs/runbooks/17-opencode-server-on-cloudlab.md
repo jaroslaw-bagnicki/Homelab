@@ -44,8 +44,8 @@
 | File | Purpose |
 |---|---|
 | `docker/opencode-server/Dockerfile` | Common image extending `ghcr.io/anomalyco/opencode` with ansible + bicep + jq + git + ssh-client |
-| `docker/opencode-homelab/docker-compose.yml` | `opencode-homelab` instance: shared tooling + workspace mount `/opt/opencode/workspaces/homelab` |
-| `docker/opencode-prospera/docker-compose.yml` | `opencode-prospera` instance: shared tooling + workspace mount `/opt/opencode/workspaces/prospera` |
+| `docker/opencode-homelab/docker-compose.yml` | `opencode-homelab` instance: shared tooling + workspace bind-mount `/var/lib/opencode/workspaces/homelab` |
+| `docker/opencode-prospera/docker-compose.yml` | `opencode-prospera` instance: shared tooling + workspace bind-mount `/var/lib/opencode/workspaces/prospera` |
 
 ### `caddy-main` integration (existing role)
 
@@ -62,7 +62,7 @@
 | `opencode-homelab` | `opencode-server:latest` (built on host from `docker/opencode-server/Dockerfile`) | none (exposed to `opencode_net` only) | `opencode_net` (external) |
 | `opencode-prospera` | `opencode-server:latest` (built on host from `docker/opencode-server/Dockerfile`) | none (exposed to `opencode_net` only) | `opencode_net` (external) |
 
-The `opencode-server:latest` image is rebuilt on the host on every `docker_compose_v2` invocation that changes the image build context. Each instance stores its data in three named volumes (`data`, `state`, `config`) and bind-mounts `/opt/opencode/workspaces/<name>` for project checkout.
+The `opencode-server:latest` image is rebuilt on the host on every `docker_compose_v2` invocation that changes the image build context. Each instance stores its data in three named volumes (`data`, `state`, `config`) and bind-mounts `/var/lib/opencode/workspaces/<name>` for project checkout.
 
 ## 3. Secret handling
 
@@ -118,7 +118,7 @@ Both roles are guarded by `inventory_hostname in ['homelab', 'cloudlab']` (mirro
 - [ ] Each instance is up: `docker ps --filter name=opencode-` → status `Up` for both `opencode-homelab` and `opencode-prospera`
 - [ ] Local debug endpoint: `curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8090` → `404` (no subdomain via localhost) or `200` when hostname header matches a known instance
 - [ ] Internal reverse proxy: from inside `caddy-opencode`, `docker exec caddy-opencode wget -qO- http://opencode-homelab:4096/global/health` → `{"healthy":true,...}`
-- [ ] Per-instance `.env` exists with `mode 0600`: `ls -l /opt/opencode/homelab/.env`
+- [ ] Per-instance `.env` exists with `mode 0600`: `ls -l /etc/opencode/instances/homelab/.env`
 - [ ] No host Docker socket mounted: `docker inspect opencode-homelab | jq '.[0].HostConfig.Binds'` → empty array
 - [ ] Via Cloudflare Tunnel: `curl -u opencode:$PASSWORD https://homelab-oc.cloud5.ovh/global/health` → `{"healthy":true,...}` (after DNS + public hostname entry in CF Zero Trust dashboard)
 - [ ] Via Cloudflare Tunnel: same check against `https://prospera-oc.cloud5.ovh/global/health`
