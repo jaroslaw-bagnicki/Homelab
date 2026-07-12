@@ -40,7 +40,7 @@
     restart_policy: always
     pull: true
     env:
-      OPENCODE_SERVER_PASSWORD: "{{ opencode_instance_passwords[item.name] }}"
+      OPENCODE_SERVER_PASSWORD: "{{ hostvars['localhost']['opencode_instance_passwords'][item.name] }}"
       OPENCODE_SERVER_HOSTNAME: "0.0.0.0"
     networks:
       - name: opencode_net

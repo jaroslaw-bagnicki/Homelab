@@ -12,7 +12,7 @@ http://portainer.cloud5.ovh {
     }
 }
 
-http://*-oc.{{ opencode_public_domain }} {
+:80 {
     route {
         @oc host_regexp ^.+-oc\.{{ opencode_public_domain | regex_escape }}$
         reverse_proxy @oc http://caddy-opencode:80 {
