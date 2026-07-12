@@ -1,0 +1,6 @@
+---
+- name: Restart caddy-opencode
+  community.docker.docker_container:
+    name: caddy-opencode
+    state: started
+    restart: true

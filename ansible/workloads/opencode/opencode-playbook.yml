@@ -1,0 +1,25 @@
+---
+# OpenCode per-project workload — self-contained recipe.
+#
+# Deploys the OpenCode per-project server instances on cloudlab per ADR 18.
+# Two role recipes co-located under ansible/workloads/opencode/:
+#   - role: docker_opencode_ingress   (caddy-opencode + per-instance Caddyfile)
+#   - role: docker_opencode_instances (per-instance container loop)
+#
+# Networks are self-declared inside the roles (opencode_net is idempotent),
+# so no pre_tasks needed here. The main playbook also declares opencode_net;
+# either source wins idempotently.
+#
+# Run standalone:
+#   ansible-playbook ansible/workloads/opencode/opencode-playbook.yml
+#
+# See:
+#   ansible/workloads/opencode/README.md        ansible-side facts
+#   docs/workloads.md                            general rules + index
+#   docs/runbooks/17-deploy-opencode-on-cloudlab.md  operational steps
+- name: Apply OpenCode per-project workload
+  hosts: cloudlab
+  become: true
+  roles:
+    - role: docker_opencode_ingress
+    - role: docker_opencode_instances

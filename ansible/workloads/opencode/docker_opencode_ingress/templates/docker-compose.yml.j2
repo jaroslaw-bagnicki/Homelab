@@ -1,0 +1,22 @@
+services:
+  caddy-opencode:
+    image: caddy:2-alpine
+    container_name: caddy-opencode
+    restart: always
+    ports:
+      - "127.0.0.1:8090:8080"
+    volumes:
+      - /etc/opencode/ingress/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_opencode_data:/data
+      - caddy_opencode_config:/config
+    networks:
+      - opencode_net
+
+volumes:
+  caddy_opencode_data:
+  caddy_opencode_config:
+
+networks:
+  opencode_net:
+    external: true
+    name: opencode_net

@@ -42,6 +42,19 @@ operating on its own.
 - **Never push** unless explicitly asked
 - **Scope commits tightly** — one logical change per commit; do not bundle unrelated edits
 
+## Workloads as self-contained recipes
+
+Each workload in this repository is its own self-contained recipe, runnable independently via `ansible-playbook ansible/workloads/<workload>/<workload>-playbook.yml`. The base `ansible/playbooks/playbook.yml` does NOT list workloads.
+
+A new workload is added by:
+
+1. Creating `ansible/workloads/<workload>/` containing the playbook entrypoint, role recipes, and an ansible-side README.
+2. Adding a row to the index table in `docs/workloads.md`.
+3. Adding a row to `README.md` ("What's Next" or "What's Done").
+4. Optionally: a runbook at `docs/runbooks/NN-deploy-<workload>.md` for operational steps.
+
+Workloads do not import each other. Workloads do not declare shared pre_tasks in the base playbook. Idempotent declarations inside a workload's roles are acceptable (e.g. networks — declare in the role and in the base playbook pre_tasks; first writer wins).
+
 ## Worktree Workflow
 
 Autonomous sessions always work on a **feature branch inside a git worktree** — `main` stays for merged, reviewed work only, and multiple agents can run in parallel without contention.

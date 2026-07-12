@@ -40,6 +40,7 @@ to the internet via **[Cloudflare Tunnel](docs/decisions/08-remote-access-cloudf
 | [`docs/decisions/`](docs/decisions/README.md) | Architecture Decision Records (ADRs) — design rationale, settled decisions |
 | [`docs/research/`](docs/research/README.md) | Exploratory research — topic investigations, comparisons, trade-off analyses |
 | [`docs/runbooks/`](docs/runbooks/README.md) | Step-by-step implementation guides referenced from the progress table |
+| [`docs/workloads.md`](docs/workloads.md) | Workload recipes — index of self-contained playbooks, convention rules, "how to add a new workload" |
 | [`scripts/`](scripts/) | Standalone PowerShell utilities (SSH key management, Arc client secrets) |
 
 Ansible runs first on the bare host (OS config, Docker, Arc agent). Bicep deploys cloud resources after Arc enrolment. The decision log is the source of truth for design rationale. Runbooks capture implementation steps. Research docs capture exploratory context that predates settled decisions.
@@ -77,6 +78,7 @@ Ansible runs first on the bare host (OS config, Docker, Arc agent). Bicep deploy
 | # | Workload | Effort | Notes |
 |---|---|---|---|
 | [#13](https://github.com/jaroslaw-bagnicki/Homelab/issues/13) | **Restic backup** (redo) | ⭐⭐ | Daily snapshots to Azure Blob Storage — see [runbook](docs/runbooks/7-restic-backup.md) |
+| [#30](https://github.com/jaroslaw-bagnicki/Homelab/issues/30) | **OpenCode server instances** | ⭐⭐ | Per-project `opencode-homelab`/`opencode-prospera` server instances on Cloudlab via `docker_container` loop, KV-backed `OPENCODE_SERVER_PASSWORD`, wildcard `*-oc.<domain>` routing via dedicated `caddy-opencode` — see [runbook](docs/runbooks/17-deploy-opencode-on-cloudlab.md) |
 |  | **Hermes Agent** | ⭐⭐⭐ | Most complex — last |
 |  | **SQL Server** | ⭐⭐ | Developer Edition in Docker — see [runbook](docs/runbooks/9-mssql-dev.md) |
 |  | **Gitea** | ⭐⭐ | Self-hosted Git with web UI for personal repos |
