@@ -35,6 +35,7 @@
 - name: Deploy opencode instances
   community.docker.docker_container:
     name: "opencode-{{ item.name }}"
+    hostname: "opencode-{{ item.name }}"
     image: ghcr.io/anomalyco/opencode:latest
     command: ["serve", "--port", "4096", "--hostname", "0.0.0.0"]
     state: started
@@ -58,14 +59,16 @@
 - name: Wait for each opencode instance health endpoint
   vars:
     auth_header: "Authorization: Basic {{ ('opencode:' + hostvars['localhost']['opencode_instance_passwords'][item.name]) | b64encode }}"
-  community.docker.docker_container_exec:
-    container: "caddy-opencode"
-    command: "wget -qO- --header '{{ auth_header }}' http://opencode-{{ item.name }}:4096/global/health"
+  ansible.builtin.shell: |
+    docker exec caddy-opencode wget -qO- --header '{{ auth_header }}' http://opencode-{{ item.name }}:4096/global/health
+  args:
+    executable: /bin/bash
   register: opencode_health
   retries: 12
   delay: 5
   until: opencode_health.rc == 0
   changed_when: false
+  no_log: true
   loop: "{{ opencode_instances }}"
   loop_control:
     label: "{{ item.name }}"
