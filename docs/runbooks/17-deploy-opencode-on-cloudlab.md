@@ -112,13 +112,13 @@ The OpenCode workload is **decoupled** from the main playbook. Run two steps:
 
 ```bash
 ansible-playbook ansible/playbooks/playbook.yml          # base setup
-ansible-playbook ansible/opencode_workload/opencode_workload.yml  # OpenCode workload
+ansible-playbook ansible/workloads/opencode/opencode_workload.yml  # OpenCode workload
 ```
 
 `opencode_net` is self-declared independently in two places:
 
 1. `ansible/playbooks/playbook.yml` pre_tasks — ensures the network before any role runs.
-2. `ansible/opencode_workload/docker_opencode_ingress/tasks/main.yml` — `community.docker.docker_network` task.
+2. `ansible/workloads/opencode/docker_opencode_ingress/tasks/main.yml` — `community.docker.docker_network` task.
 
 Both declarations are idempotent. First writer wins; the second is a no-op. The network survives both playbook runs.
 
