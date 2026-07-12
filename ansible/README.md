@@ -12,7 +12,7 @@ ansible-playbook ansible/playbooks/playbook.yml
 ansible-playbook ansible/playbooks/playbook-arc.yml
 
 # OpenCode per-project workload (decoupled recipe)
-ansible-playbook ansible/workloads/opencode/opencode_workload.yml
+ansible-playbook ansible/workloads/opencode/opencode_playbook.yml
 ```
 
 ## Structure
@@ -62,7 +62,7 @@ Manages the core Docker Compose stack on the host: `portainer`, `caddy` (with `c
 |---|---|---|
 | `playbook.yml` | common → security → azure_arc → docker_host → docker_services | First-time VPS provision after initial SSH hardening (see [runbook 10](../docs/runbooks/10-vps-playground.md)) |
 | `playbook-arc.yml` | azure_arc | Adding Arc to an already-configured host |
-| `workloads/opencode/opencode_workload.yml` | docker_opencode_ingress → docker_opencode_instances | Deploy the OpenCode per-project server workload (see [runbook 17](../docs/runbooks/17-deploy-opencode-on-cloudlab.md)) |
+| `workloads/opencode/opencode_playbook.yml` | docker_opencode_ingress → docker_opencode_instances | Deploy the OpenCode per-project server workload (see [runbook 17](../docs/runbooks/17-deploy-opencode-on-cloudlab.md)) |
 
 ## Inventory
 

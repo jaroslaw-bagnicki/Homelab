@@ -112,7 +112,7 @@ The OpenCode workload is **decoupled** from the main playbook. Run two steps:
 
 ```bash
 ansible-playbook ansible/playbooks/playbook.yml          # base setup
-ansible-playbook ansible/workloads/opencode/opencode_workload.yml  # OpenCode workload
+ansible-playbook ansible/workloads/opencode/opencode_playbook.yml  # OpenCode workload
 ```
 
 `opencode_net` is self-declared independently in two places:

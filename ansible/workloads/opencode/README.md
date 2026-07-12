@@ -19,13 +19,13 @@ Each OpenCode instance is:
 
 ## What's in this folder
 
-- `opencode_workload.yml` — playbook entrypoint.
+- `opencode_playbook.yml` — playbook entrypoint.
 - `docker_opencode_ingress/` — role: deploys `caddy-opencode`, renders per-instance Caddyfile from `host_vars.cloudlab.opencode_instances`.
 - `docker_opencode_instances/` — role: ensures per-instance data dirs, fetches passwords from `homelab-bysxdb-kv`, deploys containers via `community.docker.docker_container`.
 
 ## Invoke
 
-    ansible-playbook ansible/workloads/opencode/opencode_workload.yml
+    ansible-playbook ansible/workloads/opencode/opencode_playbook.yml
 
 ## Hosts
 
