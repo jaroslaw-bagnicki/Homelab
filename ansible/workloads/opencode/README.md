@@ -2,7 +2,7 @@
 
 ## Purpose
 
-A self-contained Ansible recipe that deploys per-project OpenCode server instances on cloudlab, behind the existing Caddy + Cloudflare Tunnel ingress. The workload decouples OpenCode deployment from the base host provisioning playbook so adding a new OpenCode project requires no playbook edits, no role inventory changes, and no role resync.
+A self-contained Ansible recipe that deploys per-project OpenCode server instances on cloudlab. The workload decouples OpenCode deployment from the base host provisioning playbook so adding a new OpenCode project requires no playbook edits, no role inventory changes, and no role resync.
 
 Per ADR 18, OpenCode instances are sandboxed: each project (`homelab`, `prospera`, future) gets its own OpenCode server container, its own persistent data volumes, and its own subdomain. The agent's tools (Bash, file edits, MCP servers) run inside the container; the host is untouched by agent execution.
 
@@ -12,7 +12,7 @@ Each OpenCode instance is:
 
 - A long-running headless `opencode serve` container exposing the HTTP API + WebUI on port 4096.
 - Authenticated via HTTP basic auth (`OPENCODE_SERVER_USERNAME` / `OPENCODE_SERVER_PASSWORD`); password is fetched from Azure Key Vault `homelab-bysxdb-kv` at playbook runtime. No credential written to the host filesystem.
-- Reachable publicly via `<instance>-oc.<domain>` through the dedicated `caddy-opencode` ingress and the existing Cloudflare Tunnel wildcard.
+- Reachable publicly via `<instance>-oc.<domain>` through the dedicated `caddy-opencode` ingress.
 - Sandbox-isolated: no host Docker socket mounted, no host filesystem mounts beyond the workspace directory, run as a non-root user inside the container.
 - Persistent: per-instance data lives under `/var/lib/opencode/instances/<name>/{data,state,config,workspace}/` on the host, bind-mounted into the container at `~/.local/share/opencode`, `~/.local/state/opencode`, `~/.config/opencode`, and `/workspace`.
 - Idempotent: re-running the playbook reports `changed=0` when no template / image / KV change exists.
@@ -24,7 +24,7 @@ Each OpenCode instance is:
 | `caddy-opencode` | `caddy:2-alpine` | `127.0.0.1:8090:8080` (debug) | `opencode_net` (external) | `docker_opencode_ingress` role |
 | `opencode-<name>` | `ghcr.io/anomalyco/opencode:latest` | none (internal only) | `opencode_net` (external) | `docker_opencode_instances` role |
 
-All OpenCode containers attach only to `opencode_net`. `caddy-main` (in `docker_services`) joins `opencode_net` and proxies wildcard OpenCode hostnames to `caddy-opencode`. Reachability flow: `internet → cloudflared → caddy-main:80 → caddy-opencode:80 (Docker DNS) → opencode-<name>:4096`.
+All OpenCode containers attach only to `opencode_net`.
 
 ## Host on-disk layout
 
@@ -43,25 +43,11 @@ All OpenCode containers attach only to `opencode_net`. `caddy-main` (in `docker_
 
 Per-instance directories owned by `1000:1000` (matches the typical UID of the `opencode` user inside the upstream image). Verify on the host with `docker run --rm ghcr.io/anomalyco/opencode:latest id` and adjust ownership if mismatched.
 
-## Secret handling
+## Secrets
 
-One secret is fetched from `homelab-bysxdb-kv` per instance via `azure.azcollection.azure_keyvault_secret` lookup (`delegate_to: localhost`, `no_log: true`):
+A secret named `opencode-<instance-name>-server-password` must exist in the vault declared by `opencode_keyvault_name` (default `homelab-bysxdb-kv`) before applying the playbook. The role fetches it at runtime via `azure.azcollection.azure_keyvault_secret` and injects it as `OPENCODE_SERVER_PASSWORD`. Provisioning steps are in the operational runbook.
 
-| Secret name template | Mapped env var |
-|---|---|
-| `opencode-{name}-server-password` | `OPENCODE_SERVER_PASSWORD` |
-
-`OPENCODE_SERVER_HOSTNAME=0.0.0.0` is inline in the role task. API keys (OpenAI / Anthropic / Zen) are intentionally **not** passed as env vars — they live in the persistent `auth.json` that OpenCode writes under `~/.local/share/opencode/auth.json` on first login.
-
-No `.env` file is rendered on the host. Secrets are fetched fresh on every playbook run; rotated passwords take effect on the next Ansible run.
-
-Provision secrets before the first playbook run:
-
-```powershell
-$vault = "homelab-bysxdb-kv"
-Set-AzKeyVaultSecret -VaultName $vault -Name "opencode-homelab-server-password"  -SecretValue (ConvertTo-SecureString -AsPlainText (New-Guid).Guid -Force) | Out-Null
-Set-AzKeyVaultSecret -VaultName $vault -Name "opencode-prospera-server-password" -SecretValue (ConvertTo-SecureString -AsPlainText (New-Guid).Guid -Force) | Out-Null
-```
+No `.env` file is rendered on the host. API keys for model providers are intentionally **not** passed as env vars — they live in the persistent `auth.json` that OpenCode writes under `~/.local/share/opencode/auth.json` on first login.
 
 ## Role Idempotency
 
@@ -69,9 +55,8 @@ Both roles use `community.docker.docker_container` / `community.docker.docker_co
 
 1. `opencode_net` bridge network is created (whichever role runs first wins; the second is a no-op).
 2. `caddy-opencode` is deployed and joined to `opencode_net`.
-3. `caddy` (from `docker_services`) is redeployed to pick up the new `opencode_net` network attachment.
-4. Each OpenCode instance is deployed via `docker_container`.
-5. Each instance's `/global/health` endpoint is polled until 200 (retries 12×5s).
+3. Each OpenCode instance is deployed via `docker_container`.
+4. Each instance's `/global/health` endpoint is polled until 200 (retries 12×5s).
 
 Subsequent runs with no template, image, or KV change report `changed=0`. Password rotations trigger `Restart opencode instance` for the affected container.
 
@@ -108,4 +93,5 @@ Run after the base playbook has been applied (`common`, `security`, `azure_arc`,
 
 ## Operational runbook
 
-For deployment steps, CF Tunnel prerequisites, and the verification checklist, see [`docs/runbooks/17-deploy-opencode-on-cloudlab.md`](../../../docs/runbooks/17-deploy-opencode-on-cloudlab.md).
+For deployment steps, secret provisioning, and the verification checklist, see [`docs/runbooks/17-deploy-opencode-on-cloudlab.md`](../../../docs/runbooks/17-deploy-opencode-on-cloudlab.md).
+

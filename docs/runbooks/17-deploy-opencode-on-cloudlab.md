@@ -1,16 +1,28 @@
 # OpenCode Server Instances on Cloudlab
 
-> Runbook for the `ansible/workloads/opencode/` workload — per-project OpenCode server instances on Cloudlab. Workload description, capabilities, services, host layout, secret handling, and idempotency live in [the workload README](../../ansible/workloads/opencode/README.md). This runbook covers the operational steps: prerequisites, deploy invocation, and verification.
+> Runbook for the `ansible/workloads/opencode/` workload — per-project OpenCode server instances on Cloudlab. Workload description, capabilities, services, host layout, secret handling, and idempotency live in [the workload README](../../ansible/workloads/opencode/README.md). This runbook covers the operational steps: prerequisites, secret provisioning, deploy invocation, verification, and CF Tunnel prerequisites.
 
 ## Prerequisites
 
 - [ ] Runbooks [1](1-init.md), [2](2-docker.md), [4](4-caddy.md), [5](5-cloudflare-tunnel.md), [10](10-vps-playground.md), [16](16-docker-services-ansible-role.md) completed.
 - [ ] Ansible collections installed: `community.docker`, `community.general`, `azure.azcollection` (`ansible-galaxy collection install -r ansible/requirements.yml`).
-- [ ] `homelab-bysxdb-kv` Key Vault accessible from the Ansible controller identity, with secrets for each instance (see workload README §Secret handling).
+- [ ] `homelab-bysxdb-kv` Key Vault accessible from the Ansible controller identity, with secrets for each instance (see workload README §Secrets).
 - [ ] SSH access to `cloudlab` via `ansible_user: labadmin` (see [ansible-vps-connect skill](../../.opencode/skills/ansible-vps-connect)).
 - [ ] Cloudflare Tunnel `*.<domain>` → `http://caddy:80` configured (see [ADR 19](../decisions/19-cloudflare-tunnel-https-origin.md)).
 
-## 1. Deploy
+## 1. Provision secrets
+
+Before the first playbook run, provision the per-instance passwords in Key Vault:
+
+```powershell
+$vault = "homelab-bysxdb-kv"
+Set-AzKeyVaultSecret -VaultName $vault -Name "opencode-homelab-server-password"  -SecretValue (ConvertTo-SecureString -AsPlainText (New-Guid).Guid -Force) | Out-Null
+Set-AzKeyVaultSecret -VaultName $vault -Name "opencode-prospera-server-password" -SecretValue (ConvertTo-SecureString -AsPlainText (New-Guid).Guid -Force) | Out-Null
+```
+
+Naming convention: one secret per instance, named `opencode-<instance-name>-server-password` (matches the role's `opencode_password_secret_template`).
+
+## 2. Deploy
 
 The OpenCode workload is **decoupled** from the main playbook. Run two steps:
 
@@ -30,7 +42,7 @@ The OpenCode workload playbook itself has no pre_tasks. The two co-located roles
 
 The deploy workflow is `bash` shell commands on a host with `ansible-playbook` installed. Inside the dev container or against cloudlab SSH, the two-step order produces an idempotent deployment: running the workload twice without changes reports `changed=0`.
 
-## 2. Verification Checklist
+## 3. Verification Checklist
 
 - [ ] External network exists: `docker network ls` → `opencode_net`
 - [ ] `caddy-opencode` is up: `docker ps --filter name=caddy-opencode` → status `Up`
@@ -46,7 +58,7 @@ The deploy workflow is `bash` shell commands on a host with `ansible-playbook` i
 
 The `cloud5.ovh` literal in this runbook reflects the cloudlab deployment. The `opencode_public_domain` Ansible var controls it; substitute accordingly when targeting a different host. The `oc` suffix is hardcoded in the Caddyfile template.
 
-## 3. Cloudflare Tunnel DNS prerequisites
+## 4. Cloudflare Tunnel DNS prerequisites
 
 The CF tunnel wildcard entry must cover `*.<domain>` (see [ADR 19](../decisions/19-cloudflare-tunnel-https-origin.md)) and point to `http://caddy:80`. Public hostname entries in the Cloudflare Zero Trust dashboard are not required when the tunnel uses a wildcard rule. If the existing tunnel entry is the apex only, add `*.<domain>` to route agent subdomains through the same tunnel to `caddy-main`.
 
