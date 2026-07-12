@@ -1,0 +1,64 @@
+---
+- name: Validate opencode_instances list is non-empty
+  ansible.builtin.assert:
+    that:
+      - opencode_instances | length > 0
+    fail_msg: "opencode_instances list is empty. Define at least one instance in host_vars/{{ inventory_hostname }}.yml."
+
+- name: Ensure per-instance data directories exist
+  ansible.builtin.file:
+    path: "{{ opencode_instances_dir }}/{{ item.0.name }}/{{ item.1 }}"
+    state: directory
+    mode: "0755"
+    owner: "1000"
+    group: "1000"
+  loop: "{{ opencode_instances | product(['data', 'state', 'config', 'workspace']) | list }}"
+  loop_control:
+    label: "{{ item.0.name }}/{{ item.1 }}"
+
+- name: Fetch instance password from Key Vault
+  vars:
+    vault_url: "https://{{ opencode_keyvault_name }}.vault.azure.net"
+    secret_name: "{{ opencode_password_secret_template | format(name=item.name) }}"
+  ansible.builtin.set_fact:
+    opencode_instance_password: "{{ lookup('azure.azcollection.azure_keyvault_secret', secret_name, vault_url=vault_url) }}"
+  delegate_to: localhost
+  no_log: true
+  loop: "{{ opencode_instances }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Deploy opencode instances
+  community.docker.docker_container:
+    name: "opencode-{{ item.name }}"
+    image: ghcr.io/anomalyco/opencode:latest
+    state: started
+    restart_policy: always
+    pull: true
+    env:
+      OPENCODE_SERVER_PASSWORD: "{{ hostvars['localhost']['opencode_instance_password_' ~ item.name] }}"
+      OPENCODE_SERVER_HOSTNAME: "0.0.0.0"
+    networks:
+      - name: opencode_net
+    volumes:
+      - "{{ opencode_instances_dir }}/{{ item.name }}/data:/home/opencode/.local/share/opencode:rw"
+      - "{{ opencode_instances_dir }}/{{ item.name }}/state:/home/opencode/.local/state/opencode:rw"
+      - "{{ opencode_instances_dir }}/{{ item.name }}/config:/home/opencode/.config/opencode:rw"
+      - "{{ opencode_instances_dir }}/{{ item.name }}/workspace:/workspace:rw"
+  loop: "{{ opencode_instances }}"
+  loop_control:
+    label: "{{ item.name }}"
+  no_log: true
+
+- name: Wait for each opencode instance health endpoint
+  community.docker.docker_container_exec:
+    container: "opencode-{{ item.name }}"
+    command: ["wget", "-qO-", "http://127.0.0.1:4096/global/health"]
+  register: opencode_health
+  retries: 12
+  delay: 5
+  until: opencode_health.rc == 0
+  changed_when: false
+  loop: "{{ opencode_instances }}"
+  loop_control:
+    label: "{{ item.name }}"

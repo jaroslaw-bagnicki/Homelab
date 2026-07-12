@@ -1,0 +1,19 @@
+:80 {
+    @opencode host *.{{ opencode_subdomain_pattern }}.{{ opencode_public_domain }}
+
+    handle @opencode {
+        reverse_proxy http://opencode-{labels.2}:4096 {
+            header_up Host {host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+            transport http {
+                dial_timeout 5s
+                response_header_timeout 30s
+            }
+        }
+    }
+
+    handle {
+        respond "OpenCode ingress — instance '{labels.2}' not found or subdomain not matched." 404
+    }
+}

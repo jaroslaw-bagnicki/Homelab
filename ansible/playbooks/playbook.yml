@@ -8,3 +8,5 @@
     - azure_arc
     - docker_host
     - docker_services
+    - docker_opencode_ingress
+    - docker_opencode_instances
