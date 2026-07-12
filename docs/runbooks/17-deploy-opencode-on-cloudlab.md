@@ -16,8 +16,10 @@ Before the first playbook run, provision the per-instance passwords in Key Vault
 
 ```powershell
 $vault = "homelab-bysxdb-kv"
-Set-AzKeyVaultSecret -VaultName $vault -Name "opencode-homelab-server-password"  -SecretValue (ConvertTo-SecureString -AsPlainText (New-Guid).Guid -Force) | Out-Null
-Set-AzKeyVaultSecret -VaultName $vault -Name "opencode-prospera-server-password" -SecretValue (ConvertTo-SecureString -AsPlainText (New-Guid).Guid -Force) | Out-Null
+function New-OpencodePassword { [Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(16)).TrimEnd('=') }
+
+Set-AzKeyVaultSecret -VaultName $vault -Name "opencode-homelab-server-password"  -SecretValue (ConvertTo-SecureString -AsPlainText (New-OpencodePassword) -Force) | Out-Null
+Set-AzKeyVaultSecret -VaultName $vault -Name "opencode-prospera-server-password" -SecretValue (ConvertTo-SecureString -AsPlainText (New-OpencodePassword) -Force) | Out-Null
 ```
 
 Naming convention: one secret per instance, named `opencode-<instance-name>-server-password` (matches the role's `opencode_password_secret_template`).
