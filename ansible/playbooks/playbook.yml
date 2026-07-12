@@ -2,11 +2,15 @@
 - name: Configure cloudlab VPS
   hosts: cloudlab
   become: true
+  pre_tasks:
+    - name: Ensure opencode_net Docker network exists
+      community.docker.docker_network:
+        name: opencode_net
+        state: present
+        driver: bridge
   roles:
     - common
     - security
     - azure_arc
     - docker_host
     - docker_services
-    - docker_opencode_ingress
-    - docker_opencode_instances
