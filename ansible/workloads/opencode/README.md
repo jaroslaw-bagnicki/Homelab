@@ -13,7 +13,7 @@ Each OpenCode instance is:
 - A long-running headless `opencode serve` container exposing the HTTP API + WebUI on port 4096.
 - Authenticated via HTTP basic auth (`OPENCODE_SERVER_USERNAME` / `OPENCODE_SERVER_PASSWORD`); password is fetched from Azure Key Vault `homelab-bysxdb-kv` at playbook runtime. No credential written to the host filesystem.
 - Reachable publicly via `<instance>-oc.<domain>` through the dedicated `caddy-opencode` ingress.
-- Sandbox-isolated: no host Docker socket mounted, no host filesystem mounts beyond the workspace directory, run as a non-root user inside the container.
+- Sandbox-isolated: no host Docker socket mounted, no host filesystem mounts beyond the workspace directory, container working directory is `/workspace`.
 - Persistent: per-instance data lives under `/var/lib/opencode/instances/<name>/{data,state,config,workspace}/` on the host, bind-mounted into the container at `~/.local/share/opencode`, `~/.local/state/opencode`, `~/.config/opencode`, and `/workspace`.
 - Idempotent: re-running the playbook reports `changed=0` when no template / image / KV change exists.
 
