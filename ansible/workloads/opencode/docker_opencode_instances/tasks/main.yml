@@ -32,24 +32,13 @@
   loop_control:
     label: "{{ item.name }}"
 
-- name: Init git repo in workspace dirs
-  ansible.builtin.command:
-    cmd: git init
-    chdir: "{{ opencode_instances_dir }}/{{ item.name }}/workspace"
-  become: true
-  changed_when: false
-  loop: "{{ opencode_instances }}"
-  loop_control:
-    label: "{{ item.name }}"
-
 - name: Deploy opencode instances
   community.docker.docker_container:
     name: "opencode-{{ item.name }}"
     hostname: "opencode-{{ item.name }}"
     image: ghcr.io/anomalyco/opencode:latest
-    entrypoint: ["/bin/sh", "-c"]
     working_dir: "/workspace"
-    command: ["apk add --no-cache git >/dev/null 2>&1 && exec opencode serve --port 4096 --hostname 0.0.0.0"]
+    command: ["serve", "--port", "4096", "--hostname", "0.0.0.0"]
     state: started
     restart_policy: always
     pull: true
