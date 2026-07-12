@@ -22,6 +22,7 @@ services:
       - "{{ docker_dir }}/Caddyfile:/etc/caddy/Caddyfile:ro"
     networks:
       - homelab_net
+      - opencode_net
 
   cloudflared:
     image: cloudflare/cloudflared:latest
@@ -46,3 +47,6 @@ volumes:
 networks:
   homelab_net:
     name: homelab_net
+  opencode_net:
+    external: true
+    name: opencode_net

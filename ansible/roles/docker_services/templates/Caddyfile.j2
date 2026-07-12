@@ -12,6 +12,17 @@ http://portainer.cloud5.ovh {
     }
 }
 
+http://*.oc.cloud5.ovh {
+    reverse_proxy caddy-opencode:80 {
+        header_up Host {host}
+        header_up X-Forwarded-Proto https
+        transport http {
+            dial_timeout 5s
+            response_header_timeout 30s
+        }
+    }
+}
+
 :8080 {
     respond "Caddy debug: OK"
 }
