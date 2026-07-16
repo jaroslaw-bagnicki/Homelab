@@ -13,6 +13,7 @@ Significant architectural and technology choices recorded in
 
 | # | Date | ADR | Status |
 |---|------|-----|--------|
+| 21 | 2026-07-16 | [Per-Project OpenCode Container Images](21-opencode-instance-images.md) | Accepted |
 | 20 | 2026-07-05 | [Caddy as Single Routing Layer on Cloudlab](20-caddy-single-routing-layer.md) | Accepted |
 | 19 | 2026-07-05 | [HTTPS-only origin via Cloudflare Tunnel + Cloudflare Origin CA on Cloudlab](19-cloudflare-tunnel-https-origin.md) | Accepted |
 | 18 | 2026-07-11 | [Host OpenCode Server Instances on Cloudlab](18-opencode-docker-sandbox.md) | Proposed |
