@@ -19,4 +19,4 @@ Each workload in this repository is a self-contained recipe, runnable independen
 
 | Workload | Path | Purpose | Docs |
 |---|---|---|---|
-| OpenCode | `ansible/workloads/opencode/opencode-playbook.yml` | Per-project OpenCode server instances on cloudlab's dedicated `opencode_net`. | [Workload README](../ansible/workloads/opencode/README.md) · [Runbook 17](runbooks/17-deploy-opencode-on-cloudlab.md) |
+| OpenCode | `ansible/workloads/opencode/opencode-playbook.yml` | Per-project OpenCode server instances on cloudlab's dedicated `opencode_net`. | [Workload README](../ansible/workloads/opencode/README.md) · [Deploy — Runbook 17](runbooks/17-deploy-opencode-on-cloudlab.md) · [Provision — Runbook 18](runbooks/18-provision-opencode-instance.md) |

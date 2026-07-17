@@ -79,6 +79,7 @@ Ansible runs first on the bare host (OS config, Docker, Arc agent). Bicep deploy
 |---|---|---|---|
 | [#13](https://github.com/jaroslaw-bagnicki/Homelab/issues/13) | **Restic backup** (redo) | ⭐⭐ | Daily snapshots to Azure Blob Storage — see [runbook](docs/runbooks/7-restic-backup.md) |
 | [#30](https://github.com/jaroslaw-bagnicki/Homelab/issues/30) | **OpenCode server instances** | ⭐⭐ | Per-project `opencode-homelab`/`opencode-prospera` server instances on Cloudlab via `docker_container` loop, KV-backed `OPENCODE_SERVER_PASSWORD`, wildcard `*-oc.<domain>` routing via dedicated `caddy-opencode` — see [runbook](docs/runbooks/17-deploy-opencode-on-cloudlab.md) |
+| [#37](https://github.com/jaroslaw-bagnicki/Homelab/issues/37) | **OpenCode model providers** | ⭐ | Per-instance model provider setup, auth.json persistence, plaintext-on-disk concern — see [runbook](docs/runbooks/18-provision-opencode-instance.md) |
 |  | **Hermes Agent** | ⭐⭐⭐ | Most complex — last |
 |  | **SQL Server** | ⭐⭐ | Developer Edition in Docker — see [runbook](docs/runbooks/9-mssql-dev.md) |
 |  | **Gitea** | ⭐⭐ | Self-hosted Git with web UI for personal repos |
