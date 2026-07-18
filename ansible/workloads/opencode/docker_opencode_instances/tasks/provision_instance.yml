@@ -1,4 +1,17 @@
 ---
+- name: "{{ instance.name }} | Ensure data directories exist"
+  ansible.builtin.file:
+    path: "{{ opencode_instances_dir }}/{{ instance.name }}/{{ item }}"
+    state: directory
+    mode: "0755"
+    owner: "0"
+    group: "0"
+  loop:
+    - data
+    - state
+    - config
+    - workspace
+
 - name: "{{ instance.name }} | Check if password exists in Key Vault"
   vars:
     vault_uri: "https://{{ opencode_keyvault_name }}.vault.azure.net"

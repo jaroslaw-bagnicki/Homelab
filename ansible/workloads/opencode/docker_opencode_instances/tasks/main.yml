@@ -5,17 +5,6 @@
       - opencode_instances | length > 0
     fail_msg: "opencode_instances list is empty. Define at least one instance in host_vars/{{ inventory_hostname }}.yml."
 
-- name: Ensure per-instance data directories exist
-  ansible.builtin.file:
-    path: "{{ opencode_instances_dir }}/{{ item.0.name }}/{{ item.1 }}"
-    state: directory
-    mode: "0755"
-    owner: "0"
-    group: "0"
-  loop: "{{ opencode_instances | product(['data', 'state', 'config', 'workspace']) | list }}"
-  loop_control:
-    label: "{{ item.0.name }}/{{ item.1 }}"
-
 - name: Provision each opencode instance
   ansible.builtin.include_tasks: provision_instance.yml
   loop: "{{ opencode_instances }}"
