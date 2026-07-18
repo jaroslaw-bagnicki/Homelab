@@ -39,7 +39,8 @@ operating on its own.
 - **Work on a feature branch in a worktree** — see [Worktree Workflow](#worktree-workflow) below; do not commit to `main` from an autonomous session
 - **Commit message format**: `(type) description` with parentheses. Common types: `docs`, `feat`, `fix`, `chore`, `refactor`
 - **Never rebase** unless explicitly asked (the rebase step in [Worktree Workflow](#worktree-workflow) merge-via-PR is the standard carve-out)
-- **Never push** unless explicitly asked
+- **Always push** after a commit on a feature branch in a worktree — push immediately, don't defer to user
+- **Do not push** to `main`, or after `git commit --amend` — amended commits require user confirmation before force-pushing
 - **Scope commits tightly** — one logical change per commit; do not bundle unrelated edits
 
 ## Workloads as self-contained recipes
@@ -93,8 +94,8 @@ git rev-parse --abbrev-ref HEAD      # current branch
 Merges always go through a pull request — the agent never merges to `main` locally unless explicitly asked.
 
 1. In the worktree: `git fetch origin && git rebase origin/main` — resolve any conflicts
-2. Ask the user for push permission: "Branch `<branch>` is ready. Push and open a PR?"
-3. After confirmation: `git push -u origin <branch>`, then open the PR via GitHub MCP tools (`create_pull_request`)
+2. `git push -u origin <branch>` — push immediately
+3. Open a PR via GitHub MCP tools (`create_pull_request`) only when asked by the user
 4. **Stop.** The human reviews and merges via the GitHub UI — the agent never merges the PR itself
 5. After the PR is merged, clean up in the primary checkout: `git pull --ff-only origin main`, then `git worktree remove ../Homelab-<short-topic>` and `git branch -d <branch>`
 
