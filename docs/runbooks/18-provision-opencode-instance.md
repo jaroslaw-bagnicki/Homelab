@@ -5,10 +5,10 @@
 ## Prerequisites
 
 - [ ] At least one OpenCode instance already deployed (see [runbook 17](17-deploy-opencode-on-cloudlab.md))
-- [ ] `homelab-bysxdb-kv` Key Vault accessible from the Ansible controller (see [runbook 14](14-gh-codespaces-sp-for-homelab.md) for AKV bootstrap)
+- [ ] `homelab-bysxdb-kv` Key Vault accessible from the Ansible controller with write access (Key Vault Secrets Officer RBAC role)
 - [ ] Ansible collections installed: `community.docker`, `azure.azcollection`
 - [ ] SSH access to `cloudlab` via `ansible_user: labadmin`
-- [ ] A dedicated inference provider API key for the new instance (see [Choosing a provider](#5-choose-a-model-provider))
+- [ ] A dedicated inference provider API key for the new instance (see [Choosing a provider](#4-choose-a-model-provider))
 
 ---
 
@@ -27,47 +27,30 @@ The instance name becomes the container name (`opencode-<name>`), the subdomain 
 
 ---
 
-## 2. Create AKV secret
+## 2. Deploy
 
-The Ansible role expects a secret named `opencode-<name>-server-password` in Key Vault. Provision it before running the playbook.
-
-```powershell
-$vault = "homelab-bysxdb-kv"
-
-function New-OpencodePassword {
-    [Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(16)).TrimEnd('=')
-}
-
-$instanceName = "<your-new-instance>"
-Set-AzKeyVaultSecret -VaultName $vault `
-    -Name "opencode-${instanceName}-server-password" `
-    -SecretValue (ConvertTo-SecureString -AsPlainText (New-OpencodePassword) -Force) |
-    Out-Null
-```
-
-Every instance gets its own password. There is no shared password across instances.
-
----
-
-## 3. Deploy
-
-Run the OpenCode workload playbook. The new instance is picked up automatically from `opencode_instances`.
+Run the OpenCode workload playbook from the `ansible/` directory. The new instance is picked up automatically from `opencode_instances`.
 
 ```bash
-ansible-playbook ansible/workloads/opencode/opencode-playbook.yml
+cd ansible && ansible-playbook workloads/opencode/opencode-playbook.yml
 ```
 
-The playbook:
-- Creates per-instance directories under `/var/lib/opencode/instances/<name>/`
-- Fetches the server password from Key Vault
-- Deploys the container on `opencode_net`
-- Polls `/global/health` until the instance responds
+The playbook runs a 7-step atomic loop per instance:
+1. Ensures data directories exist (`data`, `state`, `config`, `workspace`)
+2. Checks if a password already exists in Key Vault
+3. Generates a random password if missing
+4. Creates the KV secret if missing
+5. Fetches the password from KV
+6. Deploys the container on `opencode_net`
+7. Polls `/global/health` until the instance responds
 
-Existing instances are left untouched; only the new one is created.
+Existing instances are left untouched; only the new one is created. Every instance gets its own randomly-generated password — no shared passwords across instances.
+
+The standalone script `scripts/New-OpencodePasswordInKV.ps1` is available for pre-provisioning secrets without running the playbook.
 
 ---
 
-## 4. Verify
+## 3. Verify
 
 - [ ] Container is running: `docker ps --filter name=opencode-<name>` → status `Up`
 - [ ] Internal health: `docker exec caddy-opencode wget -qO- http://opencode-<name>:4096/global/health` → `{"healthy":true,...}`
@@ -76,11 +59,11 @@ Existing instances are left untouched; only the new one is created.
 
 ---
 
-## 5. Choose a model provider
+## 4. Choose a model provider
 
 Model provider authentication is **not automated** — each instance is configured manually. This is intentional: provider choice depends on the project, available subscriptions, and model needs. A manual step keeps each instance's provider decision explicit.
 
-1. Open the instance WebUI at `https://<name>-oc.cloud5.ovh` and authenticate with the server password from step 2.
+1. Open the instance WebUI at `https://<name>-oc.cloud5.ovh` and authenticate with the password auto-provisioned during deployment.
 2. Run the `/connect` command in the TUI to pick a provider.
 3. Follow the provider's auth flow (API key paste, OAuth device flow, etc.).
 4. Run `/models` to select the desired model.
@@ -94,7 +77,7 @@ Supported providers are documented at [opencode.ai/docs/providers](https://openc
 
 ---
 
-## 6. How auth survives container restarts
+## 5. How auth survives container restarts
 
 Provider credentials are stored by OpenCode in `~/.local/share/opencode/auth.json` inside the container. Because this directory is bind-mounted from the host (`/var/lib/opencode/instances/<name>/data/`), credentials survive container recreates, image pulls, and host reboots.
 
@@ -102,7 +85,7 @@ No re-authentication is needed after a restart.
 
 ---
 
-## 7. Security note: plaintext API keys on host
+## 6. Security note: plaintext API keys on host
 
 **Inference provider API keys are stored as plaintext** in the bind-mounted `auth.json` on the Cloudlab host filesystem. This is a known concern:
 
