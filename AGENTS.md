@@ -94,9 +94,10 @@ git rev-parse --abbrev-ref HEAD      # current branch
 Merges always go through a pull request — the agent never merges to `main` locally unless explicitly asked.
 
 1. In the worktree: `git fetch origin && git rebase origin/main` — resolve any conflicts
-2. `git push -u origin <branch>`, then open the PR via GitHub MCP tools (`create_pull_request`)
-3. **Stop.** The human reviews and merges via the GitHub UI — the agent never merges the PR itself
-4. After the PR is merged, clean up in the primary checkout: `git pull --ff-only origin main`, then `git worktree remove ../Homelab-<short-topic>` and `git branch -d <branch>`
+2. `git push -u origin <branch>` — push immediately
+3. Open a PR via GitHub MCP tools (`create_pull_request`) only when asked by the user
+4. **Stop.** The human reviews and merges via the GitHub UI — the agent never merges the PR itself
+5. After the PR is merged, clean up in the primary checkout: `git pull --ff-only origin main`, then `git worktree remove ../Homelab-<short-topic>` and `git branch -d <branch>`
 
 ### Local merge (only on explicit ask)
 
