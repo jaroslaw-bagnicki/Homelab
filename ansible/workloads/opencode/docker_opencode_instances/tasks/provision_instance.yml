@@ -1,5 +1,4 @@
----
-- name: "{{ instance.name }} | Ensure data directories exist"
+- name: Ensure data directories exist for {{ instance.name }}
   ansible.builtin.file:
     path: "{{ opencode_instances_dir }}/{{ instance.name }}/{{ item }}"
     state: directory
@@ -12,7 +11,7 @@
     - config
     - workspace
 
-- name: "{{ instance.name }} | Check if password exists in Key Vault"
+- name: Check if password exists in Key Vault for {{ instance.name }}
   vars:
     vault_uri: "https://{{ opencode_keyvault_name }}.vault.azure.net"
     secret_name: "{{ opencode_password_secret_template | format(instance.name) }}"
@@ -21,29 +20,32 @@
     name: "{{ secret_name }}"
   register: kv_check
   delegate_to: localhost
+  become: false
 
-- name: "{{ instance.name }} | Generate password"
+- name: Generate password for {{ instance.name }}
   ansible.builtin.set_fact:
     instance_password: "{{ lookup('ansible.builtin.password', '/dev/null', length=20) }}"
   delegate_to: localhost
   delegate_facts: true
   no_log: true
+  become: false
   when: kv_check.secrets | length == 0
 
-- name: "{{ instance.name }} | Create secret in Key Vault"
+- name: Create secret in Key Vault for {{ instance.name }}
   vars:
-    vault_uri: "https://{{ opencode_keyvault_name }}.vault.azure.net"
+    keyvault_uri: "https://{{ opencode_keyvault_name }}.vault.azure.net"
     secret_name: "{{ opencode_password_secret_template | format(instance.name) }}"
   azure.azcollection.azure_rm_keyvaultsecret:
-    vault_uri: "{{ vault_uri }}"
+    keyvault_uri: "{{ keyvault_uri }}"
     secret_name: "{{ secret_name }}"
     secret_value: "{{ hostvars['localhost']['instance_password'] }}"
     state: present
   delegate_to: localhost
   no_log: true
+  become: false
   when: kv_check.secrets | length == 0
 
-- name: "{{ instance.name }} | Fetch password from Key Vault"
+- name: Fetch password from Key Vault for {{ instance.name }}
   vars:
     vault_url: "https://{{ opencode_keyvault_name }}.vault.azure.net"
     secret_name: "{{ opencode_password_secret_template | format(instance.name) }}"
@@ -52,9 +54,10 @@
   delegate_to: localhost
   delegate_facts: true
   no_log: true
+  become: false
   when: kv_check.secrets | length > 0
 
-- name: "{{ instance.name }} | Deploy container"
+- name: Deploy container for {{ instance.name }}
   community.docker.docker_container:
     name: "opencode-{{ instance.name }}"
     hostname: "opencode-{{ instance.name }}"
@@ -75,7 +78,7 @@
       - "{{ opencode_instances_dir }}/{{ instance.name }}/workspace:/workspace:rw"
   no_log: true
 
-- name: "{{ instance.name }} | Wait for health endpoint"
+- name: Wait for health endpoint for {{ instance.name }}
   vars:
     auth_header: "Authorization: Basic {{ ('opencode:' + hostvars['localhost']['instance_password']) | b64encode }}"
   ansible.builtin.shell: |
