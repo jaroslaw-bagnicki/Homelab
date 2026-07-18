@@ -4,3 +4,4 @@ opencode_public_domain: cloud5.ovh
 opencode_instances:
   - name: homelab
   - name: prospera
+  - name: homelab2

@@ -16,6 +16,49 @@
   loop_control:
     label: "{{ item.0.name }}/{{ item.1 }}"
 
+- name: Check which instance passwords exist in Key Vault
+  vars:
+    vault_uri: "https://{{ opencode_keyvault_name }}.vault.azure.net"
+    secret_name: "{{ opencode_password_secret_template | format(item.name) }}"
+  azure.azcollection.azure_rm_keyvaultsecret_info:
+    vault_uri: "{{ vault_uri }}"
+    name: "{{ secret_name }}"
+  register: kv_secret_check
+  delegate_to: localhost
+  loop: "{{ opencode_instances }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Generate passwords for missing instance secrets
+  ansible.builtin.set_fact:
+    _new_passwords: >-
+      {{ _new_passwords | default({}) | combine({
+           item.item.name: lookup('ansible.builtin.password', '/dev/null', length=20)
+         }) }}
+  delegate_to: localhost
+  delegate_facts: true
+  no_log: true
+  loop: "{{ kv_secret_check.results }}"
+  when: item.secrets | length == 0
+  loop_control:
+    label: "{{ item.item.name }}"
+
+- name: Create missing instance secrets in Key Vault
+  vars:
+    vault_uri: "https://{{ opencode_keyvault_name }}.vault.azure.net"
+    secret_name: "{{ opencode_password_secret_template | format(item.item.name) }}"
+  azure.azcollection.azure_rm_keyvaultsecret:
+    vault_uri: "{{ vault_uri }}"
+    secret_name: "{{ secret_name }}"
+    secret_value: "{{ hostvars['localhost']['_new_passwords'][item.item.name] }}"
+    state: present
+  delegate_to: localhost
+  no_log: true
+  loop: "{{ kv_secret_check.results }}"
+  when: item.secrets | length == 0
+  loop_control:
+    label: "{{ item.item.name }}"
+
 - name: Fetch instance passwords from Key Vault
   vars:
     vault_url: "https://{{ opencode_keyvault_name }}.vault.azure.net"
