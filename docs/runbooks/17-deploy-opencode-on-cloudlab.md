@@ -68,6 +68,7 @@ The CF tunnel wildcard entry must cover `*.<domain>` (see [ADR 19](../decisions/
 
 ## Next Steps
 
+- **Provision a new instance** — see [runbook 18](18-provision-opencode-instance.md)
 - **Backup strategy** for `/var/lib/opencode/instances/<name>/` — follow-up issue (single `restic` snapshot covers all four data dirs per instance)
 - **Docker AI Sandboxes (`sbx`)** evaluation once KVM availability on Cloudlab is confirmed (per [Research 21](../research/21-opencode-sandboxed-homelab.md) open question #4)
 - Add Cloudflare Access or Caddy basic-auth layered on top of OpenCode's built-in auth if multi-user access becomes a requirement
@@ -83,4 +84,5 @@ The CF tunnel wildcard entry must cover `*.<domain>` (see [ADR 19](../decisions/
 - [Research 21 — OpenCode Sandboxed Architecture on Homelab](../research/21-opencode-sandboxed-homelab.md)
 - [Research 22 — Infisical vs Azure Key Vault](../research/22-infisical-vs-azure-key-vault.md)
 - [Runbook 16 — Docker Services Ansible Role](16-docker-services-ansible-role.md)
+- [Runbook 18 — Provision a New OpenCode Instance](18-provision-opencode-instance.md)
 - [#30 — Implement server-hosted OpenCode instances on Cloudlab](https://github.com/jaroslaw-bagnicki/Homelab/issues/30)

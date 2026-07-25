@@ -1,74 +1,12 @@
----
 - name: Validate opencode_instances list is non-empty
   ansible.builtin.assert:
     that:
       - opencode_instances | length > 0
     fail_msg: "opencode_instances list is empty. Define at least one instance in host_vars/{{ inventory_hostname }}.yml."
 
-- name: Ensure per-instance data directories exist
-  ansible.builtin.file:
-    path: "{{ opencode_instances_dir }}/{{ item.0.name }}/{{ item.1 }}"
-    state: directory
-    mode: "0755"
-    owner: "0"
-    group: "0"
-  loop: "{{ opencode_instances | product(['data', 'state', 'config', 'workspace']) | list }}"
-  loop_control:
-    label: "{{ item.0.name }}/{{ item.1 }}"
-
-- name: Fetch instance passwords from Key Vault
-  vars:
-    vault_url: "https://{{ opencode_keyvault_name }}.vault.azure.net"
-    secret_name: "{{ opencode_password_secret_template | format(item.name) }}"
-  ansible.builtin.set_fact:
-    opencode_instance_passwords: >-
-      {{ opencode_instance_passwords | default({}) | combine({
-           item.name: lookup('azure.azcollection.azure_keyvault_secret', secret_name, vault_url=vault_url)
-         }) }}
-  delegate_to: localhost
-  delegate_facts: true
-  no_log: true
+- name: Provision each opencode instance
+  ansible.builtin.include_tasks: provision_instance.yml
   loop: "{{ opencode_instances }}"
   loop_control:
-    label: "{{ item.name }}"
-
-- name: Deploy opencode instances
-  community.docker.docker_container:
-    name: "opencode-{{ item.name }}"
-    hostname: "opencode-{{ item.name }}"
-    image: ghcr.io/anomalyco/opencode:latest
-    command: ["serve", "--port", "4096", "--hostname", "0.0.0.0"]
-    state: started
-    restart_policy: always
-    pull: true
-    env:
-      OPENCODE_SERVER_PASSWORD: "{{ hostvars['localhost']['opencode_instance_passwords'][item.name] }}"
-      OPENCODE_SERVER_HOSTNAME: "0.0.0.0"
-    networks:
-      - name: opencode_net
-    volumes:
-      - "{{ opencode_instances_dir }}/{{ item.name }}/data:/root/.local/share/opencode:rw"
-      - "{{ opencode_instances_dir }}/{{ item.name }}/state:/root/.local/state/opencode:rw"
-      - "{{ opencode_instances_dir }}/{{ item.name }}/config:/root/.config/opencode:rw"
-      - "{{ opencode_instances_dir }}/{{ item.name }}/workspace:/workspace:rw"
-  loop: "{{ opencode_instances }}"
-  loop_control:
-    label: "{{ item.name }}"
-  no_log: true
-
-- name: Wait for each opencode instance health endpoint
-  vars:
-    auth_header: "Authorization: Basic {{ ('opencode:' + hostvars['localhost']['opencode_instance_passwords'][item.name]) | b64encode }}"
-  ansible.builtin.shell: |
-    docker exec caddy-opencode wget -qO- --header '{{ auth_header }}' http://opencode-{{ item.name }}:4096/global/health
-  args:
-    executable: /bin/bash
-  register: opencode_health
-  retries: 12
-  delay: 5
-  until: opencode_health.rc == 0
-  changed_when: false
-  no_log: true
-  loop: "{{ opencode_instances }}"
-  loop_control:
-    label: "{{ item.name }}"
+    loop_var: instance
+    label: "{{ instance.name }}"
