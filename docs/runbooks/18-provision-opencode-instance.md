@@ -25,6 +25,8 @@ opencode_instances:
 
 The instance name becomes the container name (`opencode-<name>`), the subdomain (`<name>-oc.cloud5.ovh`), and the AKV secret name suffix.
 
+The `cloud5.ovh` literal reflects the cloudlab deployment. The `opencode_public_domain` Ansible var controls it; substitute when targeting a different host. The `oc` suffix is hardcoded in the Caddyfile template.
+
 ---
 
 ## 2. Deploy
