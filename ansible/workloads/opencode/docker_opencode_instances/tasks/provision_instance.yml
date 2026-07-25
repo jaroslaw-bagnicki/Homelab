@@ -1,0 +1,93 @@
+- name: Ensure data directories exist for {{ instance.name }}
+  ansible.builtin.file:
+    path: "{{ opencode_instances_dir }}/{{ instance.name }}/{{ item }}"
+    state: directory
+    mode: "0755"
+    owner: "0"
+    group: "0"
+  loop:
+    - data
+    - state
+    - config
+    - workspace
+
+- name: Check if password exists in Key Vault for {{ instance.name }}
+  vars:
+    vault_uri: "https://{{ opencode_keyvault_name }}.vault.azure.net"
+    secret_name: "{{ opencode_password_secret_template | format(instance.name) }}"
+  azure.azcollection.azure_rm_keyvaultsecret_info:
+    vault_uri: "{{ vault_uri }}"
+    name: "{{ secret_name }}"
+  register: kv_check
+  delegate_to: localhost
+  become: false
+
+- name: Generate password for {{ instance.name }}
+  ansible.builtin.set_fact:
+    instance_password: "{{ lookup('ansible.builtin.password', '/dev/null', length=20) }}"
+  delegate_to: localhost
+  delegate_facts: true
+  no_log: true
+  become: false
+  when: kv_check.secrets | length == 0
+
+- name: Create secret in Key Vault for {{ instance.name }}
+  vars:
+    keyvault_uri: "https://{{ opencode_keyvault_name }}.vault.azure.net"
+    secret_name: "{{ opencode_password_secret_template | format(instance.name) }}"
+  azure.azcollection.azure_rm_keyvaultsecret:
+    keyvault_uri: "{{ keyvault_uri }}"
+    secret_name: "{{ secret_name }}"
+    secret_value: "{{ hostvars['localhost']['instance_password'] }}"
+    state: present
+  delegate_to: localhost
+  no_log: true
+  become: false
+  when: kv_check.secrets | length == 0
+
+- name: Fetch password from Key Vault for {{ instance.name }}
+  vars:
+    vault_url: "https://{{ opencode_keyvault_name }}.vault.azure.net"
+    secret_name: "{{ opencode_password_secret_template | format(instance.name) }}"
+  ansible.builtin.set_fact:
+    instance_password: "{{ lookup('azure.azcollection.azure_keyvault_secret', secret_name, vault_url=vault_url) }}"
+  delegate_to: localhost
+  delegate_facts: true
+  no_log: true
+  become: false
+  when: kv_check.secrets | length > 0
+
+- name: Deploy container for {{ instance.name }}
+  community.docker.docker_container:
+    name: "opencode-{{ instance.name }}"
+    hostname: "opencode-{{ instance.name }}"
+    image: ghcr.io/anomalyco/opencode:latest
+    command: ["serve", "--port", "4096", "--hostname", "0.0.0.0"]
+    state: started
+    restart_policy: always
+    pull: true
+    env:
+      OPENCODE_SERVER_PASSWORD: "{{ hostvars['localhost']['instance_password'] }}"
+      OPENCODE_SERVER_HOSTNAME: "0.0.0.0"
+    networks:
+      - name: opencode_net
+    volumes:
+      - "{{ opencode_instances_dir }}/{{ instance.name }}/data:/root/.local/share/opencode:rw"
+      - "{{ opencode_instances_dir }}/{{ instance.name }}/state:/root/.local/state/opencode:rw"
+      - "{{ opencode_instances_dir }}/{{ instance.name }}/config:/root/.config/opencode:rw"
+      - "{{ opencode_instances_dir }}/{{ instance.name }}/workspace:/workspace:rw"
+  no_log: true
+
+- name: Wait for health endpoint for {{ instance.name }}
+  vars:
+    auth_header: "Authorization: Basic {{ ('opencode:' + hostvars['localhost']['instance_password']) | b64encode }}"
+  ansible.builtin.shell: |
+    docker exec caddy-opencode wget -qO- --header '{{ auth_header }}' http://opencode-{{ instance.name }}:4096/global/health
+  args:
+    executable: /bin/bash
+  register: health
+  retries: 12
+  delay: 5
+  until: health.rc == 0
+  changed_when: false
+  no_log: true
