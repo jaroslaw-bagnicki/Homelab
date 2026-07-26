@@ -57,40 +57,53 @@
   become: false
   when: kv_check.secrets | length > 0
 
-- name: Confirm Azure SP credentials exist in Key Vault for {{ instance.name }}
+- name: Check Azure SP credentials exist in Key Vault for {{ instance.name }}
   vars:
     vault_uri: "https://{{ opencode_keyvault_name }}.vault.azure.net"
-    secret_name: "{{ opencode_azure_tenant_secret_template | format(instance.name) }}"
+    tenant_secret: "{{ opencode_azure_tenant_secret_template | format(instance.name) }}"
+    client_id_secret: "{{ opencode_azure_client_id_secret_template | format(instance.name) }}"
+    client_credential_secret: "{{ opencode_azure_client_secret_template | format(instance.name) }}"
   azure.azcollection.azure_rm_keyvaultsecret_info:
     vault_uri: "{{ vault_uri }}"
-    name: "{{ secret_name }}"
-  register: azure_sp_check
+    name: "{{ item }}"
+  loop:
+    - "{{ tenant_secret }}"
+    - "{{ client_id_secret }}"
+    - "{{ client_credential_secret }}"
+  register: azure_sp_checks
   delegate_to: localhost
   become: false
   failed_when: false
   when: instance.azure_sp | default(false)
 
-- name: Fail if Azure SP credentials are missing in Key Vault for {{ instance.name }}
+- name: Fail if any Azure SP secret is missing in Key Vault for {{ instance.name }}
+  vars:
+    missing: >-
+      {{ azure_sp_checks.results
+         | selectattr('secrets', 'defined')
+         | selectattr('secrets', 'equalto', [])
+         | map(attribute='item')
+         | list }}
   ansible.builtin.fail:
     msg: >-
-      Azure SP credentials for '{{ instance.name }}' not found in {{ opencode_keyvault_name }}.
+      Azure SP credentials for '{{ instance.name }}' incomplete in {{ opencode_keyvault_name }}.
+      Missing: {{ missing | join(', ') }}.
       Run scripts/Create-HomelabOcAgentAzSp.ps1 on your local machine first, then re-run the workload playbook.
   when:
     - instance.azure_sp | default(false)
-    - azure_sp_check.secrets | default([]) | length == 0
+    - missing | length > 0
 
 - name: Fetch Azure SP credentials from Key Vault for {{ instance.name }}
   vars:
     vault_url: "https://{{ opencode_keyvault_name }}.vault.azure.net"
     tenant_secret: "{{ opencode_azure_tenant_secret_template | format(instance.name) }}"
     client_id_secret: "{{ opencode_azure_client_id_secret_template | format(instance.name) }}"
-    client_credential_secret: "{{ opencode_azure_client_secret_secret_template | format(instance.name) }}"
+    client_credential_secret: "{{ opencode_azure_client_secret_template | format(instance.name) }}"
   ansible.builtin.set_fact:
     instance_azure_tenant_id: "{{ lookup('azure.azcollection.azure_keyvault_secret', tenant_secret, vault_url=vault_url) }}"
     instance_azure_client_id: "{{ lookup('azure.azcollection.azure_keyvault_secret', client_id_secret, vault_url=vault_url) }}"
     instance_azure_client_secret: "{{ lookup('azure.azcollection.azure_keyvault_secret', client_credential_secret, vault_url=vault_url) }}"
   delegate_to: localhost
-  delegate_facts: true
   no_log: true
   become: false
   when: instance.azure_sp | default(false)
@@ -107,9 +120,9 @@
     env:
       OPENCODE_SERVER_PASSWORD: "{{ hostvars['localhost']['instance_password'] }}"
       OPENCODE_SERVER_HOSTNAME: "0.0.0.0"
-      AZURE_TENANT_ID: "{{ hostvars['localhost']['instance_azure_tenant_id'] | default(omit) }}"
-      AZURE_CLIENT_ID: "{{ hostvars['localhost']['instance_azure_client_id'] | default(omit) }}"
-      AZURE_CLIENT_SECRET: "{{ hostvars['localhost']['instance_azure_client_secret'] | default(omit) }}"
+      AZURE_TENANT_ID: "{{ hostvars['localhost']['instance_azure_tenant_id'] if (instance.azure_sp | default(false)) else omit }}"
+      AZURE_CLIENT_ID: "{{ hostvars['localhost']['instance_azure_client_id'] if (instance.azure_sp | default(false)) else omit }}"
+      AZURE_CLIENT_SECRET: "{{ hostvars['localhost']['instance_azure_client_secret'] if (instance.azure_sp | default(false)) else omit }}"
     networks:
       - name: opencode_net
     volumes:

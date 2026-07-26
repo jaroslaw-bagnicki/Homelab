@@ -4,4 +4,4 @@ opencode_password_secret_template: "opencode-%s-server-password"
 
 opencode_azure_tenant_secret_template: "opencode-%s-sp-tenant-id"
 opencode_azure_client_id_secret_template: "opencode-%s-sp-client-id"
-opencode_azure_client_secret_secret_template: "opencode-%s-sp-client-secret"
+opencode_azure_client_secret_template: "opencode-%s-sp-client-secret"
