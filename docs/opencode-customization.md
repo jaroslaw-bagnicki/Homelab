@@ -38,7 +38,7 @@ One repo per instance. `homelab-oc` clones `jaroslaw-bagnicki/Homelab`, `prosper
 
 ### 3. Per-instance Azure SP (#40)
 
-Per ADR 16 — non-personal identity per non-interactive agent workload. For Compose-era Cloudlab workloads this is a Service Principal with `client_secret` in AKV. The homelab-oc instance's SP is `homelab-oc-agent-sp` with `Contributor` on `homelab-rg` + `Key Vault Secrets User` on `homelab-bysxdb-kv`. AKV secret names: `opencode-homelab-sp-{tenant-id,client-id,client-secret}`. The prospera-oc instance SP is deferred (its own scope decision is a follow-up).
+Per ADR 16 — non-personal identity per non-interactive agent workload. For Compose-era Cloudlab workloads this is a Service Principal with `client_secret` in AKV. The homelab-oc instance's SP is `homelab-oc-agent-sp` with `Contributor` on `homelab-rg` + `Key Vault Secrets User` on `homelab-bysxdb-kv`. AKV secret names: `opencode-homelab-sp-{tenant-id,client-id,client-secret}`. Bootstrap via `scripts/Create-HomelabOcAgentAzSp.ps1` (one-shot, exits if the SP exists); rotation via `scripts/Rotate-HomelabOcAgentAzSp.ps1` (preserves the SP object ID; updates only `client_secret`). Default credential lifetime: 90 days. The prospera-oc instance SP is deferred (its own scope decision is a follow-up).
 
 Consumer code path: Azure SDK + Azure MCP read the three env vars via `DefaultAzureCredential` → `EnvironmentCredential`. No app code changes at substrate cutover — the future UAMI Workload Identity path produces the same `DefaultAzureCredential` chain.
 
