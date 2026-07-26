@@ -1,7 +1,7 @@
 # Container Strategy — Docker Compose First, k3s Migration Path
 
-**Date:** 2026-05-24  
-**Status:** Implemented
+**Date:** 2026-05-24
+**Status:** Superseded by ADR 22
 
 ---
 
@@ -32,3 +32,7 @@ Rejected alternatives:
 - Auto-restart on crash and reboot handled by `restart: unless-stopped`
 - No zero-downtime rolling updates — brief gap during `docker compose up -d`; acceptable for a personal homelab
 - Migration to k3s is an explicit future task, not an automatic upgrade — will need storage class configuration and Docker socket workarounds
+
+---
+
+> **Superseded by [ADR 22 — Migrate Homelab Workloads to Kubernetes (k3s + Azure Arc)](22-k3s-arc-homelab.md).** The "Compose first, k3s migration path" framing was a deferral; ADR 22 makes the k3s migration the destination and supersedes the deferral. ADR 03 is preserved as historical context for why Compose was the right starting substrate and what the trade-offs were.

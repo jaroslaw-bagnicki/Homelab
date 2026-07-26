@@ -73,6 +73,13 @@ Out of scope for this evaluation:
   (local stdio, `AZURE_*` env vars from Codespaces secrets) are operational
   via `opencode.json`. Azure MCP authenticated via the Codespaces SP (ADR 16)
   with `Contributor` on `homelab-rg`.
+
+  **Note:** the `GH_PAT`-based GitHub MCP auth is transitional. Issue #43 (and
+  a future ADR 24) move OpenCode's GitHub identity to per-instance GitHub Apps
+  with installation tokens, which is the long-term pattern. The Azure MCP
+  auth path is generalized by ADR 16's re-scope (Substrate-driven identity
+  type) and, for the future homelab k3s cluster (ADR 22), replaced by UAMI
+  Workload Identity per ServiceAccount.
 - **Custom LLM providers.** DeepSeek (paid API) and MiniMax coding plan
   (subscription) are wired in `opencode.json`. Provider and model switching
   work at runtime via the OpenCode TUI.

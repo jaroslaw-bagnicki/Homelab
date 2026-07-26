@@ -8,7 +8,7 @@
 ## Context
 
 The homelab server (Lenovo ThinkCentre M910q, Ubuntu Server) was registered in
-Azure Arc ([ADR 260524](260524-hybrid-cloud-azure-arc.md)), making it visible in
+Azure Arc ([ADR 04](04-hybrid-cloud-azure-arc.md)), making it visible in
 the Azure Portal alongside other Azure resources. The next step was to enable
 basic monitoring — CPU, memory, and disk metrics — without standing up a
 separate monitoring stack.
@@ -74,3 +74,7 @@ It is installed separately via `New-AzConnectedMachineExtension`.
   tool if detailed real-time metrics are needed.
 - **cockpit** — built into Ubuntu, zero setup. Good for quick checks but no
   alerting, no history, no cloud integration.
+
+---
+
+> **Future direction:** When the homelab migrates to k3s + Arc (ADR 22), the Arc-enabled Kubernetes onboarding extends Azure Monitor coverage to cluster-level metrics (control plane, node metrics, pod metrics) and Container Insights. The Arc Server agent and AMA foundation established here remain in place; the cluster adds Azure Monitor Container Insights as a new data source.

@@ -31,6 +31,10 @@ operating on its own.
 - Runbooks: `runbooks/` — implementation instructions and operational procedures
 - Each area has a `README.md` as the index
 
+## ADR Authoring
+
+Avoid ADR bloat — reference other ADRs and issues by name, do not restate their decisions. Bloated ADRs degrade agent context.
+
 ## Git Workflow
 
 - **GitHub repository**: `https://github.com/jaroslaw-bagnicki/Homelab` (owner: `jaroslaw-bagnicki`, repo: `Homelab`)

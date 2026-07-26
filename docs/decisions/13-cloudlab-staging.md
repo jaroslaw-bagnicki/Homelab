@@ -1,6 +1,7 @@
-# Use Contabo Cloud VPS 10 as Ansible Playground for Homelab
+# Use Contabo Cloud VPS 10 as Staging Environment for Homelab
 
-**Date:** 2026-06-16  
+**Date:** 2026-06-16
+**Last revised:** 2026-07-26
 **Status:** Implemented
 
 ---
@@ -14,9 +15,29 @@ The homelab server (Lenovo ThinkCentre M910q Tiny, Ubuntu 24.04 LTS) needs to be
 playbooks directly to the production homelab risks downtime, misconfiguration,
 and data loss.
 
-A **disposable, low-cost VPS** is needed as a safe playground — a staging
-environment where Ansible playbooks can be developed, tested, and hardened
-before being applied to the physical server.
+A **disposable, low-cost VPS** is needed as a safe staging environment where
+Ansible playbooks can be developed, tested, and hardened before being applied
+to the physical server.
+
+### Core purpose
+
+**Cloudlab is the staging environment for the homelab, not a production host.**
+The physical homelab (ADR 01) is the production target; Cloudlab is where
+changes are proven before being applied to homelab. This separation is what
+makes the platform changes (k3s migration per ADR 22, image hierarchy per ADR
+21, workload shifts per ADR 18) safe to roll out: a misconfigured change hits
+Cloudlab first, not the homelab box.
+
+Cloudlab currently hosts a broader set of staging work than this ADR's title
+suggests:
+
+- Ansible playbook validation (the original purpose)
+- OpenCode server instances (ADR 18) — transitional, not permanent
+- Cloudflare Tunnel endpoint for `example.com` hostnames (ADRs 19, 20)
+- k3s + Arc staging for the homelab k3s migration (ADR 22)
+
+None of these make Cloudlab a production host. They are all "changes destined
+for homelab, validated on Cloudlab first."
 
 Requirements for the playground:
 

@@ -2,6 +2,8 @@
 
 > Runbook for the `ansible/workloads/opencode/` workload — per-project OpenCode server instances on Cloudlab. Workload description, capabilities, services, host layout, secret handling, and idempotency live in [the workload README](../../ansible/workloads/opencode/README.md). This runbook covers the operational steps: prerequisites, secret provisioning, deploy invocation, verification, and CF Tunnel prerequisites.
 
+> **Note:** `example.com` is a placeholder domain used in this runbook for documentation purposes. Replace with the actual domain when following these steps for a real deployment.
+
 ## Prerequisites
 
 - [ ] Runbooks [1](1-init.md), [2](2-docker.md), [4](4-caddy.md), [5](5-cloudflare-tunnel.md), [10](10-vps-playground.md), [16](16-docker-services-ansible-role.md) completed.
@@ -55,10 +57,10 @@ The deploy workflow is `bash` shell commands on a host with `ansible-playbook` i
 - [ ] Internal reverse proxy: `docker exec caddy-opencode wget -qO- http://opencode-prospera:4096/global/health` → `{"healthy":true,...}`
 - [ ] No host Docker socket mounted: `docker inspect opencode-homelab | jq '.[0].HostConfig.Binds'` → empty array
 - [ ] Per-instance dirs owned by container user: `ls -ld /var/lib/opencode/instances/*/{data,state,config,workspace}` (should be writable for the container process)
-- [ ] Via Cloudflare Tunnel: `curl -u opencode:$PASSWORD https://homelab-oc.cloud5.ovh/global/health` → `{"healthy":true,...}`
-- [ ] Via Cloudflare Tunnel: same check against `https://prospera-oc.cloud5.ovh/global/health`
+- [ ] Via Cloudflare Tunnel: `curl -u opencode:$PASSWORD https://homelab-oc.example.com/global/health` → `{"healthy":true,...}`
+- [ ] Via Cloudflare Tunnel: same check against `https://prospera-oc.example.com/global/health`
 
-The `cloud5.ovh` literal in this runbook reflects the cloudlab deployment. The `opencode_public_domain` Ansible var controls it; substitute accordingly when targeting a different host. The `oc` suffix is hardcoded in the Caddyfile template.
+The `example.com` literal in this runbook reflects the cloudlab deployment. The `opencode_public_domain` Ansible var controls it; substitute accordingly when targeting a different host. The `oc` suffix is hardcoded in the Caddyfile template.
 
 ## 4. Cloudflare Tunnel DNS prerequisites
 
@@ -78,7 +80,7 @@ The CF tunnel wildcard entry must cover `*.<domain>` (see [ADR 19](../decisions/
 ## Related
 
 - [Workload README — OpenCode](../../ansible/workloads/opencode/README.md)
-- [ADR 18 — Host OpenCode Server Instances on Cloudlab](../decisions/18-opencode-docker-sandbox.md)
+- [ADR 18 — Host OpenCode Server Instances on Homelab](../decisions/18-opencode-sandbox.md)
 - [ADR 19 — Cloudflare Tunnel HTTP origin with Caddy reverse proxy](../decisions/19-cloudflare-tunnel-https-origin.md)
 - [ADR 20 — Caddy as Single Routing Layer on Cloudlab](../decisions/20-caddy-single-routing-layer.md)
 - [Research 21 — OpenCode Sandboxed Architecture on Homelab](../research/21-opencode-sandboxed-homelab.md)

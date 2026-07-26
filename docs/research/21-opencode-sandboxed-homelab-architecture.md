@@ -589,6 +589,6 @@ opencode_instances:
 - [ADR 02 — Backup Strategy (Restic + Azure Blob)](../decisions/02-backup-strategy-restic-blob.md)
 - [ADR 07 — Reverse Proxy (Caddy)](../decisions/07-reverse-proxy-caddy.md)
 - [ADR 08 — Remote Access (Cloudflare Tunnel)](../decisions/08-remote-access-cloudflare-tunnel.md)
-- [ADR 13 — VPS Playground (Cloudlab)](../decisions/13-vps-playground.md)
+- [ADR 13 — Staging Environment for Homelab (Cloudlab)](../decisions/13-cloudlab-staging.md)
 - Docker AI Sandboxes docs: https://docs.docker.com/ai/sandboxes/
 - Docker OpenCode Agent docs: https://docs.docker.com/ai/sandboxes/agents/opencode/
