@@ -17,7 +17,7 @@ The host-side decision (homelab) is independent of the substrate (Docker Compose
 
 ## Decision
 
-**Run per-project OpenCode server instances on the homelab.** Each instance is an isolated, per-project container image with per-instance identity, per-instance MCP servers, and per-instance Azure credentials.
+**Run per-project OpenCode server instances on the homelab.**
 
 ### Key design choices
 
@@ -27,25 +27,17 @@ The host-side decision (homelab) is independent of the substrate (Docker Compose
 
    Homelab is an R&D/experimentation zone; Prospera holds financial data and requires higher stability. Sharing one SQLite session database and one environment would mix secrets, toolchains, and failure domains.
 
-2. **Per-project image hierarchy per ADR 21.**
+2. **Authentication: `OPENCODE_SERVER_PASSWORD`** (basic password at launch). Caddy basic auth or Cloudflare Access SSO can be layered later if needed. Caddy has no native Entra ID support.
 
-3. **Per-instance identity per ADR 16.**
-
-4. **Per-instance MCP servers per #41.**
-
-5. **Authentication: `OPENCODE_SERVER_PASSWORD`** (basic password at launch). Caddy basic auth or Cloudflare Access SSO can be layered later if needed. Caddy has no native Entra ID support.
-
-6. **No host Docker socket in agent containers** (where the substrate exposes one). The Homelab agent applies changes via SSH/Ansible or via the cluster's RBAC, not by directly controlling a host Docker daemon. Preserves isolation.
+3. **No host Docker socket in agent containers** (where the substrate exposes one). The Homelab agent applies changes via SSH/Ansible or via the cluster's RBAC, not by directly controlling a host Docker daemon. Preserves isolation.
 
 ### What this decision is
 
 - Per-project OpenCode instances on the homelab.
-- Per-project split with per-instance identity, MCP servers, and Azure credentials (established in the referenced ADRs and issues).
 
 ### What this decision is not
 
 - The substrate (Docker Compose, Kubernetes, etc.) — decided in a separate ADR.
-- Per-instance GitHub identity — separate concern tracked in #43.
 
 ---
 
@@ -54,8 +46,6 @@ The host-side decision (homelab) is independent of the substrate (Docker Compose
 ### Positive
 
 - **Clear isolation between projects.** Financial/secrets context never mixes with infrastructure experimentation.
-- **Identity simplification on cluster-resident deployments.** When the cluster is live, UAMI Workload Identity per ServiceAccount (per ADR 16) replaces the SP path — no client_secret in the cluster, no AKV env-var plumbing, no manual rotation.
-- **Ecosystem tooling.** Substrate-native (Helm/Kustomize for cluster, Compose for host) tooling applies where it fits.
 - **Remote access from any device.** Browser-based WebUI through whatever public ingress the substrate exposes.
 
 ### Negative
@@ -79,9 +69,14 @@ The host-side decision (homelab) is independent of the substrate (Docker Compose
 
 ## Out of scope
 
-- Backup strategy (deferred; addressed as a follow-up).
-- Docker AI Sandboxes deployment (deferred evaluation).
-- Single sign-on / audit logging (basic auth only at launch).
+- Per-project image hierarchy — decided in ADR 21.
+- Per-instance identity pattern — decided in ADR 16.
+- Per-instance MCP server configuration — tracked in #41.
+- Per-instance Azure credential lifecycle — tracked in #40.
+- Per-instance GitHub identity — tracked in #43.
+- Backup strategy — deferred.
+- Docker AI Sandboxes deployment — deferred evaluation.
+- Single sign-on / audit logging — deferred.
 
 ---
 
