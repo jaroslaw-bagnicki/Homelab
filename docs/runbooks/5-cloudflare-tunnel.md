@@ -25,7 +25,7 @@ The tunnel requires Cloudflare DNS to route traffic. If you already have a domai
 
 ### 1.1 Add your domain to Cloudflare
 
-1. Go to the [Cloudflare Dashboard (example.com)](https://dash.cloudflare.com/b7208cffa068d8f825142ea9fd426558/example.com).
+1. Go to the [Cloudflare Dashboard](https://dash.cloudflare.com/) and select your account, then add the domain.
 2. Click **Add a site** and enter your domain name.
 3. Select the **Free** plan.
 4. Cloudflare will scan existing DNS records — review them and confirm.

@@ -93,7 +93,7 @@ roles:
 
 ## 6. Cloudflare Dashboard Setup (manual, one-time)
 
-Before the first `ansible-playbook` run, complete these steps in the [Cloudflare dashboard (example.com)](https://dash.cloudflare.com/b7208cffa068d8f825142ea9fd426558/example.com) and [Azure portal](https://portal.azure.com/). The role fails loudly if any KV secret is missing.
+Before the first `ansible-playbook` run, complete these steps in the [Cloudflare dashboard](https://dash.cloudflare.com/) (navigate to your account and select the relevant domain / tunnel) and [Azure portal](https://portal.azure.com/). The role fails loudly if any KV secret is missing.
 
 ### 6.1 — Create Cloudflare Tunnel
 

@@ -25,7 +25,7 @@ The physical server is a **[Lenovo ThinkCentre M910q Tiny](docs/decisions/01-har
 It will be rebuilt from scratch on **[Ubuntu 24.04 LTS](docs/decisions/05-os-decision-ubuntu-server.md)**, managed entirely via
 **[Ansible](docs/decisions/10-ansible-host-config.md)** playbooks — developed and tested on a disposable **[Contabo Cloud VPS 10](docs/decisions/13-cloudlab-staging.md)** before touching the hardware.
 
-Applications run in **[Docker Compose](docs/decisions/03-container-strategy.md)** with a future path to **k3s**. The server
+Applications currently run in **Docker Compose**; the migration to **Kubernetes (k3s + Azure Arc)** is the destination per [ADR 22](docs/decisions/22-k3s-arc-homelab.md). The server
 is enrolled in **[Azure Arc](docs/decisions/04-hybrid-cloud-azure-arc.md)** for cloud-side monitoring and policy, and exposed
 to the internet via **[Cloudflare Tunnel](docs/decisions/08-remote-access-cloudflare-tunnel.md)** behind a **[Caddy](docs/decisions/07-reverse-proxy-caddy.md)** reverse proxy.
 
