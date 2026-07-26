@@ -53,7 +53,7 @@ No `.env` file is rendered on the host. API keys for model providers are intenti
 
 Instances with `azure_sp: true` in `opencode_instances` get Azure service-principal credentials injected as `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, and `AZURE_CLIENT_SECRET` container env vars. The Azure SDK and the Azure MCP server read these via `DefaultAzureCredential` → `EnvironmentCredential`.
 
-AKV secret names: `opencode-agent-sp-<instance-name>-tenant-id`, `opencode-agent-sp-<instance-name>-client-id`, `opencode-agent-sp-<instance-name>-client-secret` (one triplet per opted-in instance). The role fetches them at deploy time; the env vars are omitted from the container when `azure_sp` is unset. The SP itself is provisioned out-of-band by `scripts/Create-HomelabOcAgentAzSp.ps1` — see [runbook 19](../../../docs/runbooks/19-azure-sp-for-opencode.md).
+AKV secret names: `opencode-<instance-name>-sp-tenant-id`, `opencode-<instance-name>-sp-client-id`, `opencode-<instance-name>-sp-client-secret` (one triplet per opted-in instance). The role fetches them at deploy time; the env vars are omitted from the container when `azure_sp` is unset. The SP itself is provisioned out-of-band by `scripts/Create-HomelabOcAgentAzSp.ps1` — see [runbook 19](../../../docs/runbooks/19-azure-sp-for-opencode.md).
 
 ## Role Idempotency
 

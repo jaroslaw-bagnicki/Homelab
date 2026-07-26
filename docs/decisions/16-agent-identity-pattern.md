@@ -38,7 +38,7 @@ A Service Principal with a client_secret is the right identity primitive for a w
 
 ### History of the pattern
 
-The pattern was originally scoped to the Codespaces workflow (one project-wide SP for any Codespaces-resident workload that touched Azure). That specific SP — `homelab-codespaces-sp` — was never actually created: Codespaces became an emergency-only environment (per ADR 17's narrower scope) and the SP-for-Codespaces implementation was deferred indefinitely. The **pattern** itself was sound and was re-applied to the OpenCode on Cloudlab workload via #40, where the first per-instance SPs (`opencode-agent-sp-homelab` and the deferred `opencode-agent-sp-prospera`) are in flight. When the homelab k3s cluster lands (ADR 22), the pattern is replaced for cluster-resident workloads by UAMI Workload Identity per ServiceAccount.
+The pattern was originally scoped to the Codespaces workflow (one project-wide SP for any Codespaces-resident workload that touched Azure). That specific SP — `homelab-codespaces-sp` — was never actually created: Codespaces became an emergency-only environment (per ADR 17's narrower scope) and the SP-for-Codespaces implementation was deferred indefinitely. The **pattern** itself was sound and was re-applied to the OpenCode on Cloudlab workload via #40, where the first per-instance SPs (`opencode-homelab-sp-*` AKV triplet for `homelab-oc-agent-sp`; the deferred `prospera-oc` triplet) are in flight. When the homelab k3s cluster lands (ADR 22), the pattern is replaced for cluster-resident workloads by UAMI Workload Identity per ServiceAccount.
 
 ---
 
@@ -68,7 +68,7 @@ The original SP implementation details are preserved here for historical context
 ### Identity and naming
 
 - **SP display name:** `homelab-codespaces-sp` (project-and-purpose, not tool-specific, so future reuse doesn't require a rename). Per-instance OpenCode variants follow the `<project>-<substrate>-<role>-sp` pattern (e.g., `homelab-oc-agent-sp`, `prospera-oc-agent-sp`).
-- **KV secret names:** `codespaces-sp-tenant-id`, `codespaces-sp-client-id`, `codespaces-sp-client-secret` — kebab-case, matching the existing `cloudlab-vps-key-priv` convention. Per-instance OpenCode variants use the `opencode-agent-sp-<instance-name>-{tenant-id,client-id,client-secret}` pattern (literal: prefix `opencode-agent-sp-` + instance name + the three suffixes). The same name layout will be used by the future UAMI bootstrap script (`Set-HomelabOpencodeUami.ps1` per #44), so consumer code is unchanged at cutover.
+- **KV secret names:** `codespaces-sp-tenant-id`, `codespaces-sp-client-id`, `codespaces-sp-client-secret` — kebab-case, matching the existing `cloudlab-vps-key-priv` convention. Per-instance OpenCode variants use the `opencode-<instance-name>-sp-{tenant-id,client-id,client-secret}` pattern (literal: prefix `opencode-` + instance name + `-sp-` + the three suffixes). The same name layout will be used by the future UAMI bootstrap script (`Set-HomelabOpencodeUami.ps1` per #44), so consumer code is unchanged at cutover.
 - **Container env var names:** `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET` — fixed by the Azure Identity SDK's `EnvironmentCredential` contract.
 
 ### Scope and credentials
@@ -77,12 +77,12 @@ The original SP implementation details are preserved here for historical context
   - `Contributor` on the workload's target resource group (control plane) — needed for the agent to create and modify Azure resources.
   - `Key Vault Secrets User` on `homelab-bysxdb-kv` (data plane) — separate from the control-plane role. Required so the workload can read project secrets the same way an interactive `Az` session does.
 - **Credential type:** Client secret (password credential), not a certificate. The Microsoft Graph Bicep extension v1.0 GA does not expose the `addPassword` action as a Bicep resource (issue #38 closed as "Not planned"), so a Bicep-only path was rejected in favour of the simpler Az PowerShell route.
-- **Default lifetime:** 365 days; rotated by re-running the same script.
+- **Default lifetime:** 365 days. The `Create-*` SP bootstrap scripts (per the per-instance OpenCode SPs) are **one-shot create** — they exit if the SP already exists and do not rotate on re-run. Rotation is a deliberate operator step: either delete the SP and re-run the script (simplest), or call `New-AzADSpCredential` and update the AKV client-secret manually (preserves the SP object ID). The historical `Set-HomelabCodespacesSp.ps1` script is `Set-*` and idempotent (rotates on re-run); the verb choice encodes the create-vs-rotate contract.
 
 ### Bootstrap tool
 
 - **Azure PowerShell only** — `New-AzADServicePrincipal` + `New-AzADSpCredential` + `New-AzRoleAssignment` (control plane on the RG + data plane on the KV) + `Set-AzKeyVaultSecret`. No Azure CLI (project rule: "Always use Az PowerShell — never Azure CLI"). No Microsoft Graph SDK install needed.
-- Scripts: `scripts/Set-HomelabCodespacesSp.ps1` (Codespaces SP, the original pattern) and `scripts/Create-HomelabOcAgentAzSp.ps1` (per-instance for the `homelab-oc` OpenCode container, the live instance in flight). Same idempotent flow: check SP → create or rotate credential → assign RG `Contributor` + KV `Key Vault Secrets User` → write 3 secrets with `-Expires $endDate` → read back → print.
+- Scripts: `scripts/Set-HomelabCodespacesSp.ps1` (Codespaces SP, the original `Set-*` idempotent pattern — rotates on re-run) and `scripts/Create-HomelabOcAgentAzSp.ps1` (per-instance for the `homelab-oc` OpenCode container, the live `Create-*` one-shot pattern — exits if the SP exists). The `Create-*` script is parameterless: tenant, subscription, RG, and KV are derived from the current `Az` context and hardcoded resource names. Flow on a fresh run: check SP existence (exit if present) → create SP with `Contributor` on the RG via `-Role` + `-Scope` → grant `Key Vault Secrets User` on the KV (idempotent) → write 3 secrets with `-Expires $endDate` → read back → print.
 
 ### MCP transport and runtime (for Azure MCP consumer workloads)
 
