@@ -34,7 +34,7 @@ ADR 03 framed the migration as a "future task." This ADR settles that framing: t
 
 3. **Per-workload Kubernetes Deployments.** Each Homelab workload becomes a Deployment with workload-specific patterns. The per-project image hierarchy (ADR 21) ports unchanged.
 
-4. **UAMI Workload Identity per ServiceAccount** for cluster-resident Azure identity. No client_secret in the cluster; the Azure SDKs (`DefaultAzureCredential` → `WorkloadIdentityCredential`) handle the runtime exchange.
+4. **UAMI Workload Identity as continuation of ADR 16.** ADR 16 establishes the non-interactive identity pattern; this ADR applies the cluster-resident variant (UAMI Workload Identity) to the homelab K8s cluster. The full pattern is recorded in a future ADR. The implementation granularity (per ServiceAccount, per pod, per Deployment, per namespace) is deferred as a decision-level open question — see Open Questions.
 
 5. **Ansible for cluster bootstrap.** The same playbook structure (ADR 10) handles cluster bring-up, with the `docker_host` role replaced by a `k3s_host` role. `common` and `security` roles stay untouched.
 
@@ -42,7 +42,7 @@ ADR 03 framed the migration as a "future task." This ADR settles that framing: t
 
 - k3s as the orchestrator.
 - Arc-enrolled cluster as continuation of ADR 4.
-- UAMI per ServiceAccount as the Azure identity model.
+- UAMI Workload Identity as continuation of ADR 16's non-interactive identity pattern (Azure identity for cluster workloads; granularity deferred to Open Questions).
 - Per-workload Deployments replacing per-workload Compose stacks.
 - Ansible as the cluster bootstrap mechanism.
 
@@ -93,6 +93,7 @@ These are decision-level questions that affect the cluster's architecture. Imple
 - **Storage model** — local-path on the homelab box vs NFS vs Longhorn (distributed block storage). Affects backup strategy (ADR 02 — Restic covers file/host data; cluster resources and PVs would need Velero for the Longhorn path).
 - **Network model** — none (k3s default CNI) vs Cilium vs Linkerd. Affects east-west traffic observability, network policy, and the security story.
 - **GitOps tooling** — ArgoCD vs Flux vs manual `kubectl apply`. Affects how cluster state is reviewed and rolled forward. Worth a separate decision if/when the choice gets serious.
+- **UAMI granularity** — per K8s ServiceAccount, per pod, per Deployment, or per namespace. Each choice trades off per-workload isolation vs setup complexity. ADR 16 establishes the pattern; this ADR inherits the UAMI variant for the homelab cluster; the specific granularity is a follow-up decision (not in this ADR's scope).
 
 ---
 
