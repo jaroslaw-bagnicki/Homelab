@@ -80,7 +80,7 @@ This decision is not a commitment to specific cluster mechanics — storage clas
 - **ADR 09** — Azure Monitor via Arc. ADR 22 extends monitoring from the server to the cluster level (Arc-enabled Kubernetes monitoring + Container Insights).
 - **ADR 10** — Ansible for Host Configuration Management. ADR 22 swaps the `docker_host` role for a `k3s_host` role in the same playbook structure, matching ADR 10's prediction.
 - **ADR 13** — Use Contabo Cloud VPS 10 as Staging Environment for Homelab. Cloudlab is the staging environment where k3s changes are validated before being applied to homelab. The decision is independent of the staging-environment choice; ADR 13 establishes the staging role.
-- **ADR 18** — Host OpenCode Server Instances on Cloudlab. OpenCode is currently hosted on Cloudlab as a transitional staging step. ADR 22 makes the homelab the destination for OpenCode, with the per-project images (ADR 21) porting as Kubernetes Deployments.
+- **ADR 18** — Host OpenCode Server Instances on Homelab. **Accepted**; the homelab is the destination for OpenCode, with the per-project images (ADR 21) porting as the platform's per-project workload definitions. ADR 18 is substrate-agnostic — the per-project images, identity, MCP servers, and Azure secrets patterns are established there; the substrate (k3s + Arc per this ADR) is the deployment target.
 - **ADR 21** — Per-Project OpenCode Container Images. The three-image hierarchy (`opencode-base` → `opencode-homelab` / `opencode-prospera`) is portable: the same images deploy as container images referenced by Kubernetes Deployments.
 
 ---
@@ -117,7 +117,7 @@ These are decision-level questions that affect the cluster's architecture. Imple
 - ADR 10 — Ansible for Host Configuration Management
 - ADR 13 — Use Contabo Cloud VPS 10 as Staging Environment for Homelab
 - ADR 16 — Non-Interactive Agent Workload Identity Pattern
-- ADR 18 — Host OpenCode Server Instances on Cloudlab
+- ADR 18 — Host OpenCode Server Instances on Homelab
 - ADR 21 — Per-Project OpenCode Container Images
 - [Research 13: Ansible Adoption](research/13-ansible-adoption.md) — k3s role swap analysis
 - [Research 21: OpenCode Sandboxed Architecture on Homelab](../research/21-opencode-sandboxed-homelab-architecture.md) — k3s deployment options

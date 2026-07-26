@@ -17,7 +17,7 @@ Significant architectural and technology choices recorded in
 | 21 | 2026-07-16 | [Per-Project OpenCode Container Images](21-opencode-instance-images.md) | Accepted |
 | 20 | 2026-07-05 | [Caddy as Single Routing Layer on Cloudlab](20-caddy-single-routing-layer.md) | Accepted |
 | 19 | 2026-07-05 | [HTTPS-only origin via Cloudflare Tunnel + Cloudflare Origin CA on Cloudlab](19-cloudflare-tunnel-https-origin.md) | Accepted |
-| 18 | 2026-07-11 | [Host OpenCode Server Instances on Cloudlab](18-opencode-docker-sandbox.md) | Implemented |
+| 18 | 2026-07-11 | [Host OpenCode Server Instances on Homelab](18-opencode-docker-sandbox.md) | Accepted |
 | 17 | 2026-06-28 | [Adopt OpenCode for Agentic Homelab Development](17-adopt-opencode.md) | Implemented |
 | 16 | 2026-06-28 | [Non-Interactive Agent Workload Identity Pattern](16-gh-codespaces-sp-for-homelab.md) | Implemented |
 | 15 | 2026-06-25 | [Evaluate GitHub Copilot Desktop for Agentic Development](15-copilot-desktop-agentic.md) | Deferred |
