@@ -21,15 +21,17 @@ The host-side decision (homelab) is independent of the substrate (Docker Compose
 
 ### Key design choices
 
-1. **Per-project instances.** At least two logical instances from the start:
+1. **Container-based isolation (sandboxing).** OpenCode runs in containers, not as bare-metal services. Each instance is a container with its own process, filesystem, network, and resource namespace — isolated from the host and from other instances. The per-project split (item 2) is implemented as per-project containers. Bare-metal services are explicitly rejected (see Alternatives Considered).
+
+2. **Per-project instances.** At least two logical instances from the start:
    - `opencode-homelab` for the Homelab project (Ansible, Bicep, Docker)
    - `opencode-prospera` for the Prospera project (.NET, SQL, Azure)
 
    Homelab is an R&D/experimentation zone; Prospera holds financial data and requires higher stability. Sharing one SQLite session database and one environment would mix secrets, toolchains, and failure domains.
 
-2. **Authentication: `OPENCODE_SERVER_PASSWORD`** (basic password at launch). Caddy basic auth or Cloudflare Access SSO can be layered later if needed. Caddy has no native Entra ID support.
+3. **Authentication: `OPENCODE_SERVER_PASSWORD`** (basic password at launch). Caddy basic auth or Cloudflare Access SSO can be layered later if needed. Caddy has no native Entra ID support.
 
-3. **No host Docker socket in agent containers** (where the substrate exposes one). The Homelab agent applies changes via SSH/Ansible or via the cluster's RBAC, not by directly controlling a host Docker daemon. Preserves isolation.
+4. **No host Docker socket in agent containers** (where the substrate exposes one). The Homelab agent applies changes via SSH/Ansible or via the cluster's RBAC, not by directly controlling a host Docker daemon. Preserves isolation.
 
 ### What this decision is
 
