@@ -3,6 +3,8 @@
 > Session persistence across Dev Container rebuilds, Azure Blob backup,
 > and remote access via web server + Desktop app.
 
+> **Note:** `example.com` is a placeholder domain used in this runbook for documentation purposes. Replace with the actual domain when following these steps for a real deployment.
+
 ## Overview
 
 | | |
@@ -126,7 +128,7 @@ prove the persistence actually survives a rebuild, perform this round-trip:
 
    ```powershell
    pwsh -File scripts/Add-HomelabOpencodeBackupStorage.ps1 `
-     -TenantId       <cloud5.ovh tenant ID> `
+     -TenantId       <example.com tenant ID> `
      -SubscriptionId <subscription ID>
    ```
 
@@ -296,5 +298,5 @@ via an environment variable in `devcontainer.json` rather than hardcoding it.
 
 - [Runbook 7: Restic backup to Azure Blob](7-restic-backup.md) — creates `homelabcloud5`
 - [Runbook 14: Codespaces SP for Homelab](14-gh-codespaces-sp-for-homelab.md) — SP creation; the "Additional role" subsection documents the storage role grant
-- [ADR 16: Codespaces SP for Homelab](../decisions/16-gh-codespaces-sp-for-homelab.md)
+- [ADR 16: Non-Interactive Agent Workload Identity Pattern](../decisions/16-agent-identity-pattern.md)
 - [Research 14: Backup cost comparison](../research/14-backup-cost-comparison.md)

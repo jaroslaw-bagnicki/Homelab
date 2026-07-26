@@ -111,6 +111,7 @@ unchanged; only the per-project extension strategy is now specified.
 
 ## References
 
-- [ADR 18 — Host OpenCode Server Instances on Cloudlab](18-opencode-docker-sandbox.md) (this ADR narrows §4)
+- [ADR 18 — Host OpenCode Server Instances on Homelab](18-opencode-sandbox.md) (this ADR narrows §4)
+- [ADR 22 — Migrate Homelab Workloads to Kubernetes (k3s + Azure Arc)](22-k3s-arc-homelab.md) — the same three-image hierarchy ports to Kubernetes Deployments on the homelab cluster; the per-project images become container images referenced by Deployments rather than by Compose services
 - PR #32 — base deployment that initially deferred the image decision
 - Issue #34 — implementation epic

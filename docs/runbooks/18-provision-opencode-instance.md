@@ -2,6 +2,8 @@
 
 > Runbook for adding a new per-project OpenCode server instance on Cloudlab — extends the initial deployment from [runbook 17](17-deploy-opencode-on-cloudlab.md).
 
+> **Note:** `example.com` is a placeholder domain used in this runbook for documentation purposes. Replace with the actual domain when following these steps for a real deployment.
+
 ## Prerequisites
 
 - [ ] At least one OpenCode instance already deployed (see [runbook 17](17-deploy-opencode-on-cloudlab.md))
@@ -23,9 +25,9 @@ opencode_instances:
   - name: <your-new-instance>    # <-- add this line
 ```
 
-The instance name becomes the container name (`opencode-<name>`), the subdomain (`<name>-oc.cloud5.ovh`), and the AKV secret name suffix.
+The instance name becomes the container name (`opencode-<name>`), the subdomain (`<name>-oc.example.com`), and the AKV secret name suffix.
 
-The `cloud5.ovh` literal reflects the cloudlab deployment. The `opencode_public_domain` Ansible var controls it; substitute when targeting a different host. The `oc` suffix is hardcoded in the Caddyfile template.
+The `example.com` literal reflects the cloudlab deployment. The `opencode_public_domain` Ansible var controls it; substitute when targeting a different host. The `oc` suffix is hardcoded in the Caddyfile template.
 
 ---
 
@@ -56,7 +58,7 @@ The standalone script `scripts/New-OpencodePasswordInKV.ps1` is available for pr
 
 - [ ] Container is running: `docker ps --filter name=opencode-<name>` → status `Up`
 - [ ] Internal health: `docker exec caddy-opencode wget -qO- http://opencode-<name>:4096/global/health` → `{"healthy":true,...}`
-- [ ] Via Cloudflare Tunnel: `curl -u opencode:$PASSWORD https://<name>-oc.cloud5.ovh/global/health` → `{"healthy":true,...}`
+- [ ] Via Cloudflare Tunnel: `curl -u opencode:$PASSWORD https://<name>-oc.example.com/global/health` → `{"healthy":true,...}`
 - [ ] Idempotent: re-running the playbook reports `changed=0`
 
 ---
@@ -65,7 +67,7 @@ The standalone script `scripts/New-OpencodePasswordInKV.ps1` is available for pr
 
 Model provider authentication is **not automated** — each instance is configured manually. This is intentional: provider choice depends on the project, available subscriptions, and model needs. A manual step keeps each instance's provider decision explicit.
 
-1. Open the instance WebUI at `https://<name>-oc.cloud5.ovh` and authenticate with the password auto-provisioned during deployment.
+1. Open the instance WebUI at `https://<name>-oc.example.com` and authenticate with the password auto-provisioned during deployment.
 2. Run the `/connect` command in the TUI to pick a provider.
 3. Follow the provider's auth flow (API key paste, OAuth device flow, etc.).
 4. Run `/models` to select the desired model.
@@ -115,7 +117,7 @@ Future investigation: encrypting selected Docker volumes at rest (e.g., via LUKS
 ## Related
 
 - [Runbook 17 — Deploy OpenCode on Cloudlab](17-deploy-opencode-on-cloudlab.md)
-- [ADR 18 — Host OpenCode Server Instances on Cloudlab](../decisions/18-opencode-docker-sandbox.md)
+- [ADR 18 — Host OpenCode Server Instances on Homelab](../decisions/18-opencode-sandbox.md)
 - [Workload README — OpenCode](../../ansible/workloads/opencode/README.md)
 - [Issue #37 — Configure model providers for OpenCode instances](https://github.com/jaroslaw-bagnicki/Homelab/issues/37)
 - [Issue #34 — Customize OpenCode server instances on Cloudlab](https://github.com/jaroslaw-bagnicki/Homelab/issues/34)

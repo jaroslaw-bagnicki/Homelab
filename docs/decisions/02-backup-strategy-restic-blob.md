@@ -36,3 +36,7 @@ Retention policy: daily snapshots kept for 7 days, weekly for 4 weeks, monthly f
 - Deduplication means the Azure Blob storage cost stays low even as the dataset grows
 - No automatic integrity checking — periodic `restic check` needed to verify repository health
 - A future local SATA disk will add fast (minutes) recovery without internet dependency, but has not been procured yet
+
+---
+
+> **Future direction:** When the homelab migrates to k3s + Arc (ADR 22), Restic covers file- and host-level data as it does today. Cluster-resident state (Kubernetes resources, PersistentVolumes) requires a cluster-aware backup tool — likely **Velero** with Longhorn snapshots for any distributed storage. The Restic → Restic + Velero split is a follow-up to that migration, not a change to this ADR's decision.
