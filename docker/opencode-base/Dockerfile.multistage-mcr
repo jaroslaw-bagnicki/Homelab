@@ -1,0 +1,51 @@
+# syntax=docker/dockerfile:1.7
+
+ARG OPENCODE_BASE=ghcr.io/anomalyco/opencode:latest
+ARG PWSH_VERSION=7.4
+ARG AZCLI_VERSION=latest
+ARG BICEPCLI_VERSION=0.30.3
+
+FROM ${OPENCODE_BASE} AS opencode_upstream
+FROM mcr.microsoft.com/powershell:${PWSH_VERSION}-debian-12 AS pwsh_src
+FROM mcr.microsoft.com/azure-cli:${AZCLI_VERSION} AS az_src
+
+FROM debian:bookworm-slim
+
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+        bash \
+        ca-certificates \
+        curl \
+        git \
+        libffi-dev \
+        openssl \
+        python3 \
+        python3-pip \
+ && rm -rf /var/lib/apt/lists/*
+
+COPY --from=opencode_upstream /app /app
+
+COPY --from=pwsh_src /opt/microsoft/powershell/7 /opt/microsoft/powershell/7
+COPY --from=pwsh_src /usr/bin/pwsh /usr/bin/pwsh
+COPY --from=pwsh_src /opt/microsoft/powershell/7/Modules /opt/microsoft/powershell/7/Modules
+
+COPY --from=az_src /usr/local/bin /usr/local/bin
+COPY --from=az_src /usr/local/lib /usr/local/lib 2>/dev/null || true
+COPY --from=az_src /usr/local/az /usr/local/az 2>/dev/null || true
+
+RUN set -eux; \
+    curl -fsSL "https://github.com/Azure/bicep/releases/download/v${BICEPCLI_VERSION}/bicep-linux-musl-x64" \
+        -o /usr/local/bin/bicep; \
+    chmod +x /usr/local/bin/bicep; \
+    bicep --version
+
+COPY tests/verify-base.sh /usr/local/bin/verify-base.sh
+RUN chmod +x /usr/local/bin/verify-base.sh
+
+RUN command -v git && git --version \
+ && command -v pwsh && pwsh -Version \
+ && command -v az && az --version | head -n 1 \
+ && command -v bicep && bicep --version
+
+WORKDIR /workspaces
+ENTRYPOINT ["/app/opencode"]
