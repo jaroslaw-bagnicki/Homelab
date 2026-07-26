@@ -5,6 +5,8 @@
 > `homelab-bysxdb-kv` Key Vault and exposed to the dev container via
 > repository-level Codespaces secrets.
 
+> **Note:** `example.com` is a placeholder domain used in this runbook for documentation purposes. Replace with the actual domain when following these steps for a real deployment.
+
 ## Overview
 
 | | |
@@ -19,7 +21,7 @@
 | **Credential type** | Client secret (password credential), not certificate |
 | **Default lifetime** | 365 days (rotate via the same script) |
 
-See [ADR 16](../decisions/16-gh-codespaces-sp-for-homelab.md) for the design rationale.
+See [ADR 16](../decisions/16-agent-identity-pattern.md) for the design rationale.
 
 ---
 
@@ -41,7 +43,7 @@ gives the container a non-interactive identity that can be:
 
 The script `scripts/Set-HomelabCodespacesSp.ps1` uses the **Az PowerShell** module
 (repo rule: `az` CLI is not used in this project). You need the following RBAC
-roles on the **cloud5.ovh** tenant:
+roles on the **example.com** tenant:
 
 | Role | Scope | Why |
 |---|---|---|
@@ -85,9 +87,9 @@ Why a separate script rather than folding into `Set-HomelabCodespacesSp.ps1`:
 From the repo root, in any PowerShell session with the `Az` module loaded:
 
 ```powershell
-Connect-AzAccount -Tenant cloud5.ovh -UseDeviceAuthentication
+Connect-AzAccount -Tenant example.com -UseDeviceAuthentication
 pwsh -File scripts/Set-HomelabCodespacesSp.ps1 `
-  -TenantId       <cloud5.ovh tenant ID> `
+  -TenantId       <example.com tenant ID> `
   -SubscriptionId a8a36bc1-79a7-49fe-9faa-92220103c66f
 ```
 
@@ -110,7 +112,7 @@ matches the single-developer evaluation scope):
 
    | Name | Value (paste from script output) |
    |---|---|
-   | `AZURE_TENANT_ID` | the `cloud5.ovh` tenant ID |
+   | `AZURE_TENANT_ID` | the `example.com` tenant ID |
    | `AZURE_CLIENT_ID` | the SP's `appId` |
    | `AZURE_CLIENT_SECRET` | the password credential `SecretText` |
 
@@ -274,4 +276,4 @@ output. Or re-run quarterly with `-SecretLifetimeDays 90`.
 | `.devcontainer/devcontainer.json` | adds Node feature, adds prereq-check to `postCreateCommand` |
 | `.devcontainer/scripts/setup-azure-mcp-prereqs.sh` | NEW — masked env-var check + npx availability |
 | `.devcontainer/config/profile.ps1` | SP-aware `Connect-AzAccount` (falls back to device-auth) |
-| `docs/decisions/16-gh-codespaces-sp-for-homelab.md` | NEW — design rationale |
+| `docs/decisions/16-agent-identity-pattern.md` | NEW — design rationale |

@@ -48,3 +48,7 @@ Key elements of the approach:
 
 **Reference:** `research/13-ansible-adoption.md`  
 **Supersedes:** runbooks as the automation source of truth (`runbooks/1-init.md` etc. retain reference value only)
+
+---
+
+> **Future direction:** When the homelab migrates to k3s + Arc (ADR 22), the `docker_host` role is replaced by a `k3s_host` role. The prediction in the "Positive" consequence above — that the playbook structure works unchanged when migrating to k3s — becomes concrete: `common` and `security` roles stay untouched, the k3s role lands alongside them, and per-workload Helm/Kustomize release definitions join the workload deployment steps.
