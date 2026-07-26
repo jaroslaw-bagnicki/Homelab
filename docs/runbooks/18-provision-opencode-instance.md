@@ -115,7 +115,7 @@ Future investigation: encrypting selected Docker volumes at rest (e.g., via LUKS
 ## Related
 
 - [Runbook 17 — Deploy OpenCode on Cloudlab](17-deploy-opencode-on-cloudlab.md)
-- [ADR 18 — Host OpenCode Server Instances on Cloudlab](../decisions/18-opencode-docker-sandbox.md)
+- [ADR 18 — Host OpenCode Server Instances on Homelab](../decisions/18-opencode-sandbox.md)
 - [Workload README — OpenCode](../../ansible/workloads/opencode/README.md)
 - [Issue #37 — Configure model providers for OpenCode instances](https://github.com/jaroslaw-bagnicki/Homelab/issues/37)
 - [Issue #34 — Customize OpenCode server instances on Cloudlab](https://github.com/jaroslaw-bagnicki/Homelab/issues/34)

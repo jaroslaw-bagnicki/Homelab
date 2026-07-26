@@ -144,7 +144,7 @@ The transition from SP (OpenCode on Cloudlab, in flight via #40) to UAMI (OpenCo
 - ADR 04 — Hybrid Cloud Strategy
 - ADR 10 — Ansible for Host Configuration Management
 - ADR 17 — Adopt OpenCode for Agentic Homelab Development
-- ADR 18 — Host OpenCode Server Instances on Cloudlab
+- ADR 18 — Host OpenCode Server Instances on Homelab
 - ADR 22 — Migrate Homelab Workloads to Kubernetes (k3s + Azure Arc on homelab) — the cluster-resident variant of this pattern
 - Issue #16 — DR Simulation Agent Skill
 - Issue #36 — Secret management via self-hosted Infisical (orthogonal to identity; can be revisited after UAMI lands)

@@ -84,7 +84,7 @@ The host-side decision (homelab) is independent of the substrate (Docker Compose
 
 ## References
 
-- [ADR 16 — Non-Interactive Agent Workload Identity Pattern](16-gh-codespaces-sp-for-homelab.md)
+- [ADR 16 — Non-Interactive Agent Workload Identity Pattern](16-agent-identity-pattern.md)
 - [ADR 17 — Adopt OpenCode for Agentic Homelab Development](17-adopt-opencode.md)
 - [ADR 21 — Per-Project OpenCode Container Images](21-opencode-instance-images.md)
 - [Issue #40 — Provision per-instance Azure service principals](https://github.com/jaroslaw-bagnicki/Homelab/issues/40) (in flight)

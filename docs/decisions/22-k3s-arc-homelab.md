@@ -103,6 +103,6 @@ These are decision-level questions that affect the cluster's architecture. Imple
 - [ADR 03 — Container Strategy: Docker Compose First, k3s Migration Path](03-container-strategy.md) (**superseded by this ADR**)
 - [ADR 04 — Hybrid Cloud Strategy](04-hybrid-cloud-azure-arc.md) (Arc management concept)
 - [ADR 10 — Ansible for Host Configuration Management](10-ansible-host-config.md) (k3s_host role swap)
-- [ADR 18 — Host OpenCode Server Instances on Homelab](18-opencode-docker-sandbox.md) (first per-workload workload)
+- [ADR 18 — Host OpenCode Server Instances on Homelab](18-opencode-sandbox.md) (first per-workload workload)
 - [ADR 21 — Per-Project OpenCode Container Images](21-opencode-instance-images.md) (image portability)
 - [Microsoft docs — Azure Arc-enabled Kubernetes](https://learn.microsoft.com/en-us/azure/azure-arc/kubernetes/overview)
