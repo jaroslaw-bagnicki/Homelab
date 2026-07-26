@@ -8,71 +8,46 @@
 
 | | |
 |---|---|
-| **Trigger** | Per-instance Azure identity for non-interactive agent workloads (issue #40) — required so the `homelab-oc` container can call Azure APIs (Ansible, Bicep, Az cmdlets, Azure MCP) without inheriting the developer's personal identity |
+| **Trigger** | Per-instance Azure identity for non-interactive agent workloads (issue #40) |
 | **SP display name** | `homelab-oc-agent-sp` |
-| **RBAC role** | `Contributor` on `/subscriptions/a8a36bc1-79a7-49fe-9faa-92220103c66f/resourceGroups/homelab-rg` (control plane) + `Key Vault Secrets User` on `homelab-bysxdb-kv` (data plane) |
+| **RBAC role** | `Contributor` on `homelab-rg` (control plane) + `Key Vault Secrets User` on `homelab-bysxdb-kv` (data plane) |
 | **KV (source of truth)** | `homelab-bysxdb-kv` (RBAC-only, pre-existing) |
 | **KV secret names** | `opencode-homelab-sp-tenant-id`, `opencode-homelab-sp-client-id`, `opencode-homelab-sp-client-secret` |
 | **Container env var names** | `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET` (Azure SDK contract — non-renameable) |
-| **Credential type** | Client secret (password credential), not certificate |
-| **Default lifetime** | 365 days (rotate via the same script) |
-| **Long-term destination** | UAMI Workload Identity per K8s ServiceAccount when the homelab k3s cluster lands (issue #44) |
+| **Credential type** | Client secret (password credential) |
+| **Default lifetime** | 90 days (rotate via `Rotate-HomelabOcAgentAzSp.ps1`) |
+| **Long-term destination** | UAMI Workload Identity per K8s ServiceAccount (issue #44) |
 
-See [ADR 16](../decisions/16-agent-identity-pattern.md) for the design rationale. The Azure SDK `DefaultAzureCredential` chain already includes `WorkloadIdentityCredential` — consumer code is unchanged at cutover.
-
----
-
-## Why a per-instance Service Principal
-
-A developer's personal identity (interactive `Az` login, personal PAT) is the wrong identity for a non-interactive agent container, for three reasons (per [ADR 16](../decisions/16-agent-identity-pattern.md)):
-
-1. **No audit trail for the workload** — actions are attributed to the person, not the workload, making it impossible to answer "what did `homelab-oc` do at 03:00 last night?"
-2. **Inherits the developer's scope** — the workload gains whatever the developer has, which is broader than the workload needs.
-3. **Tied to the developer's lifecycle** — if the developer rotates their session, the workload stops working.
-
-A per-instance SP solves all three. The same pattern is extended to future workloads (one SP per non-interactive agent workload) — never one shared SP across multiple workloads.
+See [ADR 16](../decisions/16-agent-identity-pattern.md) for design rationale. The `DefaultAzureCredential` chain already includes `WorkloadIdentityCredential` — consumer code is unchanged at cutover.
 
 ---
 
-## Prerequisites (your local machine)
+## Prerequisites
 
-The script `scripts/Create-HomelabOcAgentAzSp.ps1` uses the **Az PowerShell** module (project rule: `az` CLI is not used). You need the following RBAC roles on the tenant:
-
-| Role | Scope | Why |
-|---|---|---|
-| `Application Administrator` (Entra) | Tenant | Create the app registration + SP |
-| `User Access Administrator` | Subscription | Assign `Contributor` to the SP on `homelab-rg` |
-| `Key Vault Secrets Officer` | `homelab-bysxdb-kv` | Write the 3 secrets to the vault |
-
-If you own the subscription, all three are implicit (Owner inherits `User Access Administrator`, and Application Administrator is typically granted to subscription Owners via the Entra default). If `Set-AzKeyVaultSecret` returns `Forbidden`, grant the role with:
-
-```powershell
-New-AzRoleAssignment -SignInName (Get-AzContext).Account.Id `
-  -RoleDefinitionName 'Key Vault Secrets Officer' `
-  -Scope "/subscriptions/a8a36bc1-79a7-49fe-9faa-92220103c66f/resourceGroups/homelab-rg/providers/Microsoft.KeyVault/vaults/homelab-bysxdb-kv"
-```
+- Owner on the subscription.
+- PowerShell 7 with the `Az` module loaded.
 
 ---
 
 ## One-time bootstrap
 
-### Step 1 — Run the script on your local machine
+### Step 1 — Run the script
 
-From the repo root, in any PowerShell session with the `Az` module loaded:
+From the repo root, in a PowerShell session with the `Az` module loaded:
 
 ```powershell
-Connect-AzAccount -Tenant example.com -Subscription a8a36bc1-79a7-49fe-9faa-92220103c66f -UseDeviceAuthentication
-pwsh -File scripts/Create-HomelabOcAgentAzSp.ps1
+Connect-AzAccount -Tenant example.com -Subscription <sub-id> -UseDeviceAuthentication
+scripts/Create-HomelabOcAgentAzSp.ps1
 ```
 
-The script is parameterless — it reads the tenant and subscription from the current `Az` context. It will:
+The script is parameterless — it reads the tenant and subscription from the current `Az` context. It:
 
-1. Check whether `homelab-oc-agent-sp` already exists. If so, exit cleanly with a warning — no rotation is performed.
-2. Create the SP and auto-grant `Contributor` on `homelab-rg` (via `-Role` + `-Scope` on `New-AzADServicePrincipal`).
-3. Grant `Key Vault Secrets User` on `homelab-bysxdb-kv` (data plane, idempotent check first).
-4. Write the 3 values to `homelab-bysxdb-kv` under `opencode-homelab-sp-*` with `-Expires $endDate`.
-5. Read them back to verify.
-6. Print the 3 values for the runbook log.
+1. Checks whether `homelab-oc-agent-sp` already exists. If so, exits cleanly.
+2. Validates that `homelab-rg` and `homelab-bysxdb-kv` exist in the current subscription.
+3. Creates the SP and auto-grants `Contributor` on `homelab-rg`.
+4. Writes the 3 values to `homelab-bysxdb-kv` under `opencode-homelab-sp-*` with `-Expires $endDate`.
+5. Grants `Key Vault Secrets User` on `homelab-bysxdb-kv` to the new SP.
+6. Prints confirmation (no secret values are logged).
 
 ### Step 2 — Opt the instance in via Ansible inventory
 
@@ -86,8 +61,6 @@ opencode_instances:
   - name: test
 ```
 
-Instances without `azure_sp: true` get no `AZURE_*` env vars — `EnvironmentCredential` is skipped at runtime.
-
 ### Step 3 — Re-run the workload playbook
 
 The role fetches the 3 AKV secrets at deploy time and injects them as container env vars. The container restarts on env change.
@@ -96,7 +69,7 @@ The role fetches the 3 AKV secrets at deploy time and injects them as container 
 ansible-playbook ansible/workloads/opencode/opencode-playbook.yml
 ```
 
-Running the playbook on a fresh deploy is idempotent. Running it again with no template / image / KV change reports `changed=0`. The container restart is the only change.
+Re-running the playbook with no template / image / KV change reports `changed=0`. The container restart is the only change.
 
 ---
 
@@ -106,10 +79,6 @@ Running the playbook on a fresh deploy is idempotent. Running it again with no t
 
 ```bash
 docker exec opencode-homelab printenv | grep AZURE_
-# Expect:
-#   AZURE_CLIENT_ID=<the SP's appId>
-#   AZURE_CLIENT_SECRET=<the SP's client_secret>
-#   AZURE_TENANT_ID=<the tenant ID>
 ```
 
 ### Azure PowerShell login as the SP
@@ -130,123 +99,24 @@ In an Opencode session, ask:
 
 > list the resource groups in my subscription using azure tools
 
-Expected: a single resource group — `homelab-rg` — returned. If the prompt hangs or returns an auth error, see [Troubleshooting](#troubleshooting).
-
-### Key Vault side
-
-```powershell
-Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name opencode-homelab-sp-client-secret -AsPlainText
-# Expect: the same secret value the script printed
-```
+Expected: a single resource group — `homelab-rg` — returned.
 
 ---
 
-## Secret rotation
+## Rotate
 
-The SP credential has a default lifetime of 365 days. The bootstrap script does **not** rotate on re-run — it exits if the SP already exists. Two rotation options:
-
-### Option A — delete + re-create (preferred)
-
-The simplest path: delete the SP, then re-run the bootstrap script. The script re-creates the SP with a fresh credential and overwrites the three AKV secrets. AKV keeps previous versions for audit.
+When the credential approaches its 90-day expiry, run the rotation script. The SP object ID is preserved; only the client_secret rotates.
 
 ```powershell
-$sp = Get-AzADServicePrincipal -DisplayName 'homelab-oc-agent-sp'
-Remove-AzADServicePrincipal -ObjectId $sp.Id -Force
-pwsh -File scripts/Create-HomelabOcAgentAzSp.ps1
-```
-
-Then re-run the workload playbook to re-inject the new env vars:
-
-```bash
+scripts/Rotate-HomelabOcAgentAzSp.ps1
 ansible-playbook ansible/workloads/opencode/opencode-playbook.yml
 ```
 
-The container restarts on env change and the new credential is live.
-
-### Option B — manual rotate
-
-If you want to keep the SP object ID stable across rotations (e.g., to preserve an audit trail that references the SP by object ID):
-
-```powershell
-# 1. Add a new credential to the existing SP
-$sp = Get-AzADServicePrincipal -DisplayName 'homelab-oc-agent-sp'
-$endDate = (Get-Date).ToUniversalTime().AddDays(365)
-$cred = New-AzADSpCredential -ObjectId $sp.Id -EndDate $endDate
-
-# 2. Update the AKV secret with the new client_secret (tenant-id and client-id unchanged)
-Set-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name opencode-homelab-sp-client-secret `
-  -SecretValue (ConvertTo-SecureString $cred.SecretText -AsPlainText -Force) `
-  -Expires $endDate | Out-Null
-```
-
-Then re-run the workload playbook.
-
-Set a calendar reminder ~30 days before the `$endDate` printed in the script output.
-
----
-
-## What lives where
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│  Your local machine (one-time + on rotation)                    │
-│                                                                 │
-│  pwsh -File scripts/Create-HomelabOcAgentAzSp.ps1               │
-│      │                                                          │
-│      ├─► Az.Resources cmdlets                                   │
-│      │     • New-AzADServicePrincipal  (creates homelab-oc-     │
-│      │       agent-sp + Contributor on homelab-rg)              │
-│      │     • New-AzADSpCredential      (generates secret)       │
-│      │                                                          │
-│      └─► Az.KeyVault cmdlets                                    │
-│            • Set-AzKeyVaultSecret × 3 → homelab-bysxdb-kv       │
-└─────────────────────────────────────────────────────────────────┘
-                                │
-                                │  Ansible fetches at deploy time
-                                ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  Ansible (run from dev container)                               │
-│                                                                 │
-│  opencode_instances: [{ name: homelab, azure_sp: true }]        │
-│      │                                                          │
-│      └─► docker_opencode_instances role                         │
-│            • azure_rm_keyvaultsecret_info (idempotency check)   │
-│            • azure_keyvault_secret × 3 (fetch tenant-id,        │
-│              client-id, client-secret)                          │
-│            • docker_container env: AZURE_TENANT_ID,             │
-│              AZURE_CLIENT_ID, AZURE_CLIENT_SECRET               │
-└─────────────────────────────────────────────────────────────────┘
-                                │
-                                │  Container env vars
-                                ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  opencode-homelab container (on cloudlab)                        │
-│                                                                 │
-│  $ printenv | grep AZURE_                                       │
-│  AZURE_TENANT_ID=<...>                                          │
-│  AZURE_CLIENT_ID=<...>                                          │
-│  AZURE_CLIENT_SECRET=<...>                                      │
-│                                                                 │
-│  DefaultAzureCredential → EnvironmentCredential                 │
-│  (Azure SDK, Azure MCP, Az cmdlets all read the env vars)       │
-└─────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## Troubleshooting
-
-| Symptom | Likely cause | Fix |
-|---|---|---|
-| `Set-AzKeyVaultSecret: Operation returned an invalid status code 'Forbidden'` | Your account lacks `Key Vault Secrets Officer` on `homelab-bysxdb-kv` | Run the `New-AzRoleAssignment` one-liner from [Prerequisites](#prerequisites-your-local-machine) |
-| `New-AzADServicePrincipal: Insufficient privileges to complete the operation` | You don't have Application Administrator in the tenant | Either grant it (Entra portal → Roles and administrators → Application Administrator → Add assignments) or have a tenant admin run the script |
-| Playbook fails: `Azure SP credentials for 'homelab' not found in homelab-bysxdb-kv` | You ran the playbook before running the bootstrap script | Run `scripts/Create-HomelabOcAgentAzSp.ps1` first, then re-run the workload playbook |
-| Playbook fails: `Key Vault secret 'opencode-homelab-sp-tenant-id' not found` (HTTP 404 from the lookup) | AKV Secrets Officer role missing on the **Ansible controller identity**, not your local-machine identity | The Ansible controller is a separate identity — it needs `Key Vault Secrets User` (read) on the vault. The bootstrap script's local-machine `Secrets Officer` role is unrelated. |
-| `(Get-AzContext).Account` inside the container is empty | Old container without AZURE_* env vars; restart didn't pick up the new inventory flag | Re-run the workload playbook; confirm `azure_sp: true` is on the homelab entry; check `docker inspect opencode-homelab \| jq '.[0].Config.Env' \| grep AZURE_` |
-| Azure MCP tools succeed but `Get-AzContext` shows no account | You opened a new pwsh session after a container restart; the Az module's cached context is from before the restart | Run any `Az` cmdlet — `Connect-AzAccount` will fire and cache. Or `Disconnect-AzAccount; Connect-AzAccount -ServicePrincipal` to force a fresh SP login |
-| SP can read `homelab-rg` but not other RGs | Working as designed — scope is intentionally limited to `homelab-rg` | If you need broader scope, update the role assignment in the script (the grant is idempotent — safe to re-run) |
-| `Get-AzKeyVaultSecret` returns `Forbidden` inside the container | SP lacks `Key Vault Secrets User` data-plane role on the vault (control-plane `Contributor` does not grant data-plane access) | Re-run the bootstrap script — the `Key Vault Secrets User` assignment step is idempotent |
-| `AADSTS700016: Application ... was not found` | Wrong `AZURE_CLIENT_ID` (typo, or pasted the `ObjectId` instead of the `AppId`) | Re-run the script, copy the exact `AZURE_CLIENT_ID` it prints (it's `appId`, not the GUID object ID) |
+The script:
+- Looks up the SP by display name; fails if it doesn't exist.
+- Generates a new credential with 90-day expiry.
+- Updates `opencode-homelab-sp-client-secret` in `homelab-bysxdb-kv`.
+- Prints confirmation (no secret values logged).
 
 ---
 
@@ -254,25 +124,24 @@ Set a calendar reminder ~30 days before the `$endDate` printed in the script out
 
 | Path | What |
 |---|---|
-| `scripts/Create-HomelabOcAgentAzSp.ps1` | NEW — bootstrap + rotation script |
+| `scripts/Create-HomelabOcAgentAzSp.ps1` | NEW — bootstrap script |
+| `scripts/Rotate-HomelabOcAgentAzSp.ps1` | NEW — credential rotation script |
 | `ansible/host_vars/cloudlab.yml` | EDIT — adds `azure_sp: true` to the homelab instance |
-| `ansible/workloads/opencode/docker_opencode_instances/defaults/main.yml` | EDIT — adds 3 secret-name templates |
-| `ansible/workloads/opencode/docker_opencode_instances/tasks/provision_instance.yml` | EDIT — adds optional SP credential fetch + env-var injection block |
-| `ansible/workloads/opencode/README.md` | EDIT — §"Secrets" describes the optional SP credential flow |
-| `docs/opencode-customization.md` | NEW — high-level index of the OpenCode customization workstream |
+| `ansible/workloads/opencode/docker_opencode_instances/defaults/main.yml` | EDIT — 3 secret-name templates |
+| `ansible/workloads/opencode/docker_opencode_instances/tasks/provision_instance.yml` | EDIT — optional SP credential fetch + env-var injection |
+| `ansible/workloads/opencode/README.md` | EDIT — §Secrets describes the optional SP flow |
+| `docs/opencode-customization.md` | NEW — index of the OpenCode customization workstream |
 | `docs/runbooks/19-azure-sp-for-opencode.md` | NEW — this runbook |
-| `docs/runbooks/README.md` | EDIT — adds row 19 to the runbook index |
-| `docs/decisions/16-agent-identity-pattern.md` | EDIT — updates naming examples to the new `opencode-<instance-name>-sp-*` pattern |
+| `docs/runbooks/README.md` | EDIT — adds row 19 |
+| `docs/decisions/16-agent-identity-pattern.md` | EDIT — naming + rotation policy |
 
 ---
 
-## Related
+## References
 
-- [OpenCode customization index](../opencode-customization.md) — high-level view of the customization workstream
+- [ADR 16](../decisions/16-agent-identity-pattern.md) — design rationale
+- [ADR 18](../decisions/18-opencode-sandbox.md) — AKV-as-source-of-truth
+- [Runbook 17](17-deploy-opencode-on-cloudlab.md) — base deployment
+- [Runbook 18](18-provision-opencode-instance.md) — per-instance provisioning
 - [Workload README — OpenCode](../../ansible/workloads/opencode/README.md) — Ansible-side details
-- [ADR 16 — Non-Interactive Agent Workload Identity Pattern](../decisions/16-agent-identity-pattern.md) — design rationale
-- [ADR 18 — Host OpenCode Server Instances on Homelab](../decisions/18-opencode-sandbox.md) — AKV-as-source-of-truth (§9)
-- [Runbook 17 — Deploy OpenCode on Cloudlab](17-deploy-opencode-on-cloudlab.md) — base deployment
-- [Runbook 18 — Provision a New OpenCode Instance](18-provision-opencode-instance.md) — per-instance provisioning
-- [Issue #40 — Provision per-instance Azure service principals](https://github.com/jaroslaw-bagnicki/Homelab/issues/40)
-- [Issue #44 — Migrate Homelab workloads to Kubernetes (k3s + Arc on homelab)](https://github.com/jaroslaw-bagnicki/Homelab/issues/44) — long-term destination (UAMI per ServiceAccount replaces this SP)
+- [OpenCode customization index](../opencode-customization.md) — workstream overview
