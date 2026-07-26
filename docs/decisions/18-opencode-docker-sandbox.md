@@ -11,7 +11,7 @@ The Homelab project uses OpenCode (ADR 17) as the primary agentic development to
 
 A dedicated host for OpenCode is needed. The homelab is the production target — the physical server hosts the OpenCode workloads, with per-project instances isolated from each other.
 
-Both GitHub Codespaces and the Contabo Cloudlab VPS were considered as OpenCode hosts; the host-side decision (homelab) is independent of the substrate (Docker Compose, Kubernetes, etc.), which is decided separately.
+The host-side decision (homelab) is independent of the substrate (Docker Compose, Kubernetes, etc.), which is decided separately.
 
 ---
 
@@ -27,28 +27,24 @@ Both GitHub Codespaces and the Contabo Cloudlab VPS were considered as OpenCode 
 
    Homelab is an R&D/experimentation zone; Prospera holds financial data and requires higher stability. Sharing one SQLite session database and one environment would mix secrets, toolchains, and failure domains.
 
-2. **Per-project image hierarchy (ADR 21).** A three-image hierarchy — `opencode-base` (shared tooling) → `opencode-homelab` / `opencode-prospera` (project-specific tooling). The base image is always `ghcr.io/anomalyco/opencode:latest`. Per-project tooling is baked into image layers, not installed at container start. Version pinning on LTS lines.
+2. **Per-project image hierarchy per ADR 21.**
 
-3. **Per-instance identity (ADR 16).** Each OpenCode instance has its own non-personal identity, scoped with least privilege. The identity type is substrate-driven: Service Principal with client_secret in AKV for non-cluster deployments (in flight via #40), UAMI Workload Identity per ServiceAccount for cluster deployments (when the cluster is live).
+3. **Per-instance identity per ADR 16.**
 
-4. **Per-instance MCP servers (#41).** MCP server configuration is pre-baked into each per-project image as `opencode.jsonc`. Reproducible across container recreates, version-controlled in the image build.
+4. **Per-instance MCP servers per #41.**
 
-5. **Per-instance Azure secrets via AKV.** Each instance's Azure credentials (SP client_id / client_secret / tenant_id, or UAMI federated credential) live in the `homelab-bysxdb-kv` Key Vault. The platform fetches them at deploy time and injects as container environment variables (or, in cluster deployments, via the Workload Identity credential chain). No secrets in the repo.
+5. **Authentication: `OPENCODE_SERVER_PASSWORD`** (basic password at launch). Caddy basic auth or Cloudflare Access SSO can be layered later if needed. Caddy has no native Entra ID support.
 
-6. **Authentication: `OPENCODE_SERVER_PASSWORD` (basic password at launch).** Caddy basic auth or Cloudflare Access SSO can be layered later if needed. Caddy has no native Entra ID support.
-
-7. **No host Docker socket in agent containers** (where the substrate exposes one). The Homelab agent applies changes via SSH/Ansible or via the cluster's RBAC, not by directly controlling a host Docker daemon. Preserves isolation.
+6. **No host Docker socket in agent containers** (where the substrate exposes one). The Homelab agent applies changes via SSH/Ansible or via the cluster's RBAC, not by directly controlling a host Docker daemon. Preserves isolation.
 
 ### What this decision is
 
 - Per-project OpenCode instances on the homelab.
-- Per-project image hierarchy, per-instance identity, per-instance MCP servers, per-instance Azure credentials.
-- AKV as the source of truth for Azure secrets.
+- Per-project split with per-instance identity, MCP servers, and Azure credentials (established in the referenced ADRs and issues).
 
 ### What this decision is not
 
 - The substrate (Docker Compose, Kubernetes, etc.) — decided in a separate ADR.
-- The staging strategy for changes destined for the homelab — established in ADR 13.
 - Per-instance GitHub identity — separate concern tracked in #43.
 
 ---
@@ -58,10 +54,9 @@ Both GitHub Codespaces and the Contabo Cloudlab VPS were considered as OpenCode 
 ### Positive
 
 - **Clear isolation between projects.** Financial/secrets context never mixes with infrastructure experimentation.
-- **Per-project image portability.** The same per-project image hierarchy ports across substrates (Docker Compose on a host, Kubernetes Deployments on a cluster) without image changes. The substrate-specific wiring is in the orchestrator, not the image.
 - **Identity simplification on cluster-resident deployments.** When the cluster is live, UAMI Workload Identity per ServiceAccount (per ADR 16) replaces the SP path — no client_secret in the cluster, no AKV env-var plumbing, no manual rotation.
 - **Ecosystem tooling.** Substrate-native (Helm/Kustomize for cluster, Compose for host) tooling applies where it fits.
-- **Remote access from any device.** Browser-based WebUI through whatever public ingress the substrate exposes (Cloudflare Tunnel in the current setup).
+- **Remote access from any device.** Browser-based WebUI through whatever public ingress the substrate exposes.
 
 ### Negative
 
