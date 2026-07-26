@@ -26,19 +26,22 @@ ADR 03 framed the migration as a "future task." This ADR settles that framing: t
 
 **Kubernetes (k3s) is the container orchestrator for homelab workloads. The cluster is Azure Arc-enabled.**
 
-Concretely:
+### Key Decisions
 
-- **k3s on the homelab server** — single-node Kubernetes using k3s as the distribution. CNCF-conformant; same API surface, manifests, and operational patterns as AKS. The homelab server (ADR 01) hosts the cluster.
-- **Azure Arc-enabled Kubernetes** — the cluster is onboarded to Azure Arc, making it a first-class Azure resource. Same portal, RBAC, policy, and monitoring surface as AKS-managed clusters. Extends the "Arc management" idea from the server level (ADR 04, ADR 09) to the cluster level.
-- **Each workload becomes a Kubernetes Deployment** — per-workload Deployments replace per-workload Compose stacks. The per-project image hierarchy (ADR 21) ports unchanged: the same `opencode-base`, `opencode-homelab`, `opencode-prospera` images deploy as container images referenced by Deployments.
-- **Azure identity is UAMI Workload Identity per ServiceAccount** — each workload's ServiceAccount is federated to a User-Assigned Managed Identity via Entra ID's federated identity credentials. The Azure SDKs (`DefaultAzureCredential` → `WorkloadIdentityCredential`) handle the runtime exchange; no client_secret lives in the cluster. The full pattern is recorded in a future ADR.
-- **Cluster bootstrap via Ansible** — the same playbook structure (ADR 10) handles cluster bring-up, with the `docker_host` role replaced by a `k3s_host` role. The prediction in ADR 10 — that the playbook structure works unchanged when migrating to k3s — becomes concrete.
-- **Cloudlab retains its staging role** — Cloudlab (ADR 13) is the staging environment for the homelab. Changes to the k3s configuration are validated on Cloudlab before being applied to homelab. The Cloudlab k3s host is a separate cluster; it is not part of the homelab production cluster.
+1. **k3s as the Kubernetes implementation** (not full Kubernetes). Same K8s API surface, same manifests and skills; single-binary control plane designed for single-node and edge use cases. Full Kubernetes (kubeadm) is overkill for the homelab box (ADR 01) — same API, heavier operational footprint.
+
+2. **Arc-enrolled K8s cluster as continuation of ADR 4.** ADR 4 established "Arc management" for the homelab server (ADR 09 in flight via Arc Server + AMA). This ADR extends the same control-plane integration to the K8s cluster: same Azure portal, RBAC, policy, and monitoring surface as AKS-managed clusters. The cluster becomes a first-class Azure resource via the existing Arc onboarding path, not a separate decision.
+
+3. **Per-workload Kubernetes Deployments.** Each Homelab workload becomes a Deployment with workload-specific patterns. The per-project image hierarchy (ADR 21) ports unchanged.
+
+4. **UAMI Workload Identity per ServiceAccount** for cluster-resident Azure identity. No client_secret in the cluster; the Azure SDKs (`DefaultAzureCredential` → `WorkloadIdentityCredential`) handle the runtime exchange.
+
+5. **Ansible for cluster bootstrap.** The same playbook structure (ADR 10) handles cluster bring-up, with the `docker_host` role replaced by a `k3s_host` role. `common` and `security` roles stay untouched.
 
 ### What this decision is
 
 - k3s as the orchestrator.
-- Azure Arc as the cloud control plane.
+- Arc-enrolled cluster as continuation of ADR 4.
 - UAMI per ServiceAccount as the Azure identity model.
 - Per-workload Deployments replacing per-workload Compose stacks.
 - Ansible as the cluster bootstrap mechanism.
@@ -72,26 +75,12 @@ This decision is not a commitment to specific cluster mechanics — storage clas
 
 - **ADR 03** — Container Strategy: Docker Compose First, k3s Migration Path. The "Compose first, k3s future" framing is replaced by "k3s destination, Compose as the current state to migrate off."
 
-### Supplements
-
-- **ADR 01** — the homelab server is the k3s host. ADR 22 puts that hardware to its intended k3s use.
-- **ADR 04** — Hybrid Cloud Strategy. ADR 22 extends the "Arc management" idea from the server level to the cluster level.
-- **ADR 05** — OS Decision (Ubuntu Server 24.04 LTS). The canonical k3s and Azure Arc target OS. No change.
-- **ADR 09** — Azure Monitor via Arc. ADR 22 extends monitoring from the server to the cluster level (Arc-enabled Kubernetes monitoring + Container Insights).
-- **ADR 10** — Ansible for Host Configuration Management. ADR 22 swaps the `docker_host` role for a `k3s_host` role in the same playbook structure, matching ADR 10's prediction.
-- **ADR 13** — Use Contabo Cloud VPS 10 as Staging Environment for Homelab. Cloudlab is the staging environment where k3s changes are validated before being applied to homelab. The decision is independent of the staging-environment choice; ADR 13 establishes the staging role.
-- **ADR 18** — Host OpenCode Server Instances on Homelab. **Accepted**; the homelab is the destination for OpenCode, with the per-project images (ADR 21) porting as the platform's per-project workload definitions. ADR 18 is substrate-agnostic — the per-project images, identity, MCP servers, and Azure secrets patterns are established there; the substrate (k3s + Arc per this ADR) is the deployment target.
-- **ADR 21** — Per-Project OpenCode Container Images. The three-image hierarchy (`opencode-base` → `opencode-homelab` / `opencode-prospera`) is portable: the same images deploy as container images referenced by Kubernetes Deployments.
-
 ---
 
 ## Alternatives Considered
 
-- **Full Kubernetes (kubeadm, multi-node)** — same API surface as k3s but heavier operational footprint: etcd cluster, control-plane HA, multi-node networking. k3s gives the same API surface with a single-binary control plane designed for single-node and edge use cases. Rejected for the homelab box; revisit if multi-node becomes relevant.
-- **Talos Linux** — a Kubernetes distribution with a small immutable OS, declarative node config, and strong security defaults. The homelab server already runs Ubuntu 24.04 (ADR 05); switching the OS is a separate decision. Rejected for now; the k3s-on-Ubuntu path is the right starting point.
-- **Rancher (k3s + Rancher management)** — adds a management UI on top of k3s clusters. Useful for multi-cluster operations. The Homelab has one cluster. Rejected as over-tooled.
+- **Full Kubernetes (kubeadm, multi-node)** — same API surface as k3s but heavier operational footprint: etcd cluster, control-plane HA, multi-node networking. k3s gives the same API surface with a single-binary control plane designed for single-node and edge use cases. Rejected as overkill for the homelab box (ADR 01).
 - **Azure Kubernetes Service (AKS)** — cloud-managed Kubernetes. Removes the operational burden of self-hosting but introduces a per-month cost and changes the homelab's self-hosting posture (ADR 04 explicitly keeps Azure minimal). Rejected.
-- **Standalone Kubernetes cluster (no Arc)** — the cluster runs on the homelab but is not Arc-enabled. Loses the Azure control-plane integration (portal, RBAC, policy, monitoring). Arc onboarding is part of the decision.
 - **Docker Compose extended** — keep the Compose substrate, add tooling (Compose-spec, Docker contexts, multi-host Compose) to address the scale ceiling. Doesn't get the operator to the Kubernetes skill set; doesn't unlock the ecosystem. Rejected as a half-step.
 - **Stay on Compose, document as a deliberate choice** — reject as a non-decision. ADR 03's "k3s migration path" framing was a deferral, not a final position; the migration is now the active decision.
 
@@ -109,17 +98,10 @@ These are decision-level questions that affect the cluster's architecture. Imple
 
 ## References
 
-- ADR 01 — Hardware Selection (the homelab server)
-- ADR 03 — Container Strategy: Docker Compose First, k3s Migration Path (**superseded by this ADR**)
-- ADR 04 — Hybrid Cloud Strategy
-- ADR 05 — OS Decision: Ubuntu Server 24.04 LTS
-- ADR 09 — Azure Monitor via Arc
-- ADR 10 — Ansible for Host Configuration Management
-- ADR 13 — Use Contabo Cloud VPS 10 as Staging Environment for Homelab
-- ADR 16 — Non-Interactive Agent Workload Identity Pattern
-- ADR 18 — Host OpenCode Server Instances on Homelab
-- ADR 21 — Per-Project OpenCode Container Images
-- [Research 13: Ansible Adoption](research/13-ansible-adoption.md) — k3s role swap analysis
-- [Research 21: OpenCode Sandboxed Architecture on Homelab](../research/21-opencode-sandboxed-homelab-architecture.md) — k3s deployment options
-- [Microsoft docs — Workload Identity for Kubernetes](https://learn.microsoft.com/en-us/azure/aks/workload-identity-overview)
+- [ADR 01 — Hardware Selection](01-hardware-selection-m910q.md) (the homelab server)
+- [ADR 03 — Container Strategy: Docker Compose First, k3s Migration Path](03-container-strategy.md) (**superseded by this ADR**)
+- [ADR 04 — Hybrid Cloud Strategy](04-hybrid-cloud-azure-arc.md) (Arc management concept)
+- [ADR 10 — Ansible for Host Configuration Management](10-ansible-host-config.md) (k3s_host role swap)
+- [ADR 18 — Host OpenCode Server Instances on Homelab](18-opencode-docker-sandbox.md) (first per-workload workload)
+- [ADR 21 — Per-Project OpenCode Container Images](21-opencode-instance-images.md) (image portability)
 - [Microsoft docs — Azure Arc-enabled Kubernetes](https://learn.microsoft.com/en-us/azure/azure-arc/kubernetes/overview)
