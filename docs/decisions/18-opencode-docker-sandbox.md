@@ -1,7 +1,7 @@
 # Host OpenCode Server Instances on Cloudlab
 
 **Date:** 2026-07-11
-**Status:** Proposed
+**Status:** Implemented
 
 ---
 
@@ -162,6 +162,21 @@ fallback and occasional GitHub Copilot workspace per ADR 17.
 
 ---
 
+## Future migration
+
+OpenCode is hosted on Cloudlab as a **transitional staging step** during the
+platform's maturation, not as a permanent home. The destination is the
+homelab running k3s + Arc (ADR 22), at which point OpenCode migrates to
+Kubernetes Deployments on homelab using the same per-project image hierarchy
+(ADR 21). Cloudlab's role as the OpenCode host ends at that point; it returns
+to its core purpose of staging changes destined for homelab (ADR 13).
+
+The Azure identity for the OpenCode workload transitions from the per-instance
+Service Principal pattern in flight via #40 to UAMI Workload Identity per
+ServiceAccount on the cluster, following the pattern recorded in ADR 16.
+
+---
+
 ## Out of scope
 
 - Backup strategy (will be addressed in a follow-up).
@@ -173,9 +188,12 @@ fallback and occasional GitHub Copilot workspace per ADR 17.
 ## References
 
 - [ADR 17 — Adopt OpenCode](17-adopt-opencode.md)
-- [ADR 13 — VPS Playground (Cloudlab)](13-vps-playground.md)
+- [ADR 13 — Staging Environment for Homelab (Cloudlab)](13-vps-playground.md)
+- [ADR 16 — Non-Interactive Agent Workload Identity Pattern](16-gh-codespaces-sp-for-homelab.md)
+- [ADR 21 — Per-Project OpenCode Container Images](21-opencode-instance-images.md)
+- [ADR 22 — Migrate Homelab Workloads to Kubernetes (k3s + Azure Arc)](22-k3s-arc-homelab.md) (the future-migration destination)
 - [ADR 08 — Cloudflare Tunnel](08-remote-access-cloudflare-tunnel.md)
 - [ADR 07 — Caddy Reverse Proxy](07-reverse-proxy-caddy.md)
-- [ADR 03 — Container Strategy](03-container-strategy.md)
+- [ADR 03 — Container Strategy (superseded)](03-container-strategy.md)
 - [Research 20 — OpenCode Hosting: Codespaces vs Homelab/Cloudlab](../research/20-opencode-hosting-codespaces-vs-homelab.md)
 - [Research 21 — OpenCode Sandboxed Architecture on Homelab](../research/21-opencode-sandboxed-homelab-architecture.md)

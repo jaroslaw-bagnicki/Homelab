@@ -71,6 +71,10 @@ Concretely:
   etc.) must receive the right forwarded headers from Caddy. Document
   this requirement alongside each new service.
 
+---
+
+> **Future direction:** This ADR scopes Caddy as the routing layer on Cloudlab. The in-cluster routing layer on the homelab k3s cluster (ADR 22) is a separate decision — likely an Ingress controller (ingress-nginx or Traefik) plus in-cluster Caddy as a reverse proxy for backend services, with Cloudflare Tunnel remaining the public entry point as established by this ADR and ADR 19.
+
 ### Alternatives Considered
 
 - **Direct tunnel per service.** Each public hostname gets its own tunnel
