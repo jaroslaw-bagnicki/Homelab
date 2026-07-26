@@ -6,6 +6,8 @@
 
 > Runbook for exposing homelab services publicly via Cloudflare Tunnel — no open router ports or public IP needed.
 
+> **Note:** `example.com` is a placeholder domain used in this runbook for documentation purposes. Replace with the actual domain when following these steps for a real deployment.
+
 ## Prerequisites
 
 - [ ] Docker Engine + Docker Compose installed (see [2-docker.md](2-docker.md))
@@ -23,7 +25,7 @@ The tunnel requires Cloudflare DNS to route traffic. If you already have a domai
 
 ### 1.1 Add your domain to Cloudflare
 
-1. Go to the [Cloudflare Dashboard (cloud5.ovh)](https://dash.cloudflare.com/b7208cffa068d8f825142ea9fd426558/cloud5.ovh).
+1. Go to the [Cloudflare Dashboard (example.com)](https://dash.cloudflare.com/b7208cffa068d8f825142ea9fd426558/example.com).
 2. Click **Add a site** and enter your domain name.
 3. Select the **Free** plan.
 4. Cloudflare will scan existing DNS records — review them and confirm.

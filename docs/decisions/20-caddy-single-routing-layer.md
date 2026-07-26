@@ -7,9 +7,9 @@
 
 ## Context
 
-When exposing Portainer CE publicly at `portainer.cloud5.ovh`, the natural
+When exposing Portainer CE publicly at `portainer.example.com`, the natural
 option was to add a dedicated public hostname in the Cloudflare Tunnel
-configuration — `portainer.cloud5.ovh → http://portainer:9000` — bypassing
+configuration — `portainer.example.com → http://portainer:9000` — bypassing
 Caddy entirely. The tunnel already does TLS termination at the Cloudflare
 edge, so a direct container-to-tunnel route technically removes one network
 hop.
@@ -23,8 +23,8 @@ public services.
 
 During the implementation, this split also surfaced a Cloudflare Tunnel
 ingress behavior: ingress rules match in declaration order (first-match-wins),
-not longest-prefix. A `*.cloud5.ovh → http://caddy:80` catch-all rule
-positioned before the specific `portainer.cloud5.ovh` rule shadowed it,
+not longest-prefix. A `*.example.com → http://caddy:80` catch-all rule
+positioned before the specific `portainer.example.com` rule shadowed it,
 sending Portainer traffic to Caddy — which then had no matching site block
 and returned an empty 200.
 
@@ -36,8 +36,8 @@ make per-service routing decisions.**
 
 Concretely:
 
-- The tunnel has at most two entries: `cloud5.ovh → http://caddy:80` (or
-  via the wildcard `*.cloud5.ovh → http://caddy:80` if a wildcard catch-all
+- The tunnel has at most two entries: `example.com → http://caddy:80` (or
+  via the wildcard `*.example.com → http://caddy:80` if a wildcard catch-all
   is preferred) and nothing else. No per-service hostnames.
 - All host-to-backend mapping lives in the `Caddyfile.j2` Ansible template
   under `ansible/roles/docker_services/templates/`, driven by `docker_services`

@@ -3,6 +3,8 @@
 > Session persistence across Dev Container rebuilds, Azure Blob backup,
 > and remote access via web server + Desktop app.
 
+> **Note:** `example.com` is a placeholder domain used in this runbook for documentation purposes. Replace with the actual domain when following these steps for a real deployment.
+
 ## Overview
 
 | | |
@@ -126,7 +128,7 @@ prove the persistence actually survives a rebuild, perform this round-trip:
 
    ```powershell
    pwsh -File scripts/Add-HomelabOpencodeBackupStorage.ps1 `
-     -TenantId       <cloud5.ovh tenant ID> `
+     -TenantId       <example.com tenant ID> `
      -SubscriptionId <subscription ID>
    ```
 

@@ -2,6 +2,8 @@
 
 > Runbook for the `docker_services` Ansible role — deploys Portainer, Caddy, Hello World, and Cloudflare Tunnel (`cloudflared`) on Cloudlab via `community.docker.docker_compose_v2`.
 
+> **Note:** `example.com` is a placeholder domain used in this runbook for documentation purposes. Replace with the actual domain when following these steps for a real deployment.
+
 ## Prerequisites
 
 - [ ] Ansible playbook running from the repo root (see [ansible/README.md](../../ansible/README.md))
@@ -37,7 +39,7 @@
 | Portainer | `portainer/portainer-ce:latest` | `127.0.0.1:9000:9000` | `homelab_net` | Localhost-only UI |
 | Caddy | `caddy:2-alpine` | `127.0.0.1:8080:8080` | `homelab_net` | Loopback-only 8080 debug endpoint. No external port 80/443 — all public traffic arrives through the Cloudflare Tunnel |
 | cloudflared | `cloudflare/cloudflared:latest` | none (outbound QUIC only) | `homelab_net` | Reads `TUNNEL_TOKEN` from `{{ docker_dir }}/.env` |
-| Hello | `nginxdemos/hello:latest` | none (proxied internally) | `homelab_net` | Reverse-proxied via Caddyfile for `hello.cloud5.ovh` |
+| Hello | `nginxdemos/hello:latest` | none (proxied internally) | `homelab_net` | Reverse-proxied via Caddyfile for `hello.example.com` |
 
 Caddy serves plain HTTP for tunnel traffic (cloudflared connects to `http://caddy:80`). Cloudflare terminates public TLS at the edge. The debug endpoint on 8080 is for local health checks without the tunnel.
 
@@ -81,8 +83,8 @@ roles:
 - [ ] All 4 containers running: `docker ps` shows `portainer`, `caddy`, `cloudflared`, `hello` all `Up`
 - [ ] cloudflared connected: `docker logs cloudflared 2>&1 | grep -i 'connection.*registered'` shows a successful registration
 - [ ] Local Caddy debug endpoint works: from the VPS, `curl -s http://127.0.0.1:8080` returns `Caddy debug: OK`
-- [ ] HTTPS through Cloudflare Tunnel works: from any internet device, `curl -sI https://cloud5.ovh` returns `HTTP/2 200` with a valid CF edge cert
-- [ ] Hello service reachable through tunnel: from any internet device, `curl -sI https://hello.cloud5.ovh` returns `HTTP/2 200` (proxied to `hello` container)
+- [ ] HTTPS through Cloudflare Tunnel works: from any internet device, `curl -sI https://example.com` returns `HTTP/2 200` with a valid CF edge cert
+- [ ] Hello service reachable through tunnel: from any internet device, `curl -sI https://hello.example.com` returns `HTTP/2 200` (proxied to `hello` container)
 - [ ] Portainer NOT exposed publicly: `curl -s --connect-timeout 5 http://173.249.27.13:9000` → connection refused or timeout
 - [ ] Direct HTTP blocked: `curl -s --connect-timeout 5 http://173.249.27.13` → connection refused (UFW deny 80)
 - [ ] `.env` file permissions correct: `ls -la /opt/docker/.env` → mode `0600`
@@ -91,7 +93,7 @@ roles:
 
 ## 6. Cloudflare Dashboard Setup (manual, one-time)
 
-Before the first `ansible-playbook` run, complete these steps in the [Cloudflare dashboard (cloud5.ovh)](https://dash.cloudflare.com/b7208cffa068d8f825142ea9fd426558/cloud5.ovh) and [Azure portal](https://portal.azure.com/). The role fails loudly if any KV secret is missing.
+Before the first `ansible-playbook` run, complete these steps in the [Cloudflare dashboard (example.com)](https://dash.cloudflare.com/b7208cffa068d8f825142ea9fd426558/example.com) and [Azure portal](https://portal.azure.com/). The role fails loudly if any KV secret is missing.
 
 ### 6.1 — Create Cloudflare Tunnel
 
@@ -114,13 +116,13 @@ Admin-facing services (Portainer, anything with full-host control) sit behind th
 
 - **Zero Trust → Access → Applications** → **Add an application** → **Self-hosted**
 - Application name: e.g. `portainer` (display only)
-- **Application domain**: `portainer.cloud5.ovh` (matches the public hostname exactly — subdomain scoping, no wildcard)
+- **Application domain**: `portainer.example.com` (matches the public hostname exactly — subdomain scoping, no wildcard)
 - **Session duration**: short (e.g. 24 hours) and **Apply HTTP-only, Secure** cookie attributes
 - **Identity providers**: link the IdP you want — email one-time PIN works fine for a single-user lab; add OIDC / Google / GitHub later if multi-user
 - **Policy**: at minimum an **Allow** rule keyed to your email/identity; for stricter posture add **Require country** or **IP range**
 - **Block / Allow ordering**: leave Access's defaults; the implicit deny covers anything not matched
 
-After saving, a hit on `https://portainer.cloud5.ovh/` from an unauthenticated browser returns a 302 to `https://<team>.cloudflareaccess.com/...` for IdP login. With a valid session, traffic flows through to Caddy → Portainer as normal.
+After saving, a hit on `https://portainer.example.com/` from an unauthenticated browser returns a 302 to `https://<team>.cloudflareaccess.com/...` for IdP login. With a valid session, traffic flows through to Caddy → Portainer as normal.
 
 **Why this matters**: the tunnel → Caddy hop carries plaintext HTTP internally (per [ADR 19](../decisions/19-cloudflare-tunnel-https-origin.md)). Cloudflare Access closes the trust gap at the edge without touching the in-cluster network — no Caddy mTLS, no per-service auth glue, no application code changes.
 
@@ -128,11 +130,11 @@ After saving, a hit on `https://portainer.cloud5.ovh/` from an unauthenticated b
 
 ## Adding New Services
 
-To expose a new service (e.g. `portainer.cloud5.ovh`) through the tunnel:
+To expose a new service (e.g. `portainer.example.com`) through the tunnel:
 
 1. **Caddyfile.j2**: add a new HTTP site block:
    ```Caddyfile
-   http://portainer.cloud5.ovh {
+   http://portainer.example.com {
        reverse_proxy portainer:9000
    }
    ```
@@ -145,7 +147,7 @@ To expose a new service (e.g. `portainer.cloud5.ovh`) through the tunnel:
 ## Next Steps
 
 - Migrate KV secret fetching from the dev container (SP + env vars) to the VPS using the Arc system-assigned Managed Identity — file as a follow-up issue
-- Issue #23 (DNS A record for `cloudlab.cloud5.ovh` in OVH DNS) — separate from this work; keep open for SSH / non-tunnel access
+- Issue #23 (DNS A record for `cloudlab.example.com` in OVH DNS) — separate from this work; keep open for SSH / non-tunnel access
 - Issue #24 (Let's Encrypt TLS) — **superseded by this work**, close in housekeeping commit
 
 ---

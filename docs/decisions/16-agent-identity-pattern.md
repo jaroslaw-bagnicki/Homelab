@@ -100,7 +100,7 @@ For Kubernetes-resident workloads on the homelab cluster, the SP path is replace
 - A federated identity credential on the UAMI establishes trust with the cluster's OIDC issuer and the specific ServiceAccount.
 - The workload's pod has the ServiceAccount annotated with the UAMI's client ID.
 - The Azure SDK's `WorkloadIdentityCredential` exchanges the pod's projected service-account token for an Entra token at runtime.
-- No client_secret lives in the cluster. No AKV env-var plumbing. No manual rotation — the UAMI's client secret (if any) is short-lived, and the federated trust produces short-lived Entra tokens.
+- No client_secret lives in the cluster. No AKV env-var plumbing. No manual rotation — the federated trust produces short-lived Entra tokens via the pod's projected service-account token, exchanged for an Entra access token at runtime.
 
 The transition from SP (OpenCode on Cloudlab, in flight via #40) to UAMI (OpenCode on homelab k3s, future) is a one-way swap on the consumer side: `DefaultAzureCredential` already includes both credential types, so the workload's code does not change at cutover. Only the env-var-vs-WorkloadIdentityCredential source changes.
 

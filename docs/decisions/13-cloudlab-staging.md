@@ -33,7 +33,7 @@ suggests:
 
 - Ansible playbook validation (the original purpose)
 - OpenCode server instances (ADR 18) — transitional, not permanent
-- Cloudflare Tunnel endpoint for `cloud5.ovh` hostnames (ADRs 19, 20)
+- Cloudflare Tunnel endpoint for `example.com` hostnames (ADRs 19, 20)
 - k3s + Arc staging for the homelab k3s migration (ADR 22)
 
 None of these make Cloudlab a production host. They are all "changes destined

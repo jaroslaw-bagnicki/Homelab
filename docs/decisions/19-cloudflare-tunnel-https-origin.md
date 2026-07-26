@@ -13,7 +13,7 @@ Cloudlab (Contabo VPS) needs HTTPS ingress matching Homelab's pattern (ADR 08 �
 - Mixes public CA validation with a private VPS
 - Doesn't match Homelab's pattern (ADR 08), making the two environments diverge
 
-Issue #25 introduces a Cloudflare Tunnel on Cloudlab (separate from Homelab's `homelab-tunnel`) using a different external DNS scope (`cloud5.ovh` vs Homelab's `*.cloud5.ovh`). With Tunnel, CF edge terminates TLS from clients; the connection from cloudflared to Caddy is internal (Docker network). This changes the trust model and the cert requirements.
+Issue #25 introduces a Cloudflare Tunnel on Cloudlab (separate from Homelab's `homelab-tunnel`) using a different external DNS scope (`example.com` vs Homelab's `*.example.com`). With Tunnel, CF edge terminates TLS from clients; the connection from cloudflared to Caddy is internal (Docker network). This changes the trust model and the cert requirements.
 
 ## Decision (revised 2026-07-05)
 
@@ -29,7 +29,7 @@ Issue #25 introduces a Cloudflare Tunnel on Cloudlab (separate from Homelab's `h
 
 The original design attempted HTTPS between cloudflared and Caddy using a **Cloudflare Origin CA certificate**. This was abandoned because:
 
-1. **SNI mismatch**: cloudflared connects with TLS SNI=`caddy` (derived from the dashboard ingress rule URL `https://caddy:443`). The cert's SANs cover only `*.cloud5.ovh` and `cloud5.ovh` — not `caddy`.
+1. **SNI mismatch**: cloudflared connects with TLS SNI=`caddy` (derived from the dashboard ingress rule URL `https://caddy:443`). The cert's SANs cover only `*.example.com` and `example.com` — not `caddy`.
 2. **No config-file override**: cloudflared v2026.6.1 config parser discards `originRequest` fields for dashboard-managed tunnels (`--origin-server-name`, `--no-tls-verify`, and config.yml `originRequest` settings are all ignored).
 3. **No dashboard setting**: the CF Zero Trust dashboard does not expose an "Origin Server Name" field for public hostname TLS settings.
 
@@ -37,7 +37,7 @@ After exhausting CLI flags, config files, and dashboard options, the simplest an
 
 ### Why this is acceptable
 
-- **PUBLIC traffic**: CF edge terminates TLS for all cloud5.ovh hostnames. Clients never see the internal HTTP connection.
+- **PUBLIC traffic**: CF edge terminates TLS for all example.com hostnames. Clients never see the internal HTTP connection.
 - **Internal traffic**: cloudflared and Caddy communicate over the `homelab_net` Docker bridge network. No untrusted parties can intercept traffic on this network.
 - **No cert management**: eliminates cert provisioning, renewal, SAN management, KV secret management, and TLS compatibility debugging.
 - **Matches ADR 08**: this is the same pattern used for the original Homelab setup (CF terminates TLS, plain HTTP to origin).
@@ -74,5 +74,5 @@ After exhausting CLI flags, config files, and dashboard options, the simplest an
 - Runbook 16 — Docker Services Ansible Role (updated with this work)
 - ADR 22 — Migrate Homelab Workloads to Kubernetes (k3s + Azure Arc) — the cluster-side ingress on homelab (Ingress resources, in-cluster Caddy, or ingress-nginx) is decided separately there. Cloudflare Tunnel remains the public entry point; only the in-cluster routing changes.
 - Runbook 5 — Cloudflare Tunnel (manual, superseded by runbook 16 + issue #25)
-- [cloud5.ovh domain dashboard](https://dash.cloudflare.com/b7208cffa068d8f825142ea9fd426558/cloud5.ovh)
+- [example.com domain dashboard](https://dash.cloudflare.com/b7208cffa068d8f825142ea9fd426558/example.com)
 - [cloudlab-tunnel dashboard](https://dash.cloudflare.com/b7208cffa068d8f825142ea9fd426558/tunnels/9558d789-1623-4b9e-ac67-3a1170ec9c0b/overview)
