@@ -52,9 +52,9 @@ These are read by `EnvironmentCredential` in the `DefaultAzureCredential` chain.
 
 When Cloudlab workloads migrate to k3s + Arc (#44), the SP client-secret path is replaced by UAMI Workload Identity via federated credentials. The `DefaultAzureCredential` chain already includes `WorkloadIdentityCredential` — no MCP config changes needed at cutover.
 
-### Managed Identity (not applicable)
+### Managed Identity
 
-Managed Identity is not available on the Cloudlab VPS (it's not an Azure resource). This path only becomes relevant if the OpenCode instance runs on an Azure VM or Arc-enabled server in the future.
+The Cloudlab VPS is enrolled in Azure Arc and has a system-assigned Managed Identity. However, the OpenCode container runs in Docker isolation and does not have access to the host's IMDS endpoint, so the host MI is not available to Azure MCP inside the container. This path is not intended for use in the current architecture.
 
 ## Configuration reference
 
