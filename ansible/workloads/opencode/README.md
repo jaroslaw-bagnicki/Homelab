@@ -49,6 +49,12 @@ A secret named `opencode-<instance-name>-server-password` must exist in the vaul
 
 No `.env` file is rendered on the host. API keys for model providers are intentionally **not** passed as env vars — they live in the persistent `auth.json` that OpenCode writes under `~/.local/share/opencode/auth.json` on first login.
 
+### Optional: per-instance Azure SP credentials
+
+Instances with `azure_sp: true` in `opencode_instances` get Azure service-principal credentials injected as `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, and `AZURE_CLIENT_SECRET` container env vars. The Azure SDK and the Azure MCP server read these via `DefaultAzureCredential` → `EnvironmentCredential`.
+
+AKV secret names: `opencode-<instance-name>-sp-tenant-id`, `opencode-<instance-name>-sp-client-id`, `opencode-<instance-name>-sp-client-secret` (one triplet per opted-in instance). The role fetches them at deploy time; the env vars are omitted from the container when `azure_sp` is unset. The SP itself is provisioned out-of-band by `scripts/Create-HomelabOcAgentAzSp.ps1` — see [runbook 19](../../../docs/runbooks/19-azure-sp-for-opencode.md).
+
 ## Role Idempotency
 
 Both roles use `community.docker.docker_container` / `community.docker.docker_compose_v2` with `state: started` / `state: present` and `pull: true` by default. On the first run:
