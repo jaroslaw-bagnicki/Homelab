@@ -29,6 +29,8 @@ The Azure MCP server needs a runtime to launch. The default `ghcr.io/anomalyco/o
 `uvx` is preferred: the PyPI wheel is a pre-compiled binary — no dependency resolution at startup, just download and run. `npx` is known to be problematic in the OC container because Node.js frequently isn't available and npm installs add cold-start latency.
 
 > **Blocker ([#41](https://github.com/jaroslaw-bagnicki/Homelab/issues/41)): Azure MCP binary is glibc-compiled — incompatible with Alpine (musl).** Both npm (`@azure/mcp`) and PyPI (`msmcp-azure`) ship the same .NET publish binary. The OC container is Alpine-based; `gcompat` starts the binary but it hangs on all MCP requests. Resolution deferred to k3s migration ([#44](https://github.com/jaroslaw-bagnicki/Homelab/issues/44), per ADR 22): `azmcp` will run as a glibc-based sidecar container in the same Kubernetes pod as the OC instance, reachable via `localhost`. No Compose intermediate step. Azure MCP is disabled in `opencode.json` until #44 lands.
+> 
+> **Until k3s lands, use [Azure CLI device login](#bootstrap-azure-cli-device-login) as the only Azure access path.** `az login --use-device-code` provides interactive Azure access inside the OC container via `DefaultAzureCredential` → `AzureCliCredential`. Azure MCP tools are not available; `az` commands must be issued directly.
 
 ## Authentication methods
 
