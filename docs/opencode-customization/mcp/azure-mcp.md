@@ -28,7 +28,7 @@ The Azure MCP server needs a runtime to launch. The default `ghcr.io/anomalyco/o
 
 `uvx` is preferred: the PyPI wheel is a pre-compiled binary — no dependency resolution at startup, just download and run. `npx` is known to be problematic in the OC container because Node.js frequently isn't available and npm installs add cold-start latency.
 
-> **Blocker ([#41](https://github.com/jaroslaw-bagnicki/Homelab/issues/41)): `msmcp-azure` incompatible with Alpine (musl).** The PyPI package ships only `manylinux` (glibc) wheels — no `musllinux` variants. POC confirmed the binary hangs on Alpine during runtime init (2026-08-01). If the OC container uses an Alpine base, `msmcp-azure` is not usable regardless of `uvx`. Resolution: determine the OC container's base OS (`docker run --rm --entrypoint cat ghcr.io/anomalyco/opencode:latest /etc/os-release`). If Alpine, the custom per-instance image must be Debian/Ubuntu-based to use `msmcp-azure`.
+> **Blocker ([#41](https://github.com/jaroslaw-bagnicki/Homelab/issues/41)): Azure MCP binary is glibc-compiled — incompatible with Alpine (musl).** Both npm (`@azure/mcp`) and PyPI (`msmcp-azure`) ship the same .NET publish binary. The OC container is Alpine-based; `gcompat` starts the binary but it hangs on all MCP requests — auth chain works ([SP vars](#service-principal-client-secret)) but `azmcp server start` never responds to `initialize`. Resolution: the custom per-instance image ([#38](https://github.com/jaroslaw-bagnicki/Homelab/issues/38)) must use a glibc base (Debian/Ubuntu). Once glibc-based, `uvx` is the preferred runtime.
 
 ## Authentication methods
 
