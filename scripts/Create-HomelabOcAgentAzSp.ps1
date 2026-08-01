@@ -3,6 +3,10 @@
 # in homelab-bysxdb-kv under the opencode-homelab-sp-{tenant-id,client-id,client-secret}
 # triplet. One-shot: exits if the SP already exists; does not rotate.
 # For rotation, use scripts/Rotate-HomelabOcAgentAzSp.ps1.
+#
+# Credentials are created on the App Registration (portal-visible under
+# Certificates & secrets), not on the Service Principal object (portal-hidden).
+# Both work identically for OAuth2 client-credentials flow.
 
 $ErrorActionPreference = 'Stop'
 
@@ -37,9 +41,12 @@ $rgScope = $rg.ResourceId
 $kvScope = $kv.ResourceId
 
 # ── 4. Create SP (auto-grants Contributor on the RG via -Role/-Scope) ─
+# New-AzADServicePrincipal generates a default credential with its own lifetime.
+# Discard it and create a controlled 90-day credential on the App Registration
+# so it appears in the portal under Certificates & secrets.
 Write-Host "Creating service principal '$DisplayName' in tenant $TenantId..."
 $sp   = New-AzADServicePrincipal -DisplayName $DisplayName -Role Contributor -Scope $rgScope
-$cred = $sp.PasswordCredentials[0]
+$cred = New-AzADAppCredential -ApplicationId $sp.AppId -EndDate $endDate
 
 # ── 5. Write the three AKV secrets (tagged with the credential expiry) ─
 $secrets = @{

@@ -1,8 +1,12 @@
 #!/usr/bin/env pwsh
-# Rotates the client_secret credential on the homelab-oc-agent service principal
+# Rotates the client_secret credential on the homelab-oc-agent App Registration
 # and updates the opencode-homelab-sp-client-secret secret in homelab-bysxdb-kv.
 # The SP object ID is preserved (audit trail stable); only the credential rotates.
 # Re-run = one new credential per invocation.
+#
+# Uses New-AzADAppCredential (portal-visible under Certificates & secrets)
+# rather than New-AzADSpCredential (portal-hidden). Both work identically for
+# OAuth2 client-credentials flow.
 
 $ErrorActionPreference = 'Stop'
 
@@ -20,9 +24,9 @@ if ($sp.Count -gt 1) {
 }
 $sp = $sp[0]
 
-# ── 2. Generate a new credential with 90-day expiry ───────────────────
+# ── 2. Generate a new App credential with 90-day expiry (portal-visible) ──
 $endDate = (Get-Date).ToUniversalTime().AddDays(90)
-$cred    = New-AzADSpCredential -ObjectId $sp.Id -EndDate $endDate
+$cred    = New-AzADAppCredential -ApplicationId $sp.AppId -EndDate $endDate
 
 # ── 3. Update the AKV client_secret (tenant-id and client-id unchanged)
 Set-AzKeyVaultSecret -VaultName $KeyVaultName -Name $ClientSecretName `

@@ -14,9 +14,11 @@
 | **KV (source of truth)** | `homelab-bysxdb-kv` (RBAC-only, pre-existing) |
 | **KV secret names** | `opencode-homelab-sp-tenant-id`, `opencode-homelab-sp-client-id`, `opencode-homelab-sp-client-secret` |
 | **Container env var names** | `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET` (Azure SDK contract — non-renameable) |
-| **Credential type** | Client secret (password credential) |
+| **Credential type** | Client secret (password credential) on the App Registration — portal-visible under Certificates & secrets |
 | **Default lifetime** | 90 days (rotate via `Rotate-HomelabOcAgentAzSp.ps1`) |
 | **Long-term destination** | UAMI Workload Identity per K8s ServiceAccount (issue #44) |
+
+> **Note:** The bootstrap script creates a 90-day credential on the App Registration. The auto-generated credential from `New-AzADServicePrincipal` (365-day default) is discarded — only the 90-day credential is stored in AKV. Both script and rotation use `New-AzADAppCredential` (portal-visible) rather than `New-AzADSpCredential` (portal-hidden). See [portal navigation](#portal-navigation).
 
 See [ADR 16](../decisions/16-agent-identity-pattern.md) for design rationale. The `DefaultAzureCredential` chain already includes `WorkloadIdentityCredential` — consumer code is unchanged at cutover.
 
@@ -125,7 +127,7 @@ Expected: a single resource group — `homelab-rg` — returned.
 
 ## Rotate
 
-When the credential approaches its 90-day expiry, run the rotation script. The SP object ID is preserved; only the client_secret rotates.
+When the credential approaches its 90-day expiry, run the rotation script. The AppId and SP object ID are preserved; only the client_secret rotates.
 
 ```powershell
 scripts/Rotate-HomelabOcAgentAzSp.ps1
@@ -135,9 +137,22 @@ ansible-playbook ansible/workloads/opencode/opencode-playbook.yml
 
 The script:
 - Looks up the SP by display name; fails if it doesn't exist.
-- Generates a new credential with 90-day expiry.
+- Generates a new 90-day App credential via `New-AzADAppCredential`.
 - Updates `opencode-homelab-sp-client-secret` in `homelab-bysxdb-kv`.
 - Prints confirmation (no secret values logged).
+
+The new credential appears in the portal under **Microsoft Entra ID → App registrations → homelab-oc-agent-sp → Certificates & secrets**. Previous credentials remain listed until they expire or are manually removed.
+
+## Portal navigation
+
+Credentials are stored on the App Registration, not the Service Principal (Enterprise Application). To view them:
+
+1. In the Azure portal, go to **Microsoft Entra ID → App registrations → All applications**.
+2. Search for `homelab-oc-agent-sp`.
+3. Select **Certificates & secrets** in the left nav.
+4. All client secrets (bootstrap and rotated) are listed under **Client secrets**.
+
+> The Enterprise Application blade (`Enterprise applications → homelab-oc-agent-sp`) shows the SP's roles, owners, and sign-in logs — but does not show credentials. Credentials always live on the App Registration.
 
 ---
 
