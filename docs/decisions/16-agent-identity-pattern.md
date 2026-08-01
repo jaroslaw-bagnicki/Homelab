@@ -1,7 +1,7 @@
 # Non-Interactive Agent Workload Identity Pattern
 
 **Date:** 2026-06-28
-**Last revised:** 2026-07-26
+**Last revised:** 2026-08-01
 **Status:** Implemented
 
 ---
@@ -38,7 +38,7 @@ A Service Principal with a client_secret is the right identity primitive for a w
 
 ### History of the pattern
 
-The pattern was originally scoped to the Codespaces workflow (one project-wide SP for any Codespaces-resident workload that touched Azure). That specific SP — `homelab-codespaces-sp` — was never actually created: Codespaces became an emergency-only environment (per ADR 17's narrower scope) and the SP-for-Codespaces implementation was deferred indefinitely. The **pattern** itself was sound and was re-applied to the OpenCode on Cloudlab workload via #40, where the first per-instance SP (`azure-sp-homelab`, `azure-sp-prospera`) is in flight. When the homelab k3s cluster lands (ADR 22), the pattern is replaced for cluster-resident workloads by UAMI Workload Identity per ServiceAccount.
+The pattern was originally scoped to the Codespaces workflow (one project-wide SP for any Codespaces-resident workload that touched Azure). That specific SP — `homelab-codespaces-sp` — was never actually created: Codespaces became an emergency-only environment (per ADR 17's narrower scope) and the SP-for-Codespaces implementation was deferred indefinitely. The **pattern** itself was sound and was re-applied to the OpenCode on Cloudlab workload via #40, where the first per-instance SPs (`opencode-homelab-sp-*` AKV triplet for `homelab-oc-agent-sp`; the deferred `prospera-oc` triplet) are in flight. When the homelab k3s cluster lands (ADR 22), the pattern is replaced for cluster-resident workloads by UAMI Workload Identity per ServiceAccount.
 
 ---
 
@@ -48,7 +48,7 @@ The pattern was originally scoped to the Codespaces workflow (one project-wide S
 
 | Substrate | Identity type | Secret material | Bootstrap tool |
 |---|---|---|---|
-| Docker Compose / Codespaces / bare host | Service Principal with client_secret in AKV | client_secret in AKV, fetched at deploy time | Az PowerShell (`Set-HomelabCodespacesSp.ps1`, per-instance variants) |
+| Docker Compose / Codespaces / bare host | Service Principal with client_secret in AKV | client_secret in AKV, fetched at deploy time | Az PowerShell (`Set-HomelabCodespacesSp.ps1` for the Codespaces SP; `Create-HomelabOcAgentAzSp.ps1` for the `homelab-oc` instance; per-instance variants per substrate) |
 | Kubernetes (per ADR 22) | UAMI Workload Identity per ServiceAccount | None — federated trust via OIDC | Az PowerShell (future UAMI bootstrap script) |
 
 The pattern's invariants, regardless of substrate:
@@ -67,8 +67,8 @@ The original SP implementation details are preserved here for historical context
 
 ### Identity and naming
 
-- **SP display name:** `homelab-codespaces-sp` (project-and-purpose, not tool-specific, so future reuse doesn't require a rename). Per-instance variants follow the `<project>-<substrate>-sp` pattern (e.g., `homelab-opencode-sp`, `prospera-opencode-sp`).
-- **KV secret names:** `codespaces-sp-tenant-id`, `codespaces-sp-client-id`, `codespaces-sp-client-secret` — kebab-case, matching the existing `cloudlab-vps-key-priv` convention. Per-instance variants follow `<scope>-sp-tenant-id`, `<scope>-sp-client-id`, `<scope>-sp-client-secret`.
+- **SP display name:** `homelab-codespaces-sp` (project-and-purpose, not tool-specific, so future reuse doesn't require a rename). Per-instance OpenCode variants follow the `<project>-<substrate>-<role>-sp` pattern (e.g., `homelab-oc-agent-sp`, `prospera-oc-agent-sp`).
+- **KV secret names:** `codespaces-sp-tenant-id`, `codespaces-sp-client-id`, `codespaces-sp-client-secret` — kebab-case, matching the existing `cloudlab-vps-key-priv` convention. Per-instance OpenCode variants use the `opencode-<instance-name>-sp-{tenant-id,client-id,client-secret}` pattern (literal: prefix `opencode-` + instance name + `-sp-` + the three suffixes). The same name layout will be used by the future UAMI bootstrap script (`Set-HomelabOpencodeUami.ps1` per #44), so consumer code is unchanged at cutover.
 - **Container env var names:** `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET` — fixed by the Azure Identity SDK's `EnvironmentCredential` contract.
 
 ### Scope and credentials
@@ -77,12 +77,13 @@ The original SP implementation details are preserved here for historical context
   - `Contributor` on the workload's target resource group (control plane) — needed for the agent to create and modify Azure resources.
   - `Key Vault Secrets User` on `homelab-bysxdb-kv` (data plane) — separate from the control-plane role. Required so the workload can read project secrets the same way an interactive `Az` session does.
 - **Credential type:** Client secret (password credential), not a certificate. The Microsoft Graph Bicep extension v1.0 GA does not expose the `addPassword` action as a Bicep resource (issue #38 closed as "Not planned"), so a Bicep-only path was rejected in favour of the simpler Az PowerShell route.
-- **Default lifetime:** 365 days; rotated by re-running the same script.
+- **Credential storage:** Credentials are added to the **App Registration** (portal-visible under *Certificates & secrets*), not the Service Principal object (Enterprise Application). Both the bootstrap and rotation scripts use `New-AzADAppCredential`. The Service Principal object (`New-AzADSpCredential`) also accepts credentials and they work identically for OAuth2 — but they are invisible in the portal. The App path gives a single pane of glass for credential inventory.
+- **Default lifetime:** 90 days for app-created credentials (rotation + explicit bootstrap). The auto-generated credential from `New-AzADServicePrincipal` defaults to 365 days (cmdlet default) and is discarded at bootstrap — only the 90-day App credential is stored in AKV. The `Create-*` SP bootstrap scripts (per the per-instance OpenCode SPs) are **one-shot create** — they exit if the SP already exists and do not rotate on re-run. Rotation is delegated to a sibling `Rotate-*` script (e.g. `scripts/Rotate-HomelabOcAgentAzSp.ps1` for `homelab-oc`) that preserves the SP object ID. The historical `Set-HomelabCodespacesSp.ps1` is `Set-*` and idempotent (rotates on re-run); the verb choice encodes the create-vs-rotate contract.
 
 ### Bootstrap tool
 
-- **Azure PowerShell only** — `New-AzADServicePrincipal` + `New-AzADSpCredential` + `New-AzRoleAssignment` (control plane on the RG + data plane on the KV) + `Set-AzKeyVaultSecret`. No Azure CLI (project rule: "Always use Az PowerShell — never Azure CLI"). No Microsoft Graph SDK install needed.
-- Script: `scripts/Set-HomelabCodespacesSp.ps1` (PowerShell verb-noun convention, matching `Import-SshKey.ps1` and `Get-ArcClientSecret.ps1`).
+- **Azure PowerShell only** — `New-AzADServicePrincipal` + `New-AzADAppCredential` + `New-AzRoleAssignment` (control plane on the RG + data plane on the KV) + `Set-AzKeyVaultSecret`. No Azure CLI (project rule: "Always use Az PowerShell — never Azure CLI"). No Microsoft Graph SDK install needed.
+- Scripts: `scripts/Set-HomelabCodespacesSp.ps1` (Codespaces SP, the original `Set-*` idempotent pattern — rotates on re-run) and `scripts/Create-HomelabOcAgentAzSp.ps1` (per-instance for the `homelab-oc` OpenCode container, the live `Create-*` one-shot pattern — exits if the SP exists). The `Create-*` script is parameterless: tenant, subscription, RG, and KV are derived from the current `Az` context and hardcoded resource names. Flow on a fresh run: check SP existence (exit if present) → validate RG + KV existence → create SP with `Contributor` on the RG via `-Role` + `-Scope` → discard the auto-generated credential and create a 90-day credential on the App Registration via `New-AzADAppCredential` → write 3 secrets with `-Expires $endDate` → grant `Key Vault Secrets User` on the KV → print confirmation (no secret values). Rotation is a separate `Rotate-HomelabOcAgentAzSp.ps1` script that preserves the SP object ID and also uses `New-AzADAppCredential`.
 
 ### MCP transport and runtime (for Azure MCP consumer workloads)
 
