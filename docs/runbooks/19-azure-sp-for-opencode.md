@@ -74,7 +74,17 @@ az login --use-device-code
 
 > You cannot reuse the Az PowerShell token for Azure CLI.
 
-### Step 4 — Re-run the workload playbook
+### Step 4 — Validate pre-requisites
+
+Run the pre-flight check to confirm Azure CLI auth, Python package compatibility, and SSH connectivity are all healthy:
+
+```bash
+scripts/Validate-PlaybookPrereqs.ps1
+```
+
+Fix any `FAIL` items before continuing.
+
+### Step 5 — Re-run the workload playbook
 
 The role fetches the 3 AKV secrets at deploy time and injects them as container env vars. The container restarts on env change.
 
@@ -137,6 +147,7 @@ The script:
 |---|---|
 | `scripts/Create-HomelabOcAgentAzSp.ps1` | NEW — bootstrap script |
 | `scripts/Rotate-HomelabOcAgentAzSp.ps1` | NEW — credential rotation script |
+| `scripts/Validate-PlaybookPrereqs.ps1` | NEW — pre-flight validation |
 | `ansible/host_vars/cloudlab.yml` | EDIT — adds `azure_sp: true` to the homelab instance |
 | `ansible/workloads/opencode/docker_opencode_instances/defaults/main.yml` | EDIT — 3 secret-name templates |
 | `ansible/workloads/opencode/docker_opencode_instances/tasks/provision_instance.yml` | EDIT — optional SP credential fetch + env-var injection |
