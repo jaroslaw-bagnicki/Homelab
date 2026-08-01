@@ -104,6 +104,7 @@
     instance_azure_client_id: "{{ lookup('azure.azcollection.azure_keyvault_secret', client_id_secret, vault_url=vault_url) }}"
     instance_azure_client_secret: "{{ lookup('azure.azcollection.azure_keyvault_secret', client_credential_secret, vault_url=vault_url) }}"
   delegate_to: localhost
+  delegate_facts: true
   no_log: true
   become: false
   when: instance.azure_sp | default(false)

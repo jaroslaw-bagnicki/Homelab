@@ -24,8 +24,11 @@ See [ADR 16](../decisions/16-agent-identity-pattern.md) for design rationale. Th
 
 ## Prerequisites
 
-- Owner on the subscription.
-- PowerShell 7 with the `Az` module loaded.
+Run this runbook from an **interactive user session** on your local machine, signed into Az PowerShell. You need:
+
+- **Azure RBAC:** `Owner` on the target subscription.
+- **Entra ID role:** `Application Administrator` or `Cloud Application Administrator`.
+- **PowerShell 7** with the `Az` module loaded.
 
 ---
 
