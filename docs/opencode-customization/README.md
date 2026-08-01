@@ -22,7 +22,7 @@ The workstream is split into sub-issues so each layer can land and be reviewed i
 | 1 | Per-project container images | #38 | Open |
 | 2 | Workspace + repo cloning | #39 | Open |
 | 3 | Per-instance Azure SP | #40 ← this PR | Open |
-| 4 | MCP server configuration | #41 | Blocked by #43 |
+| 4 | MCP server configuration | #41 | Blocked by Alpine + #44 |
 | 5 | GitHub App identity for GitHub MCP | #43 | Open |
 | 6 | Substrate migration (Compose → k3s + Arc) | #44 | Open |
 
