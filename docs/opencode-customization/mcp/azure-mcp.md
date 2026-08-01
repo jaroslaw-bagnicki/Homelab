@@ -4,7 +4,7 @@
 
 | | |
 |---|---|
-| **MCP package** | [`@azure/mcp`](https://www.npmjs.com/package/@azure/mcp) |
+| **MCP packages** | PyPI: [`msmcp-azure`](https://pypi.org/project/msmcp-azure/) (recommended) · npm: [`@azure/mcp`](https://www.npmjs.com/package/@azure/mcp) |
 | **Transport** | Local stdio only (`type: "local"`) |
 | **Used by** | `homelab-oc` (has dedicated SP), can be enabled for any instance |
 
@@ -16,6 +16,17 @@ Azure MCP runs as a **local** stdio process inside the container. No remote endp
 |---|---|---|
 | Local (`type: "local"`) | Yes | Primary mode; the MCP server is spawned as a child process |
 | Remote (`type: "remote"`) | No | No hosted Azure MCP endpoint exists |
+
+### Runtime prerequisite
+
+The Azure MCP server needs a runtime to launch. The default `ghcr.io/anomalyco/opencode:latest` container includes neither Node.js nor Python/uv. The runtime must be added to the per-instance custom image (see [container images issue #38](https://github.com/jaroslaw-bagnicki/Homelab/issues/38)).
+
+| Runtime | Package | Command | Container dependency |
+|---|---|---|---|
+| **`uvx`** (recommended) | `msmcp-azure` (PyPI) | `["uvx", "--from", "msmcp-azure", "azmcp", "server", "start"]` | `uv` (~16 MB) + Python 3.10+ |
+| `npx` (alternative) | `@azure/mcp` (npm) | `["npx", "-y", "@azure/mcp@latest", "server", "start"]` | Node.js + npm (~70 MB) |
+
+`uvx` is preferred: the PyPI wheel is a pre-compiled binary — no dependency resolution at startup, just download and run. `npx` is known to be problematic in the OC container because Node.js frequently isn't available and npm installs add cold-start latency.
 
 ## Authentication methods
 
@@ -71,15 +82,27 @@ All fields for `type: "local"` MCP servers:
 
 ### `command`
 
-The canonical command is:
+The recommended command uses `uvx` with the PyPI package:
+
+```
+["uvx", "--from", "msmcp-azure", "azmcp", "server", "start"]
+```
+
+- `uvx` is the tool runner from [`uv`](https://docs.astral.sh/uv/) — lightweight, no Node.js dependency
+- `--from msmcp-azure` pulls the latest pre-compiled wheel from PyPI
+- `azmcp server start` is the MCP stdio transport entrypoint
+- Pin to a specific version with `msmcp-azure==2.0.5`
+
+<details>
+<summary>Alternative: npx (npm) — known issues</summary>
 
 ```
 ["npx", "-y", "@azure/mcp@latest", "server", "start"]
 ```
 
-- `npx -y` skips the install confirmation prompt in headless containers
-- `@azure/mcp@latest` pins to latest (or lock to a specific version e.g. `@azure/mcp@1.0.0`)
-- `server start` is the subcommand that starts the MCP stdio transport
+This path requires Node.js + npm inside the container, which is **not present** in the default `ghcr.io/anomalyco/opencode:latest` image. Even when Node.js is available, `npx` adds cold-start latency from npm dependency resolution. Use `uvx` unless you specifically need the npm package variant.
+
+</details>
 
 ### `environment`
 
@@ -108,7 +131,7 @@ Additional optional vars:
   "mcp": {
     "azure-mcp": {
       "type": "local",
-      "command": ["npx", "-y", "@azure/mcp@latest", "server", "start"],
+      "command": ["uvx", "--from", "msmcp-azure", "azmcp", "server", "start"],
       "enabled": true
     }
   }
@@ -124,7 +147,7 @@ This works as long as `az login` has been run inside the container and the token
   "mcp": {
     "azure-mcp": {
       "type": "local",
-      "command": ["npx", "-y", "@azure/mcp@latest", "server", "start"],
+      "command": ["uvx", "--from", "msmcp-azure", "azmcp", "server", "start"],
       "enabled": true,
       "environment": {
         "AZURE_TENANT_ID":     "{env:AZURE_TENANT_ID}",
@@ -136,6 +159,8 @@ This works as long as `az login` has been run inside the container and the token
 }
 ```
 
+The SP env vars are injected by Ansible at deploy time (see [Credential injection](#credential-injection-homelab)).
+
 ### Production with version pin
 
 ```jsonc
@@ -143,7 +168,7 @@ This works as long as `az login` has been run inside the container and the token
   "mcp": {
     "azure-mcp": {
       "type": "local",
-      "command": ["npx", "-y", "@azure/mcp@1.2.3", "server", "start"],
+      "command": ["uvx", "--from", "msmcp-azure==2.0.5", "azmcp", "server", "start"],
       "enabled": true,
       "environment": {
         "AZURE_TENANT_ID":     "{env:AZURE_TENANT_ID}",
@@ -164,12 +189,33 @@ For instances like `prospera-oc` or `test-oc` that don't interact with Azure:
   "mcp": {
     "azure-mcp": {
       "type": "local",
-      "command": ["npx", "-y", "@azure/mcp@latest", "server", "start"],
+      "command": ["uvx", "--from", "msmcp-azure", "azmcp", "server", "start"],
       "enabled": false
     }
   }
 }
 ```
+
+### Alternative: npx (npm)
+
+```jsonc
+{
+  "mcp": {
+    "azure-mcp": {
+      "type": "local",
+      "command": ["npx", "-y", "@azure/mcp@latest", "server", "start"],
+      "enabled": true,
+      "environment": {
+        "AZURE_TENANT_ID":     "{env:AZURE_TENANT_ID}",
+        "AZURE_CLIENT_ID":     "{env:AZURE_CLIENT_ID}",
+        "AZURE_CLIENT_SECRET": "{env:AZURE_CLIENT_SECRET}"
+      }
+    }
+  }
+}
+```
+
+Requires Node.js + npm in the container image. Not recommended for new setups.
 
 ## Credential injection (Homelab)
 
@@ -185,8 +231,11 @@ Credentials are never written to disk inside the container. Rotation is via `scr
 
 ## Troubleshooting
 
+**`uvx` / `npx` command not found in container:**
+The default `ghcr.io/anomalyco/opencode:latest` image includes neither `uv` nor Node.js. Install `uv` in the custom per-instance Docker image (see [container images issue #38](https://github.com/jaroslaw-bagnicki/Homelab/issues/38)). Until the custom image is built, use `az login --use-device-code` as bootstrap inside the container.
+
 **Azure MCP tools not appearing:**
-Check that the MCP server process is running. Local stdio MCP servers must start successfully for their tools to register. Look for `npx`/npm errors in the OpenCode server logs.
+Check that the MCP server process starts successfully. For `uvx`, verify `uv` is available and the `azmcp server start` subcommand exits cleanly. For `npx`, check for npm install errors and missing Node.js. Look at the OpenCode server logs for MCP startup failures.
 
 **`az login` works but Azure MCP doesn't:**
 The `DefaultAzureCredential` chain tries `EnvironmentCredential` first. If `AZURE_TENANT_ID` is set but the other two vars are empty, auth will fail before falling back to `AzureCliCredential`. Remove the env vars or set all three together.
