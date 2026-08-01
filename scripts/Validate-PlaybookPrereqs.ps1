@@ -38,8 +38,8 @@ if ($LASTEXITCODE -eq 0 -and $cacheCheck -match '^[a-f0-9\-]+$') {
   Fail "Azure CLI credentials unreadable" "Run: pip install --break-system-packages 'msal>=1.31' 'msal-extensions>=1.2', then az login --use-device-code"
 }
 
-# 3. azure.azcollection deps importable
-$depCheck = python3 -c 'import azure.storage.fileshare, azure.mgmt.resource, azure.identity; print("OK")' 2>&1
+# 3. azure.azcollection deps importable (Ansible SDK, separate from Azure CLI)
+$depCheck = python3 -c 'import azure.identity; print("OK")' 2>&1
 if ($depCheck -match '^OK') {
   Ok "azure.azcollection deps OK"
 } else {
