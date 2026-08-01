@@ -46,6 +46,15 @@ Consumer code path: Azure SDK + Azure MCP read the three env vars via `DefaultAz
 
 MCP server config pre-baked into each per-project image as `opencode.jsonc`. Azure MCP authenticates via the §3 SP. GitHub MCP authenticates via the §5 GitHub App. (Initially scoped to per-instance SSH deploy keys from §2; superseded by §5.)
 
+#### MCP configuration guides
+
+Per-MCP reference docs covering all transport options, authentication methods, bootstrap CLI bridges, full config matrices, per-instance examples, credential injection paths, and troubleshooting.
+
+| MCP Server | Guide | Transport | Auth |
+|---|---|---|---|
+| Azure | [mcp/azure-mcp.md](mcp/azure-mcp.md) | Local stdio | SP client secret, `DefaultAzureCredential`, `az login` bootstrap |
+| GitHub | [mcp/github-mcp.md](mcp/github-mcp.md) | Remote + local stdio | PAT, OAuth, GitHub App installation tokens, `gh auth login` bootstrap |
+
 ### 5. GitHub App identity (#43)
 
 One GitHub App per project (one for Homelab, one for Prospera). Replaces personal PAT in `opencode.json`. GitHub MCP switches from remote HTTP to local stdio transport (the remote MCP does not support App auth). Git clone/push uses installation tokens via `https://x-access-token:...` — drops the SSH deploy key path from §2.
