@@ -200,3 +200,4 @@ Set `AZURE_SUBSCRIPTION_ID` in the MCP environment block, or ensure the SP has a
 ## References
 
 - [OpenCode MCP servers documentation](https://opencode.ai/docs/mcp-servers/) — official guide for local and remote MCP servers
+- [Azure MCP server (GitHub)](https://github.com/Azure/mcp) — official Azure MCP server registry and guidance

@@ -273,3 +273,5 @@ GitHub fine-grained PATs have a configurable expiry (default: 7 days, max: 2 yea
 ## References
 
 - [OpenCode MCP servers documentation](https://opencode.ai/docs/mcp-servers/) — official guide for local and remote MCP servers
+- [About MCP (GitHub Docs)](https://docs.github.com/en/copilot/concepts/context/mcp) — official GitHub MCP overview and setup guides
+- [GitHub MCP server (GitHub)](https://github.com/github/github-mcp-server) — source repository for the GitHub MCP server
