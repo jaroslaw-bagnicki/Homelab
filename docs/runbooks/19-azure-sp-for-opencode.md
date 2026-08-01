@@ -39,7 +39,7 @@ Run this runbook from an **interactive user session** on your local machine, sig
 From the repo root, in a PowerShell session with the `Az` module loaded:
 
 ```powershell
-Connect-AzAccount -Tenant example.com -Subscription <sub-id> -UseDeviceAuthentication
+Connect-AzAccount -UseDeviceAuthentication
 scripts/Create-HomelabOcAgentAzSp.ps1
 ```
 
@@ -64,7 +64,17 @@ opencode_instances:
   - name: test
 ```
 
-### Step 3 — Re-run the workload playbook
+### Step 3 — Authenticate Azure CLI for Ansible
+
+Ansible's `azure.azcollection` modules authenticate via the Azure CLI token cache, which is separate from the Az PowerShell cache. You must run `az login` even if you already logged in with `Connect-AzAccount`.
+
+```bash
+az login --use-device-code
+```
+
+> You cannot reuse the Az PowerShell token for Azure CLI.
+
+### Step 4 — Re-run the workload playbook
 
 The role fetches the 3 AKV secrets at deploy time and injects them as container env vars. The container restarts on env change.
 
@@ -86,14 +96,11 @@ docker exec opencode-homelab printenv | grep AZURE_
 
 ### Azure PowerShell login as the SP
 
-```bash
-docker exec -it opencode-homelab pwsh
-PS> (Get-AzContext).Account
-# Expect: Type=ServicePrincipal, Id=<the SP's appId>
-PS> Get-AzRoleAssignment -ServicePrincipalName (Get-AzContext).Account.Id
+The `ghcr.io/anomalyco/opencode:latest` image does not include PowerShell. If you need to verify the SP from inside the container, use the Azure SDK credential chain instead. Alternatively, verify from the host or Codespace:
+
+```powershell
+Get-AzRoleAssignment -ServicePrincipalName <SP-appId>
 # Expect: RoleDefinitionName=Contributor, Scope ends with /resourceGroups/homelab-rg
-PS> Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name cloudlab-vps-key-priv -AsPlainText | Select-Object -First 1
-# Expect: a multi-line SSH private key, NOT a Forbidden error
 ```
 
 ### Azure MCP
@@ -112,6 +119,7 @@ When the credential approaches its 90-day expiry, run the rotation script. The S
 
 ```powershell
 scripts/Rotate-HomelabOcAgentAzSp.ps1
+az login --use-device-code
 ansible-playbook ansible/workloads/opencode/opencode-playbook.yml
 ```
 
