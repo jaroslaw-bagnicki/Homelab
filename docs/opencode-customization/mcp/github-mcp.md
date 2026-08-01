@@ -269,3 +269,7 @@ For remote MCP, the server must return a valid tool list on the first request. F
 
 **PAT expired:**
 GitHub fine-grained PATs have a configurable expiry (default: 7 days, max: 2 years). Classic PATs can be set to never expire. Rotate via GitHub Settings → Developer settings → Personal access tokens.
+
+## References
+
+- [OpenCode MCP servers documentation](https://opencode.ai/docs/mcp-servers/) — official guide for local and remote MCP servers

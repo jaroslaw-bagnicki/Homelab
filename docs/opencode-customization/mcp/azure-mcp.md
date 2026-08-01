@@ -196,3 +196,7 @@ SP secrets have a 90-day default lifetime. Run `scripts/Rotate-HomelabOcAgentAzS
 
 **"No subscription found" errors:**
 Set `AZURE_SUBSCRIPTION_ID` in the MCP environment block, or ensure the SP has access to at least one subscription.
+
+## References
+
+- [OpenCode MCP servers documentation](https://opencode.ai/docs/mcp-servers/) — official guide for local and remote MCP servers
