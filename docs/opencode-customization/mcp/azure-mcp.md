@@ -5,21 +5,19 @@
 | | |
 |---|---|
 | **MCP packages** | PyPI: [`msmcp-azure`](https://pypi.org/project/msmcp-azure/) (recommended) · npm: [`@azure/mcp`](https://www.npmjs.com/package/@azure/mcp) |
-| **Transport** | Local stdio only (`type: "local"`) |
+| **Transport** | Remote HTTP via k3s sidecar (pending [#44](https://github.com/jaroslaw-bagnicki/Homelab/issues/44)) |
 | **Used by** | `homelab-oc` (has dedicated SP), can be enabled for any instance |
 
 ## Transport
 
-Azure MCP runs as a **local** stdio process inside the container. No remote endpoint is available.
+Azure MCP is deployed as a **remote** HTTP server running in a glibc-based sidecar container co-located with the OC instance.
 
 | Transport | Supported? | Notes |
 |---|---|---|
-| Local (`type: "local"`) | Yes | Primary mode; the MCP server is spawned as a child process |
-| Remote (`type: "remote"`) | No | No hosted Azure MCP endpoint exists |
+| Remote (`type: "remote"`) | Planned ([#44](https://github.com/jaroslaw-bagnicki/Homelab/issues/44)) | `azmcp` sidecar in the same k3s pod, reachable via `localhost` |
+| Local (`type: "local"`) | No — blocked | Both `msmcp-azure` and `@azure/mcp` ship a glibc binary incompatible with Alpine (musl) |
 
 ### Runtime prerequisite
-
-The Azure MCP server needs a runtime to launch. The default `ghcr.io/anomalyco/opencode:latest` container includes neither Node.js nor Python/uv. The runtime must be added to the per-instance custom image (see [container images issue #38](https://github.com/jaroslaw-bagnicki/Homelab/issues/38)).
 
 | Runtime | Package | Command | Container dependency |
 |---|---|---|---|
@@ -73,116 +71,48 @@ The Cloudlab VPS is enrolled in Azure Arc and has a system-assigned Managed Iden
 
 ## Configuration reference
 
-All fields for `type: "local"` MCP servers:
+All fields for `type: "remote"` MCP servers:
 
 | Field | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `type` | string | Yes | — | Must be `"local"` |
-| `command` | string[] | Yes | — | Command and arguments to start the MCP server |
+| `type` | string | Yes | — | Must be `"remote"` |
+| `url` | string | Yes | — | URL of the Azure MCP sidecar (`http://azmcp-<instance>:PORT/mcp`) |
 | `enabled` | boolean | No | `false` | Enable on startup |
-| `environment` | object | No | — | Env vars passed to the MCP process |
 | `timeout` | number | No | `5000` | Timeout (ms) for fetching tools |
-| `cwd` | string | No | workspace | Working directory for the process |
 
-### `command`
+### `url`
 
-The recommended command uses `uvx` with the PyPI package:
-
-```
-["uvx", "--from", "msmcp-azure", "azmcp", "server", "start"]
-```
-
-- `uvx` is the tool runner from [`uv`](https://docs.astral.sh/uv/) — lightweight, no Node.js dependency
-- `--from msmcp-azure` pulls the latest pre-compiled wheel from PyPI
-- `azmcp server start` is the MCP stdio transport entrypoint
-- Pin to a specific version with `msmcp-azure==2.0.5`
-
-<details>
-<summary>Alternative: npx (npm) — known issues</summary>
+Under k3s, the Azure MCP sidecar runs in the same pod — reachable at `localhost`:
 
 ```
-["npx", "-y", "@azure/mcp@latest", "server", "start"]
+http://localhost:52117/mcp
 ```
 
-This path requires Node.js + npm inside the container, which is **not present** in the default `ghcr.io/anomalyco/opencode:latest` image. Even when Node.js is available, `npx` adds cold-start latency from npm dependency resolution. Use `uvx` unless you specifically need the npm package variant.
+No DNS, no service discovery needed. The port is configured in the sidecar container spec.
 
-</details>
+### SP credentials
 
-### `environment`
-
-The three SP credential vars are the minimum for non-interactive auth:
-
-```json
-{
-  "AZURE_TENANT_ID":     "{env:AZURE_TENANT_ID}",
-  "AZURE_CLIENT_ID":     "{env:AZURE_CLIENT_ID}",
-  "AZURE_CLIENT_SECRET": "{env:AZURE_CLIENT_SECRET}"
-}
-```
-
-`{env:VARIABLE}` resolves from the container's environment at runtime — Ansible injects these as `docker run -e` args.
-
-Additional optional vars:
-- `AZURE_SUBSCRIPTION_ID` — if the SP has access to multiple subscriptions
-- `AZURE_AUTHORITY_HOST` — for sovereign clouds (defaults to `https://login.microsoftonline.com`)
+Credentials are injected into the **sidecar container**, not the OC instance. Under k3s + Workload Identity ([#44](https://github.com/jaroslaw-bagnicki/Homelab/issues/44)), no secrets are needed — the sidecar authenticates via federated identity. Until then, SP env vars are injected into the sidecar container spec from Azure Key Vault, same pattern as the [current Compose-era path](#credential-injection-homelab).
 
 ## Examples
 
-### Minimal (relies on ambient CLI auth)
+> Azure MCP is currently **disabled** pending k3s migration. The config below is the target state.
+
+### Production (k3s, post-#44)
 
 ```jsonc
 {
   "mcp": {
     "azure-mcp": {
-      "type": "local",
-      "command": ["uvx", "--from", "msmcp-azure", "azmcp", "server", "start"],
+      "type": "remote",
+      "url": "http://localhost:52117/mcp",
       "enabled": true
     }
   }
 }
 ```
 
-This works as long as `az login` has been run inside the container and the token is still fresh.
-
-### Production (SP credentials via env vars)
-
-```jsonc
-{
-  "mcp": {
-    "azure-mcp": {
-      "type": "local",
-      "command": ["uvx", "--from", "msmcp-azure", "azmcp", "server", "start"],
-      "enabled": true,
-      "environment": {
-        "AZURE_TENANT_ID":     "{env:AZURE_TENANT_ID}",
-        "AZURE_CLIENT_ID":     "{env:AZURE_CLIENT_ID}",
-        "AZURE_CLIENT_SECRET": "{env:AZURE_CLIENT_SECRET}"
-      }
-    }
-  }
-}
-```
-
-The SP env vars are injected by Ansible at deploy time (see [Credential injection](#credential-injection-homelab)).
-
-### Production with version pin
-
-```jsonc
-{
-  "mcp": {
-    "azure-mcp": {
-      "type": "local",
-      "command": ["uvx", "--from", "msmcp-azure==2.0.5", "azmcp", "server", "start"],
-      "enabled": true,
-      "environment": {
-        "AZURE_TENANT_ID":     "{env:AZURE_TENANT_ID}",
-        "AZURE_CLIENT_ID":     "{env:AZURE_CLIENT_ID}",
-        "AZURE_CLIENT_SECRET": "{env:AZURE_CLIENT_SECRET}"
-      }
-    }
-  }
-}
-```
+The sidecar shares the pod network namespace — `localhost` is the same container. No auth headers needed; the sidecar handles `DefaultAzureCredential` internally.
 
 ### Per-instance: disabled for non-Azure instances
 
@@ -192,34 +122,13 @@ For instances like `prospera-oc` or `test-oc` that don't interact with Azure:
 {
   "mcp": {
     "azure-mcp": {
-      "type": "local",
-      "command": ["uvx", "--from", "msmcp-azure", "azmcp", "server", "start"],
+      "type": "remote",
+      "url": "http://localhost:52117/mcp",
       "enabled": false
     }
   }
 }
 ```
-
-### Alternative: npx (npm)
-
-```jsonc
-{
-  "mcp": {
-    "azure-mcp": {
-      "type": "local",
-      "command": ["npx", "-y", "@azure/mcp@latest", "server", "start"],
-      "enabled": true,
-      "environment": {
-        "AZURE_TENANT_ID":     "{env:AZURE_TENANT_ID}",
-        "AZURE_CLIENT_ID":     "{env:AZURE_CLIENT_ID}",
-        "AZURE_CLIENT_SECRET": "{env:AZURE_CLIENT_SECRET}"
-      }
-    }
-  }
-}
-```
-
-Requires Node.js + npm in the container image. Not recommended for new setups.
 
 ## Credential injection (Homelab)
 
