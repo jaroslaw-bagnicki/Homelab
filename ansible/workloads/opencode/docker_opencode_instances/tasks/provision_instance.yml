@@ -109,6 +109,41 @@
   become: false
   when: instance.azure_sp | default(false)
 
+- name: Check GH PAT exists in Key Vault for {{ instance.name }}
+  vars:
+    vault_uri: "https://{{ opencode_keyvault_name }}.vault.azure.net"
+    pat_secret: "{{ opencode_gh_pat_secret_template | format(instance.name) }}"
+  azure.azcollection.azure_rm_keyvaultsecret_info:
+    vault_uri: "{{ vault_uri }}"
+    name: "{{ pat_secret }}"
+  register: gh_pat_check
+  delegate_to: localhost
+  become: false
+  failed_when: false
+  when: instance.gh_pat | default(false)
+
+- name: Fail if GH PAT secret is missing in Key Vault for {{ instance.name }}
+  ansible.builtin.fail:
+    msg: >-
+      GH PAT for '{{ instance.name }}' not found in {{ opencode_keyvault_name }}.
+      Secret name: {{ opencode_gh_pat_secret_template | format(instance.name) }}.
+      Create the secret in Key Vault first, then re-run the workload playbook.
+  when:
+    - instance.gh_pat | default(false)
+    - gh_pat_check.secrets | length == 0
+
+- name: Fetch GH PAT from Key Vault for {{ instance.name }}
+  vars:
+    vault_url: "https://{{ opencode_keyvault_name }}.vault.azure.net"
+    pat_secret: "{{ opencode_gh_pat_secret_template | format(instance.name) }}"
+  ansible.builtin.set_fact:
+    instance_gh_pat: "{{ lookup('azure.azcollection.azure_keyvault_secret', pat_secret, vault_url=vault_url) }}"
+  delegate_to: localhost
+  delegate_facts: true
+  no_log: true
+  become: false
+  when: instance.gh_pat | default(false)
+
 - name: Deploy container for {{ instance.name }}
   community.docker.docker_container:
     name: "opencode-{{ instance.name }}"
@@ -124,6 +159,7 @@
       AZURE_TENANT_ID: "{{ hostvars['localhost']['instance_azure_tenant_id'] if (instance.azure_sp | default(false)) else omit }}"
       AZURE_CLIENT_ID: "{{ hostvars['localhost']['instance_azure_client_id'] if (instance.azure_sp | default(false)) else omit }}"
       AZURE_CLIENT_SECRET: "{{ hostvars['localhost']['instance_azure_client_secret'] if (instance.azure_sp | default(false)) else omit }}"
+      GH_PAT: "{{ hostvars['localhost']['instance_gh_pat'] if (instance.gh_pat | default(false)) else omit }}"
     networks:
       - name: opencode_net
     volumes:
