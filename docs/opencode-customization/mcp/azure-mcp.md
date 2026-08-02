@@ -19,13 +19,6 @@ Azure MCP is deployed as a **remote** HTTP server running in a glibc-based sidec
 
 ### Runtime prerequisite
 
-| Runtime | Package | Command | Container dependency |
-|---|---|---|---|
-| **`uvx`** (recommended) | `msmcp-azure` (PyPI) | `["uvx", "--from", "msmcp-azure", "azmcp", "server", "start"]` | `uv` (~16 MB) + Python 3.10+ |
-| `npx` (alternative) | `@azure/mcp` (npm) | `["npx", "-y", "@azure/mcp@latest", "server", "start"]` | Node.js + npm (~70 MB) |
-
-`uvx` is preferred: the PyPI wheel is a pre-compiled binary — no dependency resolution at startup, just download and run. `npx` is known to be problematic in the OC container because Node.js frequently isn't available and npm installs add cold-start latency.
-
 > **Blocker ([#41](https://github.com/jaroslaw-bagnicki/Homelab/issues/41)): Azure MCP binary is glibc-compiled — incompatible with Alpine (musl).** Both npm (`@azure/mcp`) and PyPI (`msmcp-azure`) ship the same .NET publish binary. The OC container is Alpine-based; `gcompat` starts the binary but it hangs on all MCP requests. Resolution deferred to k3s migration ([#44](https://github.com/jaroslaw-bagnicki/Homelab/issues/44), per ADR 22): `azmcp` will run as a glibc-based sidecar container in the same Kubernetes pod as the OC instance, reachable via `localhost`. No Compose intermediate step. Azure MCP is disabled in `opencode.json` until #44 lands.
 > 
 > **Until k3s lands, use [Azure CLI device login](#bootstrap-azure-cli-device-login) as the only Azure access path.** `az login --use-device-code` provides interactive Azure access inside the OC container via `DefaultAzureCredential` → `AzureCliCredential`. Azure MCP tools are not available; `az` commands must be issued directly.
@@ -76,7 +69,7 @@ All fields for `type: "remote"` MCP servers:
 | Field | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `type` | string | Yes | — | Must be `"remote"` |
-| `url` | string | Yes | — | URL of the Azure MCP sidecar (`http://azmcp-<instance>:PORT/mcp`) |
+| `url` | string | Yes | — | URL of the Azure MCP sidecar (`http://localhost:PORT/mcp`) |
 | `enabled` | boolean | No | `false` | Enable on startup |
 | `timeout` | number | No | `5000` | Timeout (ms) for fetching tools |
 
@@ -144,11 +137,8 @@ Credentials are never written to disk inside the container. Rotation is via `scr
 
 ## Troubleshooting
 
-**`uvx` / `npx` command not found in container:**
-The default `ghcr.io/anomalyco/opencode:latest` image includes neither `uv` nor Node.js. Install `uv` in the custom per-instance Docker image (see [container images issue #38](https://github.com/jaroslaw-bagnicki/Homelab/issues/38)). Until the custom image is built, use `az login --use-device-code` as bootstrap inside the container.
-
-**Azure MCP tools not appearing:**
-Check that the MCP server process starts successfully. For `uvx`, verify `uv` is available and the `azmcp server start` subcommand exits cleanly. For `npx`, check for npm install errors and missing Node.js. Look at the OpenCode server logs for MCP startup failures.
+**Azure MCP is disabled pending k3s migration ([#44](https://github.com/jaroslaw-bagnicki/Homelab/issues/44)).**
+The `azmcp` binary is incompatible with Alpine (musl). Until k3s lands, use `az login --use-device-code` inside the OC container for interactive Azure access. Azure MCP tools are not available.
 
 **`az login` works but Azure MCP doesn't:**
 The `DefaultAzureCredential` chain tries `EnvironmentCredential` first. If `AZURE_TENANT_ID` is set but the other two vars are empty, auth will fail before falling back to `AzureCliCredential`. Remove the env vars or set all three together.

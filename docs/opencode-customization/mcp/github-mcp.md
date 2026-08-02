@@ -244,7 +244,7 @@ See [Managing MCP servers](https://opencode.ai/docs/mcp-servers/#manage) in the 
 Ensure the PAT has `repo` (classic) or `Contents: Read` + `Metadata: Read` (fine-grained) scopes on the target repositories.
 
 **GitHub MCP tools not appearing:**
-For remote MCP, the server must return a valid tool list on the first request. For local MCP, check that the stdio process starts successfully (npm install errors, missing env vars).
+The remote server at `api.githubcopilot.com` must return a valid tool list on the first request. If tools don't load, verify the PAT is valid and the container has outbound HTTPS access. Check the OpenCode server logs for MCP startup errors.
 
 **PAT expired:**
 GitHub fine-grained PATs have a configurable expiry (default: 7 days, max: 2 years). Classic PATs can be set to never expire. Rotate via GitHub Settings → Developer settings → Personal access tokens.
