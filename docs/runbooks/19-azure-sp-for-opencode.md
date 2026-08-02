@@ -167,7 +167,7 @@ Credentials are stored on the App Registration, not the Service Principal (Enter
 | `ansible/workloads/opencode/docker_opencode_instances/defaults/main.yml` | EDIT — 3 secret-name templates |
 | `ansible/workloads/opencode/docker_opencode_instances/tasks/provision_instance.yml` | EDIT — optional SP credential fetch + env-var injection |
 | `ansible/workloads/opencode/README.md` | EDIT — §Secrets describes the optional SP flow |
-| `docs/opencode-customization.md` | NEW — index of the OpenCode customization workstream |
+| `docs/opencode-customization/README.md` | NEW — index of the OpenCode customization workstream |
 | `docs/runbooks/19-azure-sp-for-opencode.md` | NEW — this runbook |
 | `docs/runbooks/README.md` | EDIT — adds row 19 |
 | `docs/decisions/16-agent-identity-pattern.md` | EDIT — naming + rotation policy |
@@ -181,4 +181,4 @@ Credentials are stored on the App Registration, not the Service Principal (Enter
 - [Runbook 17](17-deploy-opencode-on-cloudlab.md) — base deployment
 - [Runbook 18](18-provision-opencode-instance.md) — per-instance provisioning
 - [Workload README — OpenCode](../../ansible/workloads/opencode/README.md) — Ansible-side details
-- [OpenCode customization index](../opencode-customization.md) — workstream overview
+- [OpenCode customization index](../opencode-customization/README.md) — workstream overview
