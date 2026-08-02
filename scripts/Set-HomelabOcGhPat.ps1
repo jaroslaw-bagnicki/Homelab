@@ -12,11 +12,11 @@
 #     Contents: Read/Write, Issues: Read/Write, Pull requests: Read/Write,
 #     Metadata: Read, Workflows: Read/Write
 
-$ErrorActionPreference = 'Stop'
-
 param(
     [string]$InstanceName = 'homelab'
 )
+
+$ErrorActionPreference = 'Stop'
 
 $KeyVaultName = 'homelab-bysxdb-kv'
 $SecretName   = "opencode-$InstanceName-gh-pat"
