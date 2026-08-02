@@ -73,8 +73,7 @@ try {
 
 # -- 5. Upload to Azure Key Vault -------------------------------------
 Write-Host "Uploading PAT to Key Vault '$KeyVaultName'..."
-$secretValue = ConvertTo-SecureString -String $pat -AsPlainText -Force
-Set-AzKeyVaultSecret -VaultName $KeyVaultName -Name $SecretName -SecretValue $secretValue | Out-Null
+Set-AzKeyVaultSecret -VaultName $KeyVaultName -Name $SecretName -SecretValue $patSecure | Out-Null
 
 # -- 6. Confirmation (no secret value logged) -------------------------
 Write-Host ""
