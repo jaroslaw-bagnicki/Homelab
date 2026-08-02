@@ -48,15 +48,24 @@ The current production path. A fine-grained PAT or classic PAT is injected at de
 |---|---|
 | `GH_PAT` | Azure Key Vault → Ansible → container env (same pattern as [Azure SP](#credential-management-homelab)) |
 
-The PAT is referenced in the `Authorization` header of the remote MCP request:
+The PAT is referenced in the `Authorization` header of the remote MCP request. Full `opencode.json` config:
 
 ```jsonc
 {
-  "headers": {
-    "Authorization": "Bearer {env:GH_PAT}"
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "github-mcp": {
+      "type": "remote",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "headers": {
+        "Authorization": "Bearer {env:GH_PAT}"
+      }
+    }
   }
 }
 ```
+
+`GH_PAT` is injected from Azure Key Vault at deploy time by the Ansible workload playbook. To upload a PAT to Key Vault, run `scripts/Set-HomelabOcGhPat.ps1`.
 
 **Per ADR 17:** PAT auth is transitional. It ties operations to a personal identity rather than a workload identity. It will be replaced by GitHub App installation tokens when k3s lands ([#44](https://github.com/jaroslaw-bagnicki/Homelab/issues/44)), using the same sidecar pattern as Azure MCP.
 
