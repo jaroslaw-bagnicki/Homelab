@@ -46,8 +46,9 @@ try {
   Write-Host "(Could not open browser — navigate to the URL above manually)"
 }
 
-# -- 3. Prompt for the PAT --------------------------------------------
-$pat = Read-Host -Prompt "Paste the fine-grained PAT"
+# -- 3. Prompt for the PAT (masked input) ----------------------------
+$patSecure = Read-Host -AsSecureString -Prompt "Paste the fine-grained PAT"
+$pat = [System.Net.NetworkCredential]::new('', $patSecure).Password
 
 if ([string]::IsNullOrWhiteSpace($pat)) {
   throw "PAT cannot be empty. Aborting."
