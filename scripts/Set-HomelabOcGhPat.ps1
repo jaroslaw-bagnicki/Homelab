@@ -25,12 +25,13 @@ $TokenUrl     = "https://github.com/settings/personal-access-tokens/new"
 
 # -- 1. Secret existence check (idempotent unless -Force) ------------
 $existing = Get-AzKeyVaultSecret -VaultName $KeyVaultName -Name $SecretName -ErrorAction SilentlyContinue
-if ($existing -and -not $Force) {
-  Write-Warning "Secret '$SecretName' already exists in $KeyVaultName. Use -Force to overwrite."
-  exit 0
-}
-if ($existing -and $Force) {
-  Write-Warning "Secret '$SecretName' exists — overwriting due to -Force."
+if ($existing) {
+  if ($Force) {
+    Write-Warning "Secret '$SecretName' exists — overwriting due to -Force."
+  } else {
+    Write-Warning "Secret '$SecretName' already exists in $KeyVaultName. Use -Force to overwrite."
+    exit 0
+  }
 }
 
 # -- 2. Open GitHub PAT creation page ---------------------------------
