@@ -4,20 +4,20 @@
 
 | | |
 |---|---|
-| **MCP server** | [GitHub Copilot MCP](https://api.githubcopilot.com/mcp/) (remote) or `@modelcontextprotocol/server-github` (local) |
-| **Transport** | Remote (current) or Local stdio (future, per #43) |
+| **MCP server** | [GitHub Copilot MCP](https://api.githubcopilot.com/mcp/) (remote) · [github-mcp-server](https://github.com/github/github-mcp-server) (local) |
+| **Transport** | Remote HTTP (current) · Local sidecar via k3s (future, [#44](https://github.com/jaroslaw-bagnicki/Homelab/issues/44)) |
 | **Used by** | `homelab-oc`, `prospera-oc` |
 
 ## Transport
 
-GitHub MCP supports both remote and local transports. The choice depends on the authentication method.
+GitHub MCP runs as a **remote** HTTP server today. The future path moves to a local sidecar in the k3s pod — same architecture as Azure MCP.
 
 | Transport | Supported? | Auth methods | Notes |
 |---|---|---|---|
-| Remote (`type: "remote"`) | Yes — current | PAT, OAuth | Hosted by GitHub at `https://api.githubcopilot.com/mcp/` |
-| Local (`type: "local"`) | Yes — future (#43) | PAT, GitHub App installation token | Stdio process in the container; needed for GitHub App auth |
+| Remote (`type: "remote"`) | **Current** | PAT, OAuth | Hosted by GitHub at `https://api.githubcopilot.com/mcp/`. No local deps — works on Alpine. |
+| Local sidecar (`type: "remote"`) | Planned ([#44](https://github.com/jaroslaw-bagnicki/Homelab/issues/44)) | GitHub App installation token | `ghcr.io/github/github-mcp-server` as k3s sidecar in same pod. Go binary + Debian 12 base (glibc) — no Alpine blocker. |
 
-The **remote** MCP server does not support GitHub App authentication. Once #43 ships, the GitHub MCP switches to **local** stdio to use per-instance App installation tokens.
+The remote server does **not** support GitHub App authentication. GitHub App requires the local server. Until k3s lands, PAT on the remote server is the production path.
 
 ## Authentication methods
 
@@ -42,11 +42,11 @@ Follow the device-code prompt. After login, `gh` commands work immediately (`gh 
 
 ### PAT (personal access token) — remote
 
-The current production path. A fine-grained PAT or classic PAT is exposed as an environment variable:
+The current production path. A fine-grained PAT or classic PAT is injected at deploy time from Azure Key Vault:
 
-```
-GITHUB_TOKEN={env:GH_PAT}
-```
+| Variable | Source |
+|---|---|
+| `GH_PAT` | Azure Key Vault → Ansible → container env (same pattern as [Azure SP](#credential-management-homelab)) |
 
 The PAT is referenced in the `Authorization` header of the remote MCP request:
 
@@ -58,7 +58,7 @@ The PAT is referenced in the `Authorization` header of the remote MCP request:
 }
 ```
 
-**Per ADR 17:** PAT auth is transitional. It ties operations to a personal identity rather than a workload identity. It will be replaced by GitHub App installation tokens (#43).
+**Per ADR 17:** PAT auth is transitional. It ties operations to a personal identity rather than a workload identity. It will be replaced by GitHub App installation tokens when k3s lands ([#44](https://github.com/jaroslaw-bagnicki/Homelab/issues/44)), using the same sidecar pattern as Azure MCP.
 
 **PAT scope requirements:**
 - Fine-grained: repository-scoped, `Contents: Read/Write`, `Issues: Read/Write`, `Pull requests: Read/Write`, `Metadata: Read`
@@ -121,30 +121,29 @@ opencode mcp auth github-mcp
 }
 ```
 
-### GitHub App installation tokens — local (future, #43)
+### GitHub App installation tokens — k3s sidecar (future, #44)
 
-The long-term plan per #43. One GitHub App per project (`homelab-oc-app`, `prospera-oc-app`), each installed on its target repo. The MCP server runs as a **local** stdio process because the remote endpoint does not support App auth.
+The long-term plan. One GitHub App per project (`homelab-oc-app`, `prospera-oc-app`), each installed on its target repo. The official `ghcr.io/github/github-mcp-server` container runs as a k3s sidecar in the same pod as the OC instance. The OC instance connects via `type: "remote"` to `http://localhost:8082`.
 
-The App's private key and installation ID are injected as env vars, and the MCP server generates ephemeral installation tokens:
+**Why a sidecar, not local stdio:**
+- The Go binary is statically compiled (`CGO_ENABLED=0`) on Debian 12 (glibc) — no Alpine blocker
+- GitHub App auth works in stdio mode; the server also exposes an HTTP mode (port 8082)
+- Same architecture as Azure MCP — one pod, two containers, `localhost` routing
+- No local dependencies in the OC container — just HTTP to the sidecar
 
 ```jsonc
 {
   "mcp": {
     "github-mcp": {
-      "type": "local",
-      "command": ["npx", "-y", "@modelcontextprotocol/server-github"],
-      "enabled": true,
-      "environment": {
-        "GITHUB_APP_ID":             "{env:GITHUB_APP_ID}",
-        "GITHUB_APP_PRIVATE_KEY":    "{env:GITHUB_APP_PRIVATE_KEY}",
-        "GITHUB_APP_INSTALLATION_ID": "{env:GITHUB_APP_INSTALLATION_ID}"
-      }
+      "type": "remote",
+      "url": "http://localhost:8082/mcp",
+      "enabled": true
     }
   }
 }
 ```
 
-This is the target state — no personal PATs, per-instance scoped identity, tokens rotate automatically (1 hour TTL).
+The App's private key is injected into the sidecar container as a Kubernetes Secret. Installation tokens are generated at runtime with a 1-hour TTL — no long-lived credentials in the cluster.
 
 ## Configuration reference
 
@@ -159,20 +158,9 @@ This is the target state — no personal PATs, per-instance scoped identity, tok
 | `oauth` | object \| false | No | auto | OAuth config, or `false` to disable |
 | `timeout` | number | No | `5000` | Timeout (ms) for fetching tools |
 
-### Local options
-
-| Field | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `type` | string | Yes | — | Must be `"local"` |
-| `command` | string[] | Yes | — | Command to start the MCP server |
-| `enabled` | boolean | No | `false` | Enable on startup |
-| `environment` | object | No | — | Env vars for the MCP process |
-| `timeout` | number | No | `5000` | Timeout (ms) for fetching tools |
-| `cwd` | string | No | workspace | Working directory for the process |
-
 ## Examples
 
-### Current production: remote + PAT
+### Current production: remote + PAT (GH_PAT from AKV)
 
 ```jsonc
 {
@@ -189,6 +177,8 @@ This is the target state — no personal PATs, per-instance scoped identity, tok
 }
 ```
 
+`GH_PAT` is injected from Azure Key Vault at deploy time. This is the config in `opencode.json` today.
+
 ### Remote + OAuth (automatic)
 
 ```jsonc
@@ -203,51 +193,31 @@ This is the target state — no personal PATs, per-instance scoped identity, tok
 }
 ```
 
-### Local + PAT (transitional)
+### Future: k3s sidecar + GitHub App (#44)
 
 ```jsonc
 {
   "mcp": {
     "github-mcp": {
-      "type": "local",
-      "command": ["npx", "-y", "@modelcontextprotocol/server-github"],
-      "enabled": true,
-      "environment": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "{env:GH_PAT}"
-      }
+      "type": "remote",
+      "url": "http://localhost:8082/mcp",
+      "enabled": true
     }
   }
 }
 ```
 
-### Future: local + GitHub App (#43)
-
-```jsonc
-{
-  "mcp": {
-    "github-mcp": {
-      "type": "local",
-      "command": ["npx", "-y", "@modelcontextprotocol/server-github"],
-      "enabled": true,
-      "environment": {
-        "GITHUB_APP_ID":              "{env:GITHUB_APP_ID}",
-        "GITHUB_APP_PRIVATE_KEY":     "{env:GITHUB_APP_PRIVATE_KEY}",
-        "GITHUB_APP_INSTALLATION_ID": "{env:GITHUB_APP_INSTALLATION_ID}"
-      }
-    }
-  }
-}
-```
+The `ghcr.io/github/github-mcp-server` container runs in HTTP mode as a k3s sidecar, same pod as the OC instance. GitHub App private key is a Kubernetes Secret. Same architecture as Azure MCP.
 
 ## Credential management (Homelab)
 
-### Current (PAT)
+### Current (PAT from AKV)
 
-The `GH_PAT` environment variable is set on the host or injected at container startup. This is not managed by Ansible — the PAT must be provisioned manually or via a secret store.
+The `GH_PAT` is stored in Azure Key Vault (`homelab-bysxdb-kv`) as `opencode-<instance>-gh-pat`. Ansible fetches it at deploy time and injects as a container env var — same pattern as the [Azure SP credential path](#credential-injection-homelab). No secrets on the VPS host or in the OC container image.
 
 ### Future (GitHub App)
 
-Per #43, the App private key will be stored in Azure Key Vault (similar to the Azure SP path). Ansible will fetch it at deploy time and inject as container env vars. Installation tokens are generated at runtime by the MCP server with a 1-hour TTL — no long-lived credentials in the container.
+Under k3s ([#44](https://github.com/jaroslaw-bagnicki/Homelab/issues/44)), the App private key will be stored as a Kubernetes Secret and mounted into the sidecar container specification. Installation tokens are generated at runtime with a 1-hour TTL — no long-lived credentials in the cluster or the pod.
 
 ## Context bloat warning
 
