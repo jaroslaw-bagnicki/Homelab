@@ -13,7 +13,8 @@
 #     Metadata: Read, Workflows: Read/Write
 
 param(
-    [string]$InstanceName = 'homelab'
+    [string]$InstanceName = 'homelab',
+    [switch]$Force
 )
 
 $ErrorActionPreference = 'Stop'
@@ -22,11 +23,14 @@ $KeyVaultName = 'homelab-bysxdb-kv'
 $SecretName   = "opencode-$InstanceName-gh-pat"
 $TokenUrl     = "https://github.com/settings/personal-access-tokens/new"
 
-# -- 1. Secret existence check (idempotent) ----------------------------
+# -- 1. Secret existence check (idempotent unless -Force) ------------
 $existing = Get-AzKeyVaultSecret -VaultName $KeyVaultName -Name $SecretName -ErrorAction SilentlyContinue
-if ($existing) {
-  Write-Warning "Secret '$SecretName' already exists in $KeyVaultName."
+if ($existing -and -not $Force) {
+  Write-Warning "Secret '$SecretName' already exists in $KeyVaultName. Use -Force to overwrite."
   exit 0
+}
+if ($existing -and $Force) {
+  Write-Warning "Secret '$SecretName' exists — overwriting due to -Force."
 }
 
 # -- 2. Open GitHub PAT creation page ---------------------------------
