@@ -1,38 +1,52 @@
 # syntax=docker/dockerfile:1.7
 
 ARG OPENCODE_BASE=ghcr.io/anomalyco/opencode:latest
-ARG PWSH_VERSION=7.4
-ARG AZCLI_VERSION=latest
-ARG BICEPCLI_VERSION=0.30.3
-ARG GHCLI_VERSION=2.63.0
+ARG ALPINE_VERSION=3.24
+ARG PWSH_VERSION=7.4-alpine-3.20
 
 FROM ${OPENCODE_BASE} AS opencode_upstream
-FROM mcr.microsoft.com/powershell:${PWSH_VERSION}-debian-12 AS pwsh_src
-FROM mcr.microsoft.com/azure-cli:${AZCLI_VERSION} AS az_src
+FROM mcr.microsoft.com/powershell:${PWSH_VERSION} AS pwsh_src
 
-FROM debian:bookworm-slim
+FROM alpine:${ALPINE_VERSION}
 
-RUN apt-get update \
- && apt-get install -y --no-install-recommends \
+ARG AZCLI_VERSION=2.62.0
+ARG BICEPCLI_VERSION=0.30.3
+ARG GHCLI_VERSION=2.97.0
+
+RUN apk add --no-cache \
         bash \
         ca-certificates \
         curl \
         git \
-        libffi-dev \
+        icu-libs \
+        libffi \
+        libgcc \
+        libstdc++ \
         openssl \
+        py3-pip \
+        py3-setuptools \
+        py3-wheel \
         python3 \
-        python3-pip \
- && rm -rf /var/lib/apt/lists/*
+ && apk add --no-cache --virtual .build-deps \
+        gcc \
+        musl-dev \
+        libffi-dev \
+        openssl-dev \
+        python3-dev \
+        tar
 
-COPY --from=opencode_upstream /app /app
+COPY --from=opencode_upstream /usr/local/bin/opencode /usr/local/bin/opencode
 
 COPY --from=pwsh_src /opt/microsoft/powershell/7 /opt/microsoft/powershell/7
-COPY --from=pwsh_src /usr/bin/pwsh /usr/bin/pwsh
-COPY --from=pwsh_src /opt/microsoft/powershell/7/Modules /opt/microsoft/powershell/7/Modules
+RUN ln -sf /opt/microsoft/powershell/7/pwsh /usr/bin/pwsh
 
-COPY --from=az_src /usr/local/bin /usr/local/bin
-COPY --from=az_src /usr/local/lib /usr/local/lib 2>/dev/null || true
-COPY --from=az_src /usr/local/az /usr/local/az 2>/dev/null || true
+RUN pip3 install --no-cache-dir --break-system-packages azure-cli==${AZCLI_VERSION} \
+ && az --version | head -n 1
+
+RUN pwsh -NoProfile -Command "Set-PSRepository -Name PSGallery -InstallationPolicy Trusted; Install-Module Az -Scope AllUsers -Force -SkipPublisherCheck" \
+ && pwsh -NoProfile -Command "Import-Module Az; (Get-Module Az).Version.ToString()"
+
+RUN apk del .build-deps 2>/dev/null || true
 
 RUN set -eux; \
     curl -fsSL "https://github.com/Azure/bicep/releases/download/v${BICEPCLI_VERSION}/bicep-linux-musl-x64" \
@@ -55,7 +69,9 @@ RUN command -v git && git --version \
  && command -v pwsh && pwsh -Version \
  && command -v az && az --version | head -n 1 \
  && command -v bicep && bicep --version \
- && command -v gh && gh --version
+ && command -v gh && gh --version \
+ && opencode --version \
+ && pwsh -NoProfile -Command "if (-not (Get-Module Az -ListAvailable)) { exit 1 }"
 
 WORKDIR /workspaces
-ENTRYPOINT ["/app/opencode"]
+ENTRYPOINT ["opencode"]

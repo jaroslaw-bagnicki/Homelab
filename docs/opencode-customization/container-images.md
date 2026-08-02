@@ -8,6 +8,7 @@
 | **Decision** | [ADR 21 — Per-Project OpenCode Container Images](../decisions/21-opencode-instance-images.md) |
 | **Tracking** | [#38](https://github.com/jaroslaw-bagnicki/Homelab/issues/38) |
 | **Branch** | `feat/opencode-container-images` |
+| **Status** | `opencode-base` built + verified (POC complete) |
 
 ## Hierarchy
 
@@ -16,104 +17,117 @@ Per ADR 21 — a three-image hierarchy with shared tooling in the base layer, pr
 ```text
 ghcr.io/anomalyco/opencode:latest         (upstream, never modified)
     ↓
-opencode-base                             (shared tooling: git, pwsh, az, bicep, gh)
+opencode-base                             (shared tooling: git, pwsh, az CLI, Az module, bicep, gh)
     ├── opencode-homelab                  (+ ansible-core 2.17, ansible-lint)
     └── opencode-prospera                 (+ .NET SDK 8.0, SQL tools TBD)
 ```
 
 Tooling is installed at build time in image layers — never via startup scripts. ADR 21 explicitly rejects a single ARG-driven Dockerfile, startup-install, and an all-tooling monolith.
 
-## Current state — `opencode-base` POC
+## Key constraint — upstream is Alpine (musl)
 
-The homelab and prospera project images are deferred until the `opencode-base` recipe is locked. Two install strategies are under test.
+`ghcr.io/anomalyco/opencode:latest` is **Alpine Linux 3.24** (musl). Its `opencode` binary at `/usr/local/bin/opencode` is musl-linked and will not run on a glibc base. Therefore **the final stage must be Alpine (musl)** — a Debian/glibc final stage is not viable. This rules out reusing glibc-based tool images (e.g. `mcr.microsoft.com/azure-cli:azurelinux3.0`) as multi-stage `COPY --from` sources.
+
+## Current state — `opencode-base` built
+
+Two install strategies were POC'd and compared. `multistage-mcr` was chosen. The `alpine-apt` variant remains in the repo as the rejected alternative.
 
 ### File layout
 
 ```
 docker/opencode-base/
-├── Dockerfile.multistage-mcr    ← Option A
-├── Dockerfile.alpine-apt        ← Option B
+├── Dockerfile.multistage-mcr    ← chosen recipe
+├── Dockerfile.alpine-apt        ← rejected variant
 ├── .dockerignore
 └── tests/
     └── verify-base.sh           ← shared sanity check
 ```
 
-No image registry push yet — local builds only until the base recipe is decided.
+No image registry push yet — local builds only.
 
-### Option A — `Dockerfile.multistage-mcr`
+### Chosen recipe — `Dockerfile.multistage-mcr`
 
-Multi-stage build using Microsoft's published container images. Final stage is `debian:bookworm-slim`.
+Multi-stage build. Final stage is `alpine:3.24`.
 
 | Stage | Source | Purpose |
 |---|---|---|
-| `opencode_upstream` | `ghcr.io/anomalyco/opencode:latest` | OpenCode runtime (`/app`) |
-| `pwsh_src` | `mcr.microsoft.com/powershell:7.4-debian-12` | PowerShell 7.4 LTS |
-| `az_src` | `mcr.microsoft.com/azure-cli:latest` | Azure CLI |
-| final | `debian:bookworm-slim` | Receiver — all layers `COPY --from` into here |
+| `opencode_upstream` | `ghcr.io/anomalyco/opencode:latest` | copies `/usr/local/bin/opencode` |
+| `pwsh_src` | `mcr.microsoft.com/powershell:7.4-alpine-3.20` | copies `/opt/microsoft/powershell/7` (pwsh 7.4 LTS) |
+| final | `alpine:3.24` | receiver — everything layered in |
 
-Bicep CLI is a single `curl` download (musl-x64 binary, statically linked). GitHub CLI is downloaded from GitHub Releases (precompiled `linux_amd64` binary).
+Shared tooling baked into the final stage:
 
-**Key advantages:** matches ADR 21 tool-source-layer references verbatim; smallest image; fastest rebuilds; each tool's provenance is an `mcr` image.
+| Tool | Version | Install method |
+|---|---|---|
+| opencode | 1.18.11 | `COPY --from` upstream |
+| pwsh | 7.4.6 | `COPY --from` Microsoft Alpine image |
+| az CLI | 2.62.0 | `pip3 install azure-cli==2.62.0` |
+| Az PowerShell module | latest (16.x) | `Install-Module Az` |
+| bicep | 0.30.3 | `curl` musl binary |
+| gh | 2.97.0 | `curl` static binary |
 
-### Option B — `Dockerfile.alpine-apt`
-
-Single-stage Alpine build. `apk add` for system deps and community PowerShell, `pip install` for Azure CLI, `curl` for Bicep binary.
-
-**Key advantages:** single `FROM`, no multi-stage complexity; all tooling visible in one layer. Tradeoff: larger image, slower first build, Az install is a Python wheel (less auditable than a Microsoft-published image).
+The `apk` `.build-deps` virtual package (gcc, musl-dev, libffi-dev, openssl-dev, python3-dev) is installed only for the `pip` build, then removed with `apk del .build-deps` to keep the image slim.
 
 ### Build & verify
 
 ```bash
 docker build -f docker/opencode-base/Dockerfile.multistage-mcr \
              -t opencode-base:multistage-mcr docker/opencode-base/
-docker build -f docker/opencode-base/Dockerfile.alpine-apt \
-             -t opencode-base:alpine-apt docker/opencode-base/
 
-docker run --rm opencode-base:multistage-mcr verify-base.sh
-docker run --rm opencode-base:alpine-apt     verify-base.sh
+docker run --rm --entrypoint sh opencode-base:multistage-mcr /usr/local/bin/verify-base.sh
 docker images opencode-base:*
 ```
 
-`verify-base.sh` exits 0 only if `git --version`, `pwsh -Version`, `az --version`, `bicep --version`, and `gh --version` all succeed.
+`verify-base.sh` exits 0 only if git, pwsh, az CLI, Az module, bicep, gh, and opencode all report a version.
 
-### Decision criteria
+### POC results
 
-Report image size, build wall-clock, and verify pass/fail per option. Pick based on size + reproducibility, not subjective preference.
+| Metric | `multistage-mcr` (chosen) | `alpine-apt` (rejected) |
+|---|---|---|
+| pwsh version | 7.4.6 (Microsoft image) | 7.6.1 (apk community) |
+| On-disk size (az CLI only) | 2.77 GB | 2.76 GB |
+| On-disk size (az CLI + Az module) | **3.54 GB** | — |
+| Compressed size | **678 MB** | ~540 MB |
+
+`multistage-mcr` chosen because it uses Microsoft-published images for pwsh (deterministic 7.4, no dependency on the Alpine community package), while `alpine-apt` ships whatever pwsh version Alpine's repo currently has. LTS pinning is a **soft preference, not a hard requirement**.
+
+## Size analysis
+
+| Image | On-disk | Compressed |
+|---|---|---|
+| Upstream `ghcr.io/anomalyco/opencode:latest` | 282 MB | 72 MB |
+| `opencode-base` (az CLI only) | 2.77 GB | 546 MB |
+| `opencode-base` (az CLI + Az module) | 3.54 GB | 678 MB |
+
+Bloat is dominated by the **az CLI Python stack** (~1.1 GB of `azure` packages) plus the **Az PowerShell module** (~600 MB). Both are inherent to Azure tooling; there is no musl-compatible slim alternative for the az CLI (the official `mcr.microsoft.com/azure-cli:azurelinux3.0` is glibc, 840 MB for az alone, not reusable on our Alpine base).
+
+## microVM — not a size solution
+
+A microVM (Firecracker/Kata) replaces the *isolation boundary*, not the *payload* — it still needs the same multi-GB rootfs with the same tooling, and contradicts the settled container direction (ADR 18, ADR 22 → k3s). Not adopted.
 
 ## Deferred (follow-up PRs)
 
 | Item | Reason |
 |---|---|
-| `opencode-homelab` Dockerfile | Blocked on base recipe choice |
-| `opencode-prospera` Dockerfile | Blocked on base recipe + SQL tooling decision |
+| `opencode-homelab` Dockerfile | Base recipe now locked; needs ansible-core 2.17 + ansible-lint |
+| `opencode-prospera` Dockerfile | Needs .NET 8.0 SDK + SQL tooling decision |
 | Azure SQL tooling for prospera | Open question on #38 |
 | Image registry / push to GHCR | Local-only for now |
 | Ansible workload to consume custom images | Follow-up issue; runbook 18 covers instance provisioning |
-| Runbook (build instructions) | After base + project images are committed |
+| Runbook (build instructions) | After project images are committed |
 | README index updates | After runbook is written |
+| ADR 21 wording update | §shared tooling says "Azure CLI" only; base carries az CLI + Az module |
 
 ## Version pinning
 
-Per ADR 21 — project image tags must reflect pinned LTS versions, not `:latest`. Current pins for the POC:
-
-| Tool | Version | Source |
-|---|---|---|
-| PowerShell | `mcr.microsoft.com/powershell:7.4-debian-12` | Microsoft (Option A) |
-| Az CLI | `mcr.microsoft.com/azure-cli:latest` | Microsoft (Option A) |
-| Bicep | `0.30.3` | GitHub releases (both options) |
-| GitHub CLI | `2.63.0` | GitHub releases (Option A); `apk` (Option B) |
-| Alpine | `3.20` | Alpine Linux (Option B) |
-| pwsh (Alpine) | `7.4` | community `apk` package (Option B) |
-| Az CLI (Alpine) | `2.62.0` | PyPI (Option B) |
-
-Publised image tags (`opencode-homelab:2.17`, `opencode-prospera:8.0`) will be assigned after the base recipe is locked and the project images are authored.
+LTS pinning is a soft preference. Where a deterministic version is cheap, it is pinned (az CLI `==2.62.0`, bicep `0.30.3`, gh `2.97.0`, pwsh from `7.4-alpine-3.20`). The Az module intentionally tracks latest. Project image tags (`opencode-homelab:…`, `opencode-prospera:…`) will be assigned once those images are authored.
 
 ## ADR 21 alignment
 
 | Requirement | Status |
 |---|---|
-| Base image always `ghcr.io/anomalyco/opencode:latest` | Both options |
+| Base image always `ghcr.io/anomalyco/opencode:latest` | ✅ `multistage-mcr` |
 | Three-image hierarchy (base → homelab, prospera) | Structure ready, project images deferred |
-| Tooling in image layers, not startup scripts | Both options — `verify-base.sh` runs in the image |
-| Three Dockerfiles, no ARG/profile-driver | Two POC variants for base; separate Dockerfiles for project images follow |
-| Project image tags pinned to LTS | POC uses `:multistage-mcr` / `:alpine-apt` (variant tags); LTS pins come after base locked |
+| Tooling in image layers, not startup scripts | ✅ — `verify-base.sh` runs in the image |
+| Three Dockerfiles, no ARG/profile-driver | `multistage-mcr` + `alpine-apt` for base; separate Dockerfiles for project images follow |
+| Shared tooling list | Base carries git, pwsh, az CLI, Az module, bicep, gh — ADR 21 wording ("Azure CLI") needs update |
