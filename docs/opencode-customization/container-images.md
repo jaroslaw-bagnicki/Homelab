@@ -85,11 +85,12 @@ docker images opencode-base:*
 | Metric | `multistage-mcr` (chosen) | `alpine-apt` (rejected) |
 |---|---|---|
 | pwsh version | 7.4.6 (Microsoft image) | 7.6.1 (apk community) |
+| Build wall-clock (cold, `--no-cache`) | 492.6s (az CLI only) / 858.5s (final) | 447.5s |
 | On-disk size (az CLI only) | 2.77 GB | 2.76 GB |
 | On-disk size (az CLI + Az module) | **3.54 GB** | — |
 | Compressed size | **678 MB** | ~540 MB |
 
-`multistage-mcr` chosen because it uses Microsoft-published images for pwsh (deterministic 7.4, no dependency on the Alpine community package), while `alpine-apt` ships whatever pwsh version Alpine's repo currently has. LTS pinning is a **soft preference, not a hard requirement**.
+`multistage-mcr` chosen because it uses Microsoft-published images for pwsh (deterministic 7.4, no dependency on the Alpine community package), while `alpine-apt` ships whatever pwsh version Alpine's repo currently has. LTS pinning is a **soft preference, not a hard requirement**. The +366s in the final build (858.5s) is almost entirely the `Install-Module Az` step (~600 MB, 102 submodules).
 
 ## Size analysis
 
@@ -101,9 +102,47 @@ docker images opencode-base:*
 
 Bloat is dominated by the **az CLI Python stack** (~1.1 GB of `azure` packages) plus the **Az PowerShell module** (~600 MB). Both are inherent to Azure tooling; there is no musl-compatible slim alternative for the az CLI (the official `mcr.microsoft.com/azure-cli:azurelinux3.0` is glibc, 840 MB for az alone, not reusable on our Alpine base).
 
+## Baked-in vs. ad-hoc session install
+
+ADR 21 rejects startup-install. The comparison that motivates that:
+
+| Criterion | Baked into image (current) | Ad-hoc install at session start |
+|---|---|---|
+| Cold start | Instant — tools in layers | Slow — re-installs ~600 MB Az + 1.1 GB az CLI every session |
+| Build time | 858s once, cached after | 0 in image; each session pays runtime install |
+| Reproducibility | Deterministic (pinned versions) | Drifts with PSGallery/PyPI latest |
+| Immutability | Read-only layers, auditable | Live filesystem, non-reproducible |
+| Network at run | None | Requires outbound network + registry at session start |
+| Pull cost | 678 MB compressed, one-time | Base stays small, but sessions bloat live |
+| Tool version control | Pinned in Dockerfile | Whatever's latest when the session runs |
+| Failure surface | Fail at build, caught before deploy | Fail mid-session, harder to diagnose |
+
 ## microVM — not a size solution
 
 A microVM (Firecracker/Kata) replaces the *isolation boundary*, not the *payload* — it still needs the same multi-GB rootfs with the same tooling, and contradicts the settled container direction (ADR 18, ADR 22 → k3s). Not adopted.
+
+## Build environment gotchas
+
+### SSH to Cloudlab from this container — paramiko workaround
+
+The dev container may start as a bare Alpine image with no ssh/docker/pwsh provisioned. After bootstrapping `openssh-client` and loading the Cloudlab key from AKV, `ssh-add` / `ssh-keygen -y` fail with:
+
+```
+error in libcrypto: unsupported
+```
+
+The key is a valid unencrypted `openssh-key-v1` ed25519 key — Alpine's OpenSSH 10.3 + OpenSSL 3.5.7 (musl) refuses to decode that private-key format (locally-generated ed25519 keys load fine). Workaround: bypass the OpenSSH client and drive the host over Python **paramiko**, which parses the OpenSSH key format itself:
+
+```python
+import paramiko
+c = paramiko.SSHClient()
+c.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+c.connect(HOST, username="labadmin", key_filename="/tmp/cloudlab-key", timeout=30)
+i, o, e = c.exec_command("docker version --format '{{.Server.Version}}'")
+print(o.read().decode())
+```
+
+Also note: `docker build` requires a running daemon on the target host; the container itself has no Docker socket unless the `docker-outside-of-docker` devcontainer feature provisioned it.
 
 ## Deferred (follow-up PRs)
 
