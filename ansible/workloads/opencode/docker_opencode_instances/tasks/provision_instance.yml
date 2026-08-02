@@ -130,7 +130,7 @@
       Create the secret in Key Vault first, then re-run the workload playbook.
   when:
     - instance.gh_pat | default(false)
-    - gh_pat_check.secrets | length == 0
+    - gh_pat_check.secrets | default([]) | length == 0
 
 - name: Fetch GH PAT from Key Vault for {{ instance.name }}
   vars:

@@ -4,7 +4,7 @@
 # One-shot: exits if the secret already exists.
 #
 # Ansible injects the PAT as the GH_PAT env var on the opencode-homelab
-# container; GitHub MCP reads it from opencode.jsonc via {env:GH_PAT}.
+# container; GitHub MCP reads it from opencode.json via {env:GH_PAT}.
 #
 # Pre-requisites:
 #   Az PowerShell module, signed into Azure (Connect-AzAccount)

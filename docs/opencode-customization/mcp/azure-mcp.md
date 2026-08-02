@@ -35,7 +35,7 @@ On a fresh instance with no SP configured, use the Azure CLI as a bridge:
 az login --use-device-code
 ```
 
-This opens a browser-based device-code flow targeting the default tenant. After login, `az` commands and Azure MCP work immediately — no env vars needed, no `opencode.jsonc` changes. Tokens are cached in `~/.azure/` and expire per the tenant's token lifetime policy (default: 90 min refresh, 7 day max).
+This opens a browser-based device-code flow targeting the default tenant. After login, `az` commands and Azure MCP work immediately — no env vars needed, no `opencode.json` changes. Tokens are cached in `~/.azure/` and expire per the tenant's token lifetime policy (default: 90 min refresh, 7 day max).
 
 **When to use:** quick ad-hoc access, troubleshooting, or as a bootstrap step before provisioning the per-instance SP.  
 **Not for production:** ties the instance to a personal identity (violates ADR 16) and requires re-auth after token expiry.
@@ -131,7 +131,7 @@ On Cloudlab, Ansible provisions the SP credentials at deploy time:
 2. `client_secret`, `client_id`, `tenant_id` stored in Azure Key Vault
 3. Ansible role `docker_opencode_instances` fetches them from KV
 4. Injected as `docker run -e AZURE_TENANT_ID=... -e AZURE_CLIENT_ID=... -e AZURE_CLIENT_SECRET=...`
-5. `{env:...}` variables in `opencode.jsonc` resolve at OpenCode startup
+5. `{env:...}` variables in `opencode.json` resolve at OpenCode startup
 
 Credentials are never written to disk inside the container. Rotation is via `scripts/Rotate-HomelabOcAgentAzSp.ps1` — updates only the `client_secret` in KV, then re-run the Ansible playbook to restart the container with the new value.
 
