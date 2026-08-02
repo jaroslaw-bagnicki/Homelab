@@ -14,8 +14,11 @@
 
 $ErrorActionPreference = 'Stop'
 
+param(
+    [string]$InstanceName = 'homelab'
+)
+
 $KeyVaultName = 'homelab-bysxdb-kv'
-$InstanceName = 'homelab'
 $SecretName   = "opencode-$InstanceName-gh-pat"
 $TokenUrl     = "https://github.com/settings/personal-access-tokens/new"
 
