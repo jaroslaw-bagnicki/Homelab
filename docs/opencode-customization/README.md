@@ -22,7 +22,7 @@ The workstream is split into sub-issues so each layer can land and be reviewed i
 | 1 | Per-project container images | #38 | Open |
 | 2 | Workspace + repo cloning | #39 | Open |
 | 3 | Per-instance Azure SP | #40 ← this PR | Open |
-| 4 | MCP server configuration | #41 | Blocked by #43 |
+| 4 | MCP server configuration | #41 | Blocked by Alpine + #44 |
 | 5 | GitHub App identity for GitHub MCP | #43 | Open |
 | 6 | Substrate migration (Compose → k3s + Arc) | #44 | Open |
 
@@ -44,11 +44,20 @@ Consumer code path: Azure SDK + Azure MCP read the three env vars via `DefaultAz
 
 ### 4. MCP server configuration (#41)
 
-MCP server config pre-baked into each per-project image as `opencode.jsonc`. Azure MCP authenticates via the §3 SP. GitHub MCP authenticates via the §5 GitHub App. (Initially scoped to per-instance SSH deploy keys from §2; superseded by §5.)
+MCP server config pre-baked into each per-project image as `opencode.jsonc`. Azure MCP is blocked on Alpine (musl) — resolution deferred to k3s migration (#44), where `azmcp` runs as a glibc-based sidecar in the same pod. GitHub MCP uses remote transport with a per-instance PAT injected from Azure Key Vault. Long-term: GitHub App installation tokens via k3s sidecar (same pattern as Azure MCP).
+
+#### MCP configuration guides
+
+Per-MCP reference docs covering all transport options, authentication methods, bootstrap CLI bridges, full config matrices, per-instance examples, credential injection paths, and troubleshooting.
+
+| MCP Server | Guide | Transport | Auth |
+|---|---|---|---|
+| Azure | [mcp/azure-mcp.md](mcp/azure-mcp.md) | Remote HTTP via k3s sidecar (pending #44) | SP client secret / Workload Identity, `az login` bootstrap |
+| GitHub | [mcp/github-mcp.md](mcp/github-mcp.md) | Remote HTTP (current) · k3s sidecar (future, #44) | PAT from AKV (current), GitHub App installation tokens (future) |
 
 ### 5. GitHub App identity (#43)
 
-One GitHub App per project (one for Homelab, one for Prospera). Replaces personal PAT in `opencode.json`. GitHub MCP switches from remote HTTP to local stdio transport (the remote MCP does not support App auth). Git clone/push uses installation tokens via `https://x-access-token:...` — drops the SSH deploy key path from §2.
+One GitHub App per project (one for Homelab, one for Prospera). Replaces personal PAT. Under k3s (#44), the GitHub MCP runs as a sidecar container (`ghcr.io/github/github-mcp-server`, Go binary + Debian 12 base) in the same pod as the OC instance. Same architecture as Azure MCP. Git clone/push uses installation tokens via `https://x-access-token:...` — drops the SSH deploy key path from §2.
 
 ### 6. Substrate migration (#44)
 
@@ -73,6 +82,6 @@ Long-term destination: migrate all Cloudlab Compose workloads to k3s on the home
 ## Cross-cutting design notes
 
 - **AKV is the source of truth for SP credentials.** No `client_secret` lives in the host filesystem or the container image; Ansible fetches it at deploy time and injects as env vars.
-- **No personal identities.** Every workload authenticates with a dedicated, auditable identity scoped to the operations it performs. ADR 16.
+- **No personal identities (target state).** Every workload authenticates with a dedicated, auditable identity scoped to the operations it performs. ADR 16. GitHub MCP currently uses a transitional PAT; GitHub App (#44) will replace it.
 - **Consumer code is substrate-agnostic.** All Azure SDKs use `DefaultAzureCredential`, which already includes the credential types for both the Compose era (`EnvironmentCredential`) and the future K8s era (`WorkloadIdentityCredential`). Substrate migrations do not require app changes.
 - **Deploy is idempotent.** Re-running the workload playbook without template / image / KV changes reports `changed=0`. Password or SP-credential rotations restart only the affected container.
