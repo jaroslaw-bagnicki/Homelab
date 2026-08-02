@@ -16,7 +16,7 @@ Per ADR 21 — a three-image hierarchy with shared tooling in the base layer, pr
 ```text
 ghcr.io/anomalyco/opencode:latest         (upstream, never modified)
     ↓
-opencode-base                             (shared tooling: git, pwsh, az, bicep)
+opencode-base                             (shared tooling: git, pwsh, az, bicep, gh)
     ├── opencode-homelab                  (+ ansible-core 2.17, ansible-lint)
     └── opencode-prospera                 (+ .NET SDK 8.0, SQL tools TBD)
 ```
@@ -51,7 +51,7 @@ Multi-stage build using Microsoft's published container images. Final stage is `
 | `az_src` | `mcr.microsoft.com/azure-cli:latest` | Azure CLI |
 | final | `debian:bookworm-slim` | Receiver — all layers `COPY --from` into here |
 
-Bicep CLI is a single `curl` download (musl-x64 binary, statically linked).
+Bicep CLI is a single `curl` download (musl-x64 binary, statically linked). GitHub CLI is downloaded from GitHub Releases (precompiled `linux_amd64` binary).
 
 **Key advantages:** matches ADR 21 tool-source-layer references verbatim; smallest image; fastest rebuilds; each tool's provenance is an `mcr` image.
 
@@ -74,7 +74,7 @@ docker run --rm opencode-base:alpine-apt     verify-base.sh
 docker images opencode-base:*
 ```
 
-`verify-base.sh` exits 0 only if `git --version`, `pwsh -Version`, `az --version`, and `bicep --version` all succeed.
+`verify-base.sh` exits 0 only if `git --version`, `pwsh -Version`, `az --version`, `bicep --version`, and `gh --version` all succeed.
 
 ### Decision criteria
 
@@ -101,6 +101,7 @@ Per ADR 21 — project image tags must reflect pinned LTS versions, not `:latest
 | PowerShell | `mcr.microsoft.com/powershell:7.4-debian-12` | Microsoft (Option A) |
 | Az CLI | `mcr.microsoft.com/azure-cli:latest` | Microsoft (Option A) |
 | Bicep | `0.30.3` | GitHub releases (both options) |
+| GitHub CLI | `2.63.0` | GitHub releases (Option A); `apk` (Option B) |
 | Alpine | `3.20` | Alpine Linux (Option B) |
 | pwsh (Alpine) | `7.4` | community `apk` package (Option B) |
 | Az CLI (Alpine) | `2.62.0` | PyPI (Option B) |

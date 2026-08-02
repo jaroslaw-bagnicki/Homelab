@@ -4,6 +4,7 @@ ARG OPENCODE_BASE=ghcr.io/anomalyco/opencode:latest
 ARG PWSH_VERSION=7.4
 ARG AZCLI_VERSION=latest
 ARG BICEPCLI_VERSION=0.30.3
+ARG GHCLI_VERSION=2.63.0
 
 FROM ${OPENCODE_BASE} AS opencode_upstream
 FROM mcr.microsoft.com/powershell:${PWSH_VERSION}-debian-12 AS pwsh_src
@@ -39,13 +40,22 @@ RUN set -eux; \
     chmod +x /usr/local/bin/bicep; \
     bicep --version
 
+RUN set -eux; \
+    curl -fsSL "https://github.com/cli/cli/releases/download/v${GHCLI_VERSION}/gh_${GHCLI_VERSION}_linux_amd64.tar.gz" \
+        -o /tmp/gh.tar.gz; \
+    tar -xzf /tmp/gh.tar.gz -C /tmp; \
+    mv "/tmp/gh_${GHCLI_VERSION}_linux_amd64/bin/gh" /usr/local/bin/gh; \
+    rm -rf /tmp/gh.tar.gz "/tmp/gh_${GHCLI_VERSION}_linux_amd64"; \
+    gh --version
+
 COPY tests/verify-base.sh /usr/local/bin/verify-base.sh
 RUN chmod +x /usr/local/bin/verify-base.sh
 
 RUN command -v git && git --version \
  && command -v pwsh && pwsh -Version \
  && command -v az && az --version | head -n 1 \
- && command -v bicep && bicep --version
+ && command -v bicep && bicep --version \
+ && command -v gh && gh --version
 
 WORKDIR /workspaces
 ENTRYPOINT ["/app/opencode"]

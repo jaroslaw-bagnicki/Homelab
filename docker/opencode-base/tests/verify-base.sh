@@ -15,4 +15,7 @@ az --version | head -n 1
 echo "-- bicep --"
 bicep --version
 
+echo "-- gh --"
+gh --version
+
 echo "=== OK ==="
