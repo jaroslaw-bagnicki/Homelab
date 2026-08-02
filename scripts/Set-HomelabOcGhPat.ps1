@@ -47,7 +47,7 @@ try {
 }
 
 # -- 3. Prompt for the PAT (masked input) ----------------------------
-$patSecure = Read-Host -AsSecureString -Prompt "Paste the fine-grained PAT"
+$patSecure = Read-Host -AsSecureString -MaskInput -Prompt "Paste the fine-grained PAT"
 $pat = [System.Net.NetworkCredential]::new('', $patSecure).Password
 
 if ([string]::IsNullOrWhiteSpace($pat)) {
