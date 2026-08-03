@@ -18,7 +18,7 @@ ghcr.io/anomalyco/opencode:latest         (upstream, never modified)
     ↓
 opencode-base                             (shared tooling: git, pwsh, az CLI, Az module, bicep, gh)
     ├── opencode-homelab                  (+ ansible-core 2.20, ansible-lint)
-    └── opencode-prospera                 (+ .NET SDK 8.0, SQL tools TBD)
+    └── opencode-prospera                 (+ .NET SDK 8.0; SQL tools TBD)
 ```
 
 Tooling is installed at build time in image layers — never via startup scripts. ADR 21 explicitly rejects a single ARG-driven Dockerfile, startup-install, and an all-tooling monolith.
@@ -139,6 +139,52 @@ docker run --rm --entrypoint sh opencode-homelab:1.0.0 /usr/local/bin/verify-hom
 | ansible-core / ansible-lint | 2.20.7 / 26.6.0 |
 | Functional test | `ansible localhost -m ping` → `pong` |
 
+## Current state — `opencode-prospera` built
+
+`opencode-prospera` extends the base with the .NET 8.0 LTS SDK for the Prospera project.
+
+### File layout
+
+```
+docker/opencode-prospera/
+├── Dockerfile
+├── .dockerignore
+└── tests/
+    └── verify-prospera.sh
+```
+
+### Recipe — `docker/opencode-prospera/Dockerfile`
+
+Multi-stage: copies the .NET SDK from Microsoft's published Alpine image into `opencode-base:multistage-mcr`.
+
+| Stage | Source | Purpose |
+|---|---|---|
+| `dotnet_src` | `mcr.microsoft.com/dotnet/sdk:8.0-alpine` | copies `/usr/share/dotnet` (SDK 8.0.423) |
+| final | `opencode-base:multistage-mcr` | receiver — dotnet symlinked to `/usr/bin/dotnet` |
+
+SQL tooling (sqlcmd/sqlpackage) remains an open question on #38 — not yet baked in.
+
+### Build & verify
+
+```bash
+docker build -f docker/opencode-prospera/Dockerfile \
+             -t opencode-prospera:1.0.0 docker/opencode-prospera/
+
+docker run --rm --entrypoint sh opencode-prospera:1.0.0 /usr/local/bin/verify-prospera.sh
+```
+
+`verify-prospera.sh` runs the base checks then `dotnet --list-sdks`.
+
+### POC results
+
+| Metric | Value |
+|---|---|
+| Build | ✅ rc=0, ~65s (base cached) |
+| On-disk size | **4.37 GB** |
+| Compressed size | **899 MB** |
+| dotnet SDK | 8.0.423 |
+| Functional test | `dotnet new console` + `dotnet run` → `Hello, World!` |
+
 ## Size analysis
 
 | Image | On-disk | Compressed |
@@ -147,6 +193,7 @@ docker run --rm --entrypoint sh opencode-homelab:1.0.0 /usr/local/bin/verify-hom
 | `opencode-base` (az CLI only) | 2.77 GB | 546 MB |
 | `opencode-base` (az CLI + Az module) | 3.54 GB | 678 MB |
 | `opencode-homelab` | **3.59 GB** | **688 MB** |
+| `opencode-prospera` | **4.37 GB** | **899 MB** |
 
 Bloat is dominated by the **az CLI Python stack** (~1.1 GB of `azure` packages) plus the **Az PowerShell module** (~600 MB). Both are inherent to Azure tooling; there is no musl-compatible slim alternative for the az CLI (the official `mcr.microsoft.com/azure-cli:azurelinux3.0` is glibc, 840 MB for az alone, not reusable on our Alpine base).
 
@@ -197,7 +244,7 @@ Also note: `docker build` requires a running daemon on the target host; the cont
 | Item | Reason |
 |---|---|
 | `opencode-homelab` Dockerfile | ✅ Done — ansible-core 2.20 + ansible-lint (see above) |
-| `opencode-prospera` Dockerfile | Needs .NET 8.0 SDK + SQL tooling decision |
+| `opencode-prospera` Dockerfile | ✅ Done — .NET SDK 8.0 (see above); SQL tooling still TBD |
 | Azure SQL tooling for prospera | Open question on #38 |
 | Image registry / push to GHCR | Local-only for now |
 | Ansible workload to consume custom images | Follow-up issue; runbook 18 covers instance provisioning |
@@ -207,14 +254,14 @@ Also note: `docker build` requires a running daemon on the target host; the cont
 
 ## Version pinning
 
-LTS pinning is a soft preference. Where a deterministic version is cheap, it is pinned (az CLI `==2.62.0`, bicep `0.30.3`, gh `2.97.0`, pwsh from `7.4-alpine-3.20`). The Az module intentionally tracks latest. `opencode-homelab` is tagged `1.0.0`; `opencode-prospera` tag will be assigned once authored.
+LTS pinning is a soft preference. Where a deterministic version is cheap, it is pinned (az CLI `==2.62.0`, bicep `0.30.3`, gh `2.97.0`, pwsh from `7.4-alpine-3.20`). The Az module intentionally tracks latest. `opencode-homelab` is tagged `1.0.0`; `opencode-prospera` tagged `1.0.0`.
 
 ## ADR 21 alignment
 
 | Requirement | Status |
 |---|---|
 | Base image always `ghcr.io/anomalyco/opencode:latest` | ✅ `multistage-mcr` |
-| Three-image hierarchy (base → homelab, prospera) | `opencode-base` + `opencode-homelab` built; `opencode-prospera` deferred |
+| Three-image hierarchy (base → homelab, prospera) | All three built ✅ |
 | Tooling in image layers, not startup scripts | ✅ — `verify-base.sh` runs in the image |
 | Three Dockerfiles, no ARG/profile-driver | `multistage-mcr` + `alpine-apk` for base; separate Dockerfiles for project images follow |
 | Shared tooling list | Base carries git, pwsh, az CLI, Az module, bicep, gh — ADR 21 wording ("Azure CLI") needs update |
