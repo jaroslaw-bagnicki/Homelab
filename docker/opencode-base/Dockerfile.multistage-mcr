@@ -43,10 +43,10 @@ RUN ln -sf /opt/microsoft/powershell/7/pwsh /usr/bin/pwsh
 RUN pip3 install --no-cache-dir --break-system-packages azure-cli==${AZCLI_VERSION} \
  && az --version | head -n 1
 
-RUN pwsh -NoProfile -Command "Set-PSRepository -Name PSGallery -InstallationPolicy Trusted; Install-Module Az -Scope AllUsers -Force -SkipPublisherCheck" \
+RUN pwsh -NoProfile -Command "Set-PSRepository -Name PSGallery -InstallationPolicy Trusted; Install-Module Az -Scope AllUsers -Force" \
  && pwsh -NoProfile -Command "Import-Module Az; (Get-Module Az).Version.ToString()"
 
-RUN apk del .build-deps 2>/dev/null || true
+RUN apk del .build-deps
 
 RUN set -eux; \
     curl -fsSL "https://github.com/Azure/bicep/releases/download/v${BICEPCLI_VERSION}/bicep-linux-musl-x64" \

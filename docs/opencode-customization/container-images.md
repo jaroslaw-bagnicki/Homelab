@@ -7,7 +7,6 @@
 | **Base image** | `ghcr.io/anomalyco/opencode:latest` |
 | **Decision** | [ADR 21 — Per-Project OpenCode Container Images](../decisions/21-opencode-instance-images.md) |
 | **Tracking** | [#38](https://github.com/jaroslaw-bagnicki/Homelab/issues/38) |
-| **Branch** | `feat/opencode-container-images` |
 | **Status** | `opencode-base` built + verified (POC complete) |
 
 ## Hierarchy
@@ -26,18 +25,18 @@ Tooling is installed at build time in image layers — never via startup scripts
 
 ## Key constraint — upstream is Alpine (musl)
 
-`ghcr.io/anomalyco/opencode:latest` is **Alpine Linux 3.24** (musl). Its `opencode` binary at `/usr/local/bin/opencode` is musl-linked and will not run on a glibc base. Therefore **the final stage must be Alpine (musl)** — a Debian/glibc final stage is not viable. This rules out reusing glibc-based tool images (e.g. `mcr.microsoft.com/azure-cli:azurelinux3.0`) as multi-stage `COPY --from` sources.
+`ghcr.io/anomalyco/opencode:latest` is **Alpine Linux 3.24 (musl)** at the time of writing (Aug 2026). Its `opencode` binary at `/usr/local/bin/opencode` is musl-linked and will not run on a glibc base. Therefore **the final stage must be Alpine (musl)** — a Debian/glibc final stage is not viable. This rules out reusing glibc-based tool images (e.g. `mcr.microsoft.com/azure-cli:azurelinux3.0`) as multi-stage `COPY --from` sources.
 
 ## Current state — `opencode-base` built
 
-Two install strategies were POC'd and compared. `multistage-mcr` was chosen. The `alpine-apt` variant remains in the repo as the rejected alternative.
+Two install strategies were POC'd and compared. `multistage-mcr` was chosen. The `alpine-apk` variant remains in the repo as the rejected alternative.
 
 ### File layout
 
 ```
 docker/opencode-base/
 ├── Dockerfile.multistage-mcr    ← chosen recipe
-├── Dockerfile.alpine-apt        ← rejected variant
+├── Dockerfile.alpine-apk        ← rejected variant
 ├── .dockerignore
 └── tests/
     └── verify-base.sh           ← shared sanity check
@@ -82,7 +81,7 @@ docker images opencode-base:*
 
 ### POC results
 
-| Metric | `multistage-mcr` (chosen) | `alpine-apt` (rejected) |
+| Metric | `multistage-mcr` (chosen) | `alpine-apk` (rejected) |
 |---|---|---|
 | pwsh version | 7.4.6 (Microsoft image) | 7.6.1 (apk community) |
 | Build wall-clock (cold, `--no-cache`) | 492.6s (az CLI only) / 858.5s (final) | 447.5s |
@@ -90,7 +89,7 @@ docker images opencode-base:*
 | On-disk size (az CLI + Az module) | **3.54 GB** | — |
 | Compressed size | **678 MB** | ~540 MB |
 
-`multistage-mcr` chosen because it uses Microsoft-published images for pwsh (deterministic 7.4, no dependency on the Alpine community package), while `alpine-apt` ships whatever pwsh version Alpine's repo currently has. LTS pinning is a **soft preference, not a hard requirement**. The +366s in the final build (858.5s) is almost entirely the `Install-Module Az` step (~600 MB, 102 submodules).
+`multistage-mcr` chosen because it uses Microsoft-published images for pwsh (deterministic 7.4, no dependency on the Alpine community package), while `alpine-apk` ships whatever pwsh version Alpine's repo currently has. LTS pinning is a **soft preference, not a hard requirement**. The +366s in the final build (858.5s) is almost entirely the `Install-Module Az` step (~600 MB, 102 submodules).
 
 ## Size analysis
 
@@ -168,5 +167,5 @@ LTS pinning is a soft preference. Where a deterministic version is cheap, it is 
 | Base image always `ghcr.io/anomalyco/opencode:latest` | ✅ `multistage-mcr` |
 | Three-image hierarchy (base → homelab, prospera) | Structure ready, project images deferred |
 | Tooling in image layers, not startup scripts | ✅ — `verify-base.sh` runs in the image |
-| Three Dockerfiles, no ARG/profile-driver | `multistage-mcr` + `alpine-apt` for base; separate Dockerfiles for project images follow |
+| Three Dockerfiles, no ARG/profile-driver | `multistage-mcr` + `alpine-apk` for base; separate Dockerfiles for project images follow |
 | Shared tooling list | Base carries git, pwsh, az CLI, Az module, bicep, gh — ADR 21 wording ("Azure CLI") needs update |
