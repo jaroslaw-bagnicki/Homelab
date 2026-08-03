@@ -1,0 +1,91 @@
+{
+  "storage": {
+    "rootDirectory": "/var/lib/zot"
+  },
+  "http": {
+    "address": "0.0.0.0",
+    "port": "5000",
+    "auth": {
+      "htpasswd": {
+        "path": "/etc/zot/htpasswd"
+      }
+    },
+    "accessControl": {
+      "repositories": {
+        "**": {
+          "policies": [
+            {
+              "users": [
+                "{{ zot_registry_user }}"
+              ],
+              "actions": [
+                "read",
+                "create",
+                "update",
+                "delete"
+              ]
+            }
+          ],
+          "defaultPolicy": [
+            "read"
+          ]
+        }
+      }
+    },
+    "compat": [
+      "docker2s2"
+    ]
+  },
+  "log": {
+    "level": "info"
+  },
+  "extensions": {
+    "sync": {
+      "enable": true,
+      "registries": [
+        {
+          "urls": [
+            "https://ghcr.io"
+          ],
+          "onDemand": true,
+          "tlsVerify": true,
+          "preserveDigest": true,
+          "content": [
+            {
+              "prefix": "**",
+              "destination": "/ghcr"
+            }
+          ]
+        },
+        {
+          "urls": [
+            "https://mcr.microsoft.com"
+          ],
+          "onDemand": true,
+          "tlsVerify": true,
+          "preserveDigest": true,
+          "content": [
+            {
+              "prefix": "**",
+              "destination": "/mcr"
+            }
+          ]
+        },
+        {
+          "urls": [
+            "https://index.docker.io"
+          ],
+          "onDemand": true,
+          "tlsVerify": true,
+          "preserveDigest": true,
+          "content": [
+            {
+              "prefix": "**",
+              "destination": "/dockerhub"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

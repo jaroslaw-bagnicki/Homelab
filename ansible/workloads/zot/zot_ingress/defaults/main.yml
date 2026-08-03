@@ -1,0 +1,3 @@
+---
+zot_caddyfile: /opt/docker/Caddyfile
+zot_public_domain: example.com

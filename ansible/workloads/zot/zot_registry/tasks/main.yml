@@ -1,0 +1,89 @@
+---
+- name: Validate inventory_hostname is in supported set
+  ansible.builtin.assert:
+    that:
+      - inventory_hostname in ['homelab', 'cloudlab']
+    fail_msg: "inventory_hostname '{{ inventory_hostname }}' is not in the supported set {homelab, cloudlab}. Update the assertion in tasks/main.yml."
+
+- name: Ensure zot directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - "{{ zot_dir }}"
+    - "{{ zot_data_dir }}"
+
+- name: Ensure apache2-utils installed for htpasswd
+  ansible.builtin.apt:
+    name: apache2-utils
+    state: present
+
+- name: Fetch zot registry username from Key Vault
+  vars:
+    vault_url: "https://{{ zot_keyvault_name }}.vault.azure.net"
+  ansible.builtin.set_fact:
+    zot_registry_user: "{{ lookup('azure.azcollection.azure_keyvault_secret', zot_registry_user_secret_name, vault_url=vault_url) }}"
+  delegate_to: localhost
+  no_log: true
+
+- name: Fetch zot registry password from Key Vault
+  vars:
+    vault_url: "https://{{ zot_keyvault_name }}.vault.azure.net"
+  ansible.builtin.set_fact:
+    zot_registry_password: "{{ lookup('azure.azcollection.azure_keyvault_secret', zot_registry_password_secret_name, vault_url=vault_url) }}"
+  delegate_to: localhost
+  no_log: true
+
+- name: Check existing htpasswd entry
+  ansible.builtin.command:
+    cmd: htpasswd -v -i "{{ zot_dir }}/htpasswd" "{{ zot_registry_user }}"
+    stdin: "{{ zot_registry_password }}"
+  register: zot_htpasswd_check
+  changed_when: false
+  failed_when: false
+  no_log: true
+
+- name: Generate htpasswd entry
+  ansible.builtin.command:
+    cmd: htpasswd -n -B -i "{{ zot_registry_user }}"
+    stdin: "{{ zot_registry_password }}"
+  register: zot_htpasswd_entry
+  changed_when: false
+  no_log: true
+  when: zot_htpasswd_check.rc != 0
+
+- name: Write htpasswd file
+  ansible.builtin.copy:
+    content: "{{ zot_htpasswd_entry.stdout }}\n"
+    dest: "{{ zot_dir }}/htpasswd"
+    mode: "0600"
+    owner: root
+    group: root
+  when: zot_htpasswd_check.rc != 0
+  notify: Restart zot
+
+- name: Template zot config
+  ansible.builtin.template:
+    src: config.json.j2
+    dest: "{{ zot_dir }}/config.json"
+    mode: "0644"
+  notify: Restart zot
+
+- name: Ensure homelab_net Docker network exists
+  community.docker.docker_network:
+    name: homelab_net
+    state: present
+    driver: bridge
+
+- name: Template zot docker-compose.yml
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ zot_dir }}/docker-compose.yml"
+    mode: "0644"
+
+- name: Deploy zot container
+  community.docker.docker_compose_v2:
+    project_src: "{{ zot_dir }}"
+    state: present
+    pull: always
