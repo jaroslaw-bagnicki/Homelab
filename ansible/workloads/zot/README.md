@@ -15,7 +15,7 @@ The registry is:
 - Pinned to a released Zot image tag (`v2.1.18`), not `latest`.
 - Idempotent: re-running the playbook reports `changed=0` when no template / image / KV change exists.
 
-The full `ghcr.io/project-zot/zot` image is used (search, ui, mgmt extensions enabled by default — web UI + CVE scanning). `config.json` and `htpasswd` are bind-mounted read-only; image data lives in `zot_data_dir`.
+The full `ghcr.io/project-zot/zot` image is used, with the `search`, `ui`, and `mgmt` extensions explicitly enabled in `config.json` (web UI + CVE scanning via Trivy). `config.json` and `htpasswd` are bind-mounted read-only; image data lives in `zot_data_dir`.
 
 ## Services
 

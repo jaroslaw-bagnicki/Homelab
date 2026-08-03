@@ -69,7 +69,7 @@ Traffic flow: client → Cloudflare edge (TLS) → cloudflared → `http://caddy
 ## Security notes
 
 - **Auth on everything** — the registry requires the htpasswd credential for push and pull; there is no anonymous access, so the pull-through cache cannot be abused as an open proxy.
-- The full Zot image enables the `search`/`ui`/`mgmt` extensions by default. The `mgmt` extension ships with a built-in `zot-admin`/`zot-admin` admin identity for its management API — acceptable for a personal homelab, but the registry is otherwise fully authenticated. Review before widening access.
+- The `search`/`ui`/`mgmt` extensions are explicitly enabled in `config.json`. The `mgmt` extension ships with a built-in `zot-admin`/`zot-admin` admin identity for its management API — acceptable for a personal homelab, but the registry is otherwise fully authenticated. Review before widening access.
 - Data lives on the NVMe at `/var/lib/zot`; cloudlab is disposable (ADR 13), so no restic coverage is planned for the registry there.
 
 ---
