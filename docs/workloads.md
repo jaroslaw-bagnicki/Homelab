@@ -20,3 +20,4 @@ Each workload in this repository is a self-contained recipe, runnable independen
 | Workload | Path | Purpose | Docs |
 |---|---|---|---|
 | OpenCode | `ansible/workloads/opencode/opencode-playbook.yml` | Per-project OpenCode server instances on cloudlab's dedicated `opencode_net`. | [Workload README](../ansible/workloads/opencode/README.md) · [Deploy — Runbook 17](runbooks/17-deploy-opencode-on-cloudlab.md) · [Provision — Runbook 18](runbooks/18-provision-opencode-instance.md) |
+| Zot | `ansible/workloads/zot/zot-playbook.yml` | Self-hosted Zot OCI container registry on cloudlab's `homelab_net` — htpasswd auth from AKV, on-demand pull-through cache for GHCR/mcr/Docker Hub, public at `zot.<domain>` via Cloudflare Tunnel + Caddy. | [Workload README](../ansible/workloads/zot/README.md) · [Deploy — Runbook 20](runbooks/20-deploy-zot.md) |
