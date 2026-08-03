@@ -17,7 +17,7 @@ Per ADR 21 — a three-image hierarchy with shared tooling in the base layer, pr
 ghcr.io/anomalyco/opencode:latest         (upstream, never modified)
     ↓
 opencode-base                             (shared tooling: git, pwsh, az CLI, Az module, bicep, gh)
-    ├── opencode-homelab                  (+ ansible-core 2.17, ansible-lint)
+    ├── opencode-homelab                  (+ ansible-core 2.20, ansible-lint)
     └── opencode-prospera                 (+ .NET SDK 8.0, SQL tools TBD)
 ```
 
@@ -91,6 +91,54 @@ docker images opencode-base:*
 
 `multistage-mcr` chosen because it uses Microsoft-published images for pwsh (deterministic 7.4, no dependency on the Alpine community package), while `alpine-apk` ships whatever pwsh version Alpine's repo currently has. LTS pinning is a **soft preference, not a hard requirement**. The +366s in the final build (858.5s) is almost entirely the `Install-Module Az` step (~600 MB, 102 submodules).
 
+## Current state — `opencode-homelab` built
+
+`opencode-homelab` extends the base with the Homelab project's automation tooling.
+
+### File layout
+
+```
+docker/opencode-homelab/
+├── Dockerfile
+├── .dockerignore
+└── tests/
+    └── verify-homelab.sh
+```
+
+### Recipe — `docker/opencode-homelab/Dockerfile`
+
+`FROM opencode-base:multistage-mcr`, adds via `pip3`:
+
+| Tool | Version | Source |
+|---|---|---|
+| ansible-core | 2.20.7 | `pip3 install ansible-core==2.20.*` |
+| ansible-lint | 26.6.0 | `pip3 install ansible-lint==26.6.0` |
+
+### Why ansible-core 2.20, not ADR 21's 2.17
+
+ADR 21 pins ansible-core 2.17, but that is **incompatible with the base image's Python 3.14** — `ansible_compat` (required by ansible-lint) hard-errors on Python 3.14 unless ansible-core ≥ 2.20. So the homelab image uses **ansible-core 2.20**. This is a deviation from the ADR 21 2.17 pin and should be reflected in an ADR 21 amendment.
+
+### Build & verify
+
+```bash
+docker build -f docker/opencode-homelab/Dockerfile \
+             -t opencode-homelab:1.0.0 docker/opencode-homelab/
+
+docker run --rm --entrypoint sh opencode-homelab:1.0.0 /usr/local/bin/verify-homelab.sh
+```
+
+`verify-homelab.sh` runs the base checks then `ansible --version` and `ansible-lint --version`. Note: ansible 2.20 rejects non-blocking stderr — the script pipes `ansible --version 2>&1` to satisfy the blocking-IO check.
+
+### POC results
+
+| Metric | Value |
+|---|---|
+| Build | ✅ rc=0, ~27s (base cached) |
+| On-disk size | **3.59 GB** |
+| Compressed size | **688 MB** |
+| ansible-core / ansible-lint | 2.20.7 / 26.6.0 |
+| Functional test | `ansible localhost -m ping` → `pong` |
+
 ## Size analysis
 
 | Image | On-disk | Compressed |
@@ -98,6 +146,7 @@ docker images opencode-base:*
 | Upstream `ghcr.io/anomalyco/opencode:latest` | 282 MB | 72 MB |
 | `opencode-base` (az CLI only) | 2.77 GB | 546 MB |
 | `opencode-base` (az CLI + Az module) | 3.54 GB | 678 MB |
+| `opencode-homelab` | **3.59 GB** | **688 MB** |
 
 Bloat is dominated by the **az CLI Python stack** (~1.1 GB of `azure` packages) plus the **Az PowerShell module** (~600 MB). Both are inherent to Azure tooling; there is no musl-compatible slim alternative for the az CLI (the official `mcr.microsoft.com/azure-cli:azurelinux3.0` is glibc, 840 MB for az alone, not reusable on our Alpine base).
 
@@ -147,7 +196,7 @@ Also note: `docker build` requires a running daemon on the target host; the cont
 
 | Item | Reason |
 |---|---|
-| `opencode-homelab` Dockerfile | Base recipe now locked; needs ansible-core 2.17 + ansible-lint |
+| `opencode-homelab` Dockerfile | ✅ Done — ansible-core 2.20 + ansible-lint (see above) |
 | `opencode-prospera` Dockerfile | Needs .NET 8.0 SDK + SQL tooling decision |
 | Azure SQL tooling for prospera | Open question on #38 |
 | Image registry / push to GHCR | Local-only for now |
@@ -158,14 +207,14 @@ Also note: `docker build` requires a running daemon on the target host; the cont
 
 ## Version pinning
 
-LTS pinning is a soft preference. Where a deterministic version is cheap, it is pinned (az CLI `==2.62.0`, bicep `0.30.3`, gh `2.97.0`, pwsh from `7.4-alpine-3.20`). The Az module intentionally tracks latest. Project image tags (`opencode-homelab:…`, `opencode-prospera:…`) will be assigned once those images are authored.
+LTS pinning is a soft preference. Where a deterministic version is cheap, it is pinned (az CLI `==2.62.0`, bicep `0.30.3`, gh `2.97.0`, pwsh from `7.4-alpine-3.20`). The Az module intentionally tracks latest. `opencode-homelab` is tagged `1.0.0`; `opencode-prospera` tag will be assigned once authored.
 
 ## ADR 21 alignment
 
 | Requirement | Status |
 |---|---|
 | Base image always `ghcr.io/anomalyco/opencode:latest` | ✅ `multistage-mcr` |
-| Three-image hierarchy (base → homelab, prospera) | Structure ready, project images deferred |
+| Three-image hierarchy (base → homelab, prospera) | `opencode-base` + `opencode-homelab` built; `opencode-prospera` deferred |
 | Tooling in image layers, not startup scripts | ✅ — `verify-base.sh` runs in the image |
 | Three Dockerfiles, no ARG/profile-driver | `multistage-mcr` + `alpine-apk` for base; separate Dockerfiles for project images follow |
 | Shared tooling list | Base carries git, pwsh, az CLI, Az module, bicep, gh — ADR 21 wording ("Azure CLI") needs update |
