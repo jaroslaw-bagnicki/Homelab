@@ -1,5 +1,6 @@
 ---
-- name: Reload Caddy
-  ansible.builtin.command:
-    cmd: docker exec caddy caddy reload --config /etc/caddy/Caddyfile
-  changed_when: false
+- name: Restart Caddy
+  community.docker.docker_container:
+    name: caddy
+    state: started
+    recreate: true
