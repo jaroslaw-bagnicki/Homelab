@@ -60,7 +60,7 @@ Traffic flow: client → Cloudflare edge (TLS) → cloudflared → `http://caddy
 - [ ] Internal API: `curl -s http://127.0.0.1:5000/v2/` → `{}` (unauthenticated `401` also indicates auth is active)
 - [ ] Public catalog (over CF Tunnel): `curl -u zot:$PASSWORD https://zot.example.com/v2/_catalog` → `{"repositories":[]}`
 - [ ] Push round-trip: `docker login zot.example.com` → `docker tag hello-world zot.example.com/hello:test` → `docker push zot.example.com/hello:test` → `docker pull zot.example.com/hello:test`
-- [ ] Pull-through cache: `docker pull zot.example.com/ghcr/nginx/nginx:alpine` (first pull fetches from `ghcr.io`, caches locally; a second pull is served from cache — verify the container pulls fast)
+- [ ] Pull-through cache: `docker pull zot.example.com/ghcr/project-zot/zot:v2.1.18` and `docker pull zot.example.com/dockerhub/library/alpine:latest` (first pull fetches from `ghcr.io` / Docker Hub and caches locally; a second pull is served from cache — verify the container pulls fast)
 - [ ] CVE scan / web UI: `https://zot.example.com` → login with the htpasswd credential → image list renders, scan results visible
 - [ ] Idempotency: re-run `ansible-playbook ansible/workloads/zot/zot-playbook.yml` → `changed=0`
 
