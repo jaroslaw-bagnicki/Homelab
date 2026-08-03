@@ -30,7 +30,7 @@ The workstream is split into sub-issues so each layer can land and be reviewed i
 
 ### 1. Container images (#38)
 
-Per ADR 21 — three-image hierarchy (`opencode-base` → `opencode-homelab` / `opencode-prospera`). Base is always `ghcr.io/anomalyco/opencode:latest`, never substituted. Tooling baked into image layers, not startup scripts.
+Per ADR 21 — three-image hierarchy (`opencode-base` → `opencode-homelab` / `opencode-prospera`). Base is always `ghcr.io/anomalyco/opencode:latest`, never substituted. Tooling baked into image layers, not startup scripts. [Full doc →](container-images.md)
 
 ### 2. Workspace + repo cloning (#39)
 
