@@ -2,7 +2,7 @@
 
 > Runbook for the `ansible/workloads/zot/` workload — self-hosted OCI registry on cloudlab per [issue #50](https://github.com/jaroslaw-bagnicki/Homelab/issues/50). Workload description, capabilities, services, host layout, secret handling, and idempotency live in [the workload README](../../ansible/workloads/zot/README.md). This runbook covers the operational steps: prerequisites, secret provisioning, deploy invocation, Cloudflare Tunnel routing, and verification.
 
-> **Note:** `example.com` is a placeholder domain used in this runbook for documentation purposes. The `example.com` literal reflects the cloudlab deployment (the Ansible `zot_public_domain` var controls it).
+> **Note:** `example.com` is a placeholder domain used throughout this runbook for documentation purposes only — it is **not** the deployed domain. The actual registry hostname is `zot.<domain>`, where `<domain>` is the Ansible `zot_public_domain` var (`cloud5.ovh` on cloudlab).
 
 ## Prerequisites
 
