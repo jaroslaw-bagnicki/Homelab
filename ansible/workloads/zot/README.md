@@ -11,7 +11,7 @@ The registry is:
 - A single `zot` container on the shared `homelab_net`, reachable internally as `zot:5000` from Caddy. No public host port is published; the only published binding is `127.0.0.1:5000` for SSH-tunnel debugging.
 - **Authenticated for push and pull** — it is internet-exposed; anonymous pull would make the pull-through cache an open proxy. Credentials are a single htpasswd user/password fetched from Azure Key Vault (`homelab-bysxdb-kv`) at playbook runtime. No credential is committed.
 - A pull-through cache: `sync` extension with on-demand mirrors for `ghcr.io`, `mcr.microsoft.com`, `index.docker.io`, using `preserveDigest: true` + `http.compat: ["docker2s2"]` so digest-pinned pulls and signatures survive mirroring. Upstream content is stored under `/ghcr`, `/mcr`, `/dockerhub` repository prefixes.
-- Public via `http://zot.<domain>` → `zot:5000` in the shared Caddyfile (Cloudflare Tunnel terminates TLS at the edge, per ADR 19). The route is declared in the base `docker_services` Caddyfile template **and** ensured idempotently by this workload's `zot_ingress` role (`blockinfile`) — first writer wins.
+- Public via `zot.<domain>` through the shared Caddyfile (Cloudflare Tunnel terminates TLS at the edge, per ADR 19). Routing is declared in the base `docker_services` Caddyfile template and applied by the base playbook — see [External access](#external-access).
 - Pinned to a released Zot image tag (`v2.1.18`), not `latest`.
 - Idempotent: re-running the playbook reports `changed=0` when no template / image / KV change exists.
 
@@ -23,7 +23,27 @@ The full `ghcr.io/project-zot/zot` image is used, with the `search`, `ui`, and `
 |---|---|---|---|---|
 | `zot` | `ghcr.io/project-zot/zot:v2.1.18` | `127.0.0.1:5000:5000` | `homelab_net` (external) | `zot_registry` role |
 
-`zot_ingress` owns the Caddy route only; Caddy itself is deployed by the base `docker_services` role.
+Caddy itself is deployed by the base `docker_services` role; this workload does not touch it.
+
+## External access
+
+The zot container listens only on `homelab_net` (`zot:5000`); no public host port is published. Two options to expose it:
+
+### Option A — Reverse proxy via Caddy (repo default)
+
+Routing is declared once in the base `docker_services` Caddyfile template and applied by the base playbook (`ansible/playbooks/playbook.yml`):
+
+```caddyfile
+http://zot.example.com {
+    reverse_proxy zot:5000
+}
+```
+
+With the Cloudflare Tunnel sending `zot.example.com` → `http://caddy:80` (see [runbook 20 §3](../../../docs/runbooks/20-deploy-zot.md)), the path is: browser → CF edge → cloudflared → `caddy:80` → `zot:5000`. Caddy is restarted by the base role's handler when the template changes, so the base playbook must run before/after the workload to make the route live.
+
+### Option B — Expose zot directly
+
+Point the Cloudflare Tunnel public hostname straight at the container (service `HTTP` → `zot:5000`) and skip Caddy. No Caddyfile change needed. Trade-off: the origin lives in the Cloudflare dashboard rather than the declarative Caddyfile, and zot bypasses Caddy as the single routing/security layer (ADR 20).
 
 ## Host on-disk layout
 
@@ -63,7 +83,6 @@ Subsequent runs with no template, image, or KV change report `changed=0`.
 
 - `zot-playbook.yml` — playbook entrypoint.
 - `zot_registry/` — role: directories, `python3-passlib`/`python3-bcrypt`, KV password fetch, htpasswd write via the `htpasswd` module, `config.json` + `docker-compose.yml` templates, `homelab_net` ensure, container deploy.
-- `zot_ingress/` — role: idempotent `zot.<domain>` site block in the shared Caddyfile + Caddy restart.
 
 ## Invoke
 
@@ -76,13 +95,12 @@ Subsequent runs with no template, image, or KV change report `changed=0`.
 ## Roles run
 
 1. `zot_registry` — deploys the registry container and config.
-2. `zot_ingress` — registers the public route in the shared Caddyfile.
 
 ## Vars consumed
 
-- `zot_public_domain` — public DNS suffix for the registry hostname (`zot.<domain>`), default `example.com`, overridden per host.
-- `zot_keyvault_name`, `zot_registry_user_secret_name`, `zot_registry_password_secret_name`, `zot_dir`, `zot_data_dir`, `zot_image` — role defaults.
-- `zot_caddyfile` — path to the shared Caddyfile (default `/opt/docker/Caddyfile`).
+- `zot_keyvault_name`, `zot_registry_password_secret_name`, `zot_dir`, `zot_data_dir`, `zot_image` — role defaults.
+- `zot_registry_user` — htpasswd username (role default `zot`), used by `config.json` and the `htpasswd` module.
+- `zot_public_domain` — public DNS suffix for the registry hostname (`zot.<domain>`), default `example.com`, overridden per host; consumed by the base `docker_services` Caddyfile template for the route.
 
 ## Operational runbook
 
