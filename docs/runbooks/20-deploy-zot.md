@@ -41,7 +41,7 @@ ansible-playbook ansible/workloads/zot/zot-playbook.yml            # Zot workloa
 
 `homelab_net` is self-declared in two places — the base playbook pre_tasks and the `zot_registry` role — both idempotent, first writer wins.
 
-The `zot.example.com` route lives in the base `docker_services` Caddyfile template (the `# BEGIN/END ZOT ROUTE` block) and is applied whenever the base playbook runs, which also restarts Caddy. For the two exposure options (Caddy reverse proxy vs direct tunnel), see the [workload README — External access](../../ansible/workloads/zot/README.md).
+The `zot.example.com` route lives in the base `docker_services` Caddyfile template (the `# BEGIN/END ZOT ROUTE` block) and is applied whenever the base playbook runs, which also restarts Caddy. This is exposure Option A; the three options (Caddy reverse proxy, zot native HTTPS on host 443, direct Cloudflare Tunnel) are documented in the [workload README — External access](../../ansible/workloads/zot/README.md).
 
 The deploy workflow is idempotent: running the workload twice without changes reports `changed=0`.
 

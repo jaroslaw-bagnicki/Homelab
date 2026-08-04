@@ -27,7 +27,7 @@ Caddy itself is deployed by the base `docker_services` role; this workload does 
 
 ## External access
 
-The zot container listens only on `homelab_net` (`zot:5000`); no public host port is published. Two options to expose it:
+By default the zot container listens only on `homelab_net` (`zot:5000`), published on the host loopback (`127.0.0.1:5000`) for debugging; no public port is exposed. Three options to expose it publicly:
 
 ### Option A — Reverse proxy via Caddy (repo default)
 
@@ -41,7 +41,30 @@ http://zot.example.com {
 
 With the Cloudflare Tunnel sending `zot.example.com` → `http://caddy:80` (see [runbook 20 §3](../../../docs/runbooks/20-deploy-zot.md)), the path is: browser → CF edge → cloudflared → `caddy:80` → `zot:5000`. Caddy is restarted by the base role's handler when the template changes, so the base playbook must run before/after the workload to make the route live.
 
-### Option B — Expose zot directly
+### Option B — zot native HTTPS on host port 443
+
+Enable TLS in zot itself and bind it to the host's public port 443 — no Caddy, no tunnel needed:
+
+```jsonc
+// config.json — http section
+"http": {
+    "port": "443",
+    "tls": {
+        "cert": "/etc/zot/certs/server.crt",
+        "key":  "/etc/zot/certs/server.key"
+    }
+}
+```
+
+```yaml
+# docker-compose.yml
+ports:
+  - "443:443"
+```
+
+The certificate files must be mounted into the container and provisioned out-of-band — zot does not do ACME (e.g. a Cloudflare Origin CA cert, or Let's Encrypt via certbot). Trade-offs: requires opening inbound TCP 443 on the host (diverges from ADR 19's tunnel-only ingress), manual cert provisioning and renewal, and the DNS record should point at the host IP (grey-cloud) or use CF proxy with SSL mode `Full (strict)`.
+
+### Option C — Cloudflare Tunnel direct to zot
 
 Point the Cloudflare Tunnel public hostname straight at the container (service `HTTP` → `zot:5000`) and skip Caddy. No Caddyfile change needed. Trade-off: the origin lives in the Cloudflare dashboard rather than the declarative Caddyfile, and zot bypasses Caddy as the single routing/security layer (ADR 20).
 
