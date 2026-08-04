@@ -14,16 +14,19 @@
 
 ## 1. Provision secrets
 
-Before the first playbook run, provision the htpasswd credential in Key Vault:
+Before the first playbook run, provision the registry password in Key Vault via the provisioning script:
 
 ```powershell
-$vault = "homelab-bysxdb-kv"
-
-Set-AzKeyVaultSecret -VaultName $vault -Name "zot-registry-user"     -SecretValue (ConvertTo-SecureString -AsPlainText "zot" -Force) | Out-Null
-Set-AzKeyVaultSecret -VaultName $vault -Name "zot-registry-password" -SecretValue (ConvertTo-SecureString -AsPlainText (Get-Random) -Force) | Out-Null
+.\scripts\New-HomelabZotRegistryCredential.ps1
 ```
 
-The username and password are fetched at playbook runtime and baked into a bcrypt htpasswd file on the host (`/etc/zot/htpasswd`, mode 0600). Only one user is supported. Rotation = set a new `zot-registry-password` and re-run the playbook; the role detects the mismatch and regenerates + restarts.
+The script generates a strong random password and stores it as `zot-registry-password` in `homelab-bysxdb-kv`. The username is the role default `zot` (`zot_registry_user`), not a secret. Retrieve the password when you need to log in:
+
+```powershell
+Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name zot-registry-password -AsPlainText
+```
+
+**Rotation**: re-run `New-HomelabZotRegistryCredential.ps1 -Force` (writes a new password), then re-run the playbook — the role updates the bcrypt htpasswd file and restarts zot.
 
 > The registry is internet-exposed, so **push and pull both require this credential**. `docker login zot.example.com` is mandatory before any push/pull.
 
@@ -38,7 +41,7 @@ ansible-playbook ansible/workloads/zot/zot-playbook.yml            # Zot workloa
 
 `homelab_net` is self-declared in two places — the base playbook pre_tasks and the `zot_registry` role — both idempotent, first writer wins.
 
-The `zot.example.com` route is declared both in the base `docker_services` Caddyfile template and ensured idempotently by the `zot_ingress` role (`blockinfile`). Either source keeps the route present; the workload reloads Caddy gracefully when it changes.
+The `zot.example.com` route is declared both in the base `docker_services` Caddyfile template and ensured idempotently by the `zot_ingress` role (`blockinfile`). Either source keeps the route present; the workload restarts Caddy when the route changes.
 
 The deploy workflow is idempotent: running the workload twice without changes reports `changed=0`.
 

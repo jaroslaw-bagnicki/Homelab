@@ -15,7 +15,7 @@ The registry is:
 - Pinned to a released Zot image tag (`v2.1.18`), not `latest`.
 - Idempotent: re-running the playbook reports `changed=0` when no template / image / KV change exists.
 
-The full `ghcr.io/project-zot/zot` image is used, with the `search`, `ui`, and `mgmt` extensions explicitly enabled in `config.json` (web UI + CVE scanning via Trivy). `config.json` and `htpasswd` are bind-mounted read-only; image data lives in `zot_data_dir`.
+The full `ghcr.io/project-zot/zot` image is used, with the `search`, `ui`, and `mgmt` extensions enabled by default (web UI + CVE scanning). `config.json` and `htpasswd` are bind-mounted read-only; image data lives in `zot_data_dir`.
 
 ## Services
 
@@ -30,7 +30,7 @@ The full `ghcr.io/project-zot/zot` image is used, with the `search`, `ui`, and `
 ```
 /etc/zot/                          # registry config root (templated by zot_registry)
 ├── config.json                    # storage, http, auth, sync mirror config
-├── htpasswd                       # bcrypt htpasswd (user from Key Vault, mode 0600)
+├── htpasswd                       # bcrypt htpasswd (role default user, mode 0600)
 └── docker-compose.yml
 
 /var/lib/zot/                      # registry blob storage (zot_data_dir)
@@ -40,12 +40,11 @@ Container paths: config at `/etc/zot/config.json`, htpasswd at `/etc/zot/htpassw
 
 ## Secrets
 
-Two secrets must exist in the vault declared by `zot_keyvault_name` (default `homelab-bysxdb-kv`):
+One secret must exist in the vault declared by `zot_keyvault_name` (default `homelab-bysxdb-kv`):
 
-- `zot-registry-user` — htpasswd username (role default `zot_registry_user_secret_name`)
-- `zot-registry-password` — htpasswd password (`zot_registry_password_secret_name`)
+- `zot-registry-password` — the registry password (`zot_registry_password_secret_name`)
 
-The role fetches them at runtime via `azure.azcollection.azure_keyvault_secret` and generates the bcrypt htpasswd file on the host (`apache2-utils` is installed to provide `htpasswd`). No `.env` file or plaintext credential is rendered on the host. Rotation = update the KV password secret; the next run detects it (via `htpasswd -v`) and regenerates the file, triggering a zot restart. Only one htpasswd user is supported.
+The username is the role default `zot_registry_user: zot` (not a secret). Provision the password with `scripts/New-HomelabZotRegistryCredential.ps1`; the role fetches it at runtime via `azure.azcollection.azure_keyvault_secret` and writes the bcrypt htpasswd file on the host (`/etc/zot/htpasswd`, mode 0600) using the `community.general.htpasswd` module. No `.env` file or plaintext credential is rendered on the host. Rotation = run the script with `-Force`, then re-run the playbook. Only one htpasswd user is supported.
 
 Provisioning steps are in the operational runbook.
 
@@ -54,7 +53,7 @@ Provisioning steps are in the operational runbook.
 `zot_registry` uses `community.docker.docker_compose_v2` with `state: present` and `pull: always`. On the first run:
 
 1. `homelab_net` bridge network is ensured (idempotent with the base playbook — first writer wins).
-2. `apache2-utils` is installed; the htpasswd entry is generated from KV credentials and written as `/etc/zot/htpasswd` (only when the existing entry fails `htpasswd -v`).
+2. `python3-passlib`/`python3-bcrypt` are installed; the htpasswd entry is written from the KV-sourced password by the idempotent `community.general.htpasswd` module.
 3. `config.json` and `docker-compose.yml` are templated; the zot container is deployed.
 4. Config/htpasswd changes notify a `zot` container restart.
 
@@ -63,8 +62,8 @@ Subsequent runs with no template, image, or KV change report `changed=0`.
 ## What's in this folder
 
 - `zot-playbook.yml` — playbook entrypoint.
-- `zot_registry/` — role: directories, apache2-utils, KV credential fetch, htpasswd generation, `config.json` + `docker-compose.yml` templates, `homelab_net` ensure, container deploy.
-- `zot_ingress/` — role: idempotent `zot.<domain>` site block in the shared Caddyfile + graceful `caddy reload`.
+- `zot_registry/` — role: directories, `python3-passlib`/`python3-bcrypt`, KV password fetch, htpasswd write via the `htpasswd` module, `config.json` + `docker-compose.yml` templates, `homelab_net` ensure, container deploy.
+- `zot_ingress/` — role: idempotent `zot.<domain>` site block in the shared Caddyfile + Caddy restart.
 
 ## Invoke
 
