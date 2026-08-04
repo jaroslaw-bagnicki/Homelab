@@ -3,4 +3,4 @@
   community.docker.docker_container:
     name: caddy
     state: started
-    recreate: true
+    restart: true
