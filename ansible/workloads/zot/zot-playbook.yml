@@ -1,0 +1,23 @@
+---
+# Zot container registry workload — self-contained recipe.
+#
+# Deploys the Zot OCI registry (ghcr.io/project-zot/zot) on cloudlab per issue #50.
+# One role recipe co-located under ansible/workloads/zot/:
+#   - role: zot_registry   (config.json + htpasswd auth + zot container on homelab_net)
+#
+# Public routing (zot.<domain> → zot:5000) lives in the base docker_services
+# Caddyfile template and is applied by the base playbook — see the workload
+# README "External access" section. The workload itself does not touch Caddy.
+#
+# Run standalone:
+#   ansible-playbook ansible/workloads/zot/zot-playbook.yml
+#
+# See:
+#   ansible/workloads/zot/README.md        ansible-side facts
+#   docs/workloads.md                      general rules + index
+#   docs/runbooks/20-deploy-zot.md         operational steps
+- name: Apply Zot container registry workload
+  hosts: cloudlab
+  become: true
+  roles:
+    - role: zot_registry

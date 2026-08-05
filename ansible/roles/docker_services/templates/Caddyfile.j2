@@ -29,3 +29,9 @@ http://portainer.cloud5.ovh {
 :8080 {
     respond "Caddy debug: OK"
 }
+
+# BEGIN ZOT ROUTE
+http://zot.{{ zot_public_domain }} {
+    reverse_proxy zot:5000
+}
+# END ZOT ROUTE

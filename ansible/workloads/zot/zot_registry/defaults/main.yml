@@ -1,0 +1,8 @@
+---
+zot_dir: /etc/zot
+zot_data_dir: /var/lib/zot
+zot_image: ghcr.io/project-zot/zot:v2.1.18
+zot_keyvault_name: homelab-bysxdb-kv
+zot_registry_user: zot-admin
+zot_registry_user_secret_name: zot-registry-user
+zot_registry_password_secret_name: zot-registry-password
