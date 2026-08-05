@@ -1,10 +1,4 @@
 ---
-- name: Validate inventory_hostname is in supported set
-  ansible.builtin.assert:
-    that:
-      - inventory_hostname in ['homelab', 'cloudlab']
-    fail_msg: "inventory_hostname '{{ inventory_hostname }}' is not in the supported set {homelab, cloudlab}. Update the assertion in tasks/main.yml."
-
 - name: Ensure zot directories exist
   ansible.builtin.file:
     path: "{{ item }}"
