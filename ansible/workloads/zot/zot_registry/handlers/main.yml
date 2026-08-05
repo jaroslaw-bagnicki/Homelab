@@ -1,0 +1,6 @@
+---
+- name: Restart zot
+  community.docker.docker_container:
+    name: zot
+    state: started
+    restart: true

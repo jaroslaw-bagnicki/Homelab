@@ -1,0 +1,18 @@
+services:
+  zot:
+    image: {{ zot_image }}
+    container_name: zot
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5000:5000"
+    volumes:
+      - "{{ zot_dir }}/config.json:/etc/zot/config.json:ro"
+      - "{{ zot_dir }}/htpasswd:/etc/zot/htpasswd:ro"
+      - "{{ zot_data_dir }}:/var/lib/zot"
+    networks:
+      - homelab_net
+
+networks:
+  homelab_net:
+    external: true
+    name: homelab_net
