@@ -87,7 +87,7 @@ One secret must exist in the vault declared by `zot_keyvault_name` (default `hom
 
 - `zot-registry-password` — the registry password (`zot_registry_password_secret_name`)
 
-The username is the role default `zot_registry_user: zot` (not a secret). Provision the password with `scripts/New-HomelabZotRegistryCredential.ps1`; the role fetches it at runtime via `azure.azcollection.azure_keyvault_secret` and writes the bcrypt htpasswd file on the host (`/etc/zot/htpasswd`, mode 0600) using the `community.general.htpasswd` module. No `.env` file or plaintext credential is rendered on the host. Rotation = run the script with `-Force`, then re-run the playbook. Only one htpasswd user is supported.
+The username is the role default `zot_registry_user: zot-admin` (not a secret). This single user is granted **global admin** via `accessControl.adminPolicy` in `config.json` (in addition to the `**` repository policy), so it has full read/create/update/delete on any repository and admin status for the management API/UI. Provision the password with `scripts/New-HomelabZotRegistryCredential.ps1`; the role fetches it at runtime via `azure.azcollection.azure_keyvault_secret` and writes the bcrypt htpasswd file on the host (`/etc/zot/htpasswd`, mode 0600) using the `community.general.htpasswd` module. No `.env` file or plaintext credential is rendered on the host. Rotation = run the script with `-Force`, then re-run the playbook. Only one htpasswd user is supported.
 
 Provisioning steps are in the operational runbook.
 
@@ -122,9 +122,13 @@ Subsequent runs with no template, image, or KV change report `changed=0`.
 ## Vars consumed
 
 - `zot_keyvault_name`, `zot_registry_password_secret_name`, `zot_dir`, `zot_data_dir`, `zot_image` — role defaults.
-- `zot_registry_user` — htpasswd username (role default `zot`), used by `config.json` and the `htpasswd` module.
+- `zot_registry_user` — htpasswd username (role default `zot-admin`), the global admin (`adminPolicy`) and `**` repository policy holder, used by `config.json` and the `htpasswd` module.
 - `zot_public_domain` — public DNS suffix for the registry hostname (`zot.<domain>`), default `example.com`, overridden per host; consumed by the base `docker_services` Caddyfile template for the route.
 
 ## Operational runbook
 
 For deployment steps, secret provisioning, and the verification checklist, see [`docs/runbooks/20-deploy-zot.md`](../../../docs/runbooks/20-deploy-zot.md).
+
+## References
+
+- [Zot — User Authentication and Authorization](https://zotregistry.dev/v2.1.18/articles/authn-authz/) — authentication methods and the `accessControl` / `adminPolicy` authorization model (admin users can act on any repository).

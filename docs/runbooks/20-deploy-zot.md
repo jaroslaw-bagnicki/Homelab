@@ -20,7 +20,7 @@ Before the first playbook run, provision the registry password in Key Vault via 
 .\scripts\New-HomelabZotRegistryCredential.ps1
 ```
 
-The script generates a strong random password and stores it as `zot-registry-password` in `homelab-bysxdb-kv`. The username is the role default `zot` (`zot_registry_user`), not a secret. Retrieve the password when you need to log in:
+The script generates a strong random password and stores it as `zot-registry-password` in `homelab-bysxdb-kv`. The username is the role default `zot-admin` (`zot_registry_user`) — the registry's global admin (granted via `adminPolicy`), not a secret. Retrieve the password when you need to log in:
 
 ```powershell
 Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name zot-registry-password -AsPlainText
@@ -61,7 +61,7 @@ Traffic flow: client → Cloudflare edge (TLS) → cloudflared → `http://caddy
 
 - [ ] Zot is up: `docker ps --filter name=zot` → status `Up`
 - [ ] Internal API: `curl -s http://127.0.0.1:5000/v2/` → `{}` (unauthenticated `401` also indicates auth is active)
-- [ ] Public catalog (over CF Tunnel): `curl -u zot:$PASSWORD https://zot.example.com/v2/_catalog` → `{"repositories":[]}`
+- [ ] Public catalog (over CF Tunnel): `curl -u zot-admin:$PASSWORD https://zot.example.com/v2/_catalog` → `{"repositories":[]}`
 - [ ] Push round-trip: `docker login zot.example.com` → `docker tag hello-world zot.example.com/hello:test` → `docker push zot.example.com/hello:test` → `docker pull zot.example.com/hello:test`
 - [ ] Pull-through cache: `docker pull zot.example.com/ghcr/project-zot/zot:v2.1.18` and `docker pull zot.example.com/dockerhub/library/alpine:latest` (first pull fetches from `ghcr.io` / Docker Hub and caches locally; a second pull is served from cache — verify the container pulls fast)
 - [ ] CVE scan / web UI: `https://zot.example.com` → login with the htpasswd credential → image list renders, scan results visible
