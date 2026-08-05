@@ -134,3 +134,4 @@ For deployment steps, secret provisioning, and the verification checklist, see [
 ## References
 
 - [Zot — User Authentication and Authorization](https://zotregistry.dev/v2.1.18/articles/authn-authz/) — authentication methods and the `accessControl` / `adminPolicy` authorization model (admin users can act on any repository).
+- [Zot — `mgmt` extension README](https://github.com/project-zot/zot/blob/main/pkg/extensions/README_mgmt.md) — the `GET /v2/_zot/ext/mgmt` config endpoint: stripped config for all users, full config for admins (not implemented yet).
