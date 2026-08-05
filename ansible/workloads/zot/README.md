@@ -83,11 +83,12 @@ Container paths: config at `/etc/zot/config.json`, htpasswd at `/etc/zot/htpassw
 
 ## Secrets
 
-One secret must exist in the vault declared by `zot_keyvault_name` (default `homelab-bysxdb-kv`):
+Two secrets must exist in the vault declared by `zot_keyvault_name` (default `homelab-bysxdb-kv`), both provisioned by `scripts/New-HomelabZotRegistryCredential.ps1`:
 
+- `zot-registry-user` — the registry username (default `zot-admin`, the script's `-UserName` parameter; `zot_registry_user_secret_name`)
 - `zot-registry-password` — the registry password (`zot_registry_password_secret_name`)
 
-The username is the role default `zot_registry_user: zot-admin` (not a secret). This single user is granted **global admin** via `accessControl.adminPolicy` in `config.json` (in addition to the `**` repository policy), so it has full read/create/update/delete on any repository and admin status for the management API/UI. Provision the password with `scripts/New-HomelabZotRegistryCredential.ps1`; the role fetches it at runtime via `azure.azcollection.azure_keyvault_secret` and writes the bcrypt htpasswd file on the host (`/etc/zot/htpasswd`, mode 0600) using the `community.general.htpasswd` module. No `.env` file or plaintext credential is rendered on the host. Rotation = run the script with `-Force`, then re-run the playbook. Only one htpasswd user is supported.
+The user is granted **global admin** via `accessControl.adminPolicy` in `config.json` (in addition to the `**` repository policy), so it has full read/create/update/delete on any repository and admin status for the management API/UI. The role fetches both secrets at runtime via `azure.azcollection.azure_keyvault_secret` and writes the bcrypt htpasswd file on the host (`/etc/zot/htpasswd`, mode 0600) using the `community.general.htpasswd` module. No `.env` file or plaintext credential is rendered on the host. Rotation = run the script with `-Force`, then re-run the playbook. Only one htpasswd user is supported.
 
 Provisioning steps are in the operational runbook.
 
@@ -123,8 +124,8 @@ Subsequent runs with no template, image, or KV change report `changed=0`.
 
 ## Vars consumed
 
-- `zot_keyvault_name`, `zot_registry_password_secret_name`, `zot_dir`, `zot_data_dir`, `zot_image` — role defaults.
-- `zot_registry_user` — htpasswd username (role default `zot-admin`), the global admin (`adminPolicy`) and `**` repository policy holder, used by `config.json` and the `htpasswd` module.
+- `zot_keyvault_name`, `zot_registry_user_secret_name`, `zot_registry_password_secret_name`, `zot_dir`, `zot_data_dir`, `zot_image` — role defaults.
+- `zot_registry_user` — htpasswd username, fetched from `zot-registry-user` in Key Vault (default fallback `zot-admin`); the global admin (`adminPolicy`) and `**` repository policy holder, used by `config.json` and the `htpasswd` module.
 - `zot_public_domain` — public DNS suffix for the registry hostname (`zot.<domain>`), default `example.com`, overridden per host; consumed by the base `docker_services` Caddyfile template for the route.
 
 ## Operational runbook

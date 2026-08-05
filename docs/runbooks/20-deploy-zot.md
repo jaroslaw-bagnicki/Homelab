@@ -2,7 +2,7 @@
 
 > Runbook for the `ansible/workloads/zot/` workload — self-hosted OCI registry on cloudlab per [issue #50](https://github.com/jaroslaw-bagnicki/Homelab/issues/50). Workload description, capabilities, services, host layout, secret handling, and idempotency live in [the workload README](../../ansible/workloads/zot/README.md). This runbook covers the operational steps: prerequisites, secret provisioning, deploy invocation, Cloudflare Tunnel routing, and verification.
 
-> **Note:** `example.com` is a placeholder domain used throughout this runbook for documentation purposes only — it is **not** the deployed domain. The actual registry hostname is `zot.<domain>`, where `<domain>` is the Ansible `zot_public_domain` var (`cloud5.ovh` on cloudlab).
+> **Note:** `example.com` is a placeholder domain used throughout this runbook for documentation purposes only — it is **not** the deployed domain. The actual registry hostname is `zot.<domain>`, where `<domain>` is the Ansible `zot_public_domain` var.
 
 ## Prerequisites
 
@@ -14,13 +14,17 @@
 
 ## 1. Provision secrets
 
-Before the first playbook run, provision the registry password in Key Vault via the provisioning script:
+Before the first playbook run, provision the registry credentials in Key Vault via the provisioning script:
 
 ```powershell
 .\scripts\New-HomelabZotRegistryCredential.ps1
 ```
 
-The script generates a strong random password and stores it as `zot-registry-password` in `homelab-bysxdb-kv`. The username is the role default `zot-admin` (`zot_registry_user`) — the registry's global admin (granted via `adminPolicy`), not a secret. Retrieve the password when you need to log in:
+The script provisions both secrets in `homelab-bysxdb-kv`:
+- `zot-registry-user` — the registry username (default `zot-admin`, the `-UserName` parameter), the registry's global admin (granted via `adminPolicy`)
+- `zot-registry-password` — a strong random password
+
+The role fetches both at runtime. Retrieve the password when you need to log in:
 
 ```powershell
 Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name zot-registry-password -AsPlainText
@@ -60,7 +64,7 @@ Traffic flow: client → Cloudflare edge (TLS) → cloudflared → `http://caddy
 ## 4. Verification Checklist
 
 - [ ] Zot is up: `docker ps --filter name=zot` → status `Up`
-- [ ] Internal API: `curl -s http://127.0.0.1:5000/v2/` → `{}` (unauthenticated `401` also indicates auth is active)
+- [ ] Internal API (unauthenticated — auth is required): `curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:5000/v2/` → `401`
 - [ ] Public catalog (over CF Tunnel): `curl -u zot-admin:$PASSWORD https://zot.example.com/v2/_catalog` → `{"repositories":[]}`
 - [ ] Push round-trip: `docker login zot.example.com` → `docker tag hello-world zot.example.com/hello:test` → `docker push zot.example.com/hello:test` → `docker pull zot.example.com/hello:test`
 - [ ] Pull-through cache: `docker pull zot.example.com/ghcr/project-zot/zot:v2.1.18` and `docker pull zot.example.com/dockerhub/library/alpine:latest` (first pull fetches from `ghcr.io` / Docker Hub and caches locally; a second pull is served from cache — verify the container pulls fast)
