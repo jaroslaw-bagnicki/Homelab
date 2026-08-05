@@ -102,6 +102,8 @@ Provisioning steps are in the operational runbook.
 
 Subsequent runs with no template, image, or KV change report `changed=0`.
 
+> `python3-passlib`/`python3-bcrypt` are the `community.general.htpasswd` module's required **target-side** Python dependencies — installing the `community.general` collection only ships the module code to the controller. Without them on the host, the module fails with a "missing required library `passlib`" error.
+
 ## What's in this folder
 
 - `zot-playbook.yml` — playbook entrypoint.
