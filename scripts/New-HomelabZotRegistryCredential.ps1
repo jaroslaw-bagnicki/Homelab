@@ -1,6 +1,6 @@
 #!/usr/bin/env pwsh
 param(
-    [string]$UserName = "zot",
+    [string]$UserName = "zot-admin",
     [switch]$Force
 )
 
