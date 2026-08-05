@@ -15,6 +15,29 @@
       - python3-bcrypt
     state: present
 
+- name: Assert Azure controller credentials are set
+  ansible.builtin.assert:
+    that:
+      - lookup('ansible.builtin.env', 'AZURE_CLIENT_ID', default='') | length > 0
+      - lookup('ansible.builtin.env', 'AZURE_CLIENT_SECRET', default='') | length > 0
+      - lookup('ansible.builtin.env', 'AZURE_TENANT_ID', default='') | length > 0
+    fail_msg: "AZURE_CLIENT_ID, AZURE_CLIENT_SECRET and AZURE_TENANT_ID must be set on the Ansible controller for the Key Vault lookup."
+  delegate_to: localhost
+
+- name: Fetch zot registry user from Key Vault
+  vars:
+    vault_url: "https://{{ zot_keyvault_name }}.vault.azure.net"
+    azure_client_id: "{{ lookup('ansible.builtin.env', 'AZURE_CLIENT_ID') }}"
+    azure_secret: "{{ lookup('ansible.builtin.env', 'AZURE_CLIENT_SECRET') }}"
+    azure_tenant_id: "{{ lookup('ansible.builtin.env', 'AZURE_TENANT_ID') }}"
+  ansible.builtin.set_fact:
+    zot_registry_user: >-
+      {{ lookup('azure.azcollection.azure_keyvault_secret',
+      zot_registry_user_secret_name, vault_url=vault_url, client_id=azure_client_id,
+      secret=azure_secret, tenant=azure_tenant_id) }}
+  delegate_to: localhost
+  no_log: true
+
 - name: Fetch zot registry password from Key Vault
   vars:
     vault_url: "https://{{ zot_keyvault_name }}.vault.azure.net"

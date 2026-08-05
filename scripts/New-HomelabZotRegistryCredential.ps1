@@ -5,28 +5,34 @@ param(
 )
 
 $vault = "homelab-bysxdb-kv"
-$secretName = "zot-registry-password"
+$userSecretName = "zot-registry-user"
+$passwordSecretName = "zot-registry-password"
 
 function New-ZotRegistryPassword {
     [Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(32)).TrimEnd('=')
 }
 
-$existing = Get-AzKeyVaultSecret -VaultName $vault -Name $secretName -ErrorAction SilentlyContinue
+$userExists = Get-AzKeyVaultSecret -VaultName $vault -Name $userSecretName -ErrorAction SilentlyContinue
+$passExists = Get-AzKeyVaultSecret -VaultName $vault -Name $passwordSecretName -ErrorAction SilentlyContinue
 
-if ($existing) {
+if ($userExists -or $passExists) {
     if ($Force) {
-        Write-Warning "Secret '${secretName}' already exists. Overwriting (rotation)."
+        Write-Warning "Secrets '${userSecretName}'/'${passwordSecretName}' already exist. Overwriting."
     } else {
-        Write-Warning "Secret '${secretName}' already exists. Use -Force to rotate."
+        Write-Warning "Secrets '${userSecretName}'/'${passwordSecretName}' already exist. Use -Force to rotate."
         exit 0
     }
 }
 
-Set-AzKeyVaultSecret -VaultName $vault -Name $secretName `
+Set-AzKeyVaultSecret -VaultName $vault -Name $userSecretName `
+    -SecretValue (ConvertTo-SecureString -AsPlainText $UserName -Force) |
+    Out-Null
+
+Set-AzKeyVaultSecret -VaultName $vault -Name $passwordSecretName `
     -SecretValue (ConvertTo-SecureString -AsPlainText (New-ZotRegistryPassword) -Force) |
     Out-Null
 
-Write-Host "Secret '${secretName}' provisioned in '${vault}'."
-Write-Host "Registry user is '${UserName}' (matches the zot_registry_user role default)."
+Write-Host "Secrets '${userSecretName}' and '${passwordSecretName}' provisioned in '${vault}'."
+Write-Host "The role fetches both at deploy time (zot_registry_user / zot_registry_password)."
 Write-Host "Retrieve the password when needed:"
-Write-Host "  Get-AzKeyVaultSecret -VaultName ${vault} -Name ${secretName} -AsPlainText"
+Write-Host "  Get-AzKeyVaultSecret -VaultName ${vault} -Name ${passwordSecretName} -AsPlainText"
