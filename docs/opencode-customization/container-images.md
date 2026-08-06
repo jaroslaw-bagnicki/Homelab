@@ -42,7 +42,7 @@ docker/opencode-base/
     └── verify-base.sh           ← shared sanity check
 ```
 
-No image registry push yet — local builds only.
+Images are built locally and pushed to the self-hosted Zot registry (see [Registry](#registry)).
 
 ### Chosen recipe — `Dockerfile.multistage-mcr`
 
@@ -107,7 +107,7 @@ docker/opencode-homelab/
 
 ### Recipe — `docker/opencode-homelab/Dockerfile`
 
-`FROM opencode-base:multistage-mcr`, adds via `pip3`:
+`FROM zot.cloud5.ovh/opencode/oc-base:1.0.0` (base pulled from the registry), adds via `pip3`:
 
 | Tool | Version | Source |
 |---|---|---|
@@ -185,6 +185,26 @@ docker run --rm --entrypoint sh opencode-prospera:1.0.0 /usr/local/bin/verify-pr
 | dotnet SDK | 8.0.423 |
 | Functional test | `dotnet new console` + `dotnet run` → `Hello, World!` |
 
+## Registry
+
+Images are published to the self-hosted Zot registry (`zot.cloud5.ovh`, deployed via #51).
+
+| Image | Public ref | Digest |
+|---|---|---|
+| `oc-base` | `zot.cloud5.ovh/opencode/oc-base:1.0.0` | `c09adc…` |
+| `oc-homelab` | `zot.cloud5.ovh/opencode/oc-homelab:1.0.0` | `8e7221…` |
+| `oc-prospera` | `zot.cloud5.ovh/opencode/oc-prospera:1.0.0` | `6a6da4…` |
+
+### Push pattern — local push, public pull
+
+Cloudflare's edge caps tunneled request bodies (blobs over ~190 MB are rejected with `413 Payload Too Large`). Our images have layers up to 1.31 GB, so **pushes go via the local endpoint** (`127.0.0.1:5000`, which reaches Zot directly on cloudlab) while **pulls use the public hostname** (`zot.cloud5.ovh`, GETs are unrestricted). Both names address the same Zot storage, so a local push is immediately pullable publicly.
+
+`scripts/Push-OpencodeImagesToZot.ps1` encodes this: pushes to `-PushEndpoint` (default `127.0.0.1:5000`), verifies pulls via `-Registry` (default `zot.cloud5.ovh`). Creds resolve from `ZOT_USER`/`ZOT_PASSWORD` env vars or AKV (`homelab-bysxdb-kv`).
+
+```powershell
+pwsh scripts/Push-OpencodeImagesToZot.ps1 -BuildFirst -Version 1.0.0
+```
+
 ## Size analysis
 
 | Image | On-disk | Compressed |
@@ -246,7 +266,6 @@ Also note: `docker build` requires a running daemon on the target host; the cont
 | `opencode-homelab` Dockerfile | ✅ Done — ansible-core 2.20 + ansible-lint (see above) |
 | `opencode-prospera` Dockerfile | ✅ Done — .NET SDK 8.0 (see above); SQL tooling still TBD |
 | Azure SQL tooling for prospera | Open question on #38 |
-| Image registry / push to GHCR | Local-only for now |
 | Ansible workload to consume custom images | Follow-up issue; runbook 18 covers instance provisioning |
 | Runbook (build instructions) | After project images are committed |
 | README index updates | After runbook is written |

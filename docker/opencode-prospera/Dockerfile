@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 
-ARG BASE_IMAGE=opencode-base:multistage-mcr
+ARG BASE_IMAGE=zot.cloud5.ovh/opencode/oc-base:1.0.0
 ARG DOTNET_SDK_IMAGE=mcr.microsoft.com/dotnet/sdk:8.0-alpine
 
 FROM ${DOTNET_SDK_IMAGE} AS dotnet_src

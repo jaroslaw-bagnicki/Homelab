@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 
-ARG BASE_IMAGE=opencode-base:multistage-mcr
+ARG BASE_IMAGE=zot.cloud5.ovh/opencode/oc-base:1.0.0
 
 FROM ${BASE_IMAGE}
 
