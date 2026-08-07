@@ -5,6 +5,7 @@ Pre-decision exploration and brainstorming. Unlike `docs/decisions/` (ADRs) whic
 | # | Idea | Status | Description |
 |---|---|---|---|
 | 01 | [Homelab NAS](01-nas-backup-target.md) | 🧠 Idea | Budget NAS built from Fujitsu Esprimo Q956 + 2× WD Black 500GB, running OMV |
+| 02 | [DevContainers for OpenCode with DevPod](02-devcontainers-opencode-k3s.md) | 🧠 Idea | Long-lived, project-isolated OpenCode workspaces declared as Dev Containers, using Docker now and K3s later |
 
 ## Lifecycle
 
