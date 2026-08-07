@@ -6,7 +6,7 @@ Step-by-step guides for configuring the homelab server.
 |---|---|---|
 | 1 | [1-init.md](1-init.md) | Ubuntu install, static IP, SSH, LVM resize, mDNS, SSH key, hardening |
 | 2 | [2-docker.md](2-docker.md) | Docker Engine + Portainer CE |
-| 2a | [2a-ghcr-portainer.md](2a-ghcr-portainer.md) | GHCR registry in Portainer CE (supplements step 2) |
+| 2a | [2a-ghcr-portainer.md](2a-ghcr-portainer.md) | Container registries in Portainer CE: GHCR + self-hosted Zot (supplements step 2) |
 | 3 | [3-dns.md](3-dns.md) | Local DNS (DNSMasq) |
 | 4 | [4-caddy.md](4-caddy.md) | Caddy reverse proxy with TLS |
 | 4a | [4a-hello-world.md](4a-hello-world.md) | Hello World demo behind Caddy (supplements step 4) |

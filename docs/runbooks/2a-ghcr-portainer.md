@@ -1,6 +1,6 @@
-# Homelab Setup — GHCR Registry in Portainer
+# Homelab Setup — Container Registries in Portainer
 
-> Runbook for adding the GitHub Container Registry (ghcr.io) as a registry in Portainer CE.
+> Runbooks for adding container registries to Portainer CE: GitHub Container Registry (`ghcr.io`) and the self-hosted Zot registry (`zot.cloud5.ovh`, issue #50).
 
 ## Prerequisites
 
@@ -9,6 +9,8 @@
 - [ ] GitHub account with access to the packages you want to pull
 
 ---
+
+# Part 1 — GHCR Registry in Portainer
 
 ## 1. Create a GitHub Personal Access Token (Classic)
 
@@ -87,8 +89,87 @@ GitHub PATs expire. When the token expires:
 
 ---
 
-## Checkpoint
+## Checkpoint — GHCR
 
 - [ ] PAT (classic) created with `read:packages` scope
 - [ ] GHCR registry added in Portainer with blue "authentication-enabled" badge
 - [ ] Successfully pulled an image from `ghcr.io` via Portainer UI
+
+---
+
+# Part 2 — Zot Registry in Portainer
+
+> Adds the self-hosted Zot registry (`zot.cloud5.ovh`, issue #50) to Portainer CE. The Zot workload is deployed per [20-deploy-zot.md](20-deploy-zot.md).
+
+## Prerequisites
+
+- [ ] Zot workload deployed and reachable: `curl -u zot-admin:$PASSWORD https://zot.cloud5.ovh/v2/_catalog` returns the catalog (see [20-deploy-zot.md](20-deploy-zot.md))
+- [ ] Portainer CE running and accessible (see [2-docker.md](2-docker.md))
+
+## 1. Retrieve the Zot credentials
+
+The registry credentials live in `homelab-bysxdb-kv`:
+
+```powershell
+Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name zot-registry-user -AsPlainText
+Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name zot-registry-password -AsPlainText
+```
+
+The user is `zot-admin` (the registry's global admin via `adminPolicy`). The registry requires this credential for **both** push and pull — there is no anonymous access.
+
+## 2. Add Zot as a Registry in Portainer
+
+1. Open Portainer UI and navigate to **Settings** → **Registries**
+2. Click **Add registry**
+3. Select **Custom registry** as the provider
+4. Fill in the form:
+
+   | Field | Value |
+   |---|---|
+   | **Name** | `Zot` |
+   | **Registry URL** | `zot.cloud5.ovh` |
+   | **Authentication** | ✅ Enable |
+
+   | Field | Value |
+   |---|---|
+   | **Username** | `zot-admin` (from AKV `zot-registry-user`) |
+   | **Password** | AKV `zot-registry-password` |
+
+5. Click **Add registry**
+
+Portainer tests the credentials against `zot.cloud5.ovh`. A green success message confirms the registry is reachable.
+
+> **CE limitation**: same as GHCR — no **Browse** button in Community Edition; pull by full image path works normally.
+
+## 3. Verify It Works
+
+### 3.1 Pull an image from Zot
+
+From the Portainer sidebar, go to **Images** → click **Pull image**:
+
+1. Set **Registry** to `Zot`
+2. Enter the image path **without** the `zot.cloud5.ovh/` prefix (Portainer prepends the registry URL automatically):
+
+   ```
+   opencode/oc-homelab:1.0.0
+   ```
+
+The image should download successfully (no `401 Unauthorized` or `authorization failed` errors).
+
+### 3.2 Verify in the registry list
+
+Go back to **Settings** → **Registries**. `Zot` should be listed with the blue **authentication-enabled** badge.
+
+## 4. Credential Rotation
+
+When the Zot password is rotated (see [20-deploy-zot.md](20-deploy-zot.md) §1):
+
+1. Re-run `New-HomelabZotRegistryCredential.ps1 -Force` and re-run the Zot playbook
+2. In Portainer, go to **Settings** → **Registries** → click **Zot**
+3. Update the **Password** field with the new AKV value
+4. Click **Update registry**
+
+## Checkpoint — Zot
+
+- [ ] Zot registry added in Portainer with blue "authentication-enabled" badge
+- [ ] Successfully pulled `zot.cloud5.ovh/opencode/oc-homelab:1.0.0` via Portainer UI
