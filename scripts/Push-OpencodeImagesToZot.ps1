@@ -13,8 +13,8 @@ $Vault = "homelab-bysxdb-kv"
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 $Images = @(
     @{ Local = "opencode-base:multistage-mcr"; Target = "oc-base"; BuildCtx = "docker/opencode-base"; BuildFile = "Dockerfile.multistage-mcr" },
-    @{ Local = "opencode-homelab:1.0.0";      Target = "oc-homelab"; BuildCtx = "docker/opencode-homelab"; BuildFile = "Dockerfile" },
-    @{ Local = "opencode-prospera:1.0.0";     Target = "oc-prospera"; BuildCtx = "docker/opencode-prospera"; BuildFile = "Dockerfile" }
+    @{ Local = "opencode-homelab:$Version";      Target = "oc-homelab"; BuildCtx = "docker/opencode-homelab"; BuildFile = "Dockerfile" },
+    @{ Local = "opencode-prospera:$Version";     Target = "oc-prospera"; BuildCtx = "docker/opencode-prospera"; BuildFile = "Dockerfile" }
 )
 
 $User = $env:ZOT_USER
@@ -27,7 +27,11 @@ if (-not $User -or -not $Pass) {
 
 Write-Host "Logging into $PushEndpoint as $User..."
 $Pass | docker login $PushEndpoint -u $User --password-stdin
-if ($LASTEXITCODE -ne 0) { throw "docker login failed" }
+if ($LASTEXITCODE -ne 0) { throw "docker login to $PushEndpoint failed" }
+
+Write-Host "Logging into $Registry as $User (required for build-time base pulls and pull verification)..."
+$Pass | docker login $Registry -u $User --password-stdin
+if ($LASTEXITCODE -ne 0) { throw "docker login to $Registry failed" }
 
 foreach ($img in $Images) {
     $pushRef = "$PushEndpoint/$Namespace/$($img.Target):$Version"

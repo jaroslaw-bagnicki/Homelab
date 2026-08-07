@@ -197,12 +197,14 @@ Images are published to the self-hosted Zot registry (`zot.cloud5.ovh`, deployed
 
 ### Push pattern — local push, public pull
 
-Cloudflare's edge caps tunneled request bodies (blobs over ~190 MB are rejected with `413 Payload Too Large`). Our images have layers up to 1.31 GB, so **pushes go via the local endpoint** (`127.0.0.1:5000`, which reaches Zot directly on cloudlab) while **pulls use the public hostname** (`zot.cloud5.ovh`, GETs are unrestricted). Both names address the same Zot storage, so a local push is immediately pullable publicly.
+Cloudflare's edge caps tunneled request bodies (blobs over ~190 MB are rejected with `413 Payload Too Large`). Our images have layers up to 1.31 GB, so **pushes go via the local endpoint** (`127.0.0.1:5000`, which reaches Zot directly on cloudlab) while **pulls use the public hostname** (`zot.cloud5.ovh`). Both names address the same Zot storage, so a local push is immediately pullable publicly.
 
-`scripts/Push-OpencodeImagesToZot.ps1` encodes this: pushes to `-PushEndpoint` (default `127.0.0.1:5000`), verifies pulls via `-Registry` (default `zot.cloud5.ovh`). Creds resolve from `ZOT_USER`/`ZOT_PASSWORD` env vars or AKV (`homelab-bysxdb-kv`).
+**Pulls require auth.** Zot is configured with htpasswd access control; anonymous pulls are not allowed (see runbook `20-deploy-zot.md`). Any host pulling these images must `docker login zot.cloud5.ovh` first.
+
+`scripts/Push-OpencodeImagesToZot.ps1` encodes this: logs into both `-PushEndpoint` and `-Registry`, pushes to `-PushEndpoint` (default `127.0.0.1:5000`), verifies pulls via `-Registry` (default `zot.cloud5.ovh`). Creds resolve from `ZOT_USER`/`ZOT_PASSWORD` env vars or AKV (`homelab-bysxdb-kv`).
 
 ```powershell
-pwsh scripts/Push-OpencodeImagesToZot.ps1 -BuildFirst -Version 1.0.0
+scripts/Push-OpencodeImagesToZot.ps1 -BuildFirst -Version 1.0.0
 ```
 
 ## Size analysis

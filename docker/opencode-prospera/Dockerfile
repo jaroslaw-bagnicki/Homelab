@@ -10,8 +10,6 @@ FROM ${BASE_IMAGE}
 COPY --from=dotnet_src /usr/share/dotnet /usr/share/dotnet
 RUN ln -sf /usr/share/dotnet/dotnet /usr/bin/dotnet
 
-RUN dotnet --list-sdks
-
 COPY tests/verify-prospera.sh /usr/local/bin/verify-prospera.sh
 RUN chmod +x /usr/local/bin/verify-prospera.sh
 
