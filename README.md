@@ -59,7 +59,7 @@ Ansible runs first on the bare host (OS config, Docker, Arc agent). Bicep deploy
 | 2026‑05‑29 | Caddy | ⭐ | [4](docs/runbooks/4-caddy.md) | Reverse proxy with auto-TLS |
 | 2026‑05‑30 | Cloudflare Tunnel | ⭐⭐ | [5](docs/runbooks/5-cloudflare-tunnel.md) | Remote HTTPS access via custom domain |
 | 2026‑05‑30 | Azure Arc | ⭐⭐ | [6](docs/runbooks/6-azure-arc.md) | Hybrid server enrollment, cert-based auth |
-| 2026‑05‑31 | GHCR in Portainer | ⭐ | [2a](docs/runbooks/2a-ghcr-portainer.md) | GitHub Container Registry access |
+| 2026‑05‑31 | Container Registries in Portainer | ⭐ | [2a](docs/runbooks/2a-ghcr-portainer.md) | GHCR + self-hosted Zot registry access |
 | 2026‑05‑31 | Hello World demo | ⭐ | [4a](docs/runbooks/4a-hello-world.md) | Reverse proxy demo via Caddy + Cloudflare |
 | 2026‑06‑16 | Decision log | ⭐ | [#7](https://github.com/jaroslaw-bagnicki/Homelab/issues/7) | ADR log in MADR format — see [docs/decisions/](docs/decisions/) |
 | 2026‑06‑17 | VPS playground | ⭐⭐ | [10](docs/runbooks/10-vps-playground.md) | Contabo Cloud VPS 10 as Ansible dev/test sandbox — see [ADR 13](docs/decisions/13-cloudlab-staging.md) |
