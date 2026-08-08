@@ -12,9 +12,9 @@
 
 | Field | Value |
 |---|---|
-| Generation (G5/G6/G7/G10) | _fill in_ |
-| CPU model (`sysctl hw.model`) | _fill in_ |
-| Logical cores (`sysctl hw.ncpu`) | _fill in_ |
+| Generation (G5/G6/G7/G10) | **G5** (inferred from Pentium E2160) |
+| CPU model (`sysctl hw.model`) | Intel Pentium E2160 @ 1.8 GHz |
+| Logical cores (`sysctl hw.ncpu`) | 2 |
 | BIOS version (`sysctl smbios.bios.version`) | _fill in_ |
 | BIOS release date (`sysctl smbios.bios.release`) | _fill in_ |
 | Product string (`sysctl smbios.system.product`) | _fill in_ |
@@ -26,7 +26,7 @@
 
 | Field | Value |
 |---|---|
-| Total RAM (`sysctl hw.physmem` in GB) | _fill in_ |
+| Total RAM (`sysctl hw.physmem` in GB) | **4 GB** |
 | iLO / LO100 generation | _fill in_ (none / iLO 3 / iLO 5 / etc.) |
 | Power supply wattage | _fill in_ |
 
@@ -113,7 +113,8 @@ Current assumption (pending live inspection): B110i set to AHCI, Dell SAS 6/iR o
 | B110i Smart Array | _fill in_ | `Disabled` |
 | Boot Mode | _fill in_ | `BIOS` (OMV ISO is BIOS-only) |
 | Secure Boot | _fill in_ | `Off` |
-| Boot device / order | _fill in_ | (USB stick or spare SSD) |
+| Boot device / order | _fill in_ | USB stick (PXE/RPL/BOOTP also available) |
+| Network boot protocol | PXE (also RPL, BOOTP) | `Disabled` for local USB install |
 | LO100/iLO shared port mode | _fill in_ | |
 
 ---
@@ -134,18 +135,18 @@ Current assumption (pending live inspection): B110i set to AHCI, Dell SAS 6/iR o
 | Decision | Chosen approach | Rationale |
 |---|---|---|
 | Boot device for OMV | USB stick (≥32 GB) | All 6 internal disks are data disks |
-| Disk pool layout | **TBD** — depends on SMART health and controller topology | Likely: ZFS mirror vdevs across the 4× 3.5" drives; 2× 1.8" drives too small (20 GB each) for meaningful data pool — consider log/cache SLOG or leave unused |
-| Filesystem | ZFS (preferred) | Modern ZFS plugin on OMV 8.x; mirror vdevs give redundancy with good space efficiency |
+| Disk pool layout | **TBD** — depends on SMART health and controller topology | Likely: ZFS mirror vdevs across the 4× 3.5" drives; 2× 1.8" drives too small (20 GB each) for meaningful data pool — leave unused |
+| Filesystem | ZFS (acceptable at 4 GB; mdadm as fallback) | ZFS minimum is ~4 GB; with only 4 GB total, mirror vdevs are fine but avoid dedup/compression overhead and leave the 1.8" drives out of the pool |
 | RAID mode | AHCI (B110i disabled) | ZFS needs raw disk access; Dell SAS 6/iR is RAID-only and not ideal for ZFS |
 | OMV install method | Official ISO | BIOS boot → OMV 8.x ISO |
 | FreeNAS data handling | Wipe | No ZFS pools; existing array is regular RAID; no data preservation expected |
 
 **Open questions still requiring live inspection:**
-1. Exact ML110 generation, CPU, RAM.
-2. SMART health of all 6 drives (some are ~15+ years old).
-3. Whether all drives are visible on the B110i in AHCI mode, or if some are cabled to the Dell SAS 6/iR.
-4. Current RAID layout from the controller utility (RAID level, member disks, virtual disk size).
-5. Confirm FreeNAS OS is unbootable and no data needs preservation.
+1. SMART health of all 6 drives (some are ~15+ years old).
+2. Whether all drives are visible on the B110i in AHCI mode, or if some are cabled to the Dell SAS 6/iR.
+3. Current RAID layout from the controller utility (RAID level, member disks, virtual disk size).
+4. Confirm FreeNAS OS is unbootable and no data needs preservation.
+5. Exact BIOS version/release and POST confirmation of G5.
 
 ---
 
