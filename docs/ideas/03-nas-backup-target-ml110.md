@@ -5,7 +5,7 @@
 > the **already-owned HP ProLiant ML110** that previously ran FreeNAS. FreeNAS is
 > wiped; this is a fresh OpenMediaVault install.
 >
-> Idea 01 (`< 01-nas-backup-target.md`) is left **unchanged** as the historical
+> Idea 01 (`01-nas-backup-target.md`) is left **unchanged** as the historical
 > Q956 scoping doc.
 
 **Status**: 📋 Planned
@@ -36,9 +36,9 @@ homelab server (ADR 02, ADR 22).
 | Acquisition cost | ~195 PLN (used) + new drives + caddy | **0 PLN** (already owned) | ML110 wins — no purchase needed |
 | Form factor | USFF, ~1.9 L, near-silent | 4U tower, louder, larger | Q956 wins on footprint/noise |
 | Drive count | 2× 500 GB 2.5" | **4× 3.5" + 2× 1.8"** (6 drives) | ML110 wins — more capacity/redundancy |
-| CPU | i5-6500T (4C/4T) | Xeon / i3 class (gen-dependent) | Comparable |
-| RAM | 8 GB DDR3L | TBD (likely 4–8 GB; max depends on gen) | Inventory needed |
-| SATA topology | 2× native SATA + M.2 | B110i "fake RAID" + **PCI SATA card** + onboard SATA | ML110 is more complex — Phase 0 inventory required |
+| CPU | i5-6500T (4C/4T) | Intel Pentium E2160 @ 1.8 GHz (2C/2T, ML110 **G5**) | Q956 wins on compute |
+| RAM | 8 GB DDR3L | **4 GB** (confirmed) | Q956 wins — 4 GB is borderline for ZFS |
+| SATA topology | 2× native SATA + M.2 | B110i "fake RAID" + **Dell SAS 6/iR (RAID-only)** + onboard SATA | ML110 is more complex — see controller notes below |
 | Boot device | needs USB or SSD | needs USB/SSD — all 6 internal drives are data | Both need a boot device |
 
 **Decision**: The ML110 is already owned and has 6 drives vs. the Q956's 2 — far
@@ -49,17 +49,21 @@ machine that lives near the router/switch. No purchase cost. **Proceed with ML11
 
 ## Hardware Differences From Idea 01
 
-The Q956 idea assumed a clean USFF platform. The ML110 introduces two complexities
+The Q956 idea assumed a clean USFF platform. The ML110 introduces three complexities
 that idea 01's hardware did not have:
 
 1. **HP B110i "fake RAID" controller** — firmware-assisted RAID, not true HBA.
    ZFS (and OMV's mdadm) want raw disk access in **AHCI mode**. BIOS must disable
-   B110i RAID and set SATA to AHCI. (This is standard practice for ZFS on the ML110
-   G6/G7 per the [TrueNAS ML110 G6 thread](https://www.truenas.com/community/threads/hp-ml110-g6-and-freenas.5350/).)
+   B110i RAID and set SATA to AHCI.
 
-2. **PCI SATA controller** — a third-party add-in card that may carry some of the
-   6 drives. Controller topology (which disks on B110i vs PCI card) must be mapped
-   in Phase 0 so we know each disk's path under Linux.
+2. **Dell SAS 6/iR (UCS-61, 0JW063)** — a PCIe x8 **hardware RAID controller**
+   supporting SAS/SATA at up to 3 Gb/s, **RAID 0/1 only**, with no JBOD/IT mode.
+   It exposes only virtual disks to the OS, so ZFS cannot see raw drives through it.
+   Likely left unused for the ZFS pool unless it is cross-flashed or replaced with an
+   IT-mode HBA (e.g. LSI 9211-8i).
+
+3. **Memory constraint** — only **4 GB** RAM. ZFS works at 4 GB but is borderline;
+   mdadm RAID1 + ext4/XFS is the fallback if ZFS feels constrained.
 
 These are captured in the Phase 0 inventory: [`docs/runbooks/21-ml110-nas-inventory.md`]
 and the fill-in template: [`docs/ideas/nas-ml110-inventory.md`].
@@ -81,14 +85,16 @@ Same decision as idea 01 — OMV is the right lightweight NAS for this role.
 
 ## Phase 0 — Inventory & State Audit (Prerequisite)
 
-Since the ML110 was running FreeNAS and "wasn't used for a very long time," and
-since we can't recall exact disk capacities or controller wiring, **Phase 0 is a
-hard prerequisite** before any install:
+FreeNAS on this box is likely **not bootable** and the existing array is **regular
+RAID** (not ZFS), so **Phase 0 is a hard prerequisite** before any install:
 
-- [ ] Identify ML110 generation (G5/G6/G7/G10) — determines BIOS layout, max RAM
-- [ ] Capture FreeNAS ZFS pool layout, feature flags, encryption status (even though wiping — informs new pool design)
+- [x] Identify ML110 generation — **G5** (from Pentium E2160 @ 1.8 GHz)
+- [x] Capture disk models/sizes — 4× 3.5" (2× 500 GB, 2× 250 GB) + 2× 1.8" (2× 20 GB)
+- [x] Confirm controller inventory — onboard B110i + Dell SAS 6/iR (RAID-only)
+- [ ] Capture current controller RAID layout (RAID level, member disks) from the RAID BIOS
 - [ ] SMART health check on all 6 drives — a long-idle machine may have degraded disks
-- [ ] Map controller topology (B110i vs PCI SATA card vs onboard) — which `/dev/sdX` hangs where
+- [ ] Confirm FreeNAS is unbootable and no data needs preservation
+- [ ] Map controller topology (B110i vs Dell SAS 6/iR) — which `/dev/sdX` hangs where
 - [ ] Document BIOS SATA mode, boot order, network MAC
 - [ ] Fill the template: `docs/ideas/nas-ml110-inventory.md`
 
@@ -97,6 +103,11 @@ hard prerequisite** before any install:
 > It also creates a permanent record so a future rebuild (or repo handoff) doesn't
 > require re-probing dormant hardware. If you'd rather fold it into the runbook
 > itself, that's a one-step change.
+>
+> **Inspection method:** since FreeNAS likely won't boot, flash a **SystemRescue**
+> (or similar live Linux) USB stick and run `lspci`, `lsblk`, `smartctl`, and
+> `dmidecode` from it. Capture the RAID layout from the controller BIOS/utility
+> during POST instead of from the OS.
 
 ---
 
@@ -104,11 +115,12 @@ hard prerequisite** before any install:
 
 | Decision | Tentative choice | Why / depends on |
 |---|---|---|
-| Boot device | USB 3.0 stick (32 GB) | All 6 internal drives reserved for data — see inventory |
-| Data pool | ZFS mirror vdevs across 4× 3.5" | Redundancy for backups — depends on drive sizes/SMART |
-| Small drives | 2× 1.8" as ZFS log/cache or separate pool | Depends on capacity |
-| Filesystem | ZFS (via openmediavault-zfs plugin) | Data integrity; needs ≥4 GB RAM |
+| Boot device | USB stick (≥32 GB) | All 6 internal drives reserved for data — see inventory |
+| Data pool | ZFS mirror vdevs across 4× 3.5" | Redundancy for backups — depends on SMART health |
+| Small drives | 2× 1.8" (20 GB each) **left out** of the pool | Too small for a meaningful data pool; ZFS log/cache not worth it at 4 GB RAM |
+| Filesystem | ZFS, with **mdadm + ext4/XFS as fallback** | ZFS works at 4 GB but is borderline; fall back if sluggish |
 | SATA mode | AHCI, B110i RAID **disabled** | Direct disk access for ZFS |
+| PCI controller | Dell SAS 6/iR **not used** for the ZFS pool | RAID-only (no JBOD/IT mode); cross-flash or swap to LSI HBA if needed |
 | NFS export | `/export/backups` — Longhorn backup target | ADR 02 / ADR 22 |
 | SMB/CIFS | `/shared` — general backup landing | Windows/macOS client access |
 | Static IP | `192.168.2.x` on homelab subnet | Match homelab network |
@@ -129,8 +141,8 @@ This ML110 NAS is a **sibling** to the M910q homelab server, not a replacement:
                │ NFS/SMB (backup target)
                ▼
 ┌─────────────────────────────────────┐
-│ ML110  (this idea)                  │
-│ OMV 8.x + ZFS                       │
+│ ML110 G5  (this idea)               │
+│ OMV 8.x + ZFS (or mdadm)            │
 │ Storage-only: NFS export + SMB      │
 └─────────────────────────────────────┘
 ```
@@ -143,9 +155,10 @@ described as not-yet-procured (it will instead be this ML110 NAS).
 
 ## Open Questions
 
-- [ ] ML110 exact generation (G5/G6/G7/G10) → Phase 0
-- [ ] Drive sizes & SMART health → Phase 0
-- [ ] PCI SATA card model & chipset → Phase 0 (Linux driver support)
+- [x] ML110 generation — **G5**, Pentium E2160 @ 1.8 GHz, 4 GB RAM
+- [ ] SMART health of all 6 drives → Phase 0
+- [ ] Which disks hang off B110i vs Dell SAS 6/iR → Phase 0
+- [ ] Current RAID layout from the controller utility → Phase 0
 - [ ] Available spare USB stick or SSD for OMV boot → Phase 0
 
 ---
