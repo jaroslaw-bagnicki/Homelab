@@ -201,12 +201,55 @@ Boot from an OMV installer or a Linux rescue USB (e.g. SystemRescue) and run:
 # List all SATA/SAS controllers and attached disks
 lspci | grep -iE 'sata|raid|scsi|sas'
 lsblk
+lsblk -f
 
 # Per-disk SMART
 sudo smartctl --scan
 sudo smartctl -i /dev/sdX
 sudo smartctl -H /dev/sdX
 ```
+
+### Batch scan procedure (only 4 SATA cables available)
+
+This box has **4 regular SATA cables** plus the Dell SAS 6/iR SAS cable. The SAS 6/iR
+cannot be used for SMART scanning (RAID firmware hides raw disks), so at most **4 disks
+can be attached at once** on the onboard ICH9R SATA ports. Scan in batches:
+
+1. **Batch 1 — the 4× 3.5" data drives** (the important ones): 2× Hitachi 500 GB,
+   WD Caviar Blue 250 GB, WD RE3 250 GB → attach to the 4× onboard ICH9R SATA ports.
+2. Run the SMART loop below and **record the serial of every disk** — the two 500 GB
+   Hitachi drives share a model, so only the serial distinguishes them. Correlate each
+   `/dev/sdX` to the physical label before unplugging.
+3. **Batch 2 — the 2× 1.8" drives** (20 GB each, informational only): swap them in and
+   repeat.
+
+```sh
+# SMART health per attached disk — record model + serial + health
+for d in /dev/sd[a-z]; do
+    echo "=== $d ==="
+    smartctl -i "$d" 2>/dev/null | grep -E 'Device Model|Serial Number|User Capacity|Rotation'
+    smartctl -H "$d" 2>/dev/null | grep -E 'result'
+done
+```
+
+### Troubleshooting: no /dev/sdX visible
+
+`/dev/sdX` only appears for drives the kernel sees. If nothing shows under `lsblk`:
+
+1. Confirm at least one disk is physically attached to an **onboard SATA port** AND has
+   **power** connected. (All 6 internal disks are currently detached.)
+2. The SystemRescue boot stick itself is exposed as `/dev/mapper/ventoy`, **not** as a
+   plain `/dev/sdX` — so the USB stick alone will not create `/dev/sd*` entries.
+3. Check enumeration:
+   ```sh
+   lsblk
+   fdisk -l
+   ls /dev/sd* /dev/hd* 2>/dev/null
+   dmesg | grep -iE 'sd|ata|sas|usb' | tail -40
+   ```
+4. If a disk is attached but still invisible: it may be cabled to the **SAS 6/iR**
+   (hidden by RAID firmware) — move it to an onboard SATA port. Verify cabling with
+   `lspci` (ICH9R at `00:1f.2` = onboard SATA).
 
 **Record per disk:**
 | # | Device (/dev/daX) | Model | Capacity | Rotation | SMART health | Controller (B110i / PCI card) |
