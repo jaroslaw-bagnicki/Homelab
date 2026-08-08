@@ -60,12 +60,13 @@
 
 | # | Device (/dev/sdX) | Model (SMART) | Serial | Capacity | Rotation (RPM) | SMART health | Controller |
 |---|---|---|---|---|---|---|---|
-| 1 | _TBD_ (Batch 2) | Hitachi Travelstar HTS541020G9SA00 | _TBD_ | 20 GB | 5400 | _TBD_ | onboard |
-| 2 | _TBD_ (Batch 2) | Fujitsu MHV2020BH | _TBD_ | 20 GB | _TBD_ | _TBD_ | onboard |
+| 1 | `/dev/sda` | Hitachi Travelstar HTS541020G9SA00 | `MPBFL0X9G1W9WM` | 20 GB | 5400 | ✅ **PASSED** | onboard |
+| 2 | `/dev/sdb` | Fujitsu **MHW2020BH** | `NZ0GT772LN18` | 20 GB | _TBD_ | ✅ **PASSED** | onboard |
 | 3 | `/dev/sda` | Hitachi HDS721050CLA660 | `JP1572FL1849SK` | 500 GB | 7200 | ✅ **PASSED** | onboard ICH9R |
 | 4 | `/dev/sdb` | Hitachi HDS721050CLA660 | `JP1572FL167V6K` | 500 GB | 7200 | ✅ **PASSED** | onboard ICH9R |
 | 5 | `/dev/sdc` | WDC WD2500AAKX-75U6AA0 | `WD-WCC2F0157761` | 250 GB | 7200 | ✅ **PASSED** | onboard ICH9R |
 | 6 | `/dev/sdd` | **GB0250EAFYK** | `WCAT1F035986` | 250 GB | 7200 | ✅ **PASSED** | onboard ICH9R |
+| 7 | `/dev/sdc` (Batch 2) | **WDC WD10EZEX-00BN5A0** (spare) | `WD-WCC3F7AKKXUT` | **1.0 TB** | 7200 | ✅ **PASSED** | onboard |
 
 **Power requirements (from labels):**
 - Hitachi Travelstar 20 GB: `5V 1.0A`
@@ -77,15 +78,20 @@
 - Western Digital Caviar Blue 250 GB: manufacturing date August 24, 2012.
 - Western Digital RE3 250 GB: manufacturing date February 14, 2010.
 
-**⚠ Label vs SMART discrepancies (Batch 1, 2026-08-08):**
+> **Note on device names:** `/dev/sdX` names are **transient** — they depend on which SATA port each drive is plugged into during a given scan batch. The **serial number is the stable identifier** for building the pool. Batch 1 = 4× 3.5" drives; Batch 2 = 2× 1.8" drives + spare 1 TB.
+
+**⚠ Label vs SMART discrepancies (2026-08-08):**
 - The two 500 GB Hitachis label as `HDS721050CLA662` but SMART reports **`HDS721050CLA660`** — the `662` is the HP OEM variant number (P/N `647466-001`); same drive family. Go by SMART model.
 - The drive labeled **WD RE3 WD2502ABYS** actually reports as **`GB0250EAFYK`** (serial `WCAT1F035986`) — this is likely a relabeled/HP-rebadged drive, **not** the WD RE3 stated on the label. Treat the SMART identity as authoritative.
+- The Fujitsu 20 GB labels as `MHV2020BH` but SMART reports **`MHW2020BH`** — close family; go by SMART.
+- **Spare drive discovered**: `WDC WD10EZEX-00BN5A0` 1 TB (serial `WD-WCC3F7AKKXUT`) — not part of the original 6-drive count; consider it for the pool or a separate role.
 
 **Drive bay / connector notes**:
-- 3.5" bays: 4× occupied by Hitachi 500 GB (×2), WD Caviar Blue 250 GB, WD RE3 250 GB
+- 3.5" bays: 4× occupied by Hitachi 500 GB (×2), WD Caviar Blue 250 GB, "WD RE3" (= GB0250EAFYK) 250 GB
 - 2.5" / 1.8" bays: 2× occupied by Hitachi Travelstar 20 GB, Fujitsu 20 GB
-- All 6 disks are data disks? **Yes** (OMV needs a USB stick or spare SSD for the OS disk.)
-- **Visibility resolved** — the earlier "no disks" was because they were physically detached. Attached on the onboard ICH9R SATA ports, all 4× 3.5" drives enumerate fine as `/dev/sda`–`/dev/sdd` in IDE mode. No SAS 6/iR involvement needed for scanning.
+- **+1 spare 3.5"**: WDC WD10EZEX 1 TB (not originally mounted) — currently available as a 7th disk
+- All 6 mounted disks are data disks? **Yes** (OMV needs a USB stick or spare SSD for the OS disk.)
+- **Visibility resolved** — the earlier "no disks" was because they were physically detached. Attached on the onboard ICH9R SATA ports, drives enumerate fine as `/dev/sdX` in IDE mode. No SAS 6/iR involvement needed for scanning.
 
 ---
 
@@ -150,24 +156,25 @@ Current assumption (pending live inspection): ICH9R set to AHCI, Dell SAS 6/iR o
 | Decision | Chosen approach | Rationale |
 |---|---|---|
 | Boot device for OMV | USB stick (≥32 GB) | All 6 internal disks are data disks |
-| Disk pool layout | **TBD** — depends on SMART health and controller topology | Likely: ZFS mirror vdevs across the 4× 3.5" drives; 2× 1.8" drives too small (20 GB each) for meaningful data pool — leave unused |
+| Disk pool layout | **TBD — now 5 usable 3.5" drives (incl. spare 1 TB)** | All 6 original + 1 spare are healthy. Likely: mirror vdevs across the 2× 500 GB Hitachis and the 2× 250 GB drives; decide role of the spare **1 TB WD10EZEX** (new single-disk vdev, hot spare, or offline). 2× 1.8" drives too small — leave unused |
 | Filesystem | ZFS (acceptable at 4 GB; mdadm as fallback) | ZFS minimum is ~4 GB; with only 4 GB total, mirror vdevs are fine but avoid dedup/compression overhead and leave the 1.8" drives out of the pool. **ECC RAM confirmed** — good fit for ZFS |
 | RAID mode | AHCI (B110i disabled) | ZFS needs raw disk access; Dell SAS 6/iR is RAID-only and not ideal for ZFS |
 | OMV install method | Official ISO | BIOS boot → OMV 8.x ISO |
 | FreeNAS data handling | Wipe | No ZFS pools; existing array is regular RAID; no data preservation expected |
 
-**Resolved by SystemRescue report (hardinfo2) + Batch 1 SMART:**
+**Resolved by SystemRescue report (hardinfo2) + Batches 1 & 2 SMART:**
 1. ✅ Generation confirmed **G5** (DMI), BIOS HP `O15` (2009-09-10).
 2. ✅ CPU Pentium E2160, 2 cores @ 1.8 GHz; RAM 4 GB = 2× 2 GiB DDR2-800 **ECC**, 2 slots free.
 3. ✅ Controllers mapped: ICH9R 4-port SATA (IDE), ICH9 2-port SATA (IDE), Dell SAS 6/iR (SAS1068E), BCM5722 NIC.
 4. ✅ NIC `enp14s0` MAC `78:e7:d1:53:fb:87`, DHCP `192.168.2.164`, gw `192.168.2.1`.
 5. ✅ LO100 present (ServerEngines SE + IPMI).
-6. ✅ **All 4× 3.5" drives PASSED SMART health** (2026-08-08 Batch 1) — serials recorded above.
+6. ✅ **All drives PASSED SMART health** (2026-08-08, Batches 1+2) — 4× 3.5" + 2× 1.8" + spare 1 TB, serials recorded above.
 7. ✅ Disk visibility resolved — the drives were simply detached; they enumerate fine on the onboard ICH9R SATA.
-8. ⚠ **Label mismatch**: the "WD RE3" drive actually reports as `GB0250EAFYK`.
+8. ⚠ **Label mismatch**: the "WD RE3" drive actually reports as `GB0250EAFYK`; Fujitsu label `MHV2020BH` reports as `MHW2020BH`.
+9. ✅ **Spare 1 TB WD10EZEX** discovered and healthy.
 
 **Open questions still requiring live inspection:**
-1. SMART health of the 2× 1.8" drives (**Batch 2**).
+1. **Pool role for the spare 1 TB** (mirror partner for the 250 GB pair? separate single-disk vdev? hot spare?).
 2. Current RAID layout from the SAS 6/iR controller utility (RAID level, member disks, virtual disk size).
 3. Whether the drives can move to the ICH9R SATA in AHCI mode (cabling dependent) — only 4 SATA cables available.
 4. Confirm FreeNAS OS is unbootable and no data needs preservation.
@@ -188,5 +195,5 @@ Display: Matrox G200e (LO100 management GPU) → capped at 1024x768; monitor HP 
 CPU temps: 43-46°C at idle — healthy.
 RTC: drifts and reverts to ~23-26 July after reboot; RTC correction is not persisted to hwclock. NTP required once OMV is installed; consider replacing the CR2032 CMOS battery.
 CPU microcode: no microcode update present (mds/spec_store_bypass shown vulnerable) — low risk for a storage-only node, but worth noting.
-Batch 1 SMART (2026-08-08): all 4x 3.5" drives PASSED. Batch 2 (2x 1.8") pending.
+SMART (2026-08-08): Batches 1+2 — all 6 original drives + spare 1 TB PASSED. All healthy; no drive excluded so far.
 ```
