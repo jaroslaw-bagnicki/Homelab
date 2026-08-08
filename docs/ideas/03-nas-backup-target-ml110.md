@@ -37,9 +37,9 @@ homelab server (ADR 02, ADR 22).
 | Form factor | USFF, ~1.9 L, near-silent | 4U tower, louder, larger | Q956 wins on footprint/noise |
 | Drive count | 2× 500 GB 2.5" | **4× 3.5" + 2× 1.8"** (6 drives) | ML110 wins — more capacity/redundancy |
 | CPU | i5-6500T (4C/4T) | Intel Pentium E2160 @ 1.8 GHz (2C/2T, ML110 **G5**) | Q956 wins on compute |
-| RAM | 8 GB DDR3L | **4 GB** (confirmed) | Q956 wins — 4 GB is borderline for ZFS |
-| SATA topology | 2× native SATA + M.2 | B110i "fake RAID" + **Dell SAS 6/iR (RAID-only)** + onboard SATA | ML110 is more complex — see controller notes below |
-| Boot device | needs USB or SSD | needs USB/SSD — all 6 internal drives are data | Both need a boot device |
+| RAM | 8 GB DDR3L | **4 GB** (confirmed) | Q956 wins — 4 GB is fine for mdadm |
+| SATA topology | 2× native SATA + M.2 | ICH9R 4-port + ICH9 2-port (onboard) + **Dell SAS 6/iR (RAID-only)** | ML110 is more complex — see controller notes below |
+| Boot device | needs USB or SSD | **1.8" 20 GB drive (Option B)** — all 4× 3.5" are data | Boot device decided |
 
 **Decision**: The ML110 is already owned and has 6 drives vs. the Q956's 2 — far
 more storage headroom for a backup target. The tower footprint is acceptable for a
@@ -52,18 +52,15 @@ machine that lives near the router/switch. No purchase cost. **Proceed with ML11
 The Q956 idea assumed a clean USFF platform. The ML110 introduces three complexities
 that idea 01's hardware did not have:
 
-1. **HP B110i "fake RAID" controller** — firmware-assisted RAID, not true HBA.
-   ZFS (and OMV's mdadm) want raw disk access in **AHCI mode**. BIOS must disable
-   B110i RAID and set SATA to AHCI.
+1. **Onboard Intel ICH9R SATA** ("B110i") — the "B110i" is just the ICH9R SATA with
+   RAID-capable firmware, not a true separate HBA. Set to **AHCI** so mdadm sees raw disks.
 
 2. **Dell SAS 6/iR (UCS-61, 0JW063)** — a PCIe x8 **hardware RAID controller**
    supporting SAS/SATA at up to 3 Gb/s, **RAID 0/1 only**, with no JBOD/IT mode.
-   It exposes only virtual disks to the OS, so ZFS cannot see raw drives through it.
-   Likely left unused for the ZFS pool unless it is cross-flashed or replaced with an
-   IT-mode HBA (e.g. LSI 9211-8i).
+   mdadm needs raw disks, so this controller is **not used**.
 
-3. **Memory constraint** — only **4 GB** RAM. ZFS works at 4 GB but is borderline;
-   mdadm RAID1 + ext4/XFS is the fallback if ZFS feels constrained.
+3. **Memory constraint** — only **4 GB** RAM. Fine for OMV + mdadm RAID1; ZFS is
+   explicitly **not** being used (user decision).
 
 These are captured in the Phase 0 inventory: [`docs/runbooks/21-ml110-nas-inventory.md`]
 and the fill-in template: [`docs/ideas/nas-ml110-inventory.md`].
@@ -74,12 +71,12 @@ and the fill-in template: [`docs/ideas/nas-ml110-inventory.md`].
 
 | Option | Verdict | Reason |
 |---|---|---|
-| **OMV 8.x** (Debian 13) | ✅ Selected | Free, Debian-based, ZFS plugin via omv-extras |
+| **OMV 8.x** (Debian 13) | ✅ Selected | Free, Debian-based; mdadm RAID out of the box |
 | Unraid (paid) | ⏸️ Deferred | License cost; revisit if Docker-heavy NAS is needed |
-| TrueNAS SCALE | ❌ Rejected | Needs 8 GB+ RAM minimum, matched disks; overkill for a backup target |
+| TrueNAS SCALE | ❌ Rejected | ZFS-focused; not needed since no ZFS |
 | Proxmox | ❌ Rejected | Virtualization-focused; not a storage target |
 
-Same decision as idea 01 — OMV is the right lightweight NAS for this role.
+OMV is the right lightweight NAS for this role.
 
 ---
 
@@ -90,20 +87,14 @@ RAID** (not ZFS), so **Phase 0 is a hard prerequisite** before any install:
 
 - [x] Identify ML110 generation — **G5** (from Pentium E2160 @ 1.8 GHz)
 - [x] Capture disk models/sizes — 4× 3.5" (2× 500 GB, 2× 250 GB) + 2× 1.8" (2× 20 GB)
-- [x] Confirm controller inventory — onboard B110i + Dell SAS 6/iR (RAID-only)
+- [x] Confirm controller inventory — onboard ICH9R + ICH9 + Dell SAS 6/iR (RAID-only)
+- [x] SMART health check — **all 6 original + spare 1 TB PASSED**
 - [ ] Capture current controller RAID layout (RAID level, member disks) from the RAID BIOS
-- [ ] SMART health check on all 6 drives — a long-idle machine may have degraded disks
 - [ ] Confirm FreeNAS is unbootable and no data needs preservation
-- [ ] Map controller topology (B110i vs Dell SAS 6/iR) — which `/dev/sdX` hangs where
+- [x] Map controller topology (ICH9R vs ICH9 vs Dell SAS 6/iR)
 - [ ] Document BIOS SATA mode, boot order, network MAC
-- [ ] Fill the template: `docs/ideas/nas-ml110-inventory.md`
+- [x] Fill the template: `docs/ideas/nas-ml110-inventory.md`
 
-> **Why an inventory template?** Because the machine has been dormant and disk
-> capacities are unknown, a fill-in form prevents guesswork during the OMV install.
-> It also creates a permanent record so a future rebuild (or repo handoff) doesn't
-> require re-probing dormant hardware. If you'd rather fold it into the runbook
-> itself, that's a one-step change.
->
 > **Inspection method:** since FreeNAS likely won't boot, flash a **SystemRescue**
 > (or similar live Linux) USB stick and run `lspci`, `lsblk`, `smartctl`, and
 > `dmidecode` from it. Capture the RAID layout from the controller BIOS/utility
@@ -111,16 +102,17 @@ RAID** (not ZFS), so **Phase 0 is a hard prerequisite** before any install:
 
 ---
 
-## Proposed OMV Install Shape (pending Phase 0)
+## Proposed OMV Install Shape (Phase 0 resolved — no ZFS)
 
-| Decision | Tentative choice | Why / depends on |
+| Decision | Choice | Why / depends on |
 |---|---|---|
-| Boot device | USB stick (≥32 GB) | All 6 internal drives reserved for data — see inventory |
-| Data pool | ZFS mirror vdevs across 4× 3.5" | Redundancy for backups — depends on SMART health |
-| Small drives | 2× 1.8" (20 GB each) **left out** of the pool | Too small for a meaningful data pool; ZFS log/cache not worth it at 4 GB RAM |
-| Filesystem | ZFS, with **mdadm + ext4/XFS as fallback** | ZFS works at 4 GB but is borderline; fall back if sluggish |
-| SATA mode | AHCI, B110i RAID **disabled** | Direct disk access for ZFS |
-| PCI controller | Dell SAS 6/iR **not used** for the ZFS pool | RAID-only (no JBOD/IT mode); cross-flash or swap to LSI HBA if needed |
+| **ZFS?** | **No — mdadm RAID1** | User preference: regular RAID only |
+| Boot device | **1× 1.8" 20 GB drive on ICH9 SATA #5** (Option B) | Reuses owned hardware; no USB purchase needed |
+| Data pool | **mdadm RAID1**: `md0` = 2× 500 GB Hitachis; `md1` = 2× 250 GB | Redundancy for backups — all drives passed SMART |
+| Small drives | 1× 1.8" 20 GB = OMV OS; 2nd 1.8" + 1 TB spare **offline** | Only 5 SATA cables available |
+| Filesystem | **XFS on `md0`** (primary), **ext4 on `md1`** | XFS for backup volume; ext4 secondary |
+| SATA mode | AHCI, ICH9R RAID firmware **disabled** | Raw disks to mdadm |
+| PCI controller | Dell SAS 6/iR **not used** | mdadm needs raw disks; card may be removed (saves power) |
 | NFS export | `/export/backups` — Longhorn backup target | ADR 02 / ADR 22 |
 | SMB/CIFS | `/shared` — general backup landing | Windows/macOS client access |
 | Static IP | `192.168.2.x` on homelab subnet | Match homelab network |
@@ -142,7 +134,7 @@ This ML110 NAS is a **sibling** to the M910q homelab server, not a replacement:
                ▼
 ┌─────────────────────────────────────┐
 │ ML110 G5  (this idea)               │
-│ OMV 8.x + ZFS (or mdadm)            │
+│ OMV 8.x + mdadm RAID1               │
 │ Storage-only: NFS export + SMB      │
 └─────────────────────────────────────┘
 ```
@@ -156,10 +148,12 @@ described as not-yet-procured (it will instead be this ML110 NAS).
 ## Open Questions
 
 - [x] ML110 generation — **G5**, Pentium E2160 @ 1.8 GHz, 4 GB RAM
-- [ ] SMART health of all 6 drives → Phase 0
-- [ ] Which disks hang off B110i vs Dell SAS 6/iR → Phase 0
-- [ ] Current RAID layout from the controller utility → Phase 0
-- [ ] Available spare USB stick or SSD for OMV boot → Phase 0
+- [x] SMART health — **all drives PASSED** (Batches 1+2, incl. spare 1 TB)
+- [x] Controllers mapped — ICH9R 4-port + ICH9 2-port (onboard) + Dell SAS 6/iR (SAS1068E)
+- [x] Boot device decided — **1.8" 20 GB on ICH9 #5** (Option B)
+- [ ] Current RAID layout from the SAS 6/iR controller utility (capture before unplugging)
+- [ ] Which 1.8" drive becomes the OMV OS disk (Hitachi vs Fujitsu)
+- [ ] Confirm FreeNAS OS is unbootable / no data to preserve
 
 ---
 

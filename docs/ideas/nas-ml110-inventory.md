@@ -4,7 +4,7 @@
 > [`docs/runbooks/21-ml110-nas-inventory.md`](docs/runbooks/21-ml110-nas-inventory.md).
 > Commit this file to the worktree — it's the single source of truth for the OMV install plan.
 
-**Status**: 🧠 Idea (Phase 0 — partial inventory captured; FreeNAS likely unbootable; RAID config must be captured from controller) | **Idea**: [03 — Homelab NAS on ML110](03-nas-backup-target-ml110.md) | **Worktree**: `feat/nas-ml110-omv-setup`
+**Status**: 🧠 Idea (Phase 0 — inventory complete; **no ZFS — mdadm RAID1 + OMV on 1.8" OS disk** decided; RAID layout capture from SAS 6/iR still pending) | **Idea**: [03 — Homelab NAS on ML110](03-nas-backup-target-ml110.md) | **Worktree**: `feat/nas-ml110-omv-setup`
 
 ---
 
@@ -27,7 +27,7 @@
 | Field | Value |
 |---|---|
 | Total RAM | **4 GB** (3868 MB usable) — **2× 2 GiB DDR2-800 PC2-6400 ECC** (Samsung), slots DIMM1 + DIMM3; 2 of 4 slots free |
-| ECC | **Yes — single-bit ECC** (bonus for ZFS) |
+| ECC | **Yes — single-bit ECC** (bonus for data integrity) |
 | iLO / LO100 | **LO100 present** (ServerEngines SE / IPMI modules loaded) |
 | Power supply wattage | _fill in_ |
 | GPU | **Matrox G200e [Pilot] ServerEngines** — server management video (LO100); explains 1024×768 cap |
@@ -78,19 +78,23 @@
 - Western Digital Caviar Blue 250 GB: manufacturing date August 24, 2012.
 - Western Digital RE3 250 GB: manufacturing date February 14, 2010.
 
-> **Note on device names:** `/dev/sdX` names are **transient** — they depend on which SATA port each drive is plugged into during a given scan batch. The **serial number is the stable identifier** for building the pool. Batch 1 = 4× 3.5" drives; Batch 2 = 2× 1.8" drives + spare 1 TB.
+> **Note on device names:** `/dev/sdX` names are **transient** — they depend on which SATA port each drive is plugged into during a given scan batch. The **serial number is the stable identifier** for building the array. Batch 1 = 4× 3.5" drives; Batch 2 = 2× 1.8" drives + spare 1 TB.
 
 **⚠ Label vs SMART discrepancies (2026-08-08):**
 - The two 500 GB Hitachis label as `HDS721050CLA662` but SMART reports **`HDS721050CLA660`** — the `662` is the HP OEM variant number (P/N `647466-001`); same drive family. Go by SMART model.
 - The drive labeled **WD RE3 WD2502ABYS** actually reports as **`GB0250EAFYK`** (serial `WCAT1F035986`) — this is likely a relabeled/HP-rebadged drive, **not** the WD RE3 stated on the label. Treat the SMART identity as authoritative.
 - The Fujitsu 20 GB labels as `MHV2020BH` but SMART reports **`MHW2020BH`** — close family; go by SMART.
-- **Spare drive discovered**: `WDC WD10EZEX-00BN5A0` 1 TB (serial `WD-WCC3F7AKKXUT`) — not part of the original 6-drive count; consider it for the pool or a separate role.
+- **Spare drive discovered**: `WDC WD10EZEX-00BN5A0` 1 TB (serial `WD-WCC3F7AKKXUT`) — not part of the original 6-drive count.
 
 **Drive bay / connector notes**:
 - 3.5" bays: 4× occupied by Hitachi 500 GB (×2), WD Caviar Blue 250 GB, "WD RE3" (= GB0250EAFYK) 250 GB
 - 2.5" / 1.8" bays: 2× occupied by Hitachi Travelstar 20 GB, Fujitsu 20 GB
-- **+1 spare 3.5"**: WDC WD10EZEX 1 TB (not originally mounted) — currently available as a 7th disk
-- All 6 mounted disks are data disks? **Yes** (OMV needs a USB stick or spare SSD for the OS disk.)
+- **+1 spare 3.5"**: WDC WD10EZEX 1 TB (not originally mounted)
+- All 6 mounted disks are data disks? **Yes** — OMV OS goes on **one of the 1.8" 20 GB drives** (Option B)
+- **Final cabling plan (5 SATA cables):**
+  - ICH9R ports #1–#4 → the 4× 3.5" data drives (mdadm RAID1 pairs)
+  - ICH9 port #5 → one 1.8" 20 GB drive as the OMV system disk
+  - Second 1.8" 20 GB + 1 TB spare → left disconnected (offline)
 - **Visibility resolved** — the earlier "no disks" was because they were physically detached. Attached on the onboard ICH9R SATA ports, drives enumerate fine as `/dev/sdX` in IDE mode. No SAS 6/iR involvement needed for scanning.
 
 ---
@@ -116,12 +120,7 @@ Confirmed from SystemRescue `lspci`:
 - Connectors: 2× internal SAS ports for drive backplanes / arrays
 - Kernel driver: Fusion-MPT (`mptsas`/`mptscsih`)
 
-**Important OMV/ZFS consideration:**
-The Dell SAS 6/iR is a **hardware RAID controller**, not an HBA/JBOD controller. It only exposes RAID 0/1 virtual disks to the OS, not raw individual drives. For ZFS we prefer raw disk access (AHCI / HBA / IT-mode). Two possible paths:
-1. Use the **onboard ICH9R SATA in AHCI mode** for all six drives and do not use the Dell SAS 6/iR for the data pool.
-2. Cross-flash or replace the SAS 6/iR with an LSI/Avago/Broadcom HBA in IT-mode (e.g. LSI 9211-8i / cross-flash the 1068E itself) so ZFS sees raw disks.
-
-Current assumption (pending live inspection): ICH9R set to AHCI, Dell SAS 6/iR optionally used for a separate RAID 1 pair if an HBA is not available.
+**Decision (no ZFS):** mdadm needs raw disks, so the Dell SAS 6/iR is **not used**. The onboard ICH9R SATA set to **AHCI** provides the raw disks. The SAS 6/iR may be left seated but disconnected, or physically removed to save ~10–15 W.
 
 ---
 
@@ -129,12 +128,12 @@ Current assumption (pending live inspection): ICH9R set to AHCI, Dell SAS 6/iR o
 
 | Setting | Current | Target (OMV) |
 |---|---|---|
-| SATA Controller Mode | `IDE` (ICH9R + ICH9 both IDE) | `AHCI` |
-| B110i / ICH9R RAID firmware | enabled (as SAS1068E volume / IDE) | `Disabled` (AHCI, raw disks) |
+| SATA Controller Mode | `IDE` (ICH9R + ICH9 both IDE) | `AHCI` (for mdadm; keeps raw disks visible) |
+| B110i / ICH9R RAID firmware | enabled (as SAS1068E volume / IDE) | `Disabled` (raw disks to mdadm) |
 | Boot Mode | BIOS | `BIOS` (OMV ISO is BIOS-only) |
 | Secure Boot | N/A (G5 has none) | `Off` |
-| Boot device / order | USB | USB stick (PXE/RPL/BOOTP also available) |
-| Network boot protocol | PXE (also RPL, BOOTP) | `Disabled` for local USB install |
+| Boot device / order | USB | 1.8" 20 GB OMV disk (ICH9 #5) |
+| Network boot protocol | PXE (also RPL, BOOTP) | `Disabled` for local install |
 | LO100/iLO shared port mode | _fill in_ | |
 | RTC clock | Drifted ~13 days (26.07 → 08.08) | NTP in OMV + consider CMOS battery |
 
@@ -155,12 +154,14 @@ Current assumption (pending live inspection): ICH9R set to AHCI, Dell SAS 6/iR o
 
 | Decision | Chosen approach | Rationale |
 |---|---|---|
-| Boot device for OMV | USB stick (≥32 GB) | All 6 internal disks are data disks |
-| Disk pool layout | **TBD — now 5 usable 3.5" drives (incl. spare 1 TB)** | All 6 original + 1 spare are healthy. Likely: mirror vdevs across the 2× 500 GB Hitachis and the 2× 250 GB drives; decide role of the spare **1 TB WD10EZEX** (new single-disk vdev, hot spare, or offline). 2× 1.8" drives too small — leave unused |
-| Filesystem | ZFS (acceptable at 4 GB; mdadm as fallback) | ZFS minimum is ~4 GB; with only 4 GB total, mirror vdevs are fine but avoid dedup/compression overhead and leave the 1.8" drives out of the pool. **ECC RAM confirmed** — good fit for ZFS |
-| RAID mode | AHCI (B110i disabled) | ZFS needs raw disk access; Dell SAS 6/iR is RAID-only and not ideal for ZFS |
+| **ZFS?** | **No — mdadm RAID1 instead** | User preference: regular RAID only, no ZFS for now |
+| Boot device for OMV | **1× 1.8" 20 GB drive on ICH9 SATA port #5** (Option B) | Reuses owned hardware; no USB stick purchase. Use the Hitachi Travelstar or Fujitsu 20 GB as the OS disk |
+| Disk pool layout | **mdadm RAID1**: `md0` = 2× 500 GB Hitachis (500 GB usable); `md1` = 2× 250 GB (250 GB usable) | Software RAID1 pairs for redundancy; 1 TB spare and 1.8" spare left out (no cable) |
+| Filesystem | **XFS on `md0`** (primary), **ext4 on `md1`** | XFS for backup target volume; ext4 for secondary/bulk |
+| RAID mode | **mdadm software RAID** on onboard ICH9R SATA, set to **AHCI** in BIOS | No hardware RAID dependency; Dell SAS 6/iR unused (or physically removed) |
 | OMV install method | Official ISO | BIOS boot → OMV 8.x ISO |
 | FreeNAS data handling | Wipe | No ZFS pools; existing array is regular RAID; no data preservation expected |
+| 1 TB spare (WD10EZEX) | **Offline for now** (no free SATA cable) | Can be added later when a cable/port is freed |
 
 **Resolved by SystemRescue report (hardinfo2) + Batches 1 & 2 SMART:**
 1. ✅ Generation confirmed **G5** (DMI), BIOS HP `O15` (2009-09-10).
@@ -172,13 +173,14 @@ Current assumption (pending live inspection): ICH9R set to AHCI, Dell SAS 6/iR o
 7. ✅ Disk visibility resolved — the drives were simply detached; they enumerate fine on the onboard ICH9R SATA.
 8. ⚠ **Label mismatch**: the "WD RE3" drive actually reports as `GB0250EAFYK`; Fujitsu label `MHV2020BH` reports as `MHW2020BH`.
 9. ✅ **Spare 1 TB WD10EZEX** discovered and healthy.
+10. ✅ **Layout decision made**: no ZFS → mdadm RAID1; OMV OS on 1.8" 20 GB (Option B).
 
 **Open questions still requiring live inspection:**
-1. **Pool role for the spare 1 TB** (mirror partner for the 250 GB pair? separate single-disk vdev? hot spare?).
-2. Current RAID layout from the SAS 6/iR controller utility (RAID level, member disks, virtual disk size).
-3. Whether the drives can move to the ICH9R SATA in AHCI mode (cabling dependent) — only 4 SATA cables available.
-4. Confirm FreeNAS OS is unbootable and no data needs preservation.
-5. LO100 management IP (if configured).
+1. Current RAID layout from the SAS 6/iR controller utility (RAID level, member disks, virtual disk size) — capture before unplugging it.
+2. Confirm FreeNAS OS is unbootable and no data needs preservation.
+3. LO100 management IP (if configured).
+4. Which 1.8" drive becomes the OMV OS disk (Hitachi vs Fujitsu).
+5. Whether to physically remove the Dell SAS 6/iR (saves ~10–15 W) or leave seated but disconnected.
 
 ---
 
