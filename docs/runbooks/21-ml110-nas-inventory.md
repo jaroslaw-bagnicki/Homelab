@@ -1,15 +1,15 @@
-# ML110 NAS — Phase 0: Hardware Inventory & FreeNAS State Audit
+# ML110 NAS — Phase 0: Hardware Inventory & RAID State Audit
 
 > **Prerequisite for issue #54 — Set up Homelab NAS on HP ProLiant ML110 (OMV).**
-> Run these steps **before** wiping FreeNAS. The machine is a physical HP ProLiant ML110
-> that previously ran FreeNAS; this runbook captures its exact hardware and ZFS state
-> so the OMV install and disk layout decisions are grounded in real data, not recollection.
+> Run these steps **before** wiping the existing array. The machine is a physical HP ProLiant ML110
+> that previously ran FreeNAS on a regular RAID array; this runbook captures its exact hardware and
+> controller RAID state so the OMV install and disk layout decisions are grounded in real data.
 
 ## Goals
 
 - Identify the exact ML110 generation (G5 / G6 / G7 / G10) — determines BIOS layout,
   max RAM, controller model, and SATA speed.
-- Audit every FreeNAS ZFS pool: layout, feature flags, encryption status, health.
+- Audit the existing controller RAID configuration: RAID level, member disks, virtual disk size, status.
 - Inventory every disk: model, size, SMART health, which controller it hangs off.
 - Capture BIOS-relevant settings: SATA mode (AHCI vs RAID), boot order, network MACs.
 - Produce a **single inventory artifact** (filled template) that drives the OMV install plan.
@@ -27,20 +27,23 @@
 
 ### Access
 
+The FreeNAS OS on this box is likely **not bootable** and the existing array was **regular RAID**, not ZFS. Plan for physical inspection and controller BIOS capture rather than live OS commands.
+
 You need **one** of:
 
-- **SSH** into the running FreeNAS box (if networking is up): `ssh root@<freenas-ip>`
-- **Direct console / iLO / IPMI** — if SSH is unavailable or the network is dead (machine "wasn't used for a long time" may mean a stale DHCP lease or no SSH key).
+- **Direct console / iLO / IPMI** — attach a keyboard + monitor, or use iLO/LO100 remote console. The HP ML110 G6/G7 has LO100 built in.
+- **SSH** into the running FreeNAS box (only if it happens to boot): `ssh root@<freenas-ip>`
 
-> If you can't reach the machine over the network, boot it, attach a keyboard + monitor,
-> or use iLO/LO100 remote console. The HP ML110 G6/G7 has LO100 built in.
+> If FreeNAS does boot, treat it as a bonus and still capture the controller RAID config from the controller BIOS/utility, since the array is regular RAID rather than ZFS.
 
-### Tools already in FreeNAS
+### Tools (if FreeNAS boots)
 
 FreeNAS/TrueNAS CORE ships with: `sysctl`, `zpool`, `zfs`, `geom`, `camcontrol`,
 `pciconf`, `ifconfig`, `smartctl` (via `smartmontools` — may need installing).
 
 If `smartctl` is missing: `pkg install -y smartmontools`.
+
+If FreeNAS does **not** boot, skip these and rely on the controller utility plus an OMV/rescue USB for SMART data later.
 
 ---
 
@@ -80,7 +83,8 @@ Expected outputs:
 
 ## 2. System Specifications
 
-Run on the FreeNAS live system:
+Run on the FreeNAS live system (if it boots), or boot a Linux rescue USB and use
+`dmidecode` / `lscpu` / `free -h` instead.
 
 ```sh
 # RAM (bytes → GB = physmem / 1073741824)
@@ -101,38 +105,39 @@ sysctl smbios.bios.release
 
 ---
 
-## 3. ZFS Pool Audit
+## 3. Current RAID / Storage Configuration Capture
 
-This is the most important section — capture the pool layout and feature flags.
-**Do not** `zpool export` or shut down until you've run these. (Per the runbook,
-FreeNAS is being wiped, so pool import into OMV is not planned — but we capture
-the layout to decide the new disk arrangement.)
+Since the existing array is **regular RAID** (not ZFS), capture the layout from
+the RAID controller utility before wiping. This determines which disks are grouped
+together and what the current virtual disk(s) look like.
+
+### If using the Dell SAS 6/iR
+
+1. Boot the machine and watch for the SAS 6/iR POST message (typically `Ctrl+C` or `Ctrl+R`).
+2. Enter the RAID BIOS/utility.
+3. Record:
+   - Virtual disk(s) and their sizes
+   - RAID level (0 or 1)
+   - Member disks (by slot or SAS address)
+   - Status (Optimal / Degraded / Failed)
+
+### If using the HP B110i Smart Array
+
+1. During POST, enter the B110i Option ROM (usually `F8`).
+2. Record logical drives, RAID levels, and member disks.
+
+### If FreeNAS happens to boot
+
+You can still run the FreeBSD disk-discovery commands to correlate OS device names
+with physical slots, but the authoritative layout is the controller utility above.
 
 ```sh
-# List all pools and their health/state
-zpool list -v
+# All disks visible to the OS — FreeBSD geom
+geom disk list
 
-# Detailed status of each pool — vdev layout, device names, errors
-zpool status -v
-
-# Feature flags enabled on each pool (critical if you later reconsider import)
-# Run once per pool; replace POOLNAME
-zpool get all POOLNAME | grep feature@
-
-# Is encryption active on any dataset/dataset keys?
-zfs get encryption,keystats,keyformat,keylocation,randomized 2>/dev/null
-
-# Any scrub / resilver / rebuild in progress
-zpool status -x  # prints "all pools are healthy" or the active scan
+# All SCSI/SATA devices (shows controller → device mapping)
+camcontrol devlist -v
 ```
-
-If you have **only one or two pools** and the output is manageable, run the
-above verbatim and paste into the template.
-
-> **Note on ZFS feature flags**: FreeNAS 11.3+ and TrueNAS CORE use feature flags
-> that older ZFS-on-Linux (ZoL) couldn't import (per the OMV forum HOWTO).
-> OMV 8.x's ZFS plugin uses a modern ZoL that is generally flag-compatible,
-> but since you're wiping anyway this is informational only.
 
 ---
 
@@ -140,6 +145,8 @@ above verbatim and paste into the template.
 
 For every disk, capture: model, serial, size, SMART overall health, and which
 controller it's attached to.
+
+### If FreeNAS boots
 
 ```sh
 # All disks visible to the OS — FreeBSD geom
@@ -165,6 +172,21 @@ done
 If `smartctl` can't open a device directly (e.g. USB enclosures), try:
 ```sh
 smartctl --scan   # shows which /dev entries smartctl can talk to
+```
+
+### If FreeNAS does not boot
+
+Boot from an OMV installer or a Linux rescue USB (e.g. SystemRescue) and run:
+
+```sh
+# List all SATA/SAS controllers and attached disks
+lspci | grep -iE 'sata|raid|scsi|sas'
+lsblk
+
+# Per-disk SMART
+sudo smartctl --scan
+sudo smartctl -i /dev/sdX
+sudo smartctl -H /dev/sdX
 ```
 
 **Record per disk:**
@@ -243,9 +265,9 @@ Record:
 
 ## 8. Fill the Inventory Capture Template
 
-Once all commands are run, fill in **`docs/ideas/nas-ml110-inventory.md`** (the
-template) with the actual values. That file is the single source of truth for the
-OMV install plan.
+Once all controller/BIOS data and SMART output are captured, fill in
+**`docs/ideas/nas-ml110-inventory.md`** (the template) with the actual values.
+That file is the single source of truth for the OMV install plan.
 
 ---
 
@@ -253,7 +275,7 @@ OMV install plan.
 
 | Question | Resolved by | If unclear |
 |---|---|---|
-| Which drives to stripe/raid | §3 (pool layout) + §4 (disk sizes) | assume mirror pairs across same-size disks |
+| Which drives to stripe/raid | §3 (current RAID layout) + §4 (disk sizes) | assume mirror pairs across same-size disks |
 | ZFS vs mdadm RAID | §2 (RAM ≥4 GB?) + §4 (SMART health) | ZFS needs ≥4 GB RAM; mdadm if RAM is tight |
 | Boot device for OMV | §4 (all 6 disks = data?) + §1b (bay count) | use a USB 3.0 stick (32 GB) if no spare disk |
 | SATA mode | §6 (current RAID vs AHCI) | set to AHCI, disable B110i |

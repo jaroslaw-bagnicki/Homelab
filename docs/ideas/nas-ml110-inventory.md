@@ -4,7 +4,7 @@
 > [`docs/runbooks/21-ml110-nas-inventory.md`](docs/runbooks/21-ml110-nas-inventory.md).
 > Commit this file to the worktree — it's the single source of truth for the OMV install plan.
 
-**Status**: 🧠 Idea (Phase 0 — partial inventory captured; runbook still needs live execution) | **Idea**: [03 — Homelab NAS on ML110](03-nas-backup-target-ml110.md) | **Worktree**: `feat/nas-ml110-omv-setup`
+**Status**: 🧠 Idea (Phase 0 — partial inventory captured; FreeNAS likely unbootable; RAID config must be captured from controller) | **Idea**: [03 — Homelab NAS on ML110](03-nas-backup-target-ml110.md) | **Worktree**: `feat/nas-ml110-omv-setup`
 
 ---
 
@@ -32,20 +32,22 @@
 
 ---
 
-## 3. ZFS Pool Audit (FreeNAS state — captured before wipe)
+## 3. Current RAID / Storage Configuration (before wipe)
 
-| Pool name | Vdev layout | Feature flags | Encryption | Status | Notes |
+> **Note:** FreeNAS OS is likely **not bootable**, and the existing array was **regular RAID**, not ZFS. Capture the current RAID layout from the controller BIOS/utility before wiping, so the new OMV disk layout can be planned.
+
+| Controller | RAID level | Member disks | Virtual disk size | Status | Notes |
 |---|---|---|---|---|---|
-| _fill in_ | e.g. `raidz2-0: ad0,ad1,ad2,ad3` | `feature@...` | yes/no (GELI?) | ONLINE/DEGRADED | |
-| _fill in_ | | | | | |
-| _fill in_ | | | | | |
+| _TBD_ (B110i / Dell SAS 6/iR) | _TBD_ | _TBD_ | _TBD_ | _TBD_ | |
+| | | | | | |
+| | | | | | |
 
-**`zpool status -v` output:**
-```
-(fill in — paste verbatim)
-```
+**How to capture (pick based on what boots):**
+- **Dell SAS 6/iR**: Enter the RAID BIOS (`Ctrl+C` or `Ctrl+R` during POST) and note the virtual disk(s), RAID level, and member disks.
+- **HP B110i**: Enter Option ROM (`F8` during POST) and note logical drive configuration.
+- If neither utility is reachable, document physical cabling and infer from drive sizes.
 
-**`zpool get all` key feature flags per pool:**
+**Current RAID layout (verbatim from controller utility):**
 ```
 (fill in)
 ```
@@ -136,13 +138,14 @@ Current assumption (pending live inspection): B110i set to AHCI, Dell SAS 6/iR o
 | Filesystem | ZFS (preferred) | Modern ZFS plugin on OMV 8.x; mirror vdevs give redundancy with good space efficiency |
 | RAID mode | AHCI (B110i disabled) | ZFS needs raw disk access; Dell SAS 6/iR is RAID-only and not ideal for ZFS |
 | OMV install method | Official ISO | BIOS boot → OMV 8.x ISO |
-| FreeNAS data handling | Wipe | FreeNAS is being wiped per issue #54 |
+| FreeNAS data handling | Wipe | No ZFS pools; existing array is regular RAID; no data preservation expected |
 
 **Open questions still requiring live inspection:**
 1. Exact ML110 generation, CPU, RAM.
 2. SMART health of all 6 drives (some are ~15+ years old).
 3. Whether all drives are visible on the B110i in AHCI mode, or if some are cabled to the Dell SAS 6/iR.
-4. FreeNAS ZFS pool layout before wipe.
+4. Current RAID layout from the controller utility (RAID level, member disks, virtual disk size).
+5. Confirm FreeNAS OS is unbootable and no data needs preservation.
 
 ---
 
