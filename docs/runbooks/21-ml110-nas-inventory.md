@@ -103,6 +103,25 @@ sysctl smbios.bios.version
 sysctl smbios.bios.release
 ```
 
+### 2a. Memory test (Memtest86+)
+
+The machine is an older ML110 that sat idle for a long time, and its **4 GB RAM is
+the borderline minimum for ZFS** — a marginal stick can silently corrupt a future
+pool. Run a memory smoke test **before** deciding the pool layout.
+
+1. From the SystemRescue boot menu, select **Memtest86+** (not the default entry).
+2. Let it run **at least one full pass** (~30–60 min on 4 GB; a first-pass smoke
+   test is acceptable for now).
+3. Record the result: `PASS` / `FAIL` and the number of passes/errors.
+
+| Memtest86+ result | Implication |
+|---|---|
+| PASS (≥1 full pass) | RAM OK — proceed with ZFS or mdadm |
+| FAIL / any errors | Fix/replace the faulty module first; ZFS on bad RAM is a data-loss risk |
+
+> If Memtest86+ is unavailable, a Linux `stress-ng --mem` loop is a weak alternative
+> but does not test all address lines — prefer the real memory test.
+
 ---
 
 ## 3. Current RAID / Storage Configuration Capture
