@@ -118,6 +118,36 @@ RAID** (not ZFS), so **Phase 0 is a hard prerequisite** before any install:
 | Static IP | `192.168.2.x` on homelab subnet | Match homelab network |
 | Arc? | No | Storage node, not a workload host |
 
+### Option A (alternative, rejected)
+
+The initial plan was **OMV on a ≥32 GB USB stick** (`openmediavault-flashmemory` to limit
+wear), keeping all 6 internal disks as data, and using the **5th SATA cable for the 1 TB
+spare** as a single-disk XFS volume. Rejected because it requires buying a USB stick and
+managing flash wear, whereas **Option B** (chosen) puts an otherwise-unused **1.8" 20 GB
+drive** to work as the OS disk at zero cost. See the inventory for the full cabling table.
+
+### RAID: why software (mdadm) over hardware (Dell SAS 6/iR)
+
+1. **No controller dependency.** Hardware RAID binds the array to the exact controller
+   model — if the SAS 6/iR dies, the data needs a compatible card. mdadm stores standard
+   metadata importable on any Linux box (or a USB dock).
+2. **No battery-backed write cache.** The SAS 6/iR lacks a BBWC battery, forcing a choice
+   between risky write-back or slow write-through. mdadm + XFS/ext4 journals safely.
+3. **Per-disk visibility.** Behind hardware RAID you lose per-drive SMART/health; with
+   mdadm every disk stays a normal `/dev/sdX` visible to `smartctl` and OMV.
+4. **SATA support.** The SAS 6/iR is SAS-first, 3 Gb/s, and finicky with SATA disks;
+   onboard ICH9R in AHCI is native SATA.
+5. **Recovery portability.** Move the mdadm pair to any machine if the G5 board dies;
+   hardware RAID requires same-family card hunting.
+6. **Performance non-issue.** RAID1 has no parity math, so the 2-core E2160 isn't taxed;
+   the GigE NIC (~110 MB/s) is the real bottleneck.
+7. **RAID level parity.** The SAS 6/iR only does RAID 0/1 — same as mdadm here.
+8. **Cost & power.** Onboard SATA is free; removing the card saves ~10–15 W on a 24/7 box
+   and drops aging 2009 firmware.
+
+**Honest counterpoint:** hardware RAID offloads I/O from the CPU and survives reinstalls
+more transparently — negligible here given no parity workload and a GigE bottleneck.
+
 ---
 
 ## Relationship to the Existing Homelab

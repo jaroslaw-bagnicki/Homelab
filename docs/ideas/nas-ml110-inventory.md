@@ -163,6 +163,28 @@ Confirmed from SystemRescue `lspci`:
 | FreeNAS data handling | Wipe | No ZFS pools; existing array is regular RAID; no data preservation expected |
 | 1 TB spare (WD10EZEX) | **Offline for now** (no free SATA cable) | Can be added later when a cable/port is freed |
 
+### Alternative — Option A (rejected)
+
+Option A was the initial plan: **OMV OS on a dedicated ≥32 GB USB stick** (with
+`openmediavault-flashmemory` to reduce wear), keeping **all 6 internal disks as data**
+and using the **5th SATA cable for the 1 TB spare** as a single-disk XFS volume.
+
+| Port | Drive |
+|---|---|
+| ICH9R #1 | Hitachi 500 GB → `md0` RAID1 |
+| ICH9R #2 | Hitachi 500 GB → `md0` mirror |
+| ICH9R #3 | WD2500AAKX → `md1` RAID1 |
+| ICH9R #4 | GB0250EAFYK → `md1` mirror |
+| ICH9 #5 | **1 TB WD10EZEX** — single-disk XFS for bulk |
+| 1.8" ×2 | left out (no cable) |
+
+**Rejected because:**
+- Requires sourcing a ≥32 GB USB stick (a purchase) just for the OS.
+- Adds a USB flash-wear management layer (`flashmemory` plugin) the user didn't want to deal with.
+- Option B instead puts an otherwise-unusable **1.8" 20 GB drive** to work as the OS disk at zero cost, freeing the 5th cable question entirely (the 1 TB spare stays offline, addable later).
+
+**Cabling delta vs Option B:** in Option B the 5th cable carries the 1.8" OS disk and the 1 TB spare is offline; in Option A the 5th cable carries the 1 TB spare and the OS is on USB.
+
 **Resolved by SystemRescue report (hardinfo2) + Batches 1 & 2 SMART:**
 1. ✅ Generation confirmed **G5** (DMI), BIOS HP `O15` (2009-09-10).
 2. ✅ CPU Pentium E2160, 2 cores @ 1.8 GHz; RAM 4 GB = 2× 2 GiB DDR2-800 **ECC**, 2 slots free.
