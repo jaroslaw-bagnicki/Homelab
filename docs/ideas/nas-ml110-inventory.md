@@ -37,8 +37,6 @@
 ## 3. Current RAID / Storage Configuration (before wipe)
 
 > **Note:** FreeNAS OS is likely **not bootable**, and the existing array was **regular RAID**, not ZFS. Capture the current RAID layout from the controller BIOS/utility before wiping, so the new OMV disk layout can be planned.
->
-> **⚠ Live inspection finding:** under SystemRescue only the boot USB stick is visible — **none of the 6 internal disks appear**. Likely cause: the drives hang off the SAS1068E (Dell SAS 6/iR) in RAID firmware with no volume defined. Confirm with `lsblk`; enter the SAS 6/iR BIOS during POST (`Ctrl+C`/`Ctrl+R`) to see the configured volumes.
 
 | Controller | RAID level | Member disks | Virtual disk size | Status | Notes |
 |---|---|---|---|---|---|
@@ -60,14 +58,14 @@
 
 ## 4. Disk Inventory
 
-| # | Device (/dev/daX) | Model | Capacity | Rotation (RPM) | SMART health | Controller |
-|---|---|---|---|---|---|---|
-| 1 | _TBD_ | Hitachi Travelstar HTS541020G9SA00 | 20 GB | 5400 | _TBD_ | _TBD_ |
-| 2 | _TBD_ | Fujitsu MHV2020BH | 20 GB | _TBD_ | _TBD_ | _TBD_ |
-| 3 | _TBD_ | Hitachi HDS721050CLA662 | 500 GB | 7200 | _TBD_ | _TBD_ |
-| 4 | _TBD_ | Hitachi HDS721050CLA662 | 500 GB | 7200 | _TBD_ | _TBD_ |
-| 5 | _TBD_ | Western Digital Caviar Blue WD2500AAKX | 250 GB | 7200 | _TBD_ | _TBD_ |
-| 6 | _TBD_ | Western Digital RE3 / Enterprise Storage WD2502ABYS | 250 GB | 7200 | _TBD_ | _TBD_ |
+| # | Device (/dev/sdX) | Model (SMART) | Serial | Capacity | Rotation (RPM) | SMART health | Controller |
+|---|---|---|---|---|---|---|---|
+| 1 | _TBD_ (Batch 2) | Hitachi Travelstar HTS541020G9SA00 | _TBD_ | 20 GB | 5400 | _TBD_ | onboard |
+| 2 | _TBD_ (Batch 2) | Fujitsu MHV2020BH | _TBD_ | 20 GB | _TBD_ | _TBD_ | onboard |
+| 3 | `/dev/sda` | Hitachi HDS721050CLA660 | `JP1572FL1849SK` | 500 GB | 7200 | ✅ **PASSED** | onboard ICH9R |
+| 4 | `/dev/sdb` | Hitachi HDS721050CLA660 | `JP1572FL167V6K` | 500 GB | 7200 | ✅ **PASSED** | onboard ICH9R |
+| 5 | `/dev/sdc` | WDC WD2500AAKX-75U6AA0 | `WD-WCC2F0157761` | 250 GB | 7200 | ✅ **PASSED** | onboard ICH9R |
+| 6 | `/dev/sdd` | **GB0250EAFYK** | `WCAT1F035986` | 250 GB | 7200 | ✅ **PASSED** | onboard ICH9R |
 
 **Power requirements (from labels):**
 - Hitachi Travelstar 20 GB: `5V 1.0A`
@@ -79,11 +77,15 @@
 - Western Digital Caviar Blue 250 GB: manufacturing date August 24, 2012.
 - Western Digital RE3 250 GB: manufacturing date February 14, 2010.
 
+**⚠ Label vs SMART discrepancies (Batch 1, 2026-08-08):**
+- The two 500 GB Hitachis label as `HDS721050CLA662` but SMART reports **`HDS721050CLA660`** — the `662` is the HP OEM variant number (P/N `647466-001`); same drive family. Go by SMART model.
+- The drive labeled **WD RE3 WD2502ABYS** actually reports as **`GB0250EAFYK`** (serial `WCAT1F035986`) — this is likely a relabeled/HP-rebadged drive, **not** the WD RE3 stated on the label. Treat the SMART identity as authoritative.
+
 **Drive bay / connector notes**:
 - 3.5" bays: 4× occupied by Hitachi 500 GB (×2), WD Caviar Blue 250 GB, WD RE3 250 GB
 - 2.5" / 1.8" bays: 2× occupied by Hitachi Travelstar 20 GB, Fujitsu 20 GB
 - All 6 disks are data disks? **Yes** (OMV needs a USB stick or spare SSD for the OS disk.)
-- **Visibility under SystemRescue: NONE** — run `lsblk` and `smartctl --scan` to check; if the drives only appear after a SAS 6/iR volume is defined (or after cross-flashing), that's a Phase 0 blocker for the pool layout.
+- **Visibility resolved** — the earlier "no disks" was because they were physically detached. Attached on the onboard ICH9R SATA ports, all 4× 3.5" drives enumerate fine as `/dev/sda`–`/dev/sdd` in IDE mode. No SAS 6/iR involvement needed for scanning.
 
 ---
 
@@ -154,21 +156,22 @@ Current assumption (pending live inspection): ICH9R set to AHCI, Dell SAS 6/iR o
 | OMV install method | Official ISO | BIOS boot → OMV 8.x ISO |
 | FreeNAS data handling | Wipe | No ZFS pools; existing array is regular RAID; no data preservation expected |
 
-**Resolved by SystemRescue report (hardinfo2):**
+**Resolved by SystemRescue report (hardinfo2) + Batch 1 SMART:**
 1. ✅ Generation confirmed **G5** (DMI), BIOS HP `O15` (2009-09-10).
 2. ✅ CPU Pentium E2160, 2 cores @ 1.8 GHz; RAM 4 GB = 2× 2 GiB DDR2-800 **ECC**, 2 slots free.
 3. ✅ Controllers mapped: ICH9R 4-port SATA (IDE), ICH9 2-port SATA (IDE), Dell SAS 6/iR (SAS1068E), BCM5722 NIC.
 4. ✅ NIC `enp14s0` MAC `78:e7:d1:53:fb:87`, DHCP `192.168.2.164`, gw `192.168.2.1`.
 5. ✅ LO100 present (ServerEngines SE + IPMI).
-6. ⚠ **Internal disks not visible** under SystemRescue (only USB stick) — needs `lsblk` / SAS 6/iR BIOS check.
+6. ✅ **All 4× 3.5" drives PASSED SMART health** (2026-08-08 Batch 1) — serials recorded above.
+7. ✅ Disk visibility resolved — the drives were simply detached; they enumerate fine on the onboard ICH9R SATA.
+8. ⚠ **Label mismatch**: the "WD RE3" drive actually reports as `GB0250EAFYK`.
 
 **Open questions still requiring live inspection:**
-1. **Why are the 6 internal disks not visible?** — `lsblk`, `smartctl --scan`; check SAS 6/iR volumes in its BIOS.
-2. SMART health of all 6 drives (some are ~15+ years old).
-3. Current RAID layout from the controller utility (RAID level, member disks, virtual disk size).
-4. Whether the drives can move to the ICH9R SATA in AHCI mode (cabling dependent).
-5. Confirm FreeNAS OS is unbootable and no data needs preservation.
-6. LO100 management IP (if configured).
+1. SMART health of the 2× 1.8" drives (**Batch 2**).
+2. Current RAID layout from the SAS 6/iR controller utility (RAID level, member disks, virtual disk size).
+3. Whether the drives can move to the ICH9R SATA in AHCI mode (cabling dependent) — only 4 SATA cables available.
+4. Confirm FreeNAS OS is unbootable and no data needs preservation.
+5. LO100 management IP (if configured).
 
 ---
 
@@ -183,6 +186,7 @@ Current assumption (pending live inspection): ICH9R set to AHCI, Dell SAS 6/iR o
 ```
 Display: Matrox G200e (LO100 management GPU) → capped at 1024x768; monitor HP LA2206 supports 1920x1080 but GPU/driver won't drive it. Not relevant for a storage NAS.
 CPU temps: 43-46°C at idle — healthy.
-RTC drifted ~13 days; NTP required once OMV is installed.
+RTC: drifts and reverts to ~23-26 July after reboot; RTC correction is not persisted to hwclock. NTP required once OMV is installed; consider replacing the CR2032 CMOS battery.
 CPU microcode: no microcode update present (mds/spec_store_bypass shown vulnerable) — low risk for a storage-only node, but worth noting.
+Batch 1 SMART (2026-08-08): all 4x 3.5" drives PASSED. Batch 2 (2x 1.8") pending.
 ```
