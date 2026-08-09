@@ -1,6 +1,6 @@
 # NAS on the HP ProLiant ML110 (OpenMediaVault)
 
-**Date:** 2026-08-09
+**Date:** 2026-08-08
 **Status:** Accepted
 
 ---
@@ -24,6 +24,8 @@ The NAS is a **storage-only node** — it does not run Docker/k3s workloads. The
 **Repurpose the HP ProLiant ML110 G5 as the homelab NAS backup target, running OpenMediaVault 8.x (Debian 13) with mdadm software RAID1.**
 
 ### Key decisions
+
+> Settled during Phase 0 and recorded in research 23's Decision Summary; owned by this ADR as the authoritative record.
 
 1. **OMV 8.x** on a Debian 13 base — free, Debian-based, web UI, native mdadm management. Aligns with the original idea's software choice.
 2. **No ZFS** — **mdadm RAID1 + XFS/ext4** instead. At 4 GB RAM, ZFS would work with ECC but the operator chose regular RAID only: zero RAM pressure, full per-disk `smartctl` visibility, importable on any Linux box.
