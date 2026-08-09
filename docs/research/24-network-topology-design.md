@@ -22,7 +22,7 @@ Tenda Nova AC1200 mesh — 192.168.2.0/24, gateway 192.168.2.1
         └── Home office room
             └── Tenda Nova node (Ethernet AP role) → SINGLE office drop
                      │
-              TL-SG108E switch (new)
+              TL-SG108E switch (new — HW V1)
                      ├── M910q homelab server   — static 192.168.2.200
                      ├── ML110 NAS (OMV)        — DHCP 192.168.2.164 → static TBD
                      ├── Work laptop dock (K16A) — DHCP (corporate)
@@ -49,7 +49,7 @@ The mesh is consumer-grade: single LAN broadcast domain, no 802.1Q VLAN trunking
 | ML110 NAS (OMV) | 1× GigE (`enp14s0`, BCM5722) | `192.168.2.164` (DHCP) → static TBD | backup target, NFS for Longhorn (issue #54) |
 | Work laptop dock (Dell K16A) | 1× GigE (via dock) | DHCP (corporate) | corporate device; no static reservation — stays on mesh DHCP |
 | X1 Lite LLM server | 1× GigE (future) | TBD | Phase 2, not yet purchased |
-| **TL-SG108E switch** | 8× GigE (L2, web-managed) | mgmt IP TBD | the new piece — this analysis |
+| **TL-SG108E switch (V1)** | 8× GigE (L2, utility-managed) | `192.168.2.230` (static) | the new piece — this analysis; hardware rev. **V1** (`TL-SG108E 1.0`), web UI non-functional, managed via Easy Smart Configuration Utility (runbook 23) |
 
 ---
 
@@ -58,7 +58,7 @@ The mesh is consumer-grade: single LAN broadcast domain, no 802.1Q VLAN trunking
 1. **CGNAT** — no public IP; remote access only via Cloudflare Tunnel (ADR 08). Not directly affected by the switch, but shapes the "what must stay internal" story.
 2. **Single office Ethernet drop** — the homelab lives in the home office, wired via one Tenda Nova node in Ethernet-AP role providing **one physical outlet**. The switch is what turns that single drop into ports for M910q + NAS + work dock + future gear. The drop device is **whichever Nova unit is physically in the office** — it just needs ≥1 free Gigabit LAN port for the switch uplink (the smaller Mesh5s has fewer ports, so prefer a co-located Mesh3/Mesh5 if available).
 3. **Consumer mesh uplink** — the Tenda Nova is a single broadcast domain and **cannot trunk 802.1Q tags**. Switch VLANs therefore **cannot** segment the homelab from the house LAN; the uplink to the mesh must stay untagged in one VLAN.
-4. **Switch is web-UI-only** — no SNMP, no API. All config is manual via the web console (TP-Link utility or browser). Not Ansible-manageable; captured as a runbook.
+4. **Switch is utility-managed only (V1)** — no SNMP, no API, and the embedded web UI is non-functional (HTTP 501 on every request; already on the last V1 firmware build, line is EOL). All config is manual via the **Easy Smart Configuration Utility** (Windows). Not Ansible-manageable; captured as runbook 23.
 5. **No PoE, no routing, no dynamic LACP** on the TL-SG108E. Static link aggregation exists but the NAS and M910q each have a single NIC — LAG is not applicable today.
 
 ---
@@ -171,7 +171,7 @@ See Option A table above. The NAS static IP replaces its current DHCP lease (`19
 
 ## Next Steps
 
-1. Runbook 23 — TL-SG108E wiring + web-UI config (this branch)
+1. Runbook 23 — TL-SG108E wiring + utility config (this branch)
 2. Apply the reserved IPs during OMV NAS setup (issue #54)
 3. Port mirroring + observability collector (issue #58) — restrict to homelab ports 2–4
 4. VLAN-capable edge router evaluation (issue #57) — gate for Option B
@@ -190,4 +190,5 @@ See Option A table above. The NAS static IP replaces its current DHCP lease (`19
 - [ADR 01](../decisions/01-hardware-selection-m910q.md) — M910q homelab server
 - [ADR 06](../decisions/06-local-dns-dnsmasq.md) — local DNS
 - [Runbook 23 — TL-SG108E switch](../runbooks/23-tl-sg108e-switch.md)
+- Official TP-Link docs: [V1 datasheet](https://www.tp-link.com/pl/document/50775/) · [V1 Quick Installation Guide](https://www.tp-link.com/pl/document/883/) · [Easy Smart Configuration Utility User Guide](https://www.tp-link.com/pl/document/13823/)
 - Issue #54 — ML110 NAS (OMV); runbook 21 (ML110 inventory) in-flight on the `feat/nas-ml110-omv-setup` branch

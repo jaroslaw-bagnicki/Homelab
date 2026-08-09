@@ -1,8 +1,12 @@
 # TL-SG108E Switch Setup — Runbook
 
 > Configuration of the TP-Link TL-SG108E 8-port Gigabit Easy Smart switch as the
-> **homelab access switch**. Web-UI-only management (no SNMP/API). See
-> [research 24 — network topology & design](../research/24-network-topology-design.md)
+> **homelab access switch**. This unit is hardware **V1** (`TL-SG108E 1.0`,
+> firmware `1.1.2 Build 20141017` — see System Info). No SNMP/API. **Managed
+> exclusively via the Windows Easy Smart Configuration Utility** — the embedded
+> web UI is non-functional on V1 hardware (see
+> [§2](#2-management-access-easy-smart-configuration-utility)).
+> See [research 24 — network topology & design](../research/24-network-topology-design.md)
 > for the design rationale. Tracked in [issue #55](https://github.com/jaroslaw-bagnicki/Homelab/issues/55).
 
 ## Goals
@@ -27,7 +31,8 @@
 
 - TL-SG108E + power adapter
 - RJ-45 patch cables (Cat 5e+)
-- A device on the `192.168.2.0/24` subnet (or temporarily a laptop wired to the switch) to reach the web UI
+- A **Windows machine** on the `192.168.2.0/24` subnet (or wired directly to the switch) with the
+  **TP-Link Easy Smart Configuration Utility** installed — the only way to manage the switch (§2)
 - [Research 24](../research/24-network-topology-design.md) for the IP/reservation plan
 
 ---
@@ -40,23 +45,31 @@
 3. Connect M910q (port 2), ML110 NAS (port 3), and the **work laptop dock (port 5)**.
 4. Leave ports 4, 6–8 unplugged for now (or attach future gear per the port plan).
 
-> Default management access on the factory reset TL-SG108E is often
-> `192.168.0.1` — it may not be reachable from `192.168.2.0/24`. Two options:
->
-> **A. Temporarily set a static IP on a laptop in `192.168.0.x`** (e.g.
-> `192.168.0.50/24`) and connect it to a spare switch port; open `192.168.0.1`.
->
-> **B. Use the TP-Link Easy Smart Configuration Utility** (Windows) — it
-> auto-discovers the switch on the local segment and lets you change the
-> management IP without matching subnet. If it cannot see the switch, fall
-> back to option A.
+> ⚠ **Management reality (V1 hardware)**: this switch **cannot be managed from a
+> browser at all** — the embedded web server answers every request (root page,
+> login paths, even `favicon.ico`) with `HTTP 501 Not implemented`. There is no
+> firmware fix: the switch already runs the **latest** V1 build
+> (`1.1.2 Build 20141017` = `TL-SG108E_V1_141017`), the V1 line is EOL, and
+> newer hardware-version firmware is not compatible. The **only** management
+> path is the **Easy Smart Configuration Utility** (Windows), which discovers the
+> switch over L2 regardless of subnet — no static-IP dance needed. See §2.
 
 ---
 
-## 2. Access the Web UI
+## 2. Management Access (Easy Smart Configuration Utility)
 
-1. Browser → `http://192.168.0.1` (default) or the discovered utility IP.
-2. Login: default `admin` / `admin` (⚠ change immediately — see step 3).
+**The only supported management path on the TL-SG108E V1.** The embedded web
+UI is non-functional — every HTTP request returns `501 Not implemented` (no
+browser or `curl` access, no working login page). No firmware upgrade can fix
+it (see §1 note).
+
+1. Download the **Easy Smart Configuration Utility** for V1 from the
+   [TL-SG108E V1 download page](https://www.tp-link.com/pl/support/download/tl-sg108e/v1/)
+   — `Easy Smart Configuration Utility v1.3.20.0.exe.zip` (Windows, English) — and install it.
+2. Run the utility; it **auto-discovers** the switch on the local segment (L2
+   discovery, independent of the management IP/subnet).
+3. Open the discovered device (double-click / management icon) to reach the management UI.
+4. Login: default `admin` / `admin` (⚠ change immediately — see step 3).
 
 ---
 
@@ -71,7 +84,8 @@ In **System → System Info / Management**:
 | Gateway | `192.168.2.1` |
 
 > Reserved in the homelab `.200+` block (research 24). Apply + reboot the switch.
-> From now on reach it at `http://192.168.2.230`.
+> From now on the utility discovers it as `192.168.2.230` (browser access still
+> unavailable on V1 — see §2).
 
 Change the admin password while you're in here. These are human-only
 credentials — store them securely in Keeper Vault; **never commit them**.
@@ -140,15 +154,18 @@ ethtool enp0s31f6 | grep -i speed
 
 - Confirm M910q↔NAS traffic stays on the switch: both plugged into the switch,
   the mesh sees only their unicast frames on the uplink.
-- Web UI at `http://192.168.2.230` shows all ports `Link: Up`.
+- The Easy Smart Configuration Utility shows the switch at `192.168.2.230` with
+  all ports `Link: Up` (Port Status view; the browser web UI is non-functional
+  on V1 — see §2).
 
 ---
 
 ## 8. Security Notes
 
-- Switch web UI has **no TLS** — keep it LAN-only: no port-forwards/NAT on the mesh
-  and no Cloudflare Tunnel to `192.168.2.230`. The UI is reachable only from the
-  local `192.168.2.0/24`.
+- Switch management (Easy Smart Configuration Utility) has **no TLS** — keep it
+  LAN-only: no port-forwards/NAT on the mesh and no Cloudflare Tunnel to
+  `192.168.2.230`. Discovery + management are reachable only from the local
+  `192.168.2.0/24`.
 - Change the default `admin/admin` password; store it securely in Keeper Vault.
 - Record the management IP + password reference in the homelab inventory doc.
 
@@ -159,3 +176,11 @@ ethtool enp0s31f6 | grep -i speed
 - [Research 24 — network topology & design](../research/24-network-topology-design.md)
 - Issue [#55](https://github.com/jaroslaw-bagnicki/Homelab/issues/55)
 - [TL-SG108E product page / user guide](https://www.tp-link.com/en/business-networking/easy-smart-switch/tl-sg108e/)
+- [TL-SG108E V1 downloads — utility + firmware](https://www.tp-link.com/pl/support/download/tl-sg108e/v1/)
+- Easy Smart Configuration Utility V1.3.20.0: `https://static.tp-link.com/upload/software/2025/202504/20250408/Easy Smart Configuration Utility v1.3.20.0.exe.zip`
+- **Official TP-Link docs (V1):**
+  - [TL-SG108E V1 datasheet](https://www.tp-link.com/pl/document/50775/)
+  - [TL-SG108E V1 Quick Installation Guide](https://www.tp-link.com/pl/document/883/)
+  - [TL-SG108E V1 Installation Guide](https://www.tp-link.com/pl/document/50781/)
+  - [Easy Smart Configuration Utility — User Guide](https://www.tp-link.com/pl/document/13823/)
+  - [Easy Smart Configuration Utility — User Guide (PL, PDF)](https://static.tp-link.com/2018/201803/20180328/1910012369_Easy Smart Configuration Utility_UG_PL.pdf)
