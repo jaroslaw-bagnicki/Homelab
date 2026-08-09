@@ -31,7 +31,7 @@ The FreeNAS OS on this box is likely **not bootable** and the existing array was
 
 You need **one** of:
 
-- **Direct console / iLO / IPMI** — attach a keyboard + monitor, or use iLO/LO100 remote console. The HP ML110 G6/G7 has LO100 built in.
+- **Direct console** — attach a keyboard + mouse + monitor to the ML110. **There is no LO100/iLO on this box**: the LO100 expansion-card slot is empty and the management RJ45 port is fused with a metal plate, so no out-of-band management is available.
 - **SSH** into the running FreeNAS box (only if it happens to boot): `ssh root@<freenas-ip>`
 
 > If FreeNAS does boot, treat it as a bonus and still capture the controller RAID config from the controller BIOS/utility, since the array is regular RAID rather than ZFS.
@@ -73,9 +73,9 @@ Expected outputs:
 
 ### 1b. Physical inspection (if the OS is dead or SSH is unreachable)
 
-- Power on and watch the **POST screen** — the model (e.g. `ProLiant ML110 G7`)
+- Power on and watch the **POST screen** — the model (e.g. `ProLiant ML110 G5`)
   appears at the top.
-- Note the **LO100/iLO** address if present (G6 = LO100, G7 = iLO 3, G10 = iLO 5).
+- This G5 has **no LO100** (expansion-card slot empty, RJ45 fused) — no iLO/LO100 address to capture.
 - Photograph the **motherboard model / product label** inside the case.
 - Note the **drive bay count** and **connector types** (3.5" vs 2.5"/1.8").
 
@@ -288,8 +288,9 @@ output and map each disk (`/dev/daX` from §4) to the controller it hangs off.
 
 ## 6. BIOS / Boot Configuration
 
-Reboot and enter the BIOS (press `F8` or `F9` during POST on most ML110 models,
-or use the iLO virtual console). Capture:
+Reboot and enter the BIOS (press `F8` or `F9` during POST on most ML110 models).
+Note: this G5 has **no iLO/LO100** — a physical keyboard + monitor is the console.
+Capture:
 
 | Setting | Current value | Target for OMV |
 |---|---|---|
@@ -298,7 +299,7 @@ or use the iLO virtual console). Capture:
 | Boot Mode | `BIOS` / `UEFI` | `BIOS` (OMV 8.x ISO is BIOS-only) |
 | Secure Boot | `On` / `Off` | `Off` |
 | Network Boot | `PXE` enabled? | note for PXE-free install |
-| LO100/iLO shared port | dedicated / shared | note the iLO IP if used |
+| LO100/iLO shared port | N/A — LO100 not installed | — |
 
 Take a photo of the relevant BIOS screens (or at minimum a screenshot) so
 you can restore settings if needed.
@@ -320,7 +321,7 @@ netstat -rn | grep default
 
 Record:
 - Primary NIC MAC → map to DHCP reservation / static IP
-- iLO/LO100 management IP (if configured) — useful for remote console if SSH dies later
+- No LO100/iLO on this G5 — no management IP to capture; rely on direct console
 
 ---
 

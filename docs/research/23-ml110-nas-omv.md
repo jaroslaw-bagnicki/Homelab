@@ -45,8 +45,9 @@
 | RAM | **4 GB** = 2× 2 GiB **DDR2-800 ECC** (Samsung), slots DIMM1+DIMM3, 2 free |
 | ECC | **Single-bit ECC** — bonus for data integrity |
 | BIOS | HP **O15**, 2009-09-10 |
-| GPU | Matrox **G200e [Pilot]** (server management video / LO100) → 1024×768 cap |
-| LO100 | Present (ServerEngines SE + IPMI modules loaded) |
+| GPU | Matrox **G200e [Pilot]** (ServerEngines onboard console video) → 1024×768 cap |
+| LO100 / IPMI | **Not available** — LO100 expansion-card slot is **empty** and the management RJ45 port is **fused with a metal plate**. No out-of-band remote management (no iLO/LO100 IPMI). |
+| Remote access | **None** — direct console only: keyboard + mouse + monitor on the ML110 |
 | NIC | Broadcom BCM5722 (`enp14s0`), MAC `78:e7:d1:53:fb:87` |
 
 ### Controller topology

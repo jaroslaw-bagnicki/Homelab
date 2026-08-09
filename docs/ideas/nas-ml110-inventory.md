@@ -28,9 +28,10 @@
 |---|---|
 | Total RAM | **4 GB** (3868 MB usable) — **2× 2 GiB DDR2-800 PC2-6400 ECC** (Samsung), slots DIMM1 + DIMM3; 2 of 4 slots free |
 | ECC | **Yes — single-bit ECC** (bonus for data integrity) |
-| iLO / LO100 | **LO100 present** (ServerEngines SE / IPMI modules loaded) |
+| iLO / LO100 | **Not available** — LO100 expansion-card slot is **empty**; management RJ45 port **fused with a metal plate**. No out-of-band management |
+| Remote access | **Direct console only** — keyboard + mouse + monitor (no iLO/LO100, no IPMI) |
 | Power supply wattage | _fill in_ |
-| GPU | **Matrox G200e [Pilot] ServerEngines** — server management video (LO100); explains 1024×768 cap |
+| GPU | **Matrox G200e [Pilot] ServerEngines** — onboard console video; explains 1024×768 cap |
 
 ---
 
@@ -136,7 +137,7 @@ Confirmed from SystemRescue `lspci`:
 | Secure Boot | N/A (G5 has none) | `Off` |
 | Boot device / order | USB | **Fujitsu 20 GB OMV disk** (ICH9 #5) |
 | Network boot protocol | PXE (also RPL, BOOTP) | `Disabled` for local install |
-| LO100/iLO shared port mode | _fill in_ | |
+| LO100/iLO shared port mode | N/A — LO100 not installed (empty slot, RJ45 fused) | — |
 | RTC clock | Drifted ~13 days (26.07 → 08.08) | NTP in OMV + consider CMOS battery |
 
 ---
@@ -146,7 +147,7 @@ Confirmed from SystemRescue `lspci`:
 | Interface | MAC address | Current IP | Notes |
 |---|---|---|---|
 | `enp14s0` (Broadcom BCM5722) | `78:e7:d1:53:fb:87` | **DHCP `192.168.2.164`** | primary NIC; gw/DNS `192.168.2.1` |
-| iLO / LO100 | _fill in_ | _fill in_ | management (if present) |
+| LO100 / iLO | N/A | N/A | not installed — no out-of-band mgmt |
 
 **Planned OMV static IP** (on the homelab subnet `192.168.2.0/24`): `_fill in_` (e.g. reserve a `.2.x` address for the NAS; current DHCP lease is `.164`)
 
@@ -192,7 +193,7 @@ and using the **5th SATA cable for the 1 TB spare** as a single-disk XFS volume.
 2. ✅ CPU Pentium E2160, 2 cores @ 1.8 GHz; RAM 4 GB = 2× 2 GiB DDR2-800 **ECC**, 2 slots free.
 3. ✅ Controllers mapped: ICH9R 4-port SATA (IDE), ICH9 2-port SATA (IDE), Dell SAS 6/iR (SAS1068E), BCM5722 NIC.
 4. ✅ NIC `enp14s0` MAC `78:e7:d1:53:fb:87`, DHCP `192.168.2.164`, gw `192.168.2.1`.
-5. ✅ LO100 present (ServerEngines SE + IPMI).
+5. ✅ **LO100 NOT available** — expansion-card slot empty, management RJ45 fused with a metal plate → no out-of-band mgmt; direct console only.
 6. ✅ **All drives PASSED SMART health** (2026-08-08, Batches 1+2) — 4× 3.5" + 2× 1.8" + spare 1 TB, serials recorded above.
 7. ✅ Disk visibility resolved — the drives were simply detached; they enumerate fine on the onboard ICH9R SATA.
 8. ⚠ **Label mismatch**: the "WD RE3" drive actually reports as `GB0250EAFYK`; Fujitsu label `MHV2020BH` reports as `MHW2020BH`.
@@ -203,8 +204,7 @@ and using the **5th SATA cable for the 1 TB spare** as a single-disk XFS volume.
 **Open questions still requiring live inspection:**
 1. Current RAID layout from the SAS 6/iR controller utility (RAID level, member disks, virtual disk size) — capture before unplugging it.
 2. Confirm FreeNAS OS is unbootable and no data needs preservation.
-3. LO100 management IP (if configured).
-4. Whether to physically remove the Dell SAS 6/iR (saves ~10–15 W) or leave seated but disconnected.
+3. Whether to physically remove the Dell SAS 6/iR (saves ~10–15 W) or leave seated but disconnected.
 
 ---
 
@@ -217,7 +217,8 @@ and using the **5th SATA cable for the 1 TB spare** as a single-disk XFS volume.
 
 **Assorted notes**:
 ```
-Display: Matrox G200e (LO100 management GPU) → capped at 1024x768; monitor HP LA2206 supports 1920x1080 but GPU/driver won't drive it. Not relevant for a storage NAS.
+Display: Matrox G200e (ServerEngines onboard console video) → capped at 1024x768; monitor HP LA2206 supports 1920x1080 but GPU/driver won't drive it. Not relevant for a storage NAS.
+Management: no LO100/iLO — OMV install and operation happen on direct console (keyboard + mouse + monitor).
 CPU temps: 43-46°C at idle — healthy.
 RTC: drifts and reverts to ~23-26 July after reboot; RTC correction is not persisted to hwclock. NTP required once OMV is installed; consider replacing the CR2032 CMOS battery.
 CPU microcode: no microcode update present (mds/spec_store_bypass shown vulnerable) — low risk for a storage-only node, but worth noting.
