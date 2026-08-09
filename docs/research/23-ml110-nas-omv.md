@@ -107,14 +107,16 @@
 
 ---
 
-## Boot Device: Option A vs Option B vs Option D
+## Boot Device: Option A vs Option B vs Option C vs Option D
 
-| | Option A (rejected) | Option B (superseded) | **Option D (chosen)** |
-|---|---|---|---|
-| OMV OS on | Dedicated ≥32 GB USB stick (`flashmemory` plugin) | 1× 2.5" 20 GB drive (ICH9 #5) | **Goodram C40 120 GB SSD (ICH9 #5)** |
-| 1 TB spare | single-disk XFS on ICH9 #5 | offline | **single-disk XFS on ICH9 #6** |
-| Cost | USB purchase + flash-wear mgmt | zero (reuse 2.5" drive) | zero (spare SSD found) |
-| Hardware RAID needed | no | no | **no** — SAS 6/iR not used |
+| | Option A (rejected) | Option B (superseded) | Option C (superseded) | **Option D (chosen)** |
+|---|---|---|---|---|
+| OMV OS on | Dedicated ≥32 GB USB stick (`flashmemory` plugin) | 1× 2.5" 20 GB drive (ICH9 #5) | 2× 2.5" 20 GB in **SAS 6/iR RAID 1** (OS redundancy) | **Goodram C40 120 GB SSD (ICH9 #5)** |
+| 1 TB spare | single-disk XFS on ICH9 #5 | offline | single-disk XFS on ICH9 #6 | **single-disk XFS on ICH9 #6** |
+| Cost | USB purchase + flash-wear mgmt | zero (reuse 2.5" drive) | zero (both 20 GB reused) | zero (spare SSD found) |
+| Hardware RAID needed | no | no | **yes** — SAS 6/iR in boot path | **no** — SAS 6/iR not used |
+
+**Option C (considered, superseded):** mirror the two 2.5" 20 GB drives on the Dell SAS 6/iR as the OS volume. Rationale at the time: the boot disk is the highest-wear component, and OS RAID1 gave redundancy while freeing both ICH9 ports so the 1 TB spare could come online. Drawbacks that pushed it out: the 2009 controller becomes a boot dependency (death = no boot), no per-disk SMART behind the array, and the battery-less write cache risk — acceptable for a disposable OS, but still added hardware dependency for zero OS-capacity gain.
 
 **Chosen: Option D** — a spare **Goodram C40 120 GB SSD** appeared, giving a single reliable boot disk with 6× the OS capacity of the 20 GB drives, no hardware RAID anywhere, and freeing both 2.5" 20 GB drives as cold spares. The 1 TB spare joins the build as a single-disk XFS bulk volume. **SSD health confirmed (SMART PASSED).**
 
