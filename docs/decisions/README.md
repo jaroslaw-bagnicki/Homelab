@@ -13,6 +13,7 @@ Significant architectural and technology choices recorded in
 
 | # | Date | ADR | Status |
 |---|------|-----|--------|
+| 23 | 2026-08-09 | [NAS on the HP ProLiant ML110 (OpenMediaVault)](23-nas-on-ml110.md) | Accepted |
 | 22 | 2026-07-26 | [Migrate Homelab Workloads to Kubernetes (k3s + Azure Arc)](22-k3s-arc-homelab.md) | Accepted |
 | 21 | 2026-07-16 | [Per-Project OpenCode Container Images](21-opencode-instance-images.md) | Accepted |
 | 20 | 2026-07-05 | [Caddy as Single Routing Layer on Cloudlab](20-caddy-single-routing-layer.md) | Accepted |
