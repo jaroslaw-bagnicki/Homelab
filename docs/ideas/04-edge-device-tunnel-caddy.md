@@ -5,9 +5,10 @@
 > One device owns all inbound routing for the LAN; backends (M910q, ML110 OMV, future
 > gear) stay plain and cluster churn never drops external access.
 
-**Status**: 🧠 Idea  
+**Status**: 📋 Planned  
 **Date**: 2026-08-09  
-**Research**: none yet — see [Context](#context) and [Open Questions](#open-questions)  
+**Research**: [Research 25 — Edge ingress SBC, PL market](../research/25-edge-ingress-sbc.md)  
+**Decision**: [ADR 24 — Edge ingress on a dedicated thin-client appliance](../decisions/24-edge-ingress-appliance.md) — Dell Wyse 3040, bare-metal cloudflared + Caddy  
 **Issue**: [#65 — Dedicated edge device for Cloudflare Tunnel + Caddy ingress](https://github.com/jaroslaw-bagnicki/Homelab/issues/65)  
 
 ---
