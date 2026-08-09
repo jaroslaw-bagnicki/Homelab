@@ -2,6 +2,7 @@
 
 | # | Date | Document | Topic | Source |
 |---|------|----------|-------|--------|
+| 24 | 2026‑08‑09 | [24-network-topology-design.md](24-network-topology-design.md) | Homelab network topology & design — mesh inventory, flat vs VLAN comparison, TL-SG108E integration, static IP scheme | OpenCode thread + issue #55 |
 | 22 | 2026‑07‑11 | [22-infisical-for-homelab-secret-management.md](22-infisical-for-homelab-secret-management.md) | Infisical for Homelab secret management — evaluation, Docker deployment, and OpenCode integration concepts | Web research + OpenCode thread |
 | 21 | 2026‑07‑08 | [21-opencode-sandboxed-homelab-architecture.md](21-opencode-sandboxed-homelab-architecture.md) | OpenCode sandboxed architecture on Homelab — per-project instances, Docker Sandboxes, Caddy wildcard routing, network isolation | Gemini chats 9–13 |
 | 20 | 2026‑07‑04 | [20-opencode-hosting-codespaces-vs-homelab.md](20-opencode-hosting-codespaces-vs-homelab.md) | OpenCode hosting — Codespaces vs M910q vs Cloudlab; server mode, sandboxing, dependencies, backup, automation | Research |
