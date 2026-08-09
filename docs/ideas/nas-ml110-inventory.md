@@ -4,7 +4,7 @@
 > [`21-ml110-nas-inventory.md`](../runbooks/21-ml110-nas-inventory.md).
 > Commit this file to the worktree — it's the single source of truth for the OMV install plan.
 
-**Status**: 🧠 Idea (Phase 0 — inventory complete; **no ZFS — mdadm RAID1 + OMV on 1.8" OS disk** decided; RAID layout capture from SAS 6/iR still pending) | **Idea**: [03 — Homelab NAS on ML110](03-nas-backup-target-ml110.md) | **Worktree**: `feat/nas-ml110-omv-setup`
+**Status**: 🧠 Idea (Phase 0 — inventory complete; **no ZFS — mdadm RAID1 + OMV on Fujitsu 20 GB** decided; RAID layout capture from SAS 6/iR still pending) | **Idea**: [03 — Homelab NAS on ML110](03-nas-backup-target-ml110.md) | **Worktree**: `feat/nas-ml110-omv-setup`
 
 ---
 
@@ -58,15 +58,15 @@
 
 ## 4. Disk Inventory
 
-| # | Device (/dev/sdX) | Model (SMART) | Serial | Capacity | Rotation (RPM) | SMART health | Controller |
-|---|---|---|---|---|---|---|---|
-| 1 | `/dev/sda` | Hitachi Travelstar HTS541020G9SA00 | `MPBFL0X9G1W9WM` | 20 GB | 5400 | ✅ **PASSED** | onboard |
-| 2 | `/dev/sdb` | Fujitsu **MHW2020BH** | `NZ0GT772LN18` | 20 GB | _TBD_ | ✅ **PASSED** | onboard |
-| 3 | `/dev/sda` | Hitachi HDS721050CLA660 | `JP1572FL1849SK` | 500 GB | 7200 | ✅ **PASSED** | onboard ICH9R |
-| 4 | `/dev/sdb` | Hitachi HDS721050CLA660 | `JP1572FL167V6K` | 500 GB | 7200 | ✅ **PASSED** | onboard ICH9R |
-| 5 | `/dev/sdc` | WDC WD2500AAKX-75U6AA0 | `WD-WCC2F0157761` | 250 GB | 7200 | ✅ **PASSED** | onboard ICH9R |
-| 6 | `/dev/sdd` | **GB0250EAFYK** | `WCAT1F035986` | 250 GB | 7200 | ✅ **PASSED** | onboard ICH9R |
-| 7 | `/dev/sdc` (Batch 2) | **WDC WD10EZEX-00BN5A0** (spare) | `WD-WCC3F7AKKXUT` | **1.0 TB** | 7200 | ✅ **PASSED** | onboard |
+| # | Device (/dev/sdX) | Model (SMART) | Serial | Capacity | Rotation (RPM) | SMART health | Controller | Role |
+|---|---|---|---|---|---|---|---|---|
+| 1 | `/dev/sdf` | Hitachi Travelstar HTS541020G9SA00 | `MPBFL0X9G1W9WM` | 20 GB | 5400 | ✅ **PASSED** — 18,378 hrs | onboard | cold spare |
+| 2 | `/dev/sde` | Fujitsu **MHW2020BH** | `NZ0GT772LN18` | 20 GB | _TBD_ | ✅ **PASSED** — 11,458 hrs | onboard | **OMV OS disk** |
+| 3 | `/dev/sda` | Hitachi HDS721050CLA660 | `JP1572FL1849SK` | 500 GB | 7200 | ✅ **PASSED** | onboard ICH9R | `md0` |
+| 4 | `/dev/sdb` | Hitachi HDS721050CLA660 | `JP1572FL167V6K` | 500 GB | 7200 | ✅ **PASSED** | onboard ICH9R | `md0` mirror |
+| 5 | `/dev/sdc` | WDC WD2500AAKX-75U6AA0 | `WD-WCC2F0157761` | 250 GB | 7200 | ✅ **PASSED** | onboard ICH9R | `md1` |
+| 6 | `/dev/sdd` | **GB0250EAFYK** | `WCAT1F035986` | 250 GB | 7200 | ✅ **PASSED** | onboard ICH9R | `md1` mirror |
+| 7 | `/dev/sdc` (Batch 2) | **WDC WD10EZEX-00BN5A0** (spare) | `WD-WCC3F7AKKXUT` | **1.0 TB** | 7200 | ✅ **PASSED** | onboard | offline |
 
 **Power requirements (from labels):**
 - Hitachi Travelstar 20 GB: `5V 1.0A`
@@ -90,11 +90,13 @@
 - 3.5" bays: 4× occupied by Hitachi 500 GB (×2), WD Caviar Blue 250 GB, "WD RE3" (= GB0250EAFYK) 250 GB
 - 2.5" / 1.8" bays: 2× occupied by Hitachi Travelstar 20 GB, Fujitsu 20 GB
 - **+1 spare 3.5"**: WDC WD10EZEX 1 TB (not originally mounted)
-- All 6 mounted disks are data disks? **Yes** — OMV OS goes on **one of the 1.8" 20 GB drives** (Option B)
-- **Final cabling plan (5 SATA cables):**
+- All 6 mounted disks are data disks? **Yes** — OMV OS goes on the **Fujitsu 20 GB** (Option B)
+- **OS disk selected (2026-08-08): Fujitsu MHW2020BH** (`NZ0GT772LN18`) — 11,458 power-on hours vs Hitachi's 18,378, plus lower draw (0.5 A vs 1.0 A). Hitachi Travelstar = cold spare.
+- **Final cabling plan (6 SATA cables):**
   - ICH9R ports #1–#4 → the 4× 3.5" data drives (mdadm RAID1 pairs)
-  - ICH9 port #5 → one 1.8" 20 GB drive as the OMV system disk
-  - Second 1.8" 20 GB + 1 TB spare → left disconnected (offline)
+  - ICH9 port #5 → **Fujitsu 20 GB** as the OMV system disk
+  - ICH9 port #6 → Hitachi Travelstar 20 GB (cold spare; can be left connected)
+  - 1 TB spare → left disconnected (offline)
 - **Visibility resolved** — the earlier "no disks" was because they were physically detached. Attached on the onboard ICH9R SATA ports, drives enumerate fine as `/dev/sdX` in IDE mode. No SAS 6/iR involvement needed for scanning.
 
 ---
@@ -132,7 +134,7 @@ Confirmed from SystemRescue `lspci`:
 | B110i / ICH9R RAID firmware | enabled (as SAS1068E volume / IDE) | `Disabled` (raw disks to mdadm) |
 | Boot Mode | BIOS | `BIOS` (OMV ISO is BIOS-only) |
 | Secure Boot | N/A (G5 has none) | `Off` |
-| Boot device / order | USB | 1.8" 20 GB OMV disk (ICH9 #5) |
+| Boot device / order | USB | **Fujitsu 20 GB OMV disk** (ICH9 #5) |
 | Network boot protocol | PXE (also RPL, BOOTP) | `Disabled` for local install |
 | LO100/iLO shared port mode | _fill in_ | |
 | RTC clock | Drifted ~13 days (26.07 → 08.08) | NTP in OMV + consider CMOS battery |
@@ -155,8 +157,8 @@ Confirmed from SystemRescue `lspci`:
 | Decision | Chosen approach | Rationale |
 |---|---|---|
 | **ZFS?** | **No — mdadm RAID1 instead** | User preference: regular RAID only, no ZFS for now |
-| Boot device for OMV | **1× 1.8" 20 GB drive on ICH9 SATA port #5** (Option B) | Reuses owned hardware; no USB stick purchase. Use the Hitachi Travelstar or Fujitsu 20 GB as the OS disk |
-| Disk pool layout | **mdadm RAID1**: `md0` = 2× 500 GB Hitachis (500 GB usable); `md1` = 2× 250 GB (250 GB usable) | Software RAID1 pairs for redundancy; 1 TB spare and 1.8" spare left out (no cable) |
+| Boot device for OMV | **Fujitsu MHW2020BH 20 GB on ICH9 SATA #5** (Option B) | Reuses owned hardware; no USB stick purchase. Lower power-on hours + lower draw than Hitachi |
+| Disk pool layout | **mdadm RAID1**: `md0` = 2× 500 GB Hitachis (500 GB usable); `md1` = 2× 250 GB (250 GB usable) | Software RAID1 pairs for redundancy; 1 TB spare and Hitachi 1.8" spare left out |
 | Filesystem | **XFS on `md0`** (primary), **ext4 on `md1`** | XFS for backup target volume; ext4 for secondary/bulk |
 | RAID mode | **mdadm software RAID** on onboard ICH9R SATA, set to **AHCI** in BIOS | No hardware RAID dependency; Dell SAS 6/iR unused (or physically removed) |
 | OMV install method | Official ISO | BIOS boot → OMV 8.x ISO |
@@ -196,13 +198,13 @@ and using the **5th SATA cable for the 1 TB spare** as a single-disk XFS volume.
 8. ⚠ **Label mismatch**: the "WD RE3" drive actually reports as `GB0250EAFYK`; Fujitsu label `MHV2020BH` reports as `MHW2020BH`.
 9. ✅ **Spare 1 TB WD10EZEX** discovered and healthy.
 10. ✅ **Layout decision made**: no ZFS → mdadm RAID1; OMV OS on 1.8" 20 GB (Option B).
+11. ✅ **OS disk selected**: **Fujitsu MHW2020BH** (`NZ0GT772LN18`) — 11,458 hrs, 0.5 A; Hitachi Travelstar (18,378 hrs) → cold spare.
 
 **Open questions still requiring live inspection:**
 1. Current RAID layout from the SAS 6/iR controller utility (RAID level, member disks, virtual disk size) — capture before unplugging it.
 2. Confirm FreeNAS OS is unbootable and no data needs preservation.
 3. LO100 management IP (if configured).
-4. Which 1.8" drive becomes the OMV OS disk (Hitachi vs Fujitsu).
-5. Whether to physically remove the Dell SAS 6/iR (saves ~10–15 W) or leave seated but disconnected.
+4. Whether to physically remove the Dell SAS 6/iR (saves ~10–15 W) or leave seated but disconnected.
 
 ---
 
@@ -220,4 +222,5 @@ CPU temps: 43-46°C at idle — healthy.
 RTC: drifts and reverts to ~23-26 July after reboot; RTC correction is not persisted to hwclock. NTP required once OMV is installed; consider replacing the CR2032 CMOS battery.
 CPU microcode: no microcode update present (mds/spec_store_bypass shown vulnerable) — low risk for a storage-only node, but worth noting.
 SMART (2026-08-08): Batches 1+2 — all 6 original drives + spare 1 TB PASSED. All healthy; no drive excluded so far.
+OS disk: Fujitsu MHW2020BH (NZ0GT772LN18) chosen — 11,458 hrs / 0.5A. Hitachi Travelstar (MPBFL0X9G1W9WM) = cold spare.
 ```
