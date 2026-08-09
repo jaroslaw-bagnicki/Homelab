@@ -28,6 +28,12 @@ operating on its own.
 - Research docs: `homelab/research/` — numbered Markdown files (`01-*.md`, `02-*.md`, …).
   Useful for exploratory context, but ADRs in `docs/decisions/` supersede research
   docs once a direction is settled.
+- **Co-authoring pattern: research settles, ADR owns.** When a research/idea doc
+  settles a direction (its decision summary or resolved decisions become final),
+  author the ADR in the **same phase/PR** as the research — do not defer it to a
+  later implementation phase. The research doc links the ADR and defers decision
+  authority to it (e.g. a banner above its decision summary); it stays as the
+  analysis that fed the decision, not the authority for it.
 - Runbooks: `runbooks/` — implementation instructions and operational procedures
 - Each area has a `README.md` as the index
 
