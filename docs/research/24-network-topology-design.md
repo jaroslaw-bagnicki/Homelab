@@ -156,7 +156,7 @@ issue #54) **on the switch fabric at full GigE**, off the mesh's wireless backha
 
 ### Static IP reservations (proposed `192.168.2.200+` block)
 
-See Option A table above. The NAS static IP replaces its current DHCP lease (`192.168.2.164`); assign the new address during the OMV setup (runbook 22, issue #54).
+See Option A table above. The NAS static IP replaces its current DHCP lease (`192.168.2.164`); assign the new address during the OMV setup (runbook 22 — TBD, issue #54).
 
 ---
 

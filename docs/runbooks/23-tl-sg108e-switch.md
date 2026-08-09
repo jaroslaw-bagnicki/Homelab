@@ -73,8 +73,8 @@ In **System → System Info / Management**:
 > Reserved in the homelab `.200+` block (research 24). Apply + reboot the switch.
 > From now on reach it at `http://192.168.2.230`.
 
-Change the admin password while you're in here. Store it in the homelab Key
-Vault (see the Key Vault runbook pattern in `bicep/`); **never commit it**.
+Change the admin password while you're in here. These are human-only
+credentials — store them securely in Keeper Vault; **never commit them**.
 
 ---
 
@@ -146,10 +146,10 @@ ethtool enp0s31f6 | grep -i speed
 
 ## 8. Security Notes
 
-- Switch web UI has **no TLS** — never expose the management IP beyond the LAN
-  (UFW on the M910q already restricts `192.168.2.0/24`; the switch mgmt stays
-  LAN-only).
-- Change the default `admin/admin` password; store in AKV.
+- Switch web UI has **no TLS** — keep it LAN-only: no port-forwards/NAT on the mesh
+  and no Cloudflare Tunnel to `192.168.2.230`. The UI is reachable only from the
+  local `192.168.2.0/24`.
+- Change the default `admin/admin` password; store it securely in Keeper Vault.
 - Record the management IP + password reference in the homelab inventory doc.
 
 ---
