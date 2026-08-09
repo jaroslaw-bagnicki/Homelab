@@ -1,6 +1,6 @@
 # 24 — Homelab Network Topology & Design
 
-**Source**: OpenCode thread, Aug 09 2026 · Issue [#55](https://github.com/jaroslaw-bagnicki/Homelab/issues/55)
+**Source**: OpenCode thread, Aug 09 2026 · Issue [#55 — (feat) Homelab network analysis & design — topology, TL-SG108E switch, IP scheme](https://github.com/jaroslaw-bagnicki/Homelab/issues/55)
 
 **Scope**: Whole-homelab network analysis — current topology, constraints, IP scheme, and the role of the newly found **TP-Link TL-SG108E** 8-port Gigabit Easy Smart switch.
 
@@ -181,7 +181,7 @@ See Option A table above. The NAS static IP replaces its current DHCP lease (`19
 
 ## References
 
-- Issue [#55](https://github.com/jaroslaw-bagnicki/Homelab/issues/55) — this analysis
+- Issue [#55 — (feat) Homelab network analysis & design — topology, TL-SG108E switch, IP scheme](https://github.com/jaroslaw-bagnicki/Homelab/issues/55) — this analysis
 - Issue [#57](https://github.com/jaroslaw-bagnicki/Homelab/issues/57) — VLAN-capable edge router (Option B gate)
 - Issue [#58](https://github.com/jaroslaw-bagnicki/Homelab/issues/58) — port mirroring observability
 - Issue [#54](https://github.com/jaroslaw-bagnicki/Homelab/issues/54) — HP ML110 NAS (OMV)

@@ -7,7 +7,7 @@
 > web UI is non-functional on V1 hardware (see
 > [§2](#2-management-access-easy-smart-configuration-utility)).
 > See [research 24 — network topology & design](../research/24-network-topology-design.md)
-> for the design rationale. Tracked in [issue #55](https://github.com/jaroslaw-bagnicki/Homelab/issues/55).
+> for the design rationale. Tracked in [issue #55 — (feat) Homelab network analysis & design — topology, TL-SG108E switch, IP scheme](https://github.com/jaroslaw-bagnicki/Homelab/issues/55).
 
 ## Goals
 
@@ -190,10 +190,10 @@ ethtool enp0s31f6 | grep -i speed
 ## References
 
 - [Research 24 — network topology & design](../research/24-network-topology-design.md)
-- Issue [#55](https://github.com/jaroslaw-bagnicki/Homelab/issues/55)
+- Issue [#55 — (feat) Homelab network analysis & design — topology, TL-SG108E switch, IP scheme](https://github.com/jaroslaw-bagnicki/Homelab/issues/55)
 - [TL-SG108E product page / user guide](https://www.tp-link.com/en/business-networking/easy-smart-switch/tl-sg108e/)
 - [TL-SG108E V1 downloads — utility + firmware](https://www.tp-link.com/pl/support/download/tl-sg108e/v1/)
-- Easy Smart Configuration Utility V1.3.20.0: `https://static.tp-link.com/upload/software/2025/202504/20250408/Easy Smart Configuration Utility v1.3.20.0.exe.zip`
+- [Easy Smart Configuration Utility v1.3.20.0.exe.zip](https://static.tp-link.com/upload/software/2025/202504/20250408/Easy%20Smart%20Configuration%20Utility%20v1.3.20.0.exe.zip)
 - **Official TP-Link docs (V1):**
   - [TL-SG108E V1 datasheet](https://www.tp-link.com/pl/document/50775/)
   - [TL-SG108E V1 Quick Installation Guide](https://www.tp-link.com/pl/document/883/)
