@@ -2,7 +2,7 @@
 
 > **Phase 0 output for issue #54.** Living single source of truth for the OMV install
 > plan. Update this file as data is captured (see
-> [`21-ml110-nas-inventory.md`](../runbooks/21-ml110-nas-inventory.md)); some fields
+> [`22-ml110-nas-inventory.md`](../runbooks/22-ml110-nas-inventory.md)); some fields
 > may stay TBD until the controller BIOS review.
 
 **Status**: 🧠 Idea (Phase 0 — inventory captured; remaining TBD: PSU wattage, SAS 6/iR RAID layout, 1 TB content; **no ZFS — mdadm RAID1 + OMV OS on Goodram 120 GB SSD (Option D, confirmed)**) | **Idea**: [03 — Homelab NAS on ML110](03-nas-backup-target-ml110.md) | **Worktree**: `feat/nas-ml110-omv-setup`

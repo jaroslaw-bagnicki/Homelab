@@ -4,7 +4,7 @@
 
 ## Prerequisites
 
-- [ ] Docker + Portainer CE running (see [2-docker.md](2-docker.md))
+- [ ] Docker + Portainer CE running (see [02-docker.md](02-docker.md))
 - [ ] Access to Portainer UI (via SSH tunnel: `http://localhost:9000`)
 - [ ] GitHub account with access to the packages you want to pull
 
@@ -104,7 +104,7 @@ GitHub PATs expire. When the token expires:
 ## Prerequisites
 
 - [ ] Zot workload deployed and reachable: `curl -u zot-admin:$PASSWORD https://zot.cloud5.ovh/v2/_catalog` returns the catalog (see [20-deploy-zot.md](20-deploy-zot.md))
-- [ ] Portainer CE running and accessible (see [2-docker.md](2-docker.md))
+- [ ] Portainer CE running and accessible (see [02-docker.md](02-docker.md))
 
 ## 1. Retrieve the Zot credentials
 

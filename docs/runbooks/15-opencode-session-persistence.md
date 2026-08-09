@@ -123,7 +123,7 @@ prove the persistence actually survives a rebuild, perform this round-trip:
 
 ### Prerequisite — one-time Azure setup
 
-1. **Deploy `homelabcloud5` storage account** per [runbook 7](7-restic-backup.md) (issue #13). The OpenCode backup reuses the same storage account as the homelab-server restic backup; no new SA is created.
+1. **Deploy `homelabcloud5` storage account** per [runbook 7](07-restic-backup.md) (issue #13). The OpenCode backup reuses the same storage account as the homelab-server restic backup; no new SA is created.
 2. **Grant the Codespaces SP storage access** by running the dedicated role-grant script (separate from `Set-HomelabCodespacesSp.ps1` — see [runbook 14 § Additional role](14-gh-codespaces-sp-for-homelab.md#additional-role-storage-blob-data-contributor-added-2026-06-28-for-opencode-backups)):
 
    ```powershell
@@ -296,7 +296,7 @@ via an environment variable in `devcontainer.json` rather than hardcoding it.
 
 ## References
 
-- [Runbook 7: Restic backup to Azure Blob](7-restic-backup.md) — creates `homelabcloud5`
+- [Runbook 7: Restic backup to Azure Blob](07-restic-backup.md) — creates `homelabcloud5`
 - [Runbook 14: Codespaces SP for Homelab](14-gh-codespaces-sp-for-homelab.md) — SP creation; the "Additional role" subsection documents the storage role grant
 - [ADR 16: Non-Interactive Agent Workload Identity Pattern](../decisions/16-agent-identity-pattern.md)
 - [Research 14: Backup cost comparison](../research/14-backup-cost-comparison.md)

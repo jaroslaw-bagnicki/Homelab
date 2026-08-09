@@ -70,7 +70,7 @@ Required so `scripts/Backup-OpencodeData.ps1` (see [runbook 15](15-opencode-sess
 
 This is **separate from the control-plane `Contributor` role on the RG** — data-plane access on Storage accounts is not implied by control-plane roles (same rule that makes the Key Vault data-plane role separate).
 
-Grant idempotently via `scripts/Add-HomelabOpencodeBackupStorage.ps1`. **Prerequisite:** the `homelabcloud5` storage account must already exist (deploy it first per [runbook 7](7-restic-backup.md) — issue #13). The script throws with a clear remediation message if the SA is missing.
+Grant idempotently via `scripts/Add-HomelabOpencodeBackupStorage.ps1`. **Prerequisite:** the `homelabcloud5` storage account must already exist (deploy it first per [runbook 7](07-restic-backup.md) — issue #13). The script throws with a clear remediation message if the SA is missing.
 
 Why a separate script rather than folding into `Set-HomelabCodespacesSp.ps1`:
 

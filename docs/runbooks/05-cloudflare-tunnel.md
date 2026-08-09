@@ -10,8 +10,8 @@
 
 ## Prerequisites
 
-- [ ] Docker Engine + Docker Compose installed (see [2-docker.md](2-docker.md))
-- [ ] Services (dnsmasq, Caddy) deployed in a shared `docker-compose.yml` under `/opt/docker/` (see [3-dns.md](3-dns.md), [4-caddy.md](4-caddy.md))
+- [ ] Docker Engine + Docker Compose installed (see [02-docker.md](02-docker.md))
+- [ ] Services (dnsmasq, Caddy) deployed in a shared `docker-compose.yml` under `/opt/docker/` (see [03-dns.md](03-dns.md), [04-caddy.md](04-caddy.md))
 - [ ] SSH access via `ssh jarek@homelab.local`
 - [ ] A domain name delegated to Cloudflare DNS
 
@@ -72,7 +72,7 @@ sudo ufw allow out to any port 7844 proto udp comment 'cloudflare-tunnel'
 sudo ufw status verbose
 ```
 
-Expected output should include `7844/udp` under the `Action` column. If UFW is not enabled yet (it should be after [1-init.md](1-init.md)), skip this step — `cloudflared` makes all connections outbound, so no `ufw allow in` rules are needed.
+Expected output should include `7844/udp` under the `Action` column. If UFW is not enabled yet (it should be after [01-init.md](01-init.md)), skip this step — `cloudflared` makes all connections outbound, so no `ufw allow in` rules are needed.
 
 > If you have a restrictive corporate or ISP firewall, verify connectivity: `curl -s https://region1.v2.argotunnel.com:7844` should return a non-empty response. Replace `region1` with your closest region if known.
 
@@ -248,5 +248,5 @@ Now anyone visiting `portainer.example.com` will be prompted to authenticate (vi
 
 ## Next Steps
 
-- [Register the server in Azure Arc](6-azure-arc.md) for centralized management
+- [Register the server in Azure Arc](06-azure-arc.md) for centralized management
 - Deploy Hermes Agent, Gitea, or additional containers

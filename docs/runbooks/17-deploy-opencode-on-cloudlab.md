@@ -6,7 +6,7 @@
 
 ## Prerequisites
 
-- [ ] Runbooks [1](1-init.md), [2](2-docker.md), [4](4-caddy.md), [5](5-cloudflare-tunnel.md), [10](10-vps-playground.md), [16](16-docker-services-ansible-role.md) completed.
+- [ ] Runbooks [1](01-init.md), [2](02-docker.md), [4](04-caddy.md), [5](05-cloudflare-tunnel.md), [10](10-vps-playground.md), [16](16-docker-services-ansible-role.md) completed.
 - [ ] Ansible collections installed: `community.docker`, `community.general`, `azure.azcollection` (`ansible-galaxy collection install -r ansible/requirements.yml`).
 - [ ] `homelab-bysxdb-kv` Key Vault accessible from the Ansible controller identity, with secrets for each instance (see workload README §Secrets).
 - [ ] SSH access to `cloudlab` via `ansible_user: labadmin` (see [ansible-vps-connect skill](../../.opencode/skills/ansible-vps-connect)).
