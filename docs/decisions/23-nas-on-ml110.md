@@ -62,7 +62,6 @@ The NAS is a **storage-only node** — it does not run Docker/k3s workloads. The
 ## References
 
 - [Research 23 — ML110 NAS (OMV)](../research/23-ml110-nas-omv.md) — hardware/software trade-off analysis
-- [Inventory — nas-ml110-inventory.md](../ideas/nas-ml110-inventory.md) — single source of truth for hardware
 - [Idea 03 — Homelab NAS on ML110](../ideas/03-nas-backup-target-ml110.md)
 - [Runbook 21 — ML110 inventory](../runbooks/21-ml110-nas-inventory.md)
 - [Runbook 22 — ML110 OMV setup](../runbooks/22-ml110-omv-setup.md)
