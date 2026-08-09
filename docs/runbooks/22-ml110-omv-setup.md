@@ -326,7 +326,7 @@ subnet while Phase 1 finishes. Apply in a later phase (do not expose SSH publicl
 
 The NAS stays **storage-only** — no `cloudflared` runs on it (ADR 23). Public access reuses
 the existing `homelab-tunnel` on the M910q and routes through Caddy, the single routing layer
-(ADR 20). Future direction: a dedicated edge device per [idea 04](../ideas/04-edge-device-tunnel-caddy.md).
+(ADR 20). Future direction: a dedicated edge device — moved to branch `docs/edge-device-tunnel-caddy`.
 
 1. **Add an `omv` public hostname** in the Cloudflare Zero Trust portal
    (Networks → Tunnels → `homelab-tunnel` → **Public Hostname** → **Add a public hostname**):
