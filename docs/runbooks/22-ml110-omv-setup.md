@@ -41,7 +41,7 @@
 > - Arrays + filesystems created (§5): `md0` (2× 500 GB Hitachis → XFS) and `md1` (2× 250 GB → ext4),
 >   mounted by OMV under `/srv/dev-disk-by-uuid-*`. SSH root access verified (`ssh root@192.168.2.210`).
 >   Note: fresh `md0` reports ~9 GB used — verified as XFS metadata (`du` = 0 B, see §5 Filesystems gotcha).
-> - Dashboard: all widgets enabled on the home dashboard via `Dashboard | Settings` (§4e).
+> - Dashboard: all widgets enabled on the home dashboard via `Dashboard | Settings` (§6, executed after RAID).
 
 ---
 
@@ -179,25 +179,6 @@ Per user request the web UI is HTTPS-only. `System | Workbench | Settings`:
 - When `omv.cloud5.ovh` is exposed via the Cloudflare Tunnel (Phase 2), TLS terminates at the edge with
   a proper cert; this self-signed cert only serves direct LAN access.
 
-### 4e. Dashboard widgets (customization — 2026-08-09)
-
-`Dashboard | Settings` — all available widgets enabled for the home dashboard
-([`#/dashboard/settings`](https://192.168.2.210/#/dashboard/settings)):
-
-| Widget | Shows |
-|---|---|
-| CPU · CPU Utilization · Load Average | processor load |
-| Memory | RAM usage |
-| Uptime · System Time | clock/uptime |
-| System Information · Updates Available · Help | box facts, pending updates, docs links |
-| Disk Temperatures · S.M.A.R.T. Status | per-disk health/thermals |
-| MD Devices | software RAID array state |
-| File Systems (table + grid) | mounted filesystems two ways |
-| Network Interfaces (table + grid) | NIC status two ways |
-| Services (table + grid) | running services two ways |
-
-Default settings elsewhere untouched (auto-logout etc. left as-is).
-
 ---
 
 ## 5. Create mdadm RAID1 Arrays
@@ -272,6 +253,25 @@ ping 192.168.2.210            # static IP reachable
 ```
 
 **Web UI:** `http://192.168.2.210` loads and shows both arrays as clean in `Storage | RAID`.
+
+### Dashboard widgets (customization — 2026-08-09)
+
+`Dashboard | Settings` — all available widgets enabled for the home dashboard
+([`#/dashboard/settings`](https://192.168.2.210/#/dashboard/settings)):
+
+| Widget | Shows |
+|---|---|
+| CPU · CPU Utilization · Load Average | processor load |
+| Memory | RAM usage |
+| Uptime · System Time | clock/uptime |
+| System Information · Updates Available · Help | box facts, pending updates, docs links |
+| Disk Temperatures · S.M.A.R.T. Status | per-disk health/thermals |
+| MD Devices | software RAID array state |
+| File Systems (table + grid) | mounted filesystems two ways |
+| Network Interfaces (table + grid) | NIC status two ways |
+| Services (table + grid) | running services two ways |
+
+Default settings elsewhere untouched (auto-logout etc. left as-is).
 
 ---
 
