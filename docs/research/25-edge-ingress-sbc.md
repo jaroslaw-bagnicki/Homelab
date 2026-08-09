@@ -4,7 +4,7 @@
 
 **Scope**: Hardware selection for a dedicated edge box on the home LAN running `cloudflared` + Caddy — with prices that are actually reachable in Poland.
 
-**Status**: 📝 Analysis — working selection: **Dell Wyse 3040 thin client, bare-metal `cloudflared` + Caddy (systemd)**. Decision recorded in [ADR 24](../decisions/24-edge-ingress-appliance.md); RPi 4B documented as the price-sane ARM fallback.
+**Status**: 📝 Analysis — working selection: **Dell Wyse 3040 thin client, bare-metal `cloudflared` + Caddy (systemd) on Debian minimal** (Alpine Linux trialed in parallel). Decision recorded in [ADR 24](../decisions/24-edge-ingress-appliance.md); RPi 4B documented as the price-sane ARM fallback.
 
 ---
 
@@ -35,7 +35,7 @@ Initial research suggested a cheap SBC (e.g. Radxa ZERO 3E at ~$25) as the obvio
 Consequences:
 - **Radxa ZERO 3E — dropped** as the headline pick. Its ~$25 MSRP is not a Poland-reachable price; listings are scarce and overpriced when present.
 - The cheap-SBC floor doesn't hold: the cheapest reachable GbE SBC (Orange Pi Zero 3 4 GB) runs **~370 PLN** on Allegro (verified Aug 2026) — ~5× the 3040's ~70 PLN.
-- At that price point, a **used x86 thin client** becomes cost-competitive — with the side benefit that it reuses the homelab's existing Ubuntu Server + Ansible toolchain.
+- At that price point, a **used x86 thin client** becomes cost-competitive — with the side benefit that it reuses the homelab's existing apt/.deb + Ansible toolchain.
 
 > Exact listing prices must be verified on Allegro at purchase time (automated queries are bot-blocked; ranges below are market-level estimates as of Aug 2026).
 
@@ -57,7 +57,7 @@ Business thin clients are common and cheap on the Polish used market.
 | Network | 1× GbE |
 | Power | ~2–3 W idle (fanless) |
 | Price | ~70 PLN used |
-| OS | Ubuntu Server minimal (ADR 05) |
+| OS | Debian minimal (baseline); Alpine Linux trialed |
 
 **Selection rationale:**
 - **Insanely cheap in the PL market** — ~70 PLN vs ~370 PLN for the OPi Zero 3 4 GB vs ~280–400 PLN for a used RPi 4B. The 3040 is ~4–5× cheaper than any reachable GbE SBC/RPi.
@@ -103,15 +103,27 @@ Real PL price (Allegro, verified Aug 2026) is **~370 PLN for 4 GB** — not the 
 
 ## Deployment Model — Bare-Metal vs Docker
 
-The edge box runs exactly two daemons (`cloudflared`, Caddy). **Bare-metal (systemd on minimal Ubuntu) is the recommended model**:
+The edge box runs exactly two daemons (`cloudflared`, Caddy). **Bare-metal (systemd on minimal Debian) is the recommended model**:
 
 - **Fits the 3040's 2 GB / 8 GB** — Docker would add containerd + images + overlayfs and push RAM past comfort.
 - **Fewer layers on a public-facing device** — one less runtime to patch; smaller attack surface.
 - **Write-light on eMMC** — no image/container filesystem churn.
 - **Config-as-code intact** — the Caddyfile and cloudflared config stay templated by Ansible (ADR 10); both apps ship official apt repos (`pkg.cloudflare.com`, `caddyserver.com`), so updates remain `apt upgrade`.
-- **Keeps ADR 05** (Ubuntu Server) and the ADR 06/07 routing semantics.
+- **Fleet OS is Ubuntu (ADR 05); the edge appliance uses Debian minimal** — a leaner base for a two-daemon box that keeps the same apt/.deb toolchain and the ADR 06/07 routing semantics.
 
 **Cost:** a new Ansible provisioning path (`edge_host`-style systemd role) diverging from `docker_services` (ADR 10) — an intentional exception for an appliance-class device. Docker remains the documented alternative if fleet consistency ever outweighs minimalism; in that case the Wyse 5070 replaces the 3040.
+
+### OS Evaluation — Debian minimal (baseline) vs Alpine (trial)
+
+| | Debian minimal | Alpine Linux |
+|---|---|---|
+| Idle RAM | ~250–300 MB | ~60–100 MB |
+| Installed disk | ~1.5–2 GB | ~300 MB |
+| Package mgr / toolchain | apt/.deb — fits Ansible roles (ADR 10) | apk/musl — roles don't fit |
+| cloudflared + Caddy | .deb repos | static Go / musl builds |
+| Lifecycle | LTS 5 y | rolling, ~2 y/release |
+
+Both run the same systemd units and identical Caddy/cloudflared configs — only the package layer and provisioning differ. The trial is **sequential on the 3040**: install Debian minimal, validate `cloudflared` + Caddy, reflash Alpine, validate. Debian minimal is the baseline (keeps the apt/Ansible toolchain); Alpine is trialed as the maximally-lean constrained-resources option. The final OS is locked before the `edge_host` role is written.
 
 ---
 
@@ -125,7 +137,7 @@ The edge box runs exactly two daemons (`cloudflared`, Caddy). **Bare-metal (syst
 | RAM | 2 GB soldered (no headroom) | 4 GB | 2–8 GB | 4–8 GB upgradeable |
 | Boot storage | 8 GB eMMC | microSD + overlayroot | SD/USB | SATA SSD |
 | Deployment model | Bare-metal (systemd) | Bare-metal or Docker | Bare-metal or Docker | Docker (ADR 10 stack) |
-| OS/provisioning | Ubuntu minimal, new edge role | Armbian/ARM64, new | RPi OS/ARM64, new | Ubuntu, existing roles |
+| OS/provisioning | Debian minimal, new edge role | Armbian/ARM64, new | RPi OS/ARM64, new | Ubuntu, existing roles |
 | Cloudflared + Caddy load | Trivial | Trivial | Trivial | Trivial |
 | Spares/repairability (PL) | Good (business gear) | Poor | Good | Good |
 
@@ -145,11 +157,12 @@ The edge box runs exactly two daemons (`cloudflared`, Caddy). **Bare-metal (syst
 ## Open Questions (implementation)
 
 1. **Observability headroom** — does the edge box need an Arc/AMA or OpenTelemetry agent? If yes, the 2 GB 3040 is out and the Wyse 5070 becomes required.
-2. Config-as-code for the edge box — Ansible `edge_host`-style role vs standalone recipe (see [ADR 24](../decisions/24-edge-ingress-appliance.md)).
-3. Replace the M910q `homelab-tunnel` + Caddy entirely, or keep both in parallel during migration?
-4. Edge box placement on the TL-SG108E (runbook 23) and repointing internal `.home` DNS (ADR 06).
-5. Does this ride along with the OMV "Phase 2" tunnel work (runbook 22 §4d)?
-6. What happens to the M910q's V1 tunnel → standardize on the ADR 19/20 pattern as part of this move?
+2. **OS trial outcome** — Debian minimal vs Alpine Linux (sequential on-device trial); the final OS is locked before the provisioning role is written.
+3. Config-as-code for the edge box — Ansible `edge_host`-style role vs standalone recipe (see [ADR 24](../decisions/24-edge-ingress-appliance.md)).
+4. Replace the M910q `homelab-tunnel` + Caddy entirely, or keep both in parallel during migration?
+5. Edge box placement on the TL-SG108E (runbook 23) and repointing internal `.home` DNS (ADR 06).
+6. Does this ride along with the OMV "Phase 2" tunnel work (runbook 22 §4d)?
+7. What happens to the M910q's V1 tunnel → standardize on the ADR 19/20 pattern as part of this move?
 
 ---
 

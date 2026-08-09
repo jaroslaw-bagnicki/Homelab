@@ -13,14 +13,14 @@ The homelab's public ingress (`cloudflared` tunnel + Caddy reverse proxy) curren
 - **ADR 23** scopes the ML110 OMV NAS as storage-only; its web UI (`omv.example.com`, runbook 22 §4d "Phase 2") still needs a tunnel path.
 - **ADR 20** establishes Caddy as the single routing layer; a stable dedicated device strengthens "one Caddyfile is the source of truth".
 
-The home ISP is CGNAT (ADR 08): the ingress needs only a single outbound QUIC connection to Cloudflare's edge (UDP 7844) — no inbound ports, no router config. Hardware research ([research 25](../research/25-edge-ingress-sbc.md)) showed SBC international MSRP is not reachable in Poland; a used fanless x86 thin client is both cheaper than any reachable SBC/RPi and reuses the Ubuntu toolchain.
+The home ISP is CGNAT (ADR 08): the ingress needs only a single outbound QUIC connection to Cloudflare's edge (UDP 7844) — no inbound ports, no router config. Hardware research ([research 25](../research/25-edge-ingress-sbc.md)) showed SBC international MSRP is not reachable in Poland; a used fanless x86 thin client is both cheaper than any reachable SBC/RPi and reuses the fleet's apt/.deb toolchain.
 
 ## Decision
 
 Run the homelab's public ingress on a **dedicated, low-power edge appliance** on the home LAN, in front of all backends:
 
 - **Hardware — Dell Wyse 3040** (Atom x5-Z8350, 2 GB DDR3L, 8 GB eMMC, GbE, ~70 PLN used, ~2–3 W fanless). Selected as a deliberate constrained-resources experiment and by far the cheapest reachable GbE device in PL. The Wyse 5070 (4 GB, SATA SSD) is the accepted fallback if the 2 GB ceiling is hit.
-- **Deployment model — bare-metal, not Docker.** `cloudflared` and Caddy install directly on a minimal Ubuntu Server (ADR 05) as systemd services. Config-as-code preserved: the Caddyfile and cloudflared config are templated by Ansible (ADR 10); updates via the official apt repos.
+- **Deployment model — bare-metal, not Docker.** `cloudflared` and Caddy install directly on a minimal distro as systemd services. **OS: Debian minimal as the baseline; Alpine Linux trialed in parallel** (sequential on-device trial) as part of the constrained-resources experiment — the Caddy/cloudflared configs are identical either way. Config-as-code preserved: the Caddyfile and cloudflared config are templated by Ansible (ADR 10); Debian keeps the apt/.deb update path.
 - **Architecture split.** The edge appliance owns external routing: `*.example.com` → Caddy → backends over the LAN. The M910q keeps the internal `.home` Caddy + k3s (ADR 06/07/22). The tunnel origin moves off the M910q.
 - **ADR 19 pattern applies to the homelab edge.** cloudflared → Caddy over HTTPS with Cloudflare Origin CA; CF SSL mode Full (Strict).
 - **Provisioning.** A new Ansible `edge_host`-style role (systemd units), distinct from `docker_services`.
@@ -33,6 +33,7 @@ Run the homelab's public ingress on a **dedicated, low-power edge appliance** on
 - **New single point of failure** — the edge appliance is the ingress; if it dies, external access drops until replaced. Cheap to keep a spare; accepted.
 - **Bare-metal diverges from the container-first stack** (ADR 03/22) — an intentional exception for a two-daemon, internet-facing appliance: fewer layers, smaller attack surface, less eMMC write wear, fits 2 GB/8 GB.
 - **Constrained hardware** — 2 GB RAM / 8 GB eMMC are soldered (no upgrade). Zero headroom for future agents (observability/Arc); if needed, move to the Wyse 5070. Cherry Trail is aging.
+- **Appliance-only OS deviation from ADR 05** — the edge box runs Debian minimal (leaner base, same apt/.deb toolchain) while Ubuntu stays the fleet standard for workload hosts. The Debian-vs-Alpine outcome is locked before the `edge_host` provisioning role is written.
 - `.home` DNS (dnsmasq, ADR 06) stays pointed at the M910q for now; repoint only if internal routing ever moves to the edge.
 
 ### Alternatives Considered
