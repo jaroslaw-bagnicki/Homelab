@@ -1,7 +1,9 @@
 # 24 — Homelab Network Topology & Design
 
 **Source**: OpenCode thread, Aug 09 2026 · Issue [#55](https://github.com/jaroslaw-bagnicki/Homelab/issues/55)
+
 **Scope**: Whole-homelab network analysis — current topology, constraints, IP scheme, and the role of the newly found **TP-Link TL-SG108E** 8-port Gigabit Easy Smart switch.
+
 **Status**: 📝 Analysis — comparison of flat-subnet vs VLAN designs; ADR to follow once a direction is chosen.
 
 ---
@@ -54,7 +56,7 @@ The mesh is consumer-grade: single LAN broadcast domain, no 802.1Q VLAN trunking
 ## Constraints
 
 1. **CGNAT** — no public IP; remote access only via Cloudflare Tunnel (ADR 08). Not directly affected by the switch, but shapes the "what must stay internal" story.
-2. **Single office Ethernet drop** — the homelab lives in the home office, wired via one Tenda Nova node in Ethernet-AP role providing **one physical outlet**. The switch is what turns that single drop into ports for M910q + NAS + work dock + future gear.
+2. **Single office Ethernet drop** — the homelab lives in the home office, wired via one Tenda Nova node in Ethernet-AP role providing **one physical outlet**. The switch is what turns that single drop into ports for M910q + NAS + work dock + future gear. The drop device is **whichever Nova unit is physically in the office** — it just needs ≥1 free Gigabit LAN port for the switch uplink (the smaller Mesh5s has fewer ports, so prefer a co-located Mesh3/Mesh5 if available).
 3. **Consumer mesh uplink** — the Tenda Nova is a single broadcast domain and **cannot trunk 802.1Q tags**. Switch VLANs therefore **cannot** segment the homelab from the house LAN; the uplink to the mesh must stay untagged in one VLAN.
 4. **Switch is web-UI-only** — no SNMP, no API. All config is manual via the web console (TP-Link utility or browser). Not Ansible-manageable; captured as a runbook.
 5. **No PoE, no routing, no dynamic LACP** on the TL-SG108E. Static link aggregation exists but the NAS and M910q each have a single NIC — LAG is not applicable today.
@@ -73,6 +75,12 @@ Keep the single `192.168.2.0/24` broadcast domain. Reserve a dedicated static bl
 | `192.168.2.210` | ML110 NAS — static (proposed) |
 | `192.168.2.220` | X1 Lite LLM server (Phase 2, future) |
 | `192.168.2.230` | TL-SG108E management IP (proposed) |
+
+> **Why tens-blocks (`200/210/220/230`) rather than contiguous `200–203`:** each
+> category gets a block with headroom — `20x` server, `21x` NAS, `22x` LLM,
+> `23x` switch — so a future device in the same class (e.g. a second NAS at
+> `211` or a k3s node at `212`) slots in without renumbering existing
+> reservations.
 
 **Pros:**
 - Works today on the consumer mesh — zero router changes.
@@ -154,10 +162,10 @@ See Option A table above. The NAS static IP replaces its current DHCP lease (`19
 
 ## Open Questions
 
-- [ ] Reserve the NAS static IP (`192.168.2.210`) or pick another value in the `.200+` block
-- [ ] TL-SG108E management IP (`192.168.2.230` proposed) — static, outside mesh DHCP range
-- [ ] Whether/when to introduce a VLAN-capable edge router (gate for Option B)
-- [ ] Whether/when to revisit port mirroring (observability) with a 2nd NIC on the M910q
+- [x] NAS static IP — resolved: `192.168.2.210`
+- [x] TL-SG108E management IP — resolved: `192.168.2.230` (static, outside mesh DHCP range)
+- VLAN-capable edge router (gate for Option B) → [#57](https://github.com/jaroslaw-bagnicki/Homelab/issues/57)
+- Port mirroring / observability with a 2nd NIC on the M910q → [#58](https://github.com/jaroslaw-bagnicki/Homelab/issues/58)
 
 ---
 
@@ -165,14 +173,17 @@ See Option A table above. The NAS static IP replaces its current DHCP lease (`19
 
 1. Runbook 23 — TL-SG108E wiring + web-UI config (this branch)
 2. Apply the reserved IPs during OMV NAS setup (issue #54)
-3. Optional (future): enable port mirroring + observability collector (restrict to homelab ports 2–4)
-4. Write the ADR once the flat-vs-VLAN direction is settled
+3. Port mirroring + observability collector (issue #58) — restrict to homelab ports 2–4
+4. VLAN-capable edge router evaluation (issue #57) — gate for Option B
+5. Write the ADR once the flat-vs-VLAN direction is settled
 
 ---
 
 ## References
 
 - Issue [#55](https://github.com/jaroslaw-bagnicki/Homelab/issues/55) — this analysis
+- Issue [#57](https://github.com/jaroslaw-bagnicki/Homelab/issues/57) — VLAN-capable edge router (Option B gate)
+- Issue [#58](https://github.com/jaroslaw-bagnicki/Homelab/issues/58) — port mirroring observability
 - Issue [#54](https://github.com/jaroslaw-bagnicki/Homelab/issues/54) — ML110 NAS (OMV)
 - [ADR 22](../decisions/22-k3s-arc-homelab.md) — k3s + Azure Arc; Longhorn NFS backup target on the NAS
 - [ADR 08](../decisions/08-remote-access-cloudflare-tunnel.md) — CGNAT / Cloudflare Tunnel
