@@ -7,21 +7,21 @@
 
 ## Goals
 
-- Wire all homelab gear into the switch; single uplink to the Tenda Nova mesh.
+- Wire all homelab gear + work laptop dock into the switch; single uplink to the
+  office Tenda Nova node (Ethernet AP role) — one office drop → many wired devices.
 - Set a static management IP on the `192.168.2.0/24` subnet.
 - Enable QoS / rate-limit, IGMP snooping, loop prevention.
-- Optionally: port mirroring for observability (requires a 2nd NIC on the M910q).
 
 ## Port Plan (from research 24)
 
 | Port | Attachment | Notes |
 |---|---|---|
-| 1 | **Uplink → Tenda Nova** (`192.168.2.1`) | untagged, default VLAN |
+| 1 | **Uplink → office Tenda Nova** (Ethernet AP drop, `192.168.2.1`) | untagged, default VLAN |
 | 2 | M910q homelab server (`192.168.2.200`) | |
 | 3 | ML110 NAS (`192.168.2.210`) | |
 | 4 | X1 Lite LLM server (`192.168.2.220`, Phase 2) | |
-| 5 | Mirror port → M910q 2nd NIC (optional) | |
-| 6–8 | Spare | |
+| 5 | **Work laptop dock (Dell K16A)** | permanent; DHCP (corporate) |
+| 6–8 | Spare / future k3s node / misc | |
 
 ## Prerequisites
 
@@ -35,9 +35,10 @@
 ## 1. Physical Setup
 
 1. Power on the switch.
-2. Connect the **uplink** (port 1) to the Tenda Nova node.
-3. Connect M910q (port 2) and ML110 NAS (port 3).
-4. Leave ports 4–8 unplugged for now (or attach future gear per the port plan).
+2. Connect the **uplink** (port 1) to the **office Tenda Nova node's LAN port**
+   (the single office Ethernet drop).
+3. Connect M910q (port 2), ML110 NAS (port 3), and the **work laptop dock (port 5)**.
+4. Leave ports 4, 6–8 unplugged for now (or attach future gear per the port plan).
 
 > Default management access on the factory reset TL-SG108E is often
 > `192.168.0.1` — it may not be reachable from `192.168.2.0/24`. Two options:
@@ -79,12 +80,16 @@ Vault (see the Key Vault runbook pattern in `bicep/`); **never commit it**.
 
 ## 4. Enable QoS / Rate Limit (optional, recommended)
 
+The office drop is shared with the work laptop (port 5) — keep interactive and
+corporate traffic prioritized over bulk backup.
+
 In **QoS**:
 
 1. **Port-based priority**: leave default 802.1p/DSCP trust unless traffic tests say otherwise.
-2. **Rate limit** (if you want to protect the uplink from bulk backup saturation):
-   - Port 3 (NAS) → apply a moderate rate limit (e.g. 500–800 Mbps) if nightly
-     restic/Longhorn transfers contend with interactive traffic; tune to taste.
+2. **Rate limit** (if you want to protect the office drop from bulk backup saturation):
+   - Port 3 (NAS) → apply a moderate rate limit (e.g. 500–800 Mbps) so nightly
+     restic/Longhorn transfers don't starve the work laptop's uplink during
+     business hours; tune to taste.
    - Or rate-limit the uplink (port 1) egress instead. Start conservative.
 
 ---
@@ -99,16 +104,22 @@ In **Loop Prevention**:
 
 ---
 
-## 6. Optional: Port Mirroring for Observability
+## 6. Port Mirroring — Deferred (Future Observability)
+
+> **Not enabled in this setup.** If observability (Zeek/Suricata/ntopng on the
+> homelab host) is wanted later:
 
 > Requires a **2nd NIC on the M910q** (e.g. a ~40 PLN USB GigE adapter)
-> connected to switch **port 5**. Feeds Zeek/Suricata/ntopng on the homelab host.
+> connected to a spare switch port (6).
 
-In **L2 Features → Port Mirroring**:
-- Mirror mode: **Ingress + Egress**
-- Source ports: 1 (uplink), 2 (M910q), 3 (NAS), 4 (future LLM server)
-- Target port: **5** (mirror port → M910q 2nd NIC)
-
+> In **L2 Features → Port Mirroring**:
+> - Mirror mode: **Ingress + Egress**
+> - Source ports: **2 (M910q), 3 (NAS), 4 (future LLM server)** — homelab ports only
+> - Target port: **6** (mirror port → M910q 2nd NIC)
+>
+> ⚠ **Exclude the uplink (1) and work dock (5)** from the mirror sources — the
+> work dock carries corporate traffic that should not be captured.
+>
 > ⚠ On a 1 GbE link, a fully loaded source port can exceed the mirror port's
 > capacity; mirror a subset if drops appear.
 

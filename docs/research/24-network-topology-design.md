@@ -15,9 +15,16 @@ ISP fiber router (192.168.1.0/24)
         │  (uplink)
 Tenda Nova AC1200 mesh — 192.168.2.0/24, gateway 192.168.2.1
         │
-        ├── M910q homelab server  — static 192.168.2.200
-        ├── ML110 NAS (OMV)       — DHCP 192.168.2.164 (static TBD)
-        └── (other house devices — phones, laptops, IoT on Wi-Fi)
+        ├── (other house devices — phones, laptops, IoT on Wi-Fi)
+        │
+        └── Home office room
+            └── Tenda Nova node (Ethernet AP role) → SINGLE office drop
+                     │
+              TL-SG108E switch (new)
+                     ├── M910q homelab server   — static 192.168.2.200
+                     ├── ML110 NAS (OMV)        — DHCP 192.168.2.164 → static TBD
+                     ├── Work laptop dock (K16A) — DHCP (corporate)
+                     └── X1 Lite LLM server (Phase 2, future)
 ```
 
 ### Mesh inventory (Tenda Nova)
@@ -37,6 +44,7 @@ The mesh is consumer-grade: single LAN broadcast domain, no 802.1Q VLAN trunking
 |---|---|---|---|
 | M910q homelab server | 1× GigE (`enp0s31f6`) | `192.168.2.200` (static) | main workload host (Docker → k3s, ADR 22) |
 | ML110 NAS (OMV) | 1× GigE (`enp14s0`, BCM5722) | `192.168.2.164` (DHCP) → static TBD | backup target, NFS for Longhorn (issue #54) |
+| Work laptop dock (Dell K16A) | 1× GigE (via dock) | DHCP (corporate) | corporate device; no static reservation — stays on mesh DHCP |
 | X1 Lite LLM server | 1× GigE (future) | TBD | Phase 2, not yet purchased |
 | **TL-SG108E switch** | 8× GigE (L2, web-managed) | mgmt IP TBD | the new piece — this analysis |
 
@@ -45,9 +53,10 @@ The mesh is consumer-grade: single LAN broadcast domain, no 802.1Q VLAN trunking
 ## Constraints
 
 1. **CGNAT** — no public IP; remote access only via Cloudflare Tunnel (ADR 08). Not directly affected by the switch, but shapes the "what must stay internal" story.
-2. **Consumer mesh uplink** — the Tenda Nova is a single broadcast domain and **cannot trunk 802.1Q tags**. Switch VLANs therefore **cannot** segment the homelab from the house LAN; the uplink to the mesh must stay untagged in one VLAN.
-3. **Switch is web-UI-only** — no SNMP, no API. All config is manual via the web console (TP-Link utility or browser). Not Ansible-manageable; captured as a runbook.
-4. **No PoE, no routing, no dynamic LACP** on the TL-SG108E. Static link aggregation exists but the NAS and M910q each have a single NIC — LAG is not applicable today.
+2. **Single office Ethernet drop** — the homelab lives in the home office, wired via one Tenda Nova node in Ethernet-AP role providing **one physical outlet**. The switch is what turns that single drop into ports for M910q + NAS + work dock + future gear.
+3. **Consumer mesh uplink** — the Tenda Nova is a single broadcast domain and **cannot trunk 802.1Q tags**. Switch VLANs therefore **cannot** segment the homelab from the house LAN; the uplink to the mesh must stay untagged in one VLAN.
+4. **Switch is web-UI-only** — no SNMP, no API. All config is manual via the web console (TP-Link utility or browser). Not Ansible-manageable; captured as a runbook.
+5. **No PoE, no routing, no dynamic LACP** on the TL-SG108E. Static link aggregation exists but the NAS and M910q each have a single NIC — LAG is not applicable today.
 
 ---
 
@@ -67,7 +76,7 @@ Keep the single `192.168.2.0/24` broadcast domain. Reserve a dedicated static bl
 **Pros:**
 - Works today on the consumer mesh — zero router changes.
 - Simplest to operate; no VLAN tags to debug across the house.
-- Meets every current need: backup/NFS traffic between M910q↔NAS stays wired and isolated on the switch fabric.
+- Meets every current need: backup/NFS traffic between M910q↔NAS stays wired and isolated on the switch fabric, and the single office drop serves homelab gear + work dock simultaneously.
 
 **Cons:**
 - No isolation between homelab gear and the rest of the house at L2; segmentation must be done at the host firewall (UFW — already subnet-scoped) and Cloudflare Access at the edge.
@@ -106,25 +115,30 @@ Segment the homelab into its own VLAN (e.g. `192.168.10.0/24`) trunked from the 
 
 ### Role
 
-Dedicated **homelab access switch**: all wired homelab gear terminates here; a single uplink connects the switch to the Tenda mesh. This keeps M910q↔NAS backup/NFS traffic (restic, Longhorn `/export/backups` from ADR 22 / issue #54) **on the switch fabric at full GigE**, off the mesh's wireless backhaul.
+Dedicated **homelab access switch** in the home office: all wired homelab gear
+terminates here; a single uplink connects the switch to the office Tenda Nova node
+(acting as an Ethernet AP). This gives the office **one physical drop → many wired
+devices** — ending the current M910q ↔ work-dock cable swapping — and keeps
+M910q↔NAS backup/NFS traffic (restic, Longhorn `/export/backups` from ADR 22 /
+issue #54) **on the switch fabric at full GigE**, off the mesh's wireless backhaul.
 
 ### Port plan
 
 | Port | Attachment | Notes |
 |---|---|---|
-| 1 | **Uplink → Tenda Nova** (`192.168.2.1`) | untagged, default VLAN |
+| 1 | **Uplink → office Tenda Nova** (Ethernet AP drop, `192.168.2.1`) | untagged, default VLAN |
 | 2 | M910q homelab server (`192.168.2.200`) | |
 | 3 | ML110 NAS (`192.168.2.210`) | |
 | 4 | X1 Lite LLM server (`192.168.2.220`, Phase 2) | |
-| 5 | Mirror port → M910q 2nd NIC (observability) | optional; needs USB GbE dongle |
+| 5 | **Work laptop dock (Dell K16A)** | permanent; DHCP (corporate) |
 | 6–8 | Spare / future k3s node / misc | |
 
 ### Features worth enabling
 
 | Feature | Enable? | Rationale |
 |---|---|---|
-| **QoS / rate-limit** | ✅ | Prioritize mgmt/interactive; optionally rate-limit bulk backup on the uplink so nightly restic runs don't saturate the mesh link |
-| **Port mirroring** | 🔸 optional | SPAN ports 1–4 to a mirror port → Zeek/Suricata/ntopng on M910q's 2nd NIC; needs ~40 PLN USB GbE NIC; aligns with the ADR 22 observability story |
+| **QoS / rate-limit** | ✅ | Prioritize interactive/corporate traffic (work laptop on the shared office drop); rate-limit bulk backup so nightly restic runs don't starve the work uplink during business hours |
+| **Port mirroring** | ⏸️ future | Observability (Zeek/Suricata/ntopng on M910q 2nd NIC) — deferred; would need ~40 PLN USB GbE NIC. If enabled later, restrict sources to homelab ports (2–4) to avoid capturing corporate work-dock traffic |
 | **IGMP snooping** | ✅ | Keeps multicast (mDNS/Avahi, IPTV if any) off unrelated ports |
 | **Loop prevention** | ✅ | Protects the wired fabric when cable plant grows |
 | **Cable diagnostics** | 🔧 on-demand | Quick port/link troubleshooting |
@@ -141,8 +155,8 @@ See Option A table above. The NAS static IP replaces its current DHCP lease (`19
 
 - [ ] Reserve the NAS static IP (`192.168.2.210`) or pick another value in the `.200+` block
 - [ ] TL-SG108E management IP (`192.168.2.230` proposed) — static, outside mesh DHCP range
-- [ ] Buy a USB GbE NIC for the M910q mirror port, or skip observability for now?
 - [ ] Whether/when to introduce a VLAN-capable edge router (gate for Option B)
+- [ ] Whether/when to revisit port mirroring (observability) with a 2nd NIC on the M910q
 
 ---
 
@@ -150,7 +164,7 @@ See Option A table above. The NAS static IP replaces its current DHCP lease (`19
 
 1. Runbook 23 — TL-SG108E wiring + web-UI config (this branch)
 2. Apply the reserved IPs during OMV NAS setup (issue #54)
-3. Optional: enable port mirroring + observability collector
+3. Optional (future): enable port mirroring + observability collector (restrict to homelab ports 2–4)
 4. Write the ADR once the flat-vs-VLAN direction is settled
 
 ---
