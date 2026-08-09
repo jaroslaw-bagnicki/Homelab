@@ -29,6 +29,8 @@ Applications currently run in **Docker Compose**; the migration to **Kubernetes 
 is enrolled in **[Azure Arc](docs/decisions/04-hybrid-cloud-azure-arc.md)** for cloud-side monitoring and policy, and exposed
 to the internet via **[Cloudflare Tunnel](docs/decisions/08-remote-access-cloudflare-tunnel.md)** behind a **[Caddy](docs/decisions/07-reverse-proxy-caddy.md)** reverse proxy.
 
+The **network layer** terminates homelab gear on a **TP-Link TL-SG108E** access switch (`192.168.2.230`) with a single uplink to the office Tenda Nova mesh — one office drop → multiple wired devices. Static reservations in `192.168.2.200+`: Lenovo M910q Homelab `.200`, HP ML110 NAS `.210`. See [research 24](docs/research/24-network-topology-design.md) and [runbook 23](docs/runbooks/23-tl-sg108e-switch.md).
+
 ---
 
 ## Project Structure
