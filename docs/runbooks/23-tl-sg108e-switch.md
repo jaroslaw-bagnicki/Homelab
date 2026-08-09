@@ -21,8 +21,8 @@
 | Port | Attachment | Notes |
 |---|---|---|
 | 1 | **Uplink → office Tenda Nova** (Ethernet AP drop, `192.168.2.1`) | untagged, default VLAN |
-| 2 | M910q homelab server (`192.168.2.200`) | |
-| 3 | ML110 NAS (`192.168.2.210`) | |
+| 2 | Lenovo M910q Homelab (`192.168.2.200`) | |
+| 3 | HP ML110 NAS (`192.168.2.210`) | |
 | 4 | X1 Lite LLM server (`192.168.2.220`, Phase 2) | |
 | 5 | **Work laptop dock (Dell K16A)** | permanent; DHCP (corporate) |
 | 6–8 | Spare / future k3s node / misc | |
@@ -42,7 +42,7 @@
 1. Power on the switch.
 2. Connect the **uplink** (port 1) to the **office Tenda Nova node's LAN port**
    (the single office Ethernet drop).
-3. Connect M910q (port 2), ML110 NAS (port 3), and the **work laptop dock (port 5)**.
+3. Connect the Lenovo M910q Homelab (port 2), the HP ML110 NAS (port 3), and the **work laptop dock (port 5)**.
 4. Leave ports 4, 6–8 unplugged for now (or attach future gear per the port plan).
 
 > ⚠ **Management reality (V1 hardware)**: this switch **cannot be managed from a
@@ -69,7 +69,7 @@ it (see §1 note).
 2. Run the utility; it **auto-discovers** the switch on the local segment (L2
    discovery, independent of the management IP/subnet).
 3. Open the discovered device (double-click / management icon) to reach the management UI.
-4. Login: default `admin` / `admin` (⚠ change immediately — see step 3).
+4. Login: default `admin` / `admin` (⚠ change immediately — see §4).
 
 ---
 
@@ -87,12 +87,25 @@ In **System → System Info / Management**:
 > From now on the utility discovers it as `192.168.2.230` (browser access still
 > unavailable on V1 — see §2).
 
-Change the admin password while you're in here. These are human-only
-credentials — store them securely in Keeper Vault; **never commit them**.
+---
+
+## 4. Rotate Admin Credentials (Username + Password)
+
+Independent of the IP change — do it right after first login with the factory
+`admin`/`admin` credentials.
+
+In **System → User Account**:
+- Change the default **username** (`admin`) to a non-default value — where the
+  V1 firmware allows it (some builds lock the username field; if so,
+  password-only is acceptable).
+- Set a new strong **password** and apply.
+
+These are human-only credentials — store the **username + password pair**
+securely in **Keeper Vault**; **never commit them**.
 
 ---
 
-## 4. Enable QoS / Rate Limit (optional, recommended)
+## 5. Enable QoS / Rate Limit (optional, recommended)
 
 The office drop is shared with the work laptop (port 5) — keep interactive and
 corporate traffic prioritized over bulk backup.
@@ -101,35 +114,38 @@ In **QoS**:
 
 1. **Port-based priority**: leave default 802.1p/DSCP trust unless traffic tests say otherwise.
 2. **Rate limit** (if you want to protect the office drop from bulk backup saturation):
-   - Port 3 (NAS) → apply a moderate rate limit (e.g. 500–800 Mbps) so nightly
+   - Port 3 (HP ML110 NAS) → apply a moderate rate limit (e.g. 500–800 Mbps) so nightly
      restic/Longhorn transfers don't starve the work laptop's uplink during
      business hours; tune to taste.
    - Or rate-limit the uplink (port 1) egress instead. Start conservative.
 
 ---
 
-## 5. Enable IGMP Snooping + Loop Prevention
+## 6. Enable IGMP Snooping
 
-In **L2 Features / IGMP Snooping**:
-- Enable IGMP Snooping (V1/V2/V3) → keeps mDNS/multicast off unrelated ports.
+**IGMP Snooping** — in **Switching → IGMP Snooping**:
+- Enable **IGMP Snooping**. On the V1 there is **no version selector** — the
+  single toggle covers all IGMP versions (leave **Report Message Suppression**
+  at its default **Enable**). Keeps mDNS/multicast off unrelated ports.
 
-In **Loop Prevention**:
-- Enable Loop Prevention on all ports.
+**Loop Prevention** — **not available on the V1 firmware**: the `Switching`
+menu only offers *Port Setting*, *IGMP Snooping* and *LAG*. Nothing to
+configure; keep the cable plant loop-free by hand.
 
 ---
 
-## 6. Port Mirroring — Deferred (Future Observability)
+## 7. Port Mirroring — Deferred (Future Observability)
 
 > **Not enabled in this setup.** If observability (Zeek/Suricata/ntopng on the
 > homelab host) is wanted later:
 
-> Requires a **2nd NIC on the M910q** (e.g. a ~40 PLN USB GigE adapter)
+> Requires a **2nd NIC on the Lenovo M910q Homelab** (e.g. a ~40 PLN USB GigE adapter)
 > connected to a spare switch port (6).
 
 > In **L2 Features → Port Mirroring**:
 > - Mirror mode: **Ingress + Egress**
-> - Source ports: **2 (M910q), 3 (NAS), 4 (future LLM server)** — homelab ports only
-> - Target port: **6** (mirror port → M910q 2nd NIC)
+> - Source ports: **2 (Lenovo M910q Homelab), 3 (HP ML110 NAS), 4 (future LLM server)** — homelab ports only
+> - Target port: **6** (mirror port → Lenovo M910q Homelab 2nd NIC)
 >
 > ⚠ **Exclude the uplink (1) and work dock (5)** from the mirror sources — the
 > work dock carries corporate traffic that should not be captured.
@@ -139,20 +155,20 @@ In **Loop Prevention**:
 
 ---
 
-## 7. Verification
+## 8. Verification
 
 ```bash
-# M910q — switch mgmt IP reachable
+# Lenovo M910q Homelab — switch mgmt IP reachable
 ping 192.168.2.230
 
-# NAS (static IP 192.168.2.210) reachable from M910q
+# HP ML110 NAS (static IP 192.168.2.210) reachable from Lenovo M910q Homelab
 ping 192.168.2.210
 
 # Link up on the wired ports
 ethtool enp0s31f6 | grep -i speed
 ```
 
-- Confirm M910q↔NAS traffic stays on the switch: both plugged into the switch,
+- Confirm Lenovo M910q Homelab↔HP ML110 NAS traffic stays on the switch: both plugged into the switch,
   the mesh sees only their unicast frames on the uplink.
 - The Easy Smart Configuration Utility shows the switch at `192.168.2.230` with
   all ports `Link: Up` (Port Status view; the browser web UI is non-functional
@@ -160,13 +176,13 @@ ethtool enp0s31f6 | grep -i speed
 
 ---
 
-## 8. Security Notes
+## 9. Security Notes
 
 - Switch management (Easy Smart Configuration Utility) has **no TLS** — keep it
   LAN-only: no port-forwards/NAT on the mesh and no Cloudflare Tunnel to
   `192.168.2.230`. Discovery + management are reachable only from the local
   `192.168.2.0/24`.
-- Change the default `admin/admin` password; store it securely in Keeper Vault.
+- Admin password rotated in §4; keep the reference in Keeper Vault.
 - Record the management IP + password reference in the homelab inventory doc.
 
 ---
@@ -183,4 +199,3 @@ ethtool enp0s31f6 | grep -i speed
   - [TL-SG108E V1 Quick Installation Guide](https://www.tp-link.com/pl/document/883/)
   - [TL-SG108E V1 Installation Guide](https://www.tp-link.com/pl/document/50781/)
   - [Easy Smart Configuration Utility — User Guide](https://www.tp-link.com/pl/document/13823/)
-  - [Easy Smart Configuration Utility — User Guide (PL, PDF)](https://static.tp-link.com/2018/201803/20180328/1910012369_Easy Smart Configuration Utility_UG_PL.pdf)

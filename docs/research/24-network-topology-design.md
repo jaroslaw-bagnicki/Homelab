@@ -23,9 +23,9 @@ Tenda Nova AC1200 mesh — 192.168.2.0/24, gateway 192.168.2.1
             └── Tenda Nova node (Ethernet AP role) → SINGLE office drop
                      │
               TL-SG108E switch (new — HW V1)
-                     ├── M910q homelab server   — static 192.168.2.200
-                     ├── ML110 NAS (OMV)        — DHCP 192.168.2.164 → static TBD
-                     ├── Work laptop dock (K16A) — DHCP (corporate)
+                     ├── Lenovo M910q Homelab       — static 192.168.2.200
+                     ├── HP ML110 NAS (OMV)          — DHCP 192.168.2.164 → static TBD
+                     ├── Work laptop dock (K16A)     — DHCP (corporate)
                      └── X1 Lite LLM server (Phase 2, future)
 ```
 
@@ -45,8 +45,8 @@ The mesh is consumer-grade: single LAN broadcast domain, no 802.1Q VLAN trunking
 
 | Device | NIC(s) | IP | Notes |
 |---|---|---|---|
-| M910q homelab server | 1× GigE (`enp0s31f6`) | `192.168.2.200` (static) | main workload host (Docker → k3s, ADR 22) |
-| ML110 NAS (OMV) | 1× GigE (`enp14s0`, BCM5722) | `192.168.2.164` (DHCP) → static TBD | backup target, NFS for Longhorn (issue #54) |
+| Lenovo M910q Homelab | 1× GigE (`enp0s31f6`) | `192.168.2.200` (static) | main workload host (Docker → k3s, ADR 22) |
+| HP ML110 NAS (OMV) | 1× GigE (`enp14s0`, BCM5722) | `192.168.2.164` (DHCP) → static TBD | backup target, NFS for Longhorn (issue #54) |
 | Work laptop dock (Dell K16A) | 1× GigE (via dock) | DHCP (corporate) | corporate device; no static reservation — stays on mesh DHCP |
 | X1 Lite LLM server | 1× GigE (future) | TBD | Phase 2, not yet purchased |
 | **TL-SG108E switch (V1)** | 8× GigE (L2, utility-managed) | `192.168.2.230` (static) | the new piece — this analysis; hardware rev. **V1** (`TL-SG108E 1.0`), web UI non-functional, managed via Easy Smart Configuration Utility (runbook 23) |
@@ -56,10 +56,10 @@ The mesh is consumer-grade: single LAN broadcast domain, no 802.1Q VLAN trunking
 ## Constraints
 
 1. **CGNAT** — no public IP; remote access only via Cloudflare Tunnel (ADR 08). Not directly affected by the switch, but shapes the "what must stay internal" story.
-2. **Single office Ethernet drop** — the homelab lives in the home office, wired via one Tenda Nova node in Ethernet-AP role providing **one physical outlet**. The switch is what turns that single drop into ports for M910q + NAS + work dock + future gear. The drop device is **whichever Nova unit is physically in the office** — it just needs ≥1 free Gigabit LAN port for the switch uplink (the smaller Mesh5s has fewer ports, so prefer a co-located Mesh3/Mesh5 if available).
+2. **Single office Ethernet drop** — the homelab lives in the home office, wired via one Tenda Nova node in Ethernet-AP role providing **one physical outlet**. The switch is what turns that single drop into ports for the Lenovo M910q Homelab + HP ML110 NAS + work dock + future gear. The drop device is **whichever Nova unit is physically in the office** — it just needs ≥1 free Gigabit LAN port for the switch uplink (the smaller Mesh5s has fewer ports, so prefer a co-located Mesh3/Mesh5 if available).
 3. **Consumer mesh uplink** — the Tenda Nova is a single broadcast domain and **cannot trunk 802.1Q tags**. Switch VLANs therefore **cannot** segment the homelab from the house LAN; the uplink to the mesh must stay untagged in one VLAN.
 4. **Switch is utility-managed only (V1)** — no SNMP, no API, and the embedded web UI is non-functional (HTTP 501 on every request; already on the last V1 firmware build, line is EOL). All config is manual via the **Easy Smart Configuration Utility** (Windows). Not Ansible-manageable; captured as runbook 23.
-5. **No PoE, no routing, no dynamic LACP** on the TL-SG108E. Static link aggregation exists but the NAS and M910q each have a single NIC — LAG is not applicable today.
+5. **No PoE, no routing, no dynamic LACP** on the TL-SG108E. Static link aggregation exists but the HP ML110 NAS and Lenovo M910q Homelab each have a single NIC — LAG is not applicable today.
 
 ---
 
@@ -71,8 +71,8 @@ Keep the single `192.168.2.0/24` broadcast domain. Reserve a dedicated static bl
 
 | Address | Device |
 |---|---|
-| `192.168.2.200` | M910q homelab server (existing) |
-| `192.168.2.210` | ML110 NAS — static (proposed) |
+| `192.168.2.200` | Lenovo M910q Homelab (existing) |
+| `192.168.2.210` | HP ML110 NAS — static (proposed) |
 | `192.168.2.220` | X1 Lite LLM server (Phase 2, future) |
 | `192.168.2.230` | TL-SG108E management IP (proposed) |
 
@@ -85,7 +85,7 @@ Keep the single `192.168.2.0/24` broadcast domain. Reserve a dedicated static bl
 **Pros:**
 - Works today on the consumer mesh — zero router changes.
 - Simplest to operate; no VLAN tags to debug across the house.
-- Meets every current need: backup/NFS traffic between M910q↔NAS stays wired and isolated on the switch fabric, and the single office drop serves homelab gear + work dock simultaneously.
+- Meets every current need: backup/NFS traffic between the Lenovo M910q Homelab↔HP ML110 NAS stays wired and isolated on the switch fabric, and the single office drop serves homelab gear + work dock simultaneously.
 
 **Cons:**
 - No isolation between homelab gear and the rest of the house at L2; segmentation must be done at the host firewall (UFW — already subnet-scoped) and Cloudflare Access at the edge.
@@ -127,8 +127,8 @@ Segment the homelab into its own VLAN (e.g. `192.168.10.0/24`) trunked from the 
 Dedicated **homelab access switch** in the home office: all wired homelab gear
 terminates here; a single uplink connects the switch to the office Tenda Nova node
 (acting as an Ethernet AP). This gives the office **one physical drop → many wired
-devices** — ending the current M910q ↔ work-dock cable swapping — and keeps
-M910q↔NAS backup/NFS traffic (restic, Longhorn `/export/backups` from ADR 22 /
+devices** — ending the current Lenovo M910q Homelab ↔ work-dock cable swapping — and keeps
+Lenovo M910q Homelab↔HP ML110 NAS backup/NFS traffic (restic, Longhorn `/export/backups` from ADR 22 /
 issue #54) **on the switch fabric at full GigE**, off the mesh's wireless backhaul.
 
 ### Port plan
@@ -136,8 +136,8 @@ issue #54) **on the switch fabric at full GigE**, off the mesh's wireless backha
 | Port | Attachment | Notes |
 |---|---|---|
 | 1 | **Uplink → office Tenda Nova** (Ethernet AP drop, `192.168.2.1`) | untagged, default VLAN |
-| 2 | M910q homelab server (`192.168.2.200`) | |
-| 3 | ML110 NAS (`192.168.2.210`) | |
+| 2 | Lenovo M910q Homelab (`192.168.2.200`) | |
+| 3 | HP ML110 NAS (`192.168.2.210`) | |
 | 4 | X1 Lite LLM server (`192.168.2.220`, Phase 2) | |
 | 5 | **Work laptop dock (Dell K16A)** | permanent; DHCP (corporate) |
 | 6–8 | Spare / future k3s node / misc | |
@@ -147,7 +147,7 @@ issue #54) **on the switch fabric at full GigE**, off the mesh's wireless backha
 | Feature | Enable? | Rationale |
 |---|---|---|
 | **QoS / rate-limit** | ✅ | Prioritize interactive/corporate traffic (work laptop on the shared office drop); rate-limit bulk backup so nightly restic runs don't starve the work uplink during business hours |
-| **Port mirroring** | ⏸️ future | Observability (Zeek/Suricata/ntopng on M910q 2nd NIC) — deferred; would need ~40 PLN USB GbE NIC. If enabled later, restrict sources to homelab ports (2–4) to avoid capturing corporate work-dock traffic |
+| **Port mirroring** | ⏸️ future | Observability (Zeek/Suricata/ntopng on Lenovo M910q Homelab 2nd NIC) — deferred; would need ~40 PLN USB GbE NIC. If enabled later, restrict sources to homelab ports (2–4) to avoid capturing corporate work-dock traffic |
 | **IGMP snooping** | ✅ | Keeps multicast (mDNS/Avahi, IPTV if any) off unrelated ports |
 | **Loop prevention** | ✅ | Protects the wired fabric when cable plant grows |
 | **Cable diagnostics** | 🔧 on-demand | Quick port/link troubleshooting |
@@ -165,7 +165,7 @@ See Option A table above. The NAS static IP replaces its current DHCP lease (`19
 - [x] NAS static IP — resolved: `192.168.2.210`
 - [x] TL-SG108E management IP — resolved: `192.168.2.230` (static, outside mesh DHCP range)
 - VLAN-capable edge router (gate for Option B) → [#57](https://github.com/jaroslaw-bagnicki/Homelab/issues/57)
-- Port mirroring / observability with a 2nd NIC on the M910q → [#58](https://github.com/jaroslaw-bagnicki/Homelab/issues/58)
+- Port mirroring / observability with a 2nd NIC on the Lenovo M910q Homelab → [#58](https://github.com/jaroslaw-bagnicki/Homelab/issues/58)
 
 ---
 
@@ -184,11 +184,11 @@ See Option A table above. The NAS static IP replaces its current DHCP lease (`19
 - Issue [#55](https://github.com/jaroslaw-bagnicki/Homelab/issues/55) — this analysis
 - Issue [#57](https://github.com/jaroslaw-bagnicki/Homelab/issues/57) — VLAN-capable edge router (Option B gate)
 - Issue [#58](https://github.com/jaroslaw-bagnicki/Homelab/issues/58) — port mirroring observability
-- Issue [#54](https://github.com/jaroslaw-bagnicki/Homelab/issues/54) — ML110 NAS (OMV)
+- Issue [#54](https://github.com/jaroslaw-bagnicki/Homelab/issues/54) — HP ML110 NAS (OMV)
 - [ADR 22](../decisions/22-k3s-arc-homelab.md) — k3s + Azure Arc; Longhorn NFS backup target on the NAS
 - [ADR 08](../decisions/08-remote-access-cloudflare-tunnel.md) — CGNAT / Cloudflare Tunnel
-- [ADR 01](../decisions/01-hardware-selection-m910q.md) — M910q homelab server
+- [ADR 01](../decisions/01-hardware-selection-m910q.md) — Lenovo M910q Homelab
 - [ADR 06](../decisions/06-local-dns-dnsmasq.md) — local DNS
 - [Runbook 23 — TL-SG108E switch](../runbooks/23-tl-sg108e-switch.md)
 - Official TP-Link docs: [V1 datasheet](https://www.tp-link.com/pl/document/50775/) · [V1 Quick Installation Guide](https://www.tp-link.com/pl/document/883/) · [Easy Smart Configuration Utility User Guide](https://www.tp-link.com/pl/document/13823/)
-- Issue #54 — ML110 NAS (OMV); runbook 21 (ML110 inventory) in-flight on the `feat/nas-ml110-omv-setup` branch
+- Issue #54 — HP ML110 NAS (OMV); runbook 21 (ML110 inventory) in-flight on the `feat/nas-ml110-omv-setup` branch
