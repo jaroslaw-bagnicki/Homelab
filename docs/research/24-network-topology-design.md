@@ -31,10 +31,11 @@ Tenda Nova AC1200 mesh — 192.168.2.0/24, gateway 192.168.2.1
 
 | Item | Detail |
 |---|---|
-| Build | **MW3 pack** (bought Mar 2020) + **MW5 pack** (bought Feb 2021) |
-| Original units | **4× Nova AC1200** |
-| Current in use | **3× Nova AC1200 + 1 smaller device** (4 units total on the mesh) |
-| Lost | **1× Nova unit lost** somewhere — noted as inventory reality, not a blocker |
+| MW3 pack (bought Mar 2020) | **3× Mesh3** (AC1200) |
+| MW5 pack (bought Feb 2021) | **1× Mesh5** (AC1200) + **1× Mesh5s** (smaller device) |
+| Original units | **5× Nova** total |
+| Current in use | **3× Nova AC1200 (Mesh3) + 1× smaller Mesh5s** — 4 units on the mesh |
+| Lost | **1× Nova unit lost** (a Mesh3/Mesh5) somewhere — noted as inventory reality, not a blocker |
 
 The mesh is consumer-grade: single LAN broadcast domain, no 802.1Q VLAN trunking, no per-port management.
 
