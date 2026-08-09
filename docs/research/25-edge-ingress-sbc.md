@@ -4,7 +4,7 @@
 
 **Scope**: Hardware selection for a dedicated edge box on the home LAN running `cloudflared` + Caddy — with prices that are actually reachable in Poland.
 
-**Status**: 📝 Analysis — working selection: **Dell Wyse 3040 thin client, bare-metal `cloudflared` + Caddy (systemd)**. Decision recorded in [ADR 24](../decisions/24-edge-ingress-appliance.md); Orange Pi Zero 3 documented as the ARM fallback path.
+**Status**: 📝 Analysis — working selection: **Dell Wyse 3040 thin client, bare-metal `cloudflared` + Caddy (systemd)**. Decision recorded in [ADR 24](../decisions/24-edge-ingress-appliance.md); RPi 4B documented as the price-sane ARM fallback.
 
 ---
 
@@ -34,7 +34,7 @@ Initial research suggested a cheap SBC (e.g. Radxa ZERO 3E at ~$25) as the obvio
 
 Consequences:
 - **Radxa ZERO 3E — dropped** as the headline pick. Its ~$25 MSRP is not a Poland-reachable price; listings are scarce and overpriced when present.
-- The realistic floor for a GbE SBC in PL is ~130–200 PLN, not ~100 PLN.
+- The cheap-SBC floor doesn't hold: the cheapest reachable GbE SBC (Orange Pi Zero 3 4 GB) runs **~370 PLN** on Allegro (verified Aug 2026) — ~5× the 3040's ~70 PLN.
 - At that price point, a **used x86 thin client** becomes cost-competitive — with the side benefit that it reuses the homelab's existing Ubuntu Server + Ansible toolchain.
 
 > Exact listing prices must be verified on Allegro at purchase time (automated queries are bot-blocked; ranges below are market-level estimates as of Aug 2026).
@@ -60,7 +60,7 @@ Business thin clients are common and cheap on the Polish used market.
 | OS | Ubuntu Server minimal (ADR 05) |
 
 **Selection rationale:**
-- **Insanely cheap in the PL market** — ~70 PLN vs ~130–200 PLN for the cheapest reachable GbE SBC (OPi Zero 3) vs ~200–280 PLN for a used RPi 4B. The 3040 is ~2–4× cheaper than any reachable SBC/RPi equivalent.
+- **Insanely cheap in the PL market** — ~70 PLN vs ~370 PLN for the OPi Zero 3 4 GB vs ~280–400 PLN for a used RPi 4B. The 3040 is ~4–5× cheaper than any reachable GbE SBC/RPi.
 - **Constrained-resources experiment** — a deliberate 2 GB/8 GB appliance forces minimal, clean engineering; a first-class hobby rationale for this homelab.
 - **Bare-metal fits** — `cloudflared` + Caddy as systemd services need ~600–800 MB RAM / ~4 GB disk, leaving room on 2 GB/8 GB (see Deployment Model).
 
@@ -73,9 +73,9 @@ Business thin clients are common and cheap on the Polish used market.
 
 Celeron J4105, 4–8 GB SODIMM (upgradeable), SATA SSD slot, GbE, ~5–8 W idle. The same thin-client class with real headroom — adopted if the 3040's constraints bite.
 
-### Path B — Orange Pi Zero 3 (4 GB) — cheapest ARM GbE
+### Path B — Orange Pi Zero 3 (4 GB) — rejected on price
 
-The cheapest reachable ARM board with real Gigabit Ethernet in PL.
+Real PL price (Allegro, verified Aug 2026) is **~370 PLN for 4 GB** — not the ~130–200 PLN of international pricing, and now pricier than a used RPi 4B.
 
 | Property | Value |
 |---|---|
@@ -84,12 +84,12 @@ The cheapest reachable ARM board with real Gigabit Ethernet in PL.
 | Storage | microSD only |
 | Network | 1× GbE |
 | Power | ~2–4 W idle |
-| Price | ~130–200 PLN (Allegro import) |
+| Price | ~370 PLN (Allegro, verified Aug 2026) |
 | OS | Armbian / Debian (ARM64) |
 
-**Why consider it:**
-- **Lowest cost and lowest power** of the two paths.
-- Runs `cloudflared` + Caddy trivially (both Go/ARM64-native, write-light).
+**Assessment:**
+- Lowest **power** of the two paths, and runs `cloudflared` + Caddy trivially (both Go/ARM64-native, write-light).
+- But **no longer lowest cost** — at ~370 PLN it is ~5× the Wyse 3040 and ~30% pricier than a used RPi 4B. Rejected on price.
 
 **Costs:**
 - **New provisioning path** — Armbian/ARM64 images, a new Ansible host type and roles; none of the existing x86/Ubuntu tooling applies unchanged.
@@ -97,7 +97,7 @@ The cheapest reachable ARM board with real Gigabit Ethernet in PL.
 
 ### Path C — Raspberry Pi 4B (used) — ecosystem-safe third option
 
-~200–280 PLN used on Allegro. Native GbE, best ecosystem/support. Same ARM64 provisioning cost as Path B (SD/USB boot), at higher price — noted for completeness, not recommended over Path B at current PL prices.
+~280–400 PLN used on Allegro (2 GB from ~280 PLN, 8 GB ~400 PLN). Native GbE, best ecosystem/support. Same ARM64 provisioning cost as Path B (SD/USB boot). At these prices it is the price-sane ARM fallback (cheaper than the OPi Zero 3), but still ~4× the Wyse 3040.
 
 ---
 
@@ -119,8 +119,8 @@ The edge box runs exactly two daemons (`cloudflared`, Caddy). **Bare-metal (syst
 
 | Dimension | A — Wyse 3040 (bare-metal) | B — Orange Pi Zero 3 | C — RPi 4B (used) | D — Wyse 5070 (Docker fallback) |
 |---|---|---|---|---|
-| Est. price (PL) | **~70 PLN** | ~130–200 PLN | ~200–280 PLN | ~150–250 PLN |
-| Cost vs cheapest SBC/RPi | **~2–4× cheaper** | baseline | ~1.5× OPi | ~1.2× OPi |
+| Est. price (PL) | **~70 PLN** | ~370 PLN | ~280–400 PLN | ~150–250 PLN |
+| Cost vs ARM options | **~4–5× cheaper** | ~5× the 3040 | ~4× the 3040 (2 GB) | ~2–3× the 3040 |
 | Idle power | ~2–3 W | ~2–4 W | ~3–5 W | ~5–8 W |
 | RAM | 2 GB soldered (no headroom) | 4 GB | 2–8 GB | 4–8 GB upgradeable |
 | Boot storage | 8 GB eMMC | microSD + overlayroot | SD/USB | SATA SSD |
@@ -129,7 +129,7 @@ The edge box runs exactly two daemons (`cloudflared`, Caddy). **Bare-metal (syst
 | Cloudflared + Caddy load | Trivial | Trivial | Trivial | Trivial |
 | Spares/repairability (PL) | Good (business gear) | Poor | Good | Good |
 
-**Verdict:** the Wyse 3040 at ~70 PLN is the working selection — cheapest by a wide margin in the PL market and a deliberate constrained-resources experiment. Bare-metal keeps it viable within 2 GB/8 GB. The Wyse 5070 (Docker-capable, real headroom) is the fallback if the 3040's constraints bite; the Orange Pi Zero 3 remains the ARM alternative if the x86 path is abandoned.
+**Verdict:** the Wyse 3040 at ~70 PLN is the working selection — cheapest by a wide margin in the PL market (OPi Zero 3 is ~370 PLN, RPi 4B from ~280 PLN) and a deliberate constrained-resources experiment. Bare-metal keeps it viable within 2 GB/8 GB. The Wyse 5070 (Docker-capable, real headroom) is the fallback if the 3040's constraints bite; the RPi 4B (2 GB) is the price-sane ARM fallback if the x86 path is ever abandoned.
 
 ---
 
@@ -138,7 +138,7 @@ The edge box runs exactly two daemons (`cloudflared`, Caddy). **Bare-metal (syst
 - **NanoPi R5C** — its M.2 slot is **E-Key (WiFi/BT only)**, not NVMe; ships with 32 GB eMMC.
 - **Orange Pi 3B** — M.2 2280 is **SATA, not NVMe**.
 - **Radxa ZERO 3W** — has eMMC but **no ethernet** (WiFi only); only the 3E has GbE, and it boots microSD-only.
-- **SBC MSRP vs PL price** — always price-check the Allegro listing, not the vendor's international MSRP.
+- **SBC MSRP vs PL price** — always price-check the Allegro listing, not the vendor's international MSRP. Verified Aug 2026: Orange Pi Zero 3 4 GB ~370 PLN, used RPi 4B from ~280 PLN (2 GB) / ~400 PLN (8 GB).
 
 ---
 

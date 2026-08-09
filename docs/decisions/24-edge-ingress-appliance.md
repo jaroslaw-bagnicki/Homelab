@@ -39,8 +39,8 @@ Run the homelab's public ingress on a **dedicated, low-power edge appliance** on
 
 - **Keep ingress on the M910q (no change)** — loses the decoupling benefit; ingress tied to cluster lifecycle. Rejected.
 - **Docker/containers on the edge box** — keeps fleet consistency (ADR 10) but doesn't fit 2 GB/8 GB and adds a runtime layer to a public-facing device. Rejected for the edge; documented as the fallback path in research 25.
-- **Orange Pi Zero 3 (ARM)** — cheapest reachable SBC in PL (~130–200 PLN) but ~2–4× pricier than the 3040 and needs a new ARM64/Armbian provisioning path. Documented as Path B.
-- **Raspberry Pi 4B** — best ecosystem/support but the most expensive in PL (~200–280 PLN). Rejected on cost.
+- **Orange Pi Zero 3 (ARM)** — ~370 PLN on Allegro (verified Aug 2026): ~5× the 3040, pricier than a used RPi 4B, and needs a new ARM64/Armbian provisioning path. Rejected on price; documented as Path B.
+- **Raspberry Pi 4B** — best ecosystem/support but ~280–400 PLN in PL (2–8 GB) — ~4× the 3040. Rejected on cost.
 - **Reuse the ML110 or existing M910q** — contradicts ADR 23's storage-only scope / loses the decoupling benefit. Rejected.
 
 ---
