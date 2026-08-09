@@ -28,8 +28,9 @@ Storage-only node; primary consumer is the Longhorn/k3s backup target on the M91
 | Decision | Choice |
 |---|---|
 | **ZFS?** | No — **mdadm RAID1** |
-| Boot device | **1× 1.8" 20 GB drive on ICH9 SATA #5** (Option B) |
+| Boot device | **Goodram C40 120 GB SSD on ICH9 SATA #5** (Option D — pending SSD health) |
 | Data pool | **mdadm RAID1**: `md0` = 2× 500 GB Hitachis; `md1` = 2× 250 GB |
+| Bulk volume | **1 TB WD10EZEX — single-disk XFS** on ICH9 #6 |
 | Filesystem | **XFS on `md0`** (primary), **ext4 on `md1`** |
 | SATA mode | **AHCI**, ICH9R RAID firmware disabled |
 | Dell SAS 6/iR | **Not used** (mdadm needs raw disks); may be removed to save power |
@@ -48,22 +49,23 @@ Runbook: [`21-ml110-nas-inventory.md`](../runbooks/21-ml110-nas-inventory.md)
 - [x] Capture disk models/sizes + SMART health — **all drives PASSED** (incl. spare 1 TB)
 - [x] Confirm controller inventory — ICH9R 4-port + ICH9 2-port + Dell SAS 6/iR
 - [x] Map controller topology — see research 23 / inventory
-- [x] Decide layout — no ZFS, mdadm RAID1, boot on 1.8" drive
+- [x] Decide layout — no ZFS, mdadm RAID1, SSD boot (Option D)
+- [ ] **Goodram C40 SSD health check** (confirms Option D)
 - [ ] Capture current SAS 6/iR RAID layout (before unplugging it)
 - [ ] Confirm FreeNAS is unbootable / no data to preserve
-- [ ] Pick which 1.8" drive is the OMV OS disk (Hitachi vs Fujitsu)
 - [ ] Fill the inventory template: `nas-ml110-inventory.md`
 
 ---
 
 ## Next Steps (implementation)
 
-1. Flash OMV 8.x ISO to a boot USB (reuse YUMI) and install to the chosen 1.8" drive.
-2. BIOS: SATA → AHCI, ICH9R RAID disabled, boot from the 1.8" disk.
+1. Flash OMV 8.x ISO to a boot USB (reuse YUMI) and install to the **Goodram 120 GB SSD**.
+2. BIOS: SATA → AHCI, ICH9R RAID disabled, boot from the SSD.
 3. `mdadm` RAID1 pairs → `md0` (2× 500 GB) + `md1` (2× 250 GB); XFS/ext4.
-4. NFS `/export/backups` + SMB `/shared`; static IP `192.168.2.x`.
-5. Verify NFS from the M910q (`showmount -e`); point Longhorn at it.
-6. Repo: runbook 22 (`docs/runbooks/22-ml110-omv-setup.md`) + idea → ADR 23.
+4. 1 TB WD10EZEX → single-disk XFS bulk volume.
+5. NFS `/export/backups` + SMB `/shared`; static IP `192.168.2.x`.
+6. Verify NFS from the M910q (`showmount -e`); point Longhorn at it.
+7. Repo: runbook 22 (`docs/runbooks/22-ml110-omv-setup.md`) + idea → ADR 23.
 
 ---
 

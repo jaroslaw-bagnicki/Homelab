@@ -13,8 +13,9 @@
 | OS | **OpenMediaVault 8.x** (Debian 13), official ISO, BIOS boot |
 | Filesystem / RAID | **No ZFS** — **mdadm RAID1** + XFS/ext4 |
 | Data pool | `md0` = 2× 500 GB Hitachis (mirror), `md1` = 2× 250 GB (mirror) |
-| Boot device | **1× 1.8" 20 GB drive on ICH9 SATA #5** (Option B) |
-| Hardware RAID controller | **Not used** (Dell SAS 6/iR / SAS1068E) |
+| Boot device | **Goodram C40 120 GB SSD on ICH9 SATA #5** (Option D — pending SSD health check) |
+| Bulk volume | **1 TB WD10EZEX — single-disk XFS** on ICH9 SATA #6 |
+| Hardware RAID controller | **Not used** (Dell SAS 6/iR / SAS1068E) — may be removed to save power |
 
 ---
 
@@ -24,11 +25,11 @@
 |---|---|---|---|
 | Acquisition cost | ~195 PLN (used) + new drives + caddy | **0 PLN** (already owned) | ML110 wins — no purchase |
 | Form factor | USFF, ~1.9 L, near-silent | 4U tower, louder, larger | Q956 wins on footprint/noise |
-| Drive count | 2× 500 GB 2.5" | **4× 3.5" + 2× 1.8"** (6 drives) + spare 1 TB | ML110 wins — more capacity/redundancy |
+| Drive count | 2× 500 GB 2.5" | **4× 3.5" + 2× 2.5" 20 GB + 120 GB SSD + spare 1 TB** | ML110 wins — more capacity/redundancy |
 | CPU | i5-6500T (4C/4T) | Intel Pentium E2160 @ 1.8 GHz (2C/2T) | Q956 wins on compute |
 | RAM | 8 GB DDR3L | **4 GB** (2× 2 GiB DDR2-800) | Q956 wins; 4 GB fine for mdadm |
 | SATA topology | 2× native SATA + M.2 | ICH9R 4-port + ICH9 2-port + **Dell SAS 6/iR (RAID-only)** | ML110 more complex |
-| Boot device | needs USB or SSD | **1.8" 20 GB drive (Option B)** | Boot device decided |
+| Boot device | needs USB or SSD | **Goodram 120 GB SSD (Option D)** — 6× capacity of the 20 GB drives | Boot device decided (pending SSD health) |
 
 **Decision**: ML110 is owned, has 6 drives, and needs no purchase. Tower footprint is acceptable for a machine near the router/switch. **Proceed with ML110.**
 
@@ -61,19 +62,22 @@
 
 > Note: there is **no separate "B110i" PCI device** — "B110i" is just the ICH9R SATA with RAID-capable firmware. The only true hardware RAID controller is the SAS1068E.
 
-### Disk inventory + SMART (all PASSED)
+### Disk inventory + SMART (all PASSED unless noted)
 
 | # | Model (SMART) | Serial | Size | Role |
 |---|---|---|---|---|
-| 1 | Hitachi Travelstar HTS541020G9SA00 | `MPBFL0X9G1W9WM` | 20 GB | OMV OS (candidate) |
-| 2 | Fujitsu MHW2020BH | `NZ0GT772LN18` | 20 GB | OMV OS (candidate) |
+| 1 | Hitachi Travelstar HTS541020G9SA00 (2.5") | `MPBFL0X9G1W9WM` | 20 GB | cold spare |
+| 2 | Fujitsu MHW2020BH (2.5") | `NZ0GT772LN18` | 20 GB | cold spare |
 | 3 | Hitachi HDS721050CLA660 | `JP1572FL1849SK` | 500 GB | `md0` |
 | 4 | Hitachi HDS721050CLA660 | `JP1572FL167V6K` | 500 GB | `md0` mirror |
 | 5 | WDC WD2500AAKX-75U6AA0 | `WD-WCC2F0157761` | 250 GB | `md1` |
 | 6 | GB0250EAFYK (labeled "WD RE3") | `WCAT1F035986` | 250 GB | `md1` mirror |
-| 7 | WDC WD10EZEX-00BN5A0 (spare) | `WD-WCC3F7AKKXUT` | 1 TB | offline (no cable) |
+| 7 | **Goodram C40 120 GB** (SSD) | _TBD_ | 120 GB | **OMV OS (Option D, pending health check)** |
+| 8 | WDC WD10EZEX-00BN5A0 (spare) | `WD-WCC3F7AKKXUT` | 1 TB | **XFS bulk volume** |
 
 **Label vs SMART discrepancies:** the 500 GB Hitachis label `CLA662` but report `CLA660` (HP OEM variant); the "WD RE3" drive actually reports as `GB0250EAFYK` (rebadged); the Fujitsu label `MHV2020BH` reports as `MHW2020BH`. **SMART identity is authoritative.**
+
+> **Form-factor correction (2026-08-09):** the two 20 GB drives are **2.5"**, not 1.8" as originally stated.
 
 ---
 
@@ -105,16 +109,16 @@
 
 ---
 
-## Boot Device: Option A vs Option B
+## Boot Device: Option A vs Option B vs Option D
 
-| | Option A (rejected) | Option B (chosen) |
-|---|---|---|
-| OMV OS on | Dedicated ≥32 GB USB stick (`flashmemory` plugin) | **1× 1.8" 20 GB drive on ICH9 SATA #5** |
-| 5th SATA cable → | **1 TB spare** (single-disk XFS) | 1.8" OMV OS disk |
-| Cost | USB stick purchase + flash-wear management | Zero — reuses owned hardware |
-| All 6 internal disks as data | Yes | 4× 3.5" data; one 1.8" is the OS |
+| | Option A (rejected) | Option B (superseded) | **Option D (chosen)** |
+|---|---|---|---|
+| OMV OS on | Dedicated ≥32 GB USB stick (`flashmemory` plugin) | 1× 2.5" 20 GB drive (ICH9 #5) | **Goodram C40 120 GB SSD (ICH9 #5)** |
+| 1 TB spare | single-disk XFS on ICH9 #5 | offline | **single-disk XFS on ICH9 #6** |
+| Cost | USB purchase + flash-wear mgmt | zero (reuse 2.5" drive) | zero (spare SSD found) |
+| Hardware RAID needed | no | no | **no** — SAS 6/iR not used |
 
-**Chosen: Option B** — reuses an otherwise-unusable 1.8" drive as the OS disk, no purchase, no USB wear management. The 1 TB spare stays offline, addable later.
+**Chosen: Option D** — a spare **Goodram C40 120 GB SSD** appeared, giving a single reliable boot disk with 6× the OS capacity of the 20 GB drives, no hardware RAID anywhere, and freeing both 2.5" 20 GB drives as cold spares. The 1 TB spare joins the build as a single-disk XFS bulk volume. **Pending SSD health check.**
 
 ---
 

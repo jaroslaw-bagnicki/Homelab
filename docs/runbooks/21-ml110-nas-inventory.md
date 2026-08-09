@@ -77,7 +77,7 @@ Expected outputs:
   appears at the top.
 - This G5 has **no LO100** (expansion-card slot empty, RJ45 fused) — no iLO/LO100 address to capture.
 - Photograph the **motherboard model / product label** inside the case.
-- Note the **drive bay count** and **connector types** (3.5" vs 2.5"/1.8").
+- Note the **drive bay count** and **connector types** (3.5" vs 2.5").
 
 ---
 
@@ -220,7 +220,7 @@ can be attached at once** on the onboard ICH9R SATA ports. Scan in batches:
 2. Run the SMART loop below and **record the serial of every disk** — the two 500 GB
    Hitachi drives share a model, so only the serial distinguishes them. Correlate each
    `/dev/sdX` to the physical label before unplugging.
-3. **Batch 2 — the 2× 1.8" drives** (20 GB each, informational only): swap them in and
+3. **Batch 2 — the 2× 2.5" 20 GB drives** (informational only): swap them in and
    repeat.
 
 ```sh
