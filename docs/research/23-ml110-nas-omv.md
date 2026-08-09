@@ -7,6 +7,10 @@
 
 ## Decision Summary
 
+> **Decision authority:** the decisions below are authoritatively recorded in
+> [ADR 23 — NAS on the HP ProLiant ML110 (OMV)](../decisions/23-nas-on-ml110.md).
+> This table is the Phase 0 analysis output that fed them.
+
 | Decision | Outcome |
 |---|---|
 | Platform | HP ProLiant **ML110 G5** (already owned) — beats buying a Fujitsu Q956 |
@@ -184,4 +188,5 @@ At ~€150–200/yr this is the most power-hungry box in the homelab — the M91
 - Issue [#54](https://github.com/jaroslaw-bagnicki/Homelab/issues/54)
 - [ADR 02 — Backup Strategy](../decisions/02-backup-strategy-restic-blob.md)
 - [ADR 22 — k3s + Azure Arc](../decisions/22-k3s-arc-homelab.md) — NFS backup target for Longhorn
+- [ADR 23 — NAS on the HP ProLiant ML110 (OMV)](../decisions/23-nas-on-ml110.md) — authoritative record of the decisions in this doc
 - [ADR 01 — Hardware Selection](../decisions/01-hardware-selection-m910q.md) — the M910q homelab server
