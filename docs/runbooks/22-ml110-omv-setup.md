@@ -25,6 +25,7 @@
 - [ ] 1 TB spare content reviewed, role decided
 - [ ] Static IP `192.168.2.210` set and verified from the M910q
 - [ ] OMV web UI reachable at `https://192.168.2.210` (HTTPS-only, §4d)
+- [ ] SSH hardening (**deferred** — see §8) — key-only auth, LAN-only
 
 > **Execution log — 2026-08-09**
 > - BIOS done: `Advanced | Advanced Chipset Control | Serial ATA` → `Serial ATA: Enabled`,
@@ -98,7 +99,7 @@ Enter BIOS during POST (typically `F8`/`F9`/`Del` on ML110 models) and set:
 
 > Only the Goodram SSD should stay attached for the first boot sequence (data drives still
 > disconnected from the prerequisites). Take a **photo** of the AHCI/RAID BIOS screen before
-> applying (inventory §9 photo checklist).
+> applying (photo for the record).
 
 ---
 
@@ -287,7 +288,7 @@ Default settings elsewhere untouched (auto-logout etc. left as-is).
    - **Bulk volume** — if it holds media/archives worth keeping, add as a single-disk XFS
      volume (via OMV `Storage | File Systems`) or an `mdadm` member.
    - **Offline** — per research 23, the drive is **unplugged for now**; if the content is
-     redundant, leave it disconnected and record the decision in the inventory.
+     redundant, leave it disconnected and record the decision in [research 23](../research/23-ml110-nas-omv.md).
 4. Record the outcome in [research 23](../research/23-ml110-nas-omv.md) (open question #3).
 
 ---
@@ -302,6 +303,22 @@ Default settings elsewhere untouched (auto-logout etc. left as-is).
 - Mark the idea 03 status → **🔨 Implementing** (then **✅ Done**) in
   `docs/ideas/03-nas-backup-target-ml110.md` and `docs/ideas/README.md`.
 - Report completion on issue #61 (and #62 once exports are live) so the parent #54 can close.
+
+### Deferred — SSH hardening (not Phase 1)
+
+**Deferred intentionally** — the box still allows SSH root login with password from the whole
+subnet while Phase 1 finishes. Apply in a later phase (do not expose SSH publicly without this):
+
+- **Key-only authentication** — install a pubkey (`ssh-copy-id root@192.168.2.210`), then set
+  `PasswordAuthentication no` (or via OMV `Services | SSH`). Password auth off.
+- **LAN-only SSH** — restrict SSH to the homelab subnet `192.168.2.0/24`: UFW
+  `allow from 192.168.2.0/24 to any port 22 proto tcp` + deny the rest, or `Match Address`
+  / `AllowUsers` in `sshd_config`. No SSH from the internet.
+- **Revisit root** — the §3 note prefers a `sudo` user with the key and root SSH disabled.
+
+> **Rationale for deferring:** the NAS is reachable only on the LAN today, and the priority is
+> getting the arrays + exports stable first. Hardening lands together with the
+> Cloudflare-exposure step (Phase 2) — SSH is never exposed through the tunnel.
 
 ---
 
