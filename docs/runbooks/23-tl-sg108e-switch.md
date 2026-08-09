@@ -14,7 +14,7 @@
 - Wire all homelab gear + work laptop dock into the switch; single uplink to the
   office Tenda Nova node (Ethernet AP role) — one office drop → many wired devices.
 - Set a static management IP on the `192.168.2.0/24` subnet.
-- Enable QoS / rate-limit, IGMP snooping, loop prevention.
+- Enable QoS / rate-limit, IGMP snooping (loop prevention not available on the V1 — see §6).
 
 ## Port Plan (from research 24)
 
@@ -180,7 +180,8 @@ ethtool enp0s31f6 | grep -i speed
 
 - Switch management (Easy Smart Configuration Utility) has **no TLS** — keep it
   LAN-only: no port-forwards/NAT on the mesh and no Cloudflare Tunnel to
-  `192.168.2.230`. Discovery + management are reachable only from the local
+  `192.168.2.230`. The utility's **L2 discovery** is subnet-independent but stays
+  on the local segment; the management IP `192.168.2.230` is only reachable from
   `192.168.2.0/24`.
 - Admin password rotated in §4; keep the reference in Keeper Vault.
 - Record the management IP + password reference in the homelab inventory doc.

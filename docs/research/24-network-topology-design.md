@@ -149,7 +149,7 @@ issue #54) **on the switch fabric at full GigE**, off the mesh's wireless backha
 | **QoS / rate-limit** | ✅ | Prioritize interactive/corporate traffic (work laptop on the shared office drop); rate-limit bulk backup so nightly restic runs don't starve the work uplink during business hours |
 | **Port mirroring** | ⏸️ future | Observability (Zeek/Suricata/ntopng on Lenovo M910q Homelab 2nd NIC) — deferred; would need ~40 PLN USB GbE NIC. If enabled later, restrict sources to homelab ports (2–4) to avoid capturing corporate work-dock traffic |
 | **IGMP snooping** | ✅ | Keeps multicast (mDNS/Avahi, IPTV if any) off unrelated ports |
-| **Loop prevention** | ✅ | Protects the wired fabric when cable plant grows |
+| **Loop prevention** | ❌ (N/A) | Not available on the V1 firmware (runbook 23 §6); keep the cable plant loop-free by hand |
 | **Cable diagnostics** | 🔧 on-demand | Quick port/link troubleshooting |
 | **Static LAG** | ❌ | Single-NIC devices; not applicable |
 | **VLANs** | ❌ (disabled) | Option B deferred — mesh can't trunk |
