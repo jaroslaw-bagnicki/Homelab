@@ -30,7 +30,7 @@ Storage-only node; primary consumer is the Longhorn/k3s backup target on the M91
 | **ZFS?** | No — **mdadm RAID1** |
 | Boot device | **Goodram C40 120 GB SSD on ICH9 SATA #5** (Option D — confirmed) |
 | Data pool | **mdadm RAID1**: `md0` = 2× 500 GB Hitachis; `md1` = 2× 250 GB |
-| Bulk volume | **1 TB WD10EZEX — single-disk XFS** on ICH9 #6 |
+| Bulk volume | **1 TB WD10EZEX — unplugged for now**; content review during OMV setup, role TBD |
 | Filesystem | **XFS on `md0`** (primary), **ext4 on `md1`** |
 | SATA mode | **AHCI**, ICH9R RAID firmware disabled |
 | Dell SAS 6/iR | **Not used** (mdadm needs raw disks); may be removed to save power |
@@ -62,7 +62,7 @@ Runbook: [`21-ml110-nas-inventory.md`](../runbooks/21-ml110-nas-inventory.md)
 1. Flash OMV 8.x ISO to a boot USB (reuse YUMI) and install to the **Goodram 120 GB SSD**.
 2. BIOS: SATA → AHCI, ICH9R RAID disabled, boot from the SSD.
 3. `mdadm` RAID1 pairs → `md0` (2× 500 GB) + `md1` (2× 250 GB); XFS/ext4.
-4. 1 TB WD10EZEX → single-disk XFS bulk volume.
+4. Review the 1 TB WD10EZEX content (plug in during OMV setup), then decide its role (bulk volume vs offline).
 5. NFS `/export/backups` + SMB `/shared`; static IP `192.168.2.210`.
 6. Verify NFS from the M910q (`showmount -e`); point Longhorn at it.
 7. Repo: runbook 22 (`docs/runbooks/22-ml110-omv-setup.md`) + idea → ADR 23.

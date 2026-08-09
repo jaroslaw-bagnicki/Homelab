@@ -4,7 +4,7 @@
 > [`21-ml110-nas-inventory.md`](../runbooks/21-ml110-nas-inventory.md).
 > Commit this file to the worktree — it's the single source of truth for the OMV install plan.
 
-**Status**: 🧠 Idea (Phase 0 — inventory complete; **no ZFS — mdadm RAID1 + OMV OS on Goodram 120 GB SSD (Option D, confirmed) + 1 TB bulk**; SAS 6/iR RAID layout capture still pending) | **Idea**: [03 — Homelab NAS on ML110](03-nas-backup-target-ml110.md) | **Worktree**: `feat/nas-ml110-omv-setup`
+**Status**: 🧠 Idea (Phase 0 — inventory complete; **no ZFS — mdadm RAID1 + OMV OS on Goodram 120 GB SSD (Option D, confirmed)**; 1 TB unplugged pending content review; SAS 6/iR RAID layout capture still pending) | **Idea**: [03 — Homelab NAS on ML110](03-nas-backup-target-ml110.md) | **Worktree**: `feat/nas-ml110-omv-setup`
 
 ---
 
@@ -68,7 +68,7 @@
 | 5 | `/dev/sdc` | WDC WD2500AAKX-75U6AA0 | `WD-WCC2F0157761` | 250 GB | 7200 | ✅ **PASSED** | onboard ICH9R | `md1` |
 | 6 | `/dev/sdd` | **GB0250EAFYK** | `WCAT1F035986` | 250 GB | 7200 | ✅ **PASSED** | onboard ICH9R | `md1` mirror |
 | 7 | `/dev/sdf` | **Goodram C40 120 GB** (SSD) | `1C9C074614D500572350` | **120 GB** | SSD | ✅ **PASSED** — 13,860 hrs, 0 reallocated | onboard ICH9 | **OMV OS (Option D confirmed)** |
-| 8 | `/dev/sde` | **WDC WD10EZEX-00BN5A0** (spare) | `WD-WCC3F7AKKXUT` | **1.0 TB** | 7200 | ✅ **PASSED** | onboard ICH9 | **XFS bulk (Option D)** |
+| 8 | — (unplugged) | **WDC WD10EZEX-00BN5A0** (spare) | `WD-WCC3F7AKKXUT` | **1.0 TB** | 7200 | ✅ **PASSED** | onboard ICH9 | **unplugged — content review during OMV setup** |
 
 **Power requirements (from labels):**
 - Hitachi Travelstar 20 GB: `5V 1.0A`
@@ -82,7 +82,7 @@
 
 > **Note on device names:** `/dev/sdX` names are **transient** — they depend on which SATA port each drive is plugged into during a given scan batch. The **serial number is the stable identifier** for building the array. Batch 1 = 4× 3.5" drives; Batch 2 = 2× 2.5" 20 GB drives + spare 1 TB.
 
-**⚠ Label vs SMART discrepancies (2026-08-08):**
+**⚠️ Label vs SMART discrepancies (2026-08-08):**
 - The two 500 GB Hitachis label as `HDS721050CLA662` but SMART reports **`HDS721050CLA660`** — the `662` is the HP OEM variant number (P/N `647466-001`); same drive family. Go by SMART model.
 - The drive labeled **WD RE3 WD2502ABYS** actually reports as **`GB0250EAFYK`** (serial `WCAT1F035986`) — this is likely a relabeled/HP-rebadged drive, **not** the WD RE3 stated on the label. Treat the SMART identity as authoritative.
 - The Fujitsu 20 GB labels as `MHV2020BH` but SMART reports **`MHW2020BH`** — close family; go by SMART.
@@ -91,13 +91,13 @@
 **Drive bay / connector notes**:
 - 3.5" bays: 4× occupied by Hitachi 500 GB (×2), WD Caviar Blue 250 GB, "WD RE3" (= GB0250EAFYK) 250 GB
 - 2.5" bays: 2× occupied by Hitachi Travelstar 20 GB, Fujitsu 20 GB — **both detached** (2026-08-09)
-- **+1 spare 3.5"**: WDC WD10EZEX 1 TB (not originally mounted) — now connected
+- **+1 spare 3.5"**: WDC WD10EZEX 1 TB — **unplugged (2026-08-09)**; content to be reviewed during OMV setup, then left out
 - **+1 SSD**: Goodram C40 120 GB (2.5" SATA) — connected, **health confirmed** (SMART PASSED)
 - **OS disk:** Option D confirmed — **Goodram C40 120 GB SSD** as OMV OS. The 20 GB Fujitsu selection (Option B) is **superseded**; both 20 GB drives are cold spares.
-- **Cabling plan (6 onboard SATA cables, current state):**
+- **Cabling plan (onboard SATA cables, current state):**
   - ICH9R ports #1–#4 → the 4× 3.5" data drives (mdadm RAID1 pairs)
   - ICH9 port #5 → **Goodram C40 120 GB SSD** (OMV OS, Option D)
-  - ICH9 port #6 → **1 TB WD10EZEX** (XFS bulk, Option D)
+  - ICH9 port #6 → **free** (1 TB WD10EZEX unplugged for now)
   - Both 2.5" 20 GB drives → detached, cold spares
 - **Visibility resolved** — the earlier "no disks" was because they were physically detached. Attached on the onboard ICH9R SATA ports, drives enumerate fine as `/dev/sdX` in IDE mode. No SAS 6/iR involvement needed for scanning.
 
@@ -165,7 +165,7 @@ Confirmed from SystemRescue `lspci`:
 | RAID mode | **mdadm software RAID** on onboard ICH9R SATA, set to **AHCI** in BIOS | No hardware RAID dependency; Dell SAS 6/iR unused (or physically removed — saves ~10–15 W) |
 | OMV install method | Official ISO | BIOS boot → OMV 8.x ISO |
 | FreeNAS data handling | Wipe | No ZFS pools; existing array is regular RAID; no data preservation expected |
-| 1 TB spare (WD10EZEX) | **XFS single-disk bulk volume on ICH9 #6** (Option D) | Now connected — adds ~1 TB bulk storage for non-critical backups |
+| 1 TB spare (WD10EZEX) | **Unplugged for now** — content review during OMV setup, then left out | Not needed yet; decide bulk volume role later |
 
 ### Alternative — Option A (rejected)
 
@@ -197,16 +197,18 @@ and using the **5th SATA cable for the 1 TB spare** as a single-disk XFS volume.
 5. ✅ **LO100 NOT available** — expansion-card slot empty, management RJ45 fused with a metal plate → no out-of-band mgmt; direct console only.
 6. ✅ **All drives PASSED SMART health** (2026-08-08, Batches 1+2) — 4× 3.5" + 2× 2.5" 20 GB + spare 1 TB, serials recorded above.
 7. ✅ Disk visibility resolved — the drives were simply detached; they enumerate fine on the onboard ICH9R SATA.
-8. ⚠ **Label mismatch**: the "WD RE3" drive actually reports as `GB0250EAFYK`; Fujitsu label `MHV2020BH` reports as `MHW2020BH`.
+8. ⚠️ **Label mismatch**: the "WD RE3" drive actually reports as `GB0250EAFYK`; Fujitsu label `MHV2020BH` reports as `MHW2020BH`.
 9. ✅ **Spare 1 TB WD10EZEX** discovered and healthy.
-10. ✅ **Layout decision made**: no ZFS → mdadm RAID1; both 2.5" 20 GB drives are **cold spares**; the 1 TB is a single-disk XFS bulk volume.
+10. ✅ **Layout decision made**: no ZFS → mdadm RAID1; both 2.5" 20 GB drives are **cold spares**.
 11. ✅ **OS disk — Option D confirmed**: **Goodram C40 120 GB SSD** (`1C9C074614D500572350`) — SMART PASSED, 13,860 hrs, 0 reallocated; supersedes the Fujitsu 20 GB (Option B).
 12. ✅ Both 2.5" 20 GB drives are **detached cold spares** (SSD boot adopted in Option D).
+13. ✅ **1 TB WD10EZEX unplugged** (2026-08-09) — not used for now; content to be reviewed during OMV setup.
 
 **Open questions still requiring live inspection:**
 1. Current RAID layout from the SAS 6/iR controller utility (RAID level, member disks, virtual disk size) — capture before unplugging it.
 2. Confirm FreeNAS OS is unbootable and no data needs preservation.
 3. Whether to physically remove the Dell SAS 6/iR (saves ~10–15 W) or leave seated but disconnected.
+4. **1 TB content review** — plug it in during OMV setup, inspect existing partitions/files, then decide its final role (bulk volume vs offline).
 
 ---
 
