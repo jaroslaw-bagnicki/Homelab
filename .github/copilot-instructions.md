@@ -31,7 +31,7 @@
 - **When to create an issue**: features, bugs, or ideas that span more than one session
 - **When NOT to create an issue**: one-shot `(docs)` or `(chore)` commits, ongoing research (use `research/` docs for that)
 - **When creating an issue**: use a clear title, add relevant labels, and include a brief **Why / What** description
-- **Reference issues in commits**: use `#NNN` in commit messages to link them automatically — use `Closes #NNN` to auto-close on merge commit
+- **Reference issues**: plain `#NNN` mentions link a commit/PR to an issue but do **not** auto-close it. To auto-close on merge, add `Closes #NNN` to the **PR description** or to a commit that is merged into `main` (GitHub evaluates the keyword at merge time; editing a merged PR afterwards won't close the issue)
 - **Labels**: `enhancement` (new feature), `bug` (broken), `chore` (maintenance/tooling), `research` (investigation)
 - **README progress table = public status board** — shows at a glance what's done (dated rows) and what's next (undated rows). Only items that are **completed** or **actively being worked on** belong here.
 - **Issues = the backlog** — capture ideas, bugs, and multi-session work that isn't in the README table yet. An issue becomes a README "What's Next" row when you're ready to start it.
