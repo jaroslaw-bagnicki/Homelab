@@ -100,6 +100,7 @@ Merges always go through a pull request — the agent never merges to `main` loc
 1. In the worktree: `git fetch origin && git rebase origin/main` — resolve any conflicts
 2. `git push -u origin <branch>` — push immediately
 3. Open a PR via GitHub MCP tools (`create_pull_request`) only when asked by the user
+   - **PR title**: no `(type)` prefix (e.g. not `(feat) …`) — use labels to convey the type. The `(type)` prefix convention applies to **commit messages only**.
 4. **Stop.** The human reviews and merges via the GitHub UI — the agent never merges the PR itself
 5. After the PR is merged, clean up in the primary checkout: `git pull --ff-only origin main`, then `git worktree remove ../Homelab-<short-topic>` and `git branch -d <branch>`
 
@@ -167,6 +168,7 @@ When asked to process PR review remarks, follow this human-in-the-loop flow:
 - **Surface findings as concise summaries** — short status with file paths and commit refs; not essays
 - **Discover skills via the skill tool** — repo skills live under `.opencode/skills/` (symlinked to `.github/skills/`); load a skill only when its description matches the current task
 - **Do not create issues proactively** — issue creation is reserved for multi-session work the user explicitly asks to track; for one-shot fixes or docs changes, a commit is enough
+- **Issue titles**: no `(type)` prefix (e.g. not `(feat) …`) — use labels to convey the type. The `(type)` prefix convention applies to **commit messages only**.
 - **Never merge a PR, locally or remotely** — opening a PR is the final step of the agent's work; the human reviews and merges via the GitHub UI. This includes `merge_pull_request` calls, `git merge`, and any equivalent. Do not assume implicit merge permission even if the work appears "done". The same rule applies to PRs the agent authored across multiple sessions or that "look ready".
 
 ## Plan → Build Transition
