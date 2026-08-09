@@ -30,6 +30,7 @@
 | RAM | 8 GB DDR3L | **4 GB** (2× 2 GiB DDR2-800) | Q956 wins; 4 GB fine for mdadm |
 | SATA topology | 2× native SATA + M.2 | ICH9R 4-port + ICH9 2-port + **Dell SAS 6/iR (RAID-only)** | ML110 more complex |
 | Boot device | needs USB or SSD M2 disk | **Goodram 120 GB SSD** — 6× capacity of the 20 GB drives | Boot device decided |
+| Power consumption (est.) | ~20 W idle / ~40 W load (i5-6500T 35 W TDP, 2× 2.5" HDDs) | **~80 W idle / ~130 W load** (E2160 65 W TDP, 4× 3.5" HDDs) | Q956 wins — ~€40–45/yr vs ~€150–200/yr |
 
 **Decision**: ML110 is owned, has 6 drives, and needs no purchase. Tower footprint is acceptable for a machine near the router/switch. **Proceed with ML110.**
 
@@ -137,6 +138,41 @@ Verified with `smartctl -a` under SystemRescue before committing it as the OMV O
 **Option C (considered, superseded):** mirror the two 2.5" 20 GB drives on the Dell SAS 6/iR as the OS volume. Rationale at the time: the boot disk is the highest-wear component, and OS RAID1 gave redundancy while freeing both ICH9 ports so the 1 TB spare could come online. Drawbacks that pushed it out: the 2009 controller becomes a boot dependency (death = no boot), no per-disk SMART behind the array, and the battery-less write cache risk — acceptable for a disposable OS, but still added hardware dependency for zero OS-capacity gain.
 
 **Chosen: Option D** — a spare **Goodram C40 120 GB SSD** appeared, giving a single reliable boot disk with 6× the OS capacity of the 20 GB drives, no hardware RAID anywhere, and freeing both 2.5" 20 GB drives as cold spares. The 1 TB spare is **unplugged for now** — its content will be reviewed during OMV setup and its role (bulk volume vs offline) decided then. **SSD health confirmed (SMART PASSED).**
+
+---
+
+## Power Consumption & Optimization
+
+Estimated draw for the **final build state** (SAS 6/iR removed — saves ~10–15 W, 1 TB spare unplugged, 1× SSD + 4× 3.5" HDDs active). Component figures are datasheet estimates; confirm the idle baseline once with a wattmeter (~30 PLN).
+
+| Component | Idle | Load |
+|---|---|---|
+| ML110 G5 platform (board, chipset, fans, PSU) | ~30 W | ~35 W |
+| Intel Pentium Dual E2160 (65 W TDP) | ~12 W | ~35 W |
+| 4 GB DDR2-800 ECC | ~5 W | ~5 W |
+| Goodram C40 120 GB SSD | ~1.5 W | ~3 W |
+| 4× 3.5" 7200 rpm HDDs | ~20 W | ~32 W |
+| **DC total** | **~69 W** | **~110 W** |
+| **AC draw @ ~85% PSU efficiency** | **~80 W** | **~130 W** |
+
+### Annual cost
+
+| Scenario | Avg AC | Energy/yr | Cost/yr (0.90–1.20 PLN/kWh) |
+|---|---|---|---|
+| 24/7, drives spinning | ~85 W | ~745 kWh | ~670–890 PLN (~€150–200) |
+| 24/7, drives spun down | ~65 W | ~570 kWh | ~515–685 PLN (~€115–150) |
+| Scheduled nightly window (~8 h) | ~85 W | ~250 kWh | ~225–300 PLN (~€50–65) |
+
+At ~€150–200/yr this is the most power-hungry box in the homelab — the M910q host idles at ~8 W (research 03), the X1 Lite LLM server is TBD. Worth optimizing.
+
+### Optimization plan
+
+1. **Measure first** — one wattmeter reading to confirm the ~80 W idle baseline before investing in mitigations.
+2. **HDD spindown (free, Phase 1)** — OMV idle spindown (`hdparm -S`, conservative 20–30 min timeout) for the 4 HDDs; the SSD stays up. The NAS is a backup target touched only during backup windows (nightly restic, Longhorn snapshots per ADR 22), so drives can stay parked most of the day. Saves ~20 W → ~€35–50/yr; a long timeout keeps spin-up cycles rare, avoiding extra disk wear.
+3. **Scheduled power, only if needed** — boot the box only for the backup window (RTC wake / WoL, e.g. 23:00–06:00). Cuts cost to roughly a third (~€50–65/yr) but drops always-on NFS — fine for batch restic/Longhorn, not for interactive access.
+4. **Revisit the Q956 as a power move** — per the comparison row above the Q956 runs at ~1/4 the cost (~€40–45/yr, ~€110–160/yr saved). Its ~195 PLN acquisition + 2× 2.5" drives + caddy pays back in under a year on power alone. Keep the ML110 only if the 4× 3.5" bays or the spare 1 TB matter.
+
+**Recommendation:** apply Phase 1 (spindown) after a wattmeter baseline; escalate to scheduled power or the Q956 only if the measured saving stays below ~€40/yr.
 
 ---
 
