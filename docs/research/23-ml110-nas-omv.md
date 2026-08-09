@@ -77,6 +77,24 @@
 
 **Label vs SMART discrepancies:** the 500 GB Hitachis label `CLA662` but report `CLA660` (HP OEM variant); the "WD RE3" drive actually reports as `GB0250EAFYK` (rebadged); the Fujitsu label `MHV2020BH` reports as `MHW2020BH`. **SMART identity is authoritative.**
 
+### SSD health check (Goodram C40, 2026-08-09)
+
+Verified with `smartctl -a` under SystemRescue before committing it as the OMV OS disk:
+
+| Attribute | Value | Verdict |
+|---|---|---|
+| SMART overall-health | **PASSED** | ✅ |
+| Reallocated_Event_Count | **0** | ✅ no failed blocks |
+| Raw_Read_Error_Rate | 0 | ✅ |
+| Unknown attrs 170/173/218 | normalized **100** | ✅ fresh (SMI/Phison vendor attrs) |
+| Power_On_Hours | 13,860 | ⚠ high-ish for a consumer SSD, not a health issue |
+| Power_Cycle_Count | 4,387 | ⚠ high — frequent power-cycling in prior life, no health impact |
+| Total_LBAs_Written | ~10.5 M | ✅ low — plenty of endurance left |
+| SMART Error Log | empty | ✅ |
+| Self-test log | none run | run a short self-test at install time |
+
+**Conclusion:** healthy — confirmed as the OMV OS disk (Option D). Note the drive currently carries an old Ubuntu LVM (`ubuntu--vg`), which the OMV install will wipe.
+
 ---
 
 ## Software Choice
