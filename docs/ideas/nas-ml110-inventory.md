@@ -1,7 +1,7 @@
 # ML110 NAS — Hardware Inventory (Fill In)
 
 > **Phase 0 output for issue #54.** Fill in after running all steps in
-> [`docs/runbooks/21-ml110-nas-inventory.md`](docs/runbooks/21-ml110-nas-inventory.md).
+> [`21-ml110-nas-inventory.md`](../runbooks/21-ml110-nas-inventory.md).
 > Commit this file to the worktree — it's the single source of truth for the OMV install plan.
 
 **Status**: 🧠 Idea (Phase 0 — inventory complete; **no ZFS — mdadm RAID1 + OMV on 1.8" OS disk** decided; RAID layout capture from SAS 6/iR still pending) | **Idea**: [03 — Homelab NAS on ML110](03-nas-backup-target-ml110.md) | **Worktree**: `feat/nas-ml110-omv-setup`

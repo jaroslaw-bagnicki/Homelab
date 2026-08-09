@@ -106,8 +106,8 @@ sysctl smbios.bios.release
 ### 2a. Memory test (Memtest86+)
 
 The machine is an older ML110 that sat idle for a long time, and its **4 GB RAM is
-the borderline minimum for ZFS** — a marginal stick can silently corrupt a future
-pool. Run a memory smoke test **before** deciding the pool layout.
+fine for OMV + mdadm** — but a memory smoke test is still worthwhile before a 24/7
+NAS role. Run it before deciding the pool layout.
 
 1. From the SystemRescue boot menu, select **Memtest86+** (not the default entry).
 2. Let it run **at least one full pass** (~30–60 min on 4 GB; a first-pass smoke
@@ -116,8 +116,8 @@ pool. Run a memory smoke test **before** deciding the pool layout.
 
 | Memtest86+ result | Implication |
 |---|---|
-| PASS (≥1 full pass) | RAM OK — proceed with ZFS or mdadm |
-| FAIL / any errors | Fix/replace the faulty module first; ZFS on bad RAM is a data-loss risk |
+| PASS (≥1 full pass) | RAM OK — proceed with mdadm |
+| FAIL / any errors | Fix/replace the faulty module first; bad RAM risks data integrity |
 
 > If Memtest86+ is unavailable, a Linux `stress-ng --mem` loop is a weak alternative
 > but does not test all address lines — prefer the real memory test.
@@ -280,10 +280,9 @@ pciconf -l -v
 On Linux this would be `lspci | grep -i sata` — note the equivalent `pciconf`
 output and map each disk (`/dev/daX` from §4) to the controller it hangs off.
 
-> **For OMV**: ZFS prefers **direct disk access** (AHCI / HBA, not RAID card).
+> **For OMV (no ZFS)**: mdadm wants **direct disk access** (AHCI / HBA, not RAID card).
 > During the OMV install, set BIOS SATA to **AHCI** mode and disable the B110i
-> RAID metadata so ZFS sees raw disks. This is the same recommendation the
-> FreeNAS community gives for the ML110 G6/G7 (see [truenas.com HP ML110 G6 thread](https://www.truenas.com/community/threads/hp-ml110-g6-and-freenas.5350/)).
+> RAID metadata so mdadm sees raw disks.
 
 ---
 
@@ -295,7 +294,7 @@ or use the iLO virtual console). Capture:
 | Setting | Current value | Target for OMV |
 |---|---|---|
 | SATA Controller Mode | `RAID` / `AHCI` / `IDE` | `AHCI` |
-| B110i Smart Array | `Enabled` / `Disabled` | `Disabled` (ZFS needs raw disks) |
+| B110i Smart Array | `Enabled` / `Disabled` | `Disabled` (mdadm needs raw disks) |
 | Boot Mode | `BIOS` / `UEFI` | `BIOS` (OMV 8.x ISO is BIOS-only) |
 | Secure Boot | `On` / `Off` | `Off` |
 | Network Boot | `PXE` enabled? | note for PXE-free install |
@@ -354,4 +353,4 @@ That file is the single source of truth for the OMV install plan.
 - [FreeNAS → ZFS-on-Linux import caveats (OMV forum)](https://forum.openmediavault.org/index.php?thread/7633-howto-instal-zfs-plugin-use-zfs-on-omv/)
 - Issue [#54](https://github.com/jaroslaw-bagnicki/Homelab/issues/54) — parent issue
 - [Idea 03 — Homelab NAS on ML110 (OMV)](../ideas/03-nas-backup-target-ml110.md) — ML110 adaptation of the NAS concept
-- [Idea 01 — Homelab NAS](01-nas-backup-target.md) — original Q956 concept (historical)
+- [Idea 01 — Homelab NAS](../ideas/01-nas-backup-target.md) — original Q956 concept (historical)

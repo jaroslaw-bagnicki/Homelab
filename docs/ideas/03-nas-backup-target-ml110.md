@@ -6,14 +6,14 @@
 > wiped; this is a fresh OpenMediaVault install.
 >
 > The full hardware/software trade-off analysis lives in
-> [**Research 23 — ML110 NAS (OMV)**](docs/research/23-ml110-nas-omv.md);
+> [**Research 23 — ML110 NAS (OMV)**](../research/23-ml110-nas-omv.md);
 > this doc is the implementation plan.
 
-**Status**: 📋 Planned
-**Date**: 2026-08-08
-**Idea**: 01 — [Homelab NAS](01-nas-backup-target.md) (historical V1)
-**Research**: [23 — ML110 NAS (OMV)](docs/research/23-ml110-nas-omv.md)
-**Inventory**: [nas-ml110-inventory.md](nas-ml110-inventory.md) (single source of truth for hardware)
+**Status**: 📋 Planned  
+**Date**: 2026-08-08  
+**Idea**: 01 — [Homelab NAS](01-nas-backup-target.md) (historical V1)  
+**Research**: [23 — ML110 NAS (OMV)](../research/23-ml110-nas-omv.md)  
+**Inventory**: [nas-ml110-inventory.md](nas-ml110-inventory.md) (single source of truth for hardware)  
 **Issue**: [#54 — Set up Homelab NAS on ML110](https://github.com/jaroslaw-bagnicki/Homelab/issues/54)
 
 ---
@@ -42,7 +42,7 @@ Storage-only node; primary consumer is the Longhorn/k3s backup target on the M91
 
 ## Phase 0 — Inventory & State Audit (Prerequisite)
 
-Runbook: [`docs/runbooks/21-ml110-nas-inventory.md`](docs/runbooks/21-ml110-nas-inventory.md)
+Runbook: [`21-ml110-nas-inventory.md`](../runbooks/21-ml110-nas-inventory.md)
 
 - [x] Identify ML110 generation — **G5** (DMI)
 - [x] Capture disk models/sizes + SMART health — **all drives PASSED** (incl. spare 1 TB)
@@ -77,10 +77,10 @@ verified. Then graduates to an **ADR** (e.g. ADR 23 — NAS on ML110).
 
 ## References
 
-- [Research 23 — ML110 NAS (OMV)](docs/research/23-ml110-nas-omv.md) — hardware/software trade-off analysis
+- [Research 23 — ML110 NAS (OMV)](../research/23-ml110-nas-omv.md) — hardware/software trade-off analysis
 - [Idea 01 — Homelab NAS](01-nas-backup-target.md) — original Q956 scoping (V1, unchanged)
-- [Runbook 21 — ML110 inventory](docs/runbooks/21-ml110-nas-inventory.md)
+- [Runbook 21 — ML110 inventory](../runbooks/21-ml110-nas-inventory.md)
 - Issue [#54](https://github.com/jaroslaw-bagnicki/Homelab/issues/54)
-- [ADR 02 — Backup Strategy](docs/decisions/02-backup-strategy-restic-blob.md)
-- [ADR 22 — k3s + Azure Arc](docs/decisions/22-k3s-arc-homelab.md) — NFS backup target for Longhorn
-- [ADR 01 — Hardware Selection](docs/decisions/01-hardware-selection-m910q.md) — the M910q homelab server
+- [ADR 02 — Backup Strategy](../decisions/02-backup-strategy-restic-blob.md)
+- [ADR 22 — k3s + Azure Arc](../decisions/22-k3s-arc-homelab.md) — NFS backup target for Longhorn
+- [ADR 01 — Hardware Selection](../decisions/01-hardware-selection-m910q.md) — the M910q homelab server
