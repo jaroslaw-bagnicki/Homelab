@@ -38,6 +38,9 @@
 > - Static IP applied: `192.168.2.210`/24, gw `192.168.2.1`, DNS `192.168.2.1`, on `enp14s0` (§4c).
 > - HTTPS hardening: web UI is HTTPS-only — SSL/TLS enabled, self-signed cert `/C=PL/CN=192.168.2.210`,
 >   Force SSL/TLS (HTTP → 301 to HTTPS) (§4d).
+> - Arrays + filesystems created (§5): `md0` (2× 500 GB Hitachis → XFS) and `md1` (2× 250 GB → ext4),
+>   mounted by OMV under `/srv/dev-disk-by-uuid-*`. SSH root access verified (`ssh root@192.168.2.210`).
+>   Note: fresh `md0` reports ~9 GB used — verified as XFS metadata (`du` = 0 B, see §5 Filesystems gotcha).
 
 ---
 
@@ -181,6 +184,13 @@ Per user request the web UI is HTTPS-only. `System | Workbench | Settings`:
 
 Reconnect the **4 data drives** (#3–#6) to the onboard ICH9R SATA ports (§Prerequisites).
 
+> **What OMV's RAID page actually is.** OMV has no RAID engine of its own — `Storage | RAID`
+> is a GUI wrapper around **`mdadm`**. Creating an array in the UI runs `mdadm --create`,
+> producing a standard Linux `/dev/md*` device; OMV then maintains `/etc/mdadm/mdadm.conf`
+> so arrays auto-assemble at boot, and owns the mount management for the filesystems you
+> build on top (XFS/ext4) via `Storage | File Systems`. The arrays are genuine Linux software
+> RAID — portable to any Linux box, per-disk SMART intact. (See [research 23](../research/23-ml110-nas-omv.md).)
+
 OMV manages mdadm in the web UI (`Storage | RAID`). It works best with **unpartitioned raw
 block devices** — wipe the disks first if they carry old signatures:
 
@@ -203,6 +213,15 @@ block devices** — wipe the disks first if they carry old signatures:
 |---|---|---|
 | `md0` (500 GB usable) | **XFS** | `/srv/dev-disk-by-uuid-*` (auto) |
 | `md1` (250 GB usable) | **ext4** | `/srv/dev-disk-by-uuid-*` (auto) |
+
+> **Gotcha — a fresh XFS shows ~9 GB used immediately.** `mkfs.xfs` with the modern feature set
+> OMV enables (`rmapbt=1`, `reflink=1`, `bigtime=1`, `nrext64=1`) pre-builds its reverse-mapping
+> and refcount B-trees across the whole volume, so a brand-new ~466 GB array reports **~9 GB used
+> (~2%)** with an empty mount point. This is **filesystem metadata, not data** — it does not grow
+> with normal writes and is harmless. Verify with `du -sh /srv/dev-disk-by-uuid-*` (shows ~0 while
+> `df` shows the used bytes). Compare: fresh ext4 (`md1`) reports only ~2 MiB used — ext4 doesn't
+> pre-build that metadata. Do not reclaim it by re-creating the FS without `reflink`/`rmapbt`; the
+> 2% cost isn't worth touching a working RAID array.
 
 OMV integrates the filesystems into its DB (no manual `/etc/fstab` edits — OMV owns mount
 management). Shared folders / exports are **Phase 2** (issue #62) — not created here.
