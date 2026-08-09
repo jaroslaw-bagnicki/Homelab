@@ -16,15 +16,28 @@
 
 ## Status
 
-- [ ] BIOS configured (AHCI, RAID firmware off, SSD boot)
-- [ ] OMV 8.x installed on the Goodram SSD
+- [x] BIOS configured (AHCI, RAID firmware off, SSD boot)
+- [x] OMV 8.x installed on the Goodram SSD — **OMV 8.3.1-2**, hostname `omv`, domain `cloud5.ovh`
 - [ ] NTP + timezone set
 - [ ] `md0` (2× 500 GB → XFS) online
 - [ ] `md1` (2× 250 GB → ext4) online
 - [ ] Arrays survive reboot
 - [ ] 1 TB spare content reviewed, role decided
 - [ ] Static IP `192.168.2.210` set and verified from the M910q
-- [ ] OMV web UI reachable at `http://192.168.2.210`
+- [ ] OMV web UI reachable at `https://192.168.2.210` (HTTPS-only, §4d)
+
+> **Execution log — 2026-08-09**
+> - BIOS done: `Advanced | Advanced Chipset Control | Serial ATA` → `Serial ATA: Enabled`,
+>   `Native Mode Operation: Serial ATA` (AHCI), `SATA RAID Enable: Disabled` (Phoenix labels — see §1).
+> - OMV 8.3.1-2 (Synchrony) installed on the Goodram C40. Hostname **`omv`**, domain **`cloud5.ovh`**
+>   (FQDN `omv.cloud5.ovh`). Data drives disconnected during install; partition target = Goodram only.
+> - Interface: live/default-route NIC is **`enp14s0`** (Broadcom BCM5722, matches SystemRescue naming). The
+>   install-time boot banner briefly showed `enp5s0` (PCI enumeration at first boot) — trust `enp14s0`.
+> - Network: `ip route` confirms the NAS is on the homelab net — DHCP `192.168.2.165`, gw `192.168.2.1`.
+>   The `192.168.178.15` on the banner was the install-time boot on a different (Fritz!Box-style) network — stale.
+> - Static IP applied: `192.168.2.210`/24, gw `192.168.2.1`, DNS `192.168.2.1`, on `enp14s0` (§4c).
+> - HTTPS hardening: web UI is HTTPS-only — SSL/TLS enabled, self-signed cert `/C=PL/CN=192.168.2.210`,
+>   Force SSL/TLS (HTTP → 301 to HTTPS) (§4d).
 
 ---
 
@@ -64,10 +77,16 @@ from a **keyboard + mouse + monitor** attached directly to the box.
 
 Enter BIOS during POST (typically `F8`/`F9`/`Del` on ML110 models) and set:
 
+> **HP Phoenix label mapping (verified 2026-08-09).** The SATA options live under
+> `Advanced | Advanced Chipset Control | Serial ATA` and use HP-specific names:
+> `Serial ATA` (controller on/off), `Native Mode Operation` (mode selector — **`Serial ATA`** = AHCI,
+> `Auto` = legacy IDE), `SATA RAID Enable` (ICH9R RAID firmware).
+
 | Setting | Current | Target |
 |---|---|---|
-| SATA Controller Mode | `IDE` (ICH9R `00:1f.2` + ICH9 `00:1f.5`) | **`AHCI`** |
-| ICH9R RAID firmware | enabled | **`Disabled`** (raw disks to mdadm) |
+| Serial ATA | enabled | **`Enabled`** |
+| Native Mode Operation (= SATA Controller Mode → AHCI) | `IDE` (ICH9R `00:1f.2` + ICH9 `00:1f.5`) | **`Serial ATA`** |
+| SATA RAID Enable (= ICH9R RAID firmware) | enabled | **`Disabled`** (raw disks to mdadm) |
 | Boot Mode | BIOS | **`BIOS`** (OMV ISO is BIOS-only) |
 | Secure Boot | N/A (G5) | `Off` |
 | Boot order | USB first (temporary) | **Goodram C40 SSD first** (after install) |
@@ -130,6 +149,31 @@ Per [research 24 — network topology](../research/24-network-topology-design.md
 - `Network | Interfaces` → edit `enp14s0` (Broadcom BCM5722, MAC `78:e7:d1:53:fb:87`).
 - Method: **Static** — IP `192.168.2.210`, netmask `255.255.255.0`, gateway `192.168.2.1`.
 - Apply. Verify from the M910q (§6). Update the switch port mapping if needed (runbook 23).
+- **Web UI:** [`Network | Interfaces`](https://192.168.2.210/#/network/interfaces)
+
+> **Network status (2026-08-09, resolved).** `ip route` on the NAS confirms it is on the homelab net:
+> DHCP `192.168.2.165`, gw `192.168.2.1`, dev `enp14s0`. The `192.168.178.15` on the first-boot banner was
+> a stale/install-time lease from a different network (Fritz!Box-style `178.0/24`); it does not reflect
+> the current attachment. Safe to apply the static `192.168.2.210` now.
+
+### 4d. HTTPS-only web UI (deviation from plan — added 2026-08-09)
+
+Per user request the web UI is HTTPS-only. `System | Workbench | Settings`:
+
+| Setting | Value |
+|---|---|
+| SSL/TLS enabled | ✅ |
+| Certificate | self-signed `/C=PL/CN=192.168.2.210` (created under `System \| Certificates \| SSL` → Create) |
+| HTTPS port | `443` |
+| Force SSL/TLS | ✅ — HTTP on port 80 only 301-redirects to HTTPS |
+
+- **Web UI:** [`System | Certificates | SSL`](https://192.168.2.210/#/system/certificate/ssl) (create/import cert) · [`System | Workbench | Settings`](https://192.168.2.210/#/system/workbench/settings) (HTTPS/SSL/TLS config)
+- Access the UI at **`https://192.168.2.210`**; accept the self-signed cert on first visit (one-time per
+  browser). Cert valid 1 year — renew under `System | Certificates` (or re-create).
+- OMV 8 rejects HTTP port `0` (valid range 1–65535), so the HTTP listener can't be fully removed via
+  the UI; `Force SSL/TLS` achieves "no plaintext served" via redirect.
+- When `omv.cloud5.ovh` is exposed via the Cloudflare Tunnel (Phase 2), TLS terminates at the edge with
+  a proper cert; this self-signed cert only serves direct LAN access.
 
 ---
 
