@@ -177,7 +177,7 @@ Per user request the web UI is HTTPS-only. `System | Workbench | Settings`:
   browser). Cert valid 1 year — renew under `System | Certificates` (or re-create).
 - OMV 8 rejects HTTP port `0` (valid range 1–65535), so the HTTP listener can't be fully removed via
   the UI; `Force SSL/TLS` achieves "no plaintext served" via redirect.
-- When `omv.cloud5.ovh` is exposed via the Cloudflare Tunnel (Phase 2), TLS terminates at the edge with
+- When `omv.cloud5.ovh` is exposed via the Cloudflare Tunnel (Phase 2, [§9](#9-expose-the-omv-web-ui-via-cloudflare-tunnel-phase-2)), TLS terminates at the edge with
   a proper cert; this self-signed cert only serves direct LAN access.
 
 ---
@@ -319,6 +319,46 @@ subnet while Phase 1 finishes. Apply in a later phase (do not expose SSH publicl
 > **Rationale for deferring:** the NAS is reachable only on the LAN today, and the priority is
 > getting the arrays + exports stable first. Hardening lands together with the
 > Cloudflare-exposure step (Phase 2) — SSH is never exposed through the tunnel.
+
+---
+
+## 9. Expose the OMV Web UI via Cloudflare Tunnel (Phase 2)
+
+The NAS stays **storage-only** — no `cloudflared` runs on it (ADR 23). Public access reuses
+the existing `homelab-tunnel` on the M910q and routes through Caddy, the single routing layer
+(ADR 20). Future direction: a dedicated edge device per [idea 04](../ideas/04-edge-device-tunnel-caddy.md).
+
+1. **Add an `omv` public hostname** in the Cloudflare Zero Trust portal
+   (Networks → Tunnels → `homelab-tunnel` → **Public Hostname** → **Add a public hostname**):
+
+   | Field | Value |
+   |---|---|
+   | Subdomain | `omv` |
+   | Domain | `cloud5.ovh` |
+   | Type | `HTTP` |
+   | URL | `caddy:80` |
+
+   (Or rely on the existing wildcard `*.cloud5.ovh → http://caddy:80` — ADR 20 keeps the
+   tunnel as TLS-termination-only; all per-service routing lives in the Caddyfile.)
+
+2. **Add a Caddy site block** on the M910q (`/opt/docker/Caddyfile`):
+
+   ```Caddyfile
+   omv.cloud5.ovh {
+       reverse_proxy https://192.168.2.210 {
+           tls_insecure_skip_verify
+           header_up X-Forwarded-Proto https
+       }
+   }
+   ```
+
+   OMV serves HTTPS-only (§4d) with a self-signed cert, so Caddy proxies to the HTTPS origin
+   and skips origin verification (same HTTPS-origin caveat as ADR 19).
+
+3. **Reload Caddy** on the M910q: `docker compose restart caddy`.
+
+4. **Verify externally**: `https://omv.cloud5.ovh` loads the OMV login page (Cloudflare edge
+   TLS — no self-signed warning). SSH is never exposed through the tunnel (§8).
 
 ---
 
