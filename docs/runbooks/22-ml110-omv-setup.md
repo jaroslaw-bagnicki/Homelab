@@ -52,7 +52,7 @@ There is **no out-of-band management** on this ML110 G5: the LO100 expansion-car
 empty and the management RJ45 port is fused with a metal plate (research 23). All steps run
 from a **keyboard + mouse + monitor** attached directly to the box.
 
-### Hardware state (from inventory — `docs/ideas/nas-ml110-inventory.md`)
+### Hardware state (from research 23 — hardware inventory)
 
 | # | Drive | Serial | Role |
 |---|---|---|---|
@@ -268,7 +268,7 @@ ping 192.168.2.210            # static IP reachable
      volume (via OMV `Storage | File Systems`) or an `mdadm` member.
    - **Offline** — per research 23, the drive is **unplugged for now**; if the content is
      redundant, leave it disconnected and record the decision in the inventory.
-4. Record the outcome in `docs/ideas/nas-ml110-inventory.md` (open question #3).
+4. Record the outcome in [research 23](../research/23-ml110-nas-omv.md) (open question #3).
 
 ---
 
@@ -310,7 +310,6 @@ ping 192.168.2.210            # static IP reachable
 
 - [Research 23 — ML110 NAS (OMV)](../research/23-ml110-nas-omv.md) — hardware/software trade-off analysis
 - [Research 24 — network topology design](../research/24-network-topology-design.md) — static IP `192.168.2.210`
-- [Inventory — nas-ml110-inventory.md](../ideas/nas-ml110-inventory.md) — single source of truth for hardware
 - [Idea 03 — Homelab NAS on ML110](../ideas/03-nas-backup-target-ml110.md)
 - [ADR 23 — NAS on ML110](../decisions/23-nas-on-ml110.md)
 - [OMV 8.x — Installation via ISO](https://docs.openmediavault.org/en/8.x/installation/via_iso.html)
