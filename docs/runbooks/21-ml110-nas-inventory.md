@@ -16,10 +16,10 @@
 
 ## Status
 
-- [ ] Runbook complete (all commands verified on FreeBSD/FreeNAS syntax)
-- [ ] User has run all steps against the live ML110
-- [ ] `docs/ideas/03-nas-backup-target-ml110.md` updated with ML110 inventory findings
-- [ ] Issue #54 updated: Phase 0 complete
+- [x] Runbook executed against the live ML110 (SystemRescue + hardinfo2 + `smartctl`)
+- [x] Inventory captured — `docs/ideas/nas-ml110-inventory.md`
+- [x] Findings consolidated — `docs/research/23-ml110-nas-omv.md`
+- [x] Issue #54 updated: Phase 0 complete
 
 ---
 
@@ -126,11 +126,11 @@ NAS role. Run it before deciding the pool layout.
 
 ## 3. Current RAID / Storage Configuration Capture
 
-Since the existing array is **regular RAID** (not ZFS), capture the layout from
-the RAID controller utility before wiping. This determines which disks are grouped
-together and what the current virtual disk(s) look like.
+**No capture needed.** The Dell SAS 6/iR controller has been **removed** and the old
+FreeNAS array is not preserved (FreeNAS is wiped; no ZFS/array import). The historical
+procedure below is kept only as a record of the pre-wipe audit intent — do not run it.
 
-### If using the Dell SAS 6/iR
+### If using the Dell SAS 6/iR (historical)
 
 1. Boot the machine and watch for the SAS 6/iR POST message (typically `Ctrl+C` or `Ctrl+R`).
 2. Enter the RAID BIOS/utility.
@@ -140,12 +140,12 @@ together and what the current virtual disk(s) look like.
    - Member disks (by slot or SAS address)
    - Status (Optimal / Degraded / Failed)
 
-### If using the HP B110i Smart Array
+### If using the HP B110i Smart Array (historical)
 
 1. During POST, enter the B110i Option ROM (usually `F8`).
 2. Record logical drives, RAID levels, and member disks.
 
-### If FreeNAS happens to boot
+### If FreeNAS happens to boot (historical)
 
 You can still run the FreeBSD disk-discovery commands to correlate OS device names
 with physical slots, but the authoritative layout is the controller utility above.
@@ -333,15 +333,11 @@ That file is the single source of truth for the OMV install plan.
 
 ---
 
-## Decision Points Resolved by This Inventory
+## Decision Points
 
-| Question | Resolved by | If unclear |
-|---|---|---|
-| Which drives to stripe/raid | §3 (current RAID layout) + §4 (disk sizes) | assume mirror pairs across same-size disks |
-| ZFS vs mdadm RAID | §2 (RAM ≥4 GB?) + §4 (SMART health) | ZFS needs ≥4 GB RAM; mdadm if RAM is tight |
-| Boot device for OMV | §4 (all 6 disks = data?) + §1b (bay count) | use a USB 3.0 stick (32 GB) if no spare disk |
-| SATA mode | §6 (current RAID vs AHCI) | set to AHCI, disable B110i |
-| Controller wiring | §5 (B110i vs PCI card topology) | AHCI for both; ZFS sees all disks |
+Design decisions (RAID, filesystem, boot device, SATA mode) are recorded in
+[research 23 — ML110 NAS (OMV)](../research/23-ml110-nas-omv.md); this runbook
+only captures the raw hardware/RAID state that fed them.
 
 ---
 

@@ -51,9 +51,9 @@ Runbook: [`21-ml110-nas-inventory.md`](../runbooks/21-ml110-nas-inventory.md)
 - [x] Map controller topology — see research 23 / inventory
 - [x] Decide layout — no ZFS, mdadm RAID1, SSD boot (Option D)
 - [x] **Goodram C40 SSD health check** — **PASSED** (Option D confirmed)
-- [ ] Capture current SAS 6/iR RAID layout (before unplugging it)
+- [x] SAS 6/iR RAID layout — **not captured** (controller removed; old FreeNAS array not preserved)
 - [ ] Confirm FreeNAS is unbootable / no data to preserve
-- [ ] Fill the inventory template: `nas-ml110-inventory.md`
+- [x] Fill the inventory template (`nas-ml110-inventory.md`) — remaining TBD: PSU wattage, 1 TB content
 
 ---
 

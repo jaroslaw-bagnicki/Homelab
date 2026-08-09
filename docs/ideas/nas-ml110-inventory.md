@@ -1,10 +1,11 @@
-# ML110 NAS — Hardware Inventory (Fill In)
+# ML110 NAS — Hardware Inventory
 
-> **Phase 0 output for issue #54.** Fill in after running all steps in
-> [`21-ml110-nas-inventory.md`](../runbooks/21-ml110-nas-inventory.md).
-> Commit this file to the worktree — it's the single source of truth for the OMV install plan.
+> **Phase 0 output for issue #54.** Living single source of truth for the OMV install
+> plan. Update this file as data is captured (see
+> [`21-ml110-nas-inventory.md`](../runbooks/21-ml110-nas-inventory.md)); some fields
+> may stay TBD until the controller BIOS review.
 
-**Status**: 🧠 Idea (Phase 0 — inventory complete; **no ZFS — mdadm RAID1 + OMV OS on Goodram 120 GB SSD (Option D, confirmed)**; 1 TB unplugged pending content review; SAS 6/iR RAID layout capture still pending) | **Idea**: [03 — Homelab NAS on ML110](03-nas-backup-target-ml110.md) | **Worktree**: `feat/nas-ml110-omv-setup`
+**Status**: 🧠 Idea (Phase 0 — inventory captured; remaining TBD: PSU wattage, SAS 6/iR RAID layout, 1 TB content; **no ZFS — mdadm RAID1 + OMV OS on Goodram 120 GB SSD (Option D, confirmed)**) | **Idea**: [03 — Homelab NAS on ML110](03-nas-backup-target-ml110.md) | **Worktree**: `feat/nas-ml110-omv-setup`
 
 ---
 
@@ -205,10 +206,9 @@ and using the **5th SATA cable for the 1 TB spare** as a single-disk XFS volume.
 13. ✅ **1 TB WD10EZEX unplugged** (2026-08-09) — not used for now; content to be reviewed during OMV setup.
 
 **Open questions still requiring live inspection:**
-1. Current RAID layout from the SAS 6/iR controller utility (RAID level, member disks, virtual disk size) — capture before unplugging it.
-2. Confirm FreeNAS OS is unbootable and no data needs preservation.
-3. Whether to physically remove the Dell SAS 6/iR (saves ~10–15 W) or leave seated but disconnected.
-4. **1 TB content review** — plug it in during OMV setup, inspect existing partitions/files, then decide its final role (bulk volume vs offline).
+1. Confirm FreeNAS OS is unbootable and no data needs preservation.
+2. Whether to leave the removed Dell SAS 6/iR out (already removed — no action).
+3. **1 TB content review** — plug it in during OMV setup, inspect existing partitions/files, then decide its final role (bulk volume vs offline).
 
 ---
 
