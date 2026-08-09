@@ -3,6 +3,7 @@
 | # | Date | Document | Topic | Source |
 |---|------|----------|-------|--------|
 | 24 | 2026‑08‑09 | [24-network-topology-design.md](24-network-topology-design.md) | Homelab network topology & design — mesh inventory, flat vs VLAN comparison, TL-SG108E integration, static IP scheme | OpenCode thread + issue #55 |
+| 23 | 2026‑08‑08 | [23-ml110-nas-omv.md](23-ml110-nas-omv.md) | ML110 G5 NAS (OMV) — hardware findings, controller topology, disk SMART, RAID & boot trade-offs | SystemRescue report + SMART scans + issue #54 |
 | 22 | 2026‑07‑11 | [22-infisical-for-homelab-secret-management.md](22-infisical-for-homelab-secret-management.md) | Infisical for Homelab secret management — evaluation, Docker deployment, and OpenCode integration concepts | Web research + OpenCode thread |
 | 21 | 2026‑07‑08 | [21-opencode-sandboxed-homelab-architecture.md](21-opencode-sandboxed-homelab-architecture.md) | OpenCode sandboxed architecture on Homelab — per-project instances, Docker Sandboxes, Caddy wildcard routing, network isolation | Gemini chats 9–13 |
 | 20 | 2026‑07‑04 | [20-opencode-hosting-codespaces-vs-homelab.md](20-opencode-hosting-codespaces-vs-homelab.md) | OpenCode hosting — Codespaces vs M910q vs Cloudlab; server mode, sandboxing, dependencies, backup, automation | Research |
@@ -37,7 +38,8 @@
 | 5 | [Gemini chat 5](https://gemini.google.com/share/ffa774d97c3e) | 13 |
 | 6 | [Gemini chat 6](https://gemini.google.com/share/a4b01a2b65b2) | 15 |
 | 7 | [Gemini chat 7](https://gemini.google.com/share/536c3e9635ff) | 16 |
-| 8 | [Gemini chat 8](https://gemini.google.com/share/05578e63c66c) | 19 || 9 | [Gemini chat 9](https://gemini.google.com/share/215b0e334b18) | 21 |
+| 8 | [Gemini chat 8](https://gemini.google.com/share/05578e63c66c) | 19 |
+| 9 | [Gemini chat 9](https://gemini.google.com/share/215b0e334b18) | 21 |
 | 10 | [Gemini chat 10](https://gemini.google.com/share/9ab700c799ef) | 21 |
 | 11 | [Gemini chat 11](https://gemini.google.com/share/68b9117edd0e) | 21 |
 | 12 | [Gemini chat 12](https://gemini.google.com/share/a4fcdc245489) | 21 |
