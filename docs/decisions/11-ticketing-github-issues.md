@@ -35,7 +35,7 @@ Adopt **GitHub Issues** as the project's ticketing system.
 
 1. Idea → create a GitHub issue (backlog)
 2. Ready to start → add a row to `README.md` "What's Next"
-3. Finished → move to "What's Done" with date + runbook link
+3. Finished → add an entry to `CHANGELOG.md` with a runbook/ADR link
 4. Close the issue
 
 Issues capture ideas and multi-session work. One-shot `(docs)` or `(chore)`
