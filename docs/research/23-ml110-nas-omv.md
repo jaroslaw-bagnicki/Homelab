@@ -13,7 +13,7 @@
 | OS | **OpenMediaVault 8.x** (Debian 13), official ISO, BIOS boot |
 | Filesystem / RAID | **No ZFS** — **mdadm RAID1** + XFS/ext4 |
 | Data pool | `md0` = 2× 500 GB Hitachis (mirror), `md1` = 2× 250 GB (mirror) |
-| Boot device | **Goodram C40 120 GB SSD on ICH9 SATA #5** (Option D — pending SSD health check) |
+| Boot device | **Goodram C40 120 GB SSD on ICH9 SATA #5** (Option D — confirmed) |
 | Bulk volume | **1 TB WD10EZEX — single-disk XFS** on ICH9 SATA #6 |
 | Hardware RAID controller | **Not used** (Dell SAS 6/iR / SAS1068E) — may be removed to save power |
 
@@ -29,7 +29,7 @@
 | CPU | i5-6500T (4C/4T) | Intel Pentium E2160 @ 1.8 GHz (2C/2T) | Q956 wins on compute |
 | RAM | 8 GB DDR3L | **4 GB** (2× 2 GiB DDR2-800) | Q956 wins; 4 GB fine for mdadm |
 | SATA topology | 2× native SATA + M.2 | ICH9R 4-port + ICH9 2-port + **Dell SAS 6/iR (RAID-only)** | ML110 more complex |
-| Boot device | needs USB or SSD | **Goodram 120 GB SSD (Option D)** — 6× capacity of the 20 GB drives | Boot device decided (pending SSD health) |
+| Boot device | needs USB or SSD | **Goodram 120 GB SSD (Option D)** — 6× capacity of the 20 GB drives | Boot device decided |
 
 **Decision**: ML110 is owned, has 6 drives, and needs no purchase. Tower footprint is acceptable for a machine near the router/switch. **Proceed with ML110.**
 
@@ -72,12 +72,10 @@
 | 4 | Hitachi HDS721050CLA660 | `JP1572FL167V6K` | 500 GB | `md0` mirror |
 | 5 | WDC WD2500AAKX-75U6AA0 | `WD-WCC2F0157761` | 250 GB | `md1` |
 | 6 | GB0250EAFYK (labeled "WD RE3") | `WCAT1F035986` | 250 GB | `md1` mirror |
-| 7 | **Goodram C40 120 GB** (SSD) | _TBD_ | 120 GB | **OMV OS (Option D, pending health check)** |
+| 7 | **Goodram C40 120 GB** (SSD) | `1C9C074614D500572350` | 120 GB | **OMV OS (Option D, confirmed — SMART PASSED)** |
 | 8 | WDC WD10EZEX-00BN5A0 (spare) | `WD-WCC3F7AKKXUT` | 1 TB | **XFS bulk volume** |
 
 **Label vs SMART discrepancies:** the 500 GB Hitachis label `CLA662` but report `CLA660` (HP OEM variant); the "WD RE3" drive actually reports as `GB0250EAFYK` (rebadged); the Fujitsu label `MHV2020BH` reports as `MHW2020BH`. **SMART identity is authoritative.**
-
-> **Form-factor correction (2026-08-09):** the two 20 GB drives are **2.5"**, not 1.8" as originally stated.
 
 ---
 
@@ -118,7 +116,7 @@
 | Cost | USB purchase + flash-wear mgmt | zero (reuse 2.5" drive) | zero (spare SSD found) |
 | Hardware RAID needed | no | no | **no** — SAS 6/iR not used |
 
-**Chosen: Option D** — a spare **Goodram C40 120 GB SSD** appeared, giving a single reliable boot disk with 6× the OS capacity of the 20 GB drives, no hardware RAID anywhere, and freeing both 2.5" 20 GB drives as cold spares. The 1 TB spare joins the build as a single-disk XFS bulk volume. **Pending SSD health check.**
+**Chosen: Option D** — a spare **Goodram C40 120 GB SSD** appeared, giving a single reliable boot disk with 6× the OS capacity of the 20 GB drives, no hardware RAID anywhere, and freeing both 2.5" 20 GB drives as cold spares. The 1 TB spare joins the build as a single-disk XFS bulk volume. **SSD health confirmed (SMART PASSED).**
 
 ---
 

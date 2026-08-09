@@ -4,7 +4,7 @@
 > [`21-ml110-nas-inventory.md`](../runbooks/21-ml110-nas-inventory.md).
 > Commit this file to the worktree — it's the single source of truth for the OMV install plan.
 
-**Status**: 🧠 Idea (Phase 0 — inventory complete; **no ZFS — mdadm RAID1 + OMV OS on Goodram 120 GB SSD (Option D, pending health check) + 1 TB bulk**; SAS 6/iR RAID layout capture still pending) | **Idea**: [03 — Homelab NAS on ML110](03-nas-backup-target-ml110.md) | **Worktree**: `feat/nas-ml110-omv-setup`
+**Status**: 🧠 Idea (Phase 0 — inventory complete; **no ZFS — mdadm RAID1 + OMV OS on Goodram 120 GB SSD (Option D, confirmed) + 1 TB bulk**; SAS 6/iR RAID layout capture still pending) | **Idea**: [03 — Homelab NAS on ML110](03-nas-backup-target-ml110.md) | **Worktree**: `feat/nas-ml110-omv-setup`
 
 ---
 
@@ -67,8 +67,8 @@
 | 4 | `/dev/sdb` | Hitachi HDS721050CLA660 | `JP1572FL167V6K` | 500 GB | 7200 | ✅ **PASSED** | onboard ICH9R | `md0` mirror |
 | 5 | `/dev/sdc` | WDC WD2500AAKX-75U6AA0 | `WD-WCC2F0157761` | 250 GB | 7200 | ✅ **PASSED** | onboard ICH9R | `md1` |
 | 6 | `/dev/sdd` | **GB0250EAFYK** | `WCAT1F035986` | 250 GB | 7200 | ✅ **PASSED** | onboard ICH9R | `md1` mirror |
-| 7 | `/dev/sdX` | **Goodram C40 120 GB** (SSD) | _TBD_ | **120 GB** | SSD | ⏳ **pending health check** | onboard ICH9 | **OMV OS (Option D, pending)** |
-| 8 | `/dev/sdX` | **WDC WD10EZEX-00BN5A0** (spare) | `WD-WCC3F7AKKXUT` | **1.0 TB** | 7200 | ✅ **PASSED** | onboard ICH9 | **XFS bulk (Option D)** |
+| 7 | `/dev/sdf` | **Goodram C40 120 GB** (SSD) | `1C9C074614D500572350` | **120 GB** | SSD | ✅ **PASSED** — 13,860 hrs, 0 reallocated | onboard ICH9 | **OMV OS (Option D confirmed)** |
+| 8 | `/dev/sde` | **WDC WD10EZEX-00BN5A0** (spare) | `WD-WCC3F7AKKXUT` | **1.0 TB** | 7200 | ✅ **PASSED** | onboard ICH9 | **XFS bulk (Option D)** |
 
 **Power requirements (from labels):**
 - Hitachi Travelstar 20 GB: `5V 1.0A`
@@ -80,7 +80,7 @@
 - Western Digital Caviar Blue 250 GB: manufacturing date August 24, 2012.
 - Western Digital RE3 250 GB: manufacturing date February 14, 2010.
 
-> **Note on device names:** `/dev/sdX` names are **transient** — they depend on which SATA port each drive is plugged into during a given scan batch. The **serial number is the stable identifier** for building the array. Batch 1 = 4× 3.5" drives; Batch 2 = 2× 2.5" 20 GB drives + spare 1 TB (all 2.5", not 1.8" as first stated).
+> **Note on device names:** `/dev/sdX` names are **transient** — they depend on which SATA port each drive is plugged into during a given scan batch. The **serial number is the stable identifier** for building the array. Batch 1 = 4× 3.5" drives; Batch 2 = 2× 2.5" 20 GB drives + spare 1 TB.
 
 **⚠ Label vs SMART discrepancies (2026-08-08):**
 - The two 500 GB Hitachis label as `HDS721050CLA662` but SMART reports **`HDS721050CLA660`** — the `662` is the HP OEM variant number (P/N `647466-001`); same drive family. Go by SMART model.
@@ -92,8 +92,8 @@
 - 3.5" bays: 4× occupied by Hitachi 500 GB (×2), WD Caviar Blue 250 GB, "WD RE3" (= GB0250EAFYK) 250 GB
 - 2.5" bays: 2× occupied by Hitachi Travelstar 20 GB, Fujitsu 20 GB — **both detached** (2026-08-09)
 - **+1 spare 3.5"**: WDC WD10EZEX 1 TB (not originally mounted) — now connected
-- **+1 SSD**: Goodram C40 120 GB (2.5" SATA) — now connected; OS-disk candidate (Option D, pending health check)
-- **OS disk:** Option D proposed — **Goodram C40 120 GB SSD** as OMV OS (pending SMART health check). The 20 GB Fujitsu selection (Option B) is **superseded**; both 20 GB drives are cold spares.
+- **+1 SSD**: Goodram C40 120 GB (2.5" SATA) — connected, **health confirmed** (SMART PASSED)
+- **OS disk:** Option D confirmed — **Goodram C40 120 GB SSD** as OMV OS. The 20 GB Fujitsu selection (Option B) is **superseded**; both 20 GB drives are cold spares.
 - **Cabling plan (6 onboard SATA cables, current state):**
   - ICH9R ports #1–#4 → the 4× 3.5" data drives (mdadm RAID1 pairs)
   - ICH9 port #5 → **Goodram C40 120 GB SSD** (OMV OS, Option D)
@@ -150,7 +150,7 @@ Confirmed from SystemRescue `lspci`:
 | `enp14s0` (Broadcom BCM5722) | `78:e7:d1:53:fb:87` | **DHCP `192.168.2.164`** | primary NIC; gw/DNS `192.168.2.1` |
 | LO100 / iLO | N/A | N/A | not installed — no out-of-band mgmt |
 
-**Planned OMV static IP** (on the homelab subnet `192.168.2.0/24`): `_fill in_` (e.g. reserve a `.2.x` address for the NAS; current DHCP lease is `.164`)
+**Planned OMV static IP** (on the homelab subnet `192.168.2.0/24`): **`192.168.2.210`** — per [research 24 — network topology design](../research/24-network-topology-design.md) (issue #55, merged via PR #56); switch port 3 on the TL-SG108E
 
 ---
 
@@ -159,7 +159,7 @@ Confirmed from SystemRescue `lspci`:
 | Decision | Chosen approach | Rationale |
 |---|---|---|
 | **ZFS?** | **No — mdadm RAID1 instead** | User preference: regular RAID only, no ZFS for now |
-| Boot device for OMV | **Goodram C40 120 GB SSD on ICH9 SATA #5** (Option D — pending SSD health check) | SSD = single reliable boot disk; no hardware RAID dependency; 6× OS capacity of the 20 GB drives; faster boot/UI |
+| Boot device for OMV | **Goodram C40 120 GB SSD on ICH9 SATA #5** (Option D — confirmed) | SSD = single reliable boot disk; no hardware RAID dependency; 6× OS capacity of the 20 GB drives; faster boot/UI |
 | Disk pool layout | **mdadm RAID1**: `md0` = 2× 500 GB Hitachis (500 GB usable); `md1` = 2× 250 GB (250 GB usable) | Software RAID1 pairs for redundancy; both 2.5" 20 GB drives = cold spares |
 | Filesystem | **XFS on `md0`** (primary), **ext4 on `md1`** | XFS for backup target volume; ext4 for secondary/bulk |
 | RAID mode | **mdadm software RAID** on onboard ICH9R SATA, set to **AHCI** in BIOS | No hardware RAID dependency; Dell SAS 6/iR unused (or physically removed — saves ~10–15 W) |
@@ -200,14 +200,13 @@ and using the **5th SATA cable for the 1 TB spare** as a single-disk XFS volume.
 8. ⚠ **Label mismatch**: the "WD RE3" drive actually reports as `GB0250EAFYK`; Fujitsu label `MHV2020BH` reports as `MHW2020BH`.
 9. ✅ **Spare 1 TB WD10EZEX** discovered and healthy.
 10. ✅ **Layout decision made**: no ZFS → mdadm RAID1; both 2.5" 20 GB drives are **cold spares**; the 1 TB is a single-disk XFS bulk volume.
-11. ⏳ **OS disk — Option D proposed**: **Goodram C40 120 GB SSD** (single boot disk), **pending SMART health check**; supersedes the Fujitsu 20 GB (Option B).
-12. ✅ **Form-factor correction (2026-08-09)**: the two 20 GB drives are **2.5"**, not 1.8" as originally stated; both now detached and acting as cold spares.
+11. ✅ **OS disk — Option D confirmed**: **Goodram C40 120 GB SSD** (`1C9C074614D500572350`) — SMART PASSED, 13,860 hrs, 0 reallocated; supersedes the Fujitsu 20 GB (Option B).
+12. ✅ Both 2.5" 20 GB drives are **detached cold spares** (SSD boot adopted in Option D).
 
 **Open questions still requiring live inspection:**
-1. **Goodram C40 SSD health check** — `smartctl -a /dev/sdX` + short self-test; if clean → Option D (SSD boot) confirmed.
-2. Current RAID layout from the SAS 6/iR controller utility (RAID level, member disks, virtual disk size) — capture before unplugging it.
-3. Confirm FreeNAS OS is unbootable and no data needs preservation.
-4. Whether to physically remove the Dell SAS 6/iR (saves ~10–15 W) or leave seated but disconnected.
+1. Current RAID layout from the SAS 6/iR controller utility (RAID level, member disks, virtual disk size) — capture before unplugging it.
+2. Confirm FreeNAS OS is unbootable and no data needs preservation.
+3. Whether to physically remove the Dell SAS 6/iR (saves ~10–15 W) or leave seated but disconnected.
 
 ---
 
@@ -226,6 +225,5 @@ CPU temps: 43-46°C at idle — healthy.
 RTC: drifts and reverts to ~23-26 July after reboot; RTC correction is not persisted to hwclock. NTP required once OMV is installed; consider replacing the CR2032 CMOS battery.
 CPU microcode: no microcode update present (mds/spec_store_bypass shown vulnerable) — low risk for a storage-only node, but worth noting.
 SMART (2026-08-08): Batches 1+2 — all 6 original drives + spare 1 TB PASSED. All healthy; no drive excluded so far.
-OS disk: Option D — Goodram C40 120 GB SSD (pending health check). The 2.5" 20 GB drives (Fujitsu NZ0GT772LN18, Hitachi MPBFL0X9G1W9WM) are both cold spares.
-Form factor: the two 20 GB drives are 2.5", NOT 1.8" (corrected 2026-08-09).
+OS disk: Option D confirmed — Goodram C40 120 GB SSD (1C9C074614D500572350) SMART PASSED, 13,860 hrs, 0 reallocated. The 2.5" 20 GB drives (Fujitsu NZ0GT772LN18, Hitachi MPBFL0X9G1W9WM) are both cold spares.
 ```

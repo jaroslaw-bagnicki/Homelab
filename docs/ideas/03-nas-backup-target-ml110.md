@@ -28,7 +28,7 @@ Storage-only node; primary consumer is the Longhorn/k3s backup target on the M91
 | Decision | Choice |
 |---|---|
 | **ZFS?** | No — **mdadm RAID1** |
-| Boot device | **Goodram C40 120 GB SSD on ICH9 SATA #5** (Option D — pending SSD health) |
+| Boot device | **Goodram C40 120 GB SSD on ICH9 SATA #5** (Option D — confirmed) |
 | Data pool | **mdadm RAID1**: `md0` = 2× 500 GB Hitachis; `md1` = 2× 250 GB |
 | Bulk volume | **1 TB WD10EZEX — single-disk XFS** on ICH9 #6 |
 | Filesystem | **XFS on `md0`** (primary), **ext4 on `md1`** |
@@ -36,7 +36,7 @@ Storage-only node; primary consumer is the Longhorn/k3s backup target on the M91
 | Dell SAS 6/iR | **Not used** (mdadm needs raw disks); may be removed to save power |
 | NFS export | `/export/backups` — Longhorn backup target |
 | SMB/CIFS | `/shared` — general backup landing |
-| Static IP | `192.168.2.x` on homelab subnet |
+| Static IP | `192.168.2.210` on homelab subnet |
 | Arc? | No — storage node, not a workload host |
 
 ---
@@ -50,7 +50,7 @@ Runbook: [`21-ml110-nas-inventory.md`](../runbooks/21-ml110-nas-inventory.md)
 - [x] Confirm controller inventory — ICH9R 4-port + ICH9 2-port + Dell SAS 6/iR
 - [x] Map controller topology — see research 23 / inventory
 - [x] Decide layout — no ZFS, mdadm RAID1, SSD boot (Option D)
-- [ ] **Goodram C40 SSD health check** (confirms Option D)
+- [x] **Goodram C40 SSD health check** — **PASSED** (Option D confirmed)
 - [ ] Capture current SAS 6/iR RAID layout (before unplugging it)
 - [ ] Confirm FreeNAS is unbootable / no data to preserve
 - [ ] Fill the inventory template: `nas-ml110-inventory.md`
@@ -63,7 +63,7 @@ Runbook: [`21-ml110-nas-inventory.md`](../runbooks/21-ml110-nas-inventory.md)
 2. BIOS: SATA → AHCI, ICH9R RAID disabled, boot from the SSD.
 3. `mdadm` RAID1 pairs → `md0` (2× 500 GB) + `md1` (2× 250 GB); XFS/ext4.
 4. 1 TB WD10EZEX → single-disk XFS bulk volume.
-5. NFS `/export/backups` + SMB `/shared`; static IP `192.168.2.x`.
+5. NFS `/export/backups` + SMB `/shared`; static IP `192.168.2.210`.
 6. Verify NFS from the M910q (`showmount -e`); point Longhorn at it.
 7. Repo: runbook 22 (`docs/runbooks/22-ml110-omv-setup.md`) + idea → ADR 23.
 
