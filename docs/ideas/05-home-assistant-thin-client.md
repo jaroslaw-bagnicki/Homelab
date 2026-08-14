@@ -5,9 +5,10 @@
 > **Mosquitto MQTT + Zigbee2MQTT** in LXC containers right next to it — decoupled from
 > the k3s cluster (M910q) and positioned centrally in the home for good Zigbee coverage.
 
-**Status**: 🧠 Idea — exploration only, no hardware acquired, no ADR  
+**Status**: 📋 Planned — ADR 25 in progress (Proposed), no hardware acquired  
 **Date**: 2026-08-13  
 **Research**: [Research 26 — Home Assistant on a thin client (Wyse 5070 + Proxmox)](../research/26-home-assistant-thin-client.md) — full Gemini-thread write-up (hardware, architecture, sizing, Ansible, observability)  
+**Decision**: [ADR 25 — Home Assistant on a dedicated thin-client node (Wyse 5070 + Proxmox VE)](../decisions/25-home-assistant-thin-client.md) — Proposed
 
 ---
 
