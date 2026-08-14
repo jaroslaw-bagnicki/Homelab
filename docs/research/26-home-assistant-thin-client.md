@@ -1,0 +1,227 @@
+# 26 — Home Assistant on a Thin Client — Dell Wyse 5070 + Proxmox
+
+**Source**: Gemini chat (3.6 Flash), Aug 13 2026 · [share.gemini.google/cWshbtFYrvlL](https://share.gemini.google/cWshbtFYrvlL) (resolves to [gemini.google.com/share/e52d75c28976](https://gemini.google.com/share/e52d75c28976))
+
+**Scope**: Exploratory research for a **new idea** — a dedicated Home Assistant node built on a thin client, co-locating HA OS with Mosquitto MQTT + Zigbee2MQTT under Proxmox VE.
+
+**Status**: 🧠 Idea — exploration only. No hardware acquired, no ADR, no implementation plan. Would slot into the homelab as a *second compute/automation node* alongside the M910q (k3s, ADR 22), ML110 OMV NAS (ADR 23), and Wyse 3040 edge ingress (ADR 24).
+
+> ⚠️ **Verification needed**: Config snippets, commands, and price claims below are Gemini-generated. Prices are PL secondary-market estimates (Aug 2026) and must be re-checked at purchase time; LXC/USB-passthrough and Fluent Bit configs must be validated against current Proxmox / HA documentation before execution.
+
+---
+
+## Context
+
+The homelab today has a clean role split: **M910q** = compute (k3s, ADR 22), **ML110** = storage-only OMV NAS (ADR 23), **Wyse 3040** = edge ingress, `cloudflared` + Caddy (ADR 24). The idea: add a **dedicated, low-power smart-home node** running Home Assistant, decoupled from the k3s cluster, positioned centrally in the home for good Zigbee radio coverage.
+
+The thread walks through: thin-client hardware selection, HA-on-Proxmox architecture, where to place MQTT/Zigbee, RAM/SSD sizing, Ansible management of Proxmox, and observability (Netdata + Fluent Bit).
+
+---
+
+## Key Findings
+
+### 1. Hardware: Dell Wyse 5070 vs Lenovo M600
+
+| Spec | Dell Wyse 5070 | Lenovo ThinkCentre M600 |
+|---|---|---|
+| CPU | Intel Celeron J4105 / Pentium J5005 (Gemini Lake, 4 cores) | Intel Celeron N3000/N3050 or Pentium N3700 (Braswell, 2–4 cores) |
+| Performance | ~2.5–3× M600 (PassMark ~2800 vs ~1000) | baseline |
+| RAM | 2× DDR4 SO-DIMM (official 8 GB, unofficial up to 16–32 GB) | 1× DDR3L slot (8 GB max) |
+| Disk | M.2 SATA 2280 slot (**B+M key only**) | 2.5" SATA SSD bay (cheap drives easy to source) |
+| Cooling | Fully passive (silent, no dust) | Small fan |
+| Power | 4–8 W idle | 4–8 W idle |
+
+**Verdict: Wyse 5070 wins** for HA — stronger CPU (add-on workloads: ESPHome compile, HA DB history, Node-RED, Frigate/Coral TPU), dual DDR4 slots (Proxmox headroom), passive cooling for 24/7 operation.
+
+> **Critical hardware note**: the Wyse 5070's M.2 slot accepts **M.2 SATA (B+M key) only** — standard M.2 **NVMe (M key) drives are NOT detected**.
+
+### 2. Hardware alternative: Fujitsu Futro S740 (PL-market "king")
+
+Same CPU as the Wyse 5070 (Intel Celeron J4105, Gemini Lake, 4C/4T, TDP 10 W, VT-x/VT-d/AES-NI) — identical HA performance, identical Proxmox fit.
+
+| Cecha | Dell Wyse 5070 | Fujitsu Futro S740 |
+|---|---|---|
+| Procesor | J4105 | J4105 |
+| Pasywne chłodzenie | Tak | Tak |
+| Slot PCIe | Very limited | **Yes — low-profile x4 (riser)** |
+| RAM | 2× SO-DIMM | 2× SO-DIMM |
+| Miejsce na dysk | M.2 SATA + 2.5" | M.2 SATA |
+| Ekosystem Proxmox | Ideal | Ideal |
+
+**Futro S740 advantages**: low-profile **PCIe x4 slot** (10 GbE NIC, extra SATA controller, USB 3.0 card — future file-server/Plex/Jellyfin transcoding path), very solid build (German industrial/office market), strong PL availability and often **20–30% cheaper** than the Wyse 5070 on Allegro/OLX.
+**Caveats**: needs the **dedicated Fujitsu 19 V PSU** (ensure it's included), boxier case.
+
+**Verdict**: if the Wyse 5070 hasn't been purchased yet, **prefer the Futro S740** (PCIe flexibility + price); otherwise either is a "tank" for light virtualization.
+
+### 3. Architecture: HA OS as a VM on Proxmox VE (vs bare-metal)
+
+Running Home Assistant OS as a VM on Proxmox VE instead of bare-metal gives:
+
+1. **Snapshots** — one-click restore point before every major update / new integration / config edit, taken without stopping the VM.
+2. **Full backups (`vzdump`)** — whole-VM images, automatable to an external target (NAS/SMB/NFS); full DR = reinstall Proxmox + restore latest backup.
+3. **Service isolation via LXC** — Mosquitto, Zigbee2MQTT, Z-Wave JS UI, AdGuard/Pi-hole, Nginx Proxy Manager/Cloudflare Tunnel, Grafana+InfluxDB in separate lightweight containers; HA restarts never drop the Zigbee/MQTT mesh.
+4. **Resource utilization** — allocate HA what it needs (e.g. 2 vCPU / 4 GB) and use the rest of the Wyse 5070 for other homelab projects.
+5. **USB pass-through** — clean assignment of Zigbee/Sonoff dongles, RF433/BT receivers, Coral TPU to the HA VM.
+
+| Podejście | Zalety | Wady |
+|---|---|---|
+| Bare-Metal (HA OS direct) | Simple install, no virtualization layer, zero overhead | Machine dedicated to HA only; harder whole-disk recovery |
+| VM on Proxmox VE | Snapshots, full LXC service independence, easy backups, optimal hardware use | Needs initial Proxmox setup + basic virtualization knowledge |
+
+### 4. Where to place MQTT + Zigbee2MQTT (given existing lab)
+
+Three options considered, **plus the one settled on**:
+
+- **Option 1 — M910q (K3s)**: MQTT as `StatefulSet`/`Deployment` with PVC on ML110 (NFS/Longhorn); Z2M on the cluster, USB dongle via `hostPath` (`/dev/serial/by-id/...`). **K3s tip**: pin Z2M to the node holding the USB adapter with `nodeSelector`/`nodeAffinity`.
+- **Option 2 — LAN Zigbee coordinator + Z2M in K3s**: Ethernet coordinator (EFR32/CC2652 — SMLIGHT **SLZB-06**, TubesZB) placed centrally, Z2M connects over TCP (`ezsp://…` / `zstack://192.168.x.x:6638`). Most flexible — no USB dependency at all.
+- **Option 3 — Wyse 3040 edge**: Mosquitto + Z2M in Docker/LXC next to Caddy; decouples the IoT physical layer from the k3s cluster (cluster rebuilds never drop Zigbee/MQTT).
+- **✅ Option 4 — Wyse 5070 Proxmox LXC next to HA (winner of the thread)**: Mosquitto + Z2M as LXC containers on the same Wyse 5070 that hosts the HA VM. Reasons:
+  - Z2M/MQTT are **independent of HA restarts** (unlike HA add-ons).
+  - **K3s on M910q stays purely application** — it just connects to the MQTT broker over LAN; no USB/hostPath/nodeSelector complexity.
+  - Passive, **4–6 W**, can sit in a central home location → dramatically better Zigbee mesh than a rack next to the M910q.
+  - **Native, stable Proxmox USB pass-through** (vs orchestrating Pod hostPath).
+  - Beats Wyse 3040: the 5070 (J4105, expandable to 16 GB) has the headroom for Proxmox + HA + MQTT + Z2M; the 3040's 2 GB RAM / 16 GB eMMC would waste Proxmox.
+
+**MQTT best practices from the thread**: use `/dev/serial/by-id/…` (stable) instead of `/dev/ttyUSB0` (renumbers on reboot); create **separate Mosquitto users** for Zigbee2MQTT (write to `zigbee2mqtt/#`) and HA; Z2M sends states with the **retain** flag so consumers read last-known state immediately after restart.
+
+### 5. Proxmox layout (target)
+
+```
+[ Proxmox VE - Dell Wyse 5070 ]
+├── VM 100: Home Assistant OS (VM) ────────> [ 2 vCPU | 4 GB RAM ]
+├── LXC 101: Mosquitto MQTT Broker ────────> [ 1 vCPU | 256 MB RAM ]
+└── LXC 102: Zigbee2MQTT ──────────────────> [ 1 vCPU | 512 MB RAM ] + (Passthrough USB Dongle)
+```
+
+USB pass-through to the Z2M LXC — `/etc/pve/lxc/102.conf` (Gemini-suggested; verify syntax):
+
+```
+lxc.cgroup2.devices.allow: c 188:* rwm
+lxc.mount.entry: /dev/serial/by-id/usb-ITead_Sonoff_Zigbee_3.0_USB_Dongle_Plus_... dev/ttyUSB0 none bind,optional,create=file
+```
+
+### 6. RAM sizing
+
+| Komponent / Usługa | Typ | Przydzielony RAM | Rzeczywiste zużycie RAM |
+|---|---|---|---|
+| Proxmox VE (Hypervisor) | System bazowy | – | ~1.0 GB |
+| Home Assistant OS | Maszyna wirtualna (VM) | 4.0 GB | ~2.0–3.0 GB |
+| Mosquitto MQTT | Kontener LXC | 256 MB | ~20–50 MB |
+| Zigbee2MQTT | Kontener LXC | 512 MB – 1 GB | ~150–300 MB |
+| **Suma całkowita** | | **~5.5 GB** | **~3.2–4.4 GB** |
+
+- **4 GB (minimal)**: works but on the edge — HA gets 2 GB, no safety margin, SWAP-on-SSD risk shortens SSD life.
+- **8 GB (optimal, recommended)**: HA gets the vendor-recommended 4 GB, containers full headroom, ~2.5–3 GB free for extra LXC (AdGuard, Nginx Proxy Manager).
+- **16 GB (future-proof)**: 2×8 GB DDR4 SO-DIMM works unofficially; treats the Wyse 5070 as a second full homelab node.
+- Purchase tip: **1× 8 GB DDR4 SO-DIMM** (or 2×4 GB factory set) — the two slots make a later 16 GB a simple second-stick upgrade.
+
+### 7. Disk: buy SSD, ignore the 16 GB eMMC
+
+- **eMMC is a dead end**: very low TBW and no real wear leveling — HA writes its DB 24/7 (SQLite/MariaDB), "killing" eMMC in months. Also too small: Proxmox + HA OS VM image (8–12 GB) + growing DB + backups fill 16 GB immediately.
+- **Interface**: M.2 **SATA** 2280 (B+M key) — NVMe M-key drives are **not detected** on the Wyse 5070.
+- **Capacity**: **128–256 GB**. 128 GB is sufficient; **256 GB is the sweet spot** (better TBW, room for many local backups).
+- Examples: GoodRam CX400 M.2 SATA, Transcend 830S, Crucial, or a used OEM Samsung/Intel/Micron from leased hardware.
+- Leave the eMMC unused in BIOS, or use it only as spare storage for text config files.
+
+### 8. Managing Proxmox with Ansible
+
+Yes — Proxmox VE is a first-class Ansible citizen, **no agent required**:
+
+- **`community.proxmox` collection (REST API)** — create/delete/start/modify VMs and LXC; needs a dedicated API user/token (e.g. `ansible@pve!token_id`).
+- **Standard SSH** — OS-level config (Debian updates, NFS mounts, network bridges).
+
+Automate for this scenario: host provisioning (disable the **commercial repo**, enable `pve-no-subscription`, install tools, NFS-mount the ML110 for `vzdump` backups, `vmbr0`/VLAN config); HA OS VM via `proxmox_kvm` (fetch the `.qcow2`/`.vmdk` from HA GitHub releases, convert, attach, boot); LXC via `proxmox_lxc`/`proxmox_nic` (template, static IP, USB pass-through entries, then install `mosquitto`/`zigbee2mqtt` + configs inside).
+
+Example `proxmox_lxc` task (Gemini-suggested; params to verify):
+
+```yaml
+- name: Stwórz kontener LXC dla brokera Mosquitto MQTT
+  community.proxmox.proxmox_lxc:
+    api_host: "192.168.1.50"
+    api_user: "ansible@pve"
+    api_token_id: "ansible-token"
+    api_token_secret: "xxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    vmid: 101
+    hostname: "mosquitto-lxc"
+    node: "wyse5070"
+    ostemplate: "local:vztmpl/debian-12-standard_12.2-1_amd64.tar.zst"
+    storage: "local-lld"
+    cores: 1
+    memory: 256
+    netif: 'net0: "name=eth0,bridge=vmbr0,ip=192.168.1.51/24,gw=192.168.1.1"'
+    state: present
+    unprivileged: true
+```
+
+Benefits: idempotency + fast DR (one playbook rebuilds the whole VM/LXC structure from a clean Proxmox), and consistency with the rest of the lab (k3s on M910q, ingress on Wyse 3040) all in one Git repo (GitOps/IaC).
+
+### 9. Observability: Netdata + Fluent Bit on the Proxmox host
+
+Recommended: install both at the **Proxmox (Debian) host level** — full visibility of the node *and* its VMs/LXC without touching the closed HA OS appliance.
+
+- **Netdata** — auto-detects QEMU/KVM VMs and LXC containers; ~100–150 MB RAM. Install:
+  ```bash
+  wget -O /tmp/netdata-kickstart.sh https://my-netdata.io/netdata-kickstart.sh && sh /tmp/netdata-kickstart.sh
+  ```
+  SSD-friendly config (`/etc/netdata/netdata.conf`): `[db] mode = dbengine` with `storage limit mib = 512`. Can stream metrics to a central Netdata Parent / Grafana in the k3s cluster.
+- **Fluent Bit** — ~10–30 MB RAM; collects `systemd-journal`, `/var/log/syslog`, Proxmox services (`pveproxy`, `pvedaemon`), LXC logs (`/var/log/lxc/*.log`); forwards to central Loki/Elasticsearch/Vector on the M910q:
+  ```ini
+  [INPUT]
+      Name systemd
+      Tag host.*
+      Read_From_Tail On
+  [OUTPUT]
+      Name loki
+      Match *
+      Host 192.168.1.X
+      Port 3100
+      Labels job=fluentbit, host=wyse5070
+  ```
+- LXC `stdout`/`stderr` logs are captured by Proxmox `journald` — no per-container agents needed. HA OS logs/metrics go out via its native Syslog / Prometheus / InfluxDB integrations.
+
+| Zasób | Zużycie przez Netdata + Fluent Bit | Wpływ na HA + MQTT + Z2M |
+|---|---|---|
+| CPU | ~1–3% of one Celeron J4105 core | Niezauważalny |
+| RAM | ~150–200 MB total | Znikomy (huge headroom at 8 GB) |
+| SSD | Very low (RAM buffering + network export) | Safe for SSD lifespan |
+
+---
+
+## Decisions Made
+
+| # | Decision | Rejected alternative(s) | Reason |
+|---|---|---|---|
+| 1 | Dell Wyse 5070 as HA base (vs M600) | Lenovo M600 | ~2.5–3× CPU, dual DDR4 SO-DIMM slots, fully passive cooling |
+| 2 | If not yet purchased → prefer **Fujitsu Futro S740** | Wyse 5070 | Same J4105, low-profile PCIe x4 slot, often 20–30% cheaper in PL |
+| 3 | HA OS as **VM on Proxmox VE** | Bare-metal HA OS | Snapshots, `vzdump` backups, LXC isolation, USB pass-through, resource sharing |
+| 4 | MQTT + Z2M as **LXC on the Wyse 5070** (next to HA) | M910q K3s, LAN coordinator (SLZB-06), Wyse 3040 edge | HA-independent mesh, k3s stays application-only, native USB pass-through, central radio location |
+| 5 | **8 GB RAM** (16 GB future-proof) | 4 GB minimal | HA gets vendor-recommended 4 GB + ~2.5–3 GB free |
+| 6 | **M.2 SATA SSD 128–256 GB** (256 GB sweet spot) | 16 GB eMMC, NVMe | eMMC too small/low-TBW for 24/7 HA DB writes; NVMe not detected (B+M key) |
+| 7 | **Ansible `community.proxmox`** for VM/LXC lifecycle | Manual web-UI provisioning | Idempotency, DR replay, GitOps consistency with k3s/ingress |
+| 8 | Netdata + Fluent Bit at **Proxmox host level** | In-guest agents, HA add-ons | Closed HA OS untouched; auto VM/LXC detection; ~150–200 MB total |
+
+---
+
+## Open Questions
+
+1. **Purchase timing / device**: Wyse 5070 vs Futro S740 — final pick depends on the actual Allegro/OLX deal (price + included PSU/RAM) at purchase time.
+2. **Zigbee coordinator**: USB dongle (Sonoff ZBDongle-P / SkyConnect) vs LAN unit (SLZB-06) — depends on where the node physically ends up and mesh coverage needs.
+3. **HA distribution**: HA OS in a VM (thread's default) vs Home Assistant Core in Docker/LXC — worth a separate comparison before committing.
+4. **Placement**: needs a central home spot for good Zigbee coverage; how does that interact with the TL-SG108E switch layout (runbook 23)?
+5. **Integration with the lab**: MQTT broker also consumed by other homelab services? Central Loki/Grafana on the M910q as the observability sink (Netdata Parent + Fluent Bit output target)?
+6. **Backup target**: `vzdump` backups → ML110 OMV (NFS/SMB) — ties into existing backup strategy (ADR 02, restic) — how do Proxmox VM backups fit with the restic/Blob model?
+7. **Is a dedicated node even needed?** The M910q (k3s) could run HA as a container — the dedicated thin-client node is justified by radio placement + decoupling, but worth an explicit trade-off before ADR.
+
+---
+
+## References
+
+- [ADR 22 — k3s + Azure Arc](../decisions/22-k3s-arc-homelab.md) — cluster that would stay application-only
+- [ADR 23 — NAS on the ML110 (OMV)](../decisions/23-nas-on-ml110.md) — backup target / PVC source for the new node
+- [ADR 24 — Edge ingress appliance](../decisions/24-edge-ingress-appliance.md) — Wyse 3040 edge; this idea would be the *second* thin client
+- [Research 25 — Edge ingress SBC, PL market](../research/25-edge-ingress-sbc.md) — same PL-market thin-client research angle
+- [Runbook 23 — TL-SG108E switch](../runbooks/23-tl-sg108e-switch.md) — LAN placement context
+
+## Source
+
+https://share.gemini.google/cWshbtFYrvlL — "Home Assistance na Wyse 5070", Gemini 3.6 Flash, Aug 13 2026 (published Aug 14 2026)
