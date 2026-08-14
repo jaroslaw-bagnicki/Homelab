@@ -168,4 +168,4 @@ Recommended: install both at the **Proxmox (Debian) host level** — full visibi
 
 ## Source
 
-https://share.gemini.google/cWshbtFYrvlL — "Home Assistance na Wyse 5070", Gemini 3.6 Flash, Aug 13 2026 (published Aug 14 2026)
+https://share.gemini.google/cWshbtFYrvlL — "Home Assistant na Wyse 5070", Gemini 3.6 Flash, Aug 13 2026 (published Aug 14 2026)

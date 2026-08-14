@@ -1,7 +1,7 @@
 # Idea 04 — Dedicated Edge Device for Cloudflare Tunnel + Caddy
 
 > Move the homelab's **public ingress** (`cloudflared` tunnel + Caddy reverse proxy)
-> off the M910q and onto a dedicated low-power **edge box** (e.g. a cheap Raspberry Pi).
+> off the M910q and onto a dedicated low-power **edge box** (e.g. a Dell Wyse 3040).
 > One device owns all inbound routing for the LAN; backends (M910q, ML110 OMV, future
 > gear) stay plain and cluster churn never drops external access.
 
@@ -67,10 +67,12 @@ Backends are reached over the LAN. The M910q, OMV, and anything new never need t
    stays storage-only (ADR 23).
 3. **Single routing layer, on a stable box** — extends ADR 20's "Caddyfile is the source
    of truth" to a dedicated device.
-4. **Power & cost** — an RPi idles ~3–5 W; `cloudflared` + Caddy are Go/ARM64-native.
+4. **Power & cost** — the Wyse 3040 idles ~2–3 W; `cloudflared` + Caddy are Go/ARM64-native.
 5. **CNAT/zero-config ingress unchanged** — the ADR 08 model still applies.
 
-## Hardware options (TBD)
+## Hardware options (considered)
+
+Decided in [ADR 24](../decisions/24-edge-ingress-appliance.md): **Dell Wyse 3040**. The alternatives below were weighed during exploration (full PL-market analysis in [research 25](../research/25-edge-ingress-sbc.md)).
 
 | Option | Pros | Cons |
 |---|---|---|

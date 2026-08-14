@@ -14,7 +14,7 @@ The homelab has a clean role split: **M910q** = compute (k3s, ADR 22), **ML110**
 - Keeping IoT off k3s avoids USB `hostPath`/`nodeSelector` complexity and keeps the cluster purely application.
 
 ## Decision
-\
+
 Adopt a dedicated, fanless **Dell Wyse 5070** (Celeron J4105, 2× DDR4 SO-DIMM, M.2 SATA 2280) as a Home Assistant node running **Proxmox VE**:
 
 - **VM 100** — Home Assistant OS (2 vCPU / 4 GB RAM)
