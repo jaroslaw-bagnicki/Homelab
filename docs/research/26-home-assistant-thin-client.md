@@ -124,27 +124,6 @@ Yes — Proxmox VE is a first-class Ansible citizen, **no agent required**:
 
 Automate for this scenario: host provisioning (disable the **commercial repo**, enable `pve-no-subscription`, install tools, NFS-mount the ML110 for `vzdump` backups, `vmbr0`/VLAN config); Home Assistant OS VM via `proxmox_kvm` (fetch the `.qcow2`/`.vmdk` from Home Assistant GitHub releases, convert, attach, boot); LXC via `proxmox_lxc`/`proxmox_nic` (template, static IP, USB pass-through entries, then install `mosquitto`/`zigbee2mqtt` + configs inside).
 
-Example `proxmox_lxc` task (Gemini-suggested; params to verify):
-
-```yaml
-- name: Stwórz kontener LXC dla brokera Mosquitto MQTT
-  community.proxmox.proxmox_lxc:
-    api_host: "192.168.1.50"
-    api_user: "ansible@pve"
-    api_token_id: "ansible-token"
-    api_token_secret: "xxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-    vmid: 101
-    hostname: "mosquitto-lxc"
-    node: "wyse5070"
-    ostemplate: "local:vztmpl/debian-12-standard_12.2-1_amd64.tar.zst"
-    storage: "local-lld"
-    cores: 1
-    memory: 256
-    netif: 'net0: "name=eth0,bridge=vmbr0,ip=192.168.1.51/24,gw=192.168.1.1"'
-    state: present
-    unprivileged: true
-```
-
 Benefits: idempotency + fast DR (one playbook rebuilds the whole VM/LXC structure from a clean Proxmox), and consistency with the rest of the lab (k3s on M910q, ingress on Wyse 3040) all in one Git repo (GitOps/IaC).
 
 ### 9. Observability: Netdata + Fluent Bit on the Proxmox host
