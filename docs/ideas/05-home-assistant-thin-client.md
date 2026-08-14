@@ -39,7 +39,7 @@ A single, silent, low-power node running, under Proxmox VE:
 | Fujitsu Futro S740 | Fallback | Same J4105, often 20–30% cheaper on Allegro/OLX — but boxier, aesthetic trade-off, and **no PCIe/mPCIe expansion slot** (the "PCIe x4" claim was a research-26 correction) |
 | Lenovo M600 | Rejected | ~2.5–3× slower, 1× DDR3L slot (8 GB max), fan |
 
-RAM: **8 GB optimal** (Home Assistant gets 4 GB), 16 GB future-proof. Disk: **M.2 SATA SSD 128–256 GB** (256 GB sweet spot) — the 16 GB eMMC is rejected (low TBW, Home Assistant writes DB 24/7).
+RAM: **8 GB optimal** (Home Assistant gets 4 GB), 16 GB future-proof. Disk: **M.2 SATA SSD 64–256 GB** (128 GB practical pick; 64 GB sufficient) — the 16 GB eMMC is rejected (low TBW, Home Assistant writes DB 24/7).
 
 ## Key decisions to make (open questions)
 

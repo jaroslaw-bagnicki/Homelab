@@ -111,7 +111,7 @@ lxc.mount.entry: /dev/serial/by-id/usb-ITead_Sonoff_Zigbee_3.0_USB_Dongle_Plus_.
 
 - **eMMC is a dead end**: very low TBW and no real wear leveling — Home Assistant writes its DB 24/7 (SQLite/MariaDB), "killing" eMMC in months. Also too small: Proxmox + Home Assistant OS VM image (8–12 GB) + growing DB + backups fill 16 GB immediately.
 - **Interface**: M.2 **SATA** 2280 (B+M key) — NVMe M-key drives are **not detected** on the Wyse 5070.
-- **Capacity**: **128–256 GB**. 128 GB is sufficient; **256 GB is the sweet spot** (better TBW, room for many local backups).
+- **Capacity**: **64 GB is sufficient** — realistic footprint is ~15–25 GB (Proxmox ~2–3 GB, Home Assistant OS VM 8–12 GB + recorder DB growth, Mosquitto/Zigbee2MQTT LXC ~1–2 GB, Netdata/Fluent Bit ~1 GB), and full `vzdump` backups go to the ML110 NAS (NFS) rather than local disk. **128 GB is the practical pick** — 64 GB M.2 SATA 2280 is uncommon on the used market (Allegro), 128 GB is the abundant entry size at near-equal price, and a larger drive has higher write endurance for the 24/7 recorder writes plus room for local snapshots. **256 GB** only if you want to keep several local backups.
 - Examples: GoodRam CX400 M.2 SATA, Transcend 830S, Crucial, or a used OEM Samsung/Intel/Micron from leased hardware.
 - Leave the eMMC unused in BIOS, or use it only as spare storage for text config files.
 
@@ -156,7 +156,7 @@ Following the ADR 24 pattern — the edge-device decision lives in [ADR 24](../d
 | 2 | Home Assistant OS as **VM on Proxmox VE** | Bare-metal Home Assistant OS | Snapshots, `vzdump` backups, LXC isolation, USB pass-through, resource sharing |
 | 3 | MQTT + Z2M as **LXC on the Wyse 5070** (next to Home Assistant) | M910q K3s, LAN coordinator (SLZB-06), Wyse 3040 edge | Home Assistant-independent mesh, k3s stays application-only, native USB pass-through, central radio location |
 | 4 | **8 GB RAM** (16 GB future-proof) | 4 GB minimal | Home Assistant gets vendor-recommended 4 GB + ~2.5–3 GB free |
-| 5 | **M.2 SATA SSD 128–256 GB** (256 GB sweet spot) | 16 GB eMMC, NVMe | eMMC too small/low-TBW for 24/7 Home Assistant DB writes; NVMe not detected (B+M key) |
+| 5 | **M.2 SATA SSD 64–256 GB** (128 GB practical pick) | 16 GB eMMC, NVMe | eMMC too small/low-TBW for 24/7 Home Assistant DB writes; NVMe not detected (B+M key) |
 | 6 | **Ansible `community.proxmox`** for VM/LXC lifecycle | Manual web-UI provisioning | Idempotency, DR replay, GitOps consistency with k3s/ingress |
 | 7 | Netdata + Fluent Bit at **Proxmox host level** | In-guest agents, Home Assistant add-ons | Closed Home Assistant OS untouched; auto VM/LXC detection; ~150–200 MB total |
 
