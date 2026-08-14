@@ -9,6 +9,8 @@
 > ⚠️ **Verification needed**: Config snippets, commands, and price claims below are Gemini-generated. Prices are PL secondary-market estimates (Aug 2026) and must be re-checked at purchase time; LXC/USB-passthrough and Fluent Bit configs must be validated against current Proxmox / Home Assistant documentation before execution.
 >
 > ⚠️ **Correction (2026-08-14)**: the Gemini claim that the Fujitsu Futro S740 has a **low-profile PCIe x4 expansion slot is WRONG** — verified: the S740 has **no PCIe or mPCIe slot at all** (its two M.2 sockets carry PCIe 2.0 x1 only). All "PCIe x4" references to the S740 have been removed from this doc.
+>
+> ⚠️ **Correction (2026-08-14)**: the claim that the Dell Wyse 5070 has a **2.5" drive bay is also a Gemini error** — verified: its only internal storage slot is the **M.2 SATA 2280 (B+M key)**. The "2.5" bay" has been removed from the hardware table.
 
 ---
 
@@ -29,7 +31,7 @@ The thread walks through: thin-client hardware selection, Home Assistant-on-Prox
 | CPU | Intel Celeron J4105 / Pentium J5005 (Gemini Lake, 4 cores) | Intel Celeron J4105 (Gemini Lake, 4C/4T, TDP 10 W, VT-x/VT-d/AES-NI) | Intel Celeron N3000/N3050 or Pentium N3700 (Braswell, 2–4 cores) |
 | Performance | ~2.5–3× M600 (PassMark ~2800) | ~2.5–3× M600 (PassMark ~2800) | baseline (PassMark ~1000) |
 | RAM | 2× DDR4 SO-DIMM (official 8 GB, unofficial 16–32 GB) | 2× DDR4 SO-DIMM | 1× DDR3L slot (8 GB max) |
-| Disk | M.2 SATA 2280 (**B+M key only**) + 2.5" bay | M.2 SATA (2× sockets) | 2.5" SATA bay (cheap drives easy to source) |
+| Disk | M.2 SATA 2280 (**B+M key only**) | M.2 SATA (2× sockets) | 2.5" SATA bay (cheap drives easy to source) |
 | Cooling | Fully passive (silent, no dust) | Fully passive | Small fan |
 | Power | 4–8 W idle | 4–6 W idle | 4–8 W idle |
 | Expansion | Very limited | **None** (no PCIe/mPCIe; M.2 ports carry PCIe 2.0 x1) | — |
