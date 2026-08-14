@@ -22,38 +22,26 @@ The thread walks through: thin-client hardware selection, Home Assistant-on-Prox
 
 ## Key Findings
 
-### 1. Hardware: Dell Wyse 5070 vs Lenovo M600
+### 1. Hardware: Dell Wyse 5070 vs Fujitsu Futro S740 vs Lenovo M600
 
-| Spec | Dell Wyse 5070 | Lenovo ThinkCentre M600 |
-|---|---|---|
-| CPU | Intel Celeron J4105 / Pentium J5005 (Gemini Lake, 4 cores) | Intel Celeron N3000/N3050 or Pentium N3700 (Braswell, 2–4 cores) |
-| Performance | ~2.5–3× M600 (PassMark ~2800 vs ~1000) | baseline |
-| RAM | 2× DDR4 SO-DIMM (official 8 GB, unofficial up to 16–32 GB) | 1× DDR3L slot (8 GB max) |
-| Disk | M.2 SATA 2280 slot (**B+M key only**) | 2.5" SATA SSD bay (cheap drives easy to source) |
-| Cooling | Fully passive (silent, no dust) | Small fan |
-| Power | 4–8 W idle | 4–8 W idle |
+| Spec | Dell Wyse 5070 | Fujitsu Futro S740 | Lenovo ThinkCentre M600 |
+|---|---|---|---|
+| CPU | Intel Celeron J4105 / Pentium J5005 (Gemini Lake, 4 cores) | Intel Celeron J4105 (Gemini Lake, 4C/4T, TDP 10 W, VT-x/VT-d/AES-NI) | Intel Celeron N3000/N3050 or Pentium N3700 (Braswell, 2–4 cores) |
+| Performance | ~2.5–3× M600 (PassMark ~2800) | ~2.5–3× M600 (PassMark ~2800) | baseline (PassMark ~1000) |
+| RAM | 2× DDR4 SO-DIMM (official 8 GB, unofficial 16–32 GB) | 2× DDR4 SO-DIMM | 1× DDR3L slot (8 GB max) |
+| Disk | M.2 SATA 2280 (**B+M key only**) + 2.5" bay | M.2 SATA (2× sockets) | 2.5" SATA bay (cheap drives easy to source) |
+| Cooling | Fully passive (silent, no dust) | Fully passive | Small fan |
+| Power | 4–8 W idle | 4–6 W idle | 4–8 W idle |
+| Expansion | Very limited | **None** (no PCIe/mPCIe; M.2 ports carry PCIe 2.0 x1) | — |
+| Design / notes | Modern look (**preferred**) | Boxier; solid build; dedicated 19 V PSU | Older platform |
 
-**Verdict: Wyse 5070 wins** for Home Assistant — stronger CPU (add-on workloads: ESPHome compile, Home Assistant DB history, Node-RED, Frigate/Coral TPU), dual DDR4 slots (Proxmox headroom), passive cooling for 24/7 operation.
+**Why the Wyse 5070 wins for Home Assistant** — vs the M600: ~2.5–3× stronger CPU (add-on workloads: ESPHome compile, Home Assistant DB history, Node-RED, Frigate/Coral TPU), dual DDR4 slots (Proxmox headroom), fully passive cooling for 24/7 operation. vs the otherwise-identical Futro S740: its **design/look** is preferred for a visible spot in the home (aesthetic choice).
 
-> **Critical hardware note**: the Wyse 5070's M.2 slot accepts **M.2 SATA (B+M key) only** — standard M.2 **NVMe (M key) drives are NOT detected**.
+**Futro S740** — same J4105 CPU and Proxmox fit as the Wyse 5070; very solid build (German industrial/office market), strong PL availability, often **20–30% cheaper** on Allegro/OLX. **Note**: the original Gemini claim of a PCIe x4 expansion slot is **wrong** — the S740 has no PCIe/mPCIe slot, so it gains no expansion advantage. Caveats: dedicated Fujitsu 19 V PSU (ensure it's included), boxier case.
 
-### 2. Hardware alternative: Fujitsu Futro S740 (PL-market "king")
+**Lenovo M600 — rejected**: ~2.5–3× slower, single DDR3L slot (8 GB max), small fan.
 
-Same CPU as the Wyse 5070 (Intel Celeron J4105, Gemini Lake, 4C/4T, TDP 10 W, VT-x/VT-d/AES-NI) — identical Home Assistant performance, identical Proxmox fit.
-
-| Cecha | Dell Wyse 5070 | Fujitsu Futro S740 |
-|---|---|---|
-| Procesor | J4105 | J4105 |
-| Pasywne chłodzenie | Tak | Tak |
-| Slot PCIe | Very limited | **None** (no PCIe/mPCIe; M.2 ports carry PCIe 2.0 x1) |
-| RAM | 2× SO-DIMM | 2× SO-DIMM |
-| Miejsce na dysk | M.2 SATA + 2.5" | M.2 SATA |
-| Ekosystem Proxmox | Ideal | Ideal |
-
-**Futro S740 advantages**: very solid build (German industrial/office market), strong PL availability and often **20–30% cheaper** than the Wyse 5070 on Allegro/OLX. **Note**: the original Gemini claim of a PCIe x4 expansion slot is **wrong** — the S740 has no PCIe/mPCIe slot, so it gains no expansion advantage over the Wyse 5070.
-**Caveats**: needs the **dedicated Fujitsu 19 V PSU** (ensure it's included), boxier case.
-
-**Verdict**: **prefer the Dell Wyse 5070** — same CPU and (with the PCIe-slot claim corrected) no expansion gap; the Wyse 5070's **design/look** is preferred for a visible spot in the home (aesthetic choice). Either is a "tank" for light virtualization.
+> **Critical hardware note (Wyse 5070)**: the M.2 slot accepts **M.2 SATA (B+M key) only** — standard M.2 **NVMe (M key) drives are NOT detected**.
 
 ### 3. Architecture: Home Assistant OS as a VM on Proxmox VE (vs bare-metal)
 
