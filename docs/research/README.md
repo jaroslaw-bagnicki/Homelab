@@ -2,7 +2,7 @@
 
 | # | Date | Document | Topic | Source |
 |---|------|----------|-------|--------|
-| 26 | 2026-08-14 | [26-home-assistant-thin-client.md](26-home-assistant-thin-client.md) | Home Assistant on a thin client — Wyse 5070/Futro S740 hardware, HA OS on Proxmox VE, MQTT/Zigbee2MQTT placement, RAM/SSD sizing, Ansible, Netdata+Fluent Bit | Gemini chat 14 |
+| 26 | 2026-08-14 | [26-home-assistant-thin-client.md](26-home-assistant-thin-client.md) | Home Assistant on a thin client — Wyse 5070/Futro S740 hardware, Home Assistant OS on Proxmox VE, MQTT/Zigbee2MQTT placement, RAM/SSD sizing, Ansible, Netdata+Fluent Bit | Gemini chat 14 |
 | 25 | 2026-08-09 | [25-edge-ingress-sbc.md](25-edge-ingress-sbc.md) | Edge ingress SBC for Cloudflare Tunnel + Caddy — PL-market hardware research: used x86 thin client vs Orange Pi Zero 3 | OpenCode thread + issue #65 |
 | 24 | 2026-08-09 | [24-network-topology-design.md](24-network-topology-design.md) | Homelab network topology & design — mesh inventory, flat vs VLAN comparison, TL-SG108E integration, static IP scheme | OpenCode thread + issue #55 |
 | 23 | 2026-08-08 | [23-ml110-nas-omv.md](23-ml110-nas-omv.md) | ML110 G5 NAS (OMV) — hardware findings, controller topology, disk SMART, RAID & boot trade-offs | SystemRescue report + SMART scans + issue #54 |
