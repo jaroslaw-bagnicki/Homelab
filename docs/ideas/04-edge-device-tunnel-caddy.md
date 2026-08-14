@@ -43,15 +43,17 @@ flowchart LR
         CF["Cloudflare Edge"]
     end
     subgraph LAN["Home LAN"]
-        RPi["RPi edge — cloudflared + Caddy"]
+        W3040["Wyse 3040 — ingress edge (cloudflared + Caddy)"]
         M910q["M910q — k3s workloads"]
         OMV["ML110 OMV — storage"]
+        W5070["Wyse 5070 — Home Assistant (Proxmox)"]
         FUT["future gear"]
     end
-    CF <-- "outbound QUIC :7844" --> RPi
-    RPi -- "HTTPS/HTTP" --> M910q
-    RPi -- "https://192.168.2.210" --> OMV
-    RPi -- "HTTPS/HTTP" --> FUT
+    CF <-- "outbound QUIC :7844" --> W3040
+    W3040 -- "HTTPS/HTTP" --> M910q
+    W3040 -- "https://192.168.2.210" --> OMV
+    W3040 -- "HTTPS/HTTP" --> W5070
+    W3040 -- "HTTPS/HTTP" --> FUT
 ```
 
 Backends are reached over the LAN. The M910q, OMV, and anything new never need their own
