@@ -135,19 +135,7 @@ Recommended: install both at the **Proxmox (Debian) host level** — full visibi
   wget -O /tmp/netdata-kickstart.sh https://my-netdata.io/netdata-kickstart.sh && sh /tmp/netdata-kickstart.sh
   ```
   SSD-friendly config (`/etc/netdata/netdata.conf`): `[db] mode = dbengine` with `storage limit mib = 512`. Can stream metrics to a central Netdata Parent / Grafana in the k3s cluster.
-- **Fluent Bit** — ~10–30 MB RAM; collects `systemd-journal`, `/var/log/syslog`, Proxmox services (`pveproxy`, `pvedaemon`), LXC logs (`/var/log/lxc/*.log`); forwards to central Loki/Elasticsearch/Vector on the M910q:
-  ```ini
-  [INPUT]
-      Name systemd
-      Tag host.*
-      Read_From_Tail On
-  [OUTPUT]
-      Name loki
-      Match *
-      Host 192.168.1.X
-      Port 3100
-      Labels job=fluentbit, host=wyse5070
-  ```
+- **Fluent Bit** — ~10–30 MB RAM; collects `systemd-journal`, `/var/log/syslog`, Proxmox services (`pveproxy`, `pvedaemon`), LXC logs (`/var/log/lxc/*.log`); forwards to central Loki/Elasticsearch/Vector on the M910q.
 - LXC `stdout`/`stderr` logs are captured by Proxmox `journald` — no per-container agents needed. Home Assistant OS logs/metrics go out via its native Syslog / Prometheus / InfluxDB integrations.
 
 | Zasób | Zużycie przez Netdata + Fluent Bit | Wpływ na Home Assistant + MQTT + Z2M |
