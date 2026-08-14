@@ -55,7 +55,7 @@ Running Home Assistant OS as a VM on Proxmox VE instead of bare-metal gives:
 4. **Resource utilization** — allocate Home Assistant what it needs (e.g. 2 vCPU / 4 GB) and use the rest of the Wyse 5070 for other homelab projects.
 5. **USB pass-through** — clean assignment of Zigbee/Sonoff dongles, RF433/BT receivers, Coral TPU to the Home Assistant VM.
 
-| Podejście | Zalety | Wady |
+| Approach | Pros | Cons |
 |---|---|---|
 | Bare-Metal (Home Assistant OS direct) | Simple install, no virtualization layer, zero overhead | Machine dedicated to Home Assistant only; harder whole-disk recovery |
 | VM on Proxmox VE | Snapshots, full LXC service independence, easy backups, optimal hardware use | Needs initial Proxmox setup + basic virtualization knowledge |
@@ -94,13 +94,13 @@ lxc.mount.entry: /dev/serial/by-id/usb-ITead_Sonoff_Zigbee_3.0_USB_Dongle_Plus_.
 
 ### 6. RAM sizing
 
-| Komponent / Usługa | Typ | Przydzielony RAM | Rzeczywiste zużycie RAM |
+| Component / Service | Type | Allocated RAM | Actual RAM usage |
 |---|---|---|---|
-| Proxmox VE (Hypervisor) | System bazowy | – | ~1.0 GB |
-| Home Assistant OS | Maszyna wirtualna (VM) | 4.0 GB | ~2.0–3.0 GB |
-| Mosquitto MQTT | Kontener LXC | 256 MB | ~20–50 MB |
-| Zigbee2MQTT | Kontener LXC | 512 MB – 1 GB | ~150–300 MB |
-| **Suma całkowita** | | **~5.5 GB** | **~3.2–4.4 GB** |
+| Proxmox VE (Hypervisor) | Base system | – | ~1.0 GB |
+| Home Assistant OS | Virtual machine (VM) | 4.0 GB | ~2.0–3.0 GB |
+| Mosquitto MQTT | LXC container | 256 MB | ~20–50 MB |
+| Zigbee2MQTT | LXC container | 512 MB – 1 GB | ~150–300 MB |
+| **Total** | | **~5.5 GB** | **~3.2–4.4 GB** |
 
 - **4 GB (minimal)**: works but on the edge — Home Assistant gets 2 GB, no safety margin, SWAP-on-SSD risk shortens SSD life.
 - **8 GB (optimal, recommended)**: Home Assistant gets the vendor-recommended 4 GB, containers full headroom, ~2.5–3 GB free for extra LXC (AdGuard, Nginx Proxy Manager).
@@ -138,10 +138,10 @@ Recommended: install both at the **Proxmox (Debian) host level** — full visibi
 - **Fluent Bit** — ~10–30 MB RAM; collects `systemd-journal`, `/var/log/syslog`, Proxmox services (`pveproxy`, `pvedaemon`), LXC logs (`/var/log/lxc/*.log`); forwards to central Loki/Elasticsearch/Vector on the M910q.
 - LXC `stdout`/`stderr` logs are captured by Proxmox `journald` — no per-container agents needed. Home Assistant OS logs/metrics go out via its native Syslog / Prometheus / InfluxDB integrations.
 
-| Zasób | Zużycie przez Netdata + Fluent Bit | Wpływ na Home Assistant + MQTT + Z2M |
+| Resource | Netdata + Fluent Bit usage | Impact on Home Assistant + MQTT + Z2M |
 |---|---|---|
-| CPU | ~1–3% of one Celeron J4105 core | Niezauważalny |
-| RAM | ~150–200 MB total | Znikomy (huge headroom at 8 GB) |
+| CPU | ~1–3% of one Celeron J4105 core | Negligible |
+| RAM | ~150–200 MB total | Negligible (huge headroom at 8 GB) |
 | SSD | Very low (RAM buffering + network export) | Safe for SSD lifespan |
 
 ---
