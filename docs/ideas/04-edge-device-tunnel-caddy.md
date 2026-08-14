@@ -5,10 +5,12 @@
 > One device owns all inbound routing for the LAN; backends (M910q, ML110 OMV, future
 > gear) stay plain and cluster churn never drops external access.
 
-**Status**: 📋 Planned  
+**Status**: 🔨 Implementing  
 **Date**: 2026-08-09  
 **Research**: [Research 25 — Edge ingress SBC, PL market](../research/25-edge-ingress-sbc.md)  
 **Decision**: [ADR 24 — Edge ingress on a dedicated thin-client appliance](../decisions/24-edge-ingress-appliance.md) — Dell Wyse 3040, bare-metal cloudflared + Caddy  
+**Runbook**: [Runbook 24 — Edge appliance (Wyse 3040)](../runbooks/24-edge-appliance.md)  
+**Hardware**: Dell Wyse 3040 acquired **2026-08-13** — 89,00 PLN device + 35,94 PLN charger = 124,94 PLN (~29,06 EUR)  
 **Issue**: [#65 — Dedicated edge device for Cloudflare Tunnel + Caddy ingress](https://github.com/jaroslaw-bagnicki/Homelab/issues/65)  
 
 ---

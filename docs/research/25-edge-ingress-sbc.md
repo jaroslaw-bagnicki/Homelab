@@ -34,7 +34,7 @@ Initial research suggested a cheap SBC (e.g. Radxa ZERO 3E at ~$25) as the obvio
 
 Consequences:
 - **Radxa ZERO 3E — dropped** as the headline pick. Its ~$25 MSRP is not a Poland-reachable price; listings are scarce and overpriced when present.
-- The cheap-SBC floor doesn't hold: the cheapest reachable GbE SBC (Orange Pi Zero 3 4 GB) runs **~370 PLN** on Allegro (verified Aug 2026) — ~5× the 3040's ~70 PLN.
+- The cheap-SBC floor doesn't hold: the cheapest reachable GbE SBC (Orange Pi Zero 3 4 GB) runs **~370 PLN** on Allegro (verified Aug 2026) — ~4× the 3040's ~90 PLN (actual purchase 89,00 PLN).
 - At that price point, a **used x86 thin client** becomes cost-competitive — with the side benefit that it reuses the homelab's existing apt/.deb + Ansible toolchain.
 
 > Exact listing prices must be verified on Allegro at purchase time (automated queries are bot-blocked; ranges below are market-level estimates as of Aug 2026).
@@ -47,7 +47,7 @@ Consequences:
 
 Business thin clients are common and cheap on the Polish used market.
 
-#### Selected unit: Dell Wyse 3040 (~70 PLN used)
+#### Selected unit: Dell Wyse 3040 (~90 PLN used)
 
 | Property | Value |
 |---|---|
@@ -56,11 +56,11 @@ Business thin clients are common and cheap on the Polish used market.
 | Storage | 8 GB eMMC (soldered) |
 | Network | 1× GbE |
 | Power | ~2–3 W idle (fanless) |
-| Price | ~70 PLN used |
+| Price | ~90 PLN used (actual purchase 89,00 PLN, 2026-08-13) |
 | OS | Debian minimal (baseline); Alpine Linux trialed |
 
 **Selection rationale:**
-- **Insanely cheap in the PL market** — ~70 PLN vs ~370 PLN for the OPi Zero 3 4 GB vs ~280–400 PLN for a used RPi 4B. The 3040 is ~4–5× cheaper than any reachable GbE SBC/RPi.
+- **Insanely cheap in the PL market** — ~90 PLN (actual 89,00 PLN) vs ~370 PLN for the OPi Zero 3 4 GB vs ~280–400 PLN for a used RPi 4B. The 3040 is ~3–4× cheaper than any reachable GbE SBC/RPi.
 - **Constrained-resources experiment** — a deliberate 2 GB/8 GB appliance forces minimal, clean engineering; a first-class hobby rationale for this homelab.
 - **Bare-metal fits** — `cloudflared` + Caddy as systemd services need ~600–800 MB RAM / ~4 GB disk, leaving room on 2 GB/8 GB (see Deployment Model).
 
@@ -131,8 +131,8 @@ Both run the same systemd units and identical Caddy/cloudflared configs — only
 
 | Dimension | A — Wyse 3040 (bare-metal) | B — Orange Pi Zero 3 | C — RPi 4B (used) | D — Wyse 5070 (Docker fallback) |
 |---|---|---|---|---|
-| Est. price (PL) | **~70 PLN** | ~370 PLN | ~280–400 PLN | ~150–250 PLN |
-| Cost vs ARM options | **~4–5× cheaper** | ~5× the 3040 | ~4× the 3040 (2 GB) | ~2–3× the 3040 |
+| Est. price (PL) | **~90 PLN (actual 89)** | ~370 PLN | ~280–400 PLN | ~150–250 PLN |
+| Cost vs ARM options | **~3–4× cheaper** | ~4× the 3040 | ~3× the 3040 (2 GB) | ~2× the 3040 |
 | Idle power | ~2–3 W | ~2–4 W | ~3–5 W | ~5–8 W |
 | RAM | 2 GB soldered (no headroom) | 4 GB | 2–8 GB | 4–8 GB upgradeable |
 | Boot storage | 8 GB eMMC | microSD + overlayroot | SD/USB | SATA SSD |
@@ -141,7 +141,7 @@ Both run the same systemd units and identical Caddy/cloudflared configs — only
 | Cloudflared + Caddy load | Trivial | Trivial | Trivial | Trivial |
 | Spares/repairability (PL) | Good (business gear) | Poor | Good | Good |
 
-**Verdict:** the Wyse 3040 at ~70 PLN is the working selection — cheapest by a wide margin in the PL market (OPi Zero 3 is ~370 PLN, RPi 4B from ~280 PLN) and a deliberate constrained-resources experiment. Bare-metal keeps it viable within 2 GB/8 GB. The Wyse 5070 (Docker-capable, real headroom) is the fallback if the 3040's constraints bite; the RPi 4B (2 GB) is the price-sane ARM fallback if the x86 path is ever abandoned.
+**Verdict:** the Wyse 3040 at ~90 PLN (actual purchase 89,00 PLN) is the working selection — cheapest by a wide margin in the PL market (OPi Zero 3 is ~370 PLN, RPi 4B from ~280 PLN) and a deliberate constrained-resources experiment. Bare-metal keeps it viable within 2 GB/8 GB. The Wyse 5070 (Docker-capable, real headroom) is the fallback if the 3040's constraints bite; the RPi 4B (2 GB) is the price-sane ARM fallback if the x86 path is ever abandoned.
 
 ---
 

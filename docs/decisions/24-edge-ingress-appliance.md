@@ -19,7 +19,7 @@ The home ISP is CGNAT (ADR 08): the ingress needs only a single outbound QUIC co
 
 Run the homelab's public ingress on a **dedicated, low-power edge appliance** on the home LAN, in front of all backends:
 
-- **Hardware — Dell Wyse 3040** (Atom x5-Z8350, 2 GB DDR3L, 8 GB eMMC, GbE, ~70 PLN used, ~2–3 W fanless). Selected as a deliberate constrained-resources experiment and by far the cheapest reachable GbE device in PL. The Wyse 5070 (4 GB, SATA SSD) is the accepted fallback if the 2 GB ceiling is hit.
+- **Hardware — Dell Wyse 3040** (Atom x5-Z8350, 2 GB DDR3L, 8 GB eMMC, GbE, ~90 PLN used — actual purchase 89,00 PLN on 2026-08-13, ~2–3 W fanless). Selected as a deliberate constrained-resources experiment and by far the cheapest reachable GbE device in PL. The Wyse 5070 (4 GB, SATA SSD) is the accepted fallback if the 2 GB ceiling is hit.
 - **Deployment model — bare-metal, not Docker.** `cloudflared` and Caddy install directly on a minimal distro as systemd services. **OS: Debian minimal as the baseline; Alpine Linux trialed in parallel** (sequential on-device trial) as part of the constrained-resources experiment — the Caddy/cloudflared configs are identical either way. Config-as-code preserved: the Caddyfile and cloudflared config are templated by Ansible (ADR 10); Debian keeps the apt/.deb update path.
 - **Architecture split.** The edge appliance owns external routing: `*.example.com` → Caddy → backends over the LAN. The M910q keeps the internal `.home` Caddy + k3s (ADR 06/07/22). The tunnel origin moves off the M910q.
 - **ADR 19 pattern applies to the homelab edge.** cloudflared → Caddy over HTTPS with Cloudflare Origin CA; CF SSL mode Full (Strict).
@@ -40,8 +40,8 @@ Run the homelab's public ingress on a **dedicated, low-power edge appliance** on
 
 - **Keep ingress on the M910q (no change)** — loses the decoupling benefit; ingress tied to cluster lifecycle. Rejected.
 - **Docker/containers on the edge box** — keeps fleet consistency (ADR 10) but doesn't fit 2 GB/8 GB and adds a runtime layer to a public-facing device. Rejected for the edge; documented as the fallback path in research 25.
-- **Orange Pi Zero 3 (ARM)** — ~370 PLN on Allegro (verified Aug 2026): ~5× the 3040, pricier than a used RPi 4B, and needs a new ARM64/Armbian provisioning path. Rejected on price; documented as Path B.
-- **Raspberry Pi 4B** — best ecosystem/support but ~280–400 PLN in PL (2–8 GB) — ~4× the 3040. Rejected on cost.
+- **Orange Pi Zero 3 (ARM)** — ~370 PLN on Allegro (verified Aug 2026): ~4× the 3040, pricier than a used RPi 4B, and needs a new ARM64/Armbian provisioning path. Rejected on price; documented as Path B.
+- **Raspberry Pi 4B** — best ecosystem/support but ~280–400 PLN in PL (2–8 GB) — ~3× the 3040. Rejected on cost.
 - **Reuse the ML110 or existing M910q** — contradicts ADR 23's storage-only scope / loses the decoupling benefit. Rejected.
 
 ---
