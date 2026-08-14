@@ -50,10 +50,10 @@ flowchart LR
         FUT["future gear"]
     end
     CF <-- "outbound QUIC :7844" --> W3040
-    W3040 -- "HTTPS/HTTP" --> M910q
-    W3040 -- "https://192.168.2.210" --> OMV
-    W3040 -- "HTTPS/HTTP" --> W5070
-    W3040 -- "HTTPS/HTTP" --> FUT
+    W3040 -- "HTTPS" --> M910q
+    W3040 -- "HTTPS" --> OMV
+    W3040 -- "HTTPS" --> W5070
+    W3040 -- "HTTPS" --> FUT
 ```
 
 Backends are reached over the LAN. The M910q, OMV, and anything new never need their own
