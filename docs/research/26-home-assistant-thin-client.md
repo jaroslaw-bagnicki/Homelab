@@ -146,18 +146,19 @@ Recommended: install both at the **Proxmox (Debian) host level** — full visibi
 
 ---
 
-## Decisions Made
+## Working Selection — pending ADR
 
-| # | Decision | Rejected alternative(s) | Reason |
+Following the ADR 24 pattern — the edge-device decision lives in [ADR 24](../decisions/24-edge-ingress-appliance.md), not in a research file — the items below are **working selections from this research**. The formal decision is carried by a future ADR, not settled here.
+
+| # | Selection | Rejected alternative(s) | Reason |
 |---|---|---|---|
-| 1 | Dell Wyse 5070 as Home Assistant base (vs M600) | Lenovo M600 | ~2.5–3× CPU, dual DDR4 SO-DIMM slots, fully passive cooling |
-| 2 | **Dell Wyse 5070** (design/look preference) | Fujitsu Futro S740 | Same J4105 and no expansion gap (PCIe-slot claim was a Gemini error); ~20–30% lower PL price outweighed by the 5070's better look in a visible home spot |
-| 3 | Home Assistant OS as **VM on Proxmox VE** | Bare-metal Home Assistant OS | Snapshots, `vzdump` backups, LXC isolation, USB pass-through, resource sharing |
-| 4 | MQTT + Z2M as **LXC on the Wyse 5070** (next to Home Assistant) | M910q K3s, LAN coordinator (SLZB-06), Wyse 3040 edge | Home Assistant-independent mesh, k3s stays application-only, native USB pass-through, central radio location |
-| 5 | **8 GB RAM** (16 GB future-proof) | 4 GB minimal | Home Assistant gets vendor-recommended 4 GB + ~2.5–3 GB free |
-| 6 | **M.2 SATA SSD 128–256 GB** (256 GB sweet spot) | 16 GB eMMC, NVMe | eMMC too small/low-TBW for 24/7 Home Assistant DB writes; NVMe not detected (B+M key) |
-| 7 | **Ansible `community.proxmox`** for VM/LXC lifecycle | Manual web-UI provisioning | Idempotency, DR replay, GitOps consistency with k3s/ingress |
-| 8 | Netdata + Fluent Bit at **Proxmox host level** | In-guest agents, Home Assistant add-ons | Closed Home Assistant OS untouched; auto VM/LXC detection; ~150–200 MB total |
+| 1 | **Dell Wyse 5070** as the Home Assistant node (→ future ADR) | Lenovo M600, Fujitsu Futro S740 | ~2.5–3× CPU vs M600; design/look over the otherwise-identical Futro (no expansion gap after the PCIe correction) |
+| 2 | Home Assistant OS as **VM on Proxmox VE** | Bare-metal Home Assistant OS | Snapshots, `vzdump` backups, LXC isolation, USB pass-through, resource sharing |
+| 3 | MQTT + Z2M as **LXC on the Wyse 5070** (next to Home Assistant) | M910q K3s, LAN coordinator (SLZB-06), Wyse 3040 edge | Home Assistant-independent mesh, k3s stays application-only, native USB pass-through, central radio location |
+| 4 | **8 GB RAM** (16 GB future-proof) | 4 GB minimal | Home Assistant gets vendor-recommended 4 GB + ~2.5–3 GB free |
+| 5 | **M.2 SATA SSD 128–256 GB** (256 GB sweet spot) | 16 GB eMMC, NVMe | eMMC too small/low-TBW for 24/7 Home Assistant DB writes; NVMe not detected (B+M key) |
+| 6 | **Ansible `community.proxmox`** for VM/LXC lifecycle | Manual web-UI provisioning | Idempotency, DR replay, GitOps consistency with k3s/ingress |
+| 7 | Netdata + Fluent Bit at **Proxmox host level** | In-guest agents, Home Assistant add-ons | Closed Home Assistant OS untouched; auto VM/LXC detection; ~150–200 MB total |
 
 ---
 
