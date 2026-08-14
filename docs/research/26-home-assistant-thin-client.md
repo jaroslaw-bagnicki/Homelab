@@ -4,7 +4,7 @@
 
 **Scope**: Exploratory research for a **new idea** — a dedicated Home Assistant node built on a thin client, co-locating Home Assistant OS with Mosquitto MQTT + Zigbee2MQTT under Proxmox VE.
 
-**Status**: 🧠 Idea — exploration only. No hardware acquired, no ADR, no implementation plan. Would slot into the homelab as a *second compute/automation node* alongside the M910q (k3s, ADR 22), ML110 OMV NAS (ADR 23), and Wyse 3040 edge ingress (ADR 24).
+**Status**: 📝 Analysis — direction carried by [ADR 25](../decisions/25-home-assistant-thin-client.md) (Proposed); no hardware acquired, no implementation yet. Would slot into the homelab as a *second compute/automation node* alongside the M910q (k3s, ADR 22), ML110 OMV NAS (ADR 23), and Wyse 3040 edge ingress (ADR 24).
 
 > ⚠️ **Verification needed**: Config snippets, commands, and price claims below are Gemini-generated. Prices are PL secondary-market estimates (Aug 2026) and must be re-checked at purchase time; LXC/USB-passthrough and Fluent Bit configs must be validated against current Proxmox / Home Assistant documentation before execution.
 >
@@ -143,22 +143,6 @@ Recommended: install both at the **Proxmox (Debian) host level** — full visibi
 | CPU | ~1–3% of one Celeron J4105 core | Niezauważalny |
 | RAM | ~150–200 MB total | Znikomy (huge headroom at 8 GB) |
 | SSD | Very low (RAM buffering + network export) | Safe for SSD lifespan |
-
----
-
-## Working Selection — pending ADR
-
-Following the ADR 24 pattern — the edge-device decision lives in [ADR 24](../decisions/24-edge-ingress-appliance.md), not in a research file — the items below are **working selections from this research**. The formal decision is carried by a future ADR, not settled here.
-
-| # | Selection | Rejected alternative(s) | Reason |
-|---|---|---|---|
-| 1 | **Dell Wyse 5070** as the Home Assistant node (→ future ADR) | Lenovo M600, Fujitsu Futro S740 | ~2.5–3× CPU vs M600; design/look over the otherwise-identical Futro (no expansion gap after the PCIe correction) |
-| 2 | Home Assistant OS as **VM on Proxmox VE** | Bare-metal Home Assistant OS | Snapshots, `vzdump` backups, LXC isolation, USB pass-through, resource sharing |
-| 3 | MQTT + Z2M as **LXC on the Wyse 5070** (next to Home Assistant) | M910q K3s, LAN coordinator (SLZB-06), Wyse 3040 edge | Home Assistant-independent mesh, k3s stays application-only, native USB pass-through, central radio location |
-| 4 | **8 GB RAM** (16 GB future-proof) | 4 GB minimal | Home Assistant gets vendor-recommended 4 GB + ~2.5–3 GB free |
-| 5 | **M.2 SATA SSD 64–256 GB** (128 GB practical pick) | 16 GB eMMC, NVMe | eMMC too small/low-TBW for 24/7 Home Assistant DB writes; NVMe not detected (B+M key) |
-| 6 | **Ansible `community.proxmox`** for VM/LXC lifecycle | Manual web-UI provisioning | Idempotency, DR replay, GitOps consistency with k3s/ingress |
-| 7 | Netdata + Fluent Bit at **Proxmox host level** | In-guest agents, Home Assistant add-ons | Closed Home Assistant OS untouched; auto VM/LXC detection; ~150–200 MB total |
 
 ---
 
