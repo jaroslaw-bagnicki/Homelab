@@ -3,6 +3,10 @@
 **Date:** 2026-06-02  
 **Status:** Implemented (partial)
 
+> **Scope (amended 2026-08-15):** This ADR covers only the **Azure Monitor (Tier A)** element of
+> the two-tier monitoring strategy ([ADR 27](27-monitoring-strategy.md)); the overall strategy's
+> Tier B is a local **Netdata plane** on all nodes.
+
 ---
 
 ## Context
@@ -77,4 +81,4 @@ It is installed separately via `New-AzConnectedMachineExtension`.
 
 ---
 
-> **Future direction:** When the homelab migrates to k3s + Arc (ADR 22), the Arc-enabled Kubernetes onboarding extends Azure Monitor coverage to cluster-level metrics (control plane, node metrics, pod metrics) and Container Insights. The Arc Server agent and AMA foundation established here remain in place; the cluster adds Azure Monitor Container Insights as a new data source.
+> **Future direction:** With the k3s + Arc migration (ADR 22), Container Insights extends this Tier A setup to cluster-level metrics (control plane, node metrics, pod metrics). The overall homelab monitoring strategy is the two-tier model in [ADR 27](27-monitoring-strategy.md); this ADR covers only the Azure Monitor (Tier A) portion.
