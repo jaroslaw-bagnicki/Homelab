@@ -44,11 +44,11 @@ Currently: [OpenCode](workloads/opencode/README.md) — per-project OpenCode ser
 
 ### `common`
 
-Sets the hostname to inventory name, configures `Etc/UTC` timezone, and ensures `systemd-timesyncd` is running.
+Sets the hostname to inventory name, configures `Etc/UTC` timezone, ensures `systemd-timesyncd` is running, and optionally installs/enables Avahi mDNS (`.local`) when `common_enable_avahi: true`.
 
 ### `security`
 
-Configures UFW with default-deny incoming policy and explicit SSH allow on configurable port. Installs and enables fail2ban with SSH hardening (config in `templates/fail2ban-jail.local.j2`).
+Configures UFW with default-deny incoming policy, explicit SSH allow on configurable port, and deny inbound TCP/80 (ingress via the edge appliance). Installs and enables fail2ban with SSH hardening (config in `templates/fail2ban-jail.local.j2`).
 
 ### `azure_arc`
 
@@ -56,7 +56,7 @@ Installs `azcmagent` from Microsoft's Ubuntu 22.04 package repo, fetches the SPN
 
 ### `docker_host`
 
-Removes any OS-package Docker remnants, adds the official Docker repository, installs `docker-ce` / `docker-ce-cli` / `containerd.io`, and adds `labadmin` to the `docker` group.
+Removes any OS-package Docker remnants, adds the official Docker repository, and installs `docker-ce` / `docker-ce-cli` / `containerd.io`. Optionally adds users from `docker_users` to the `docker` group — **defaults to `[]`** (docker-group membership is passwordless root-equivalent and not needed for Ansible, which reaches Docker via `become`).
 
 ### `docker_services`
 
@@ -80,10 +80,18 @@ Manages the core Docker Compose stack on the host: `portainer`, `caddy` (with `c
 cloudlab ansible_host=173.249.27.13 ansible_user=labadmin
 
 [physical]
-homelab ansible_host=192.168.2.200 ansible_user=jarek
+homelab ansible_host=192.168.2.200 ansible_user=labadmin
 ```
 
-The hostnames must resolve on the control machine — add `cloudlab` and `homelab` to `C:\Windows\System32\drivers\etc\hosts` (or the equivalent) on the machine running Ansible. `homelab` requires `ansible_user=jarek` with the workstation SSH key; `cloudlab` uses `labadmin` (key from AKV).
+Both hosts use the generic **`labadmin`** operator account (key-only SSH, no password). The hostnames must resolve on the control machine — add `cloudlab` and `homelab` to `C:\Windows\System32\drivers\etc\hosts` (or the equivalent). `homelab` lives on the home LAN and is only reachable from a workstation on `192.168.2.0/24`.
+
+### Agent account pattern (`labadmin`)
+
+`labadmin` is a dedicated, non-interactive Ansible agent account, not a human login:
+
+- **Key-only login** — SSH public key, no password.
+- **`NOPASSWD` sudo** (or a scoped sudoers rule) — required for Ansible `become: true`.
+- **`docker_users: []` on both hosts** — deliberately *not* in the `docker` group. The `docker` group is passwordless root-equivalent via the daemon socket, and Ansible reaches Docker through `become` anyway; a compromised agent key must not also grant instant root. Interactive `docker` commands on a host are run via `sudo`.
 
 ---
 

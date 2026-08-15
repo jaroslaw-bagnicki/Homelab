@@ -1,3 +1,2 @@
 ---
-docker_users:
-  - labadmin
+docker_users: []
