@@ -37,7 +37,7 @@
 - USB flash drive + flasher (balenaEtcher / `dd`)
 - OS images for the trial: **Debian minimal** (netinst) + **Alpine Linux**
 - Console or SSH reachability during setup
-- Refs: [research 25](../research/25-edge-ingress-sbc.md) (hardware), [ADR 24](../decisions/24-edge-ingress-appliance.md) (decision), [runbook 23](23-tl-sg108e-switch.md) (switch placement)
+- Refs: [research 25](../research/25-edge-ingress-sbc.md) (hardware), [ADR 24](../decisions/24-edge-ingress-appliance.md) (decision), [runbook 21](21-tl-sg108e-switch.md) (switch placement)
 
 ---
 
@@ -49,7 +49,7 @@
 ## 2. Base Setup
 
 > *To be completed.* Static IP on the reserved `192.168.2.x` block (research 24), SSH,
-> hardening — mirror [runbook 1](1-init.md).
+> hardening — mirror [runbook 01](01-init.md).
 
 ## 3. cloudflared — Tunnel
 
@@ -68,5 +68,5 @@
 
 ## 6. Switch Placement
 
-> *To be completed.* Port on the TL-SG108E (runbook 23), static IP per research 24's
+> *To be completed.* Port on the TL-SG108E (runbook 21), static IP per research 24's
 > reserved block.

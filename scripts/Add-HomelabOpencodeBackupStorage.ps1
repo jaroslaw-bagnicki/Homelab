@@ -7,7 +7,7 @@
 # Idempotent — safe to re-run.
 #
 # Prerequisite: homelabcloud5 storage account must already exist.
-# Deploy it first per docs/runbooks/7-restic-backup.md (issue #13).
+# Deploy it first per docs/runbooks/07-restic-backup.md (issue #13).
 
 [CmdletBinding()]
 param(
@@ -27,7 +27,7 @@ Set-AzContext -Tenant $TenantId -Subscription $SubscriptionId | Out-Null
 $sa = Get-AzStorageAccount -ResourceGroupName $ResourceGroupName -Name $StorageAccountName -ErrorAction SilentlyContinue
 if (-not $sa) {
   throw "Storage account '$StorageAccountName' not found in RG '$ResourceGroupName'.`n" +
-        "Deploy it first per docs/runbooks/7-restic-backup.md (issue #13).`n" +
+        "Deploy it first per docs/runbooks/07-restic-backup.md (issue #13).`n" +
         "Re-run this script after the storage account exists."
 }
 

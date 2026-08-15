@@ -11,7 +11,7 @@
 
 ## Prerequisites
 
-- [x] Target server registered in Azure Arc (see [6-azure-arc.md](6-azure-arc.md))
+- [x] Target server registered in Azure Arc (see [06-azure-arc.md](06-azure-arc.md))
 - [x] Server shows status **Connected** in Azure Portal → **Azure Arc** → **Servers**
 - [x] Azure subscription with Contributor access
 

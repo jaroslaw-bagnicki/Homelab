@@ -6,9 +6,9 @@
 
 ## Prerequisites
 
-- [ ] DNSMasq deployed and resolving `*.home` (see [3-dns.md](3-dns.md))
-- [ ] Caddy reverse proxy running (see [4-caddy.md](4-caddy.md))
-- [ ] Cloudflare Tunnel deployed with wildcard `*` public hostname → `caddy:80` (see [5-cloudflare-tunnel.md](5-cloudflare-tunnel.md) §5)
+- [ ] DNSMasq deployed and resolving `*.home` (see [03-dns.md](03-dns.md))
+- [ ] Caddy reverse proxy running (see [04-caddy.md](04-caddy.md))
+- [ ] Cloudflare Tunnel deployed with wildcard `*` public hostname → `caddy:80` (see [05-cloudflare-tunnel.md](05-cloudflare-tunnel.md) §5)
 - [ ] SSH access via `ssh jarek@homelab.local`
 
 ---
@@ -100,7 +100,7 @@ http://*.example.com {
 
 ## 3. Expose via `hello.example.com`
 
-If you have a Cloudflare Tunnel with a wildcard `*` public hostname → `caddy:80` (see [5-cloudflare-tunnel.md](5-cloudflare-tunnel.md) §5), add a specific block **above** the wildcard catch-all so it matches first:
+If you have a Cloudflare Tunnel with a wildcard `*` public hostname → `caddy:80` (see [05-cloudflare-tunnel.md](05-cloudflare-tunnel.md) §5), add a specific block **above** the wildcard catch-all so it matches first:
 
 ```bash
 nano Caddyfile

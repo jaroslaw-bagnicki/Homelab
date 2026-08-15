@@ -24,7 +24,7 @@ Meanwhile:
 - **ADR 22** is migrating homelab workloads to **k3s** on the M910q — cluster churn
   (upgrades, restarts, node maintenance) should not be able to drop the public tunnel.
 - **ADR 23** scopes the ML110 OMV NAS as **storage-only** — no `cloudflared` on it. Its
-  web UI (`omv.example.com`, runbook 22 §4d "Phase 2") still needs a tunnel path.
+  web UI (`omv.example.com`, runbook 23 §4d "Phase 2") still needs a tunnel path.
 - **ADR 20** establishes Caddy as the **single routing layer** — a stable dedicated device
   strengthens "one Caddyfile is the only place to read routing".
 - **ADR 08** still holds: home ISP is CGNAT; the edge box needs only a single **outbound**
@@ -99,9 +99,9 @@ Decided in [ADR 24](../decisions/24-edge-ingress-appliance.md): **Dell Wyse 3040
 1. Which hardware? (SBC vs Zero 2 W vs reusing existing gear)
 2. Replace `homelab-tunnel` + Caddy on the M910q entirely, or keep both in parallel
    during migration?
-3. Where does the edge box sit on the TL-SG108E (runbook 23) and how does internal
+3. Where does the edge box sit on the TL-SG108E (runbook 21) and how does internal
    `.home` DNS get repointed (ADR 06)?
-4. Does this ride along with the OMV "Phase 2" tunnel work (runbook 22 §4d)?
+4. Does this ride along with the OMV "Phase 2" tunnel work (runbook 23 §4d)?
 5. What happens to the M910q's V1 tunnel → standardize on the ADR 19/20 pattern as part
    of this move?
 
@@ -120,5 +120,5 @@ before implementation, not a drive-by move.
 - [ADR 22 — k3s + Azure Arc](../decisions/22-k3s-arc-homelab.md) — in-cluster ingress decision
 - [ADR 23 — NAS on the ML110 (OMV)](../decisions/23-nas-on-ml110.md) — storage-only scope
 - [Research 24 — network topology design](../research/24-network-topology-design.md)
-- [Runbook 22 — ML110 OMV setup](../runbooks/22-ml110-omv-setup.md) — §4d "Phase 2" tunnel note
-- [Runbook 23 — TL-SG108E switch](../runbooks/23-tl-sg108e-switch.md)
+- [Runbook 23 — ML110 OMV setup](../runbooks/23-ml110-omv-setup.md) — §4d "Phase 2" tunnel note
+- [Runbook 21 — TL-SG108E switch](../runbooks/21-tl-sg108e-switch.md)

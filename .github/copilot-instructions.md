@@ -25,6 +25,9 @@
   docs once a direction is settled.
 - Runbooks: `runbooks/` — implementation instructions and operational procedures
 - Each area has a `README.md` as the index
+- **State docs stay current**: when a node or workload is added, removed, or changes
+  status, update `docs/overview.md` (nodes/workloads view) and `docs/hardware.md`
+  (per-node specs + network appliances) in the same change
 
 ## Issue Tracking
 
@@ -35,10 +38,10 @@
 - **PR descriptions**: do **not** use the **Why / What / How (WWH)** format — that is **reserved for GitHub Issues only**. PR descriptions are a plain summary of the **Changes** (and any **Notes**) with no WWH headings
 - **Reference issues**: plain `#NNN` mentions link a commit/PR to an issue but do **not** auto-close it. To auto-close on merge, add `Closes #NNN` to the **PR description** or to a commit that is merged into `main` (GitHub evaluates the keyword at merge time; editing a merged PR afterwards won't close the issue)
 - **Labels**: `enhancement` (new feature), `bug` (broken), `chore` (maintenance/tooling), `research` (investigation)
-- **README progress table = public status board** — shows at a glance what's done (dated rows) and what's next (undated rows). Only items that are **completed** or **actively being worked on** belong here.
-- **Issues = the backlog** — capture ideas, bugs, and multi-session work that isn't in the README table yet. An issue becomes a README "What's Next" row when you're ready to start it.
-- **Typical flow**: idea → issue → move to README "What's Next" when starting → move to "What's Done" when finished → close the issue
-- When adding a completed row to "What's Done", link the **runbook** (not the issue) — `[runbook](runbooks/N-name.md)` — so the table points to the implementation, not the ticket
+- **`docs/overview.md` "What's Next" = public status board** — shows what's planned or actively being worked on. Only items that are **planned** or **in progress** belong here.
+- **Issues = the backlog** — capture ideas, bugs, and multi-session work that isn't in the overview table yet. An issue becomes a `docs/overview.md` "What's Next" row when you're ready to start it.
+- **Typical flow**: idea → issue → move to `docs/overview.md` "What's Next" when starting → on completion add an entry to `CHANGELOG.md` (with runbook/ADR links) → close the issue
+- When adding a completed entry to `CHANGELOG.md`, link the **runbook** (not the issue) — `[runbook](runbooks/NN-name.md)` — so the entry points to the implementation, not the ticket
 
 ## Git Workflow
 

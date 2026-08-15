@@ -7,7 +7,7 @@
 ## Prerequisites
 
 - [ ] Ansible playbook running from the repo root (see [ansible/README.md](../../ansible/README.md))
-- [ ] `docker_host` role completed (Docker Engine + Compose plugin installed) — see [2-docker.md](2-docker.md)
+- [ ] `docker_host` role completed (Docker Engine + Compose plugin installed) — see [02-docker.md](02-docker.md)
 - [ ] `security` role completed (UFW configured) — see runbook §4
 - [ ] `community.docker` collection installed (`ansible-galaxy collection install -r ansible/requirements.yml`)
 - [ ] **Python packages for KV lookup** — the `azure.azcollection.azure_keyvault_secret` lookup requires `azure-identity` and `azure-keyvault-secrets`:

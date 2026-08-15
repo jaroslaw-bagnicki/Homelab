@@ -61,4 +61,4 @@ This is a new hardware + architecture project — expect a decision (research 26
 - [ADR 22 — k3s + Azure Arc](../decisions/22-k3s-arc-homelab.md) — cluster that stays application-only
 - [ADR 23 — NAS on the ML110 (OMV)](../decisions/23-nas-on-ml110.md) — backup target / PVC source
 - [ADR 24 — Edge ingress appliance](../decisions/24-edge-ingress-appliance.md) — the lab's first thin client; this is the second
-- [Runbook 23 — TL-SG108E switch](../runbooks/23-tl-sg108e-switch.md) — LAN placement context
+- [Runbook 21 — TL-SG108E switch](../runbooks/21-tl-sg108e-switch.md) — LAN placement context

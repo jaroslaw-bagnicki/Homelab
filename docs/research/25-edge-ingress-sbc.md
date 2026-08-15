@@ -13,7 +13,7 @@
 The homelab's public ingress (`cloudflared` + Caddy) currently lives on the M910q (ADR 07/08, V1 design). Moving it to a dedicated, low-power edge box decouples inbound routing from the M910q's lifecycle:
 
 - **ADR 22** is migrating workloads to k3s on the M910q — cluster churn must not drop the public tunnel.
-- **ADR 23** scopes the ML110 OMV NAS as storage-only; its web UI still needs a tunnel path (runbook 22 §4d "Phase 2").
+- **ADR 23** scopes the ML110 OMV NAS as storage-only; its web UI still needs a tunnel path (runbook 23 §4d "Phase 2").
 - **ADR 20** establishes Caddy as the single routing layer — a stable dedicated device keeps "one Caddyfile is the source of truth".
 - **ADR 08** still holds: home ISP is CGNAT; the edge box needs only a single outbound QUIC connection to Cloudflare's edge (UDP 7844). No inbound ports, no router config.
 
@@ -160,8 +160,8 @@ Both run the same systemd units and identical Caddy/cloudflared configs — only
 2. **OS trial outcome** — Debian minimal vs Alpine Linux (sequential on-device trial); the final OS is locked before the provisioning role is written.
 3. Config-as-code for the edge box — Ansible `edge_host`-style role vs standalone recipe (see [ADR 24](../decisions/24-edge-ingress-appliance.md)).
 4. Replace the M910q `homelab-tunnel` + Caddy entirely, or keep both in parallel during migration?
-5. Edge box placement on the TL-SG108E (runbook 23) and repointing internal `.home` DNS (ADR 06).
-6. Does this ride along with the OMV "Phase 2" tunnel work (runbook 22 §4d)?
+5. Edge box placement on the TL-SG108E (runbook 21) and repointing internal `.home` DNS (ADR 06).
+6. Does this ride along with the OMV "Phase 2" tunnel work (runbook 23 §4d)?
 7. What happens to the M910q's V1 tunnel → standardize on the ADR 19/20 pattern as part of this move?
 
 ---
@@ -178,5 +178,5 @@ Both run the same systemd units and identical Caddy/cloudflared configs — only
 - [ADR 22](../decisions/22-k3s-arc-homelab.md) — k3s + Azure Arc
 - [ADR 23](../decisions/23-nas-on-ml110.md) — ML110 OMV storage-only
 - [Research 24 — network topology design](24-network-topology-design.md)
-- [Runbook 22 — ML110 OMV setup](../runbooks/22-ml110-omv-setup.md) — §4d "Phase 2" tunnel note
-- [Runbook 23 — TL-SG108E switch](../runbooks/23-tl-sg108e-switch.md)
+- [Runbook 23 — ML110 OMV setup](../runbooks/23-ml110-omv-setup.md) — §4d "Phase 2" tunnel note
+- [Runbook 21 — TL-SG108E switch](../runbooks/21-tl-sg108e-switch.md)
