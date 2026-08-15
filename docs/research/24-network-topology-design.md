@@ -191,4 +191,4 @@ See Option A table above. The NAS static IP replaces its current DHCP lease (`19
 - [ADR 06](../decisions/06-local-dns-dnsmasq.md) — local DNS
 - [Runbook 21 — TL-SG108E switch](../runbooks/21-tl-sg108e-switch.md)
 - Official TP-Link docs: [V1 datasheet](https://www.tp-link.com/pl/document/50775/) · [V1 Quick Installation Guide](https://www.tp-link.com/pl/document/883/) · [Easy Smart Configuration Utility User Guide](https://www.tp-link.com/pl/document/13823/)
-- Issue #54 — HP ML110 NAS (OMV); runbook 22 (ML110 inventory) in-flight on the `feat/nas-ml110-omv-setup` branch
+- [Runbook 22 — ML110 inventory](../runbooks/22-ml110-nas-inventory.md) — HP ML110 NAS (OMV)
