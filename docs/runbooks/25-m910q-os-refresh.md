@@ -82,7 +82,9 @@ The refresh re-aligns the box with ADR 05 and unblocks that track.
    | Gateway | `192.168.2.1` |
    | Name servers | `1.1.1.1, 8.8.8.8` |
 
-3. **Install OpenSSH server** when prompted. Complete the install and reboot (remove the USB).
+3. **Create the `labadmin` user when prompted** (name it exactly `labadmin`; the installer
+   adds it to `sudo`). **Install OpenSSH server** when prompted. Complete the install and
+   reboot (remove the USB).
 4. **Verify:**
    ```sh
    ip addr show enp0s31f6 | grep 'inet '
@@ -91,16 +93,31 @@ The refresh re-aligns the box with ADR 05 and unblocks that track.
 
 ## 2. Post-Install Base
 
-Only the SSH key is installed manually here — the LVM root extension and Avahi (mDNS)
-are handled by `playbook-homelab.yml` (pre_task + `common` role), so they run the same
-way on every rebuild.
+The LVM root extension and Avahi (mDNS) are handled by `playbook-homelab.yml`
+(pre_task + `common` role), so they run the same way on every rebuild. What's done here
+manually: finish the `labadmin` agent account setup and upload the SSH key **from the
+workstation**.
 
-1. Install the workstation SSH key (runbook 01 §5):
+1. **Harden the `labadmin` agent account** (at the console or over SSH as `labadmin`,
+   mirroring runbook 10 §3):
    ```sh
-   sudo mkdir -p /home/labadmin/.ssh && sudo chown labadmin:labadmin /home/labadmin/.ssh
-   # paste the workstation id_ed25519.pub into /home/labadmin/.ssh/authorized_keys
+   echo "labadmin ALL=(ALL) NOPASSWD: ALL" | sudo tee /etc/sudoers.d/labadmin
+   sudo chmod 440 /etc/sudoers.d/labadmin
+   sudo mkdir -p /home/labadmin/.ssh && sudo chmod 700 /home/labadmin/.ssh
    ```
-2. **Verify:** `ssh labadmin@homelab` from the workstation logs in without a password.
+   `NOPASSWD` sudo is required for Ansible `become: true` to run non-interactively.
+
+2. **Upload the SSH key from the workstation** (PowerShell — runbook 10 §4):
+   ```powershell
+   type $env:USERPROFILE\.ssh\id_ed25519.pub | ssh labadmin@192.168.2.200 "cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
+   ```
+
+3. **Lock the password** (key-only account — dedicated for the agent):
+   ```sh
+   sudo passwd --lock labadmin
+   ```
+
+4. **Verify:** `ssh labadmin@homelab` from the workstation logs in without a password.
    Pure hostname resolution works out of the box via **LLMNR** (Ubuntu's
    `systemd-resolved` responds by default); `homelab.local` needs Avahi (installed by
    the playbook) for mDNS.
