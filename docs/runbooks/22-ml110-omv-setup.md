@@ -45,6 +45,9 @@
 > - RAID UI plugin: OMV 8 has **no RAID page in the base install** — the `openmediavault-md`
 >   plugin (8.1.5-1) had to be installed first; OMV upgraded 8.3.1 → 8.5.6-1 in the process (see §5).
 > - Dashboard: all widgets enabled on the home dashboard via `Dashboard | Settings` (§6, executed after RAID).
+> - SSH: user **`jarek`** created via web UI (`_ssh`, `sudo`, `users`, `openmediavault-admin`,
+>   `openmediavault-webgui`), workstation `lenovo-slim` pubkey attached. Hardening applied via
+>   `Services | SSH`: key-only, LAN-only (`Match Address`), root console-only (§8, 2026-08-15).
 
 ---
 
@@ -312,21 +315,47 @@ Default settings elsewhere untouched (auto-logout etc. left as-is).
   `docs/ideas/03-nas-backup-target-ml110.md` and `docs/ideas/README.md`.
 - Report completion on issue #61 (and #62 once exports are live) so the parent #54 can close.
 
-### Deferred — SSH hardening (not Phase 1)
+### SSH access — workstation (user `jarek`, via web UI)
 
-**Deferred intentionally** — the box still allows SSH root login with password from the whole
-subnet while Phase 1 finishes. Apply in a later phase (do not expose SSH publicly without this):
+Key-based SSH for the operator (and `sudo` admin) is done **via the OMV web UI**, not at the CLI.
+The NAS is reachable directly **only from the home LAN** (`192.168.2.0/24`); nothing is exposed
+outside it (see the hardening block below — applied, not deferred).
 
-- **Key-only authentication** — install a pubkey (`ssh-copy-id root@192.168.2.210`), then set
-  `PasswordAuthentication no` (or via OMV `Services | SSH`). Password auth off.
-- **LAN-only SSH** — restrict SSH to the homelab subnet `192.168.2.0/24`: UFW
-  `allow from 192.168.2.0/24 to any port 22 proto tcp` + deny the rest, or `Match Address`
-  / `AllowUsers` in `sshd_config`. No SSH from the internet.
-- **Revisit root** — the §3 note prefers a `sudo` user with the key and root SSH disabled.
+1. **Create the operator user** — `Users | Users` → **Create**: name `jarek`, assign groups
+   **`_ssh`** (SSH login), **`sudo`**, **`users`**, and — for full web-UI admin —
+   **`openmediavault-admin`** + **`openmediavault-webgui`**. Set a password.
+   (The built-in `admin` is the web-GUI bootstrap account; `jarek` is the operator's daily
+   SSH + admin identity.)
+2. **Add the workstation public key** — edit the user → **SSH public keys** → **Add** and paste
+   the workstation `id_ed25519.pub` (`lenovo-slim`, already in use across the homelab, runbook 1).
+   OMV converts it to RFC 4716 for `authorized_keys`.
+3. **Apply** the pending config changes (`postfix`, `ssh` modules).
+4. **Verify** from the workstation: `ssh jarek@192.168.2.210` logs in **without** a password
+   (`jarek` has `sudo` for admin tasks; `ssh jarek@omv` also works via the `~/.ssh/config` alias).
 
-> **Rationale for deferring:** the NAS is reachable only on the LAN today, and the priority is
-> getting the arrays + exports stable first. Hardening lands together with the
-> Cloudflare-exposure step (Phase 2) — SSH is never exposed through the tunnel.
+> **No home directory is created by OMV** — `/home/jarek` is absent until created at the CLI
+> (`mkdir -p /home/jarek && chown jarek:users /home/jarek && chmod 755 /home/jarek`). Harmless
+> (only a chdir warning on login). Optionally, once shared folders exist (Phase 2, issue #62),
+> `Users | Settings` → **User home directory** can place homes on the data pool instead.
+
+### SSH hardening (applied 2026-08-15)
+
+`Services | SSH`:
+
+| Setting | Value |
+|---|---|
+| Enabled | ✅ |
+| Port | `22` |
+| Permit root login | ❌ — root is **console-only** (no SSH as root) |
+| Password authentication | ❌ — key-only |
+| Public key authentication | ✅ |
+| Extra options | `Match Address !192.168.2.0/24` → `DenyUsers *` (LAN-only) |
+
+- **Key-only** — `PasswordAuthentication` off; `jarek` uses the installed pubkey.
+- **LAN-only** — the `Match Address` block denies SSH from outside `192.168.2.0/24`. (UFW
+  `allow from 192.168.2.0/24 to any port 22` is an alternative if the firewall plugin is used.)
+- **Root is console-only** — root SSH is disabled; admin work happens via `jarek` + `sudo`.
+- SSH is **never** exposed via the Cloudflare Tunnel (see §9) — do not route it through.
 
 ---
 
