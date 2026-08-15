@@ -54,7 +54,7 @@ The NAS is a **storage-only node** — it does not run Docker/k3s workloads. The
 - **Buy the Fujitsu Q956 (idea 01 V1)** — ~195 PLN + new drives + caddy; ~1/4 the power cost (~€40–45/yr vs ~€150–200/yr) and near-silent. Rejected: the ML110 is already owned with 6 drive bays and needs no purchase; power economics keep the Q956 as a future power-savings move if the ML110's capacity isn't needed.
 - **TrueNAS SCALE / ZFS** — ZFS-focused, elegant snapshots/checksums, viable at 4 GB ECC. Rejected: operator chose no ZFS; mdadm RAID1 gives redundancy with zero RAM pressure and simpler ops.
 - **Unraid** — paid license; deferred unless a Docker-heavy NAS is ever needed.
-- **Hardware RAID on the Dell SAS 6/iR** — no controller dependency, no battery-backed write cache, no per-disk SMART, RAID 0/1 only. Rejected (see decision 5).
+- **Hardware RAID on the Dell SAS 6/iR** — strong controller dependency (arrays bind to the card), no battery-backed write cache, no per-disk SMART, RAID 0/1 only. Rejected (see decision 5).
 - **OS on a ≥32 GB USB stick (Option A) or on the 2× 20 GB drives (Option B/C)** — USB adds flash-wear management and a purchase; the 20 GB drives give a cramped OS volume and/or a hardware-RAID boot dependency. Superseded by the spare SSD (Option D).
 
 ---
