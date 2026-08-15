@@ -138,20 +138,25 @@ The lab's monitoring must **not** depend on Home Assistant: Prometheus + Grafana
 
 | Dongle | Chipset | Price (PL) | Notes |
 |---|---|---|---|
-| **SONOFF ZBDongle-P** | CC2652P (TI) | 99,90 PLN (~24 EUR) | **Gold standard**; very stable in Z2M and ZHA; external antenna + aluminium RF-shielding case (official store price, Aug 2026) |
+| SONOFF ZBDongle-P | CC2652P (TI) | 99,90 PLN (~24 EUR) | **Gold standard**; very stable in Z2M and ZHA; external antenna + aluminium RF-shielding case (official store price, Aug 2026) |
 | SONOFF ZBDongle-E | EFR32MG21 (Silicon Labs) | 68,77–70,90 PLN (~16–17 EUR) | Cheaper; great for ZHA; experimental Thread/Matter support; external SMA antenna +20 dBm (official store price, Aug 2026) |
 | **NOUS E16** (Nous, official store) | Silicon Labs **EFR32MG21** (ARM Cortex-M33) — Zigbee 3.0 + Thread/Matter + BLE 5.2 | 49,99 PLN (~12 EUR) | Budget multi-protocol USB dongle; **EmberZNet/EZSP** (Zigbee) or **OpenThread** (Thread) firmware; USB-UART **CP2102N/CH340** → `/dev/ttyUSB0`; TX up to **18.6 dBm**; ext. antenna + aluminium housing; Z2M/HA/OpenHAB; Direct-Flash FW updates; Thread/BLE future-proofing (§1.2) |
 | ConBee II / III | — | 140–180 PLN (~33–42 EUR) | Plug-and-play with internal antenna, but pricier |
 
-**Recommendation**: **ZBDongle-P (99,90 PLN (~24 EUR))** + a plain **0.5–1 m USB extension cable** (keeps the dongle away from USB 3.0 interference). **Budget pick**: the **NOUS E16** (49,99 PLN (~12 EUR), official Nous Allegro store, Aug 2026) is the cheapest option — a multi-protocol **EFR32MG21** dongle (Zigbee + Thread + BLE 5.2, the exact chip also used in the ZBDongle-E) with external antenna + aluminium housing; good value if the CC2652P gold-standard status isn't needed.
+**Recommendation (decided)**: **NOUS E16 (49,99 PLN (~12 EUR))** is the pick — half the price of the ZBDongle-P, confirmed EFR32MG21 (the exact chip behind the hugely popular ZBDongle-E), EmberZNet/EZSP firmware, Direct-Flash, and Thread/BLE future-proofing. The **~50 PLN saving goes to the Wyse 5070 budget** (idea 05) — the more impactful purchase for the HA node. The **ZBDongle-P (99,90 PLN (~24 EUR))** remains the premium alternative if CC2652P gold-standard status is worth the extra cost. Either way, add a plain **0.5–1 m USB extension cable** (keeps the dongle away from USB 3.0 interference).
 
-**Why the ZBDongle-P over the NOUS E16 (~50 PLN saving)?** The E16 is the cheaper budget pick, but the ZBDongle-P stays the default because the coordinator sits at the **centre of the whole Zigbee mesh** — the single point of failure for every Zigbee device and the independent monitoring stack:
+**Why the NOUS E16 over the ZBDongle-P?** Honest trade-off — the E16 wins for this lab:
 
-- **Proven silicon + largest community base**: the CC2652P is the most battle-tested coordinator chip in the HA/Z2M ecosystem — huge install base, exhaustive docs, well-known quirks. The E16 (EFR32-class, like the ZBDongle-E) is supported but much newer and less field-proven.
-- **Turnkey firmware path**: the ZBDongle-P ships pre-flashed with Z-Stack 3.x and its Z2M setup is exhaustively documented; the E16's firmware/Z2M path still needs verification (flagged above).
-- **Single-protocol simplicity**: the E16's Thread + BLE 5.2 is future-proofing the lab explicitly doesn't need yet (§1.2 "watch — not needed now") and adds multi-protocol firmware complexity; the ZBDongle-P is a dedicated, predictable Zigbee coordinator.
-- **Brand track record**: Sonoff's dongles are the community reference; Nous is primarily a rebranded-Tuya device maker, so the E16 is the less-documented option.
-- **Cost vs risk**: the ~50 PLN saving is real, but for the mesh's central node the proven ZBDongle-P is cheap insurance against a newer "mostly works but has quirks" device.
+- **Same proven silicon at half price**: the E16 is EFR32MG21 — the exact chip in the hugely popular ZBDongle-E (4.94★, 1882 reviews, 289 sold recently on Allegro). That removes most of the "less-proven device" risk: the silicon, firmware path (EmberZNet/EZSP), and Z2M support match the E, which the community runs at scale.
+- **~50 PLN → Wyse 5070 budget** (idea 05): the coordinator saving funds a meaningful share of the thin-client hardware — the more impactful purchase.
+- **Thread/BLE future-proofing**: multi-protocol covers the "Matter/Thread watch" (§1.2) at no extra cost.
+- **Direct-Flash**: firmware updates without opening the case.
+
+What you give up vs the ZBDongle-P (the honest counter):
+
+- **CC2652P gold-standard status**: the P has the largest install base, deepest docs, and longest Z2M/HA track record; troubleshooting and device-converter guidance most often assume it.
+- **Nous-brand documentation**: fewer field reports specific to the E16 (mitigated — the chip/firmware is shared with the E).
+- **Verify firmware before pairing**: confirm the E16 ships with the correct EmberZNet coordinator build for Z2M.
 
 #### 6.1 Network coordinators & gateways — alternatives to the ZBDongle-P
 
@@ -163,7 +168,7 @@ Beyond USB dongles, Allegro (Aug 2026) lists network-connected Zigbee coordinato
 | **SONOFF Zigbee Bridge Pro (ZBBridge-P)** | WiFi bridge | ESP-based + Zigbee SoC | Cloud (eWeLink) by default; Z2M only after **Tasmota/Zigbee2Tasmota** flash | ⚠️ **DIY only** — cloud-bound out of the box; flashing adds complexity vs a turnkey dongle |
 | **Silvercrest "Inteligentny Dom" gateway (LIDL)** | Consumer hub | Proprietary / cloud app | None — not a Z2M/ZHA coordinator | ❌ **Rejected** — cloud-bound vendor hub; same reason classic gateways were rejected (§5) |
 
-**Verdict**: the **ZBDongle-P** stays the default (cheap, turnkey, gold standard). If the lab wants **central Zigbee placement without USB pass-through**, a **CC2652P2 network coordinator** is the strongest alternative — same silicon family as the dongle, Z2M over TCP, and fully independent — at a higher price. The Sonoff Bridge Pro only makes sense as a flashed-DIY path; the Silvercrest gateway doesn't fit HA/Z2M at all.
+**Verdict**: the **NOUS E16** is the primary pick (budget, confirmed EFR32MG21); the **ZBDongle-P** is the premium gold-standard alternative. If the lab wants **central Zigbee placement without USB pass-through**, a **CC2652P2 network coordinator** is the strongest network option — same silicon family, Z2M over TCP, fully independent — at a higher price. The Sonoff Bridge Pro only makes sense as a flashed-DIY path; the Silvercrest gateway doesn't fit HA/Z2M at all.
 
 ### 7. Architecture: independent power monitoring — Z2M decoupled from HA
 
@@ -209,7 +214,7 @@ Prometheus can't read MQTT natively — the dedicated exporter `mqtt2prometheus`
 ## Open Questions
 
 1. **Purchase timing**: the Nous A1Z USED 4-pack at 109 PLN (~26 EUR) is a promo price worth grabbing while available — re-verify price/stock at purchase time (noussmart.pl).
-2. **Coordinator**: ZBDongle-P (99,90 PLN (~24 EUR), gold standard) vs cheaper ZBDongle-E vs the **budget multi-protocol NOUS E16** (49,99 PLN (~12 EUR)) vs a **CC2652P2 network coordinator** (RJ45/WiFi — central placement, no USB pass-through; see §6.1) — ties into the ZHA vs Z2M choice.
+2. **Coordinator**: settled on the **budget multi-protocol NOUS E16** (49,99 PLN (~12 EUR)) — same EFR32MG21 chip as the ZBDongle-E; the ZBDongle-P (99,90 PLN (~24 EUR), gold standard) is the premium alternative if the CC2652P status is worth the extra ~50 PLN; a **CC2652P2 network coordinator** (RJ45/WiFi — central placement, no USB pass-through; see §6.1) stays an option — ties into the ZHA vs Z2M choice.
 3. **Zigbee stack decision (ADR input — see §1)**: [§1](#1-protocol-comparison--zigbee-stacks--adjacent-radios-adr-input) recommends **Zigbee + Zigbee2MQTT** for this lab — the ADR should settle whether to start with ZHA for a quick go-live and migrate to Z2M, or go straight to Z2M.
 4. **Where Prometheus/Grafana run**: the thread assumes the lab "already has" Prometheus — verify where it lives (k3s on the M910q?) and where `mqtt2prometheus` should be deployed (k3s vs LXC on the HA thin-client node).
 5. **Where Mosquitto/Z2M run**: research 26 (idea 05) puts them as **LXC containers on the Wyse 5070** next to the Home Assistant VM — does this thread's independent-metrics stack change that? (Probably not — the same LXC layout serves both.)
