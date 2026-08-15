@@ -18,7 +18,7 @@
 | Filesystem / RAID | **No ZFS** — **mdadm RAID1** + XFS/ext4 |
 | Boot device | **Goodram C40 120 GB SSD on ICH9 SATA #5**|
 | Data pool | `md0` = 2× 500 GB Hitachis (mirror), `md1` = 2× 250 GB (mirror) |
-| Bulk volume | **1 TB WD10EZEX — unplugged for now**; content review during OMV setup, role TBD |
+| Bulk volume | **1 TB WD10EZEX — offline (decided 2026-08-15)**; content reviewed via SystemRescue, not documented (personal data, public repo) |
 | Hardware RAID controller | **Not used** (Dell SAS 6/iR / SAS1068E) — removed |
 
 ---
@@ -88,13 +88,13 @@
 | 5 | WDC WD2500AAKX-75U6AA0 | `WD-WCC2F0157761` | 250 GB | `md1` |
 | 6 | GB0250EAFYK (labeled "WD RE3") | `WCAT1F035986` | 250 GB | `md1` mirror |
 | 7 | Goodram C40 120 GB (SSD) | `1C9C074614D500572350` | 120 GB | OS disk |
-| 8 | WDC WD10EZEX-00BN5A0 (spare) | `WD-WCC3F7AKKXUT` | 1 TB | unplugged — content review during OMV setup |
+| 8 | WDC WD10EZEX-00BN5A0 (spare) | `WD-WCC3F7AKKXUT` | 1 TB | **offline** (decided 2026-08-15) |
 
 **Label vs SMART discrepancies:** the 500 GB Hitachis label `CLA662` but report `CLA660` (HP OEM variant); the "WD RE3" drive actually reports as `GB0250EAFYK` (rebadged); the Fujitsu label `MHV2020BH` reports as `MHW2020BH`. **SMART identity is authoritative.**
 
 **Cabling & bays (onboard SATA, current state):** ICH9R ports #1–#4 → the 4× 3.5" data
 drives (mdadm RAID1 pairs); ICH9 port #5 → **Goodram C40 120 GB SSD** (OMV OS, Option D);
-ICH9 port #6 → **free** (1 TB WD10EZEX unplugged for now). All four 3.5" bays occupied;
+ICH9 port #6 → **free** (1 TB WD10EZEX **offline**, decided 2026-08-15). All four 3.5" bays occupied;
 both 2.5" bays hold the 20 GB cold spares (detached). Label power draw: Hitachi Travelstar
 20 GB `5V 1.0A`, Fujitsu 20 GB `5V 0.50A`.
 
@@ -178,13 +178,13 @@ auto-mount so its DB stays the source of truth for mounts).
 | | Option A (rejected) | Option B (superseded) | Option C (superseded) | **Option D (chosen)** |
 |---|---|---|---|---|
 | OMV OS on | Dedicated ≥32 GB USB stick (`flashmemory` plugin) | 1× 2.5" 20 GB drive (ICH9 #5) | 2× 2.5" 20 GB in **SAS 6/iR RAID 1** (OS redundancy) | **Goodram C40 120 GB SSD (ICH9 #5)** |
-| 1 TB spare | single-disk XFS on ICH9 #5 | offline | single-disk XFS on ICH9 #6 | **unplugged — content review, role TBD** |
+| 1 TB spare | single-disk XFS on ICH9 #5 | offline | single-disk XFS on ICH9 #6 | **offline — decided 2026-08-15** |
 | Cost | USB purchase + flash-wear mgmt | zero (reuse 2.5" drive) | zero (both 20 GB reused) | zero (spare SSD found) |
 | Hardware RAID needed | no | no | **yes** — SAS 6/iR in boot path | **no** — SAS 6/iR not used |
 
 **Option C (considered, superseded):** mirror the two 2.5" 20 GB drives on the Dell SAS 6/iR as the OS volume. Rationale at the time: the boot disk is the highest-wear component, and OS RAID1 gave redundancy while freeing both ICH9 ports so the 1 TB spare could come online. Drawbacks that pushed it out: the 2009 controller becomes a boot dependency (death = no boot), no per-disk SMART behind the array, and the battery-less write cache risk — acceptable for a disposable OS, but still added hardware dependency for zero OS-capacity gain.
 
-**Chosen: Option D** — a spare **Goodram C40 120 GB SSD** appeared, giving a single reliable boot disk with 6× the OS capacity of the 20 GB drives, no hardware RAID anywhere, and freeing both 2.5" 20 GB drives as cold spares. The 1 TB spare is **unplugged for now** — its content will be reviewed during OMV setup and its role (bulk volume vs offline) decided then. **SSD health confirmed (SMART PASSED).**
+**Chosen: Option D** — a spare **Goodram C40 120 GB SSD** appeared, giving a single reliable boot disk with 6× the OS capacity of the 20 GB drives, no hardware RAID anywhere, and freeing both 2.5" 20 GB drives as cold spares. The 1 TB spare is **offline** (decided 2026-08-15 after a SystemRescue content review); its contents are **not documented** — personal data, and this repo is public. **SSD health confirmed (SMART PASSED).**
 
 ---
 

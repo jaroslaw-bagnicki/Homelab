@@ -23,7 +23,7 @@
 - [x] `md1` (2× 250 GB → ext4) online
 - [x] Arrays survive reboot — **confirmed** (machine rebooted, md0/md1 auto-assembled + mounted)
 - [x] Static IP `192.168.2.210` set and verified from the M910q
-- [ ] 1 TB spare content reviewed, role decided (**in progress** — §7)
+- [x] 1 TB spare reviewed — **role: offline** (stays disconnected; content not documented — personal data, §7, 2026-08-15)
 - [x] OMV web UI reachable at `https://192.168.2.210` (HTTPS-only, §4d)
 - [x] SSH hardening — **applied** (key-only, LAN-only, root console-only — §8, 2026-08-15)
 - [x] Disk noise tuning — **AAM = quietest on all 4 data drives** (APM/spindown left off — §6, 2026-08-15)
@@ -78,7 +78,7 @@ from a **keyboard + mouse + monitor** attached directly to the box.
 | 5 | WDC WD2500AAKX 250 GB | `WD-WCC2F0157761` | `md1` |
 | 6 | GB0250EAFYK 250 GB | `WCAT1F035986` | `md1` mirror |
 | 7 | **Goodram C40 120 GB SSD** | `1C9C074614D500572350` | **OMV OS** |
-| 8 | WDC WD10EZEX 1 TB (spare) | `WD-WCC3F7AKKXUT` | unplugged — content review §7 |
+| 8 | WDC WD10EZEX 1 TB (spare) | `WD-WCC3F7AKKXUT` | **offline** — reviewed 2026-08-15, content not documented (§7) |
 
 ### Media & tools
 
@@ -367,23 +367,13 @@ sudo apt update          # → "All packages are up to date."; Updates page show
 
 ---
 
-## 7. Review the 1 TB WD10EZEX Spare — **in progress**
+## 7. Review the 1 TB WD10EZEX Spare — **done (offline)**
 
-> **In progress (2026-08-15).** Connect the WD10EZEX (`WD-WCC3F7AKKXUT`) and review its content;
-> the role decision (bulk volume vs offline) is recorded here and in [research 23](../research/23-ml110-nas-omv.md).
-
-1. Power off, connect the **WD10EZEX** (`WD-WCC3F7AKKXUT`) to the free ICH9 port **#6**.
-2. Power on and inspect its existing content before assigning any role:
-   ```sh
-   lsblk -f /dev/sdX          # existing partitions / filesystems
-   sudo mkdir /mnt/review && sudo mount /dev/sdX1 /mnt/review && ls /mnt/review
-   ```
-3. Decide its role:
-   - **Bulk volume** — if it holds media/archives worth keeping, add as a single-disk XFS
-     volume (via OMV `Storage | File Systems`) or an `mdadm` member.
-   - **Offline** — per research 23, the drive is **unplugged for now**; if the content is
-     redundant, leave it disconnected and record the decision in [research 23](../research/23-ml110-nas-omv.md).
-4. Record the outcome in [research 23](../research/23-ml110-nas-omv.md) (open question #3).
+> **Done 2026-08-15.** The WD10EZEX (`WD-WCC3F7AKKXUT`) content was reviewed via SystemRescue.
+> **Role decision: offline** — the drive stays disconnected for now (ICH9 port #6 free). Its
+> contents are **deliberately not documented** — they include personal data and this repository is
+> public (per the repo's sanitization rule). The decision is recorded in
+> [research 23](../research/23-ml110-nas-omv.md).
 
 ---
 
