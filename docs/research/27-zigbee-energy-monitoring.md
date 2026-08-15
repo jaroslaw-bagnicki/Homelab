@@ -101,9 +101,25 @@ The Home Assistant node (idea 05) and the independent power-monitoring path (thi
 | **Zigbee** | 2.4 GHz | Cheap devices (Nous/Tuya), mesh, mains plugs act as routers | 2.4 GHz congestion (Wi-Fi/Bluetooth overlap) | ✅ chosen — the Nous A1Z path |
 | Z-Wave (Z-Wave JS) | Sub-GHz (800–900 MHz) | No 2.4 GHz interference, better wall penetration | Pricier devices, thin cheap-DIY ecosystem, separate dongle | ❌ not for Nous/Tuya |
 | Matter / Thread | Thread = 2.4 GHz 802.15.4 | Vendor-neutral, local by default, future-proofing | Still maturing in HA (2026); A1Z plugs aren't Matter | ⏸️ watch — not needed now |
-| Wi-Fi / direct MQTT (ESPHome, Tasmota) | Wi-Fi | No extra radio; direct MQTT to broker | Chatty on the AP; cloud-app devices need reflashing | ❌ not the chosen path |
+| Wi-Fi / direct MQTT (Tasmota, ESPHome) | Wi-Fi | No extra radio; direct MQTT to broker | Chatty on the AP; per-device flashing | ⏸️ complementary (see §6.3) |
 
-**Recommendation (for the ADR)**: stay on **Zigbee** for the energy-monitoring plugs — it matches the already-chosen Nous hardware and the compact-plug/energy-measurement niche — and run **Zigbee2MQTT** as the stack, because only MQTT gives the independent Prometheus path and AI-agent access this idea is built around.
+#### 6.3 Tasmota / ESPHome — local Wi-Fi firmware (the MQTT-native alternative)
+
+**Tasmota** is not a radio protocol — it is open-source firmware that replaces the vendor cloud firmware on ESP8266/ESP32 smart devices (Sonoff, many Tuya models). A flashed device talks **MQTT over Wi-Fi directly to the broker**: no Zigbee radio, no coordinator.
+
+| Aspect | Tasmota (and ESPHome) |
+|---|---|
+| What it is | Open-source local firmware replacing cloud firmware on ESP-based devices (ESPHome = declarative YAML sibling) |
+| Radio | Wi-Fi — no Zigbee dongle / coordinator |
+| Integration | Direct MQTT to the broker; HA via MQTT Discovery / native integration |
+| Energy data | Same W / A / V / kWh fields as the A1Z plugs, over MQTT topics |
+| Monitoring fit | Trivially scraped by `mqtt2prometheus` / any MQTT consumer — the same Mosquitto-centric path as Z2M (the MQTT side is protocol-agnostic) |
+| Setup cost | Per-device flashing (serial/solder on many; OTA on supported models); device must be flashable |
+| Cons | Wi-Fi congestion; depends on WLAN health; some models unflashable; more effort per device |
+
+**Verdict**: architecturally a **great fit** — a Tasmota device drops straight into the same Mosquitto broker and `mqtt2prometheus` config as the Zigbee plugs, so the monitoring / AI-agent path is identical. Worth it for Wi-Fi devices already on hand or where Zigbee isn't available. For the energy plugs the thread picked Zigbee (Nous A1Z) for radio robustness (mesh, mains-router plugs, no Wi-Fi congestion); **Tasmota stays a complementary option** — e.g. a Wi-Fi mains-energy monitor on the M910q/NAS if a Zigbee one isn't available.
+
+**Recommendation (for the ADR)**: stay on **Zigbee** for the energy-monitoring plugs — it matches the already-chosen Nous hardware and the compact-plug/energy-measurement niche — and run **Zigbee2MQTT** as the stack, because only MQTT gives the independent Prometheus path and AI-agent access this idea is built around. The MQTT-centric architecture keeps the door open for **Tasmota/ESPHome devices later** — they plug into the same broker and exporter with no architectural change.
 
 ### 7. Architecture: independent power monitoring — Z2M decoupled from HA
 
