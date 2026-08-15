@@ -38,9 +38,9 @@
 - **PR descriptions**: do **not** use the **Why / What / How (WWH)** format — that is **reserved for GitHub Issues only**. PR descriptions are a plain summary of the **Changes** (and any **Notes**) with no WWH headings
 - **Reference issues**: plain `#NNN` mentions link a commit/PR to an issue but do **not** auto-close it. To auto-close on merge, add `Closes #NNN` to the **PR description** or to a commit that is merged into `main` (GitHub evaluates the keyword at merge time; editing a merged PR afterwards won't close the issue)
 - **Labels**: `enhancement` (new feature), `bug` (broken), `chore` (maintenance/tooling), `research` (investigation)
-- **README "What's Next" = public status board** — shows what's planned or actively being worked on. Only items that are **planned** or **in progress** belong here.
-- **Issues = the backlog** — capture ideas, bugs, and multi-session work that isn't in the README table yet. An issue becomes a README "What's Next" row when you're ready to start it.
-- **Typical flow**: idea → issue → move to README "What's Next" when starting → on completion add an entry to `CHANGELOG.md` (with runbook/ADR links) → close the issue
+- **`docs/overview.md` "What's Next" = public status board** — shows what's planned or actively being worked on. Only items that are **planned** or **in progress** belong here.
+- **Issues = the backlog** — capture ideas, bugs, and multi-session work that isn't in the overview table yet. An issue becomes a `docs/overview.md` "What's Next" row when you're ready to start it.
+- **Typical flow**: idea → issue → move to `docs/overview.md` "What's Next" when starting → on completion add an entry to `CHANGELOG.md` (with runbook/ADR links) → close the issue
 - When adding a completed entry to `CHANGELOG.md`, link the **runbook** (not the issue) — `[runbook](runbooks/NN-name.md)` — so the entry points to the implementation, not the ticket
 
 ## Git Workflow

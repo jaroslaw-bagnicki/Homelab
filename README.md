@@ -51,30 +51,9 @@ The **network layer** terminates homelab gear on a **TP-Link TL-SG108E** access 
 |---|---|
 | [`ansible/`](ansible/README.md) | Host provisioning — playbooks, roles (common, security, azure_arc, docker_host, docker_services, workloads), inventory |
 | [`bicep/`](bicep/README.md) | Cloud-side IaC — Log Analytics, DCR, AMA extensions, Key Vault |
-| [`docs/ideas/`](docs/ideas/README.md) | Brainstorming — pre-decision exploration, ideas, planned projects |
-| [`docs/decisions/`](docs/decisions/README.md) | Architecture Decision Records (ADRs) — design rationale, settled decisions |
-| [`docs/research/`](docs/research/README.md) | Exploratory research — topic investigations, comparisons, trade-off analyses |
-| [`docs/runbooks/`](docs/runbooks/README.md) | Step-by-step implementation guides |
-| [`docs/workloads.md`](docs/workloads.md) | Workload recipes — index of self-contained playbooks, convention rules, "how to add a new workload" |
 | [`scripts/`](scripts/) | Standalone PowerShell utilities (SSH key management, Arc client secrets, OpenCode backup) |
 
 Ansible runs first on the bare host (OS config, Docker, Arc agent). Bicep deploys cloud resources after Arc enrolment. The decision log is the source of truth for design rationale. Runbooks capture implementation steps. Research docs capture exploratory context that predates settled decisions. Ideas capture possibilities before a decision is made.
-
----
-
-## What's Next
-
-| # | Workload | Effort | Notes |
-|---|---|---|---|
-| [#13](https://github.com/jaroslaw-bagnicki/Homelab/issues/13) | **Restic backup** (redo) | ⭐⭐ | Daily snapshots to Azure Blob Storage — see [runbook](docs/runbooks/07-restic-backup.md) |
-| [#65](https://github.com/jaroslaw-bagnicki/Homelab/issues/65) | **Edge ingress appliance** | ⭐⭐ | Move public ingress (`cloudflared` + Caddy) to a Wyse 3040 thin client — [runbook 24](docs/runbooks/24-edge-appliance.md) · [ADR 24](docs/decisions/24-edge-ingress-appliance.md) |
-| [#54](https://github.com/jaroslaw-bagnicki/Homelab/issues/54) | **OMV NAS** | ⭐⭐ | OMV 8.3 installed, RAID1 arrays online ([runbook 23](docs/runbooks/23-ml110-omv-setup.md)); next: NFS/SMB exports + Longhorn backup target |
-|  | **Home Assistant** | ⭐⭐ | Dedicated HA thin-client node — Proxmox VE VM + MQTT/Zigbee2MQTT — [idea 05](docs/ideas/05-home-assistant-thin-client.md) · [ADR 25](docs/decisions/25-home-assistant-thin-client.md) |
-| [#44](https://github.com/jaroslaw-bagnicki/Homelab/issues/44) | **k3s migration** | ⭐⭐⭐ | Migrate workloads from Docker Compose to Kubernetes (k3s + Arc) — per [ADR 22](docs/decisions/22-k3s-arc-homelab.md) |
-|  | **Hermes Agent** | ⭐⭐⭐ | Most complex — last |
-| [#3](https://github.com/jaroslaw-bagnicki/Homelab/issues/3) | **SQL Server** | ⭐⭐ | Developer Edition in Docker — see [runbook](docs/runbooks/09-mssql-dev.md) |
-| [#4](https://github.com/jaroslaw-bagnicki/Homelab/issues/4) | **Gitea** | ⭐⭐ | Self-hosted Git with web UI for personal repos |
-| - | **Ollama + Bielik** (Phase 2) | ⭐⭐⭐ | Needs dedicated LLM server hardware |
 
 ---
 

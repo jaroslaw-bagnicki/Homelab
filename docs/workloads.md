@@ -12,7 +12,7 @@ Each workload in this repository is a self-contained recipe, runnable independen
   1. Create the workload folder under `ansible/workloads/<workload>/`.
   2. Add the playbook entrypoint (`<workload>-playbook.yml`), role recipes, and an ansible-side README inside it.
   3. Add a row to the "Index" table below.
-  4. Add a row to `README.md` "What's Next", and a `CHANGELOG.md` entry on completion.
+  4. Add a row to `docs/overview.md` "What's Next", and a `CHANGELOG.md` entry on completion.
   5. Optionally: a runbook at `docs/runbooks/NN-deploy-<workload>.md`.
 
 ## Index

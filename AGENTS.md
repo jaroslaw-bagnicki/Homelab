@@ -65,7 +65,7 @@ A new workload is added by:
 
 1. Creating `ansible/workloads/<workload>/` containing the playbook entrypoint, role recipes, and an ansible-side README.
 2. Adding a row to the index table in `docs/workloads.md`.
-3. Adding a row to `README.md` "What's Next", and a `CHANGELOG.md` entry on completion.
+3. Adding a row to `docs/overview.md` "What's Next", and a `CHANGELOG.md` entry on completion.
 4. Optionally: a runbook at `docs/runbooks/NN-deploy-<workload>.md` for operational steps.
 
 Workloads do not import each other. Workloads do not declare shared pre_tasks in the base playbook. Idempotent declarations inside a workload's roles are acceptable (e.g. networks — declare in the role and in the base playbook pre_tasks; first writer wins).

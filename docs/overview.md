@@ -20,6 +20,8 @@ hardware detail see [Hardware Inventory](hardware.md); for change history see
 
 ## Workloads
 
+Current state — what's running or in progress. Planned work is under [What's Next](#whats-next).
+
 | Workload | Runs on | Purpose | Status |
 |---|---|---|---|
 | **Portainer CE** | Cloudlab VPS | Docker GUI | ✅ |
@@ -28,11 +30,20 @@ hardware detail see [Hardware Inventory](hardware.md); for change history see
 | **OpenCode instances** (`homelab`, `prospera`) | Cloudlab VPS | per-project agentic dev servers | ✅ |
 | **Zot** | Cloudlab VPS | self-hosted OCI registry + pull-through cache | ✅ |
 | **OMV NAS shares** | OMV NAS | NFS/SMB exports, Longhorn backup target | 🔨 (Phase 2) |
-| **Restic backup** | Homelab | snapshots to Azure Blob | 📋 |
-| **SQL Server** | Homelab | Developer Edition in Docker | 📋 |
-| **Gitea** | Homelab | self-hosted Git | 📋 |
-| **Hermes Agent** | Homelab | AI agent | 📋 |
-| **k3s + Azure Arc** | Homelab | Kubernetes migration (ADR 22) | 📋 |
+
+## What's Next
+
+| # | Workload | Effort | Notes |
+|---|---|---|---|
+| [#13](https://github.com/jaroslaw-bagnicki/Homelab/issues/13) | **Restic backup** (redo) | ⭐⭐ | Daily snapshots to Azure Blob Storage — see [runbook](runbooks/07-restic-backup.md) |
+| [#65](https://github.com/jaroslaw-bagnicki/Homelab/issues/65) | **Edge Ingress** | ⭐⭐ | Move public ingress (`cloudflared` + Caddy) to the Wyse 3040 — [runbook 24](runbooks/24-edge-appliance.md) · [ADR 24](decisions/24-edge-ingress-appliance.md) |
+| [#54](https://github.com/jaroslaw-bagnicki/Homelab/issues/54) | **OMV NAS Phase 2** | ⭐⭐ | NFS/SMB exports + Longhorn backup target — [runbook 23](runbooks/23-ml110-omv-setup.md) |
+|  | **Home Assistant** | ⭐⭐ | Dedicated HA node — Proxmox VE VM + MQTT/Zigbee2MQTT — [idea 05](ideas/05-home-assistant-thin-client.md) · [ADR 25](decisions/25-home-assistant-thin-client.md) |
+| [#44](https://github.com/jaroslaw-bagnicki/Homelab/issues/44) | **k3s migration** | ⭐⭐⭐ | Migrate workloads from Docker Compose to Kubernetes (k3s + Arc) — per [ADR 22](decisions/22-k3s-arc-homelab.md) |
+|  | **Hermes Agent** | ⭐⭐⭐ | Most complex — last |
+| [#3](https://github.com/jaroslaw-bagnicki/Homelab/issues/3) | **SQL Server** | ⭐⭐ | Developer Edition in Docker — see [runbook](runbooks/09-mssql-dev.md) |
+| [#4](https://github.com/jaroslaw-bagnicki/Homelab/issues/4) | **Gitea** | ⭐⭐ | Self-hosted Git with web UI for personal repos |
+| - | **Ollama + Bielik** (Phase 2) | ⭐⭐⭐ | Needs dedicated LLM server hardware |
 
 ## Topology
 

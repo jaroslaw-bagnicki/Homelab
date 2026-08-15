@@ -6,6 +6,7 @@ same `(type)` prefixes as commit messages; types: `feat`, `fix`, `docs`, `chore`
 
 ## 2026‑08
 
+- **(docs)** Make overview the single state + roadmap page — Workloads table = current state only, "What's Next" moved from root README — [overview](docs/overview.md)
 - **(docs)** Add Homelab overview — nodes, workloads, topology at a glance — [overview](docs/overview.md)
 - **(docs)** Add per-node hardware inventory incl. network appliances — [hardware](docs/hardware.md)
 - **(feat)** ML110 NAS Phase 1 — OMV 8.3 install on the Goodram SSD, BIOS AHCI, mdadm RAID1 (`md0`/`md1`), static IP `192.168.2.210`, SSH hardening — [runbook 23](docs/runbooks/23-ml110-omv-setup.md) · [ADR 23](docs/decisions/23-nas-on-ml110.md) · [#61](https://github.com/jaroslaw-bagnicki/Homelab/issues/61)
