@@ -4,7 +4,7 @@
 
 **Scope**: Exploratory research for **idea 06** — monitoring homelab power consumption via Zigbee energy-measuring plugs (**Nous A1Z**), a USB Zigbee coordinator (**Sonoff ZBDongle-P**), and an independent **Zigbee2MQTT → mqtt2prometheus → Prometheus → Grafana** path that also exposes power data (and optional control) to the homelab AI agent.
 
-**Status**: 📝 Analysis — no hardware acquired yet; direction feeds idea 06. Complements [idea 05](../ideas/05-home-assistant-thin-client.md) / [research 26](26-home-assistant-thin-client.md) (Home Assistant on a thin client): the **same Zigbee mesh, coordinator, and Mosquitto/Z2M containers** will serve both the Home Assistant node and this independent Prometheus-based power monitoring.
+**Status**: 📝 Analysis — no hardware acquired yet; direction feeds idea 06. Complements [idea 05](../ideas/05-home-assistant-thin-client.md) / [research 26](26-home-assistant-thin-client.md) (Home Assistant on a thin client): the **same Zigbee mesh, coordinator, and Mosquitto/Z2M containers** will serve both the Home Assistant node and this independent Prometheus-based power monitoring. Decision authoritatively recorded in [ADR 26](../decisions/26-zigbee-energy-monitoring.md).
 
 > ⚠️ **Verification needed**: Prices are PL-market (Aug 2026) and change frequently — the Nous A1Z USED 4-pack at **109 PLN (~26 EUR)** (noussmart.pl) and the Sonoff dongles at **95–99,90 PLN (~22–24 EUR)** (ZBDongle-P — 95 PLN cheapest found, 99,90 PLN official store) / **68,77–70,90 PLN (~16–17 EUR)** (ZBDongle-E, official Sonoff Allegro store, Aug 2026) must be re-checked at purchase time. The Z2M `debounce`/`retain` settings are Gemini-generated and must be validated against current project docs before execution.
 

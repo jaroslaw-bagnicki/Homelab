@@ -5,7 +5,7 @@
 **Status**: 🧠 Idea — research 27 done, no hardware acquired  
 **Date**: 2026-08-15  
 **Research**: [Research 27 — Zigbee energy monitoring](../research/27-zigbee-energy-monitoring.md) — the full research output  
-**Related**: [Idea 05 — Home Assistant on a Thin Client](05-home-assistant-thin-client.md) / [Research 26](../research/26-home-assistant-thin-client.md) / ADR 25
+**Related**: [Idea 05 — Home Assistant on a Thin Client](05-home-assistant-thin-client.md) / [Research 26](../research/26-home-assistant-thin-client.md) / ADR 25 · **Decision**: [ADR 26](../decisions/26-zigbee-energy-monitoring.md)
 
 ---
 
@@ -35,12 +35,12 @@ Home Assistant is joining the lab as a dedicated thin-client node (idea 05, ADR 
 
 ## Research
 
-All substance — radio alternatives, devices, stack, metrics architecture, AI-agent access, and open questions — lives in [research 27](../research/27-zigbee-energy-monitoring.md), which this idea references as a whole. The decision will be recorded in an ADR (likely tied to ADR 25).
+All substance — radio alternatives, devices, stack, metrics architecture, AI-agent access, and open questions — lives in [research 27](../research/27-zigbee-energy-monitoring.md), which this idea references as a whole. The decision is authoritatively recorded in [ADR 26](../decisions/26-zigbee-energy-monitoring.md).
 
 ## Lifecycle
 
 🧠 **Idea** → 📋 **Planned** (scoped + ADR in progress) → 🔨 **Implementing** → ✅ **Done**.
-New hardware + metrics architecture — expect a decision (research 27 → ADR) before acquisition.
+New hardware + metrics architecture — decision recorded in [ADR 26](../decisions/26-zigbee-energy-monitoring.md) (Accepted); implementation pending acquisition.
 
 ## References
 
