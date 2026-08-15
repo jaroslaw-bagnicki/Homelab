@@ -53,6 +53,9 @@
 > - Disk noise tuning: **AAM = quietest** (`Minimum performance, minimum acoustic output`) set on
 >   all 4 data drives via `Storage | Disks → Edit`, applied 2026-08-15 (§6). APM and Spindown
 >   deliberately left `Disabled` (RAID-safety + wear — see §6 / research 23).
+> - System update: **29 stable/security packages** upgraded via `apt` (util-linux security fix,
+>   postfix, chrony, rsync, Python 3.13, etc.). Backports kernel 7.1.3 + ~23 firmware packages
+>   deliberately skipped (§6, 2026-08-15).
 
 ---
 
@@ -324,6 +327,24 @@ Verify (`hdparm` needs root):
 ```sh
 sudo hdparm -M /dev/sda /dev/sdb /dev/sdd /dev/sde   # expect: acoustic = 128 (minimum)
 ```
+
+### System update — stable/security batch (applied 2026-08-15)
+
+Routine Debian patching via SSH (`sudo apt install …`). **29 packages upgraded**, all from
+Debian **stable / security / stable-updates** — the important one is the **util-linux security
+fix** (`util-linux`, `mount`, `login`, `fdisk`, `bsdutils` + libs), plus `postfix` (security),
+`chrony`, `rsync`, `libcurl`, `xz`, `libxml2`, `base-files`, Python 3.13.5-2+deb13u4, etc.
+
+**Deliberately NOT installed** — the **backports kernel 6.12 → 7.1.3** and the **~23 backports
+firmware packages** (~230 MiB of firmware for hardware this box doesn't have). The stock Debian
+6.12 kernel is what OMV 8 is built/tested against; a backports kernel jump adds risk + a reboot
+for zero benefit on this hardware. They remain as "upgradable" suggestions until the
+`trixie-backports` repo entry is disabled (or left as harmless noise).
+
+- `postfix` chose **No configuration** during install → OMV keeps owning its config
+  (`main.cf` untouched by debconf). `postfix`/`rsync` services stay inactive until OMV enables
+  them (notifications / rsync plugin, Phase 2) — expected.
+- No reboot required (userspace-only, no kernel touched).
 
 ---
 
