@@ -20,10 +20,8 @@ The refresh re-aligns the box with ADR 05 and unblocks that track.
 - **DNS / Caddy / cloudflared leave the M910q** (Option B): the edge appliance (ADR 24 / [#65](https://github.com/jaroslaw-bagnicki/Homelab/issues/65)) takes over `*.home` DNS, internal `.home` Caddy, and the external tunnel. The refreshed M910q is **compute-only** — dnsmasq and `homelab-tunnel` are **not** reinstalled. Accept a temporary `.home` + external-access gap until the edge box is live.
 - **Operator account — `labadmin`.** Both hosts (cloudlab + homelab) use the generic `labadmin` account: key-only SSH (full pattern in the [ansible README](../ansible/README.md)).
 
-> **Execution note.** Run this runbook **interactively from your control node in
-> VSCode with the GitHub Copilot extension** — the M910q is only reachable from
-> `192.168.2.0/24` (this Cloudlab-hosted dev container has no route to it). Each step
-> ends with a verify gate: run the command and confirm the expected output before moving on.
+> **Execution note.** Run this runbook **interactively from your control node** (any
+> interactive session — e.g. VSCode with the GitHub Copilot extension).
 
 ## Prerequisites
 
