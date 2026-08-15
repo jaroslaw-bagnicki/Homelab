@@ -15,6 +15,14 @@ Home Assistant is joining the lab as a dedicated thin-client node (idea 05, ADR 
 
 **Zigbee looks the most promising** (rich device ecosystem, low-power battery sensors, mains plugs act as mesh routers) — but the radio choice is delegated to [research 27](../research/27-zigbee-energy-monitoring.md), which compares it against Z-Wave, Matter/Thread, and Wi-Fi/Tasmota before any decision.
 
+## Goal
+
+- Per-device visibility of homelab power draw (compute, NAS, network, edge).
+- Independent of Home Assistant — monitoring and AI-agent access keep working whether or not HA is up.
+- Data available to the lab's monitoring stack and to the AI agent, with control kept separate from analytics.
+- Historical data retained for analysis — trends, baselines, and longer-range queries by the AI agent.
+- Low-power, local devices (radio TBD in research) — no cloud dependency.
+
 ## Questions to answer in research
 
 1. Which radio protocol — **Zigbee (most promising)** vs Z-Wave, Matter/Thread, Wi-Fi/Tasmota — and why.
@@ -24,6 +32,10 @@ Home Assistant is joining the lab as a dedicated thin-client node (idea 05, ADR 
 5. How the AI agent consumes the data — control vs read-only analytics, kept separate.
 6. Which homelab nodes to instrument first.
 7. How this fits the existing observability (Azure Monitor via Arc) and backup model.
+
+## Research
+
+All substance — radio alternatives, devices, stack, metrics architecture, AI-agent access, and open questions — lives in [research 27](../research/27-zigbee-energy-monitoring.md), which this idea references as a whole. The decision will be recorded in an ADR (likely tied to ADR 25).
 
 ## Lifecycle
 
