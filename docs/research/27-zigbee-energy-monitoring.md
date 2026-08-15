@@ -6,7 +6,7 @@
 
 **Status**: 📝 Analysis — no hardware acquired yet; direction feeds idea 06. Complements [idea 05](../ideas/05-home-assistant-thin-client.md) / [research 26](26-home-assistant-thin-client.md) (Home Assistant on a thin client): the **same Zigbee mesh, coordinator, and Mosquitto/Z2M containers** will serve both the Home Assistant node and this independent Prometheus-based power monitoring.
 
-> ⚠️ **Verification needed**: Prices are PL-market (Aug 2026) and change frequently — the Nous A1Z USED 4-pack at **109 PLN (~26 EUR)** (noussmart.pl) and the Sonoff ZBDongle-P at **90–100 PLN (~21–24 EUR)** must be re-checked at purchase time. The Z2M `debounce`/`retain` settings are Gemini-generated and must be validated against current project docs before execution.
+> ⚠️ **Verification needed**: Prices are PL-market (Aug 2026) and change frequently — the Nous A1Z USED 4-pack at **109 PLN (~26 EUR)** (noussmart.pl) and the Sonoff dongles at **99,90 PLN (~24 EUR)** (ZBDongle-P) / **68,77–70,90 PLN (~16–17 EUR)** (ZBDongle-E, official Sonoff Allegro store, Aug 2026) must be re-checked at purchase time. The Z2M `debounce`/`retain` settings are Gemini-generated and must be validated against current project docs before execution.
 
 ---
 
@@ -64,12 +64,12 @@ With Home Assistant joining the lab (idea 05), the user wants to **monitor homel
 
 | Dongle | Chipset | Price (PL) | Notes |
 |---|---|---|---|
-| **SONOFF ZBDongle-P** | CC2652P (TI) | 90–100 PLN (~21–24 EUR) | **Gold standard**; very stable in Z2M and ZHA; external antenna + aluminium RF-shielding case |
-| SONOFF ZBDongle-E | EFR32MG21 (Silicon Labs) | 80–90 PLN (~19–21 EUR) | Cheaper; great for ZHA; experimental Thread/Matter support |
+| **SONOFF ZBDongle-P** | CC2652P (TI) | 99,90 PLN (~24 EUR) | **Gold standard**; very stable in Z2M and ZHA; external antenna + aluminium RF-shielding case (official store price, Aug 2026) |
+| SONOFF ZBDongle-E | EFR32MG21 (Silicon Labs) | 68,77–70,90 PLN (~16–17 EUR) | Cheaper; great for ZHA; experimental Thread/Matter support; external SMA antenna +20 dBm (official store price, Aug 2026) |
 | **NOUS E16** (Nous, official store) | EFR32-class — Zigbee 3.0 + Thread + BLE 5.2 | 49,99 PLN (~12 EUR) | Budget multi-protocol USB dongle; ext. antenna + aluminium housing; Z2M/HA/OpenHAB; Direct-Flash FW updates; Thread/BLE future-proofing (§6.2) — chipset to verify |
 | ConBee II / III | — | 140–180 PLN (~33–42 EUR) | Plug-and-play with internal antenna, but pricier |
 
-**Recommendation**: **ZBDongle-P (90–100 PLN (~21–24 EUR))** + a plain **0.5–1 m USB extension cable** (keeps the dongle away from USB 3.0 interference). **Budget pick**: the **NOUS E16** (49,99 PLN (~12 EUR), official Nous Allegro store, Aug 2026) is the cheapest option — a multi-protocol EFR32-class dongle (Zigbee + Thread + BLE 5.2, same family as the ZBDongle-E) with external antenna + aluminium housing; good value if the CC2652P gold-standard status isn't needed.
+**Recommendation**: **ZBDongle-P (99,90 PLN (~24 EUR))** + a plain **0.5–1 m USB extension cable** (keeps the dongle away from USB 3.0 interference). **Budget pick**: the **NOUS E16** (49,99 PLN (~12 EUR), official Nous Allegro store, Aug 2026) is the cheapest option — a multi-protocol EFR32-class dongle (Zigbee + Thread + BLE 5.2, same family as the ZBDongle-E) with external antenna + aluminium housing; good value if the CC2652P gold-standard status isn't needed.
 
 #### 5.1 Network coordinators & gateways — alternatives to the ZBDongle-P
 
@@ -201,7 +201,7 @@ Prometheus can't read MQTT natively — the dedicated exporter `mqtt2prometheus`
 ## Open Questions
 
 1. **Purchase timing**: the Nous A1Z USED 4-pack at 109 PLN (~26 EUR) is a promo price worth grabbing while available — re-verify price/stock at purchase time (noussmart.pl).
-2. **Coordinator**: ZBDongle-P (90–100 PLN (~21–24 EUR), gold standard) vs cheaper ZBDongle-E vs the **budget multi-protocol NOUS E16** (49,99 PLN (~12 EUR)) vs a **CC2652P2 network coordinator** (RJ45/WiFi — central placement, no USB pass-through; see §5.1) — ties into the ZHA vs Z2M choice.
+2. **Coordinator**: ZBDongle-P (99,90 PLN (~24 EUR), gold standard) vs cheaper ZBDongle-E vs the **budget multi-protocol NOUS E16** (49,99 PLN (~12 EUR)) vs a **CC2652P2 network coordinator** (RJ45/WiFi — central placement, no USB pass-through; see §5.1) — ties into the ZHA vs Z2M choice.
 3. **Zigbee stack decision (ADR input — see §6)**: [§6](#6-protocol-comparison--zigbee-stacks--adjacent-radios-adr-input) recommends **Zigbee + Zigbee2MQTT** for this lab — the ADR should settle whether to start with ZHA for a quick go-live and migrate to Z2M, or go straight to Z2M.
 4. **Where Prometheus/Grafana run**: the thread assumes the lab "already has" Prometheus — verify where it lives (k3s on the M910q?) and where `mqtt2prometheus` should be deployed (k3s vs LXC on the HA thin-client node).
 5. **Where Mosquitto/Z2M run**: research 26 (idea 05) puts them as **LXC containers on the Wyse 5070** next to the Home Assistant VM — does this thread's independent-metrics stack change that? (Probably not — the same LXC layout serves both.)
