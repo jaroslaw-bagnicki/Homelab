@@ -32,7 +32,7 @@ AMA → Log Analytics (`homelab-law`) on **Arc-enrolled nodes only**: the M910q 
 
 - **Netdata agent on all nodes** — M910q, ML110 OMV NAS, Edge Wyse 3040, HA Proxmox host (Wyse 5070), `cloudlab` VPS, future LLM node: a uniform agent across Ubuntu, Debian, OMV, Proxmox, and (trial pending) Alpine.
 - **Parent placement** — Netdata Parent runs as a **k3s workload on the M910q** after the ADR 22 migration; until then children run **standalone** (local `dbengine` + alarms) and re-point to the parent when it lands.
-- **Edge Wyse 3040 — minimal agent (explicit ADR 24 override).** Smallest practical footprint; Alpine compatibility validated during the Debian-vs-Alpine on-device trial.
+- **Edge Wyse 3040 — lightweight components only.** A **Netdata child node** (minimal footprint, **RAM-only buffering** — no eMMC `dbengine`, per [ADR 24](24-edge-ingress-appliance.md)) and optionally Fluent Bit; Alpine compatibility validated during the Debian-vs-Alpine on-device trial.
 - **Metrics-only scope.** Provisioned via a new Ansible `netdata` role (ADR 10).
 - **Future components of Tier B (extensions — not adopted, no ADR yet):** **Grafana, Prometheus, Fluent Bit, Loki.** Netdata's Prometheus-compatible export is the future integration point for a dashboard/analytics (and log) component; **ADR 26's power path** (Z2M → `mqtt2prometheus` → Prometheus → Grafana) is the only committed Prometheus/Grafana usage today. Components are added incrementally via their own future ADRs.
 
