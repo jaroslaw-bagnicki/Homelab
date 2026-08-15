@@ -72,7 +72,7 @@ With Home Assistant joining the lab (idea 05), the user wants to **monitor homel
 
 ### 6. Protocol comparison — Zigbee stacks & adjacent radios (ADR input)
 
-The Home Assistant node (idea 05) and the independent power-monitoring path (this idea) both hinge on one choice: **which Zigbee integration stack**, and whether Zigbee is even the right radio. This comparison is the input for the Zigbee-stack ADR.
+The Home Assistant node (idea 05) and the independent power-monitoring path (this idea) both hinge on one choice: **which Zigbee integration stack**, and whether Zigbee is even the right radio. Two dimensions decide it: (a) device/radio fit, and (b) — **the must-have** — how directly the stack integrates with the homelab infrastructure (Prometheus/Grafana) and the AI agent, **independent of Home Assistant** (§6.4). This comparison is the input for the Zigbee-stack ADR.
 
 #### 6.1 Zigbee integration stacks — how HA talks to Zigbee
 
@@ -90,7 +90,7 @@ The Home Assistant node (idea 05) and the independent power-monitoring path (thi
 
 **Verdicts**
 
-- **ZHA** — simplest; ideal for a quick start when all Zigbee stays inside HA.
+- **ZHA** — simplest; ideal for a quick start when all Zigbee stays inside HA — but it **fails the infra/AI must-have (§6.4)**: all telemetry is locked inside HA, making Home Assistant the single point of failure for monitoring.
 - **Zigbee2MQTT — the fit for this lab**: decoupled from HA (restarts never drop the mesh) and every device state is plain JSON over MQTT → enables the independent Prometheus monitoring (idea 06) and AI-agent access without touching HA. Extra moving part: an MQTT broker.
 - **deCONZ** — only worth it if ConBee hardware is already on hand; no reason to pick it for a new setup.
 
@@ -119,7 +119,22 @@ The Home Assistant node (idea 05) and the independent power-monitoring path (thi
 
 **Verdict**: architecturally a **great fit** — a Tasmota device drops straight into the same Mosquitto broker and `mqtt2prometheus` config as the Zigbee plugs, so the monitoring / AI-agent path is identical. Worth it for Wi-Fi devices already on hand or where Zigbee isn't available. For the energy plugs the thread picked Zigbee (Nous A1Z) for radio robustness (mesh, mains-router plugs, no Wi-Fi congestion); **Tasmota stays a complementary option** — e.g. a Wi-Fi mains-energy monitor on the M910q/NAS if a Zigbee one isn't available.
 
-**Recommendation (for the ADR)**: stay on **Zigbee** for the energy-monitoring plugs — it matches the already-chosen Nous hardware and the compact-plug/energy-measurement niche — and run **Zigbee2MQTT** as the stack, because only MQTT gives the independent Prometheus path and AI-agent access this idea is built around. The MQTT-centric architecture keeps the door open for **Tasmota/ESPHome devices later** — they plug into the same broker and exporter with no architectural change.
+#### 6.4 Direct integration with homelab infra & AI agents — the must-have
+
+The lab's monitoring must **not** depend on Home Assistant: Prometheus + Grafana are the sink, and the AI agent needs both control (MQTT) and read-only analytics (Prometheus API). Direct infrastructure/AI-agent integration is a **must**, not a preference — it decides the stack.
+
+| Stack / protocol | Path to homelab infra | AI-agent access | Independent of HA? | Verdict |
+|---|---|---|---|---|
+| **Zigbee2MQTT** | Native MQTT JSON → `mqtt2prometheus` → Prometheus | MQTT ACL (control) + Prometheus API (analytics) | ✅ fully | **Excellent — satisfies the must-have** |
+| **Tasmota / ESPHome (Wi-Fi)** | Direct MQTT (same `mqtt2prometheus` path); ESPHome can also export Prometheus metrics natively | MQTT ACL + Prometheus API (same broker) | ✅ fully | **Excellent — same path as Z2M** |
+| **ZHA** | No MQTT — only via HA's built-in Prometheus integration or HA REST API | Must route through the HA API; HA becomes the coupling point | ❌ tied to the HA instance | **Poor** — HA is a single point of failure for power telemetry |
+| **deCONZ / Phoscon** | Vendor REST/WebSocket API (custom exporter needed) | Custom REST integration | ✅ separate service, but vendor API | Medium — local but non-standard vs MQTT |
+| **Z-Wave (Z-Wave JS UI)** | MQTT possible via Z-Wave JS UI | MQTT possible, extra setup | ⚠️ via a separate server | Medium — workable, but ecosystem mismatch |
+| **Matter / Thread** | No native MQTT/Prometheus; needs a Matter controller + border router | No direct path today | ⚠️ depends on a controller | Poor today |
+
+**Takeaway**: only the **MQTT-native** stacks — **Zigbee2MQTT** and **Tasmota/ESPHome** — satisfy the must-have cleanly: device state is plain JSON on a standard broker that `mqtt2prometheus`, Grafana, and the AI agent all consume, with Home Assistant as an optional extra consumer rather than the hub. This criterion alone eliminates **ZHA** for the lab's monitoring use case.
+
+**Recommendation (for the ADR)**: apply the must-have first — the stack must expose power telemetry **directly to homelab infra and the AI agent, independent of HA**. That points to an **MQTT-native stack**: **Zigbee2MQTT** for the Zigbee plugs (matches the already-chosen Nous hardware), with **Tasmota/ESPHome** as a compatible Wi-Fi complement later. **ZHA is ruled out** for monitoring (locks telemetry inside HA); Z-Wave/Matter don't fit the ecosystem. The MQTT-centric architecture keeps every consumer — Prometheus, Grafana, HA, AI agent — on the same standard broker.
 
 ### 7. Architecture: independent power monitoring — Z2M decoupled from HA
 
