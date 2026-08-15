@@ -32,6 +32,7 @@
 - **When NOT to create an issue**: one-shot `(docs)` or `(chore)` commits, ongoing research (use `research/` docs for that)
 - **When creating an issue**: use a clear title with **no `(type)` prefix** (e.g. not `(feat) …`) — the **label** conveys the type. Add relevant labels and a brief **Why / What** description
 - **PR titles**: same rule — no `(type)` prefix in the title; use labels to convey the type (the `(type)` prefix convention applies to **commit messages only**)
+- **PR descriptions**: do **not** use the **Why / What / How (WWH)** format — that is **reserved for GitHub Issues only**. PR descriptions are a plain summary of the **Changes** (and any **Notes**) with no WWH headings
 - **Reference issues**: plain `#NNN` mentions link a commit/PR to an issue but do **not** auto-close it. To auto-close on merge, add `Closes #NNN` to the **PR description** or to a commit that is merged into `main` (GitHub evaluates the keyword at merge time; editing a merged PR afterwards won't close the issue)
 - **Labels**: `enhancement` (new feature), `bug` (broken), `chore` (maintenance/tooling), `research` (investigation)
 - **README progress table = public status board** — shows at a glance what's done (dated rows) and what's next (undated rows). Only items that are **completed** or **actively being worked on** belong here.
