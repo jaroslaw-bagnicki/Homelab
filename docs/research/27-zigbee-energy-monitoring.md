@@ -71,6 +71,14 @@ With Home Assistant joining the lab (idea 05), the user wants to **monitor homel
 
 **Recommendation**: **ZBDongle-P (99,90 PLN (~24 EUR))** + a plain **0.5–1 m USB extension cable** (keeps the dongle away from USB 3.0 interference). **Budget pick**: the **NOUS E16** (49,99 PLN (~12 EUR), official Nous Allegro store, Aug 2026) is the cheapest option — a multi-protocol EFR32-class dongle (Zigbee + Thread + BLE 5.2, same family as the ZBDongle-E) with external antenna + aluminium housing; good value if the CC2652P gold-standard status isn't needed.
 
+**Why the ZBDongle-P over the NOUS E16 (~50 PLN saving)?** The E16 is the cheaper budget pick, but the ZBDongle-P stays the default because the coordinator sits at the **centre of the whole Zigbee mesh** — the single point of failure for every Zigbee device and the independent monitoring stack:
+
+- **Proven silicon + largest community base**: the CC2652P is the most battle-tested coordinator chip in the HA/Z2M ecosystem — huge install base, exhaustive docs, well-known quirks. The E16 (EFR32-class, like the ZBDongle-E) is supported but much newer and less field-proven.
+- **Turnkey firmware path**: the ZBDongle-P ships pre-flashed with Z-Stack 3.x and its Z2M setup is exhaustively documented; the E16's firmware/Z2M path still needs verification (flagged above).
+- **Single-protocol simplicity**: the E16's Thread + BLE 5.2 is future-proofing the lab explicitly doesn't need yet (§6.2 "watch — not needed now") and adds multi-protocol firmware complexity; the ZBDongle-P is a dedicated, predictable Zigbee coordinator.
+- **Brand track record**: Sonoff's dongles are the community reference; Nous is primarily a rebranded-Tuya device maker, so the E16 is the less-documented option.
+- **Cost vs risk**: the ~50 PLN saving is real, but for the mesh's central node the proven ZBDongle-P is cheap insurance against a newer "mostly works but has quirks" device.
+
 #### 5.1 Network coordinators & gateways — alternatives to the ZBDongle-P
 
 Beyond USB dongles, Allegro (Aug 2026) lists network-connected Zigbee coordinators and gateways. Reviewed against the lab's **must-have** (§6.4 — independent of HA, direct MQTT/Prometheus/AI-agent access) and the central-placement goal (idea 05). Listing pages were blocked to automated access (Allegro anti-bot) — prices/specs must be verified at purchase time.
