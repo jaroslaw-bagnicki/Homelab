@@ -23,9 +23,10 @@
 - [x] `md1` (2× 250 GB → ext4) online
 - [x] Arrays survive reboot — **confirmed** (machine rebooted, md0/md1 auto-assembled + mounted)
 - [x] Static IP `192.168.2.210` set and verified from the M910q
-- [ ] 1 TB spare content reviewed, role decided (**in progress** — §7)
+- [x] 1 TB spare reviewed — **role: offline** (stays disconnected; §7, 2026-08-15)
 - [x] OMV web UI reachable at `https://192.168.2.210` (HTTPS-only, §4d)
 - [x] SSH hardening — **applied** (key-only, LAN-only, root console-only — §8, 2026-08-15)
+- [x] Disk noise tuning — **AAM = quietest on all 4 data drives** (APM/spindown left off — §6, 2026-08-15)
 - [ ] OpenCode cloud-instance SSH key (**dropped for now** — instance on Cloudlab, no path to NAS; revisit when it moves home)
 
 > **Execution log — 2026-08-09**
@@ -46,9 +47,19 @@
 > - RAID UI plugin: OMV 8 has **no RAID page in the base install** — the `openmediavault-md`
 >   plugin (8.1.5-1) had to be installed first; OMV upgraded 8.3.1 → 8.5.6-1 in the process (see §5).
 > - Dashboard: all widgets enabled on the home dashboard via `Dashboard | Settings` (§6, executed after RAID).
+
+> **Execution log — 2026-08-15**
 > - SSH: user **`jarek`** created via web UI (`_ssh`, `sudo`, `users`, `openmediavault-admin`,
 >   `openmediavault-webgui`), workstation `lenovo-slim` pubkey attached. Hardening applied via
 >   `Services | SSH`: key-only, LAN-only (`Match Address`), root console-only (§8, 2026-08-15).
+> - Disk noise tuning: **AAM = quietest** (`Minimum performance, minimum acoustic output`) set on
+>   all 4 data drives via `Storage | Disks → Edit`, applied 2026-08-15 (§6). APM and Spindown
+>   deliberately left `Disabled` (RAID-safety + wear — see §6 / research 23).
+> - System update: **29 stable/security packages** upgraded via `apt` (util-linux security fix,
+>   postfix, chrony, rsync, Python 3.13, etc.). Backports kernel 7.1.3 + ~23 firmware packages
+>   deliberately skipped (§6, 2026-08-15).
+> - Backports repo disabled: `openmediavault-kernel-backports.list` commented out via `sed`;
+>   `apt update` → "All packages are up to date.", Updates page shows 0 (§6, 2026-08-15).
 
 ---
 
@@ -69,7 +80,7 @@ from a **keyboard + mouse + monitor** attached directly to the box.
 | 5 | WDC WD2500AAKX 250 GB | `WD-WCC2F0157761` | `md1` |
 | 6 | GB0250EAFYK 250 GB | `WCAT1F035986` | `md1` mirror |
 | 7 | **Goodram C40 120 GB SSD** | `1C9C074614D500572350` | **OMV OS** |
-| 8 | WDC WD10EZEX 1 TB (spare) | `WD-WCC3F7AKKXUT` | unplugged — content review §7 |
+| 8 | WDC WD10EZEX 1 TB (spare) | `WD-WCC3F7AKKXUT` | **offline** — reviewed 2026-08-15 (§7) |
 
 ### Media & tools
 
@@ -245,7 +256,7 @@ management). Shared folders / exports are **Phase 2** (issue #62) — not create
 
 ---
 
-## 6. Verify
+## 6. Verify & Post-Install Tuning
 
 ```sh
 # Arrays assembled
@@ -289,25 +300,80 @@ ping 192.168.2.210            # static IP reachable
 
 Default settings elsewhere untouched (auto-logout etc. left as-is).
 
+### Disk acoustic & power management (AAM/APM — applied 2026-08-15)
+
+Noise is the biggest concern on this box, so AAM is set to **quietest** on all 4 data drives
+(the 2× Hitachi 500 GB + WD2500AAKX + GB0250EAFYK — *not* the Goodram OS SSD).
+`Storage | Disks` → select a data drive → **Edit** → **Advanced Acoustic Management** →
+**Minimum performance, minimum acoustic output** → Save (repeat per drive) → **Apply**.
+
+> Match drives by **serial**, not `/dev/sdX` — OMV device letters shift across reboots/SCSI
+> enumeration (2026-08-15: sda=Hitachi JP1572FL1849SK, sdb=WD2500AAKX, sdc=Goodram SSD,
+> sdd=GB0250EAFYK, sde=Hitachi JP1572FL167V6K).
+
+| OMV device (2026-08-15) | Drive | Serial | AAM |
+|---|---|---|---|
+| `/dev/sda` | Hitachi HDS721050CLA660 | `JP1572FL1849SK` | 🔇 quietest |
+| `/dev/sdb` | WDC WD2500AAKX | `WD-WCC2F0157761` | 🔇 quietest |
+| `/dev/sdd` | GB0250EAFYK | `WCAT1F035986` | 🔇 quietest |
+| `/dev/sde` | Hitachi HDS721050CLA660 | `JP1572FL167V6K` | 🔇 quietest |
+| `/dev/sdc` | Goodram C40 SSD | `1C9C074614D500572350` | n/a (SSD) |
+
+**Deliberately not set** (full AAM/APM analysis in [research 23](../research/23-ml110-nas-omv.md)):
+
+- **APM** — left `Disabled`. The only RAID-safe value (≥128) doesn't spin down but adds head
+  load/unload cycles (wear) for marginal power saving; it doesn't reduce the hum.
+- **Spindown time** — left `Disabled`. Never spin down RAID members: mdadm can mark a
+  slow-to-wake drive as **failed** → array degradation.
+
+Verify (`hdparm` needs root):
+
+```sh
+sudo hdparm -M /dev/sda /dev/sdb /dev/sdd /dev/sde   # expect: acoustic = 128 (minimum)
+```
+
+### System update — stable/security batch (applied 2026-08-15)
+
+Routine Debian patching via SSH (`sudo apt install …`). **29 packages upgraded**, all from
+Debian **stable / security / stable-updates** — the important one is the **util-linux security
+fix** (`util-linux`, `mount`, `login`, `fdisk`, `bsdutils` + libs), plus `postfix` (security),
+`chrony`, `rsync`, `libcurl`, `xz`, `libxml2`, `base-files`, Python 3.13.5-2+deb13u4, etc.
+
+**Deliberately NOT installed** — the **backports kernel 6.12 → 7.1.3** and the **~23 backports
+firmware packages** (~230 MiB of firmware for hardware this box doesn't have). The stock Debian
+6.12 kernel is what OMV 8 is built/tested against; a backports kernel jump adds risk + a reboot
+for zero benefit on this hardware. The `trixie-backports` repo was then **disabled** (see below),
+so the ~29 backports suggestions no longer appear at all.
+
+- `postfix` chose **No configuration** during install → OMV keeps owning its config
+  (`main.cf` untouched by debconf). `postfix`/`rsync` services stay inactive until OMV enables
+  them (notifications / rsync plugin, Phase 2) — expected.
+- No reboot required (userspace-only, no kernel touched).
+
+### Backports repo disabled (applied 2026-08-15)
+
+The `openmediavault-kernel-backports` file (created by OMV so the backports kernel is available)
+was **commented out** — OMV's Updates page lists *whatever the enabled repos offer*, it does not
+recommend per-package, and Debian's own stance is "newer, not necessarily more stable". For a
+backup-target NAS on fully-supported hardware (E2160, ICH9R, BCM5722), the backports kernel
++ 230 MiB of firmware for absent hardware are risk/noise with zero upside.
+
+```sh
+sudo sed -i 's/^deb /#deb /' /etc/apt/sources.list.d/openmediavault-kernel-backports.list
+sudo apt update          # → "All packages are up to date."; Updates page shows 0
+```
+
+- **Reversible** — the `deb` line is only commented; uncomment to re-enable the backports kernel.
+- **May re-appear** — an upgrade/reinstall of the `openmediavault-kernel-backports` package can
+  re-create the file; re-run the same `sed`, or `apt remove openmediavault-kernel-backports` if it recurs.
+
 ---
 
-## 7. Review the 1 TB WD10EZEX Spare — **in progress**
+## 7. Review the 1 TB WD10EZEX Spare — **done (offline)**
 
-> **In progress (2026-08-15).** Connect the WD10EZEX (`WD-WCC3F7AKKXUT`) and review its content;
-> the role decision (bulk volume vs offline) is recorded here and in [research 23](../research/23-ml110-nas-omv.md).
-
-1. Power off, connect the **WD10EZEX** (`WD-WCC3F7AKKXUT`) to the free ICH9 port **#6**.
-2. Power on and inspect its existing content before assigning any role:
-   ```sh
-   lsblk -f /dev/sdX          # existing partitions / filesystems
-   sudo mkdir /mnt/review && sudo mount /dev/sdX1 /mnt/review && ls /mnt/review
-   ```
-3. Decide its role:
-   - **Bulk volume** — if it holds media/archives worth keeping, add as a single-disk XFS
-     volume (via OMV `Storage | File Systems`) or an `mdadm` member.
-   - **Offline** — per research 23, the drive is **unplugged for now**; if the content is
-     redundant, leave it disconnected and record the decision in [research 23](../research/23-ml110-nas-omv.md).
-4. Record the outcome in [research 23](../research/23-ml110-nas-omv.md) (open question #3).
+> **Done 2026-08-15.** The WD10EZEX (`WD-WCC3F7AKKXUT`) content was reviewed via SystemRescue.
+> **Role decision: offline** — the drive stays disconnected for now (ICH9 port #6 free). The decision is recorded in
+> [research 23](../research/23-ml110-nas-omv.md).
 
 ---
 

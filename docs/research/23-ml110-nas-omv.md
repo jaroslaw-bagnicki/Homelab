@@ -18,7 +18,7 @@
 | Filesystem / RAID | **No ZFS** — **mdadm RAID1** + XFS/ext4 |
 | Boot device | **Goodram C40 120 GB SSD on ICH9 SATA #5**|
 | Data pool | `md0` = 2× 500 GB Hitachis (mirror), `md1` = 2× 250 GB (mirror) |
-| Bulk volume | **1 TB WD10EZEX — unplugged for now**; content review during OMV setup, role TBD |
+| Bulk volume | **1 TB WD10EZEX — offline (decided 2026-08-15)**; content reviewed via SystemRescue |
 | Hardware RAID controller | **Not used** (Dell SAS 6/iR / SAS1068E) — removed |
 
 ---
@@ -55,6 +55,16 @@
 | LO100 / IPMI | **Not available** — LO100 expansion-card slot is **empty** and the management RJ45 port is **fused with a metal plate**. No out-of-band remote management (no iLO/LO100 IPMI). |
 | Remote access | **None** — direct console only: keyboard + mouse + monitor on the ML110 |
 | NIC | Broadcom BCM5722 (`enp14s0`), MAC `78:e7:d1:53:fb:87` |
+| Hardware monitoring | **No lm-sensors fan/PWM control** — no Super I/O sensor chip exposed; IPMI BMC KCS has no Linux driver (verified with `sensors-detect` 2026-08-15, see note below) |
+
+> **Fan / hardware monitoring (lm-sensors, 2026-08-15).** `sensors-detect` on the live OMV
+> install finds **only `coretemp`** (CPU digital thermal sensor — 42 °C at idle, crit 100 °C).
+> No Super I/O sensor chip is present at the standard probe ports (0x2e/0x2f, 0x4e/0x4f), so there
+> are **no fan RPM inputs and no PWM outputs** — `fancontrol` / the OMV fan-control plugin have
+> nothing to control. An **IPMI BMC KCS** is detected at `0xca2` but has **no Linux driver yet**
+> (and this G5 has no working LO100 anyway). **Conclusion: software fan control is not possible**
+> on this board; fan noise is addressed physically (clean / quiet-fan swap / dampening), and a
+> BIOS fan/thermal profile (if any) reverts on power loss until the dead CR2032 is replaced.
 
 ### Controller topology
 
@@ -78,13 +88,13 @@
 | 5 | WDC WD2500AAKX-75U6AA0 | `WD-WCC2F0157761` | 250 GB | `md1` |
 | 6 | GB0250EAFYK (labeled "WD RE3") | `WCAT1F035986` | 250 GB | `md1` mirror |
 | 7 | Goodram C40 120 GB (SSD) | `1C9C074614D500572350` | 120 GB | OS disk |
-| 8 | WDC WD10EZEX-00BN5A0 (spare) | `WD-WCC3F7AKKXUT` | 1 TB | unplugged — content review during OMV setup |
+| 8 | WDC WD10EZEX-00BN5A0 (spare) | `WD-WCC3F7AKKXUT` | 1 TB | **offline** (decided 2026-08-15) |
 
 **Label vs SMART discrepancies:** the 500 GB Hitachis label `CLA662` but report `CLA660` (HP OEM variant); the "WD RE3" drive actually reports as `GB0250EAFYK` (rebadged); the Fujitsu label `MHV2020BH` reports as `MHW2020BH`. **SMART identity is authoritative.**
 
 **Cabling & bays (onboard SATA, current state):** ICH9R ports #1–#4 → the 4× 3.5" data
 drives (mdadm RAID1 pairs); ICH9 port #5 → **Goodram C40 120 GB SSD** (OMV OS, Option D);
-ICH9 port #6 → **free** (1 TB WD10EZEX unplugged for now). All four 3.5" bays occupied;
+ICH9 port #6 → **free** (1 TB WD10EZEX **offline**, decided 2026-08-15). All four 3.5" bays occupied;
 both 2.5" bays hold the 20 GB cold spares (detached). Label power draw: Hitachi Travelstar
 20 GB `5V 1.0A`, Fujitsu 20 GB `5V 0.50A`.
 
@@ -168,13 +178,13 @@ auto-mount so its DB stays the source of truth for mounts).
 | | Option A (rejected) | Option B (superseded) | Option C (superseded) | **Option D (chosen)** |
 |---|---|---|---|---|
 | OMV OS on | Dedicated ≥32 GB USB stick (`flashmemory` plugin) | 1× 2.5" 20 GB drive (ICH9 #5) | 2× 2.5" 20 GB in **SAS 6/iR RAID 1** (OS redundancy) | **Goodram C40 120 GB SSD (ICH9 #5)** |
-| 1 TB spare | single-disk XFS on ICH9 #5 | offline | single-disk XFS on ICH9 #6 | **unplugged — content review, role TBD** |
+| 1 TB spare | single-disk XFS on ICH9 #5 | offline | single-disk XFS on ICH9 #6 | **offline — decided 2026-08-15** |
 | Cost | USB purchase + flash-wear mgmt | zero (reuse 2.5" drive) | zero (both 20 GB reused) | zero (spare SSD found) |
 | Hardware RAID needed | no | no | **yes** — SAS 6/iR in boot path | **no** — SAS 6/iR not used |
 
 **Option C (considered, superseded):** mirror the two 2.5" 20 GB drives on the Dell SAS 6/iR as the OS volume. Rationale at the time: the boot disk is the highest-wear component, and OS RAID1 gave redundancy while freeing both ICH9 ports so the 1 TB spare could come online. Drawbacks that pushed it out: the 2009 controller becomes a boot dependency (death = no boot), no per-disk SMART behind the array, and the battery-less write cache risk — acceptable for a disposable OS, but still added hardware dependency for zero OS-capacity gain.
 
-**Chosen: Option D** — a spare **Goodram C40 120 GB SSD** appeared, giving a single reliable boot disk with 6× the OS capacity of the 20 GB drives, no hardware RAID anywhere, and freeing both 2.5" 20 GB drives as cold spares. The 1 TB spare is **unplugged for now** — its content will be reviewed during OMV setup and its role (bulk volume vs offline) decided then. **SSD health confirmed (SMART PASSED).**
+**Chosen: Option D** — a spare **Goodram C40 120 GB SSD** appeared, giving a single reliable boot disk with 6× the OS capacity of the 20 GB drives, no hardware RAID anywhere, and freeing both 2.5" 20 GB drives as cold spares. The 1 TB spare is **offline** (decided 2026-08-15 after a SystemRescue content review); its contents are **not documented** — personal data, and this repo is public. **SSD health confirmed (SMART PASSED).**
 
 ---
 
@@ -205,11 +215,45 @@ At ~€150–200/yr this is the most power-hungry box in the homelab — the M91
 ### Optimization plan
 
 1. **Measure first** — one wattmeter reading to confirm the ~80 W idle baseline before investing in mitigations.
-2. **HDD spindown (free, Phase 1)** — OMV idle spindown (`hdparm -S`, conservative 20–30 min timeout) for the 4 HDDs; the SSD stays up. The NAS is a backup target touched only during backup windows (nightly restic, Longhorn snapshots per ADR 22), so drives can stay parked most of the day. Saves ~20 W → ~€35–50/yr; a long timeout keeps spin-up cycles rare, avoiding extra disk wear.
-3. **Scheduled power, only if needed** — boot the box only for the backup window (RTC wake / WoL, e.g. 23:00–06:00). Cuts cost to roughly a third (~€50–65/yr) but drops always-on NFS — fine for batch restic/Longhorn, not for interactive access.
-4. **Revisit the Q956 as a power move** — per the comparison row above the Q956 runs at ~1/4 the cost (~€40–45/yr, ~€110–160/yr saved). Its ~195 PLN acquisition + 2× 2.5" drives + caddy pays back in under a year on power alone. Keep the ML110 only if the 4× 3.5" bays or the spare 1 TB matter.
+2. **No HDD spindown** — all 4 HDDs are **mdadm RAID1 members** (`md0` + `md1`), so idle spindown
+   is **off the table**: mdadm can mark a slow-to-wake drive as **failed** → array degradation
+   (see the AAM/APM section below). The SSD stays up regardless.
+3. **Scheduled power (the power lever for this setup)** — boot the box only for the backup window
+   (RTC wake / WoL, e.g. 23:00–06:00). Cuts cost to roughly a third (~€50–65/yr) but drops
+   always-on NFS — fine for batch restic/Longhorn, not for interactive access.
+4. **Revisit the Q956 as a power move** — per the comparison row above the Q956 runs at ~1/4 the
+   cost (~€40–45/yr, ~€110–160/yr saved). Its ~195 PLN acquisition + 2× 2.5" drives + caddy pays
+   back in under a year on power alone. Keep the ML110 only if the 4× 3.5" bays or the spare 1 TB matter.
 
-**Recommendation:** apply Phase 1 (spindown) after a wattmeter baseline; escalate to scheduled power or the Q956 only if the measured saving stays below ~€40/yr.
+**Recommendation:** with spindown excluded for the RAID members, the realistic levers are scheduled
+power (item 3) or the Q956 (item 4) — decide after a wattmeter baseline.
+
+### Acoustic & power management (AAM / APM)
+
+OMV exposes per-disk AAM/APM under `Storage | Disks → Edit` (backed by `hdparm`). Both are
+**set-and-apply** config that OMV re-applies at boot, so the values survive reboots.
+
+- **AAM — Advanced Acoustic Management (`hdparm -M`)** trades seek speed for seek noise:
+  - `Disabled` (default) — drive's own factory seek profile.
+  - `Minimum performance, minimum acoustic output` — **quietest** (acoustic level ~128).
+  - `Maximum performance, maximum acoustic output` — loudest (fastest seeks).
+  - **Effect on noise:** removes most of the rapid *click-clack* seek clatter — the dominant
+    annoying sound on these 3.5" drives. Small random-access perf hit; irrelevant for a NAS.
+- **APM — Advanced Power Management (`hdparm -B`)** manages the drive's power/standby state:
+  - Values **1–127** permit **spindown/standby** — **do not use on RAID members**: if mdadm
+    writes to a parked drive, the slow wake can make mdadm mark it **failed** → array degraded.
+  - Values **128–254** keep the disk **spinning** (no spindown) but allow idle head parking /
+    reduced power.
+  - `Disabled` — no power management (full power always).
+- **Spindown time (`hdparm -S`)** — the idle timeout after which a drive parks; same RAID risk
+  as APM < 128. Left **disabled** on all RAID members.
+
+**Applied 2026-08-15:** **AAM = quietest** on all 4 data drives (both Hitachis, WD2500AAKX,
+GB0250EAFYK). **APM and Spindown left Disabled** — APM 128 would only trim idle draw at the
+cost of extra load/unload cycling (a wear factor on these older drives) and does not reduce the
+audible hum; spindown is a RAID-reliability trap (see above). The noise lever is **AAM**; the
+power lever is spindown / scheduled power (below), not APM. (Runbook 22 §6 records the live
+values per drive.)
 
 ---
 
