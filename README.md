@@ -12,6 +12,22 @@ self-host AI agents, and keep learning for the joy of it.
 
 ---
 
+## Goals
+
+- 🎮 **Have fun** — tinkering for the joy of it, no deadlines
+- 🔧 **Sharpen the saw** — supplement and extend my Operations and DevOps expertise by running infrastructure hands-on
+- 🤖 **Experiment with AI workloads** — run Hermes Agent with cloud/hybrid LLMs, and eventually local inference on dedicated hardware
+
+## Tech Stack
+
+The homelab runs on a **Lenovo M910q Tiny** managed via **Ansible**, with workloads in
+**Docker Compose** today and **Kubernetes (k3s + Azure Arc)** as the destination. Public
+access goes through **Cloudflare Tunnel** behind a **Caddy** reverse proxy. An **OMV NAS**
+(HP ProLiant ML110) provides backup storage and NFS exports, while a dedicated **Edge Ingress**
+(Wyse 3040) is taking over public routing from the main host. See the
+[Overview](docs/overview.md) for the current nodes, workloads, and topology, and
+[Hardware](docs/hardware.md) for per-node specs.
+
 ## Explore
 
 | Area | Description |
@@ -24,17 +40,3 @@ self-host AI agents, and keep learning for the joy of it.
 | [Runbooks](docs/runbooks/README.md) | Step-by-step implementation guides |
 | [Workloads](docs/workloads.md) | Self-contained Ansible workload recipes |
 | [Changelog](CHANGELOG.md) | Notable changes, newest first |
-
-## Goals
-
-- 🎮 **Have fun** — tinkering for the joy of it, no deadlines
-- 🔧 **Sharpen the saw** — supplement and extend my Operations and DevOps expertise by running infrastructure hands-on
-- 🤖 **Experiment with AI workloads** — run Hermes Agent with cloud/hybrid LLMs, and eventually local inference on dedicated hardware
-
-## Tech Stack
-
-The homelab runs on a **Lenovo M910q Tiny** managed via **Ansible**, with workloads in
-**Docker Compose** today and **Kubernetes (k3s + Azure Arc)** as the destination. Public
-access goes through **Cloudflare Tunnel** behind a **Caddy** reverse proxy. See the
-[Overview](docs/overview.md) for the current nodes, workloads, and topology, and
-[Hardware](docs/hardware.md) for per-node specs.
