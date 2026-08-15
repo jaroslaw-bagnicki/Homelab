@@ -19,26 +19,20 @@ The refresh re-aligns the box with ADR 05 and unblocks that track.
 - **Ansible-provisioned base**: `common` → `security` → `docker_host` → `azure_arc` via `ansible/playbooks/playbook-homelab.yml`.
 - **DNS / Caddy / cloudflared leave the M910q** (Option B): the edge appliance (ADR 24 / [#65](https://github.com/jaroslaw-bagnicki/Homelab/issues/65)) takes over `*.home` DNS, internal `.home` Caddy, and the external tunnel. The refreshed M910q is **compute-only** — dnsmasq and `homelab-tunnel` are **not** reinstalled. Accept a temporary `.home` + external-access gap until the edge box is live.
 
-> **Execution note.** Run this runbook **interactively from your LAN workstation in
+> **Execution note.** Run this runbook **interactively from your control node in
 > VSCode with the GitHub Copilot extension** — the M910q is only reachable from
 > `192.168.2.0/24` (this Cloudlab-hosted dev container has no route to it). Each step
 > ends with a verify gate: run the command and confirm the expected output before moving on.
 
 ## Prerequisites
 
-- **On the LAN workstation** (the Ansible control node):
-  - This repo checked out on branch `feat/m910q-refresh`
-  - **Windows OpenSSH client** (`ssh`) — native, no extra tools
-  - The workstation SSH **public** key at `$env:USERPROFILE\.ssh\id_ed25519.pub`
-    (uploaded to `labadmin` by the bootstrap script; runbook 01 §5)
+- **Control node** (the machine that runs Ansible — must be on the same LAN as the M910q):
+  - `ssh` client (native OpenSSH)
   - Ansible + collections: `ansible-galaxy install -r ansible/requirements.yml`
   - `az` CLI (or Az PowerShell) **logged in** — the `azure_arc` role fetches the SPN
-    secret from Key Vault on the control node (`lookup('azure.azcollection.azure_keyvault_secret')`)
-  - The **root breaking-glass password** (Keeper) — needed by the bootstrap script
-- **Bootable USB** with Ubuntu Server 24.04 LTS ISO (YUMI/Rufus, runbook 01 §0) and a **SystemRescue** ISO.
-- **Keyboard + monitor** attached to the M910q (direct console for the reinstall).
-- Backup of any data on the M910q you want to keep (configs in `/opt/docker`, volumes)
-  — the NVMe is wiped by the reinstall.
+    secret from Key Vault on the control node
+  - The control node's SSH **public** key (uploaded to `labadmin` by the bootstrap script)
+- **Bootable USB** with Ubuntu Server 24.04 LTS ISO and a **SystemRescue** ISO.
 
 > **Operator account — `labadmin`.** Both hosts (cloudlab + homelab) use the generic
 > `labadmin` account: key-only SSH, no password, `NOPASSWD` sudo for Ansible `become`,
@@ -102,9 +96,9 @@ by Ansible in §3.
    ```
 
 > **Why root, not a regular user, during install:** the bootstrap script (§2) connects as
-> root to create the `labadmin` agent account and upload the workstation key. No regular
-> user exists on the box until the script makes `labadmin` — the machine never carries a
-> throwaway human account.
+> root to create the `labadmin` agent account and upload the control node's SSH key. No
+> regular user exists on the box until the script makes `labadmin` — the machine never
+> carries a throwaway human account.
 
 ## 2. Bootstrap — labadmin Agent Account (`scripts/New-HomelabLabadmin.ps1`)
 
@@ -116,7 +110,7 @@ by Ansible in §3.
    The script removes this drop-in when it finishes (step 2), so root returns to
    console-only.
 
-2. **From the workstation**, run the bootstrap script (PowerShell, native ssh):
+2. **From the control node**, run the bootstrap script (PowerShell, native ssh):
    ```powershell
    ./scripts/New-HomelabLabadmin.ps1
    ```
@@ -125,7 +119,7 @@ by Ansible in §3.
    as root, it:
    - creates the `labadmin` user (sudo group, disabled password)
    - writes `/etc/sudoers.d/labadmin` with `NOPASSWD: ALL` (for Ansible `become`)
-   - uploads the workstation `id_ed25519.pub` to `labadmin`'s `authorized_keys`
+   - uploads the control node's `id_ed25519.pub` to `labadmin`'s `authorized_keys`
    - locks the `labadmin` password (key-only agent account)
    - removes `99-root-bootstrap.conf` and restarts sshd (root SSH back to console-only)
    No key is installed for root — root is reached by password only.
@@ -140,9 +134,9 @@ by Ansible in §3.
    `systemd-resolved` responds by default); `homelab.local` needs Avahi (installed by
    the playbook) for mDNS.
 
-## 3. Ansible Provision (from the LAN workstation)
+## 3. Ansible Provision (from the control node)
 
-From the repo checkout on the **workstation** (control node):
+From the repo checkout on the **control node** (the machine that runs Ansible):
 
 ```powershell
 ansible-galaxy install -r ansible/requirements.yml

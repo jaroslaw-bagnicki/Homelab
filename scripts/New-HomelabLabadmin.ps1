@@ -8,7 +8,7 @@
     idempotently:
       - creates the labadmin user (sudo group, locked password) if missing
       - writes /etc/sudoers.d/labadmin with NOPASSWD ALL (for Ansible become)
-      - installs the workstation SSH public key for labadmin (key-only agent account)
+      - installs the control node's SSH public key for labadmin (key-only agent account)
       - removes the temporary root-SSH permit drop-in and restarts sshd,
         returning root to console-only breaking glass
     No key is installed for root — root is reached by password only.
@@ -17,12 +17,12 @@
 .PARAMETER TargetHost
     M910q hostname/IP. Default: homelab (resolves on the LAN via LLMNR).
 .PARAMETER PubKeyPath
-    Workstation public key to install for labadmin. Default: $env:USERPROFILE\.ssh\id_ed25519.pub
+    Control node's public key to install for labadmin. Default: ~/.ssh/id_ed25519.pub
 #>
 [CmdletBinding()]
 param(
   [string] $TargetHost = 'homelab',
-  [string] $PubKeyPath = "$env:USERPROFILE\.ssh\id_ed25519.pub"
+  [string] $PubKeyPath = "$HOME/.ssh/id_ed25519.pub"
 )
 
 $ErrorActionPreference = 'Stop'
