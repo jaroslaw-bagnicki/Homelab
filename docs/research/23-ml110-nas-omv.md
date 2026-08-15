@@ -55,6 +55,16 @@
 | LO100 / IPMI | **Not available** — LO100 expansion-card slot is **empty** and the management RJ45 port is **fused with a metal plate**. No out-of-band remote management (no iLO/LO100 IPMI). |
 | Remote access | **None** — direct console only: keyboard + mouse + monitor on the ML110 |
 | NIC | Broadcom BCM5722 (`enp14s0`), MAC `78:e7:d1:53:fb:87` |
+| Hardware monitoring | **No lm-sensors fan/PWM control** — no Super I/O sensor chip exposed; IPMI BMC KCS has no Linux driver (verified with `sensors-detect` 2026-08-15, see note below) |
+
+> **Fan / hardware monitoring (lm-sensors, 2026-08-15).** `sensors-detect` on the live OMV
+> install finds **only `coretemp`** (CPU digital thermal sensor — 42 °C at idle, crit 100 °C).
+> No Super I/O sensor chip is present at the standard probe ports (0x2e/0x2f, 0x4e/0x4f), so there
+> are **no fan RPM inputs and no PWM outputs** — `fancontrol` / the OMV fan-control plugin have
+> nothing to control. An **IPMI BMC KCS** is detected at `0xca2` but has **no Linux driver yet**
+> (and this G5 has no working LO100 anyway). **Conclusion: software fan control is not possible**
+> on this board; fan noise is addressed physically (clean / quiet-fan swap / dampening), and a
+> BIOS fan/thermal profile (if any) reverts on power loss until the dead CR2032 is replaced.
 
 ### Controller topology
 
