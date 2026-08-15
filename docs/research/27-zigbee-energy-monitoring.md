@@ -6,7 +6,7 @@
 
 **Status**: 📝 Analysis — no hardware acquired yet; direction feeds idea 06. Complements [idea 05](../ideas/05-home-assistant-thin-client.md) / [research 26](26-home-assistant-thin-client.md) (Home Assistant on a thin client): the **same Zigbee mesh, coordinator, and Mosquitto/Z2M containers** will serve both the Home Assistant node and this independent Prometheus-based power monitoring.
 
-> ⚠️ **Verification needed**: Prices are PL-market (Aug 2026) and change frequently — the Nous A1Z USED 4-pack at **109 zł** (noussmart.pl) and the Sonoff ZBDongle-P at **~90–100 zł** must be re-checked at purchase time. The Docker Compose snippet and Z2M `debounce`/`retain` settings are Gemini-generated and must be validated against current project docs before execution.
+> ⚠️ **Verification needed**: Prices are PL-market (Aug 2026) and change frequently — the Nous A1Z USED 4-pack at **109 zł** (noussmart.pl) and the Sonoff ZBDongle-P at **~90–100 zł** must be re-checked at purchase time. The Z2M `debounce`/`retain` settings are Gemini-generated and must be validated against current project docs before execution.
 
 ---
 
@@ -109,50 +109,7 @@ Prometheus can't read MQTT natively — the dedicated exporter `mqtt2prometheus`
 - **Path A — control (read-write) via MQTT**: dedicated Mosquitto account with a restricted **ACL**. Agent publishes JSON to `zigbee2mqtt/Gniazdko_Serwer/set` (e.g. `{ "state": "OFF" }`) and subscribes to `zigbee2mqtt/Gniazdko_Serwer` for real-time state.
 - **Path B — analytics (read-only) via Prometheus HTTP API**: e.g. `GET /api/v1/query?query=avg_over_time(homelab_power_watts[24h])` — safe for infrastructure; the agent cannot accidentally cut power to a node.
 
-### 9. Docker Compose reference (everything except Prometheus, which the lab presumably already has)
-
-```yaml
-version: '3.8'
-services:
-  mosquitto:
-    image: eclipse-mosquitto:2
-    container_name: homelab-mqtt
-    restart: unless-stopped
-    ports:
-      - "1883:1883"
-      - "9001:9001"
-    volumes:
-      - ./mosquitto/config:/mosquitto/config
-      - ./mosquitto/data:/mosquitto/data
-  zigbee2mqtt:
-    image: koenkk/zigbee2mqtt:latest
-    container_name: homelab-z2m
-    restart: unless-stopped
-    volumes:
-      - ./z2m-data:/app/data
-      - /run/udev:/run/udev:ro
-    ports:
-      - "8080:8080" # Z2M frontend panel
-    devices:
-      - /dev/ttyUSB0:/dev/ttyUSB0 # Sonoff ZBDongle
-    environment:
-      - TZ=Europe/Warsaw
-    depends_on:
-      - mosquitto
-  mqtt2prometheus:
-    image: hikhinstitch/mqtt2prometheus:latest
-    container_name: homelab-mqtt-exporter
-    restart: unless-stopped
-    ports:
-      - "9641:9641"
-    volumes:
-      - ./mqtt2prometheus/config.yaml:/config.yaml
-    command: ["-config", "/config.yaml"]
-    depends_on:
-      - mosquitto
-```
-
-**Key best practices from the thread**:
+### 9. Zigbee2MQTT configuration best practices
 
 - Use `/dev/serial/by-id/...` (e.g. `usb-ITEAD_SONOFF_Zigbee_3.0_USB_Dongle_Plus_...`) instead of `/dev/ttyUSB0` — the latter renumbers on reboot / after plugging a different adapter.
 - Set `retain: true` for Z2M states so Prometheus / the AI agent read the last-known state immediately after a restart.
