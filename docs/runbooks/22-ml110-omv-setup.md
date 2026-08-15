@@ -21,9 +21,9 @@
 - [x] NTP + timezone set
 - [x] `md0` (2× 500 GB → XFS) online
 - [x] `md1` (2× 250 GB → ext4) online
-- [ ] Arrays survive reboot
-- [ ] 1 TB spare content reviewed, role decided
-- [ ] Static IP `192.168.2.210` set and verified from the M910q
+- [x] Arrays survive reboot — **confirmed** (machine rebooted, md0/md1 auto-assembled + mounted)
+- [x] Static IP `192.168.2.210` set and verified from the M910q
+- [ ] 1 TB spare content reviewed, role decided (**deferred** — see §7)
 - [x] OMV web UI reachable at `https://192.168.2.210` (HTTPS-only, §4d)
 - [x] SSH hardening — **applied** (key-only, LAN-only, root console-only — §8, 2026-08-15)
 - [ ] OpenCode cloud-instance SSH key (**dropped for now** — instance on Cloudlab, no path to NAS; revisit when it moves home)
@@ -291,7 +291,11 @@ Default settings elsewhere untouched (auto-logout etc. left as-is).
 
 ---
 
-## 7. Review the 1 TB WD10EZEX Spare
+## 7. Review the 1 TB WD10EZEX Spare — **deferred**
+
+> **Deferred (2026-08-15).** The WD10EZEX (`WD-WCC3F7AKKXUT`) stays **unplugged** for now;
+> its role decision (bulk volume vs offline) is postponed — revisit after Phase 2 storage setup
+> (issue #62). The steps below are the procedure for when it's reviewed.
 
 1. Power off, connect the **WD10EZEX** (`WD-WCC3F7AKKXUT`) to the free ICH9 port **#6**.
 2. Power on and inspect its existing content before assigning any role:
@@ -313,7 +317,8 @@ Default settings elsewhere untouched (auto-logout etc. left as-is).
 - Confirm acceptance criteria from issue #61:
   - OMV web UI reachable at `https://192.168.2.210` (HTTPS-only, §4d).
   - Data pool online with redundancy (`md0` + `md1`, clean).
-  - Arrays survive reboot.
+  - Arrays survive reboot — **confirmed** (auto-assembled + mounted after reboot).
+  - Static IP `192.168.2.210` verified from the M910q.
 - The **NFS `/export/backups`** and **SMB `/shared`** exports are **Phase 2** (issue #62).
 - Mark the idea 03 status → **🔨 Implementing** (then **✅ Done**) in
   `docs/ideas/03-nas-backup-target-ml110.md` and `docs/ideas/README.md`.
