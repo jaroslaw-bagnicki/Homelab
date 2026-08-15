@@ -13,8 +13,7 @@ Significant architectural and technology choices recorded in
 
 | # | Date | ADR | Status |
 |---|------|-----|--------|
-| 28 | 2026-08-15 | [Netdata Agent on Every Node — Local Real-Time Metrics](28-netdata-adoption.md) | Accepted |
-| 27 | 2026-08-15 | [Homelab Monitoring & Observability Strategy — Two-Tier Model (Azure Monitor via Arc + Local Netdata Stack)](27-monitoring-strategy.md) | Accepted |
+| 27 | 2026-08-15 | [Homelab Monitoring & Observability Strategy — Two-Tier Model (Azure Monitor via Arc + Netdata on Every Node)](27-monitoring-strategy.md) | Accepted |
 | 26 | 2026-08-15 | [Zigbee Energy Monitoring — Z2M → Prometheus, Independent of Home Assistant](26-zigbee-energy-monitoring.md) | Accepted |
 | 25 | 2026-08-14 | [Home Assistant on a Dedicated Thin-Client Node (Wyse 5070 + Proxmox VE)](25-home-assistant-thin-client.md) | Proposed |
 | 24 | 2026-08-09 | [Edge Ingress on a Dedicated Thin-Client Appliance](24-edge-ingress-appliance.md) | Accepted |
