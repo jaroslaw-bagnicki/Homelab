@@ -18,13 +18,13 @@
 
 - [x] BIOS configured (AHCI, RAID firmware off, SSD boot)
 - [x] OMV 8.x installed on the Goodram SSD — **OMV 8.3.1-2**, hostname `omv`, domain `cloud5.ovh`
-- [ ] NTP + timezone set
-- [ ] `md0` (2× 500 GB → XFS) online
-- [ ] `md1` (2× 250 GB → ext4) online
+- [x] NTP + timezone set
+- [x] `md0` (2× 500 GB → XFS) online
+- [x] `md1` (2× 250 GB → ext4) online
 - [ ] Arrays survive reboot
 - [ ] 1 TB spare content reviewed, role decided
 - [ ] Static IP `192.168.2.210` set and verified from the M910q
-- [ ] OMV web UI reachable at `https://192.168.2.210` (HTTPS-only, §4d)
+- [x] OMV web UI reachable at `https://192.168.2.210` (HTTPS-only, §4d)
 - [ ] SSH hardening (**deferred** — see §8) — key-only auth, LAN-only
 
 > **Execution log — 2026-08-09**
