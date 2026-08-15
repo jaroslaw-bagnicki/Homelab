@@ -56,6 +56,8 @@
 > - System update: **29 stable/security packages** upgraded via `apt` (util-linux security fix,
 >   postfix, chrony, rsync, Python 3.13, etc.). Backports kernel 7.1.3 + ~23 firmware packages
 >   deliberately skipped (§6, 2026-08-15).
+> - Backports repo disabled: `openmediavault-kernel-backports.list` commented out via `sed`;
+>   `apt update` → "All packages are up to date.", Updates page shows 0 (§6, 2026-08-15).
 
 ---
 
@@ -338,13 +340,30 @@ fix** (`util-linux`, `mount`, `login`, `fdisk`, `bsdutils` + libs), plus `postfi
 **Deliberately NOT installed** — the **backports kernel 6.12 → 7.1.3** and the **~23 backports
 firmware packages** (~230 MiB of firmware for hardware this box doesn't have). The stock Debian
 6.12 kernel is what OMV 8 is built/tested against; a backports kernel jump adds risk + a reboot
-for zero benefit on this hardware. They remain as "upgradable" suggestions until the
-`trixie-backports` repo entry is disabled (or left as harmless noise).
+for zero benefit on this hardware. The `trixie-backports` repo was then **disabled** (see below),
+so the ~29 backports suggestions no longer appear at all.
 
 - `postfix` chose **No configuration** during install → OMV keeps owning its config
   (`main.cf` untouched by debconf). `postfix`/`rsync` services stay inactive until OMV enables
   them (notifications / rsync plugin, Phase 2) — expected.
 - No reboot required (userspace-only, no kernel touched).
+
+### Backports repo disabled (applied 2026-08-15)
+
+The `openmediavault-kernel-backports` file (created by OMV so the backports kernel is available)
+was **commented out** — OMV's Updates page lists *whatever the enabled repos offer*, it does not
+recommend per-package, and Debian's own stance is "newer, not necessarily more stable". For a
+backup-target NAS on fully-supported hardware (E2160, ICH9R, BCM5722), the backports kernel
++ 230 MiB of firmware for absent hardware are risk/noise with zero upside.
+
+```sh
+sudo sed -i 's/^deb /#deb /' /etc/apt/sources.list.d/openmediavault-kernel-backports.list
+sudo apt update          # → "All packages are up to date."; Updates page shows 0
+```
+
+- **Reversible** — the `deb` line is only commented; uncomment to re-enable the backports kernel.
+- **May re-appear** — an upgrade/reinstall of the `openmediavault-kernel-backports` package can
+  re-create the file; re-run the same `sed`, or `apt remove openmediavault-kernel-backports` if it recurs.
 
 ---
 
