@@ -18,84 +18,11 @@ With Home Assistant joining the lab (idea 05), the user wants to **monitor homel
 
 ## Key Findings
 
-### 1. Nous Zigbee energy-measuring product line (PL prices, Aug 2026)
+### 1. Protocol comparison — Zigbee stacks & adjacent radios (ADR input)
 
-| Product | Type | Measurement | Price (PL) |
-|---|---|---|---|
-| **Nous A1Z** | Smart plug, Zigbee 3.0, 16 A / 3680 W | Full (W, A, V, kWh) | 59,99 PLN (~14 EUR) |
-| Nous A7Z | Smart plug, earthing pin (FR/PL) | Energy monitoring | 59,99 PLN (~14 EUR) |
-| Nous A6Z | Outdoor plug, IP44 | Energy monitoring | 74,99 PLN (~18 EUR) |
-| Nous A11Z | Power strip (3× AC + USB) | **Total only** (one meter at input) | 149,00 PLN (~35 EUR) |
-| Nous B2Z | 1-ch relay module (in-box) | Power measurement (PM) | 59,99 PLN (~14 EUR) |
-| Nous B3Z | 2-ch relay module (in-box) | Independent per-channel PM | 64,99 PLN (~15 EUR) |
-| Nous D4Z | DIN-rail energy meter, 120 A | Current-clamp (non-invasive) | 329,00–384,99 PLN (~77–91 EUR) |
+The Home Assistant node (idea 05) and the independent power-monitoring path (this idea) both hinge on one choice: **which Zigbee integration stack**, and whether Zigbee is even the right radio. Two dimensions decide it: (a) device/radio fit, and (b) — **the must-have** — how directly the stack integrates with the homelab infrastructure (Prometheus/Grafana) and the AI agent, **independent of Home Assistant** (§1.4). This comparison is the input for the Zigbee-stack ADR.
 
-(All prices from official Nous distribution, PLN; EUR are rounded approximations at ~4.25 PLN/EUR, Aug 2026 — verify at purchase time.)
-
-### 2. No consumer Zigbee power strip has per-outlet measurement
-
-- **Nous A11Z confirmed**: 3 AC outlets are independently *switchable* (plus the USB section as a whole), but there is a **single measurement chip** (e.g. `BL0942`) on the power input — Home Assistant/Z2M/ZHA sees one set of entities (voltage, current, total power), **not per-outlet data**.
-- Consumer smart strips (Nous A11Z, Tuya, WOOX) cap out at **3–4× 230 V outlets** and meter only total draw.
-- **Solution A — regular strip + 5 individual Zigbee plugs (most reliable)**: each plug has its own independent metering IC, real-time per-device consumption in HA. Recommended plugs: Nous A1Z / A7Z (50–60 PLN (~12–14 EUR) each) → **300–350 PLN (~71–82 EUR) total** for 5 + a plain strip. Tip: a strip with outlets at a **45° angle** lets compact A1Z plugs sit side-by-side without blocking.
-- **Solution B — switched, metered-by-outlet rack PDUs** (APC, CyberPower, Server Technology): true per-outlet metering, but **SNMP/HTTP-REST (not Zigbee)**, industrial IEC C13/C19 sockets, and **from 1200 PLN (~282 EUR) up** — out of scope for a homelab.
-
-### 3. Buy: Nous A1Z **USED 4-pack at 109 PLN (~26 EUR)** (noussmart.pl) as the starter set
-
-- **27,25 PLN (~6 EUR)/unit** vs 55–60 PLN (~13–14 EUR) single retail; new 4-packs 150–180 PLN (~35–42 EUR); lowest Allegro price 149 PLN (~35 EUR).
-- **Full native support** in Zigbee2MQTT (device `TS011F` / `_TZ3000_26aw2vkh`, Tuya) and in ZHA.
-- Exposes directly from the metering IC: **power (W), current (A), voltage (V), total energy (kWh)**.
-- Act as **Zigbee Router** (mains-powered) → extend/strengthen the Zigbee mesh for battery sensors.
-- Among the **smallest plugs on the market** — fit side-by-side on a 45° angled strip.
-- **Outlet/USED caveats**: mostly consumer returns (e.g. bought without a Zigbee gateway then returned); possible minor scratches on glossy plastic; electronics work like new. To pair with a new coordinator: hold the button **5–7 s** until the LED fast-blinks (factory reset).
-
-### 4. Gateway vs USB coordinator — don't buy a Wi-Fi/Tuya gateway for HA
-
-- A classic gateway (Nous E1, Tuya) is an **autonomous network/Wi-Fi/Tuya device** that pushes data to the cloud — wrong architecture for Home Assistant. (The E1 being sold out is good news, not bad.)
-- For HA you need a **USB adapter (coordinator/dongle)**: raw Zigbee packets straight to Zigbee2MQTT/ZHA, **100 % local**.
-
-| Feature | Classic Gateway (Nous E1, Tuya) | USB Dongle (Sonoff ZBDongle) |
-|---|---|---|
-| What it is | Standalone wall-plug device with vendor firmware | USB stick into the HA server |
-| Processing | Handles Zigbee, usually pushes to cloud (Tuya/Smart Life) | Raw Zigbee packets to Z2M / ZHA |
-| Locality | Needs cloud integration or hacky reflash (Tasmota) | 100 % local, zero cloud, no latency |
-| Use case | People without their own server (phone app) | **Standard for homelab / Home Assistant** |
-
-### 5. Coordinator selection — Sonoff ZBDongle-P
-
-| Dongle | Chipset | Price (PL) | Notes |
-|---|---|---|---|
-| **SONOFF ZBDongle-P** | CC2652P (TI) | 99,90 PLN (~24 EUR) | **Gold standard**; very stable in Z2M and ZHA; external antenna + aluminium RF-shielding case (official store price, Aug 2026) |
-| SONOFF ZBDongle-E | EFR32MG21 (Silicon Labs) | 68,77–70,90 PLN (~16–17 EUR) | Cheaper; great for ZHA; experimental Thread/Matter support; external SMA antenna +20 dBm (official store price, Aug 2026) |
-| **NOUS E16** (Nous, official store) | EFR32-class — Zigbee 3.0 + Thread + BLE 5.2 | 49,99 PLN (~12 EUR) | Budget multi-protocol USB dongle; ext. antenna + aluminium housing; Z2M/HA/OpenHAB; Direct-Flash FW updates; Thread/BLE future-proofing (§6.2) — chipset to verify |
-| ConBee II / III | — | 140–180 PLN (~33–42 EUR) | Plug-and-play with internal antenna, but pricier |
-
-**Recommendation**: **ZBDongle-P (99,90 PLN (~24 EUR))** + a plain **0.5–1 m USB extension cable** (keeps the dongle away from USB 3.0 interference). **Budget pick**: the **NOUS E16** (49,99 PLN (~12 EUR), official Nous Allegro store, Aug 2026) is the cheapest option — a multi-protocol EFR32-class dongle (Zigbee + Thread + BLE 5.2, same family as the ZBDongle-E) with external antenna + aluminium housing; good value if the CC2652P gold-standard status isn't needed.
-
-**Why the ZBDongle-P over the NOUS E16 (~50 PLN saving)?** The E16 is the cheaper budget pick, but the ZBDongle-P stays the default because the coordinator sits at the **centre of the whole Zigbee mesh** — the single point of failure for every Zigbee device and the independent monitoring stack:
-
-- **Proven silicon + largest community base**: the CC2652P is the most battle-tested coordinator chip in the HA/Z2M ecosystem — huge install base, exhaustive docs, well-known quirks. The E16 (EFR32-class, like the ZBDongle-E) is supported but much newer and less field-proven.
-- **Turnkey firmware path**: the ZBDongle-P ships pre-flashed with Z-Stack 3.x and its Z2M setup is exhaustively documented; the E16's firmware/Z2M path still needs verification (flagged above).
-- **Single-protocol simplicity**: the E16's Thread + BLE 5.2 is future-proofing the lab explicitly doesn't need yet (§6.2 "watch — not needed now") and adds multi-protocol firmware complexity; the ZBDongle-P is a dedicated, predictable Zigbee coordinator.
-- **Brand track record**: Sonoff's dongles are the community reference; Nous is primarily a rebranded-Tuya device maker, so the E16 is the less-documented option.
-- **Cost vs risk**: the ~50 PLN saving is real, but for the mesh's central node the proven ZBDongle-P is cheap insurance against a newer "mostly works but has quirks" device.
-
-#### 5.1 Network coordinators & gateways — alternatives to the ZBDongle-P
-
-Beyond USB dongles, Allegro (Aug 2026) lists network-connected Zigbee coordinators and gateways. Reviewed against the lab's **must-have** (§6.4 — independent of HA, direct MQTT/Prometheus/AI-agent access) and the central-placement goal (idea 05). Listing pages were blocked to automated access (Allegro anti-bot) — prices/specs must be verified at purchase time.
-
-| Device (Allegro listing) | Type | Connectivity | Z2M/ZHA path | Fit for the lab |
-|---|---|---|---|---|
-| **CC2652P2 coordinator** — RJ45 / USB / WiFi | Network coordinator | TI CC2652P2 (EZSP); Ethernet (RJ45), USB, or WiFi | Z2M/ZHA over **TCP** (EZSP over the network) | ✅ **Best alternative** — place centrally for better Zigbee coverage, **no USB pass-through** on Proxmox, fully independent of the host; pricier than a dongle |
-| **SONOFF Zigbee Bridge Pro (ZBBridge-P)** | WiFi bridge | ESP-based + Zigbee SoC | Cloud (eWeLink) by default; Z2M only after **Tasmota/Zigbee2Tasmota** flash | ⚠️ **DIY only** — cloud-bound out of the box; flashing adds complexity vs a turnkey dongle |
-| **Silvercrest "Inteligentny Dom" gateway (LIDL)** | Consumer hub | Proprietary / cloud app | None — not a Z2M/ZHA coordinator | ❌ **Rejected** — cloud-bound vendor hub; same reason classic gateways were rejected (§4) |
-
-**Verdict**: the **ZBDongle-P** stays the default (cheap, turnkey, gold standard). If the lab wants **central Zigbee placement without USB pass-through**, a **CC2652P2 network coordinator** is the strongest alternative — same silicon family as the dongle, Z2M over TCP, and fully independent — at a higher price. The Sonoff Bridge Pro only makes sense as a flashed-DIY path; the Silvercrest gateway doesn't fit HA/Z2M at all.
-
-### 6. Protocol comparison — Zigbee stacks & adjacent radios (ADR input)
-
-The Home Assistant node (idea 05) and the independent power-monitoring path (this idea) both hinge on one choice: **which Zigbee integration stack**, and whether Zigbee is even the right radio. Two dimensions decide it: (a) device/radio fit, and (b) — **the must-have** — how directly the stack integrates with the homelab infrastructure (Prometheus/Grafana) and the AI agent, **independent of Home Assistant** (§6.4). This comparison is the input for the Zigbee-stack ADR.
-
-#### 6.1 Zigbee integration stacks — how HA talks to Zigbee
+#### 1.1 Zigbee integration stacks — how HA talks to Zigbee
 
 | Feature | ZHA (Zigbee Home Automation) | Zigbee2MQTT (Z2M) | deCONZ / Phoscon |
 |---|---|---|---|
@@ -111,20 +38,20 @@ The Home Assistant node (idea 05) and the independent power-monitoring path (thi
 
 **Verdicts**
 
-- **ZHA** — simplest; ideal for a quick start when all Zigbee stays inside HA — but it **fails the infra/AI must-have (§6.4)**: all telemetry is locked inside HA, making Home Assistant the single point of failure for monitoring.
+- **ZHA** — simplest; ideal for a quick start when all Zigbee stays inside HA — but it **fails the infra/AI must-have (§1.4)**: all telemetry is locked inside HA, making Home Assistant the single point of failure for monitoring.
 - **Zigbee2MQTT — the fit for this lab**: decoupled from HA (restarts never drop the mesh) and every device state is plain JSON over MQTT → enables the independent Prometheus monitoring (idea 06) and AI-agent access without touching HA. Extra moving part: an MQTT broker.
 - **deCONZ** — only worth it if ConBee hardware is already on hand; no reason to pick it for a new setup.
 
-#### 6.2 Adjacent radio protocols — should the lab use Zigbee at all?
+#### 1.2 Adjacent radio protocols — should the lab use Zigbee at all?
 
 | Protocol | Radio | Pros | Cons | Fit for this lab |
 |---|---|---|---|---|
 | **Zigbee** | 2.4 GHz | Cheap devices (Nous/Tuya), mesh, mains plugs act as routers | 2.4 GHz congestion (Wi-Fi/Bluetooth overlap) | ✅ chosen — the Nous A1Z path |
 | Z-Wave (Z-Wave JS) | Sub-GHz (800–900 MHz) | No 2.4 GHz interference, better wall penetration | Pricier devices, thin cheap-DIY ecosystem, separate dongle | ❌ not for Nous/Tuya |
 | Matter / Thread | Thread = 2.4 GHz 802.15.4 | Vendor-neutral, local by default, future-proofing | Still maturing in HA (2026); A1Z plugs aren't Matter | ⏸️ watch — not needed now |
-| Wi-Fi / direct MQTT (Tasmota, ESPHome) | Wi-Fi | No extra radio; direct MQTT to broker | Chatty on the AP; per-device flashing | ⏸️ complementary (see §6.3) |
+| Wi-Fi / direct MQTT (Tasmota, ESPHome) | Wi-Fi | No extra radio; direct MQTT to broker | Chatty on the AP; per-device flashing | ⏸️ complementary (see §1.3) |
 
-#### 6.3 Tasmota / ESPHome — local Wi-Fi firmware (the MQTT-native alternative)
+#### 1.3 Tasmota / ESPHome — local Wi-Fi firmware (the MQTT-native alternative)
 
 **Tasmota** is not a radio protocol — it is open-source firmware that replaces the vendor cloud firmware on ESP8266/ESP32 smart devices (Sonoff, many Tuya models). A flashed device talks **MQTT over Wi-Fi directly to the broker**: no Zigbee radio, no coordinator.
 
@@ -140,7 +67,7 @@ The Home Assistant node (idea 05) and the independent power-monitoring path (thi
 
 **Verdict**: architecturally a **great fit** — a Tasmota device drops straight into the same Mosquitto broker and `mqtt2prometheus` config as the Zigbee plugs, so the monitoring / AI-agent path is identical. Worth it for Wi-Fi devices already on hand or where Zigbee isn't available. For the energy plugs the thread picked Zigbee (Nous A1Z) for radio robustness (mesh, mains-router plugs, no Wi-Fi congestion); **Tasmota stays a complementary option** — e.g. a Wi-Fi mains-energy monitor on the M910q/NAS if a Zigbee one isn't available.
 
-#### 6.4 Direct integration with homelab infra & AI agents — the must-have
+#### 1.4 Direct integration with homelab infra & AI agents — the must-have
 
 The lab's monitoring must **not** depend on Home Assistant: Prometheus + Grafana are the sink, and the AI agent needs both control (MQTT) and read-only analytics (Prometheus API). Direct infrastructure/AI-agent integration is a **must**, not a preference — it decides the stack.
 
@@ -155,7 +82,7 @@ The lab's monitoring must **not** depend on Home Assistant: Prometheus + Grafana
 
 **Takeaway**: only the **MQTT-native** stacks — **Zigbee2MQTT** and **Tasmota/ESPHome** — satisfy the must-have cleanly: device state is plain JSON on a standard broker that `mqtt2prometheus`, Grafana, and the AI agent all consume, with Home Assistant as an optional extra consumer rather than the hub. This criterion alone eliminates **ZHA** for the lab's monitoring use case.
 
-#### 6.5 Ecosystem depth & power draw — Zigbee vs Tasmota
+#### 1.5 Ecosystem depth & power draw — Zigbee vs Tasmota
 
 **Ecosystem richness — Zigbee wins.** Zigbee is a full radio protocol with a large, standardized, cross-vendor device ecosystem: thousands of devices from hundreds of manufacturers (Tuya/Nous, Aqara/Xiaomi, Philips Hue, IKEA, Sonoff, Third Reality…) across plugs, switches, sensors, bulbs, thermostats, locks, remotes, and energy meters. Zigbee2MQTT alone lists thousands of supported devices, and any Zigbee 3.0 device interoperates with any Zigbee 3.0 coordinator (vendor quirks handled by Z2M's device converters). **Tasmota is not an ecosystem — it's firmware** you flash onto ESP8266/ESP32 hardware (Sonoff, some Tuya models, DIY boards). Its "support" is hardware-compatibility-driven, and the pool of cheap new flashable devices is **shrinking** as vendors move to non-ESP chips (e.g. BK7231), so it's best for mains-powered devices you already own.
 
@@ -163,7 +90,80 @@ The lab's monitoring must **not** depend on Home Assistant: Prometheus + Grafana
 
 **Verdict**: Zigbee is the richer, more scalable smart-home radio (broader device catalog + battery-sensor ecosystem); Tasmota stays a firmware complement for Wi-Fi devices already on hand. Both feed the same MQTT monitoring path, so the stack choice (Z2M) is unaffected.
 
-**Recommendation (for the ADR)**: apply the must-have first — the stack must expose power telemetry **directly to homelab infra and the AI agent, independent of HA**. That points to an **MQTT-native stack**: **Zigbee2MQTT** for the Zigbee plugs (matches the already-chosen Nous hardware), with **Tasmota/ESPHome** as a compatible Wi-Fi complement later. **ZHA is ruled out** for monitoring (locks telemetry inside HA); Z-Wave/Matter don't fit the ecosystem. The ecosystem/power analysis (§6.5) reinforces this: Zigbee is the richer, more scalable radio — broader device catalog and a real battery-sensor ecosystem — while Tasmota remains a complement for owned Wi-Fi gear. The MQTT-centric architecture keeps every consumer — Prometheus, Grafana, HA, AI agent — on the same standard broker.
+**Recommendation (for the ADR)**: apply the must-have first — the stack must expose power telemetry **directly to homelab infra and the AI agent, independent of HA**. That points to an **MQTT-native stack**: **Zigbee2MQTT** for the Zigbee plugs (matches the already-chosen Nous hardware), with **Tasmota/ESPHome** as a compatible Wi-Fi complement later. **ZHA is ruled out** for monitoring (locks telemetry inside HA); Z-Wave/Matter don't fit the ecosystem. The ecosystem/power analysis (§1.5) reinforces this: Zigbee is the richer, more scalable radio — broader device catalog and a real battery-sensor ecosystem — while Tasmota remains a complement for owned Wi-Fi gear. The MQTT-centric architecture keeps every consumer — Prometheus, Grafana, HA, AI agent — on the same standard broker.
+
+### 2. Nous Zigbee energy-measuring product line (PL prices, Aug 2026)
+
+| Product | Type | Measurement | Price (PL) |
+|---|---|---|---|
+| **Nous A1Z** | Smart plug, Zigbee 3.0, 16 A / 3680 W | Full (W, A, V, kWh) | 59,99 PLN (~14 EUR) |
+| Nous A7Z | Smart plug, earthing pin (FR/PL) | Energy monitoring | 59,99 PLN (~14 EUR) |
+| Nous A6Z | Outdoor plug, IP44 | Energy monitoring | 74,99 PLN (~18 EUR) |
+| Nous A11Z | Power strip (3× AC + USB) | **Total only** (one meter at input) | 149,00 PLN (~35 EUR) |
+| Nous B2Z | 1-ch relay module (in-box) | Power measurement (PM) | 59,99 PLN (~14 EUR) |
+| Nous B3Z | 2-ch relay module (in-box) | Independent per-channel PM | 64,99 PLN (~15 EUR) |
+| Nous D4Z | DIN-rail energy meter, 120 A | Current-clamp (non-invasive) | 329,00–384,99 PLN (~77–91 EUR) |
+
+(All prices from official Nous distribution, PLN; EUR are rounded approximations at ~4.25 PLN/EUR, Aug 2026 — verify at purchase time.)
+
+### 3. No consumer Zigbee power strip has per-outlet measurement
+
+- **Nous A11Z confirmed**: 3 AC outlets are independently *switchable* (plus the USB section as a whole), but there is a **single measurement chip** (e.g. `BL0942`) on the power input — Home Assistant/Z2M/ZHA sees one set of entities (voltage, current, total power), **not per-outlet data**.
+- Consumer smart strips (Nous A11Z, Tuya, WOOX) cap out at **3–4× 230 V outlets** and meter only total draw.
+- **Solution A — regular strip + 5 individual Zigbee plugs (most reliable)**: each plug has its own independent metering IC, real-time per-device consumption in HA. Recommended plugs: Nous A1Z / A7Z (50–60 PLN (~12–14 EUR) each) → **300–350 PLN (~71–82 EUR) total** for 5 + a plain strip. Tip: a strip with outlets at a **45° angle** lets compact A1Z plugs sit side-by-side without blocking.
+- **Solution B — switched, metered-by-outlet rack PDUs** (APC, CyberPower, Server Technology): true per-outlet metering, but **SNMP/HTTP-REST (not Zigbee)**, industrial IEC C13/C19 sockets, and **from 1200 PLN (~282 EUR) up** — out of scope for a homelab.
+
+### 4. Buy: Nous A1Z **USED 4-pack at 109 PLN (~26 EUR)** (noussmart.pl) as the starter set
+
+- **27,25 PLN (~6 EUR)/unit** vs 55–60 PLN (~13–14 EUR) single retail; new 4-packs 150–180 PLN (~35–42 EUR); lowest Allegro price 149 PLN (~35 EUR).
+- **Full native support** in Zigbee2MQTT (device `TS011F` / `_TZ3000_26aw2vkh`, Tuya) and in ZHA.
+- Exposes directly from the metering IC: **power (W), current (A), voltage (V), total energy (kWh)**.
+- Act as **Zigbee Router** (mains-powered) → extend/strengthen the Zigbee mesh for battery sensors.
+- Among the **smallest plugs on the market** — fit side-by-side on a 45° angled strip.
+- **Outlet/USED caveats**: mostly consumer returns (e.g. bought without a Zigbee gateway then returned); possible minor scratches on glossy plastic; electronics work like new. To pair with a new coordinator: hold the button **5–7 s** until the LED fast-blinks (factory reset).
+
+### 5. Gateway vs USB coordinator — don't buy a Wi-Fi/Tuya gateway for HA
+
+- A classic gateway (Nous E1, Tuya) is an **autonomous network/Wi-Fi/Tuya device** that pushes data to the cloud — wrong architecture for Home Assistant. (The E1 being sold out is good news, not bad.)
+- For HA you need a **USB adapter (coordinator/dongle)**: raw Zigbee packets straight to Zigbee2MQTT/ZHA, **100 % local**.
+
+| Feature | Classic Gateway (Nous E1, Tuya) | USB Dongle (Sonoff ZBDongle) |
+|---|---|---|
+| What it is | Standalone wall-plug device with vendor firmware | USB stick into the HA server |
+| Processing | Handles Zigbee, usually pushes to cloud (Tuya/Smart Life) | Raw Zigbee packets to Z2M / ZHA |
+| Locality | Needs cloud integration or hacky reflash (Tasmota) | 100 % local, zero cloud, no latency |
+| Use case | People without their own server (phone app) | **Standard for homelab / Home Assistant** |
+
+### 6. Coordinator selection — Sonoff ZBDongle-P
+
+| Dongle | Chipset | Price (PL) | Notes |
+|---|---|---|---|
+| **SONOFF ZBDongle-P** | CC2652P (TI) | 99,90 PLN (~24 EUR) | **Gold standard**; very stable in Z2M and ZHA; external antenna + aluminium RF-shielding case (official store price, Aug 2026) |
+| SONOFF ZBDongle-E | EFR32MG21 (Silicon Labs) | 68,77–70,90 PLN (~16–17 EUR) | Cheaper; great for ZHA; experimental Thread/Matter support; external SMA antenna +20 dBm (official store price, Aug 2026) |
+| **NOUS E16** (Nous, official store) | EFR32-class — Zigbee 3.0 + Thread + BLE 5.2 | 49,99 PLN (~12 EUR) | Budget multi-protocol USB dongle; ext. antenna + aluminium housing; Z2M/HA/OpenHAB; Direct-Flash FW updates; Thread/BLE future-proofing (§1.2) — chipset to verify |
+| ConBee II / III | — | 140–180 PLN (~33–42 EUR) | Plug-and-play with internal antenna, but pricier |
+
+**Recommendation**: **ZBDongle-P (99,90 PLN (~24 EUR))** + a plain **0.5–1 m USB extension cable** (keeps the dongle away from USB 3.0 interference). **Budget pick**: the **NOUS E16** (49,99 PLN (~12 EUR), official Nous Allegro store, Aug 2026) is the cheapest option — a multi-protocol EFR32-class dongle (Zigbee + Thread + BLE 5.2, same family as the ZBDongle-E) with external antenna + aluminium housing; good value if the CC2652P gold-standard status isn't needed.
+
+**Why the ZBDongle-P over the NOUS E16 (~50 PLN saving)?** The E16 is the cheaper budget pick, but the ZBDongle-P stays the default because the coordinator sits at the **centre of the whole Zigbee mesh** — the single point of failure for every Zigbee device and the independent monitoring stack:
+
+- **Proven silicon + largest community base**: the CC2652P is the most battle-tested coordinator chip in the HA/Z2M ecosystem — huge install base, exhaustive docs, well-known quirks. The E16 (EFR32-class, like the ZBDongle-E) is supported but much newer and less field-proven.
+- **Turnkey firmware path**: the ZBDongle-P ships pre-flashed with Z-Stack 3.x and its Z2M setup is exhaustively documented; the E16's firmware/Z2M path still needs verification (flagged above).
+- **Single-protocol simplicity**: the E16's Thread + BLE 5.2 is future-proofing the lab explicitly doesn't need yet (§1.2 "watch — not needed now") and adds multi-protocol firmware complexity; the ZBDongle-P is a dedicated, predictable Zigbee coordinator.
+- **Brand track record**: Sonoff's dongles are the community reference; Nous is primarily a rebranded-Tuya device maker, so the E16 is the less-documented option.
+- **Cost vs risk**: the ~50 PLN saving is real, but for the mesh's central node the proven ZBDongle-P is cheap insurance against a newer "mostly works but has quirks" device.
+
+#### 6.1 Network coordinators & gateways — alternatives to the ZBDongle-P
+
+Beyond USB dongles, Allegro (Aug 2026) lists network-connected Zigbee coordinators and gateways. Reviewed against the lab's **must-have** (§1.4 — independent of HA, direct MQTT/Prometheus/AI-agent access) and the central-placement goal (idea 05). Listing pages were blocked to automated access (Allegro anti-bot) — prices/specs must be verified at purchase time.
+
+| Device (Allegro listing) | Type | Connectivity | Z2M/ZHA path | Fit for the lab |
+|---|---|---|---|---|
+| **CC2652P2 coordinator** — RJ45 / USB / WiFi | Network coordinator | TI CC2652P2 (EZSP); Ethernet (RJ45), USB, or WiFi | Z2M/ZHA over **TCP** (EZSP over the network) | ✅ **Best alternative** — place centrally for better Zigbee coverage, **no USB pass-through** on Proxmox, fully independent of the host; pricier than a dongle |
+| **SONOFF Zigbee Bridge Pro (ZBBridge-P)** | WiFi bridge | ESP-based + Zigbee SoC | Cloud (eWeLink) by default; Z2M only after **Tasmota/Zigbee2Tasmota** flash | ⚠️ **DIY only** — cloud-bound out of the box; flashing adds complexity vs a turnkey dongle |
+| **Silvercrest "Inteligentny Dom" gateway (LIDL)** | Consumer hub | Proprietary / cloud app | None — not a Z2M/ZHA coordinator | ❌ **Rejected** — cloud-bound vendor hub; same reason classic gateways were rejected (§5) |
+
+**Verdict**: the **ZBDongle-P** stays the default (cheap, turnkey, gold standard). If the lab wants **central Zigbee placement without USB pass-through**, a **CC2652P2 network coordinator** is the strongest alternative — same silicon family as the dongle, Z2M over TCP, and fully independent — at a higher price. The Sonoff Bridge Pro only makes sense as a flashed-DIY path; the Silvercrest gateway doesn't fit HA/Z2M at all.
 
 ### 7. Architecture: independent power monitoring — Z2M decoupled from HA
 
@@ -209,8 +209,8 @@ Prometheus can't read MQTT natively — the dedicated exporter `mqtt2prometheus`
 ## Open Questions
 
 1. **Purchase timing**: the Nous A1Z USED 4-pack at 109 PLN (~26 EUR) is a promo price worth grabbing while available — re-verify price/stock at purchase time (noussmart.pl).
-2. **Coordinator**: ZBDongle-P (99,90 PLN (~24 EUR), gold standard) vs cheaper ZBDongle-E vs the **budget multi-protocol NOUS E16** (49,99 PLN (~12 EUR)) vs a **CC2652P2 network coordinator** (RJ45/WiFi — central placement, no USB pass-through; see §5.1) — ties into the ZHA vs Z2M choice.
-3. **Zigbee stack decision (ADR input — see §6)**: [§6](#6-protocol-comparison--zigbee-stacks--adjacent-radios-adr-input) recommends **Zigbee + Zigbee2MQTT** for this lab — the ADR should settle whether to start with ZHA for a quick go-live and migrate to Z2M, or go straight to Z2M.
+2. **Coordinator**: ZBDongle-P (99,90 PLN (~24 EUR), gold standard) vs cheaper ZBDongle-E vs the **budget multi-protocol NOUS E16** (49,99 PLN (~12 EUR)) vs a **CC2652P2 network coordinator** (RJ45/WiFi — central placement, no USB pass-through; see §6.1) — ties into the ZHA vs Z2M choice.
+3. **Zigbee stack decision (ADR input — see §1)**: [§1](#1-protocol-comparison--zigbee-stacks--adjacent-radios-adr-input) recommends **Zigbee + Zigbee2MQTT** for this lab — the ADR should settle whether to start with ZHA for a quick go-live and migrate to Z2M, or go straight to Z2M.
 4. **Where Prometheus/Grafana run**: the thread assumes the lab "already has" Prometheus — verify where it lives (k3s on the M910q?) and where `mqtt2prometheus` should be deployed (k3s vs LXC on the HA thin-client node).
 5. **Where Mosquitto/Z2M run**: research 26 (idea 05) puts them as **LXC containers on the Wyse 5070** next to the Home Assistant VM — does this thread's independent-metrics stack change that? (Probably not — the same LXC layout serves both.)
 6. **AI agent access**: which agent (opencode instance?) and how — MQTT ACLs + Prometheus API need to be wired into the agent's available tools.
