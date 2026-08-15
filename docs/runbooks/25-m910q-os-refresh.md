@@ -31,12 +31,16 @@ The refresh re-aligns the box with ADR 05 and unblocks that track.
   - Ansible + collections: `ansible-galaxy install -r ansible/requirements.yml`
   - `az` CLI (or Az PowerShell) **logged in** — the `azure_arc` role fetches the SPN
     secret from Key Vault on the control node (`lookup('azure.azcollection.azure_keyvault_secret')`)
-  - SSH key for `jarek@192.168.2.200` (the `lenovo-slim` key, runbook 01 §5)
-  - `homelab` → `192.168.2.200` in `C:\Windows\System32\drivers\etc\hosts`
+  - SSH key for `labadmin@192.168.2.200` (the `lenovo-slim` key, runbook 01 §5)
 - **Bootable USB** with Ubuntu Server 24.04 LTS ISO (YUMI/Rufus, runbook 01 §0) and a **SystemRescue** ISO.
 - **Keyboard + monitor** attached to the M910q (direct console for the reinstall).
 - Backup of any data on the M910q you want to keep (configs in `/opt/docker`, volumes)
   — the NVMe is wiped by the reinstall.
+
+> **Operator account — `labadmin`.** Both hosts (cloudlab + homelab) use the generic
+> `labadmin` account: key-only SSH, no password, `NOPASSWD` sudo for Ansible `become`,
+> and **no `docker` group membership** (`docker_users: []` — the docker group is
+> root-equivalent; Ansible reaches Docker via `become`, so it's never needed).
 
 ---
 
@@ -87,33 +91,43 @@ The refresh re-aligns the box with ADR 05 and unblocks that track.
 
 ## 2. Post-Install Base
 
-1. Extend the LVM root volume (runbook 01 §3):
+Only the SSH key is installed manually here — the LVM root extension and Avahi (mDNS)
+are handled by `playbook-homelab.yml` (pre_task + `common` role), so they run the same
+way on every rebuild.
+
+1. Install the workstation SSH key (runbook 01 §5):
    ```sh
-   sudo lvextend -l +100%FREE /dev/mapper/ubuntu--vg-ubuntu--lv
-   sudo resize2fs /dev/mapper/ubuntu--vg-ubuntu--lv
+   sudo mkdir -p /home/labadmin/.ssh && sudo chown labadmin:labadmin /home/labadmin/.ssh
+   # paste the workstation id_ed25519.pub into /home/labadmin/.ssh/authorized_keys
    ```
-2. Install Avahi for `homelab.local` (runbook 01 §4):
-   ```sh
-   sudo apt update && sudo apt install -y avahi-daemon
-   sudo systemctl enable --now avahi-daemon
-   ```
-3. Install the workstation SSH key (runbook 01 §5):
-   ```sh
-   sudo mkdir -p /home/jarek/.ssh && sudo chown jarek:jarek /home/jarek/.ssh
-   # paste the workstation id_ed25519.pub into /home/jarek/.ssh/authorized_keys
-   ```
-4. **Verify:** `ssh jarek@192.168.2.200` from the workstation logs in without a password.
+2. **Verify:** `ssh labadmin@homelab` from the workstation logs in without a password.
+   Pure hostname resolution works out of the box via **LLMNR** (Ubuntu's
+   `systemd-resolved` responds by default); `homelab.local` needs Avahi (installed by
+   the playbook) for mDNS.
+
+> **Fallback (only if the Ansible pre_task fails):** the playbook's LVM pre_task extends
+> the root LV to the full disk via `community.general.lvol` + `resizefs`. If it can't
+> run, do it manually before any further provisioning:
+> ```sh
+> sudo lvextend -l +100%FREE /dev/mapper/ubuntu--vg-ubuntu--lv
+> sudo resize2fs /dev/mapper/ubuntu--vg-ubuntu--lv
+> ```
+> **Why this step exists:** Ubuntu's installer allocates only ~100 GB to the root LV by
+> default; without it the 256 GB NVMe caps at ~100 GB and Docker/k3s fills it quickly.
+> Grow the LV (container) *and* the ext4 filesystem (data) separately — two layers, both
+> required. Verify with `df -h /` → ~232 GB.
 
 > **Do not** set up dnsmasq, Caddy, or cloudflared — these moved to the edge appliance
-> (ADR 24). The `security` role's UFW rules allow SSH and outbound cloudflared QUIC only
-> (the QUIC rule is disabled via `security_cloudflared_outbound_enabled: false`).
+> (ADR 24). The `security` role's UFW rules are generic base hardening (default-deny
+> incoming, allow SSH, deny direct HTTP); there are no cloudflared-specific rules on the
+> M910q.
 
 ## 3. Ansible Provision (from the LAN workstation)
 
 From the repo checkout on the **workstation** (control node, not this dev container):
 
 ```powershell
-chmod 755 C:\Users\jarek\Homelab C:\Users\jarek\Homelab\ansible   # if world-writable warnings occur
+chmod 755 C:\Users\labadmin\Homelab C:\Users\labadmin\Homelab\ansible   # if world-writable warnings occur
 ansible-galaxy install -r ansible/requirements.yml
 az login
 ansible-playbook -i ansible/inventory.ini ansible/playbooks/playbook-homelab.yml
@@ -139,7 +153,7 @@ sudo azcmagent show
 
 - [ ] §0 hardware audit captured in `docs/hardware.md`
 - [ ] Ubuntu 24.04 installed; static IP `192.168.2.200` reachable
-- [ ] SSH key login works: `ssh jarek@192.168.2.200`
+- [ ] SSH key login works: `ssh labadmin@homelab`
 - [ ] `ansible-playbook playbook-homelab.yml` completes with no failed tasks
 - [ ] `azcmagent show` → `Connected`
 - [ ] `docs/overview.md` M910q row reflects Ubuntu 24.04 + Arc (update if needed)
