@@ -56,7 +56,7 @@ $sa = Get-AzStorageAccount -ResourceGroupName $ResourceGroupName -Name $StorageA
 if (-not $sa) {
   Remove-Item -Force $localTar -ErrorAction SilentlyContinue
   throw "Storage account '$StorageAccountName' not found in RG '$ResourceGroupName'. `n" +
-        "Deploy per docs/runbooks/7-restic-backup.md (issue #13) first. `n" +
+        "Deploy per docs/runbooks/07-restic-backup.md (issue #13) first. `n" +
         "Re-run this script after the storage account exists."
 }
 $ctx = $sa.Context

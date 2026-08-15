@@ -1,0 +1,71 @@
+# Changelog
+
+Notable changes to the Homelab repo, newest first. This log supersedes the
+"What's Done" table that used to live in the root `README.md`. Entries use the
+same `(type)` prefixes as commit messages; types: `feat`, `fix`, `docs`, `chore`, `refactor`.
+
+## 2026‑08
+
+- **(docs)** Make overview the single state + roadmap page — Workloads table = current state only, "What's Next" moved from root README — [overview](docs/overview.md)
+- **(docs)** Add Homelab overview — nodes, workloads, topology at a glance — [overview](docs/overview.md)
+- **(docs)** Add per-node hardware inventory incl. network appliances — [hardware](docs/hardware.md)
+- **(feat)** ML110 NAS Phase 1 — OMV 8.3 install on the Goodram SSD, BIOS AHCI, mdadm RAID1 (`md0`/`md1`), static IP `192.168.2.210`, SSH hardening — [runbook 23](docs/runbooks/23-ml110-omv-setup.md) · [ADR 23](docs/decisions/23-nas-on-ml110.md) · [#61](https://github.com/jaroslaw-bagnicki/Homelab/issues/61)
+- **(feat)** Edge ingress appliance — Wyse 3040 thin client (acquired) as bare-metal `cloudflared` + Caddy public ingress; OS trial Debian vs Alpine — [runbook 24](docs/runbooks/24-edge-appliance.md) · [ADR 24](docs/decisions/24-edge-ingress-appliance.md) · [idea 04](docs/ideas/04-edge-device-tunnel-caddy.md) · [#65](https://github.com/jaroslaw-bagnicki/Homelab/issues/65)
+- **(docs)** Home Assistant on a dedicated thin-client node — Proxmox VE VM + Mosquitto/Zigbee2MQTT — [ADR 25](docs/decisions/25-home-assistant-thin-client.md) · [idea 05](docs/ideas/05-home-assistant-thin-client.md) · [research 26](docs/research/26-home-assistant-thin-client.md)
+- **(docs)** Edge ingress SBC hardware research — used x86 thin client vs Orange Pi Zero 3 — [research 25](docs/research/25-edge-ingress-sbc.md)
+- **(docs)** ML110 NAS Phase 0 — hardware inventory & FreeNAS state audit before the OMV install — [runbook 22](docs/runbooks/22-ml110-nas-inventory.md) · [research 23](docs/research/23-ml110-nas-omv.md) · [#54](https://github.com/jaroslaw-bagnicki/Homelab/issues/54)
+- **(docs)** Homelab network topology & design — mesh inventory, flat-vs-VLAN analysis, static IP scheme — [research 24](docs/research/24-network-topology-design.md)
+- **(docs)** TL-SG108E switch setup — wiring, management IP, QoS/rate-limit, IGMP snooping — [runbook 21](docs/runbooks/21-tl-sg108e-switch.md) · [#55](https://github.com/jaroslaw-bagnicki/Homelab/issues/55)
+- **(feat)** Build per-project OpenCode container images (`opencode-homelab`, `opencode-prospera`) and push to the Zot registry — [#52](https://github.com/jaroslaw-bagnicki/Homelab/issues/52)
+- **(feat)** Adopt Zot as self-hosted OCI container registry — pull-through cache for GHCR/mcr/Docker Hub — [runbook 20](docs/runbooks/20-deploy-zot.md) · [#50](https://github.com/jaroslaw-bagnicki/Homelab/issues/50) · [#51](https://github.com/jaroslaw-bagnicki/Homelab/issues/51)
+- **(feat)** Configure MCP servers per OpenCode instance — GitHub MCP PAT + Azure MCP — [#41](https://github.com/jaroslaw-bagnicki/Homelab/issues/41) · [#47](https://github.com/jaroslaw-bagnicki/Homelab/issues/47)
+- **(docs)** Add ideas: DevPod DevContainers for OpenCode ([idea 02](docs/ideas/02-devcontainers-opencode-k3s.md)) and NAS backup target ([idea 01](docs/ideas/01-nas-backup-target.md))
+- **(chore)** Drop the `(type)` prefix from issue and PR titles — labels convey the type
+- **(docs)** Adopt "research settles, ADR owns" co-authoring pattern — research/idea docs defer decision authority to the ADR
+
+## 2026‑07
+
+- **(feat)** Provision `homelab-oc` Azure service principal for OpenCode instances — AKV-sourced `AZURE_*` env vars — [runbook 19](docs/runbooks/19-azure-sp-for-opencode.md) · [#40](https://github.com/jaroslaw-bagnicki/Homelab/issues/40) · [#46](https://github.com/jaroslaw-bagnicki/Homelab/issues/46)
+- **(docs)** Add ADR 22 — migrate Homelab workloads to Kubernetes (k3s + Azure Arc) — [ADR 22](docs/decisions/22-k3s-arc-homelab.md)
+- **(docs)** Add ADR 21 — per-project OpenCode container images — [ADR 21](docs/decisions/21-opencode-instance-images.md)
+- **(docs)** Provisioning runbook for new OpenCode instances — inventory, AKV secret, deploy, model providers — [runbook 18](docs/runbooks/18-provision-opencode-instance.md) · [#37](https://github.com/jaroslaw-bagnicki/Homelab/issues/37) · [#42](https://github.com/jaroslaw-bagnicki/Homelab/issues/42)
+- **(feat)** Init server-hosted OpenCode instances on Cloudlab — `docker_opencode_ingress` + `docker_opencode_instances` roles, wildcard `*-oc.<domain>` routing — [runbook 17](docs/runbooks/17-deploy-opencode-on-cloudlab.md) · [#30](https://github.com/jaroslaw-bagnicki/Homelab/issues/30) · [#32](https://github.com/jaroslaw-bagnicki/Homelab/issues/32)
+- **(docs)** Research: Infisical for Homelab secret management — [research 22](docs/research/22-infisical-for-homelab-secret-management.md)
+- **(docs)** Research: OpenCode sandboxed homelab architecture — [research 21](docs/research/21-opencode-sandboxed-homelab-architecture.md)
+- **(docs)** Research: OpenCode hosting — Codespaces vs Homelab vs Cloudlab — [research 20](docs/research/20-opencode-hosting-codespaces-vs-homelab.md)
+- **(docs)** Add ADR 18 — host OpenCode server instances on Homelab — [ADR 18](docs/decisions/18-opencode-sandbox.md)
+- **(feat)** Add `cloudflared` to the `docker_services` role — HTTPS-only origin via Cloudflare Tunnel + Origin CA — [runbook 16](docs/runbooks/16-docker-services-ansible-role.md) · [ADR 19](docs/decisions/19-cloudflare-tunnel-https-origin.md) · [#25](https://github.com/jaroslaw-bagnicki/Homelab/issues/25) · [#27](https://github.com/jaroslaw-bagnicki/Homelab/issues/27)
+- **(feat)** Expose Portainer via `portainer.cloud5.ovh` with injected admin password — [#29](https://github.com/jaroslaw-bagnicki/Homelab/issues/29)
+- **(docs)** Document Cloudflare Access policy for admin services
+- **(docs)** Document Codespaces secret + `containerEnv` for DeepSeek in the dev container
+
+## 2026‑06
+
+- **(docs)** Add ADR 17 — adopt OpenCode for agentic Homelab development — [ADR 17](docs/decisions/17-adopt-opencode.md)
+- **(feat)** OpenCode session persistence + Azure Blob backup — survives Dev Container rebuilds and Codespace deletion — [runbook 15](docs/runbooks/15-opencode-session-persistence.md)
+- **(feat)** GH Codespaces service principal for Homelab — enables Azure MCP — [runbook 14](docs/runbooks/14-gh-codespaces-sp-for-homelab.md) · [ADR 16](docs/decisions/16-agent-identity-pattern.md)
+- **(docs)** Add ADR 15 — evaluate GitHub Copilot Desktop for agentic development (deferred) — [ADR 15](docs/decisions/15-copilot-desktop-agentic.md)
+- **(docs)** Add ADR 14 — adopt GitHub Codespaces for occasional remote work — [ADR 14](docs/decisions/14-codespaces-adoption.md)
+- **(feat)** Add `docker_services` Ansible role — deploys Portainer, Caddy, and Hello World on Cloudlab via `docker_compose_v2` — [runbook 16](docs/runbooks/16-docker-services-ansible-role.md) · [#14](https://github.com/jaroslaw-bagnicki/Homelab/issues/14)
+- **(docs)** Add ADR 13 — use Contabo Cloud VPS 10 as staging environment — [ADR 13](docs/decisions/13-cloudlab-staging.md)
+- **(docs)** Add ADR 12 — lightweight ADR log in MADR format — [ADR 12](docs/decisions/12-establish-adr-log.md)
+- **(docs)** Add ADR 11 — GitHub Issues for ticketing — [ADR 11](docs/decisions/11-ticketing-github-issues.md)
+- **(docs)** Add ADR 10 — Ansible for host configuration management — [ADR 10](docs/decisions/10-ansible-host-config.md)
+- **(docs)** Add ADR 09 — Azure Monitor via Arc — [ADR 09](docs/decisions/09-azure-monitor-via-arc.md)
+- **(feat)** Contabo Cloud VPS 10 as Ansible dev/test sandbox — SSH hardening, UFW, fail2ban, Docker — [runbook 10](docs/runbooks/10-vps-playground.md)
+- **(feat)** Azure Monitor metrics and log collection on Arc-connected servers — [runbook 06a](docs/runbooks/06a-azure-monitor.md)
+- **(docs)** Research: GitHub Codespaces & Dev Containers setup — [research 16](docs/research/16-github-codespaces-devcontainers.md)
+- **(docs)** Research: Docker Compose replication options after rebuild — [research 18](docs/research/18-docker-compose-replication.md)
+
+## 2026‑05
+
+- **(feat)** Base setup — Ubuntu 24.04, static IP, SSH, LVM, mDNS, hardening — [runbook 01](docs/runbooks/01-init.md)
+- **(feat)** Docker Engine + Portainer CE — [runbook 02](docs/runbooks/02-docker.md)
+- **(feat)** Local DNS via DNSMasq — `*.home` wildcard resolution — [runbook 03](docs/runbooks/03-dns.md)
+- **(feat)** Caddy reverse proxy with auto-TLS — [runbook 04](docs/runbooks/04-caddy.md)
+- **(feat)** Cloudflare Tunnel for remote HTTPS access — [runbook 05](docs/runbooks/05-cloudflare-tunnel.md)
+- **(feat)** Azure Arc hybrid server enrollment — cert-based auth — [runbook 06](docs/runbooks/06-azure-arc.md)
+- **(feat)** Container registries in Portainer (GHCR) — [runbook 02a](docs/runbooks/02a-ghcr-portainer.md)
+- **(feat)** Hello World demo behind Caddy + Cloudflare — [runbook 04a](docs/runbooks/04a-hello-world.md)
+- **(docs)** Add ADRs 01–08 — hardware, OS, backup, hybrid cloud, reverse proxy, local DNS, remote access, Azure Monitor — [decision log](docs/decisions/README.md)
+- **(docs)** Research 01–18 — hardware, OS, container stack, networking, VPS selection, backup, Copilot Desktop — [research index](docs/research/README.md)

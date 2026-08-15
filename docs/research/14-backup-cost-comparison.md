@@ -9,7 +9,7 @@
 
 The M910q homelab server is enrolled in Azure Arc (see [07-azure-arc-and-cost.md](07-azure-arc-and-cost.md)). This opens two cloud off-site backup paths:
 
-1. **Restic → Azure Blob Storage** (partially set up — see [runbook 7](../runbooks/7-restic-backup.md))
+1. **Restic → Azure Blob Storage** (partially set up — see [runbook 7](../runbooks/07-restic-backup.md))
 2. **Azure Backup (MARS agent)** on the Arc-connected machine
 
 Both use the same Azure subscription (`Cloud5-default`) and same resource group (`homelab-rg`). Both require the server to be connected to the internet during backup windows.
@@ -170,6 +170,6 @@ Assumptions:
 
 - [Azure Blob Storage pricing (June 2026)](https://azure.microsoft.com/en-us/pricing/details/storage/blobs/)
 - [Azure Backup pricing (June 2026)](https://azure.microsoft.com/en-us/pricing/details/backup/)
-- [Runbook: Restic backup to Azure Blob](../runbooks/7-restic-backup.md)
+- [Runbook: Restic backup to Azure Blob](../runbooks/07-restic-backup.md)
 - [Research: Azure Arc & cost comparison](07-azure-arc-and-cost.md)
 - [Research: Backup strategy](10-backup-strategy.md)

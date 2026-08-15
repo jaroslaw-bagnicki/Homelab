@@ -7,7 +7,7 @@
 
 ## Context
 
-The homelab server (Lenovo ThinkCentre M910q Tiny, Ubuntu 24.04 LTS) was initially set up via imperative shell commands captured in Markdown runbooks (`runbooks/1-init.md`, `runbooks/2-docker.md`, etc.). This approach has several shortcomings:
+The homelab server (Lenovo ThinkCentre M910q Tiny, Ubuntu 24.04 LTS) was initially set up via imperative shell commands captured in Markdown runbooks (`runbooks/01-init.md`, `runbooks/02-docker.md`, etc.). This approach has several shortcomings:
 
 - **No idempotency** — re-running a runbook after partial failure requires manual recovery
 - **No drift detection** — there is no way to verify the host still matches the documented state after ad-hoc fixes
@@ -47,7 +47,7 @@ Key elements of the approach:
 ---
 
 **Reference:** `research/13-ansible-adoption.md`  
-**Supersedes:** runbooks as the automation source of truth (`runbooks/1-init.md` etc. retain reference value only)
+**Supersedes:** runbooks as the automation source of truth (`runbooks/01-init.md` etc. retain reference value only)
 
 ---
 

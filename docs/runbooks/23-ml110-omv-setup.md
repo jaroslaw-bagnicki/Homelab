@@ -173,7 +173,7 @@ Per [research 24 — network topology](../research/24-network-topology-design.md
 
 - `Network | Interfaces` → edit `enp14s0` (Broadcom BCM5722, MAC `78:e7:d1:53:fb:87`).
 - Method: **Static** — IP `192.168.2.210`, netmask `255.255.255.0`, gateway `192.168.2.1`.
-- Apply. Verify from the M910q (§6). Update the switch port mapping if needed (runbook 23).
+- Apply. Verify from the M910q (§6). Update the switch port mapping if needed (runbook 21).
 - **Web UI:** [`Network | Interfaces`](https://192.168.2.210/#/network/interfaces)
 
 > **Network status (2026-08-09, resolved).** `ip route` on the NAS confirms it is on the homelab net:
@@ -401,7 +401,7 @@ outside it (see the hardening block below — applied, not deferred).
    (The built-in `admin` is the web-GUI bootstrap account; `jarek` is the operator's daily
    SSH + admin identity.)
 2. **Add the workstation public key** — edit the user → **SSH public keys** → **Add** and paste
-   the workstation `id_ed25519.pub` (`lenovo-slim`, already in use across the homelab, runbook 1).
+   the workstation `id_ed25519.pub` (`lenovo-slim`, already in use across the homelab, runbook 01).
    OMV converts it to RFC 4716 for `authorized_keys`.
 3. **Apply** the pending config changes (`postfix`, `ssh` modules).
 4. **Verify** from the workstation: `ssh jarek@192.168.2.210` logs in **without** a password

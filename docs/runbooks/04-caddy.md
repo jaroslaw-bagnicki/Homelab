@@ -4,8 +4,8 @@
 
 ## Prerequisites
 
-- [ ] DNSMasq deployed and resolving `*.home` (see [3-dns.md](3-dns.md))
-- [ ] Docker Engine installed (see [2-docker.md](2-docker.md))
+- [ ] DNSMasq deployed and resolving `*.home` (see [03-dns.md](03-dns.md))
+- [ ] Docker Engine installed (see [02-docker.md](02-docker.md))
 - [ ] SSH access via `ssh jarek@homelab.local`
 
 ---

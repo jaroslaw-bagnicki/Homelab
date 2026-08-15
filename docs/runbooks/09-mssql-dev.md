@@ -4,10 +4,10 @@
 
 ## Prerequisites
 
-- [ ] Docker Engine + Docker Compose installed (see [2-docker.md](2-docker.md))
+- [ ] Docker Engine + Docker Compose installed (see [02-docker.md](02-docker.md))
 - [ ] SSH access via `ssh jarek@homelab.local`
 - [ ] At least 2 GB free RAM (4 GB recommended for comfortable use)
-- [ ] (Optional) `jarek` user added to `himds` group for Key Vault secret retrieval (see [6-azure-arc.md](6-azure-arc.md))
+- [ ] (Optional) `jarek` user added to `himds` group for Key Vault secret retrieval (see [06-azure-arc.md](06-azure-arc.md))
 
 ---
 
@@ -38,7 +38,7 @@ echo "Your SA password is: $MSSQL_PW"
 
 ### Option B — Key Vault via Arc managed identity (recommended for production-like setup)
 
-If your homelab server is Arc-enabled (see [6-azure-arc.md](6-azure-arc.md)) and `jarek` is in the `himds` group:
+If your homelab server is Arc-enabled (see [06-azure-arc.md](06-azure-arc.md)) and `jarek` is in the `himds` group:
 
 1. Store the password in Azure Key Vault:
 
@@ -83,7 +83,7 @@ volumes:
   mssql_data:
 ```
 
-> **Why `127.0.0.1:1433`**: Binds to localhost only, consistent with the homelab security model (see [2-docker.md](2-docker.md) §2). Other Docker containers on the same network can still reach it via the internal Docker DNS name `mssql`.
+> **Why `127.0.0.1:1433`**: Binds to localhost only, consistent with the homelab security model (see [02-docker.md](02-docker.md) §2). Other Docker containers on the same network can still reach it via the internal Docker DNS name `mssql`.
 
 ---
 
@@ -203,8 +203,8 @@ If you're using Restic or another volume backup tool (see [10-backup-strategy.md
 |---|---|
 | Connect from apps in the same Compose stack | Use hostname `mssql` |
 | Secure credential management | Store SA password in Azure Key Vault, retrieve via Arc managed identity |
-| Expose via Caddy (SQL protocol is not HTTP, but you could proxy a web admin tool like **Azure Data Studio web** or **SQL Server Management Studio** via Remote Desktop) | [4-caddy.md](4-caddy.md) |
-| Monitor SQL Server via Azure Arc | [6a-azure-monitor.md](6a-azure-monitor.md) |
+| Expose via Caddy (SQL protocol is not HTTP, but you could proxy a web admin tool like **Azure Data Studio web** or **SQL Server Management Studio** via Remote Desktop) | [04-caddy.md](04-caddy.md) |
+| Monitor SQL Server via Azure Arc | [06a-azure-monitor.md](06a-azure-monitor.md) |
 | Volume backups | [10-backup-strategy.md](../docs/research/10-backup-strategy.md) |
 | Upgrade to k3s (future) | [05-container-stack.md](../docs/research/05-container-stack.md) |
 

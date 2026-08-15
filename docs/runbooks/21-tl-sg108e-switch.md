@@ -23,7 +23,7 @@
 | 1 | **Uplink → office Tenda Nova** (Ethernet AP drop, `192.168.2.1`) | untagged, default VLAN |
 | 2 | Lenovo M910q Homelab (`192.168.2.200`) | |
 | 3 | HP ML110 NAS (`192.168.2.210`) | |
-| 4 | X1 Lite LLM server (`192.168.2.220`, Phase 2) | |
+| 4 | LLM server (`192.168.2.220`, Phase 2) | |
 | 5 | **Work laptop dock (Dell K16A)** | permanent; DHCP (corporate) |
 | 6–8 | Spare / future k3s node / misc | |
 

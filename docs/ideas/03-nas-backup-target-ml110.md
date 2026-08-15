@@ -9,7 +9,7 @@
 > [**Research 23 — ML110 NAS (OMV)**](../research/23-ml110-nas-omv.md);
 > this doc is the implementation plan.
 
-**Status**: 📋 Planned  
+**Status**: 🔨 Implementing  
 **Date**: 2026-08-08  
 **Idea**: 01 — [Homelab NAS](01-nas-backup-target.md) (historical V1)  
 **Research**: [23 — ML110 NAS (OMV)](../research/23-ml110-nas-omv.md)  
@@ -42,7 +42,7 @@ Storage-only node; primary consumer is the Longhorn/k3s backup target on the M91
 
 ## Phase 0 — Inventory & State Audit (Prerequisite)
 
-Runbook: [`21-ml110-nas-inventory.md`](../runbooks/21-ml110-nas-inventory.md)
+Runbook: [`22-ml110-nas-inventory.md`](../runbooks/22-ml110-nas-inventory.md)
 
 - [x] Identify ML110 generation — **G5** (DMI)
 - [x] Capture disk models/sizes + SMART health — **all drives PASSED** (incl. spare 1 TB)
@@ -64,7 +64,7 @@ Runbook: [`21-ml110-nas-inventory.md`](../runbooks/21-ml110-nas-inventory.md)
 4. Review the 1 TB WD10EZEX content (plug in during OMV setup), then decide its role (bulk volume vs offline).
 5. NFS `/export/backups` + SMB `/shared`; static IP `192.168.2.210`.
 6. Verify NFS from the M910q (`showmount -e`); point Longhorn at it.
-7. Repo: runbook 22 (`docs/runbooks/22-ml110-omv-setup.md`) + idea → ADR 23.
+7. Repo: runbook 23 (`docs/runbooks/23-ml110-omv-setup.md`) + idea → ADR 23.
 
 ---
 
@@ -80,7 +80,7 @@ verified. Then graduates to an **ADR** (e.g. ADR 23 — NAS on ML110).
 
 - [Research 23 — ML110 NAS (OMV)](../research/23-ml110-nas-omv.md) — hardware/software trade-off analysis
 - [Idea 01 — Homelab NAS](01-nas-backup-target.md) — original Q956 scoping (V1, unchanged)
-- [Runbook 21 — ML110 inventory](../runbooks/21-ml110-nas-inventory.md)
+- [Runbook 22 — ML110 inventory](../runbooks/22-ml110-nas-inventory.md)
 - Issue [#54](https://github.com/jaroslaw-bagnicki/Homelab/issues/54)
 - [ADR 02 — Backup Strategy](../decisions/02-backup-strategy-restic-blob.md)
 - [ADR 22 — k3s + Azure Arc](../decisions/22-k3s-arc-homelab.md) — NFS backup target for Longhorn

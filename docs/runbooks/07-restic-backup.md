@@ -6,7 +6,7 @@
 
 - [ ] SSH access via `ssh jarek@homelab`
 - [ ] Server has `curl` and `bzip2`: `sudo apt install -y curl bzip2`
-- [ ] Azure CLI installed on the server (see [2-docker.md](2-docker.md) for general server access)
+- [ ] Azure CLI installed on the server (see [02-docker.md](02-docker.md) for general server access)
 - [ ] Azure subscription + `Az` PowerShell module installed on your local machine
 
 ---
@@ -51,7 +51,7 @@ New-AzStorageContainer -Name backups -Context $ctx -Permission Off
 
 ### 1.3 Assign RBAC role to the Arc managed identity
 
-The homelab server is enrolled in Azure Arc (see [6-azure-arc.md](6-azure-arc.md)), so it already has a system-assigned managed identity. Grant it access to the storage account:
+The homelab server is enrolled in Azure Arc (see [06-azure-arc.md](06-azure-arc.md)), so it already has a system-assigned managed identity. Grant it access to the storage account:
 
 ```powershell
 $connectedMachine = Get-AzConnectedMachine -ResourceGroupName homelab-rg -Name "homelab"

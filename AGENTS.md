@@ -36,6 +36,10 @@ operating on its own.
   analysis that fed the decision, not the authority for it.
 - Runbooks: `runbooks/` — implementation instructions and operational procedures
 - Each area has a `README.md` as the index
+- **State docs stay current**: when a node or workload is added, removed, or changes
+  status, update `docs/overview.md` (nodes/workloads view) and `docs/hardware.md`
+  (per-node specs + network appliances) in the same change. Do not let them go stale
+  like the old "What's Done" table did.
 
 ## ADR Authoring
 
@@ -61,7 +65,7 @@ A new workload is added by:
 
 1. Creating `ansible/workloads/<workload>/` containing the playbook entrypoint, role recipes, and an ansible-side README.
 2. Adding a row to the index table in `docs/workloads.md`.
-3. Adding a row to `README.md` ("What's Next" or "What's Done").
+3. Adding a row to `docs/overview.md` "What's Next", and a `CHANGELOG.md` entry on completion.
 4. Optionally: a runbook at `docs/runbooks/NN-deploy-<workload>.md` for operational steps.
 
 Workloads do not import each other. Workloads do not declare shared pre_tasks in the base playbook. Idempotent declarations inside a workload's roles are acceptable (e.g. networks — declare in the role and in the base playbook pre_tasks; first writer wins).

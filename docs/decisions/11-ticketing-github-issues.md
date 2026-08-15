@@ -16,7 +16,7 @@ Requirements:
 - **Zero cost** — the repo is public on GitHub, no budget for tooling
 - **Low friction** — create an issue in seconds, close it in a commit
 - **Commit integration** — auto-close issues from commit messages (`Closes #NNN`)
-- **Co-exist with README** — the existing `README.md` progress table remains the
+- **Co-exist with the overview** — the `docs/overview.md` "What's Next" table remains the
   public status board; issues are the backlog
 
 ## Decision
@@ -34,8 +34,8 @@ Adopt **GitHub Issues** as the project's ticketing system.
 ### Workflow
 
 1. Idea → create a GitHub issue (backlog)
-2. Ready to start → add a row to `README.md` "What's Next"
-3. Finished → move to "What's Done" with date + runbook link
+2. Ready to start → add a row to `docs/overview.md` "What's Next"
+3. Finished → add an entry to `CHANGELOG.md` with a runbook/ADR link
 4. Close the issue
 
 Issues capture ideas and multi-session work. One-shot `(docs)` or `(chore)`
@@ -53,7 +53,7 @@ issues.
 
 - Commit messages can auto-close issues via `Closes #NNN` — traceability without
   ceremony
-- The `README.md` progress table stays as the canonical status board; issues are
+- The `docs/overview.md` "What's Next" table stays as the canonical status board; issues are
   purely a backlog, never a duplicate status tracker
 - Zero additional cost or tooling — everything lives in the GitHub repo
 - Easy to escalate later — if the project grows, GitHub Projects can be enabled

@@ -210,7 +210,7 @@ Estimated draw for the **final build state** (SAS 6/iR removed — saves ~10–1
 | 24/7, drives spun down | ~65 W | ~570 kWh | ~515–685 PLN (~€115–150) |
 | Scheduled nightly window (~8 h) | ~85 W | ~250 kWh | ~225–300 PLN (~€50–65) |
 
-At ~€150–200/yr this is the most power-hungry box in the homelab — the M910q host idles at ~8 W (research 03), the X1 Lite LLM server is TBD. Worth optimizing.
+At ~€150–200/yr this is the most power-hungry box in the homelab — the M910q host idles at ~8 W (research 03), the LLM server is TBD. Worth optimizing.
 
 ### Optimization plan
 
@@ -260,7 +260,7 @@ values per drive.)
 ## References
 
 - Idea [03 — Homelab NAS on ML110](../ideas/03-nas-backup-target-ml110.md) — the plan/implementation doc
-- Runbook [21 — ML110 inventory](../runbooks/21-ml110-nas-inventory.md)
+- Runbook [22 — ML110 inventory](../runbooks/22-ml110-nas-inventory.md)
 - Issue [#54](https://github.com/jaroslaw-bagnicki/Homelab/issues/54)
 - [ADR 02 — Backup Strategy](../decisions/02-backup-strategy-restic-blob.md)
 - [ADR 22 — k3s + Azure Arc](../decisions/22-k3s-arc-homelab.md) — NFS backup target for Longhorn

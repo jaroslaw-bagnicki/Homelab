@@ -4,7 +4,7 @@
 
 ## Prerequisites
 
-- [ ] Base OS is set up and hardened (see [1-init.md](1-init.md))
+- [ ] Base OS is set up and hardened (see [01-init.md](01-init.md))
 - [ ] SSH access via `ssh jarek@homelab.local` or `ssh homelab`
 - [ ] Server is up to date: `sudo apt update && sudo apt upgrade -y`
 

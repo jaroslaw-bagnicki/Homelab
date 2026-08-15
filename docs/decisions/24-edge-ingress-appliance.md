@@ -10,7 +10,7 @@
 The homelab's public ingress (`cloudflared` tunnel + Caddy reverse proxy) currently runs in Docker on the M910q (ADR 07/08, V1 design). Three pressures drive moving it:
 
 - **ADR 22** migrates workloads to k3s on the M910q — cluster churn (upgrades, restarts, node maintenance) must not be able to drop the public tunnel.
-- **ADR 23** scopes the ML110 OMV NAS as storage-only; its web UI (`omv.example.com`, runbook 22 §4d "Phase 2") still needs a tunnel path.
+- **ADR 23** scopes the ML110 OMV NAS as storage-only; its web UI (`omv.example.com`, runbook 23 §4d "Phase 2") still needs a tunnel path.
 - **ADR 20** establishes Caddy as the single routing layer; a stable dedicated device strengthens "one Caddyfile is the source of truth".
 
 The home ISP is CGNAT (ADR 08): the ingress needs only a single outbound QUIC connection to Cloudflare's edge (UDP 7844) — no inbound ports, no router config. Hardware research ([research 25](../research/25-edge-ingress-sbc.md)) showed SBC international MSRP is not reachable in Poland; a used fanless x86 thin client is both cheaper than any reachable SBC/RPi and reuses the fleet's apt/.deb toolchain.

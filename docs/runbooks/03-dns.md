@@ -4,7 +4,7 @@
 
 ## Prerequisites
 
-- [ ] Docker Engine installed (see [2-docker.md](2-docker.md))
+- [ ] Docker Engine installed (see [02-docker.md](02-docker.md))
 - [ ] Portainer running (optional — can use Portainer stacks or plain `docker-compose`)
 - [ ] SSH access via `ssh jarek@homelab.local`
 
@@ -157,4 +157,4 @@ Expected: returns `192.168.2.200`.
 
 ## Next Steps
 
-Deploy **Caddy reverse proxy** — see [4-caddy.md](4-caddy.md) — to serve services on standard ports (80/443) with automatic TLS.
+Deploy **Caddy reverse proxy** — see [04-caddy.md](04-caddy.md) — to serve services on standard ports (80/443) with automatic TLS.
