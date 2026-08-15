@@ -28,7 +28,7 @@ The refresh re-aligns the box with ADR 05 and unblocks that track.
 
 - **On the LAN workstation** (the Ansible control node):
   - This repo checked out on branch `feat/m910q-refresh`
-  - **PowerShell** with the **Posh-SSH** module (`Install-Module Posh-SSH -Scope CurrentUser`)
+  - **Windows OpenSSH client** (`ssh`) — native, no extra tools
   - The workstation SSH **public** key at `$env:USERPROFILE\.ssh\id_ed25519.pub`
     (uploaded to `labadmin` by the bootstrap script; runbook 01 §5)
   - Ansible + collections: `ansible-galaxy install -r ansible/requirements.yml`
@@ -75,9 +75,10 @@ The refresh re-aligns the box with ADR 05 and unblocks that track.
 
 ## 1. Reinstall Ubuntu Server 24.04 LTS
 
-The only typing during install: static IP + a **root breaking-glass password** + OpenSSH
-server. Everything after (the `labadmin` agent account, SSH key, hardening) is done by
-`scripts/New-HomelabLabadmin.ps1` in §2.
+Manual input during install is limited to: static IP + a **root breaking-glass password**
++ OpenSSH server. Everything after (the `labadmin` agent account and SSH key) is done by
+`scripts/New-HomelabLabadmin.ps1` in §2; OS hardening (UFW, fail2ban, Docker, Arc) is done
+by Ansible in §3.
 
 1. Boot the M910q from the **Ubuntu Server 24.04 LTS USB** (F12 boot menu).
 2. In the installer's **Network connections** screen set the interface (`enp0s31f6`):
@@ -91,8 +92,8 @@ server. Everything after (the `labadmin` agent account, SSH key, hardening) is d
 
 3. **Set a root password** (the breaking-glass account) — the installer's profile screen
    has a "Set a root password" option; use it instead of creating a regular user. Store
-   the password in **Keeper**. It is only used by the bootstrap script in §2 and kept
-   console-only afterwards.
+   the password in **Keeper**. It is used by the bootstrap script in §2 and kept
+   console-only afterwards (root SSH is re-disabled by the script).
 4. **Install OpenSSH server** when prompted. Complete the install and reboot (remove the USB).
 5. **Verify:**
    ```sh
@@ -107,11 +108,6 @@ server. Everything after (the `labadmin` agent account, SSH key, hardening) is d
 
 ## 2. Bootstrap — labadmin Agent Account (`scripts/New-HomelabLabadmin.ps1`)
 
-The LVM root extension and Avahi (mDNS) are handled by `playbook-homelab.yml`
-(pre_task + `common` role), so they run the same way on every rebuild. The `labadmin`
-agent account is created by the **bootstrap script** — no manual typing beyond the root
-password.
-
 1. **One console command — enable root SSH password login for the bootstrap** (Ubuntu's
    default `PermitRootLogin prohibit-password` blocks the script's root connection):
    ```sh
@@ -120,17 +116,19 @@ password.
    The script removes this drop-in when it finishes (step 2), so root returns to
    console-only.
 
-2. **From the workstation**, run the bootstrap script (PowerShell):
+2. **From the workstation**, run the bootstrap script (PowerShell, native ssh):
    ```powershell
-   Install-Module Posh-SSH -Scope CurrentUser -Force   # if not installed
    ./scripts/New-HomelabLabadmin.ps1
    ```
-   It prompts for the **root breaking-glass password** (Keeper), then remotely, as root:
+   It connects as `root@homelab` via the native `ssh` client — **root authenticates by
+   password** (the breaking-glass password from Keeper, prompted once by ssh). Then,
+   as root, it:
    - creates the `labadmin` user (sudo group, disabled password)
    - writes `/etc/sudoers.d/labadmin` with `NOPASSWD: ALL` (for Ansible `become`)
    - uploads the workstation `id_ed25519.pub` to `labadmin`'s `authorized_keys`
    - locks the `labadmin` password (key-only agent account)
    - removes `99-root-bootstrap.conf` and restarts sshd (root SSH back to console-only)
+   No key is installed for root — root is reached by password only.
    Idempotent — safe to re-run.
 
 3. **Verify:**
@@ -142,36 +140,35 @@ password.
    `systemd-resolved` responds by default); `homelab.local` needs Avahi (installed by
    the playbook) for mDNS.
 
-> **Fallback (only if the Ansible pre_task fails):** the playbook's LVM pre_task extends
-> the root LV to the full disk via `community.general.lvol` + `resizefs`. If it can't
-> run, do it manually before any further provisioning:
-> ```sh
-> sudo lvextend -l +100%FREE /dev/mapper/ubuntu--vg-ubuntu--lv
-> sudo resize2fs /dev/mapper/ubuntu--vg-ubuntu--lv
-> ```
-> **Why this step exists:** Ubuntu's installer allocates only ~100 GB to the root LV by
-> default; without it the 256 GB NVMe caps at ~100 GB and Docker/k3s fills it quickly.
-> Grow the LV (container) *and* the ext4 filesystem (data) separately — two layers, both
-> required. Verify with `df -h /` → ~232 GB.
-
-> **Do not** set up dnsmasq, Caddy, or cloudflared — these moved to the edge appliance
-> (ADR 24). The `security` role's UFW rules are generic base hardening (default-deny
-> incoming, allow SSH, deny direct HTTP); there are no cloudflared-specific rules on the
-> M910q.
-
 ## 3. Ansible Provision (from the LAN workstation)
 
-From the repo checkout on the **workstation** (control node, not this dev container):
+From the repo checkout on the **workstation** (control node):
 
 ```powershell
-chmod 755 C:\Users\labadmin\Homelab C:\Users\labadmin\Homelab\ansible   # if world-writable warnings occur
 ansible-galaxy install -r ansible/requirements.yml
 az login
 ansible-playbook -i ansible/inventory.ini ansible/playbooks/playbook-homelab.yml
 ```
 
-**Verify:** the playbook runs `common` → `security` → `docker_host` → `azure_arc` and
-ends with the Arc connection status. Confirm no failed tasks.
+This runs `common` → `security` → `docker_host` → `azure_arc` and also handles the
+**LVM root extension** (playbook `pre_task`) and **Avahi mDNS** (`common` role with
+`common_enable_avahi: true`).
+
+**Verify:** the playbook completes with no failed tasks and ends with the Arc connection
+status.
+
+> **Why the LVM pre_task is there:** Ubuntu's installer allocates only ~100 GB to the root
+> LV by default; without the extension the 256 GB NVMe caps at ~100 GB and Docker/k3s fills
+> it quickly. The pre_task extends the LV (container) *and* the ext4 filesystem (data) —
+> two layers, both required — via `community.general.lvol` + `resizefs`. Confirm with
+> `df -h /` → ~232 GB.
+>
+> **Fallback (only if the pre_task cannot run):** do it manually before further
+> provisioning:
+> ```sh
+> sudo lvextend -l +100%FREE /dev/mapper/ubuntu--vg-ubuntu--lv
+> sudo resize2fs /dev/mapper/ubuntu--vg-ubuntu--lv
+> ```
 
 ## 4. Azure Arc Verification
 
