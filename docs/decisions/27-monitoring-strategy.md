@@ -33,7 +33,7 @@ AMA → Log Analytics (`homelab-law`) on **Arc-enrolled nodes only**: the M910q 
 - **Unified monitoring agent across all nodes** — one Netdata agent runs on every node in the fleet: a uniform agent across Ubuntu, Debian, OMV, Proxmox, and (trial pending) Alpine.
 - **Parent placement** — Netdata Parent runs as a **k3s workload on the M910q** after the ADR 22 migration; until then children run **standalone** (local `dbengine` + alarms) and re-point to the parent when it lands.
 - **Edge Wyse 3040 — lightweight components only.** A **Netdata child node** (minimal footprint, **RAM-only buffering** — no eMMC `dbengine`, per [ADR 24](24-edge-ingress-appliance.md)) and Fluent Bit if adopted as a Tier B component; Alpine compatibility validated during the Debian-vs-Alpine on-device trial.
-- **Metrics-only scope.** Provisioned via a new Ansible `netdata` role (ADR 10).
+- **Metrics-only scope.** Provisioned via a new Ansible `netdata` role following the ADR 10 Ansible approach.
 - **Future components of Tier B (extensions — not adopted, no ADR yet):** **Grafana, Prometheus, Fluent Bit, Loki.** Netdata's Prometheus-compatible export is the future integration point for a dashboard/analytics (and log) component; **ADR 26's power path** (Z2M → `mqtt2prometheus` → Prometheus → Grafana) is the only committed Prometheus/Grafana usage today. Components are added incrementally via their own future ADRs.
 
 ### Boundary rule
@@ -66,7 +66,7 @@ AMA → Log Analytics (`homelab-law`) on **Arc-enrolled nodes only**: the M910q 
 
 - [ADR 04](04-hybrid-cloud-azure-arc.md) — Hybrid Cloud Strategy (Arc management concept)
 - [ADR 09](09-azure-monitor-via-arc.md) — Azure Monitor via Arc (**amended — Tier A only**)
-- [ADR 10](10-ansible-host-config.md) — Ansible host configuration (`netdata` role)
+- [ADR 10](10-ansible-host-config.md) — Ansible host configuration (pattern for the new `netdata` role)
 - [ADR 22](22-k3s-arc-homelab.md) — k3s + Arc (Container Insights = Tier A cluster extension)
 - [ADR 24](24-edge-ingress-appliance.md) — Edge Wyse 3040 (amended — lightweight Edge components, RAM-only buffering)
 - [ADR 25](25-home-assistant-thin-client.md) — HA node (Netdata → Tier B plane)
