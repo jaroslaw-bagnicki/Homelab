@@ -6,6 +6,8 @@ same `(type)` prefixes as commit messages; types: `feat`, `fix`, `docs`, `chore`
 
 ## 2026‑08
 
+- **(docs)** Add ADR 28 — Netdata agent on every node; parent as k3s workload; minimal agent on the Edge (ADR 24 override) — [ADR 28](docs/decisions/28-netdata-adoption.md)
+- **(docs)** Add ADR 27 — two-tier monitoring strategy reconciling Azure Monitor via Arc (Tier A, management plane) with a local Netdata/Prometheus/Grafana plane on all nodes (Tier B); ADR 09 amended in place, ADR 24/25/26 aligned — [ADR 27](docs/decisions/27-monitoring-strategy.md) · [#75](https://github.com/jaroslaw-bagnicki/Homelab/issues/75)
 - **(docs)** Add ADR 26 — Zigbee energy monitoring via Zigbee2MQTT → Prometheus, independent of Home Assistant — [ADR 26](docs/decisions/26-zigbee-energy-monitoring.md) · [research 27](docs/research/27-zigbee-energy-monitoring.md) · [idea 06](docs/ideas/06-homelab-energy-monitoring.md)
 - **(docs)** Zigbee energy monitoring — independent homelab power-consumption monitoring via per-device energy plugs (Zigbee leading candidate, alternatives compared); protocol/stack comparison + Z2M → Prometheus metrics architecture + AI-agent access in research — [research 27](docs/research/27-zigbee-energy-monitoring.md) · [idea 06](docs/ideas/06-homelab-energy-monitoring.md)
 - **(docs)** Make overview the single state + roadmap page — Workloads table = current state only, "What's Next" moved from root README — [overview](docs/overview.md)

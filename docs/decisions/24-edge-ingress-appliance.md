@@ -32,7 +32,7 @@ Run the homelab's public ingress on a **dedicated, low-power edge appliance** on
 - Single source of truth for routing stays (ADR 20), now on a stable box.
 - **New single point of failure** — the edge appliance is the ingress; if it dies, external access drops until replaced. Cheap to keep a spare; accepted.
 - **Bare-metal diverges from the container-first stack** (ADR 03/22) — an intentional exception for a two-daemon, internet-facing appliance: fewer layers, smaller attack surface, less eMMC write wear, fits 2 GB/8 GB.
-- **Constrained hardware** — 2 GB RAM / 8 GB eMMC are soldered (no upgrade). Zero headroom for future agents (observability/Arc); if needed, move to the Wyse 5070. Cherry Trail is aging.
+- **Constrained hardware** — 2 GB RAM / 8 GB eMMC are soldered (no upgrade). No Arc agent and no default-size agents; a **minimal Netdata agent** is the single exception ([ADR 28](28-netdata-adoption.md)). If headroom is exhausted, move to the Wyse 5070. Cherry Trail is aging.
 - **Appliance-only OS deviation from ADR 05** — the edge box runs Debian minimal (leaner base, same apt/.deb toolchain) while Ubuntu stays the fleet standard for workload hosts. The Debian-vs-Alpine outcome is locked before the `edge_host` provisioning role is written.
 - `.home` DNS (dnsmasq, ADR 06) stays pointed at the M910q for now; repoint only if internal routing ever moves to the edge.
 
