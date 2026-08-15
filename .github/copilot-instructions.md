@@ -20,7 +20,7 @@
   alternatives were considered. When the agent needs to answer "why did we pick X
   over Y?", consult `docs/decisions/README.md` first — the decision log takes
   precedence over research docs and code comments for design rationale.
-- Research docs: `homelab/research/` — numbered Markdown files (`01-*.md`, `02-*.md`, …).
+- Research docs: `docs/research/` — numbered Markdown files (`01-*.md`, `02-*.md`, …).
   Useful for exploratory context, but ADRs in `docs/decisions/` supersede research
   docs once a direction is settled.
 - Runbooks: `runbooks/` — implementation instructions and operational procedures
@@ -32,6 +32,7 @@
 - **When NOT to create an issue**: one-shot `(docs)` or `(chore)` commits, ongoing research (use `research/` docs for that)
 - **When creating an issue**: use a clear title with **no `(type)` prefix** (e.g. not `(feat) …`) — the **label** conveys the type. Add relevant labels and a brief **Why / What** description
 - **PR titles**: same rule — no `(type)` prefix in the title; use labels to convey the type (the `(type)` prefix convention applies to **commit messages only**)
+- **PR descriptions**: do **not** use the **Why / What / How (WWH)** format — that is **reserved for GitHub Issues only**. PR descriptions are a plain summary of the **Changes** (and any **Notes**) with no WWH headings
 - **Reference issues**: plain `#NNN` mentions link a commit/PR to an issue but do **not** auto-close it. To auto-close on merge, add `Closes #NNN` to the **PR description** or to a commit that is merged into `main` (GitHub evaluates the keyword at merge time; editing a merged PR afterwards won't close the issue)
 - **Labels**: `enhancement` (new feature), `bug` (broken), `chore` (maintenance/tooling), `research` (investigation)
 - **README "What's Next" = public status board** — shows what's planned or actively being worked on. Only items that are **planned** or **in progress** belong here.

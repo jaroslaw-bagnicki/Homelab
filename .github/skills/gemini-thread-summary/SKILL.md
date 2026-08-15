@@ -1,6 +1,6 @@
 ---
 name: gemini-thread-summary
-description: 'Fetch a Gemini share URL, read the full conversation, and write a structured summary as a Markdown research doc. USE FOR: archiving Gemini research threads, extracting decisions and findings from a shared Gemini chat, converting a Gemini conversation into a homelab or lab research doc. WHEN: user provides a gemini.google.com/share/... URL, user says "summarize this Gemini thread", "archive Gemini chat", "turn Gemini discussion into a doc", "write up this Gemini conversation".'
+description: 'Fetch a Gemini share URL, read the full conversation, and write a structured summary as a Markdown research and/or idea doc. USE FOR: archiving Gemini research threads, extracting decisions and findings from a shared Gemini chat, converting a Gemini conversation into a homelab/lab research or idea doc. WHEN: user provides a gemini.google.com/share/... URL, user says "summarize this Gemini thread", "archive Gemini chat", "turn Gemini discussion into a doc", "write up this Gemini conversation".'
 argument-hint: 'Gemini share URL (https://gemini.google.com/share/...)'
 ---
 
@@ -60,16 +60,20 @@ Write a structured Markdown document covering:
 
 Adapt the structure to the content — a hardware research thread warrants a spec table; a conceptual discussion warrants a findings list.
 
-### 6. Determine output target
-Ask the user (or infer from context) where to save the summary:
+### 7. Determine output target
+Ask the user (or infer from context) where to save the summary. A thread may warrant **more than one target** — pick all that apply:
 
-- **New numbered research doc** (e.g. `homelab/research/09-*.md`) — when the thread is a self-contained research session
-- **Appended section in an existing doc** — when the thread adds to an already-documented topic
-- **Chat only** — when the user wants a quick read without saving anything
+- **New numbered research doc** (`docs/research/NN-*.md`) — when the thread is a self-contained research session (hardware, architecture, tool evaluation). Register in `docs/research/README.md` (research table + Gemini Discussions).
+- **New numbered idea doc** (`docs/ideas/NN-*.md`) — when the thread is about a **new project idea** for the lab, not just research. Follow the ideas index and lifecycle in `docs/ideas/README.md` (🧠 Idea → 📋 Planned → 🔨 Implementing → ✅ Done).
+- **Both research + idea** — when the thread is a self-contained research session **about a new idea** (e.g. Home Assistant on a thin client → research 26 + idea 05). The research doc holds the detailed write-up; the idea doc tracks the lifecycle and cross-references it.
+- **Appended section in an existing doc** — when the thread adds to an already-documented topic.
+- **Chat only** — when the user wants a quick read without saving anything.
 
-### 7. Commit if saving to a file
-Commit directly to `main`:
+Once an idea matures into a decision, it gets an ADR in `docs/decisions/` (see the adr-authoring skill) — the research/idea docs feed it but don't replace it.
+
+### 8. Commit if saving to a file
+Commit with the repo convention:
 ```
 (docs) add <doc-name> — <short topic>
 ```
-Also update the relevant README research table and Gemini Discussions section if saving a new numbered doc.
+Also update the relevant README index(es) — research table + Gemini Discussions section, and/or the ideas index — if saving a new numbered doc.

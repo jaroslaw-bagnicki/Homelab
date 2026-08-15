@@ -13,7 +13,6 @@
 **Date**: 2026-08-08  
 **Idea**: 01 — [Homelab NAS](01-nas-backup-target.md) (historical V1)  
 **Research**: [23 — ML110 NAS (OMV)](../research/23-ml110-nas-omv.md)  
-**Inventory**: [nas-ml110-inventory.md](nas-ml110-inventory.md) (single source of truth for hardware)  
 **Issue**: [#54 — Set up Homelab NAS on ML110](https://github.com/jaroslaw-bagnicki/Homelab/issues/54)
 
 ---
@@ -53,7 +52,7 @@ Runbook: [`22-ml110-nas-inventory.md`](../runbooks/22-ml110-nas-inventory.md)
 - [x] **Goodram C40 SSD health check** — **PASSED** (Option D confirmed)
 - [x] SAS 6/iR RAID layout — **not captured** (controller removed; old FreeNAS array not preserved)
 - [ ] Confirm FreeNAS is unbootable / no data to preserve
-- [x] Fill the inventory template (`nas-ml110-inventory.md`) — remaining TBD: PSU wattage, 1 TB content
+- [x] Consolidate findings into [research 23](../research/23-ml110-nas-omv.md) — remaining TBD: PSU wattage, 1 TB content
 
 ---
 

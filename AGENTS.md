@@ -25,9 +25,15 @@ operating on its own.
   alternatives were considered. When the agent needs to answer "why did we pick X
   over Y?", consult `docs/decisions/README.md` first — the decision log takes
   precedence over research docs and code comments for design rationale.
-- Research docs: `homelab/research/` — numbered Markdown files (`01-*.md`, `02-*.md`, …).
+- Research docs: `docs/research/` — numbered Markdown files (`01-*.md`, `02-*.md`, …).
   Useful for exploratory context, but ADRs in `docs/decisions/` supersede research
   docs once a direction is settled.
+- **Co-authoring pattern: research settles, ADR owns.** When a research/idea doc
+  settles a direction (its decision summary or resolved decisions become final),
+  author the ADR in the **same phase/PR** as the research — do not defer it to a
+  later implementation phase. The research doc links the ADR and defers decision
+  authority to it (e.g. a banner above its decision summary); it stays as the
+  analysis that fed the decision, not the authority for it.
 - Runbooks: `runbooks/` — implementation instructions and operational procedures
 - Each area has a `README.md` as the index
 
@@ -101,6 +107,7 @@ Merges always go through a pull request — the agent never merges to `main` loc
 2. `git push -u origin <branch>` — push immediately
 3. Open a PR via GitHub MCP tools (`create_pull_request`) only when asked by the user
    - **PR title**: no `(type)` prefix (e.g. not `(feat) …`) — use labels to convey the type. The `(type)` prefix convention applies to **commit messages only**.
+   - **PR description**: do **not** use the **Why / What / How (WWH)** format — that is **reserved for GitHub Issues only**. PR descriptions are a plain summary of the **Changes** (and any **Notes**) with no WWH headings.
 4. **Stop.** The human reviews and merges via the GitHub UI — the agent never merges the PR itself
 5. After the PR is merged, clean up in the primary checkout: `git pull --ff-only origin main`, then `git worktree remove ../Homelab-<short-topic>` and `git branch -d <branch>`
 

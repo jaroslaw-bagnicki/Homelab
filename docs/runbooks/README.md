@@ -4,6 +4,8 @@ Step-by-step guides for configuring the homelab server.
 
 | # | Runbook | Topic |
 |---|---|---|
+| 24 | [24-edge-appliance.md](24-edge-appliance.md) | Dedicated edge appliance (Dell Wyse 3040) — bare-metal cloudflared + Caddy as the single public ingress; hardware acquired 2026-08-13; OS trial Debian vs Alpine — see [ADR 24](../decisions/24-edge-ingress-appliance.md) & [issue #65](https://github.com/jaroslaw-bagnicki/Homelab/issues/65) |
+| 23 | [23-ml110-omv-setup.md](23-ml110-omv-setup.md) | ML110 NAS Phase 1 — OMV 8.x install on the Goodram SSD, BIOS AHCI, mdadm RAID1 (`md0`/`md1`), static IP `192.168.2.210` — see [ADR 23](../decisions/23-nas-on-ml110.md) & [issue #61](https://github.com/jaroslaw-bagnicki/Homelab/issues/61) |
 | 22 | [22-ml110-nas-inventory.md](22-ml110-nas-inventory.md) | Phase 0 inventory & FreeNAS state audit on the HP ProLiant ML110 before OMV install — generation, ZFS pools, disk SMART, controller topology, BIOS settings — see [idea 03](../ideas/03-nas-backup-target-ml110.md) & [issue #54](https://github.com/jaroslaw-bagnicki/Homelab/issues/54) |
 | 21 | [21-tl-sg108e-switch.md](21-tl-sg108e-switch.md) | TL-SG108E homelab switch setup — wiring, management IP, QoS/rate-limit, IGMP snooping, optional port mirroring — see [research 24](../research/24-network-topology-design.md) & [issue #55](https://github.com/jaroslaw-bagnicki/Homelab/issues/55) |
 | 20 | [20-deploy-zot.md](20-deploy-zot.md) | Self-hosted Zot OCI registry on cloudlab — htpasswd auth from AKV, pull-through cache for GHCR/mcr/Docker Hub, public at `zot.<domain>` via Cloudflare Tunnel + Caddy — see [issue #50](https://github.com/jaroslaw-bagnicki/Homelab/issues/50) |
