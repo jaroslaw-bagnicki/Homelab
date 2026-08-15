@@ -16,6 +16,8 @@ self-host AI agents, and keep learning for the joy of it.
 
 | Area | Description |
 |---|---|
+| [Overview](docs/overview.md) | Homelab at a glance — nodes, workloads, topology |
+| [Hardware](docs/hardware.md) | Per-node hardware inventory + network appliances |
 | [Ideas](docs/ideas/README.md) | Pre-decision brainstorming — possibilities and early-stage exploration |
 | [Research](docs/research/README.md) | Exploratory research — topic investigations, comparisons, trade-offs |
 | [Decision log](docs/decisions/README.md) | Architecture Decision Records (ADRs) — settled design rationale, source of truth |

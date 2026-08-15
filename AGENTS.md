@@ -36,6 +36,10 @@ operating on its own.
   analysis that fed the decision, not the authority for it.
 - Runbooks: `runbooks/` — implementation instructions and operational procedures
 - Each area has a `README.md` as the index
+- **State docs stay current**: when a node or workload is added, removed, or changes
+  status, update `docs/overview.md` (nodes/workloads view) and `docs/hardware.md`
+  (per-node specs + network appliances) in the same change. Do not let them go stale
+  like the old "What's Done" table did.
 
 ## ADR Authoring
 

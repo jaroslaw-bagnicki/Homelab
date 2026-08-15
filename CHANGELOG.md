@@ -6,6 +6,8 @@ same `(type)` prefixes as commit messages; types: `feat`, `fix`, `docs`, `chore`
 
 ## 2026‑08
 
+- **(docs)** Add Homelab overview — nodes, workloads, topology at a glance — [overview](docs/overview.md)
+- **(docs)** Add per-node hardware inventory incl. network appliances — [hardware](docs/hardware.md)
 - **(feat)** ML110 NAS Phase 1 — OMV 8.3 install on the Goodram SSD, BIOS AHCI, mdadm RAID1 (`md0`/`md1`), static IP `192.168.2.210`, SSH hardening — [runbook 23](docs/runbooks/23-ml110-omv-setup.md) · [ADR 23](docs/decisions/23-nas-on-ml110.md) · [#61](https://github.com/jaroslaw-bagnicki/Homelab/issues/61)
 - **(feat)** Edge ingress appliance — Wyse 3040 thin client (acquired) as bare-metal `cloudflared` + Caddy public ingress; OS trial Debian vs Alpine — [runbook 24](docs/runbooks/24-edge-appliance.md) · [ADR 24](docs/decisions/24-edge-ingress-appliance.md) · [idea 04](docs/ideas/04-edge-device-tunnel-caddy.md) · [#65](https://github.com/jaroslaw-bagnicki/Homelab/issues/65)
 - **(docs)** Home Assistant on a dedicated thin-client node — Proxmox VE VM + Mosquitto/Zigbee2MQTT — [ADR 25](docs/decisions/25-home-assistant-thin-client.md) · [idea 05](docs/ideas/05-home-assistant-thin-client.md) · [research 26](docs/research/26-home-assistant-thin-client.md)

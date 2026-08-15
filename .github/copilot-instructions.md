@@ -25,6 +25,9 @@
   docs once a direction is settled.
 - Runbooks: `runbooks/` — implementation instructions and operational procedures
 - Each area has a `README.md` as the index
+- **State docs stay current**: when a node or workload is added, removed, or changes
+  status, update `docs/overview.md` (nodes/workloads view) and `docs/hardware.md`
+  (per-node specs + network appliances) in the same change
 
 ## Issue Tracking
 
