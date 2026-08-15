@@ -140,10 +140,10 @@ The lab's monitoring must **not** depend on Home Assistant: Prometheus + Grafana
 |---|---|---|---|
 | **SONOFF ZBDongle-P** | CC2652P (TI) | 99,90 PLN (~24 EUR) | **Gold standard**; very stable in Z2M and ZHA; external antenna + aluminium RF-shielding case (official store price, Aug 2026) |
 | SONOFF ZBDongle-E | EFR32MG21 (Silicon Labs) | 68,77–70,90 PLN (~16–17 EUR) | Cheaper; great for ZHA; experimental Thread/Matter support; external SMA antenna +20 dBm (official store price, Aug 2026) |
-| **NOUS E16** (Nous, official store) | EFR32-class — Zigbee 3.0 + Thread + BLE 5.2 | 49,99 PLN (~12 EUR) | Budget multi-protocol USB dongle; ext. antenna + aluminium housing; Z2M/HA/OpenHAB; Direct-Flash FW updates; Thread/BLE future-proofing (§1.2) — chipset to verify |
+| **NOUS E16** (Nous, official store) | Silicon Labs **EFR32MG21** (ARM Cortex-M33) — Zigbee 3.0 + Thread/Matter + BLE 5.2 | 49,99 PLN (~12 EUR) | Budget multi-protocol USB dongle; **EmberZNet/EZSP** (Zigbee) or **OpenThread** (Thread) firmware; USB-UART **CP2102N/CH340** → `/dev/ttyUSB0`; TX up to **18.6 dBm**; ext. antenna + aluminium housing; Z2M/HA/OpenHAB; Direct-Flash FW updates; Thread/BLE future-proofing (§1.2) |
 | ConBee II / III | — | 140–180 PLN (~33–42 EUR) | Plug-and-play with internal antenna, but pricier |
 
-**Recommendation**: **ZBDongle-P (99,90 PLN (~24 EUR))** + a plain **0.5–1 m USB extension cable** (keeps the dongle away from USB 3.0 interference). **Budget pick**: the **NOUS E16** (49,99 PLN (~12 EUR), official Nous Allegro store, Aug 2026) is the cheapest option — a multi-protocol EFR32-class dongle (Zigbee + Thread + BLE 5.2, same family as the ZBDongle-E) with external antenna + aluminium housing; good value if the CC2652P gold-standard status isn't needed.
+**Recommendation**: **ZBDongle-P (99,90 PLN (~24 EUR))** + a plain **0.5–1 m USB extension cable** (keeps the dongle away from USB 3.0 interference). **Budget pick**: the **NOUS E16** (49,99 PLN (~12 EUR), official Nous Allegro store, Aug 2026) is the cheapest option — a multi-protocol **EFR32MG21** dongle (Zigbee + Thread + BLE 5.2, the exact chip also used in the ZBDongle-E) with external antenna + aluminium housing; good value if the CC2652P gold-standard status isn't needed.
 
 **Why the ZBDongle-P over the NOUS E16 (~50 PLN saving)?** The E16 is the cheaper budget pick, but the ZBDongle-P stays the default because the coordinator sits at the **centre of the whole Zigbee mesh** — the single point of failure for every Zigbee device and the independent monitoring stack:
 
