@@ -7,6 +7,10 @@
 
 ## Decision Summary
 
+> **Decision authority:** the decisions below are authoritatively recorded in
+> [ADR 23 — NAS on the HP ProLiant ML110 (OMV)](../decisions/23-nas-on-ml110.md).
+> This table is the Phase 0 analysis output that fed them.
+
 | Decision | Outcome |
 |---|---|
 | Platform | HP ProLiant **ML110 G5** (already owned) — beats buying a Fujitsu Q956 |
@@ -78,6 +82,12 @@
 
 **Label vs SMART discrepancies:** the 500 GB Hitachis label `CLA662` but report `CLA660` (HP OEM variant); the "WD RE3" drive actually reports as `GB0250EAFYK` (rebadged); the Fujitsu label `MHV2020BH` reports as `MHW2020BH`. **SMART identity is authoritative.**
 
+**Cabling & bays (onboard SATA, current state):** ICH9R ports #1–#4 → the 4× 3.5" data
+drives (mdadm RAID1 pairs); ICH9 port #5 → **Goodram C40 120 GB SSD** (OMV OS, Option D);
+ICH9 port #6 → **free** (1 TB WD10EZEX unplugged for now). All four 3.5" bays occupied;
+both 2.5" bays hold the 20 GB cold spares (detached). Label power draw: Hitachi Travelstar
+20 GB `5V 1.0A`, Fujitsu 20 GB `5V 0.50A`.
+
 ### SSD health check (Goodram C40, 2026-08-09)
 
 Verified with `smartctl -a` under SystemRescue before committing it as the OMV OS disk:
@@ -123,6 +133,33 @@ Verified with `smartctl -a` under SystemRescue before committing it as the OMV O
 8. **Cost & power.** Onboard SATA is free; removing the card saves ~10–15 W on a 24/7 box.
 
 **Counterpoint:** hardware RAID offloads I/O and survives reinstalls more transparently — negligible here given no parity workload and a GigE bottleneck.
+
+### B110i (ICH9R "fake RAID") — also not recommended
+
+The HP "B110i" is **not** a hardware RAID controller — it's the onboard ICH9R SATA
+(`00:1f.2`) running RAID-capable firmware (Intel Matrix RAID, i.e. "fake RAID"). It
+shares the SAS 6/iR's drawbacks and adds its own:
+
+- **No cache / no BBWC** — nothing to absorb a power loss; metadata lives on the disks and in BIOS ROM.
+- **Host-CPU RAID** — the controller has no RAID engine; the OS driver does the work.
+- **Driver-dependent** — logical volumes are invisible to Linux without the HPE `hpvsa`/`hpsa` driver; mdadm sees nothing.
+- **Hides per-disk SMART** — the array is opaque behind the fake-RAID metadata.
+- **RAID 0/1/10 only** — no advantage over mdadm RAID1 here.
+
+Since it offers nothing over plain mdadm, the BIOS sets **SATA RAID Enable = Disabled** and
+the disks go straight to mdadm as raw `/dev/sdX`.
+
+### How OMV handles array management (mdadm under the hood)
+
+OMV has no RAID engine of its own — `Storage | RAID` in the web UI is a **GUI wrapper around
+`mdadm`**. Creating an array there runs `mdadm --create`, producing a standard Linux
+`/dev/md*` device; OMV then maintains `/etc/mdadm/mdadm.conf` so arrays auto-assemble at
+boot, and owns mount management for the filesystems built on top (XFS/ext4) via
+`Storage | File Systems`. The arrays are genuine Linux software RAID — portable to any
+Linux box, per-disk SMART intact. Arrays created outside OMV (e.g. at the CLI) are detected
+the same way: once assembled they appear under `Storage | RAID`, their filesystems under
+`Storage | File Systems`, and OMV can mount them via the UI (it deliberately does not
+auto-mount so its DB stays the source of truth for mounts).
 
 ---
 
@@ -179,9 +216,9 @@ At ~€150–200/yr this is the most power-hungry box in the homelab — the M91
 ## References
 
 - Idea [03 — Homelab NAS on ML110](../ideas/03-nas-backup-target-ml110.md) — the plan/implementation doc
-- Inventory: [nas-ml110-inventory.md](../ideas/nas-ml110-inventory.md) — single source of truth for hardware
 - Runbook [21 — ML110 inventory](../runbooks/21-ml110-nas-inventory.md)
 - Issue [#54](https://github.com/jaroslaw-bagnicki/Homelab/issues/54)
 - [ADR 02 — Backup Strategy](../decisions/02-backup-strategy-restic-blob.md)
 - [ADR 22 — k3s + Azure Arc](../decisions/22-k3s-arc-homelab.md) — NFS backup target for Longhorn
+- [ADR 23 — NAS on the HP ProLiant ML110 (OMV)](../decisions/23-nas-on-ml110.md) — authoritative record of the decisions in this doc
 - [ADR 01 — Hardware Selection](../decisions/01-hardware-selection-m910q.md) — the M910q homelab server

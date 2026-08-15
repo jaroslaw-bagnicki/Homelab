@@ -51,6 +51,26 @@ tool version bumps, typos or formatting fixes.
 
 ---
 
+## Co-authoring pattern: research settles, ADR owns
+
+When a **research doc or idea** settles a direction (its decision summary or
+resolved-decision list becomes final), author the ADR in the **same phase/PR** as
+the research — do not defer it to a later implementation phase.
+
+- The ADR is the **single authoritative record** of each decision (Context →
+  Decision → Consequences), even when the decisions were first recorded in a
+  research doc's decision summary.
+- The research doc **links the ADR** and **defers authority** to it — e.g. a
+  banner above its decision summary: *"decisions authoritatively recorded in
+  [ADR NN]"*. It keeps the analysis/trade-off detail that fed the decision but is
+  no longer the authority for it.
+- Date the ADR with **when the decision was made** (the research phase), not when
+  it was written.
+- Avoid ADR bloat: state each decision concisely and reference the research doc
+  for the full rationale instead of restating it.
+
+---
+
 ## File naming
 
 ```

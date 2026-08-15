@@ -12,13 +12,12 @@
 - Audit the existing controller RAID configuration: RAID level, member disks, virtual disk size, status.
 - Inventory every disk: model, size, SMART health, which controller it hangs off.
 - Capture BIOS-relevant settings: SATA mode (AHCI vs RAID), boot order, network MACs.
-- Produce a **single inventory artifact** (filled template) that drives the OMV install plan.
+- Produce a **single hardware reference** — findings consolidated in research 23 — that drives the OMV install plan.
 
 ## Status
 
 - [x] Runbook executed against the live ML110 (SystemRescue + hardinfo2 + `smartctl`)
-- [x] Inventory captured — `docs/ideas/nas-ml110-inventory.md`
-- [x] Findings consolidated — `docs/research/23-ml110-nas-omv.md`
+- [x] Inventory captured — consolidated in `docs/research/23-ml110-nas-omv.md`
 - [x] Issue #54 updated: Phase 0 complete
 
 ---
@@ -325,11 +324,11 @@ Record:
 
 ---
 
-## 8. Fill the Inventory Capture Template
+## 8. Consolidate Findings into Research 23
 
-Once all controller/BIOS data and SMART output are captured, fill in
-**`docs/ideas/nas-ml110-inventory.md`** (the template) with the actual values.
-That file is the single source of truth for the OMV install plan.
+Once all controller/BIOS data and SMART output are captured, record the values in
+**`docs/research/23-ml110-nas-omv.md`** — the single source of truth for the ML110
+hardware and the OMV install plan.
 
 ---
 
