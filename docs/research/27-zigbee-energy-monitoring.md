@@ -70,17 +70,40 @@ With Home Assistant joining the lab (idea 05), the user wants to **monitor homel
 
 **Recommendation**: **ZBDongle-P (~90–100 zł)** + a plain **0.5–1 m USB extension cable** (keeps the dongle away from USB 3.0 interference).
 
-### 6. ZHA vs Zigbee2MQTT
+### 6. Protocol comparison — Zigbee stacks & adjacent radios (ADR input)
 
-| Feature | ZHA (Zigbee Home Automation) | Zigbee2MQTT (Z2M) |
-|---|---|---|
-| Type | Native integration built into HA | External app / add-on (uses MQTT) |
-| Setup difficulty | Very easy (a few clicks) | Medium (needs an MQTT broker, e.g. Mosquitto) |
-| Interface | Inside Home Assistant | Separate, advanced web panel |
-| Device support | Very large (thousands of models) | **Largest on the market** (fastest support for new devices) |
-| Diagnostics | Basic / sufficient | Very detailed (precise parameter control) |
+The Home Assistant node (idea 05) and the independent power-monitoring path (this idea) both hinge on one choice: **which Zigbee integration stack**, and whether Zigbee is even the right radio. This comparison is the input for the Zigbee-stack ADR.
 
-**For the start** (just the A1Z 4-pack + quick go-live), **ZHA is the ideal quick path**; the thread's long-term architecture is **Z2M hosted independently** (see below).
+#### 6.1 Zigbee integration stacks — how HA talks to Zigbee
+
+| Feature | ZHA (Zigbee Home Automation) | Zigbee2MQTT (Z2M) | deCONZ / Phoscon |
+|---|---|---|---|
+| Type | Native, built into HA core | External Node.js app, publishes over MQTT | Vendor stack (dresden elektronik) + Phoscon UI |
+| Coordinator | Any zigpy-supported USB dongle (ZBDongle-P/E, ConBee) | Any supported USB dongle (ZBDongle-P/E, ConBee) | ConBee I/II/III (or RaspBee) only |
+| Setup | Zero-config — auto-detected | Needs an MQTT broker (Mosquitto) + config | Phoscon web UI; REST/WebSocket API |
+| Device support | Very large (thousands, via zigpy) | **Largest; fastest support for new devices** | Large, but lags on new devices |
+| Interface | Inside HA (Settings → Devices) | Separate advanced web panel | Phoscon panel + API |
+| Diagnostics | Basic / sufficient | Very detailed (map, logs, per-device config) | Good (network map) |
+| Independence from HA | Tied to the HA instance | **Fully independent** (MQTT-based) | Runs as its own service |
+| External data access | HA-only (via HA integrations/API) | **Any MQTT consumer** (mqtt2prometheus, AI agent) | deCONZ REST/WebSocket API |
+| Momentum (2026) | Mature, core-maintained | Mature, very active community | Declining; vendor-centric |
+
+**Verdicts**
+
+- **ZHA** — simplest; ideal for a quick start when all Zigbee stays inside HA.
+- **Zigbee2MQTT — the fit for this lab**: decoupled from HA (restarts never drop the mesh) and every device state is plain JSON over MQTT → enables the independent Prometheus monitoring (idea 06) and AI-agent access without touching HA. Extra moving part: an MQTT broker.
+- **deCONZ** — only worth it if ConBee hardware is already on hand; no reason to pick it for a new setup.
+
+#### 6.2 Adjacent radio protocols — should the lab use Zigbee at all?
+
+| Protocol | Radio | Pros | Cons | Fit for this lab |
+|---|---|---|---|---|
+| **Zigbee** | 2.4 GHz | Cheap devices (Nous/Tuya), mesh, mains plugs act as routers | 2.4 GHz congestion (Wi-Fi/Bluetooth overlap) | ✅ chosen — the Nous A1Z path |
+| Z-Wave (Z-Wave JS) | Sub-GHz (800–900 MHz) | No 2.4 GHz interference, better wall penetration | Pricier devices, thin cheap-DIY ecosystem, separate dongle | ❌ not for Nous/Tuya |
+| Matter / Thread | Thread = 2.4 GHz 802.15.4 | Vendor-neutral, local by default, future-proofing | Still maturing in HA (2026); A1Z plugs aren't Matter | ⏸️ watch — not needed now |
+| Wi-Fi / direct MQTT (ESPHome, Tasmota) | Wi-Fi | No extra radio; direct MQTT to broker | Chatty on the AP; cloud-app devices need reflashing | ❌ not the chosen path |
+
+**Recommendation (for the ADR)**: stay on **Zigbee** for the energy-monitoring plugs — it matches the already-chosen Nous hardware and the compact-plug/energy-measurement niche — and run **Zigbee2MQTT** as the stack, because only MQTT gives the independent Prometheus path and AI-agent access this idea is built around.
 
 ### 7. Architecture: independent power monitoring — Z2M decoupled from HA
 
@@ -127,7 +150,7 @@ Prometheus can't read MQTT natively — the dedicated exporter `mqtt2prometheus`
 
 1. **Purchase timing**: the Nous A1Z USED 4-pack at 109 zł is a promo price worth grabbing while available — re-verify price/stock at purchase time (noussmart.pl).
 2. **Coordinator**: ZBDongle-P (~90–100 zł, gold standard) vs cheaper ZBDongle-E — ties into the ZHA vs Z2M choice.
-3. **ZHA vs Z2M for the start**: ZHA = quick go-live; Z2M = the long-term independent architecture the user wants. Start with ZHA, migrate to Z2M later?
+3. **Zigbee stack decision (ADR input — see §6)**: [§6](#6-protocol-comparison--zigbee-stacks--adjacent-radios-adr-input) recommends **Zigbee + Zigbee2MQTT** for this lab — the ADR should settle whether to start with ZHA for a quick go-live and migrate to Z2M, or go straight to Z2M.
 4. **Where Prometheus/Grafana run**: the thread assumes the lab "already has" Prometheus — verify where it lives (k3s on the M910q?) and where `mqtt2prometheus` should be deployed (k3s vs LXC on the HA thin-client node).
 5. **Where Mosquitto/Z2M run**: research 26 (idea 05) puts them as **LXC containers on the Wyse 5070** next to the Home Assistant VM — does this thread's independent-metrics stack change that? (Probably not — the same LXC layout serves both.)
 6. **AI agent access**: which agent (opencode instance?) and how — MQTT ACLs + Prometheus API need to be wired into the agent's available tools.
