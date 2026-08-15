@@ -1,0 +1,9 @@
+---
+- name: Configure homelab M910q base
+  hosts: homelab
+  become: true
+  roles:
+    - common
+    - security
+    - docker_host
+    - azure_arc

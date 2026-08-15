@@ -1,0 +1,5 @@
+---
+arc_machine_name: homelab
+docker_users:
+  - jarek
+security_cloudflared_outbound_enabled: false

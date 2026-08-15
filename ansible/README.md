@@ -1,6 +1,8 @@
 # Ansible
 
-Configuration management for the Homelab Ubuntu hosts — the `cloudlab` Contabo VPS and eventually the physical `homelab` server. Ansible handles **pre-Arc** host provisioning (OS hardening, base tools, Docker, Arc agent install), while Azure Arc + Bicep handle **post-Arc** cloud management (monitoring, extensions, policies).
+Configuration management for the Homelab Ubuntu hosts — the `cloudlab` Contabo VPS and the physical `homelab` M910q server. Ansible handles **pre-Arc** host provisioning (OS hardening, base tools, Docker, Arc agent install), while Azure Arc + Bicep handle **post-Arc** cloud management (monitoring, extensions, policies).
+
+> **Control node per host.** `cloudlab` is managed from this dev container (see the `ansible-vps-connect` skill); `homelab` lives on the home LAN and is only reachable from a workstation on `192.168.2.0/24` — run the homelab playbook there (runbook 25).
 
 ## Quickstart
 
@@ -11,6 +13,9 @@ ansible-playbook ansible/playbooks/playbook.yml
 # Arc enrolment only (if host is already hardened)
 ansible-playbook ansible/playbooks/playbook-arc.yml
 
+# Homelab M910q base provision (from a LAN workstation, runbook 25)
+ansible-playbook ansible/playbooks/playbook-homelab.yml
+
 # OpenCode per-project workload (decoupled recipe)
 ansible-playbook ansible/workloads/opencode/opencode-playbook.yml
 ```
@@ -19,11 +24,12 @@ ansible-playbook ansible/workloads/opencode/opencode-playbook.yml
 
 | Path | Purpose |
 |---|---|
-| `inventory.ini` | Target hosts (`cloudlab` → `173.249.27.13`) |
+| `inventory.ini` | Target hosts (`cloudlab` → `173.249.27.13`, `homelab` → `192.168.2.200`) |
 | `ansible.cfg` | Inventory path, role path, SSH options |
 | `requirements.yml` | Required Ansible Galaxy collections (`community.docker`, `community.general`, `azure.azcollection`) |
 | `playbooks/playbook.yml` | Base provision: common → security → azure_arc → docker_host → docker_services; pre_tasks declares `opencode_net` |
 | `playbooks/playbook-arc.yml` | Arc enrolment only (for already-configured hosts) |
+| `playbooks/playbook-homelab.yml` | M910q base provision: common → security → docker_host → azure_arc (no `docker_services` — see below) |
 | `workloads/` | Self-contained workload recipes — playbook entrypoint, role recipes, ansible-side README, all co-located per workload |
 | `workloads/opencode/` | OpenCode per-project server workload (see [README](workloads/opencode/README.md)) |
 | `roles/` | Base shared roles: `common`, `security`, `azure_arc`, `docker_host`, `docker_services` |
@@ -56,12 +62,15 @@ Removes any OS-package Docker remnants, adds the official Docker repository, ins
 
 Manages the core Docker Compose stack on the host: `portainer`, `caddy` (with `cloudflared` reverse proxy), `hello`, plus the shared `homelab_net` and `opencode_net` bridge networks. Templates live in `roles/docker_services/templates/`.
 
+> **Not applied to `homelab`.** The M910q is compute-only (k3s target, ADR 22); its DNS/Caddy/tunnel roles moved to the edge appliance (ADR 24). The `docker_services` stack stays cloudlab-only.
+
 ## Playbooks
 
 | Playbook | Roles | When to use |
 |---|---|---|
 | `playbook.yml` | common → security → azure_arc → docker_host → docker_services | First-time VPS provision after initial SSH hardening (see [runbook 10](../docs/runbooks/10-vps-playground.md)) |
 | `playbook-arc.yml` | azure_arc | Adding Arc to an already-configured host |
+| `playbook-homelab.yml` | common → security → docker_host → azure_arc | M910q base provision after the 24.04 reinstall (see [runbook 25](../docs/runbooks/25-m910q-os-refresh.md)) |
 | `workloads/opencode/opencode-playbook.yml` | docker_opencode_ingress → docker_opencode_instances | Deploy the OpenCode per-project server workload (see [runbook 17](../docs/runbooks/17-deploy-opencode-on-cloudlab.md)) |
 
 ## Inventory
@@ -69,9 +78,12 @@ Manages the core Docker Compose stack on the host: `portainer`, `caddy` (with `c
 ```ini
 [vps]
 cloudlab ansible_host=173.249.27.13 ansible_user=labadmin
+
+[physical]
+homelab ansible_host=192.168.2.200 ansible_user=jarek
 ```
 
-The hostname `cloudlab` must resolve locally — add it to `C:\Windows\System32\drivers\etc\hosts` on the control machine.
+The hostnames must resolve on the control machine — add `cloudlab` and `homelab` to `C:\Windows\System32\drivers\etc\hosts` (or the equivalent) on the machine running Ansible. `homelab` requires `ansible_user=jarek` with the workstation SSH key; `cloudlab` uses `labadmin` (key from AKV).
 
 ---
 
