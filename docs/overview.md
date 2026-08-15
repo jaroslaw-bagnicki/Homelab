@@ -11,23 +11,23 @@ hardware detail see [Hardware Inventory](hardware.md); for change history see
 | Node | Role | Hardware / OS | IP | Status |
 |---|---|---|---|---|
 | **Homelab** | main workload host (Docker → k3s) | Lenovo M910q Tiny · Ubuntu 24.04 | `192.168.2.200` | ✅ |
-| **ML110 NAS** | backup target / NFS for Longhorn | HP ProLiant ML110 G5 · OMV 8.3 | `192.168.2.210` | ✅ |
+| **OMV NAS** | backup target / NFS for Longhorn | HP ProLiant ML110 G5 · OMV 8.3 | `192.168.2.210` | ✅ |
 | **TL-SG108E** | access switch | TP-Link 8× GigE (L2) | `192.168.2.230` | ✅ |
-| **Cloudlab** | staging / Ansible playground | Contabo VPS 10 · Ubuntu 24.04 | `173.249.27.13` | ✅ |
 | **Edge Ingress** | public ingress (cloudflared + Caddy) | Dell Wyse 3040 · Debian/Alpine TBD | TBD | 🔨 |
 | **Home Assistant** | smart home node | Wyse 5070 · Proxmox VE | TBD | 📋 |
 | **LLM server** | local LLM inference | Minisforum X1 Lite | TBD | 🧠 (Phase 2) |
+| **Cloudlab VPS** | staging / Ansible playground | Contabo VPS 10 · Ubuntu 24.04 | `173.249.27.13` | ✅ |
 
 ## Workloads
 
 | Workload | Runs on | Purpose | Status |
 |---|---|---|---|
-| **Portainer CE** | Cloudlab | Docker GUI | ✅ |
-| **Caddy** | Cloudlab | reverse proxy + auto-TLS | ✅ |
-| **cloudflared** | Cloudlab | Cloudflare Tunnel public HTTPS | ✅ |
-| **OpenCode instances** (`homelab`, `prospera`) | Cloudlab | per-project agentic dev servers | ✅ |
-| **Zot** | Cloudlab | self-hosted OCI registry + pull-through cache | ✅ |
-| **OMV NAS shares** | ML110 | NFS/SMB exports, Longhorn backup target | 🔨 (Phase 2) |
+| **Portainer CE** | Cloudlab VPS | Docker GUI | ✅ |
+| **Caddy** | Cloudlab VPS | reverse proxy + auto-TLS | ✅ |
+| **cloudflared** | Cloudlab VPS | Cloudflare Tunnel public HTTPS | ✅ |
+| **OpenCode instances** (`homelab`, `prospera`) | Cloudlab VPS | per-project agentic dev servers | ✅ |
+| **Zot** | Cloudlab VPS | self-hosted OCI registry + pull-through cache | ✅ |
+| **OMV NAS shares** | OMV NAS | NFS/SMB exports, Longhorn backup target | 🔨 (Phase 2) |
 | **Restic backup** | Homelab | snapshots to Azure Blob | 📋 |
 | **SQL Server** | Homelab | Developer Edition in Docker | 📋 |
 | **Gitea** | Homelab | self-hosted Git | 📋 |
@@ -43,12 +43,12 @@ Tenda Nova mesh — 192.168.2.0/24, gateway 192.168.2.1 (single broadcast domain
         │
         └── TL-SG108E switch (192.168.2.230)
                  ├── Homelab M910q    — 192.168.2.200
-                 ├── ML110 NAS (OMV)  — 192.168.2.210
+                 ├── OMV NAS         — 192.168.2.210
                  ├── Edge Ingress      — TBD (future ingress)
                  └── work laptop dock — DHCP (corporate)
 ```
 
-Cloudlab (Contabo VPS) sits outside the LAN with its own Cloudflare Tunnel + Caddy (ADR 19).
+Cloudlab VPS (Contabo) sits outside the LAN with its own Cloudflare Tunnel + Caddy (ADR 19).
 
 ---
 

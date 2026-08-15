@@ -41,7 +41,7 @@ Applications currently run in **Docker Compose**; the migration to **Kubernetes 
 is enrolled in **[Azure Arc](docs/decisions/04-hybrid-cloud-azure-arc.md)** for cloud-side monitoring and policy, and exposed
 to the internet via **[Cloudflare Tunnel](docs/decisions/08-remote-access-cloudflare-tunnel.md)** behind a **[Caddy](docs/decisions/07-reverse-proxy-caddy.md)** reverse proxy.
 
-The **network layer** terminates homelab gear on a **TP-Link TL-SG108E** access switch (`192.168.2.230`) with a single uplink to the office Tenda Nova mesh — one office drop → multiple wired devices. Static reservations in `192.168.2.200+`: Lenovo M910q Homelab `.200`, HP ML110 NAS `.210`. See [research 24](docs/research/24-network-topology-design.md) and [runbook 21](docs/runbooks/21-tl-sg108e-switch.md).
+The **network layer** terminates homelab gear on a **TP-Link TL-SG108E** access switch (`192.168.2.230`) with a single uplink to the office Tenda Nova mesh — one office drop → multiple wired devices. Static reservations in `192.168.2.200+`: Lenovo M910q Homelab `.200`, HP ML110 OMV NAS `.210`. See [research 24](docs/research/24-network-topology-design.md) and [runbook 21](docs/runbooks/21-tl-sg108e-switch.md).
 
 ---
 
@@ -68,7 +68,7 @@ Ansible runs first on the bare host (OS config, Docker, Arc agent). Bicep deploy
 |---|---|---|---|
 | [#13](https://github.com/jaroslaw-bagnicki/Homelab/issues/13) | **Restic backup** (redo) | ⭐⭐ | Daily snapshots to Azure Blob Storage — see [runbook](docs/runbooks/07-restic-backup.md) |
 | [#65](https://github.com/jaroslaw-bagnicki/Homelab/issues/65) | **Edge ingress appliance** | ⭐⭐ | Move public ingress (`cloudflared` + Caddy) to a Wyse 3040 thin client — [runbook 24](docs/runbooks/24-edge-appliance.md) · [ADR 24](docs/decisions/24-edge-ingress-appliance.md) |
-| [#54](https://github.com/jaroslaw-bagnicki/Homelab/issues/54) | **ML110 NAS (OMV)** | ⭐⭐ | OMV 8.3 installed, RAID1 arrays online ([runbook 23](docs/runbooks/23-ml110-omv-setup.md)); next: NFS/SMB exports + Longhorn backup target |
+| [#54](https://github.com/jaroslaw-bagnicki/Homelab/issues/54) | **OMV NAS** | ⭐⭐ | OMV 8.3 installed, RAID1 arrays online ([runbook 23](docs/runbooks/23-ml110-omv-setup.md)); next: NFS/SMB exports + Longhorn backup target |
 |  | **Home Assistant** | ⭐⭐ | Dedicated HA thin-client node — Proxmox VE VM + MQTT/Zigbee2MQTT — [idea 05](docs/ideas/05-home-assistant-thin-client.md) · [ADR 25](docs/decisions/25-home-assistant-thin-client.md) |
 | [#44](https://github.com/jaroslaw-bagnicki/Homelab/issues/44) | **k3s migration** | ⭐⭐⭐ | Migrate workloads from Docker Compose to Kubernetes (k3s + Arc) — per [ADR 22](docs/decisions/22-k3s-arc-homelab.md) |
 |  | **Hermes Agent** | ⭐⭐⭐ | Most complex — last |
