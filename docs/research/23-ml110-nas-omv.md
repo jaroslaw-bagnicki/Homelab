@@ -211,6 +211,33 @@ At ~€150–200/yr this is the most power-hungry box in the homelab — the M91
 
 **Recommendation:** apply Phase 1 (spindown) after a wattmeter baseline; escalate to scheduled power or the Q956 only if the measured saving stays below ~€40/yr.
 
+### Acoustic & power management (AAM / APM)
+
+OMV exposes per-disk AAM/APM under `Storage | Disks → Edit` (backed by `hdparm`). Both are
+**set-and-apply** config that OMV re-applies at boot, so the values survive reboots.
+
+- **AAM — Advanced Acoustic Management (`hdparm -M`)** trades seek speed for seek noise:
+  - `Disabled` (default) — drive's own factory seek profile.
+  - `Minimum performance, minimum acoustic output` — **quietest** (acoustic level ~128).
+  - `Maximum performance, maximum acoustic output` — loudest (fastest seeks).
+  - **Effect on noise:** removes most of the rapid *click-clack* seek clatter — the dominant
+    annoying sound on these 3.5" drives. Small random-access perf hit; irrelevant for a NAS.
+- **APM — Advanced Power Management (`hdparm -B`)** manages the drive's power/standby state:
+  - Values **1–127** permit **spindown/standby** — **do not use on RAID members**: if mdadm
+    writes to a parked drive, the slow wake can make mdadm mark it **failed** → array degraded.
+  - Values **128–254** keep the disk **spinning** (no spindown) but allow idle head parking /
+    reduced power.
+  - `Disabled` — no power management (full power always).
+- **Spindown time (`hdparm -S`)** — the idle timeout after which a drive parks; same RAID risk
+  as APM < 128. Left **disabled** on all RAID members.
+
+**Applied 2026-08-15:** **AAM = quietest** on all 4 data drives (both Hitachis, WD2500AAKX,
+GB0250EAFYK). **APM and Spindown left Disabled** — APM 128 would only trim idle draw at the
+cost of extra load/unload cycling (a wear factor on these older drives) and does not reduce the
+audible hum; spindown is a RAID-reliability trap (see above). The noise lever is **AAM**; the
+power lever is spindown / scheduled power (below), not APM. (Runbook 22 §6 records the live
+values per drive.)
+
 ---
 
 ## References

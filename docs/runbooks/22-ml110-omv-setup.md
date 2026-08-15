@@ -26,6 +26,7 @@
 - [ ] 1 TB spare content reviewed, role decided (**in progress** — §7)
 - [x] OMV web UI reachable at `https://192.168.2.210` (HTTPS-only, §4d)
 - [x] SSH hardening — **applied** (key-only, LAN-only, root console-only — §8, 2026-08-15)
+- [x] Disk noise tuning — **AAM = quietest on all 4 data drives** (APM/spindown left off — §6, 2026-08-15)
 - [ ] OpenCode cloud-instance SSH key (**dropped for now** — instance on Cloudlab, no path to NAS; revisit when it moves home)
 
 > **Execution log — 2026-08-09**
@@ -49,6 +50,9 @@
 > - SSH: user **`jarek`** created via web UI (`_ssh`, `sudo`, `users`, `openmediavault-admin`,
 >   `openmediavault-webgui`), workstation `lenovo-slim` pubkey attached. Hardening applied via
 >   `Services | SSH`: key-only, LAN-only (`Match Address`), root console-only (§8, 2026-08-15).
+> - Disk noise tuning: **AAM = quietest** (`Minimum performance, minimum acoustic output`) set on
+>   all 4 data drives via `Storage | Disks → Edit`, applied 2026-08-15 (§6). APM and Spindown
+>   deliberately left `Disabled` (RAID-safety + wear — see §6 / research 23).
 
 ---
 
@@ -288,6 +292,38 @@ ping 192.168.2.210            # static IP reachable
 | Services (table + grid) | running services two ways |
 
 Default settings elsewhere untouched (auto-logout etc. left as-is).
+
+### Disk acoustic & power management (AAM/APM — applied 2026-08-15)
+
+Noise is the biggest concern on this box, so AAM is set to **quietest** on all 4 data drives
+(the 2× Hitachi 500 GB + WD2500AAKX + GB0250EAFYK — *not* the Goodram OS SSD).
+`Storage | Disks` → select a data drive → **Edit** → **Advanced Acoustic Management** →
+**Minimum performance, minimum acoustic output** → Save (repeat per drive) → **Apply**.
+
+> Match drives by **serial**, not `/dev/sdX` — OMV device letters shift across reboots/SCSI
+> enumeration (2026-08-15: sda=Hitachi JP1572FL1849SK, sdb=WD2500AAKX, sdc=Goodram SSD,
+> sdd=GB0250EAFYK, sde=Hitachi JP1572FL167V6K).
+
+| OMV device (2026-08-15) | Drive | Serial | AAM |
+|---|---|---|---|
+| `/dev/sda` | Hitachi HDS721050CLA660 | `JP1572FL1849SK` | 🔇 quietest |
+| `/dev/sdb` | WDC WD2500AAKX | `WD-WCC2F0157761` | 🔇 quietest |
+| `/dev/sdd` | GB0250EAFYK | `WCAT1F035986` | 🔇 quietest |
+| `/dev/sde` | Hitachi HDS721050CLA660 | `JP1572FL167V6K` | 🔇 quietest |
+| `/dev/sdc` | Goodram C40 SSD | `1C9C074614D500572350` | n/a (SSD) |
+
+**Deliberately not set** (full AAM/APM analysis in [research 23](../research/23-ml110-nas-omv.md)):
+
+- **APM** — left `Disabled`. The only RAID-safe value (≥128) doesn't spin down but adds head
+  load/unload cycles (wear) for marginal power saving; it doesn't reduce the hum.
+- **Spindown time** — left `Disabled`. Never spin down RAID members: mdadm can mark a
+  slow-to-wake drive as **failed** → array degradation.
+
+Verify (`hdparm` needs root):
+
+```sh
+sudo hdparm -M /dev/sda /dev/sdb /dev/sdd /dev/sde   # expect: acoustic = 128 (minimum)
+```
 
 ---
 
