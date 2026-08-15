@@ -26,25 +26,25 @@ Adopt a **two-tier layered monitoring model**:
 
 AMA → Log Analytics (`homelab-law`) on **Arc-enrolled nodes only**: the M910q (after the #74 24.04 refresh), `cloudlab` (already live), and the k3s cluster via **Container Insights** (ADR 22). Free-tier surface: portal health/compliance, policy, heartbeat, KQL.
 
-### Tier B — Netdata on every node (local real-time plane)
+### Tier B — Local monitoring stack (first component: Netdata)
 
-**Netdata agent per node → Netdata Parent** (k3s workload on the M910q) → **Netdata dashboard + alarms**. Covers the Edge, Home Assistant, NAS, Cloudlab, and future LLM node — Arc or not.
+**Tier B is the local monitoring stack on the homelab; Netdata is its first — currently only — adopted component.** Netdata agent per node → **Netdata Parent** (k3s workload on the M910q) → **Netdata dashboard + alarms**. Covers the Edge, Home Assistant, NAS, Cloudlab, and future LLM node — Arc or not.
 
-- **Agent on all nodes** — M910q, ML110 OMV NAS, Edge Wyse 3040, HA Proxmox host (Wyse 5070), `cloudlab` VPS, future LLM node: a uniform agent across Ubuntu, Debian, OMV, Proxmox, and (trial pending) Alpine.
+- **Netdata agent on all nodes** — M910q, ML110 OMV NAS, Edge Wyse 3040, HA Proxmox host (Wyse 5070), `cloudlab` VPS, future LLM node: a uniform agent across Ubuntu, Debian, OMV, Proxmox, and (trial pending) Alpine.
 - **Parent placement** — Netdata Parent runs as a **k3s workload on the M910q** after the ADR 22 migration; until then children run **standalone** (local `dbengine` + alarms) and re-point to the parent when it lands.
 - **Edge Wyse 3040 — minimal agent (explicit ADR 24 override).** Smallest practical footprint; Alpine compatibility validated during the Debian-vs-Alpine on-device trial.
 - **Metrics-only scope.** Provisioned via a new Ansible `netdata` role (ADR 10).
-- **Extensions of Tier B (not adopted — no ADR yet):** **Grafana, Prometheus, Fluent Bit, Loki.** Netdata's Prometheus-compatible export is the future integration point for a dashboard/analytics (and log) extension; **ADR 26's power path** (Z2M → `mqtt2prometheus` → Prometheus → Grafana) is the only committed Prometheus/Grafana usage today. These extensions are adopted only via their own future ADRs.
+- **Future components of Tier B (extensions — not adopted, no ADR yet):** **Grafana, Prometheus, Fluent Bit, Loki.** Netdata's Prometheus-compatible export is the future integration point for a dashboard/analytics (and log) component; **ADR 26's power path** (Z2M → `mqtt2prometheus` → Prometheus → Grafana) is the only committed Prometheus/Grafana usage today. Components are added incrementally via their own future ADRs.
 
 ### Boundary rule
 
 - **Arc = management plane only.** Tier A is for portal/policy/compliance visibility on Arc-enrolled surfaces.
 - **Per-node real-time metrics come from Netdata on all nodes** (Tier B) — never a gap on non-Arc devices.
-- **Tier B extensions** (Grafana/Prometheus/Fluent Bit/Loki) are adopted only through their own future ADRs, not this one.
+- **Future Tier B components** (Grafana/Prometheus/Fluent Bit/Loki) are adopted only through their own future ADRs, not this one.
 
 ## Consequences
 
-- **Two planes to run** — Azure Monitor (Tier A) and the local Netdata plane (Tier B). Tier A stays within the LAW free tier; Tier B is self-hosted on the M910q.
+- **Two planes to run** — Azure Monitor (Tier A) and the local monitoring stack (Tier B, Netdata as its first component). Tier A stays within the LAW free tier; Tier B is self-hosted on the M910q.
 - **Single Netdata Parent pane** for every node's real-time metrics; **non-Arc nodes fully covered** (Edge, HA, NAS) where Azure could never reach.
 - **One agent everywhere** — a uniform monitoring tool across heterogeneous nodes; auto-discovers containers, VMs/LXC (Proxmox), and services with rich out-of-the-box metrics.
 - **Standalone-first, parent-later** — every child is useful immediately (local dashboard + alarms) before the k3s central plane exists; re-pointing to the parent is a config change, not a reinstall.
@@ -52,14 +52,13 @@ AMA → Log Analytics (`homelab-law`) on **Arc-enrolled nodes only**: the M910q 
 - **Container Insights (ADR 22)** is now defined as the Tier A cluster extension, not a replacement for the local plane.
 - **ADR 26's independence requirement** (monitoring survives Home Assistant restarts) is satisfied: the Tier B plane lives on the M910q k3s, not the HA node.
 - **New operational overhead** — a Netdata agent per node (~100–150 MB default; minimal profile ~60–100 MB on the constrained Edge) and a central plane to maintain.
-- **Two dashboards to learn** — Azure Portal (management) and the Netdata dashboard (operations); a Grafana surface appears only if the Tier B extension is adopted.
+- **Two dashboards to learn** — Azure Portal (management) and the Netdata dashboard (operations); a Grafana surface appears only if a future Tier B component is adopted.
 
 ### Alternatives Considered
 
 - **Azure Monitor as the sole stack** — a single sink, but structurally cannot cover Edge/HA/NAS (never Arc-enrolled), no real-time pane, and portal-centric. Rejected.
 - **Pure local OSS, no Azure** — simpler, one stack, but loses the Arc management-plane benefits (policy, compliance, portal, heartbeat) that ADR 04/09 bought with zero cost. Rejected.
 - **Per-node one-off agents (cockpit/htop) with no central aggregation** — no cross-node view, no history, no alerting. Rejected.
-- **Prometheus node_exporter as the local agent** — lighter than Netdata but no dashboard, no alarms, no auto-discovery, and useless standalone (needs a central Prometheus from day one). Rejected in favor of Netdata.
 
 ---
 
