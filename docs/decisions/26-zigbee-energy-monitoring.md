@@ -7,7 +7,7 @@
 
 ## Context
 
-The lab needs per-node power-consumption monitoring of its own infrastructure — an independent, always-on capability that does not depend on Home Assistant's availability or restarts, with data available to the homelab monitoring stack (Tier B, [ADR 27](27-monitoring-strategy.md)) and the AI agent. The full analysis (radio/protocol comparison, device & coordinator selection, prices, architecture) is in [research 27](../research/27-zigbee-energy-monitoring.md) · [idea 06](../ideas/06-homelab-energy-monitoring.md).
+The lab needs per-node power-consumption monitoring of its own infrastructure — an independent, always-on capability that does not depend on Home Assistant's availability or restarts, with data available to the homelab monitoring stack and the AI agent. The full analysis (radio/protocol comparison, device & coordinator selection, prices, architecture) is in [research 27](../research/27-zigbee-energy-monitoring.md) · [idea 06](../ideas/06-homelab-energy-monitoring.md).
 
 ## Decision
 

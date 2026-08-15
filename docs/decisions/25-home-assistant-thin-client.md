@@ -22,7 +22,7 @@ Adopt a dedicated, fanless **Dell Wyse 5070** (Celeron J4105, 2× DDR4 SO-DIMM, 
 - **LXC 102** — Zigbee2MQTT (1 vCPU / 512 MB, USB Zigbee coordinator passed through)
 - **8 GB RAM** (16 GB future-proof), **M.2 SATA SSD 64–256 GB** (128 GB practical pick; 64 GB sufficient)
 - Proxmox managed via **Ansible `community.proxmox`** (ADR 10 pattern)
-- **Netdata + Fluent Bit** on the Proxmox host, forwarding metrics/logs to the M910q Tier B central plane (Netdata parent / Prometheus / Grafana / Loki — [ADR 27](27-monitoring-strategy.md))
+- **Netdata** on the Proxmox host, streaming metrics to the M910q Netdata Parent (Tier B, [ADR 27](27-monitoring-strategy.md))
 
 The Wyse 5070 is preferred over the Futro S740 on **design/look** (both run the same J4105; the S740's claimed PCIe x4 slot was a Gemini error) and over the M600 on performance and RAM.
 

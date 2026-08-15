@@ -4,9 +4,8 @@
 **Status:** Implemented (partial)
 
 > **Scope (amended 2026-08-15):** This ADR covers only the **Azure Monitor (Tier A)** element of
-> the two-tier monitoring strategy ([ADR 27](27-monitoring-strategy.md)). It is kept in place as
-> the record of the Azure Monitor setup; the overall strategy also includes a local
-> Netdata/Prometheus/Grafana plane on all nodes ([ADR 28](28-netdata-adoption.md)).
+> the two-tier monitoring strategy ([ADR 27](27-monitoring-strategy.md)); the overall strategy's
+> Tier B is a local **Netdata plane** on all nodes.
 
 ---
 
