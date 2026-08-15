@@ -1,7 +1,7 @@
 # Zigbee Energy Monitoring — Z2M → Prometheus, Independent of Home Assistant
 
-**Date:** 2026-08-15
-**Status:** Accepted
+**Date:** 2026-08-15  
+**Status:** Accepted  
 
 ---
 
@@ -16,7 +16,7 @@ Adopt **Zigbee + Zigbee2MQTT** for homelab power monitoring, decoupled from Home
 - **Radio**: Zigbee — over Z-Wave, Matter/Thread, and Wi-Fi/Tasmota (MQTT-native, low-power, richest device ecosystem for the lab).
 - **Stack**: **Zigbee2MQTT**, not ZHA — fully independent of HA; every device state is plain JSON over MQTT, which satisfies the must-have of direct homelab-infra + AI-agent integration.
 - **Coordinator**: **Sonoff ZBDongle-P** (CC2652P / Z-Stack) — the most mature, stable path for Z2M.
-- **Devices**: **Nous A1Z** energy plugs (W/A/V/kWh); starter set = **4× A1Z** (USED 4-pack, ~109 PLN), expandable to one plug per key node later.
+- **Devices**: **Nous A1Z** energy plugs (W/A/V/kWh); starter set = **4× A1Z** (USED 4-pack), expandable to one plug per key node later.
 - **Path**: Z2M → Mosquitto → `mqtt2prometheus` → Prometheus → Grafana; AI-agent access via restricted MQTT ACL (control) + Prometheus API (read-only).
 - **Home Assistant is optional** — it may join the same broker later; monitoring runs standalone (e.g. bootstrap on the M910q, research 27 §7.1).
 
@@ -27,7 +27,7 @@ Adopt **Zigbee + Zigbee2MQTT** for homelab power monitoring, decoupled from Home
 - **MQTT-centric** — any consumer (Grafana, HA, AI agent, exporter) reads the same broker.
 - The Zigbee mesh + ZBDongle-P coordinator is **shared with the future Home Assistant node** (idea 05 / ADR 25).
 - Adds an MQTT broker (Mosquitto) to the stack.
-- Commits spend: ZBDongle-P (~95–99,90 PLN) + 4× A1Z USED 4-pack (~109 PLN).
+- Commits spend: ZBDongle-P + 4× A1Z USED 4-pack — current PL-market prices in research 27.
 
 ### Alternatives Considered
 
