@@ -13,6 +13,7 @@ Significant architectural and technology choices recorded in
 
 | # | Date | ADR | Status |
 |---|------|-----|--------|
+| 26 | 2026-08-15 | [Zigbee Energy Monitoring — Z2M → Prometheus, Independent of Home Assistant](26-zigbee-energy-monitoring.md) | Accepted |
 | 25 | 2026-08-14 | [Home Assistant on a Dedicated Thin-Client Node (Wyse 5070 + Proxmox VE)](25-home-assistant-thin-client.md) | Proposed |
 | 24 | 2026-08-09 | [Edge Ingress on a Dedicated Thin-Client Appliance](24-edge-ingress-appliance.md) | Accepted |
 | 23 | 2026-08-08 | [NAS on the HP ProLiant ML110 (OpenMediaVault)](23-nas-on-ml110.md) | Accepted |
