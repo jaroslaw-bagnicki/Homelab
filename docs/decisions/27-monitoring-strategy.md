@@ -1,4 +1,4 @@
-# Homelab Monitoring & Observability Strategy — Two-Tier Model (Azure Monitor via Arc + Netdata on Every Node)
+# Homelab Monitoring & Observability Strategy — Two-Tier Model (Azure Monitor via Arc + Local Monitoring Stack)
 
 **Date:** 2026-08-15  
 **Status:** Accepted
