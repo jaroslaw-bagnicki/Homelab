@@ -107,6 +107,7 @@ Merges always go through a pull request — the agent never merges to `main` loc
 2. `git push -u origin <branch>` — push immediately
 3. Open a PR via GitHub MCP tools (`create_pull_request`) only when asked by the user
    - **PR title**: no `(type)` prefix (e.g. not `(feat) …`) — use labels to convey the type. The `(type)` prefix convention applies to **commit messages only**.
+   - **PR description**: do **not** use the **Why / What / How (WWH)** format — that is **reserved for GitHub Issues only**. PR descriptions are a plain summary of the **Changes** (and any **Notes**) with no WWH headings.
 4. **Stop.** The human reviews and merges via the GitHub UI — the agent never merges the PR itself
 5. After the PR is merged, clean up in the primary checkout: `git pull --ff-only origin main`, then `git worktree remove ../Homelab-<short-topic>` and `git branch -d <branch>`
 
