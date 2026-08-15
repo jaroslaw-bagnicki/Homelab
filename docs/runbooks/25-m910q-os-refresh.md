@@ -28,10 +28,13 @@ The refresh re-aligns the box with ADR 05 and unblocks that track.
 
 - **On the LAN workstation** (the Ansible control node):
   - This repo checked out on branch `feat/m910q-refresh`
+  - **PowerShell** with the **Posh-SSH** module (`Install-Module Posh-SSH -Scope CurrentUser`)
+  - The workstation SSH **public** key at `$env:USERPROFILE\.ssh\id_ed25519.pub`
+    (uploaded to `labadmin` by the bootstrap script; runbook 01 §5)
   - Ansible + collections: `ansible-galaxy install -r ansible/requirements.yml`
   - `az` CLI (or Az PowerShell) **logged in** — the `azure_arc` role fetches the SPN
     secret from Key Vault on the control node (`lookup('azure.azcollection.azure_keyvault_secret')`)
-  - SSH key for `labadmin@192.168.2.200` (the `lenovo-slim` key, runbook 01 §5)
+  - The **root breaking-glass password** (Keeper) — needed by the bootstrap script
 - **Bootable USB** with Ubuntu Server 24.04 LTS ISO (YUMI/Rufus, runbook 01 §0) and a **SystemRescue** ISO.
 - **Keyboard + monitor** attached to the M910q (direct console for the reinstall).
 - Backup of any data on the M910q you want to keep (configs in `/opt/docker`, volumes)
@@ -72,6 +75,10 @@ The refresh re-aligns the box with ADR 05 and unblocks that track.
 
 ## 1. Reinstall Ubuntu Server 24.04 LTS
 
+The only typing during install: static IP + a **root breaking-glass password** + OpenSSH
+server. Everything after (the `labadmin` agent account, SSH key, hardening) is done by
+`scripts/New-HomelabLabadmin.ps1` in §2.
+
 1. Boot the M910q from the **Ubuntu Server 24.04 LTS USB** (F12 boot menu).
 2. In the installer's **Network connections** screen set the interface (`enp0s31f6`):
 
@@ -82,42 +89,55 @@ The refresh re-aligns the box with ADR 05 and unblocks that track.
    | Gateway | `192.168.2.1` |
    | Name servers | `1.1.1.1, 8.8.8.8` |
 
-3. **Create the `labadmin` user when prompted** (name it exactly `labadmin`; the installer
-   adds it to `sudo`). **Install OpenSSH server** when prompted. Complete the install and
-   reboot (remove the USB).
-4. **Verify:**
+3. **Set a root password** (the breaking-glass account) — the installer's profile screen
+   has a "Set a root password" option; use it instead of creating a regular user. Store
+   the password in **Keeper**. It is only used by the bootstrap script in §2 and kept
+   console-only afterwards.
+4. **Install OpenSSH server** when prompted. Complete the install and reboot (remove the USB).
+5. **Verify:**
    ```sh
    ip addr show enp0s31f6 | grep 'inet '
    # Expected: 192.168.2.200/24
    ```
 
-## 2. Post-Install Base
+> **Why root, not a regular user, during install:** the bootstrap script (§2) connects as
+> root to create the `labadmin` agent account and upload the workstation key. No regular
+> user exists on the box until the script makes `labadmin` — the machine never carries a
+> throwaway human account.
+
+## 2. Bootstrap — labadmin Agent Account (`scripts/New-HomelabLabadmin.ps1`)
 
 The LVM root extension and Avahi (mDNS) are handled by `playbook-homelab.yml`
-(pre_task + `common` role), so they run the same way on every rebuild. What's done here
-manually: finish the `labadmin` agent account setup and upload the SSH key **from the
-workstation**.
+(pre_task + `common` role), so they run the same way on every rebuild. The `labadmin`
+agent account is created by the **bootstrap script** — no manual typing beyond the root
+password.
 
-1. **Harden the `labadmin` agent account** (at the console or over SSH as `labadmin`,
-   mirroring runbook 10 §3):
+1. **One console command — enable root SSH password login for the bootstrap** (Ubuntu's
+   default `PermitRootLogin prohibit-password` blocks the script's root connection):
    ```sh
-   echo "labadmin ALL=(ALL) NOPASSWD: ALL" | sudo tee /etc/sudoers.d/labadmin
-   sudo chmod 440 /etc/sudoers.d/labadmin
-   sudo mkdir -p /home/labadmin/.ssh && sudo chmod 700 /home/labadmin/.ssh
+   echo 'PermitRootLogin yes' > /etc/ssh/sshd_config.d/99-root-bootstrap.conf && systemctl restart ssh
    ```
-   `NOPASSWD` sudo is required for Ansible `become: true` to run non-interactively.
+   The script removes this drop-in when it finishes (step 2), so root returns to
+   console-only.
 
-2. **Upload the SSH key from the workstation** (PowerShell — runbook 10 §4):
+2. **From the workstation**, run the bootstrap script (PowerShell):
    ```powershell
-   type $env:USERPROFILE\.ssh\id_ed25519.pub | ssh labadmin@192.168.2.200 "cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
+   Install-Module Posh-SSH -Scope CurrentUser -Force   # if not installed
+   ./scripts/New-HomelabLabadmin.ps1
    ```
+   It prompts for the **root breaking-glass password** (Keeper), then remotely, as root:
+   - creates the `labadmin` user (sudo group, disabled password)
+   - writes `/etc/sudoers.d/labadmin` with `NOPASSWD: ALL` (for Ansible `become`)
+   - uploads the workstation `id_ed25519.pub` to `labadmin`'s `authorized_keys`
+   - locks the `labadmin` password (key-only agent account)
+   - removes `99-root-bootstrap.conf` and restarts sshd (root SSH back to console-only)
+   Idempotent — safe to re-run.
 
-3. **Lock the password** (key-only account — dedicated for the agent):
-   ```sh
-   sudo passwd --lock labadmin
+3. **Verify:**
+   ```powershell
+   ssh labadmin@homelab
+   sudo whoami   # should print "root"
    ```
-
-4. **Verify:** `ssh labadmin@homelab` from the workstation logs in without a password.
    Pure hostname resolution works out of the box via **LLMNR** (Ubuntu's
    `systemd-resolved` responds by default); `homelab.local` needs Avahi (installed by
    the playbook) for mDNS.
