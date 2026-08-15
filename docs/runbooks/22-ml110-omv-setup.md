@@ -47,6 +47,8 @@
 > - RAID UI plugin: OMV 8 has **no RAID page in the base install** — the `openmediavault-md`
 >   plugin (8.1.5-1) had to be installed first; OMV upgraded 8.3.1 → 8.5.6-1 in the process (see §5).
 > - Dashboard: all widgets enabled on the home dashboard via `Dashboard | Settings` (§6, executed after RAID).
+
+> **Execution log — 2026-08-15**
 > - SSH: user **`jarek`** created via web UI (`_ssh`, `sudo`, `users`, `openmediavault-admin`,
 >   `openmediavault-webgui`), workstation `lenovo-slim` pubkey attached. Hardening applied via
 >   `Services | SSH`: key-only, LAN-only (`Match Address`), root console-only (§8, 2026-08-15).
@@ -254,7 +256,7 @@ management). Shared folders / exports are **Phase 2** (issue #62) — not create
 
 ---
 
-## 6. Verify
+## 6. Verify & Post-Install Tuning
 
 ```sh
 # Arrays assembled

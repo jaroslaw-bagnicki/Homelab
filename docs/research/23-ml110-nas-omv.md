@@ -215,11 +215,18 @@ At ~€150–200/yr this is the most power-hungry box in the homelab — the M91
 ### Optimization plan
 
 1. **Measure first** — one wattmeter reading to confirm the ~80 W idle baseline before investing in mitigations.
-2. **HDD spindown (free, Phase 1)** — OMV idle spindown (`hdparm -S`, conservative 20–30 min timeout) for the 4 HDDs; the SSD stays up. The NAS is a backup target touched only during backup windows (nightly restic, Longhorn snapshots per ADR 22), so drives can stay parked most of the day. Saves ~20 W → ~€35–50/yr; a long timeout keeps spin-up cycles rare, avoiding extra disk wear.
-3. **Scheduled power, only if needed** — boot the box only for the backup window (RTC wake / WoL, e.g. 23:00–06:00). Cuts cost to roughly a third (~€50–65/yr) but drops always-on NFS — fine for batch restic/Longhorn, not for interactive access.
-4. **Revisit the Q956 as a power move** — per the comparison row above the Q956 runs at ~1/4 the cost (~€40–45/yr, ~€110–160/yr saved). Its ~195 PLN acquisition + 2× 2.5" drives + caddy pays back in under a year on power alone. Keep the ML110 only if the 4× 3.5" bays or the spare 1 TB matter.
+2. **No HDD spindown** — all 4 HDDs are **mdadm RAID1 members** (`md0` + `md1`), so idle spindown
+   is **off the table**: mdadm can mark a slow-to-wake drive as **failed** → array degradation
+   (see the AAM/APM section below). The SSD stays up regardless.
+3. **Scheduled power (the power lever for this setup)** — boot the box only for the backup window
+   (RTC wake / WoL, e.g. 23:00–06:00). Cuts cost to roughly a third (~€50–65/yr) but drops
+   always-on NFS — fine for batch restic/Longhorn, not for interactive access.
+4. **Revisit the Q956 as a power move** — per the comparison row above the Q956 runs at ~1/4 the
+   cost (~€40–45/yr, ~€110–160/yr saved). Its ~195 PLN acquisition + 2× 2.5" drives + caddy pays
+   back in under a year on power alone. Keep the ML110 only if the 4× 3.5" bays or the spare 1 TB matter.
 
-**Recommendation:** apply Phase 1 (spindown) after a wattmeter baseline; escalate to scheduled power or the Q956 only if the measured saving stays below ~€40/yr.
+**Recommendation:** with spindown excluded for the RAID members, the realistic levers are scheduled
+power (item 3) or the Q956 (item 4) — decide after a wattmeter baseline.
 
 ### Acoustic & power management (AAM / APM)
 
