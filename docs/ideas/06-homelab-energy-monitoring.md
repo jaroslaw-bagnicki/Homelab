@@ -5,7 +5,7 @@
 **Status**: 🧠 Idea — research 27 done, no hardware acquired  
 **Date**: 2026-08-15  
 **Research**: [Research 27 — Zigbee energy monitoring](../research/27-zigbee-energy-monitoring.md) — the full research output  
-**Related**: [Idea 05 — Home Assistant on a Thin Client](05-home-assistant-thin-client.md) / [Research 26](26-home-assistant-thin-client.md) / ADR 25
+**Related**: [Idea 05 — Home Assistant on a Thin Client](05-home-assistant-thin-client.md) / [Research 26](../research/26-home-assistant-thin-client.md) / ADR 25
 
 ---
 

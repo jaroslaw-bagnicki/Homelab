@@ -1,12 +1,12 @@
 # 27 — Zigbee Energy Monitoring for the Homelab — Nous A1Z plugs + Prometheus
 
-**Source**: Gemini chat (3.6 Flash), Aug 13 2026 · [share.gemini.google/pS8nxsp7MNcY](https://share.gemini.google/pS8nxsp7MNcY) (resolves to [gemini.google.com/share/daf15799b559](https://gemini.google.com/share/daf15799b559))
+**Source**: Gemini chat (3.6 Flash), Aug 13 2026 · [gemini.google.com/share/daf15799b559](https://gemini.google.com/share/daf15799b559)
 
 **Scope**: Exploratory research for **idea 06** — monitoring homelab power consumption via Zigbee energy-measuring plugs (**Nous A1Z**), a USB Zigbee coordinator (**Sonoff ZBDongle-P**), and an independent **Zigbee2MQTT → mqtt2prometheus → Prometheus → Grafana** path that also exposes power data (and optional control) to the homelab AI agent.
 
 **Status**: 📝 Analysis — no hardware acquired yet; direction feeds idea 06. Complements [idea 05](../ideas/05-home-assistant-thin-client.md) / [research 26](26-home-assistant-thin-client.md) (Home Assistant on a thin client): the **same Zigbee mesh, coordinator, and Mosquitto/Z2M containers** will serve both the Home Assistant node and this independent Prometheus-based power monitoring.
 
-> ⚠️ **Verification needed**: Prices are PL-market (Aug 2026) and change frequently — the Nous A1Z USED 4-pack at **109 zł** (noussmart.pl) and the Sonoff ZBDongle-P at **~90–100 zł** must be re-checked at purchase time. The Z2M `debounce`/`retain` settings are Gemini-generated and must be validated against current project docs before execution.
+> ⚠️ **Verification needed**: Prices are PL-market (Aug 2026) and change frequently — the Nous A1Z USED 4-pack at **109 PLN (~26 EUR)** (noussmart.pl) and the Sonoff ZBDongle-P at **~90–100 PLN (~21–24 EUR)** must be re-checked at purchase time. The Z2M `debounce`/`retain` settings are Gemini-generated and must be validated against current project docs before execution.
 
 ---
 
@@ -22,26 +22,26 @@ With Home Assistant joining the lab (idea 05), the user wants to **monitor homel
 
 | Product | Type | Measurement | Price (PL) |
 |---|---|---|---|
-| **Nous A1Z** | Smart plug, Zigbee 3.0, 16 A / 3680 W | Full (W, A, V, kWh) | ~59,99 zł |
-| Nous A7Z | Smart plug, earthing pin (FR/PL) | Energy monitoring | ~59,99 zł |
-| Nous A6Z | Outdoor plug, IP44 | Energy monitoring | ~74,99 zł |
-| Nous A11Z | Power strip (3× AC + USB) | **Total only** (one meter at input) | ~149,00 zł |
-| Nous B2Z | 1-ch relay module (in-box) | Power measurement (PM) | ~59,99 zł |
-| Nous B3Z | 2-ch relay module (in-box) | Independent per-channel PM | ~64,99 zł |
-| Nous D4Z | DIN-rail energy meter, 120 A | Current-clamp (non-invasive) | ~329,00–384,99 zł |
+| **Nous A1Z** | Smart plug, Zigbee 3.0, 16 A / 3680 W | Full (W, A, V, kWh) | ~59,99 PLN (~14 EUR) |
+| Nous A7Z | Smart plug, earthing pin (FR/PL) | Energy monitoring | ~59,99 PLN (~14 EUR) |
+| Nous A6Z | Outdoor plug, IP44 | Energy monitoring | ~74,99 PLN (~18 EUR) |
+| Nous A11Z | Power strip (3× AC + USB) | **Total only** (one meter at input) | ~149,00 PLN (~35 EUR) |
+| Nous B2Z | 1-ch relay module (in-box) | Power measurement (PM) | ~59,99 PLN (~14 EUR) |
+| Nous B3Z | 2-ch relay module (in-box) | Independent per-channel PM | ~64,99 PLN (~15 EUR) |
+| Nous D4Z | DIN-rail energy meter, 120 A | Current-clamp (non-invasive) | ~329,00–384,99 PLN (~77–91 EUR) |
 
-(All prices from official Nous distribution; verify at purchase time.)
+(All prices from official Nous distribution, PLN; EUR are rounded approximations at ~4.25 PLN/EUR, Aug 2026 — verify at purchase time.)
 
 ### 2. No consumer Zigbee power strip has per-outlet measurement
 
 - **Nous A11Z confirmed**: 3 AC outlets are independently *switchable* (plus the USB section as a whole), but there is a **single measurement chip** (e.g. `BL0942`) on the power input — Home Assistant/Z2M/ZHA sees one set of entities (voltage, current, total power), **not per-outlet data**.
 - Consumer smart strips (Nous A11Z, Tuya, WOOX) cap out at **3–4× 230 V outlets** and meter only total draw.
-- **Solution A — regular strip + 5 individual Zigbee plugs (most reliable)**: each plug has its own independent metering IC, real-time per-device consumption in HA. Recommended plugs: Nous A1Z / A7Z (~50–60 zł each) → **~300–350 zł total** for 5 + a plain strip. Tip: a strip with outlets at a **45° angle** lets compact A1Z plugs sit side-by-side without blocking.
-- **Solution B — switched, metered-by-outlet rack PDUs** (APC, CyberPower, Server Technology): true per-outlet metering, but **SNMP/HTTP-REST (not Zigbee)**, industrial IEC C13/C19 sockets, and **from ~1200 zł up** — out of scope for a homelab.
+- **Solution A — regular strip + 5 individual Zigbee plugs (most reliable)**: each plug has its own independent metering IC, real-time per-device consumption in HA. Recommended plugs: Nous A1Z / A7Z (~50–60 PLN (~12–14 EUR) each) → **~300–350 PLN (~71–82 EUR) total** for 5 + a plain strip. Tip: a strip with outlets at a **45° angle** lets compact A1Z plugs sit side-by-side without blocking.
+- **Solution B — switched, metered-by-outlet rack PDUs** (APC, CyberPower, Server Technology): true per-outlet metering, but **SNMP/HTTP-REST (not Zigbee)**, industrial IEC C13/C19 sockets, and **from ~1200 PLN (~282 EUR) up** — out of scope for a homelab.
 
-### 3. Buy: Nous A1Z **USED 4-pack at 109 zł** (noussmart.pl) as the starter set
+### 3. Buy: Nous A1Z **USED 4-pack at 109 PLN (~26 EUR)** (noussmart.pl) as the starter set
 
-- **~27,25 zł/unit** vs ~55–60 zł single retail; new 4-packs ~150–180 zł; lowest Allegro price ~149 zł.
+- **~27,25 PLN (~6 EUR)/unit** vs ~55–60 PLN (~13–14 EUR) single retail; new 4-packs ~150–180 PLN (~35–42 EUR); lowest Allegro price ~149 PLN (~35 EUR).
 - **Full native support** in Zigbee2MQTT (device `TS011F` / `_TZ3000_26aw2vkh`, Tuya) and in ZHA.
 - Exposes directly from the metering IC: **power (W), current (A), voltage (V), total energy (kWh)**.
 - Act as **Zigbee Router** (mains-powered) → extend/strengthen the Zigbee mesh for battery sensors.
@@ -64,11 +64,11 @@ With Home Assistant joining the lab (idea 05), the user wants to **monitor homel
 
 | Dongle | Chipset | Price (PL) | Notes |
 |---|---|---|---|
-| **SONOFF ZBDongle-P** | CC2652P (TI) | ~90–100 zł | **Gold standard**; very stable in Z2M and ZHA; external antenna + aluminium RF-shielding case |
-| SONOFF ZBDongle-E | EFR32MG21 (Silicon Labs) | ~80–90 zł | Cheaper; great for ZHA; experimental Thread/Matter support |
-| ConBee II / III | — | ~140–180 zł | Plug-and-play with internal antenna, but pricier |
+| **SONOFF ZBDongle-P** | CC2652P (TI) | ~90–100 PLN (~21–24 EUR) | **Gold standard**; very stable in Z2M and ZHA; external antenna + aluminium RF-shielding case |
+| SONOFF ZBDongle-E | EFR32MG21 (Silicon Labs) | ~80–90 PLN (~19–21 EUR) | Cheaper; great for ZHA; experimental Thread/Matter support |
+| ConBee II / III | — | ~140–180 PLN (~33–42 EUR) | Plug-and-play with internal antenna, but pricier |
 
-**Recommendation**: **ZBDongle-P (~90–100 zł)** + a plain **0.5–1 m USB extension cable** (keeps the dongle away from USB 3.0 interference).
+**Recommendation**: **ZBDongle-P (~90–100 PLN (~21–24 EUR))** + a plain **0.5–1 m USB extension cable** (keeps the dongle away from USB 3.0 interference).
 
 ### 6. Protocol comparison — Zigbee stacks & adjacent radios (ADR input)
 
@@ -187,8 +187,8 @@ Prometheus can't read MQTT natively — the dedicated exporter `mqtt2prometheus`
 
 ## Open Questions
 
-1. **Purchase timing**: the Nous A1Z USED 4-pack at 109 zł is a promo price worth grabbing while available — re-verify price/stock at purchase time (noussmart.pl).
-2. **Coordinator**: ZBDongle-P (~90–100 zł, gold standard) vs cheaper ZBDongle-E — ties into the ZHA vs Z2M choice.
+1. **Purchase timing**: the Nous A1Z USED 4-pack at 109 PLN (~26 EUR) is a promo price worth grabbing while available — re-verify price/stock at purchase time (noussmart.pl).
+2. **Coordinator**: ZBDongle-P (~90–100 PLN (~21–24 EUR), gold standard) vs cheaper ZBDongle-E — ties into the ZHA vs Z2M choice.
 3. **Zigbee stack decision (ADR input — see §6)**: [§6](#6-protocol-comparison--zigbee-stacks--adjacent-radios-adr-input) recommends **Zigbee + Zigbee2MQTT** for this lab — the ADR should settle whether to start with ZHA for a quick go-live and migrate to Z2M, or go straight to Z2M.
 4. **Where Prometheus/Grafana run**: the thread assumes the lab "already has" Prometheus — verify where it lives (k3s on the M910q?) and where `mqtt2prometheus` should be deployed (k3s vs LXC on the HA thin-client node).
 5. **Where Mosquitto/Z2M run**: research 26 (idea 05) puts them as **LXC containers on the Wyse 5070** next to the Home Assistant VM — does this thread's independent-metrics stack change that? (Probably not — the same LXC layout serves both.)
@@ -208,4 +208,4 @@ Prometheus can't read MQTT natively — the dedicated exporter `mqtt2prometheus`
 
 ## Source
 
-https://share.gemini.google/pS8nxsp7MNcY — "Produkty Nous Zigbee do pomiaru prądu", Gemini 3.6 Flash, Aug 13 2026 (published Aug 15 2026)
+https://gemini.google.com/share/daf15799b559 — "Produkty Nous Zigbee do pomiaru prądu", Gemini 3.6 Flash, Aug 13 2026 (published Aug 15 2026)
