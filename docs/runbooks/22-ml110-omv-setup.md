@@ -25,7 +25,8 @@
 - [ ] 1 TB spare content reviewed, role decided
 - [ ] Static IP `192.168.2.210` set and verified from the M910q
 - [x] OMV web UI reachable at `https://192.168.2.210` (HTTPS-only, §4d)
-- [ ] SSH hardening (**deferred** — see §8) — key-only auth, LAN-only
+- [x] SSH hardening — **applied** (key-only, LAN-only, root console-only — §8, 2026-08-15)
+- [ ] OpenCode cloud-instance SSH key (**dropped for now** — instance on Cloudlab, no path to NAS; revisit when it moves home)
 
 > **Execution log — 2026-08-09**
 > - BIOS done: `Advanced | Advanced Chipset Control | Serial ATA` → `Serial ATA: Enabled`,
@@ -148,8 +149,11 @@ With **only the Goodram SSD attached** (data drives disconnected):
 ### 4b. NTP + timezone (RTC drifts ~13 days — research 23)
 
 - `System | Date & Time` — set **timezone** and enable **NTP**.
-- The G5 RTC loses time across reboots; NTP corrects it. **Consider swapping the CR2032
-  CMOS battery** to reduce drift (research 23 notes).
+- The G5 RTC loses time across reboots; NTP corrects it.
+- **The CR2032 CMOS battery is dead** (confirmed 2026-08-15): unplugging power resets the clock
+  **and** reverts BIOS settings to defaults (boot device order, AHCI/RAID mode). **Replace the
+  CR2032** (standard coin cell, ~5–10 PLN) and re-apply the §1 BIOS settings (AHCI, RAID off,
+  boot from the Goodram SSD) after the swap.
 
 ### 4c. Static IP `192.168.2.210`
 
@@ -418,8 +422,10 @@ and routes through Caddy, the single routing layer (ADR 20).
   Then *Continue without boot loader* in the Debian installer.
 - **Drives not visible after reconnect** — confirm they are on the onboard ICH9R SATA ports
   (`00:1f.2`) and that BIOS SATA mode is **AHCI**, not RAID/IDE (mdadm needs raw disks).
-- **RTC/time wrong after reboot** — NTP is enabled (§4b); if drift persists, replace the
-  CR2032.
+- **RTC/time wrong or BIOS settings reset after power-off** — the **CR2032 CMOS battery is dead**
+  (confirmed 2026-08-15). NTP corrects the clock once booted (§4b), but BIOS settings revert to
+  defaults on power loss — **replace the CR2032** and re-apply the §1 settings (AHCI, RAID off,
+  boot from the Goodram SSD).
 - **Web UI unavailable after static IP** — the DHCP lease was replaced; use the console to
   confirm the interface came up with `192.168.2.210` (`ip a show enp14s0`).
 
