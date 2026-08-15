@@ -370,9 +370,7 @@ sudo apt update          # → "All packages are up to date."; Updates page show
 ## 7. Review the 1 TB WD10EZEX Spare — **done (offline)**
 
 > **Done 2026-08-15.** The WD10EZEX (`WD-WCC3F7AKKXUT`) content was reviewed via SystemRescue.
-> **Role decision: offline** — the drive stays disconnected for now (ICH9 port #6 free). Its
-> contents are **deliberately not documented** — they include personal data and this repository is
-> public (per the repo's sanitization rule). The decision is recorded in
+> **Role decision: offline** — the drive stays disconnected for now (ICH9 port #6 free). The decision is recorded in
 > [research 23](../research/23-ml110-nas-omv.md).
 
 ---
