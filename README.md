@@ -33,30 +33,8 @@ self-host AI agents, and keep learning for the joy of it.
 
 ## Tech Stack
 
-The physical server is a **[Lenovo ThinkCentre M910q Tiny](docs/decisions/01-hardware-selection-m910q.md)** (i5-7500T, 16 GB RAM).
-It will be rebuilt from scratch on **[Ubuntu 24.04 LTS](docs/decisions/05-os-decision-ubuntu-server.md)**, managed entirely via
-**[Ansible](docs/decisions/10-ansible-host-config.md)** playbooks — developed and tested on a disposable **[Contabo Cloud VPS 10](docs/decisions/13-cloudlab-staging.md)** before touching the hardware.
-
-Applications currently run in **Docker Compose**; the migration to **Kubernetes (k3s + Azure Arc)** is the destination per [ADR 22](docs/decisions/22-k3s-arc-homelab.md). The server
-is enrolled in **[Azure Arc](docs/decisions/04-hybrid-cloud-azure-arc.md)** for cloud-side monitoring and policy, and exposed
-to the internet via **[Cloudflare Tunnel](docs/decisions/08-remote-access-cloudflare-tunnel.md)** behind a **[Caddy](docs/decisions/07-reverse-proxy-caddy.md)** reverse proxy.
-
-The **network layer** terminates homelab gear on a **TP-Link TL-SG108E** access switch (`192.168.2.230`) with a single uplink to the office Tenda Nova mesh — one office drop → multiple wired devices. Static reservations in `192.168.2.200+`: Lenovo M910q Homelab `.200`, HP ML110 OMV NAS `.210`. See [research 24](docs/research/24-network-topology-design.md) and [runbook 21](docs/runbooks/21-tl-sg108e-switch.md).
-
----
-
-## Project Structure
-
-| Folder | Purpose |
-|---|---|
-| [`ansible/`](ansible/README.md) | Host provisioning — playbooks, roles (common, security, azure_arc, docker_host, docker_services, workloads), inventory |
-| [`bicep/`](bicep/README.md) | Cloud-side IaC — Log Analytics, DCR, AMA extensions, Key Vault |
-| [`scripts/`](scripts/) | Standalone PowerShell utilities (SSH key management, Arc client secrets, OpenCode backup) |
-
-Ansible runs first on the bare host (OS config, Docker, Arc agent). Bicep deploys cloud resources after Arc enrolment. The decision log is the source of truth for design rationale. Runbooks capture implementation steps. Research docs capture exploratory context that predates settled decisions. Ideas capture possibilities before a decision is made.
-
----
-
-## Recent Work
-
-Completed work and notable changes are tracked in the [changelog](CHANGELOG.md).
+The homelab runs on a **Lenovo M910q Tiny** managed via **Ansible**, with workloads in
+**Docker Compose** today and **Kubernetes (k3s + Azure Arc)** as the destination. Public
+access goes through **Cloudflare Tunnel** behind a **Caddy** reverse proxy. See the
+[Overview](docs/overview.md) for the current nodes, workloads, and topology, and
+[Hardware](docs/hardware.md) for per-node specs.
