@@ -12,9 +12,9 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | **Homelab** | main workload host | i5-7500T (4C/4T) | 16 GB DDR4 | 256 GB NVMe (+ free 2.5" bay) | 1× GbE `enp0s31f6` | ✅ |
 | **ML110 NAS** | backup target / NFS | Pentium E2160 (2C/2T) | 4 GB DDR2 | Goodram 120 GB SSD + RAID1 arrays | 1× GbE BCM5722 | ✅ |
 | **Cloudlab** | staging / playground | 4 vCPU | 8 GB | 75 GB NVMe | public IP | ✅ |
-| **Edge appliance** | public ingress | Atom x5-Z8350 | 2 GB DDR3L | 8 GB eMMC | 1× GbE | 🔨 |
-| **HA thin client** | smart home node | J4105 (planned) | 8 GB DDR4 | M.2 SATA SSD 64–256 GB | 1× GbE | 📋 |
-| **X1 Lite LLM server** | local LLM inference | Ryzen 7 255 (Hawk Point) | 32–64 GB DDR5 | NVMe | 1× GbE | 🧠 (Phase 2) |
+| **Edge Ingress** | public ingress | Atom x5-Z8350 | 2 GB DDR3L | 8 GB eMMC | 1× GbE | 🔨 |
+| **Home Assistant** | smart home node | J4105 (planned) | 8 GB DDR4 | M.2 SATA SSD 64–256 GB | 1× GbE | 📋 |
+| **LLM server** | local LLM inference | Ryzen 7 255 (Hawk Point) | 32–64 GB DDR5 | NVMe | 1× GbE | 🧠 (Phase 2) |
 
 ## Compute & Storage Nodes
 
@@ -53,7 +53,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Role | Ansible staging/playground + hosted workloads (Portainer, Caddy, cloudflared, OpenCode, Zot) |
 | Docs | [runbook 10](runbooks/10-vps-playground.md) · [ADR 13](decisions/13-cloudlab-staging.md) |
 
-### Edge appliance — Dell Wyse 3040
+### Edge Ingress — Dell Wyse 3040
 
 | Item | Spec |
 |---|---|
@@ -65,7 +65,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Acquisition | 2026-08-13 — 89,00 PLN device + 35,94 PLN charger = 124,94 PLN (~29 EUR) |
 | Docs | [runbook 24](runbooks/24-edge-appliance.md) · [ADR 24](decisions/24-edge-ingress-appliance.md) · [research 25](research/25-edge-ingress-sbc.md) · [idea 04](ideas/04-edge-device-tunnel-caddy.md) |
 
-### HA thin client — Dell Wyse 5070 (planned)
+### Home Assistant — Dell Wyse 5070 (planned)
 
 | Item | Spec |
 |---|---|
@@ -76,7 +76,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Fallback | Fujitsu Futro S740 (same J4105, often cheaper, no PCIe/mPCIe) |
 | Docs | [idea 05](ideas/05-home-assistant-thin-client.md) · [ADR 25](decisions/25-home-assistant-thin-client.md) · [research 26](research/26-home-assistant-thin-client.md) |
 
-### X1 Lite LLM server — Minisforum AI X1 (Phase 2, 🧠 idea)
+### LLM server — Minisforum AI X1 (Phase 2, 🧠 idea)
 
 | Item | Spec |
 |---|---|

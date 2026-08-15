@@ -26,7 +26,7 @@ Tenda Nova AC1200 mesh — 192.168.2.0/24, gateway 192.168.2.1
                      ├── Lenovo M910q Homelab       — static 192.168.2.200
                      ├── HP ML110 NAS (OMV)          — DHCP 192.168.2.164 → static TBD
                      ├── Work laptop dock (K16A)     — DHCP (corporate)
-                     └── X1 Lite LLM server (Phase 2, future)
+                     └── LLM server (Phase 2, future)
 ```
 
 ### Mesh inventory (Tenda Nova)
@@ -48,7 +48,7 @@ The mesh is consumer-grade: single LAN broadcast domain, no 802.1Q VLAN trunking
 | Lenovo M910q Homelab | 1× GigE (`enp0s31f6`) | `192.168.2.200` (static) | main workload host (Docker → k3s, ADR 22) |
 | HP ML110 NAS (OMV) | 1× GigE (`enp14s0`, BCM5722) | `192.168.2.164` (DHCP) → static TBD | backup target, NFS for Longhorn (issue #54) |
 | Work laptop dock (Dell K16A) | 1× GigE (via dock) | DHCP (corporate) | corporate device; no static reservation — stays on mesh DHCP |
-| X1 Lite LLM server | 1× GigE (future) | TBD | Phase 2, not yet purchased |
+| LLM server | 1× GigE (future) | TBD | Phase 2, not yet purchased |
 | **TL-SG108E switch (V1)** | 8× GigE (L2, utility-managed) | `192.168.2.230` (static) | the new piece — this analysis; hardware rev. **V1** (`TL-SG108E 1.0`), web UI non-functional, managed via Easy Smart Configuration Utility (runbook 21) |
 
 ---
@@ -73,7 +73,7 @@ Keep the single `192.168.2.0/24` broadcast domain. Reserve a dedicated static bl
 |---|---|
 | `192.168.2.200` | Lenovo M910q Homelab (existing) |
 | `192.168.2.210` | HP ML110 NAS — static (proposed) |
-| `192.168.2.220` | X1 Lite LLM server (Phase 2, future) |
+| `192.168.2.220` | LLM server (Phase 2, future) |
 | `192.168.2.230` | TL-SG108E management IP (proposed) |
 
 > **Why tens-blocks (`200/210/220/230`) rather than contiguous `200–203`:** each
@@ -138,7 +138,7 @@ issue #54) **on the switch fabric at full GigE**, off the mesh's wireless backha
 | 1 | **Uplink → office Tenda Nova** (Ethernet AP drop, `192.168.2.1`) | untagged, default VLAN |
 | 2 | Lenovo M910q Homelab (`192.168.2.200`) | |
 | 3 | HP ML110 NAS (`192.168.2.210`) | |
-| 4 | X1 Lite LLM server (`192.168.2.220`, Phase 2) | |
+| 4 | LLM server (`192.168.2.220`, Phase 2) | |
 | 5 | **Work laptop dock (Dell K16A)** | permanent; DHCP (corporate) |
 | 6–8 | Spare / future k3s node / misc | |
 

@@ -210,7 +210,7 @@ Estimated draw for the **final build state** (SAS 6/iR removed — saves ~10–1
 | 24/7, drives spun down | ~65 W | ~570 kWh | ~515–685 PLN (~€115–150) |
 | Scheduled nightly window (~8 h) | ~85 W | ~250 kWh | ~225–300 PLN (~€50–65) |
 
-At ~€150–200/yr this is the most power-hungry box in the homelab — the M910q host idles at ~8 W (research 03), the X1 Lite LLM server is TBD. Worth optimizing.
+At ~€150–200/yr this is the most power-hungry box in the homelab — the M910q host idles at ~8 W (research 03), the LLM server is TBD. Worth optimizing.
 
 ### Optimization plan
 

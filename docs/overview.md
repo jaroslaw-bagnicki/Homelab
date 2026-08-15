@@ -14,9 +14,9 @@ hardware detail see [Hardware Inventory](hardware.md); for change history see
 | **ML110 NAS** | backup target / NFS for Longhorn | HP ProLiant ML110 G5 · OMV 8.3 | `192.168.2.210` | ✅ |
 | **TL-SG108E** | access switch | TP-Link 8× GigE (L2) | `192.168.2.230` | ✅ |
 | **Cloudlab** | staging / Ansible playground | Contabo VPS 10 · Ubuntu 24.04 | `173.249.27.13` | ✅ |
-| **Edge appliance** | public ingress (cloudflared + Caddy) | Dell Wyse 3040 · Debian/Alpine TBD | TBD | 🔨 |
-| **HA thin client** | smart home node (Home Assistant) | Wyse 5070 · Proxmox VE | TBD | 📋 |
-| **X1 Lite LLM server** | local LLM inference | Minisforum X1 Lite | TBD | 🧠 (Phase 2) |
+| **Edge Ingress** | public ingress (cloudflared + Caddy) | Dell Wyse 3040 · Debian/Alpine TBD | TBD | 🔨 |
+| **Home Assistant** | smart home node | Wyse 5070 · Proxmox VE | TBD | 📋 |
+| **LLM server** | local LLM inference | Minisforum X1 Lite | TBD | 🧠 (Phase 2) |
 
 ## Workloads
 
@@ -44,7 +44,7 @@ Tenda Nova mesh — 192.168.2.0/24, gateway 192.168.2.1 (single broadcast domain
         └── TL-SG108E switch (192.168.2.230)
                  ├── Homelab M910q    — 192.168.2.200
                  ├── ML110 NAS (OMV)  — 192.168.2.210
-                 ├── Edge appliance   — TBD (future ingress)
+                 ├── Edge Ingress      — TBD (future ingress)
                  └── work laptop dock — DHCP (corporate)
 ```
 
