@@ -188,6 +188,28 @@ Design goals from the user: host **Zigbee2MQTT independently of HA**, the homela
 
 Prometheus can't read MQTT natively — the dedicated exporter `mqtt2prometheus` bridges it (exposes `/metrics` on `:9641`), parsing the `power`, `current`, `voltage`, and `energy` fields from Z2M's JSON payloads, keyed per device by `friendly_name`.
 
+#### 7.1 Bootstrap on the M910q — no Home Assistant needed
+
+Home Assistant is **optional** in this architecture — it is just one consumer of the MQTT broker. Pure power monitoring runs standalone on the M910q with **only the Nous A1Z plugs + Sonoff ZBDongle-P**:
+
+```
+[ A1Z plugs ] ─(Zigbee)─▶ [ Zigbee2MQTT + ZBDongle-P ]
+                              │ JSON/MQTT
+                              ▼
+                         [ Mosquitto ]
+                              │
+                              ▼
+                   [ mqtt2prometheus ] ──▶ [ Prometheus ] ──▶ [ Grafana / AI agent ]
+```
+
+Five Docker containers on the M910q host: **Mosquitto**, **Zigbee2MQTT** (dongle via `--device /dev/serial/by-id/...`), **mqtt2prometheus**, **Prometheus**, **Grafana** — no HA anywhere.
+
+- **Setup**: plug the ZBDongle-P into the M910q (0.5–1 m USB extension to avoid USB 3.0 interference) → start the five containers → permit-join and pair the A1Z plugs → Grafana dashboard from the `homelab_*` metrics (W / A / V / kWh per plug).
+- **Resources**: trivial for the M910q (Mosquitto ~50 MB, Z2M ~150–300 MB, Prometheus/Grafana a few hundred MB) alongside k3s.
+- **Range**: fine for monitoring the rack-adjacent homelab equipment; the "central placement" goal (idea 05) only matters later for whole-home sensors.
+- **Run as Docker Compose on the host** (clean USB pass-through), not k3s (hostPath is awkward for the dongle) — matching research 26's plan to keep Zigbee off the cluster.
+- **Later migration**: when the Wyse 5070 (idea 05) arrives, move Z2M/Mosquitto to LXC there — back up Z2M's data dir + keep the same dongle (the Zigbee network lives in the coordinator's NVRAM); HA can then join the same broker.
+
 ### 8. AI agent access — two paths
 
 - **Path A — control (read-write) via MQTT**: dedicated Mosquitto account with a restricted **ACL**. Agent publishes JSON to `zigbee2mqtt/Gniazdko_Serwer/set` (e.g. `{ "state": "OFF" }`) and subscribes to `zigbee2mqtt/Gniazdko_Serwer` for real-time state.
