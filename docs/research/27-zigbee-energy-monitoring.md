@@ -210,6 +210,20 @@ Five Docker containers on the M910q host: **Mosquitto**, **Zigbee2MQTT** (dongle
 - **Run as Docker Compose on the host** (clean USB pass-through), not k3s (hostPath is awkward for the dongle) — matching research 26's plan to keep Zigbee off the cluster.
 - **Later migration**: when the Wyse 5070 (idea 05) arrives, move Z2M/Mosquitto to LXC there — back up Z2M's data dir + keep the same dongle (the Zigbee network lives in the coordinator's NVRAM); HA can then join the same broker.
 
+#### 7.2 Resilience & where history lives
+
+**Where historical data is persisted**: the **Prometheus TSDB** (on disk), not Mosquitto — the MQTT broker is a real-time router and holds only the *last value per topic* (`retain`), never a time series. Grafana queries Prometheus; the AI agent's analytics (Path B, §8) hit the Prometheus API. Set Prometheus retention (`--storage.tsdb.retention.time=…`) to match the "historical data for analysis" goal — the default (~15 d) is too short.
+
+**Single Prometheus = a single point of failure for history.** `mqtt2prometheus` holds only the *current* value (no buffer/backlog) and Prometheus doesn't backfill — so a Prometheus outage causes a real gap in power/current/voltage (energy keeps its running total but loses interval detail).
+
+**Mitigation options** (cheapest first):
+
+- `restart: unless-stopped` + sane config — baseline hygiene, not real HA.
+- **Second, independent TSDB scraping the same `mqtt2prometheus`** (2× Prometheus, or Prometheus + VictoriaMetrics) — the direct fix for outage gaps; cheap as another container on the M910q.
+- **`vmagent` (VictoriaMetrics) as a buffering scraper** — queues samples and retries, so brief storage blips don't lose data.
+- **Prometheus `remote_write` to a second store** (InfluxDB / VictoriaMetrics / Thanos) — protects against *storage loss*, not down-time gaps (if Prometheus is down it isn't writing either).
+- **InfluxDB** — viable alternative store (via Telegraf MQTT input, or Prometheus remote-write) with an HTTP query API for the AI agent; heavier than Prometheus.
+
 ### 8. AI agent access — two paths
 
 - **Path A — control (read-write) via MQTT**: dedicated Mosquitto account with a restricted **ACL**. Agent publishes JSON to `zigbee2mqtt/Gniazdko_Serwer/set` (e.g. `{ "state": "OFF" }`) and subscribes to `zigbee2mqtt/Gniazdko_Serwer` for real-time state.
