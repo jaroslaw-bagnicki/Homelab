@@ -18,6 +18,7 @@ The refresh re-aligns the box with ADR 05 and unblocks that track.
 - **Reinstall** to Ubuntu Server 24.04 LTS on the 256 GB NVMe; static IP `192.168.2.200` (switch port 2, runbook 21).
 - **Ansible-provisioned base**: `common` → `security` → `docker_host` → `azure_arc` via `ansible/playbooks/playbook-homelab.yml`.
 - **DNS / Caddy / cloudflared leave the M910q** (Option B): the edge appliance (ADR 24 / [#65](https://github.com/jaroslaw-bagnicki/Homelab/issues/65)) takes over `*.home` DNS, internal `.home` Caddy, and the external tunnel. The refreshed M910q is **compute-only** — dnsmasq and `homelab-tunnel` are **not** reinstalled. Accept a temporary `.home` + external-access gap until the edge box is live.
+- **`labadmin` is the only account on the box** — key-only, `NOPASSWD` sudo for Ansible `become`, no `docker` group (the account pattern is documented in the [ansible README](../ansible/README.md)).
 
 > **Execution note.** Run this runbook **interactively from your control node in
 > VSCode with the GitHub Copilot extension** — the M910q is only reachable from
@@ -33,11 +34,6 @@ The refresh re-aligns the box with ADR 05 and unblocks that track.
     secret from Key Vault on the control node
   - The control node's SSH **public** key (uploaded to `labadmin` by the bootstrap script)
 - **Bootable USB** with Ubuntu Server 24.04 LTS ISO and a **SystemRescue** ISO.
-
-> **Operator account — `labadmin`.** Both hosts (cloudlab + homelab) use the generic
-> `labadmin` account: key-only SSH, no password, `NOPASSWD` sudo for Ansible `become`,
-> and **no `docker` group membership** (`docker_users: []` — the docker group is
-> root-equivalent; Ansible reaches Docker via `become`, so it's never needed).
 
 ---
 
