@@ -26,11 +26,11 @@ Adopt a **two-tier layered monitoring model**:
 
 AMA → Log Analytics (`homelab-law`) on **Arc-enrolled nodes only**: the M910q (after the #74 24.04 refresh), `cloudlab` (already live), and the k3s cluster via **Container Insights** (ADR 22). Free-tier surface: portal health/compliance, policy, heartbeat, KQL.
 
-### Tier B — Local monitoring stack (first component: Netdata)
+### Tier B — Local monitoring stack (local real-time plane)
 
-**Tier B is the local monitoring stack on the homelab; Netdata is its first — currently only — adopted component.** Netdata agent per node → **Netdata Parent** (k3s workload on the M910q) → **Netdata dashboard + alarms**. Covers the Edge, Home Assistant, NAS, Cloudlab, and future LLM node — Arc or not.
+**Tier B is the local monitoring stack on the homelab; Netdata is its first component.** A Netdata agent on every node → **Netdata Parent** (k3s workload on the M910q) → **Netdata dashboard + alarms**. Covers the Edge, Home Assistant, NAS, Cloudlab, and future LLM node — Arc or not.
 
-- **Netdata agent on all nodes** — M910q, ML110 OMV NAS, Edge Wyse 3040, HA Proxmox host (Wyse 5070), `cloudlab` VPS, future LLM node: a uniform agent across Ubuntu, Debian, OMV, Proxmox, and (trial pending) Alpine.
+- **Unified monitoring agent across all nodes** — one Netdata agent runs on every node in the fleet: a uniform agent across Ubuntu, Debian, OMV, Proxmox, and (trial pending) Alpine.
 - **Parent placement** — Netdata Parent runs as a **k3s workload on the M910q** after the ADR 22 migration; until then children run **standalone** (local `dbengine` + alarms) and re-point to the parent when it lands.
 - **Edge Wyse 3040 — lightweight components only.** A **Netdata child node** (minimal footprint, **RAM-only buffering** — no eMMC `dbengine`, per [ADR 24](24-edge-ingress-appliance.md)) and optionally Fluent Bit; Alpine compatibility validated during the Debian-vs-Alpine on-device trial.
 - **Metrics-only scope.** Provisioned via a new Ansible `netdata` role (ADR 10).
