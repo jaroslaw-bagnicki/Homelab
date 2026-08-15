@@ -6,7 +6,7 @@
 
 **Status**: 📝 Analysis — no hardware acquired yet; direction feeds idea 06. Complements [idea 05](../ideas/05-home-assistant-thin-client.md) / [research 26](26-home-assistant-thin-client.md) (Home Assistant on a thin client): the **same Zigbee mesh, coordinator, and Mosquitto/Z2M containers** will serve both the Home Assistant node and this independent Prometheus-based power monitoring.
 
-> ⚠️ **Verification needed**: Prices are PL-market (Aug 2026) and change frequently — the Nous A1Z USED 4-pack at **109 zł** (noussmart.pl) and the Sonoff ZBDongle-P at **~90–100 zł** must be re-checked at purchase time. `mqtt2prometheus` config, Z2M `debounce`/`retain` settings, and the Docker Compose snippet are Gemini-generated and must be validated against current project docs before execution.
+> ⚠️ **Verification needed**: Prices are PL-market (Aug 2026) and change frequently — the Nous A1Z USED 4-pack at **109 zł** (noussmart.pl) and the Sonoff ZBDongle-P at **~90–100 zł** must be re-checked at purchase time. The Docker Compose snippet and Z2M `debounce`/`retain` settings are Gemini-generated and must be validated against current project docs before execution.
 
 ---
 
@@ -102,35 +102,7 @@ Design goals from the user: host **Zigbee2MQTT independently of HA**, the homela
 [ Prometheus TSDB ] ──► [ Grafana / AI agent ]
 ```
 
-Prometheus can't read MQTT natively — the dedicated exporter `mqtt2prometheus` bridges it. Example config:
-
-```yaml
-# config.yaml for mqtt2prometheus
-mqtt:
-  server: "tcp://mosquitto:1883"
-  topic_path: "zigbee2mqtt"
-metrics:
-  - name: homelab_power_watts
-    help: "Aktualna moc chwilowa w Watach"
-    path: "$.power"
-    type: gauge
-    device_identifier: "$.friendly_name"
-  - name: homelab_current_amperes
-    help: "Aktualne natężenie prądu"
-    path: "$.current"
-    type: gauge
-    device_identifier: "$.friendly_name"
-  - name: homelab_voltage_volts
-    help: "Napięcie w sieci"
-    path: "$.voltage"
-    type: gauge
-    device_identifier: "$.friendly_name"
-  - name: homelab_energy_kwh
-    help: "Suma zużytej energii w kWh"
-    path: "$.energy"
-    type: counter
-    device_identifier: "$.friendly_name"
-```
+Prometheus can't read MQTT natively — the dedicated exporter `mqtt2prometheus` bridges it (exposes `/metrics` on `:9641`), parsing the `power`, `current`, `voltage`, and `energy` fields from Z2M's JSON payloads, keyed per device by `friendly_name`.
 
 ### 8. AI agent access — two paths
 
