@@ -1,24 +1,24 @@
 # Idea 06 — Homelab Energy Monitoring via Zigbee
 
-> Monitor the homelab's own power consumption as an independent system — per-device **Zigbee energy plugs** on the key nodes, a **USB Zigbee coordinator**, and an independent **Zigbee2MQTT → Prometheus → Grafana** path — decoupled from Home Assistant, with power data (and optional control) exposed to the homelab AI agent.
+> Monitor the homelab's own power consumption as an independent, always-on system — per-device **Zigbee energy plugs** across the key nodes, with the data available to the lab's monitoring stack and to the homelab AI agent — decoupled from Home Assistant.
 
 **Status**: 🧠 Idea — research 27 done, no hardware acquired  
 **Date**: 2026-08-15  
-**Research**: [Research 27 — Zigbee energy monitoring](../research/27-zigbee-energy-monitoring.md) — the detailed write-up (devices, coordinator, ZHA vs Z2M, metrics architecture, AI-agent access, prices)  
+**Research**: [Research 27 — Zigbee energy monitoring](../research/27-zigbee-energy-monitoring.md) — the detailed write-up (devices, coordinator, stack/protocol comparison, metrics architecture, AI-agent access, prices)  
 **Related**: [Idea 05 — Home Assistant on a Thin Client](05-home-assistant-thin-client.md) / [Research 26](26-home-assistant-thin-client.md) / ADR 25 — this rides on the **same Zigbee mesh, coordinator, and Mosquitto/Z2M containers** as the Home Assistant node
 
 ---
 
 ## Context
 
-Home Assistant is joining the lab as a dedicated thin-client node (idea 05, ADR 25 Proposed). Alongside it, the user wants to **monitor the homelab's own power consumption** as an independent system — not tied to Home Assistant's availability or restarts. The direction: per-device **Zigbee energy plugs** on the key homelab nodes, a **USB Zigbee coordinator**, and an independent **Zigbee2MQTT → Prometheus → Grafana** path. Specifics (devices, prices, architecture) live in [research 27](../research/27-zigbee-energy-monitoring.md).
+Home Assistant is joining the lab as a dedicated thin-client node (idea 05, ADR 25 Proposed). Alongside it, the lab should know **what its own infrastructure draws**, per node — as an independent, always-on capability that does not depend on Home Assistant's availability or restarts, and that the homelab AI agent can read (and safely control) directly. The how — devices, stack, architecture — lives in [research 27](../research/27-zigbee-energy-monitoring.md).
 
 ## Goal
 
-- Instrument the key homelab nodes (M910q, ML110 NAS, switch, router, future thin clients) for per-device power draw via **Zigbee energy-measuring plugs**.
-- Run **Zigbee2MQTT independently of Home Assistant** (per idea 05's LXC layout), exposing JSON over **Mosquitto MQTT**.
-- Bridge MQTT → **Prometheus** and visualize in **Grafana** — independent of Home Assistant restarts.
-- Give the **AI agent** read-write control (restricted **MQTT ACL**) and read-only analytics (**Prometheus API**).
+- Per-device visibility of homelab power draw (compute, NAS, network, edge).
+- Independent of Home Assistant — monitoring and AI-agent access keep working whether or not HA is up.
+- Data available to the lab's monitoring stack and to the AI agent, with control kept separate from analytics.
+- Low-power, local Zigbee devices — no cloud dependency.
 
 ## Hardware direction
 
@@ -26,12 +26,12 @@ Home Assistant is joining the lab as a dedicated thin-client node (idea 05, ADR 
 
 ## Key decisions to make (open questions)
 
-1. **Zigbee stack for the start**: native **ZHA** (quick go-live) vs **Zigbee2MQTT** (long-term independent architecture) — and when to migrate.
-2. **Where the stack runs**: LXC containers on the HA thin-client node (idea 05) vs the k3s cluster — and where the existing **Prometheus/Grafana** live.
-3. **Purchase**: how much to buy up front (starter set vs full coverage) and whether to bundle with the idea-05 hardware order.
-4. **AI agent access**: which agent and how — wire **MQTT ACL** (control) + **Prometheus API** (analytics) into the agent's toolset, kept separate.
-5. **Coverage scope**: which homelab nodes get a plug first; per-device measurement needs one plug per device.
-6. **Coexistence with observability**: how this metrics path fits alongside Azure Monitor via Arc (ADR 04/09) and the restic/Blob backup model.
+1. Which Zigbee integration stack to standardize on — and the starting path.
+2. Where the stack runs — and where the existing Prometheus/Grafana live.
+3. What to buy and when — starter set vs full coverage; bundle with the idea-05 hardware order.
+4. How the AI agent consumes the data — control vs read-only analytics, kept separate.
+5. Which homelab nodes to instrument first.
+6. How this fits the existing observability (Azure Monitor via Arc) and backup model.
 
 ## Lifecycle
 
