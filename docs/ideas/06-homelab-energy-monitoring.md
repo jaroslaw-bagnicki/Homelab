@@ -1,49 +1,30 @@
 # Idea 06 — Homelab Energy Monitoring
 
-> Monitor the homelab's own power consumption as an independent, always-on system — per-device **energy-measuring plugs** across the key nodes, with the data available to the lab's monitoring stack and to the homelab AI agent — decoupled from Home Assistant (Zigbee is one radio option among several; see research 27).
+> Monitor the homelab's own power consumption as an independent, always-on system — per-device **energy-measuring plugs** across the key nodes, with the data available to the lab's monitoring stack and to the homelab AI agent — decoupled from Home Assistant.
 
 **Status**: 🧠 Idea — research 27 done, no hardware acquired  
 **Date**: 2026-08-15  
-**Research**: [Research 27 — Zigbee energy monitoring](../research/27-zigbee-energy-monitoring.md) — the detailed write-up (radio alternatives, devices, coordinator, stack/protocol comparison, metrics architecture, AI-agent access, prices)  
-**Related**: [Idea 05 — Home Assistant on a Thin Client](05-home-assistant-thin-client.md) / [Research 26](26-home-assistant-thin-client.md) / ADR 25 — if Zigbee is chosen, this can share the **mesh, coordinator, and Mosquitto/Z2M containers** of the Home Assistant node
+**Research**: [Research 27 — Zigbee energy monitoring](../research/27-zigbee-energy-monitoring.md) — the full research output  
+**Related**: [Idea 05 — Home Assistant on a Thin Client](05-home-assistant-thin-client.md) / [Research 26](26-home-assistant-thin-client.md) / ADR 25
 
 ---
 
 ## Context
 
-Home Assistant is joining the lab as a dedicated thin-client node (idea 05, ADR 25 Proposed). Alongside it, the lab should know **what its own infrastructure draws**, per node — as an independent, always-on capability that does not depend on Home Assistant's availability or restarts, and that the homelab AI agent can read (and safely control) directly. The radio choice is open: **Zigbee is the leading candidate**, and the how — devices, radio, stack, architecture — lives in [research 27](../research/27-zigbee-energy-monitoring.md), which evaluates Zigbee against the alternatives (Z-Wave, Matter/Thread, Wi-Fi/Tasmota) before any decision.
+Home Assistant is joining the lab as a dedicated thin-client node (idea 05, ADR 25 Proposed). Alongside it, the lab should know **what its own infrastructure draws**, per node — as an independent, always-on capability that does not depend on Home Assistant's availability or restarts, and that the homelab AI agent can read (and safely control) directly.
 
-## Goal
-
-- Per-device visibility of homelab power draw (compute, NAS, network, edge).
-- Independent of Home Assistant — monitoring and AI-agent access keep working whether or not HA is up.
-- Data available to the lab's monitoring stack and to the AI agent, with control kept separate from analytics.
-- Historical data retained for analysis — trends, baselines, and longer-range queries by the AI agent.
-- Low-power, local devices (radio TBD in research) — no cloud dependency.
-
-## Hardware direction
-
-**Energy-measuring plugs + a radio coordinator** — **Zigbee is the leading candidate**; [research 27 §6](../research/27-zigbee-energy-monitoring.md) compares the radio/protocol options (Zigbee vs Z-Wave vs Matter/Thread vs Wi-Fi/Tasmota) and holds the specific products, prices, and rejected alternatives (per-outlet metering power strips don't exist; classic gateways are wrong for HA; per-outlet metering PDUs are overkill).
-
-## Key decisions to make (open questions)
-
-1. Which radio protocol to use — **Zigbee as the leading candidate** vs Z-Wave, Matter/Thread, Wi-Fi/Tasmota — and which integration stack.
-2. Where the stack runs — and where the existing Prometheus/Grafana live.
-3. What to buy and when — starter set vs full coverage; bundle with the idea-05 hardware order.
-4. How the AI agent consumes the data — control vs read-only analytics, kept separate.
-5. Which homelab nodes to instrument first.
-6. How this fits the existing observability (Azure Monitor via Arc) and backup model.
+All substance — radio alternatives, devices, stack, metrics architecture, AI-agent access, and open questions — lives in [research 27](../research/27-zigbee-energy-monitoring.md), which this idea references as a whole. The decision will be recorded in an ADR (likely tied to ADR 25).
 
 ## Lifecycle
 
 🧠 **Idea** → 📋 **Planned** (scoped + ADR in progress) → 🔨 **Implementing** → ✅ **Done**.
-New hardware + metrics architecture — expect a decision (research 27 → ADR, likely tied to ADR 25) before acquisition.
+New hardware + metrics architecture — expect a decision (research 27 → ADR) before acquisition.
 
 ## References
 
-- [Research 27 — Zigbee energy monitoring](../research/27-zigbee-energy-monitoring.md) — the detailed write-up
+- [Research 27 — Zigbee energy monitoring](../research/27-zigbee-energy-monitoring.md) — the full research output
 - [Idea 05 — Home Assistant on a Thin Client](05-home-assistant-thin-client.md) — the HA node this rides alongside
 - [ADR 25 — Home Assistant on a dedicated thin-client node](../decisions/25-home-assistant-thin-client.md) — Proposed
-- [ADR 22 — k3s + Azure Arc](../decisions/22-k3s-arc-homelab.md) — likely Prometheus home
-- [ADR 23 — NAS on the ML110 (OMV)](../decisions/23-nas-on-ml110.md) — plugged NAS node
-- [ADR 24 — Edge ingress appliance](../decisions/24-edge-ingress-appliance.md) — Wyse 3040 edge
+- [ADR 22 — k3s + Azure Arc](../decisions/22-k3s-arc-homelab.md)
+- [ADR 23 — NAS on the ML110 (OMV)](../decisions/23-nas-on-ml110.md)
+- [ADR 24 — Edge ingress appliance](../decisions/24-edge-ingress-appliance.md)
