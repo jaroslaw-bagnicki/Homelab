@@ -361,9 +361,14 @@ outside it (see the hardening block below — applied, not deferred).
 
 ## 9. Expose the OMV Web UI via Cloudflare Tunnel (Phase 2)
 
+> **⛔ Blocked by [#65 — Dedicated edge device for Cloudflare Tunnel + Caddy ingress](https://github.com/jaroslaw-bagnicki/Homelab/issues/65).**
+> Public ingress is moving off the M910q onto a dedicated edge box (ADR 24 / idea 04). This step
+> is **deferred until #65 lands** — do not add the `omv` hostname to the M910q tunnel yet, since
+> the tunnel/Caddy configuration is being re-architected there.
+
 The NAS stays **storage-only** — no `cloudflared` runs on it (ADR 23). Public access reuses
-the existing `homelab-tunnel` on the M910q and routes through Caddy, the single routing layer
-(ADR 20). Future direction: a dedicated edge device — moved to branch `docs/edge-device-tunnel-caddy`.
+the homelab tunnel (currently on the M910q; **moving to the dedicated edge device via #65**)
+and routes through Caddy, the single routing layer (ADR 20).
 
 1. **Add an `omv` public hostname** in the Cloudflare Zero Trust portal
    (Networks → Tunnels → `homelab-tunnel` → **Public Hostname** → **Add a public hostname**):
