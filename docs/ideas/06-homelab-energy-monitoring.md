@@ -18,6 +18,7 @@ Home Assistant is joining the lab as a dedicated thin-client node (idea 05, ADR 
 - Per-device visibility of homelab power draw (compute, NAS, network, edge).
 - Independent of Home Assistant — monitoring and AI-agent access keep working whether or not HA is up.
 - Data available to the lab's monitoring stack and to the AI agent, with control kept separate from analytics.
+- Historical data retained for analysis — trends, baselines, and longer-range queries by the AI agent.
 - Low-power, local Zigbee devices — no cloud dependency.
 
 ## Hardware direction
