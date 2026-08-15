@@ -18,7 +18,7 @@
 | Filesystem / RAID | **No ZFS** — **mdadm RAID1** + XFS/ext4 |
 | Boot device | **Goodram C40 120 GB SSD on ICH9 SATA #5**|
 | Data pool | `md0` = 2× 500 GB Hitachis (mirror), `md1` = 2× 250 GB (mirror) |
-| Bulk volume | **1 TB WD10EZEX — offline (decided 2026-08-15)**; content reviewed via SystemRescue, not documented (personal data, public repo) |
+| Bulk volume | **1 TB WD10EZEX — offline (decided 2026-08-15)**; content reviewed via SystemRescue |
 | Hardware RAID controller | **Not used** (Dell SAS 6/iR / SAS1068E) — removed |
 
 ---

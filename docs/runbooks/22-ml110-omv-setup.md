@@ -23,7 +23,7 @@
 - [x] `md1` (2× 250 GB → ext4) online
 - [x] Arrays survive reboot — **confirmed** (machine rebooted, md0/md1 auto-assembled + mounted)
 - [x] Static IP `192.168.2.210` set and verified from the M910q
-- [x] 1 TB spare reviewed — **role: offline** (stays disconnected; content not documented — personal data, §7, 2026-08-15)
+- [x] 1 TB spare reviewed — **role: offline** (stays disconnected; §7, 2026-08-15)
 - [x] OMV web UI reachable at `https://192.168.2.210` (HTTPS-only, §4d)
 - [x] SSH hardening — **applied** (key-only, LAN-only, root console-only — §8, 2026-08-15)
 - [x] Disk noise tuning — **AAM = quietest on all 4 data drives** (APM/spindown left off — §6, 2026-08-15)
@@ -78,7 +78,7 @@ from a **keyboard + mouse + monitor** attached directly to the box.
 | 5 | WDC WD2500AAKX 250 GB | `WD-WCC2F0157761` | `md1` |
 | 6 | GB0250EAFYK 250 GB | `WCAT1F035986` | `md1` mirror |
 | 7 | **Goodram C40 120 GB SSD** | `1C9C074614D500572350` | **OMV OS** |
-| 8 | WDC WD10EZEX 1 TB (spare) | `WD-WCC3F7AKKXUT` | **offline** — reviewed 2026-08-15, content not documented (§7) |
+| 8 | WDC WD10EZEX 1 TB (spare) | `WD-WCC3F7AKKXUT` | **offline** — reviewed 2026-08-15 (§7) |
 
 ### Media & tools
 
