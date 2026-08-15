@@ -13,7 +13,7 @@
 
 Home Assistant is joining the lab as a dedicated thin-client node (idea 05, ADR 25 Proposed). Alongside it, the lab should know **what its own infrastructure draws**, per node — as an independent, always-on capability that does not depend on Home Assistant's availability or restarts, and that the homelab AI agent can read (and safely control) directly.
 
-**Zigbee looks the most promising** (rich device ecosystem, low-power battery sensors, mains plugs act as mesh routers) — but the radio choice is delegated to [research 27](../research/27-zigbee-energy-monitoring.md), which compares it against Z-Wave, Matter/Thread, and Wi-Fi/Tasmota before any decision.
+**Zigbee looks the most promising** (rich device ecosystem, low-power battery sensors, mains plugs act as mesh routers) — but the radio choice is delegated to [research 27](../research/27-zigbee-energy-monitoring.md), which compares it against alternatives before any decision.
 
 ## Goal
 
@@ -25,7 +25,7 @@ Home Assistant is joining the lab as a dedicated thin-client node (idea 05, ADR 
 
 ## Questions to answer in research
 
-1. Which radio protocol — **Zigbee (most promising)** vs Z-Wave, Matter/Thread, Wi-Fi/Tasmota — and why.
+1. Which radio protocol — **Zigbee (most promising)** vs the alternatives — and why.
 2. Which integration stack, and whether it can be independent of Home Assistant.
 3. Where the stack runs, and where the existing Prometheus/Grafana live.
 4. What to buy and when — starter set vs full coverage; bundle with the idea-05 hardware order.
