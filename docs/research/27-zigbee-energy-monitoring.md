@@ -70,6 +70,18 @@ With Home Assistant joining the lab (idea 05), the user wants to **monitor homel
 
 **Recommendation**: **ZBDongle-P (90–100 PLN (~21–24 EUR))** + a plain **0.5–1 m USB extension cable** (keeps the dongle away from USB 3.0 interference).
 
+#### 5.1 Network coordinators & gateways — alternatives to the ZBDongle-P
+
+Beyond USB dongles, Allegro (Aug 2026) lists network-connected Zigbee coordinators and gateways. Reviewed against the lab's **must-have** (§6.4 — independent of HA, direct MQTT/Prometheus/AI-agent access) and the central-placement goal (idea 05). Listing pages were blocked to automated access (Allegro anti-bot) — prices/specs must be verified at purchase time.
+
+| Device (Allegro listing) | Type | Connectivity | Z2M/ZHA path | Fit for the lab |
+|---|---|---|---|---|
+| **CC2652P2 coordinator** — RJ45 / USB / WiFi | Network coordinator | TI CC2652P2 (EZSP); Ethernet (RJ45), USB, or WiFi | Z2M/ZHA over **TCP** (EZSP over the network) | ✅ **Best alternative** — place centrally for better Zigbee coverage, **no USB pass-through** on Proxmox, fully independent of the host; pricier than a dongle |
+| **SONOFF Zigbee Bridge Pro (ZBBridge-P)** | WiFi bridge | ESP-based + Zigbee SoC | Cloud (eWeLink) by default; Z2M only after **Tasmota/Zigbee2Tasmota** flash | ⚠️ **DIY only** — cloud-bound out of the box; flashing adds complexity vs a turnkey dongle |
+| **Silvercrest "Inteligentny Dom" gateway (LIDL)** | Consumer hub | Proprietary / cloud app | None — not a Z2M/ZHA coordinator | ❌ **Rejected** — cloud-bound vendor hub; same reason classic gateways were rejected (§4) |
+
+**Verdict**: the **ZBDongle-P** stays the default (cheap, turnkey, gold standard). If the lab wants **central Zigbee placement without USB pass-through**, a **CC2652P2 network coordinator** is the strongest alternative — same silicon family as the dongle, Z2M over TCP, and fully independent — at a higher price. The Sonoff Bridge Pro only makes sense as a flashed-DIY path; the Silvercrest gateway doesn't fit HA/Z2M at all.
+
 ### 6. Protocol comparison — Zigbee stacks & adjacent radios (ADR input)
 
 The Home Assistant node (idea 05) and the independent power-monitoring path (this idea) both hinge on one choice: **which Zigbee integration stack**, and whether Zigbee is even the right radio. Two dimensions decide it: (a) device/radio fit, and (b) — **the must-have** — how directly the stack integrates with the homelab infrastructure (Prometheus/Grafana) and the AI agent, **independent of Home Assistant** (§6.4). This comparison is the input for the Zigbee-stack ADR.
@@ -188,7 +200,7 @@ Prometheus can't read MQTT natively — the dedicated exporter `mqtt2prometheus`
 ## Open Questions
 
 1. **Purchase timing**: the Nous A1Z USED 4-pack at 109 PLN (~26 EUR) is a promo price worth grabbing while available — re-verify price/stock at purchase time (noussmart.pl).
-2. **Coordinator**: ZBDongle-P (90–100 PLN (~21–24 EUR), gold standard) vs cheaper ZBDongle-E — ties into the ZHA vs Z2M choice.
+2. **Coordinator**: ZBDongle-P (90–100 PLN (~21–24 EUR), gold standard) vs cheaper ZBDongle-E vs a **CC2652P2 network coordinator** (RJ45/WiFi — central placement, no USB pass-through; see §5.1) — ties into the ZHA vs Z2M choice.
 3. **Zigbee stack decision (ADR input — see §6)**: [§6](#6-protocol-comparison--zigbee-stacks--adjacent-radios-adr-input) recommends **Zigbee + Zigbee2MQTT** for this lab — the ADR should settle whether to start with ZHA for a quick go-live and migrate to Z2M, or go straight to Z2M.
 4. **Where Prometheus/Grafana run**: the thread assumes the lab "already has" Prometheus — verify where it lives (k3s on the M910q?) and where `mqtt2prometheus` should be deployed (k3s vs LXC on the HA thin-client node).
 5. **Where Mosquitto/Z2M run**: research 26 (idea 05) puts them as **LXC containers on the Wyse 5070** next to the Home Assistant VM — does this thread's independent-metrics stack change that? (Probably not — the same LXC layout serves both.)
