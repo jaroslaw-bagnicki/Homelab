@@ -42,6 +42,8 @@
 > - Arrays + filesystems created (§5): `md0` (2× 500 GB Hitachis → XFS) and `md1` (2× 250 GB → ext4),
 >   mounted by OMV under `/srv/dev-disk-by-uuid-*`. SSH root access verified (`ssh root@192.168.2.210`).
 >   Note: fresh `md0` reports ~9 GB used — verified as XFS metadata (`du` = 0 B, see §5 Filesystems gotcha).
+> - RAID UI plugin: OMV 8 has **no RAID page in the base install** — the `openmediavault-md`
+>   plugin (8.1.5-1) had to be installed first; OMV upgraded 8.3.1 → 8.5.6-1 in the process (see §5).
 > - Dashboard: all widgets enabled on the home dashboard via `Dashboard | Settings` (§6, executed after RAID).
 
 ---
@@ -186,19 +188,25 @@ Per user request the web UI is HTTPS-only. `System | Workbench | Settings`:
 
 Reconnect the **4 data drives** (#3–#6) to the onboard ICH9R SATA ports (§Prerequisites).
 
-> **What OMV's RAID page actually is.** OMV has no RAID engine of its own — `Storage | RAID`
-> is a GUI wrapper around **`mdadm`**. Creating an array in the UI runs `mdadm --create`,
-> producing a standard Linux `/dev/md*` device; OMV then maintains `/etc/mdadm/mdadm.conf`
-> so arrays auto-assemble at boot, and owns the mount management for the filesystems you
-> build on top (XFS/ext4) via `Storage | File Systems`. The arrays are genuine Linux software
-> RAID — portable to any Linux box, per-disk SMART intact. (See [research 23](../research/23-ml110-nas-omv.md).)
+> **⚠ First: install the `openmediavault-md` plugin.** In OMV 8, the **Software RAID UI is a
+> separate plugin, not part of the base install** — a fresh OMV has no RAID page at all.
+> `System | Plugins` → search `md` → install **`openmediavault-md`** (this may also upgrade OMV
+> itself, e.g. 8.3.x → 8.5.x). Then do a **full page reload** so the `Storage | Multiple Device`
+> entry appears in the navigation.
 
-OMV manages mdadm in the web UI (`Storage | RAID`). It works best with **unpartitioned raw
+> **What OMV's RAID page actually is.** OMV has no RAID engine of its own — `Storage | Multiple Device`
+> (route `#/storage/md`) is a GUI wrapper around **`mdadm`**. Creating an array in the UI runs
+> `mdadm --create`, producing a standard Linux `/dev/md*` device; OMV then maintains
+> `/etc/mdadm/mdadm.conf` so arrays auto-assemble at boot, and owns the mount management for the
+> filesystems you build on top (XFS/ext4) via `Storage | File Systems`. The arrays are genuine
+> Linux software RAID — portable to any Linux box, per-disk SMART intact. (See [research 23](../research/23-ml110-nas-omv.md).)
+
+OMV manages mdadm in the web UI (`Storage | Multiple Device`). It works best with **unpartitioned raw
 block devices** — wipe the disks first if they carry old signatures:
 
 1. `Storage | Disks` — for each of the 4 data drives: **Wipe** (quick wipe is enough to clear
    partition tables; full wipe if old RAID superblocks are present).
-2. `Storage | RAID` → **Create** — **Level 1 (Mirror)**:
+2. `Storage | Multiple Device` → **Create** — **Level 1 (Mirror)**:
    - Select the two **Hitachi 500 GB** drives (match by **serial** — the 500 GB Hitachis share a
      model, only serial distinguishes them) → `md0`.
    - Create a second array: the two **250 GB** drives (WDC WD2500AAKX + GB0250EAFYK) → `md1`.
@@ -253,7 +261,7 @@ mounted. This is the key resilience test for a backup target.
 ping 192.168.2.210            # static IP reachable
 ```
 
-**Web UI:** `http://192.168.2.210` loads and shows both arrays as clean in `Storage | RAID`.
+**Web UI:** `https://192.168.2.210` loads and shows both arrays as clean in `Storage | Multiple Device`.
 
 ### Dashboard widgets (customization — 2026-08-09)
 
@@ -296,7 +304,7 @@ Default settings elsewhere untouched (auto-logout etc. left as-is).
 ## 8. Wrap-up
 
 - Confirm acceptance criteria from issue #61:
-  - OMV web UI reachable at `http://192.168.2.210`.
+  - OMV web UI reachable at `https://192.168.2.210` (HTTPS-only, §4d).
   - Data pool online with redundancy (`md0` + `md1`, clean).
   - Arrays survive reboot.
 - The **NFS `/export/backups`** and **SMB `/shared`** exports are **Phase 2** (issue #62).
