@@ -9,7 +9,7 @@
 > [**Research 23 — ML110 NAS (OMV)**](../research/23-ml110-nas-omv.md);
 > this doc is the implementation plan.
 
-**Status**: 📋 Planned  
+**Status**: 🔨 Implementing  
 **Date**: 2026-08-08  
 **Idea**: 01 — [Homelab NAS](01-nas-backup-target.md) (historical V1)  
 **Research**: [23 — ML110 NAS (OMV)](../research/23-ml110-nas-omv.md)  

@@ -151,7 +151,7 @@ Recommended: install both at the **Proxmox (Debian) host level** — full visibi
 1. **Purchase timing / device**: Wyse 5070 is the pick (design preference) — watch Allegro/OLX for a good deal (price + included PSU/RAM) at purchase time.
 2. **Zigbee coordinator**: USB dongle (Sonoff ZBDongle-P / SkyConnect) vs LAN unit (SLZB-06) — depends on where the node physically ends up and mesh coverage needs.
 3. **Home Assistant distribution**: Home Assistant OS in a VM (thread's default) vs Home Assistant Core in Docker/LXC — worth a separate comparison before committing.
-4. **Placement**: needs a central home spot for good Zigbee coverage; how does that interact with the TL-SG108E switch layout (runbook 23)?
+4. **Placement**: needs a central home spot for good Zigbee coverage; how does that interact with the TL-SG108E switch layout (runbook 21)?
 5. **Integration with the lab**: MQTT broker also consumed by other homelab services? Central Loki/Grafana on the M910q as the observability sink (Netdata Parent + Fluent Bit output target)?
 6. **Backup target**: `vzdump` backups → ML110 OMV (NFS/SMB) — ties into existing backup strategy (ADR 02, restic) — how do Proxmox VM backups fit with the restic/Blob model?
 7. **Is a dedicated node even needed?** The M910q (k3s) could run Home Assistant as a container — the dedicated thin-client node is justified by radio placement + decoupling, but worth an explicit trade-off before ADR.
@@ -164,7 +164,7 @@ Recommended: install both at the **Proxmox (Debian) host level** — full visibi
 - [ADR 23 — NAS on the ML110 (OMV)](../decisions/23-nas-on-ml110.md) — backup target / PVC source for the new node
 - [ADR 24 — Edge ingress appliance](../decisions/24-edge-ingress-appliance.md) — Wyse 3040 edge; this idea would be the *second* thin client
 - [Research 25 — Edge ingress SBC, PL market](../research/25-edge-ingress-sbc.md) — same PL-market thin-client research angle
-- [Runbook 23 — TL-SG108E switch](../runbooks/23-tl-sg108e-switch.md) — LAN placement context
+- [Runbook 21 — TL-SG108E switch](../runbooks/21-tl-sg108e-switch.md) — LAN placement context
 
 ## Source
 

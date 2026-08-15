@@ -260,7 +260,7 @@ values per drive.)
 ## References
 
 - Idea [03 — Homelab NAS on ML110](../ideas/03-nas-backup-target-ml110.md) — the plan/implementation doc
-- Runbook [21 — ML110 inventory](../runbooks/21-ml110-nas-inventory.md)
+- Runbook [22 — ML110 inventory](../runbooks/22-ml110-nas-inventory.md)
 - Issue [#54](https://github.com/jaroslaw-bagnicki/Homelab/issues/54)
 - [ADR 02 — Backup Strategy](../decisions/02-backup-strategy-restic-blob.md)
 - [ADR 22 — k3s + Azure Arc](../decisions/22-k3s-arc-homelab.md) — NFS backup target for Longhorn

@@ -9,7 +9,7 @@
 
 The homelab needs a dedicated **backup target NAS** for the primary server (M910q, ADR 01): an NFS export for Longhorn volume snapshots (ADR 02, ADR 22) and local SMB/CIFS for general backup landing. The original idea (idea 01) scoped a new Fujitsu Esprimo Q956 (~195 PLN + drives). A retired **HP ProLiant ML110 G5** (previously a FreeNAS box, likely unbootable, disks on regular hardware RAID) was available in the home for **zero acquisition cost** — research 23 analyzed reusing it.
 
-Constraints surfaced in the Phase 0 inventory (issue #54, runbook 21):
+Constraints surfaced in the Phase 0 inventory (issue #54, runbook 22):
 - **Hardware**: Pentium E2160 @ 1.8 GHz (2C/2T), **4 GB** DDR2-800 **ECC** RAM, no LO100/iLO (direct console only).
 - **Controllers**: onboard ICH9R 4-port SATA (IDE mode) + ICH9 2-port SATA + Dell SAS 6/iR (SAS1068E) hardware RAID — RAID 0/1 only, no JBOD.
 - **Disks**: 2× Hitachi 500 GB, 2× 250 GB (WDC WD2500AAKX + GB0250EAFYK), 2× 2.5" 20 GB cold spares, a **spare Goodram C40 120 GB SSD**, and a **spare 1 TB WD10EZEX**. All SMART-passed.
@@ -33,7 +33,7 @@ The NAS is a **storage-only node** — it does not run Docker/k3s workloads. The
 4. **Data pool: mdadm RAID1** — `md0` = 2× 500 GB Hitachis (XFS), `md1` = 2× 250 GB (ext4). Both pairs are mirror vdevs with redundancy.
 5. **Dell SAS 6/iR removed** — hardware RAID binds arrays to the controller, hides per-disk SMART, adds a battery-less write-cache risk, and does not support mdadm raw disks. Removing it also saves ~10–15 W on a 24/7 box.
 6. **BIOS SATA = AHCI**, ICH9R RAID firmware disabled — raw disks to mdadm.
-7. **Static IP `192.168.2.210`** on the homelab subnet (research 24 / runbook 23, switch port 3), replacing the DHCP lease.
+7. **Static IP `192.168.2.210`** on the homelab subnet (research 24 / runbook 21, switch port 3), replacing the DHCP lease.
 8. **1 TB WD10EZEX spare unplugged** for now — its content is reviewed during OMV setup and its role (bulk volume vs offline) decided then.
 
 ---
@@ -63,8 +63,8 @@ The NAS is a **storage-only node** — it does not run Docker/k3s workloads. The
 
 - [Research 23 — ML110 NAS (OMV)](../research/23-ml110-nas-omv.md) — hardware/software trade-off analysis
 - [Idea 03 — Homelab NAS on ML110](../ideas/03-nas-backup-target-ml110.md)
-- [Runbook 21 — ML110 inventory](../runbooks/21-ml110-nas-inventory.md)
-- [Runbook 22 — ML110 OMV setup](../runbooks/22-ml110-omv-setup.md)
+- [Runbook 22 — ML110 inventory](../runbooks/22-ml110-nas-inventory.md)
+- [Runbook 23 — ML110 OMV setup](../runbooks/23-ml110-omv-setup.md)
 - [Research 24 — network topology design](../research/24-network-topology-design.md) — static IP `192.168.2.210`
 - [ADR 01 — Hardware Selection](01-hardware-selection-m910q.md) — the M910q homelab server
 - [ADR 02 — Backup Strategy](02-backup-strategy-restic-blob.md) — Restic to local SATA + Azure Blob

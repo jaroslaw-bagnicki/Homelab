@@ -6,6 +6,10 @@ same `(type)` prefixes as commit messages; types: `feat`, `fix`, `docs`, `chore`
 
 ## 2026‑08
 
+- **(feat)** ML110 NAS Phase 1 — OMV 8.3 install on the Goodram SSD, BIOS AHCI, mdadm RAID1 (`md0`/`md1`), static IP `192.168.2.210`, SSH hardening — [runbook 23](docs/runbooks/23-ml110-omv-setup.md) · [ADR 23](docs/decisions/23-nas-on-ml110.md) · [#61](https://github.com/jaroslaw-bagnicki/Homelab/issues/61)
+- **(feat)** Edge ingress appliance — Wyse 3040 thin client (acquired) as bare-metal `cloudflared` + Caddy public ingress; OS trial Debian vs Alpine — [runbook 24](docs/runbooks/24-edge-appliance.md) · [ADR 24](docs/decisions/24-edge-ingress-appliance.md) · [idea 04](docs/ideas/04-edge-device-tunnel-caddy.md) · [#65](https://github.com/jaroslaw-bagnicki/Homelab/issues/65)
+- **(docs)** Home Assistant on a dedicated thin-client node — Proxmox VE VM + Mosquitto/Zigbee2MQTT — [ADR 25](docs/decisions/25-home-assistant-thin-client.md) · [idea 05](docs/ideas/05-home-assistant-thin-client.md) · [research 26](docs/research/26-home-assistant-thin-client.md)
+- **(docs)** Edge ingress SBC hardware research — used x86 thin client vs Orange Pi Zero 3 — [research 25](docs/research/25-edge-ingress-sbc.md)
 - **(docs)** ML110 NAS Phase 0 — hardware inventory & FreeNAS state audit before the OMV install — [runbook 22](docs/runbooks/22-ml110-nas-inventory.md) · [research 23](docs/research/23-ml110-nas-omv.md) · [#54](https://github.com/jaroslaw-bagnicki/Homelab/issues/54)
 - **(docs)** Homelab network topology & design — mesh inventory, flat-vs-VLAN analysis, static IP scheme — [research 24](docs/research/24-network-topology-design.md)
 - **(docs)** TL-SG108E switch setup — wiring, management IP, QoS/rate-limit, IGMP snooping — [runbook 21](docs/runbooks/21-tl-sg108e-switch.md) · [#55](https://github.com/jaroslaw-bagnicki/Homelab/issues/55)
@@ -14,6 +18,7 @@ same `(type)` prefixes as commit messages; types: `feat`, `fix`, `docs`, `chore`
 - **(feat)** Configure MCP servers per OpenCode instance — GitHub MCP PAT + Azure MCP — [#41](https://github.com/jaroslaw-bagnicki/Homelab/issues/41) · [#47](https://github.com/jaroslaw-bagnicki/Homelab/issues/47)
 - **(docs)** Add ideas: DevPod DevContainers for OpenCode ([idea 02](docs/ideas/02-devcontainers-opencode-k3s.md)) and NAS backup target ([idea 01](docs/ideas/01-nas-backup-target.md))
 - **(chore)** Drop the `(type)` prefix from issue and PR titles — labels convey the type
+- **(docs)** Adopt "research settles, ADR owns" co-authoring pattern — research/idea docs defer decision authority to the ADR
 
 ## 2026‑07
 
