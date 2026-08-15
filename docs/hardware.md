@@ -9,7 +9,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 
 | Node | Role | CPU | RAM | Storage | Network | Status |
 |---|---|---|---|---|---|---|
-| **Homelab** | main workload host | i5-7500T (4C/4T) | 16 GB DDR4 | 256 GB NVMe (+ free 2.5" bay) | 1× GbE `enp0s31f6` | ✅ |
+| **Homelab** | main workload host | i5-7500T (4C/4T) | 16 GB DDR4 | 256 GB NVMe (+ free 2.5" bay) | 1× GbE `enp0s31f6` | 🔨 |
 | **OMV NAS** | backup target / NFS | Pentium E2160 (2C/2T) | 4 GB DDR2 | Goodram 120 GB SSD + RAID1 arrays | 1× GbE BCM5722 | ✅ |
 | **Edge Ingress** | public ingress | Atom x5-Z8350 | 2 GB DDR3L | 8 GB eMMC | 1× GbE | 🔨 |
 | **Home Assistant** | smart home node | J4105 (planned) | 8 GB DDR4 | M.2 SATA SSD 64–256 GB | 1× GbE | 📋 |
@@ -24,10 +24,10 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 |---|---|
 | CPU | Intel Core i5-7500T (4C/4T, 35 W TDP, QuickSync) |
 | RAM | 16 GB DDR4 (2× SODIMM, upgradeable to 32 GB) |
-| Storage | 256 GB NVMe SSD; free 2.5" SATA bay for a secondary/backup disk |
+| Storage | 256 GB NVMe SSD (model/serial TBD — §0 SystemRescue audit); free 2.5" SATA bay for a secondary/backup disk |
 | Network | 1× Gigabit Ethernet (`enp0s31f6`) |
-| Role | Main workload host — Docker Compose today, k3s + Azure Arc target (ADR 22) |
-| Docs | [ADR 01](decisions/01-hardware-selection-m910q.md) · [overview](overview.md) |
+| Role | Main workload host — OS refresh to Ubuntu 24.04 LTS + Arc enrolment in progress (runbook 25), then k3s (ADR 22) |
+| Docs | [ADR 01](decisions/01-hardware-selection-m910q.md) · [runbook 25](runbooks/25-m910q-os-refresh.md) · [overview](overview.md) |
 
 ### OMV NAS — HP ProLiant ML110 G5
 
