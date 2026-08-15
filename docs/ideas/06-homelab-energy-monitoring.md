@@ -1,6 +1,6 @@
 # Idea 06 — Homelab Energy Monitoring
 
-> Monitor the homelab's own power consumption as an independent, always-on system — per-device **energy-measuring plugs** across the key nodes, with the data available to the lab's monitoring stack and to the homelab AI agent — decoupled from Home Assistant.
+> Monitor the homelab's own power consumption as an independent, always-on system — per-device **energy-measuring plugs** across the key nodes, with the data available to the lab's monitoring stack and to the homelab AI agent — decoupled from Home Assistant. **Zigbee is the most promising radio option**, but the choice is delegated to research, which compares it against alternatives.
 
 **Status**: 🧠 Idea — research 27 done, no hardware acquired  
 **Date**: 2026-08-15  
@@ -13,7 +13,17 @@
 
 Home Assistant is joining the lab as a dedicated thin-client node (idea 05, ADR 25 Proposed). Alongside it, the lab should know **what its own infrastructure draws**, per node — as an independent, always-on capability that does not depend on Home Assistant's availability or restarts, and that the homelab AI agent can read (and safely control) directly.
 
-All substance — radio alternatives, devices, stack, metrics architecture, AI-agent access, and open questions — lives in [research 27](../research/27-zigbee-energy-monitoring.md), which this idea references as a whole. The decision will be recorded in an ADR (likely tied to ADR 25).
+**Zigbee looks the most promising** (rich device ecosystem, low-power battery sensors, mains plugs act as mesh routers) — but the radio choice is delegated to [research 27](../research/27-zigbee-energy-monitoring.md), which compares it against Z-Wave, Matter/Thread, and Wi-Fi/Tasmota before any decision.
+
+## Questions to answer in research
+
+1. Which radio protocol — **Zigbee (most promising)** vs Z-Wave, Matter/Thread, Wi-Fi/Tasmota — and why.
+2. Which integration stack, and whether it can be independent of Home Assistant.
+3. Where the stack runs, and where the existing Prometheus/Grafana live.
+4. What to buy and when — starter set vs full coverage; bundle with the idea-05 hardware order.
+5. How the AI agent consumes the data — control vs read-only analytics, kept separate.
+6. Which homelab nodes to instrument first.
+7. How this fits the existing observability (Azure Monitor via Arc) and backup model.
 
 ## Lifecycle
 
