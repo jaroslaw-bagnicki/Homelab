@@ -100,6 +100,43 @@ by Ansible in §3.
 > regular user exists on the box until the script makes `labadmin` — the machine never
 > carries a throwaway human account.
 
+## 1b. Alternative — PXE / network install (deferred)
+
+Deferred — this refresh uses the USB path in §1. Recorded here so the option is
+available for future reinstalls (edge appliance, Home Assistant box).
+
+**Hardware confirmed.** The M910q UEFI exposes network boot: F12 → **Network 1 →
+UEFI: IPv4 Intel(R) Ethernet Connection (2) I219-LM** (choose the IPv4 entry).
+
+**PXE server must be a separate host.** It can't run on the M910q (the machine
+being reinstalled). It has to live on the same broadcast domain — the workstation
+(`192.168.2.227`, Wi-Fi) works (single broadcast domain, research 24). Three pieces:
+
+1. **proxyDHCP** — the Tenda router (`192.168.2.1`) won't advertise PXE options;
+   run dnsmasq in proxyDHCP mode (`dhcp-range=…,proxy`) so PXE clients learn the
+   boot server while the router still hands out IPs.
+2. **TFTP + HTTP + menu** — netboot.xyz gives an interactive installer menu
+   (Ubuntu 24.04, SystemRescue) served over HTTP; only the small bootloader goes
+   over TFTP.
+3. **Hosting** — Tiny PXE Server (portable Windows GUI, quickest proof) or a WSL2
+   stack (dnsmasq + tftpd + nginx). WSL2 needs **mirrored networking**
+   (`networkingMode=mirrored` in `.wslconfig` + `wsl --shutdown`); default NAT
+   hides the WSL VM from LAN PXE clients.
+
+**Autoinstall via initrd (subiquity).** Ubuntu Server's autoinstall is triggered by
+an `autoinstall` kernel argument; the installer pulls its config from cloud-init's
+nocloud datasource:
+
+```
+linux /casper/vmlinuz url=http://<pxe-server>/ubuntu-24.04-live-server-amd64.iso autoinstall ds=nocloud-net;s=http://<pxe-server>/ ip=dhcp ---
+initrd /casper/initrd
+```
+
+Serve `user-data` + `meta-data` over HTTP. The `user-data` automates §1's manual
+input — static IP `192.168.2.200`, gateway `192.168.2.1`, DNS `1.1.1.1, 8.8.8.8`,
+root breaking-glass password, OpenSSH — making the install fully hands-off; §2–§4
+then proceed unchanged.
+
 ## 2. Bootstrap — labadmin Agent Account (`scripts/New-HomelabLabadmin.ps1`)
 
 1. **One console command — enable root SSH password login for the bootstrap** (Ubuntu's
