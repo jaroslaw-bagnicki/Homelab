@@ -191,12 +191,16 @@ the playbook) for mDNS.
 
 ## 3. Ansible Provision (from the control node)
 
-From the repo checkout on the **control node** (the machine that runs Ansible):
+Run in **WSL Ubuntu** (the machine that runs Ansible). Ansible + collections are
+covered by the **Prerequisites**; `az login` is a freshness re-check before the Arc
+enrolment role fetches the SPN secret. Set `ANSIBLE_CONFIG` explicitly: WSL's
+`/mnt/c` mount is world-writable, so Ansible ignores an `ansible.cfg` auto-discovered
+there (`chmod` does not stick on the Windows mount).
 
-```powershell
-ansible-galaxy install -r ansible/requirements.yml
+```bash
+cd /mnt/c/dev/repos/Homelab
 az login
-ansible-playbook -i ansible/inventory.ini ansible/playbooks/playbook-homelab.yml
+ANSIBLE_CONFIG=ansible/ansible.cfg ansible-playbook -i ansible/inventory.ini ansible/playbooks/playbook-homelab.yml
 ```
 
 This runs `common` → `security` → `docker_host` → `azure_arc` and also handles the
