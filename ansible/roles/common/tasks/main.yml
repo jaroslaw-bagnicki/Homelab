@@ -11,7 +11,7 @@
     state: present
 
 - name: Set timezone to Etc/UTC
-  ansible.builtin.timezone:
+  community.general.timezone:
     name: Etc/UTC
   notify: Restart systemd-timesyncd
 
@@ -19,7 +19,7 @@
   ansible.builtin.service:
     name: systemd-timesyncd
     state: started
-    enabled: yes
+    enabled: true
 
 - name: Install Avahi daemon
   ansible.builtin.apt:
