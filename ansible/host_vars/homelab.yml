@@ -1,0 +1,4 @@
+---
+arc_machine_name: homelab
+docker_users: []
+common_enable_avahi: true

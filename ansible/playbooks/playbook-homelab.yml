@@ -1,0 +1,17 @@
+---
+- name: Configure homelab M910q base
+  hosts: homelab
+  become: true
+  pre_tasks:
+    - name: Extend LVM root volume to full disk
+      community.general.lvol:
+        vg: ubuntu-vg
+        lv: ubuntu-lv
+        size: "+100%FREE"
+        resizefs: true
+      when: ansible_facts['lvm']['vgs'] is defined and 'ubuntu-vg' in ansible_facts['lvm']['vgs']
+  roles:
+    - common
+    - security
+    - docker_host
+    - azure_arc

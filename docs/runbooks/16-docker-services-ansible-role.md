@@ -70,10 +70,8 @@ roles:
   - docker_services
 ```
 
-`security` role defaults that govern cloudflared connectivity (see `ansible/roles/security/defaults/main.yml`):
+`security` role defaults that govern inbound hardening (see `ansible/roles/security/defaults/main.yml`):
 - `security_ufw_deny_inbound_tcp_80: true` — deny direct public HTTP (defense in depth)
-- `security_cloudflared_outbound_enabled: true` — allow outbound UDP 7844
-- `security_cloudflared_quic_port: 7844` — cloudflared's QUIC port to CF edge
 
 ---
 

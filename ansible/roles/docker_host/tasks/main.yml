@@ -31,13 +31,21 @@
     dest: /etc/apt/keyrings/docker.asc
     mode: "0644"
 
+- name: Remove legacy Docker repo file (apt_repository format)
+  ansible.builtin.file:
+    path: /etc/apt/sources.list.d/download_docker_com_linux_ubuntu.list
+    state: absent
+
 - name: Add Docker apt repository
-  ansible.builtin.apt_repository:
-    repo: >-
-      deb [arch={{ ansible_architecture }} signed-by=/etc/apt/keyrings/docker.asc]
-      https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable
+  ansible.builtin.deb822_repository:
+    name: docker
+    types: [deb]
+    architectures: [amd64]
+    signed_by: /etc/apt/keyrings/docker.asc
+    uris: [https://download.docker.com/linux/ubuntu]
+    suites: ["{{ ansible_facts['distribution_release'] }}"]
+    components: [stable]
     state: present
-    update_cache: true
 
 - name: Install Docker packages
   ansible.builtin.apt:
@@ -48,6 +56,7 @@
       - docker-buildx-plugin
       - docker-compose-plugin
     state: present
+    update_cache: true
 
 - name: Add users to docker group
   ansible.builtin.user:
