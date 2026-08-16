@@ -179,7 +179,7 @@ sudo azcmagent show
 
 ## Verification Checklist
 
-- [ ] §0 hardware audit captured in `docs/hardware.md`
+- [x] §0 hardware audit captured in `docs/hardware.md`
 - [ ] Ubuntu 24.04 installed; static IP `192.168.2.200` reachable
 - [ ] SSH key login works: `ssh labadmin@homelab`
 - [ ] `ansible-playbook playbook-homelab.yml` completes with no failed tasks
