@@ -21,8 +21,13 @@ The refresh re-aligns the box with ADR 05 and unblocks that track.
 - **Operator account — `labadmin`.** Both hosts (cloudlab + homelab) use the generic `labadmin` account: key-only SSH (full pattern in the [ansible README](../ansible/README.md)).
 - **Breaking-glass account — your personal user.** Created during install (password in **Keeper**); it's the emergency **console** credential — SSH password login is disabled after §2 — while `labadmin` stays the key-only SSH automation account.
 
-> **Execution note.** Run this runbook **interactively from your control node** (any
-> interactive session — e.g. VSCode with the GitHub Copilot extension).
+> **Execution note.** Run this runbook **interactively from the repo's dev container**
+> (any interactive session — e.g. VSCode with the GitHub Copilot extension). Do **not**
+> run Ansible from WSL: the WSL control node broke the `azure_arc` role — the Windows
+> `az` CLI leaked in via WSL interop and the Linux Python lacked the `azure.azcollection`
+> deps, so the Key Vault lookup failed (`name 'azure_cloud' is not defined`) — and WSL's
+> world-writable `/mnt/c` mount makes Ansible ignore `ansible.cfg`. The dev container is
+> the designed control node.
 
 ## Prerequisites
 
