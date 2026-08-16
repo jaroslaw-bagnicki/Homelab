@@ -72,8 +72,8 @@ The refresh re-aligns the box with ADR 05 and unblocks that track.
 
 Manual input during install is limited to: static IP + a **personal breaking-glass
 account** (password) + OpenSSH server. Everything after (the `labadmin` agent account
-and SSH key) is done by `scripts/New-HomelabLabadmin.ps1` in §2; OS hardening (UFW,
-fail2ban, Docker, Arc) is done by Ansible in §3.
+and SSH key) is done manually in §2; OS hardening (UFW, fail2ban, Docker, Arc) is done
+by Ansible in §3.
 
 1. Boot the M910q from the **Ubuntu Server 24.04 LTS USB** (F12 boot menu).
 2. In the installer's **Network connections** screen set the interface (`enp0s31f6`):
@@ -88,25 +88,26 @@ fail2ban, Docker, Arc) is done by Ansible in §3.
 3. **Create your personal breaking-glass account** — on the installer's profile screen
    use **"Create a user"**: your name, server name `homelab`, a username of your choice,
    and a **strong password**. Store the password in **Keeper** — it is the breaking-glass
-   credential used by the bootstrap script in §2 and for emergency console/SSH access.
+   credential used in the §2 bootstrap and for emergency console/SSH access.
    (The installer adds the first user to `sudo` automatically.) Optionally set an
    independent root password as a last-resort fallback afterwards: `sudo passwd root`
    → **Keeper**.
 4. **Install OpenSSH server** when prompted — keep **"Allow password authentication over
-   SSH"** checked (the §2 bootstrap needs it; it is disabled again by the bootstrap).
-   Complete the install and reboot (remove the USB).
+   SSH"** checked if you'll run §2 over SSH (the §2 snippet disables it when done). You
+   can also run §2 from the console and skip password SSH entirely. Complete the install
+   and reboot (remove the USB).
 5. **Verify:**
    ```sh
    ip addr show enp0s31f6 | grep 'inet '
    # Expected: 192.168.2.200/24
    ```
 
-> **Why a personal account, not root, during install:** the bootstrap script (§2)
-> connects as this user (with `sudo`) to create the `labadmin` agent account and upload
-> the control node's SSH key. It doubles as the breaking-glass account — a named identity
-> for emergency **console** access (SSH password login is disabled when the bootstrap
-> finishes). `labadmin` is the key-only SSH agent account for Ansible; the machine never
-> carries a throwaway human account.
+> **Why a personal account, not root, during install:** the §2 bootstrap (run manually
+> on the box) uses this user (with `sudo`) to create the `labadmin` agent account and
+> install the control node's SSH key. It doubles as the breaking-glass account — a named
+> identity for emergency **console** access (SSH password login is disabled when the
+> bootstrap finishes). `labadmin` is the key-only SSH agent account for Ansible; the
+> machine never carries a throwaway human account.
 
 ## 1b. Alternative — PXE / network install (deferred)
 
@@ -145,28 +146,37 @@ input — static IP `192.168.2.200`, gateway `192.168.2.1`, DNS `1.1.1.1, 8.8.8.
 root breaking-glass password, OpenSSH — making the install fully hands-off; §2–§4
 then proceed unchanged.
 
-## 2. Bootstrap — labadmin Agent Account (`scripts/New-HomelabLabadmin.ps1`)
+## 2. Bootstrap — labadmin Agent Account (manual, on the homelab)
 
-No console command needed — Ubuntu's default sshd already allows password login for
-regular users, so the bootstrap connects straight in over SSH.
+Run these commands **on the M910q** as your personal breaking-glass user (console, or
+over SSH while password login is still enabled). They create the key-only `labadmin`
+agent account and lock SSH down to key-only. Replace `<control-node id_ed25519.pub>`
+with the content of the control node's `~/.ssh/id_ed25519.pub` (Windows + WSL keys are
+identical). Idempotent — safe to re-run.
 
-**From the control node**, run the bootstrap script (PowerShell, native ssh):
-```powershell
-./scripts/New-HomelabLabadmin.ps1 -TargetUser <your-username>
+```sh
+id -u labadmin >/dev/null 2>&1 || sudo useradd -m -s /bin/bash labadmin
+sudo usermod -aG sudo labadmin
+echo 'labadmin ALL=(ALL) NOPASSWD: ALL' | sudo tee /etc/sudoers.d/labadmin
+sudo chmod 440 /etc/sudoers.d/labadmin
+
+sudo mkdir -p /home/labadmin/.ssh && sudo chmod 700 /home/labadmin/.ssh
+echo '<control-node id_ed25519.pub>' | sudo tee /home/labadmin/.ssh/authorized_keys
+sudo chmod 600 /home/labadmin/.ssh/authorized_keys
+sudo chown -R labadmin:labadmin /home/labadmin/.ssh
+
+sudo passwd -l labadmin
+
+echo 'PasswordAuthentication no' | sudo tee /etc/ssh/sshd_config.d/99-password-off.conf
+sudo systemctl restart ssh
 ```
-It connects as **your personal breaking-glass user** (`<user>@homelab`) via the native
-`ssh` client — the user authenticates by **password** (the breaking-glass password from
-Keeper, prompted once by ssh; the script prompts once more for the same password to run
-the commands with `sudo`). It:
-- creates the `labadmin` user (sudo group, disabled password)
-- writes `/etc/sudoers.d/labadmin` with `NOPASSWD: ALL` (for Ansible `become`)
-- uploads the control node's `id_ed25519.pub` to `labadmin`'s `authorized_keys`
-- locks the `labadmin` password (key-only agent account)
-- restarts sshd
-No key is installed for the personal user — when the script finishes it disables SSH
-password login (`PasswordAuthentication no`), so the personal account becomes
-**console-only** breaking glass and `labadmin` is the only SSH path (key-only).
-Idempotent — safe to re-run while password login is still enabled.
+
+What it does:
+- creates `labadmin` (sudo group, locked password)
+- grants `NOPASSWD: ALL` (for Ansible `become`)
+- installs the control node's public key as `labadmin`'s only login
+- disables SSH password login → the personal account becomes **console-only** breaking
+  glass; `labadmin` is the only SSH path (key-only)
 
 **Verify:**
 ```powershell

@@ -58,7 +58,8 @@ $pw = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($bstr)
 [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
 
 Write-Host "Connecting as $TargetUser@$TargetHost (native ssh)..." -ForegroundColor Yellow
-("$pw`n$remote") | & ssh -o StrictHostKeyChecking=accept-new "$TargetUser@$TargetHost" "sudo -S bash -s"
+# tr strips CR (file CRLF + pwsh pipe's trailing CRLF) before bash runs the script as root
+("$pw`n$remote") | & ssh -o StrictHostKeyChecking=accept-new "$TargetUser@$TargetHost" 'sudo -S bash -c "tr -d ''\r'' | bash -s"'
 if ($LASTEXITCODE -ne 0) {
   throw "Remote bootstrap failed (exit $LASTEXITCODE)."
 }
