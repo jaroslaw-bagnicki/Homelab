@@ -54,6 +54,12 @@ The refresh re-aligns the box with ADR 05 and unblocks that track.
    smartctl -a /dev/nvme0n1   # or the NVMe /dev from lsblk — capture model, serial, health
    smartctl -H /dev/nvme0n1
    ```
+   > **hardinfo2 Storage-tab note.** hardinfo2 may show *"Any NVMe storage devices are
+   > not listed. udisks2 is required for NVMe devices"* — the SystemRescue live env does
+   > not run the udisks2 daemon, so hardinfo2 can't enumerate the NVMe. That's a
+   > **reporting limitation, not a hardware fault**: the drive still appears under PCI
+   > devices and in sensor readings. Trust the `lsblk`/`smartctl` output above for the
+   > authoritative NVMe data.
 3. Optional memory smoke test: from the SystemRescue boot menu select **Memtest86+**,
    run ≥1 pass, record `PASS`/`FAIL`.
 4. **Record the results** in `docs/hardware.md` (M910q section) — disk model/serial,
