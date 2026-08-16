@@ -150,8 +150,8 @@ then proceed unchanged.
 
 Run these commands **on the M910q** as your personal breaking-glass user (console, or
 over SSH while password login is still enabled). They create the key-only `labadmin`
-agent account and lock SSH down to key-only. Replace `<control-node id_ed25519.pub>`
-with the content of the control node's `~/.ssh/id_ed25519.pub` (Windows + WSL keys are
+agent account and lock SSH down to key-only. The snippet prompts you to paste the
+control node's public key (from `~/.ssh/id_ed25519.pub`; Windows + WSL keys are
 identical). Idempotent — safe to re-run.
 
 ```sh
@@ -161,7 +161,8 @@ echo 'labadmin ALL=(ALL) NOPASSWD: ALL' | sudo tee /etc/sudoers.d/labadmin
 sudo chmod 440 /etc/sudoers.d/labadmin
 
 sudo mkdir -p /home/labadmin/.ssh && sudo chmod 700 /home/labadmin/.ssh
-echo '<control-node id_ed25519.pub>' | sudo tee /home/labadmin/.ssh/authorized_keys
+read -r -p 'Paste the control node public key and press Enter: ' pubkey
+echo "$pubkey" | sudo tee /home/labadmin/.ssh/authorized_keys
 sudo chmod 600 /home/labadmin/.ssh/authorized_keys
 sudo chown -R labadmin:labadmin /home/labadmin/.ssh
 
@@ -234,7 +235,7 @@ sudo azcmagent show
 
 - [x] §0 hardware audit captured in `docs/hardware.md`
 - [x] Ubuntu 24.04 installed; static IP `192.168.2.200` reachable
-- [ ] SSH key login works: `ssh labadmin@homelab`
+- [x] SSH key login works: `ssh labadmin@homelab`
 - [ ] `ansible-playbook playbook-homelab.yml` completes with no failed tasks
 - [ ] `azcmagent show` → `Connected`
 - [ ] `docs/overview.md` M910q row reflects Ubuntu 24.04 + Arc (update if needed)
