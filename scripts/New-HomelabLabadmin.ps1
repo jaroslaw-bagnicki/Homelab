@@ -3,25 +3,28 @@
 .SYNOPSIS
     Bootstrap the labadmin agent account on a fresh M910q (after the Ubuntu 24.04 install).
 .DESCRIPTION
-    Connects to the M910q as root via the native ssh client (root authenticates by
-    password — the breaking-glass password from Keeper, prompted once by ssh) and
-    idempotently:
+    Connects to the M910q as the personal breaking-glass user via the native ssh client
+    (that user authenticates by password — prompted once by ssh; the same password is
+    used for sudo, prompted once more by this script) and idempotently:
       - creates the labadmin user (sudo group, locked password) if missing
       - writes /etc/sudoers.d/labadmin with NOPASSWD ALL (for Ansible become)
       - installs the control node's SSH public key for labadmin (key-only agent account)
-      - removes the temporary root-SSH permit drop-in and restarts sshd,
-        returning root to console-only breaking glass
-    No key is installed for root — root is reached by password only.
-    Prerequisite: root SSH password login must be enabled for this one bootstrap
-    (runbook 25 §2). Removed automatically by this script afterwards.
+      - restarts sshd
+    No key is installed for the personal user — it stays password-capable as the
+    breaking-glass account (runbook 25).
+    Prerequisite: the personal user exists with sudo on the M910q (installer profile
+    screen, runbook 25 §1).
 .PARAMETER TargetHost
     M910q hostname/IP. Default: homelab (resolves on the LAN via LLMNR).
+.PARAMETER TargetUser
+    Personal breaking-glass user on the M910q. Default: jarek.
 .PARAMETER PubKeyPath
     Control node's public key to install for labadmin. Default: ~/.ssh/id_ed25519.pub
 #>
 [CmdletBinding()]
 param(
   [string] $TargetHost = 'homelab',
+  [string] $TargetUser = 'jarek',
   [string] $PubKeyPath = "$HOME/.ssh/id_ed25519.pub"
 )
 
@@ -43,12 +46,17 @@ echo '__PUBKEY__' > /home/labadmin/.ssh/authorized_keys
 chmod 600 /home/labadmin/.ssh/authorized_keys
 chown -R labadmin:labadmin /home/labadmin/.ssh
 passwd -l labadmin
-rm -f /etc/ssh/sshd_config.d/99-root-bootstrap.conf
 systemctl restart ssh
 '@.Replace('__PUBKEY__', $pubKey)
 
-Write-Host "Connecting as root@$TargetHost (native ssh)..." -ForegroundColor Yellow
-& ssh -o StrictHostKeyChecking=accept-new "root@$TargetHost" $remote
+# sudo -S reads the first stdin line as the password, then bash -s runs the script.
+$secure = Read-Host "Password for $TargetUser@$TargetHost (sudo)" -AsSecureString
+$bstr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
+$pw = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($bstr)
+[System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
+
+Write-Host "Connecting as $TargetUser@$TargetHost (native ssh)..." -ForegroundColor Yellow
+("$pw`n$remote") | & ssh -o StrictHostKeyChecking=accept-new "$TargetUser@$TargetHost" "sudo -S bash -s"
 if ($LASTEXITCODE -ne 0) {
   throw "Remote bootstrap failed (exit $LASTEXITCODE)."
 }

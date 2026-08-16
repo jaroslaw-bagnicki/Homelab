@@ -19,6 +19,7 @@ The refresh re-aligns the box with ADR 05 and unblocks that track.
 - **Ansible-provisioned base**: `common` → `security` → `docker_host` → `azure_arc` via `ansible/playbooks/playbook-homelab.yml`.
 - **DNS / Caddy / cloudflared leave the M910q** (Option B): the edge appliance (ADR 24 / [#65](https://github.com/jaroslaw-bagnicki/Homelab/issues/65)) takes over `*.home` DNS, internal `.home` Caddy, and the external tunnel. The refreshed M910q is **compute-only** — dnsmasq and `homelab-tunnel` are **not** reinstalled. Accept a temporary `.home` + external-access gap until the edge box is live.
 - **Operator account — `labadmin`.** Both hosts (cloudlab + homelab) use the generic `labadmin` account: key-only SSH (full pattern in the [ansible README](../ansible/README.md)).
+- **Breaking-glass account — your personal user.** Created during install (password in **Keeper**); it's the emergency console/SSH credential while `labadmin` stays the key-only automation account.
 
 > **Execution note.** Run this runbook **interactively from your control node** (any
 > interactive session — e.g. VSCode with the GitHub Copilot extension).
@@ -69,10 +70,10 @@ The refresh re-aligns the box with ADR 05 and unblocks that track.
 
 ## 1. Reinstall Ubuntu Server 24.04 LTS
 
-Manual input during install is limited to: static IP + a **root breaking-glass password**
-+ OpenSSH server. Everything after (the `labadmin` agent account and SSH key) is done by
-`scripts/New-HomelabLabadmin.ps1` in §2; OS hardening (UFW, fail2ban, Docker, Arc) is done
-by Ansible in §3.
+Manual input during install is limited to: static IP + a **personal breaking-glass
+account** (password) + OpenSSH server. Everything after (the `labadmin` agent account
+and SSH key) is done by `scripts/New-HomelabLabadmin.ps1` in §2; OS hardening (UFW,
+fail2ban, Docker, Arc) is done by Ansible in §3.
 
 1. Boot the M910q from the **Ubuntu Server 24.04 LTS USB** (F12 boot menu).
 2. In the installer's **Network connections** screen set the interface (`enp0s31f6`):
@@ -84,10 +85,13 @@ by Ansible in §3.
    | Gateway | `192.168.2.1` |
    | Name servers | `1.1.1.1, 8.8.8.8` |
 
-3. **Set a root password** (the breaking-glass account) — the installer's profile screen
-   has a "Set a root password" option; use it instead of creating a regular user. Store
-   the password in **Keeper**. It is used by the bootstrap script in §2 and kept
-   console-only afterwards (root SSH is re-disabled by the script).
+3. **Create your personal breaking-glass account** — on the installer's profile screen
+   use **"Create a user"**: your name, server name `homelab`, a username (e.g. `jarek`),
+   and a **strong password**. Store the password in **Keeper** — it is the breaking-glass
+   credential used by the bootstrap script in §2 and for emergency console/SSH access.
+   (The installer adds the first user to `sudo` automatically.) Optionally set an
+   independent root password as a last-resort fallback afterwards: `sudo passwd root`
+   → **Keeper**.
 4. **Install OpenSSH server** when prompted. Complete the install and reboot (remove the USB).
 5. **Verify:**
    ```sh
@@ -95,10 +99,11 @@ by Ansible in §3.
    # Expected: 192.168.2.200/24
    ```
 
-> **Why root, not a regular user, during install:** the bootstrap script (§2) connects as
-> root to create the `labadmin` agent account and upload the control node's SSH key. No
-> regular user exists on the box until the script makes `labadmin` — the machine never
-> carries a throwaway human account.
+> **Why a personal account, not root, during install:** the bootstrap script (§2)
+> connects as this user (with `sudo`) to create the `labadmin` agent account and upload
+> the control node's SSH key. It doubles as the breaking-glass account — a named,
+> password-capable identity for emergency console/SSH access. `labadmin` is the key-only
+> agent account for Ansible; the machine never carries a throwaway human account.
 
 ## 1b. Alternative — PXE / network install (deferred)
 
@@ -139,37 +144,33 @@ then proceed unchanged.
 
 ## 2. Bootstrap — labadmin Agent Account (`scripts/New-HomelabLabadmin.ps1`)
 
-1. **One console command — enable root SSH password login for the bootstrap** (Ubuntu's
-   default `PermitRootLogin prohibit-password` blocks the script's root connection):
-   ```sh
-   echo 'PermitRootLogin yes' > /etc/ssh/sshd_config.d/99-root-bootstrap.conf && systemctl restart ssh
-   ```
-   The script removes this drop-in when it finishes (step 2), so root returns to
-   console-only.
+No console command needed — Ubuntu's default sshd already allows password login for
+regular users, so the bootstrap connects straight in over SSH.
 
-2. **From the control node**, run the bootstrap script (PowerShell, native ssh):
-   ```powershell
-   ./scripts/New-HomelabLabadmin.ps1
-   ```
-   It connects as `root@homelab` via the native `ssh` client — **root authenticates by
-   password** (the breaking-glass password from Keeper, prompted once by ssh). Then,
-   as root, it:
-   - creates the `labadmin` user (sudo group, disabled password)
-   - writes `/etc/sudoers.d/labadmin` with `NOPASSWD: ALL` (for Ansible `become`)
-   - uploads the control node's `id_ed25519.pub` to `labadmin`'s `authorized_keys`
-   - locks the `labadmin` password (key-only agent account)
-   - removes `99-root-bootstrap.conf` and restarts sshd (root SSH back to console-only)
-   No key is installed for root — root is reached by password only.
-   Idempotent — safe to re-run.
+**From the control node**, run the bootstrap script (PowerShell, native ssh):
+```powershell
+./scripts/New-HomelabLabadmin.ps1          # add -TargetUser <name> if not 'jarek'
+```
+It connects as **your personal breaking-glass user** (`<user>@homelab`) via the native
+`ssh` client — the user authenticates by **password** (the breaking-glass password from
+Keeper, prompted once by ssh; the script prompts once more for the same password to run
+the commands with `sudo`). It:
+- creates the `labadmin` user (sudo group, disabled password)
+- writes `/etc/sudoers.d/labadmin` with `NOPASSWD: ALL` (for Ansible `become`)
+- uploads the control node's `id_ed25519.pub` to `labadmin`'s `authorized_keys`
+- locks the `labadmin` password (key-only agent account)
+- restarts sshd
+No key is installed for the personal user — it stays password-capable as the
+breaking-glass account. Idempotent — safe to re-run.
 
-3. **Verify:**
-   ```powershell
-   ssh labadmin@homelab
-   sudo whoami   # should print "root"
-   ```
-   Pure hostname resolution works out of the box via **LLMNR** (Ubuntu's
-   `systemd-resolved` responds by default); `homelab.local` needs Avahi (installed by
-   the playbook) for mDNS.
+**Verify:**
+```powershell
+ssh labadmin@homelab
+sudo whoami   # should print "root"
+```
+Pure hostname resolution works out of the box via **LLMNR** (Ubuntu's
+`systemd-resolved` responds by default); `homelab.local` needs Avahi (installed by
+the playbook) for mDNS.
 
 ## 3. Ansible Provision (from the control node)
 
