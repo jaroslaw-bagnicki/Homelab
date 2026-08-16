@@ -23,11 +23,9 @@ The refresh re-aligns the box with ADR 05 and unblocks that track.
 
 > **Execution note.** Run this runbook **interactively from the repo's dev container**
 > (any interactive session — e.g. VSCode with the GitHub Copilot extension). Do **not**
-> run Ansible from WSL: the WSL control node broke the `azure_arc` role — the Windows
-> `az` CLI leaked in via WSL interop and the Linux Python lacked the `azure.azcollection`
-> deps, so the Key Vault lookup failed (`name 'azure_cloud' is not defined`) — and WSL's
-> world-writable `/mnt/c` mount makes Ansible ignore `ansible.cfg`. The dev container is
-> the designed control node.
+> run Ansible from WSL — the WSL control node's Azure/Ansible setup broke the `azure_arc`
+> role (Key Vault lookup failed) and Ansible ignores `ansible.cfg` on its world-writable
+> `/mnt/c` mount.
 
 ## Prerequisites
 
