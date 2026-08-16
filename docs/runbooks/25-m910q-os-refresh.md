@@ -191,16 +191,17 @@ the playbook) for mDNS.
 
 ## 3. Ansible Provision (from the control node)
 
-Run in **WSL Ubuntu** (the machine that runs Ansible). Ansible + collections are
-covered by the **Prerequisites**; `az login` is a freshness re-check before the Arc
-enrolment role fetches the SPN secret. Set `ANSIBLE_CONFIG` explicitly: WSL's
-`/mnt/c` mount is world-writable, so Ansible ignores an `ansible.cfg` auto-discovered
-there (`chmod` does not stick on the Windows mount).
+Run in the repo's **dev container** (the control node). Ansible + collections are
+covered by the **Prerequisites**; `az login --use-device-code` is a freshness re-check
+before the Arc enrolment role fetches the SPN secret (the container has no browser, so
+the device-code flow is required). From the `ansible/` directory the playbook
+auto-loads `ansible.cfg` (workspace dirs are `chmod 755`, so no `ANSIBLE_CONFIG`
+override is needed — unlike WSL's `/mnt/c` mount, where `chmod` does not stick).
 
 ```bash
-cd /mnt/c/dev/repos/Homelab
-az login
-ANSIBLE_CONFIG=ansible/ansible.cfg ansible-playbook -i ansible/inventory.ini ansible/playbooks/playbook-homelab.yml
+cd /workspaces/Homelab/ansible
+az login --use-device-code
+ansible-playbook playbooks/playbook-homelab.yml
 ```
 
 This runs `common` → `security` → `docker_host` → `azure_arc` and also handles the
