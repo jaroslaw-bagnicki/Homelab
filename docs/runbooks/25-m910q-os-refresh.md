@@ -19,7 +19,7 @@ The refresh re-aligns the box with ADR 05 and unblocks that track.
 - **Ansible-provisioned base**: `common` → `security` → `docker_host` → `azure_arc` via `ansible/playbooks/playbook-homelab.yml`.
 - **DNS / Caddy / cloudflared leave the M910q** (Option B): the edge appliance (ADR 24 / [#65](https://github.com/jaroslaw-bagnicki/Homelab/issues/65)) takes over `*.home` DNS, internal `.home` Caddy, and the external tunnel. The refreshed M910q is **compute-only** — dnsmasq and `homelab-tunnel` are **not** reinstalled. Accept a temporary `.home` + external-access gap until the edge box is live.
 - **Operator account — `labadmin`.** Both hosts (cloudlab + homelab) use the generic `labadmin` account: key-only SSH (full pattern in the [ansible README](../ansible/README.md)).
-- **Breaking-glass account — your personal user.** Created during install (password in **Keeper**); it's the emergency console/SSH credential while `labadmin` stays the key-only automation account.
+- **Breaking-glass account — your personal user.** Created during install (password in **Keeper**); it's the emergency **console** credential — SSH password login is disabled after §2 — while `labadmin` stays the key-only SSH automation account.
 
 > **Execution note.** Run this runbook **interactively from your control node** (any
 > interactive session — e.g. VSCode with the GitHub Copilot extension).
@@ -92,7 +92,9 @@ fail2ban, Docker, Arc) is done by Ansible in §3.
    (The installer adds the first user to `sudo` automatically.) Optionally set an
    independent root password as a last-resort fallback afterwards: `sudo passwd root`
    → **Keeper**.
-4. **Install OpenSSH server** when prompted. Complete the install and reboot (remove the USB).
+4. **Install OpenSSH server** when prompted — keep **"Allow password authentication over
+   SSH"** checked (the §2 bootstrap needs it; it is disabled again by the bootstrap).
+   Complete the install and reboot (remove the USB).
 5. **Verify:**
    ```sh
    ip addr show enp0s31f6 | grep 'inet '
@@ -101,9 +103,10 @@ fail2ban, Docker, Arc) is done by Ansible in §3.
 
 > **Why a personal account, not root, during install:** the bootstrap script (§2)
 > connects as this user (with `sudo`) to create the `labadmin` agent account and upload
-> the control node's SSH key. It doubles as the breaking-glass account — a named,
-> password-capable identity for emergency console/SSH access. `labadmin` is the key-only
-> agent account for Ansible; the machine never carries a throwaway human account.
+> the control node's SSH key. It doubles as the breaking-glass account — a named identity
+> for emergency **console** access (SSH password login is disabled when the bootstrap
+> finishes). `labadmin` is the key-only SSH agent account for Ansible; the machine never
+> carries a throwaway human account.
 
 ## 1b. Alternative — PXE / network install (deferred)
 
@@ -160,8 +163,10 @@ the commands with `sudo`). It:
 - uploads the control node's `id_ed25519.pub` to `labadmin`'s `authorized_keys`
 - locks the `labadmin` password (key-only agent account)
 - restarts sshd
-No key is installed for the personal user — it stays password-capable as the
-breaking-glass account. Idempotent — safe to re-run.
+No key is installed for the personal user — when the script finishes it disables SSH
+password login (`PasswordAuthentication no`), so the personal account becomes
+**console-only** breaking glass and `labadmin` is the only SSH path (key-only).
+Idempotent — safe to re-run while password login is still enabled.
 
 **Verify:**
 ```powershell

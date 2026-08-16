@@ -10,8 +10,8 @@
       - writes /etc/sudoers.d/labadmin with NOPASSWD ALL (for Ansible become)
       - installs the control node's SSH public key for labadmin (key-only agent account)
       - restarts sshd
-    No key is installed for the personal user — it stays password-capable as the
-    breaking-glass account (runbook 25).
+    No key is installed for the personal user — password SSH is disabled at the end,
+    so it stays console-only as the breaking-glass account (runbook 25).
     Prerequisite: the personal user exists with sudo on the M910q (installer profile
     screen, runbook 25 §1).
 .PARAMETER TargetHost
@@ -47,6 +47,7 @@ echo '__PUBKEY__' > /home/labadmin/.ssh/authorized_keys
 chmod 600 /home/labadmin/.ssh/authorized_keys
 chown -R labadmin:labadmin /home/labadmin/.ssh
 passwd -l labadmin
+echo 'PasswordAuthentication no' > /etc/ssh/sshd_config.d/99-password-off.conf
 systemctl restart ssh
 '@.Replace('__PUBKEY__', $pubKey)
 
