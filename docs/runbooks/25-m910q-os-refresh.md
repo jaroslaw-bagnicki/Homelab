@@ -168,7 +168,8 @@ sudo chown -R labadmin:labadmin /home/labadmin/.ssh
 
 sudo passwd -l labadmin
 
-echo 'PasswordAuthentication no' | sudo tee /etc/ssh/sshd_config.d/99-password-off.conf
+# sshd uses the first value read; 10- wins over cloud-init's 50-cloud-init.conf (PasswordAuthentication yes)
+echo 'PasswordAuthentication no' | sudo tee /etc/ssh/sshd_config.d/10-password-off.conf
 sudo systemctl restart ssh
 ```
 
