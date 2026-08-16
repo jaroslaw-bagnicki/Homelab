@@ -216,18 +216,9 @@ This runs `common` → `security` → `docker_host` → `azure_arc` and also han
 **Verify:** the playbook completes with no failed tasks and ends with the Arc connection
 status.
 
-> **Why the LVM pre_task is there:** Ubuntu's installer allocates only ~100 GB to the root
-> LV by default; without the extension the 256 GB NVMe caps at ~100 GB and Docker/k3s fills
-> it quickly. The pre_task extends the LV (container) *and* the ext4 filesystem (data) —
-> two layers, both required — via `community.general.lvol` + `resizefs`. Confirm with
-> `df -h /` → ~232 GB.
->
-> **Fallback (only if the pre_task cannot run):** do it manually before further
-> provisioning:
-> ```sh
-> sudo lvextend -l +100%FREE /dev/mapper/ubuntu--vg-ubuntu--lv
-> sudo resize2fs /dev/mapper/ubuntu--vg-ubuntu--lv
-> ```
+> **Why the LVM pre_task is there:** Ubuntu's installer only allocates ~100 GB to the
+> root LV by default; the playbook's `pre_task` extends it to the full 256 GB NVMe.
+> Confirm with `df -h /` → ~232 GB.
 
 ## 4. Azure Arc Verification
 
