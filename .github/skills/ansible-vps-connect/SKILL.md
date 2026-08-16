@@ -59,8 +59,8 @@ ssh cloudlab "hostname && timedatectl | head -3"
 Once SSH is working, from the `ansible/` directory:
 
 ```powershell
-cd /workspaces/Homelab/ansible
-ansible-playbook playbook.yml
+cd /workspaces/Homelab
+ansible-playbook ansible/playbooks/playbook.yml
 ```
 
 ## Known Pitfalls

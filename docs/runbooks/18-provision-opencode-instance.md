@@ -36,7 +36,7 @@ The `example.com` literal reflects the cloudlab deployment. The `opencode_public
 Run the OpenCode workload playbook from the `ansible/` directory. The new instance is picked up automatically from `opencode_instances`.
 
 ```bash
-cd ansible && ansible-playbook workloads/opencode/opencode-playbook.yml
+ansible-playbook ansible/workloads/opencode/opencode-playbook.yml
 ```
 
 The playbook runs a 7-step atomic loop per instance:
