@@ -4,6 +4,7 @@ Step-by-step guides for configuring the homelab server.
 
 | # | Runbook | Topic |
 |---|---|---|
+| 25 | [25-m910q-os-refresh.md](25-m910q-os-refresh.md) | M910q OS refresh — reinstall Ubuntu 24.04 LTS (ADR 05), Ansible base provision, Azure Arc enrolment; DNS/Caddy/tunnel move to the edge appliance — see [issue #74](https://github.com/jaroslaw-bagnicki/Homelab/issues/74) |
 | 24 | [24-edge-appliance.md](24-edge-appliance.md) | Dedicated edge appliance (Dell Wyse 3040) — bare-metal cloudflared + Caddy as the single public ingress; hardware acquired 2026-08-13; OS trial Debian vs Alpine — see [ADR 24](../decisions/24-edge-ingress-appliance.md) & [issue #65](https://github.com/jaroslaw-bagnicki/Homelab/issues/65) |
 | 23 | [23-ml110-omv-setup.md](23-ml110-omv-setup.md) | ML110 NAS Phase 1 — OMV 8.x install on the Goodram SSD, BIOS AHCI, mdadm RAID1 (`md0`/`md1`), static IP `192.168.2.210` — see [ADR 23](../decisions/23-nas-on-ml110.md) & [issue #61](https://github.com/jaroslaw-bagnicki/Homelab/issues/61) |
 | 22 | [22-ml110-nas-inventory.md](22-ml110-nas-inventory.md) | Phase 0 inventory & FreeNAS state audit on the HP ProLiant ML110 before OMV install — generation, ZFS pools, disk SMART, controller topology, BIOS settings — see [idea 03](../ideas/03-nas-backup-target-ml110.md) & [issue #54](https://github.com/jaroslaw-bagnicki/Homelab/issues/54) |

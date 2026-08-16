@@ -140,7 +140,7 @@ The following steps will be automated via Ansible playbooks, not done manually:
 
 - **UFW firewall** — default deny incoming, allow SSH only
 - **fail2ban** — 3 retries, 1h ban on SSH
-- **Docker Engine** — official repo, `labadmin` in docker group
+- **Docker Engine** — official repo (no docker-group membership — `docker_users: []`, agent reaches Docker via `sudo`/`become`)
 - **Common tools** — git, curl, htop, etc.
 - **NTP** — ensure time sync is enabled (timezone stays UTC on servers)
 - **Verification** — SSH config, UFW, fail2ban, Docker, listening ports

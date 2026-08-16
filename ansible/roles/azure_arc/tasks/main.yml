@@ -6,7 +6,7 @@
       - curl
       - gnupg
     state: present
-    update_cache: yes
+    update_cache: true
 
 - name: Add Microsoft package repo
   ansible.builtin.apt:
@@ -16,11 +16,12 @@
   ansible.builtin.apt:
     name: azcmagent
     state: present
-    update_cache: yes
+    update_cache: true
 
 - name: Fetch SPN client secret from Key Vault
   ansible.builtin.set_fact:
-    arc_spn_secret: "{{ lookup('azure.azcollection.azure_keyvault_secret', arc_spn_secret_name, vault_url='https://' ~ arc_keyvault_name ~ '.vault.azure.net') }}"
+    arc_spn_secret: "{{ lookup('azure.azcollection.azure_keyvault_secret', \
+      arc_spn_secret_name, vault_url='https://' ~ arc_keyvault_name ~ '.vault.azure.net') }}"
   no_log: true
 
 - name: Connect to Azure Arc

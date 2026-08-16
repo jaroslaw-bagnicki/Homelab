@@ -23,11 +23,12 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Item | Spec |
 |---|---|
 | CPU | Intel Core i5-7500T (4C/4T, 35 W TDP, QuickSync) |
-| RAM | 16 GB DDR4 (2× SODIMM, upgradeable to 32 GB) |
-| Storage | 256 GB NVMe SSD; free 2.5" SATA bay for a secondary/backup disk |
-| Network | 1× Gigabit Ethernet (`enp0s31f6`) |
-| Role | Main workload host — Docker Compose today, k3s + Azure Arc target (ADR 22) |
-| Docs | [ADR 01](decisions/01-hardware-selection-m910q.md) · [overview](overview.md) |
+| RAM | 16 GB DDR4 (1× 16 GiB SODIMM in ChannelB-DIMM0 @ 2400 MT/s; ChannelA-DIMM0 empty — 2 slots, upgradeable to 32 GB) |
+| Storage | 256 GB NVMe — SK hynix BC501 HFM256GDJTNG-8310A · serial `FS85N582310805D30` · FW `80000C00` · SMART **PASSED** (1% used, 16,355 POH — §0 audit 2026-08-16); free 2.5" SATA bay for a secondary/backup disk |
+| Firmware | BIOS LENOVO M1AKT2CA (2017-11-22) · board 310B |
+| Network | 1× Gigabit Ethernet Intel I219-LM (`enp0s31f6`, MAC `6c:4b:90:40:c5:e2`) |
+| Role | Main workload host — OS refresh to Ubuntu 24.04 LTS + Arc enrolment in progress (runbook 25), then k3s (ADR 22) |
+| Docs | [ADR 01](decisions/01-hardware-selection-m910q.md) · [runbook 25](runbooks/25-m910q-os-refresh.md) · [overview](overview.md) |
 
 ### OMV NAS — HP ProLiant ML110 G5
 
