@@ -12,7 +12,6 @@ hardware detail see [Hardware Inventory](hardware.md); for change history see
 |---|---|---|---|---|
 | **Homelab** | main workload host (Docker → k3s) | Lenovo M910q Tiny · Ubuntu 24.04 LTS · Azure Arc | `192.168.2.200` | ✅ |
 | **OMV NAS** | backup target / NFS for Longhorn | HP ProLiant ML110 G5 · OMV 8.3 | `192.168.2.210` | ✅ |
-| **TL-SG108E** | access switch | TP-Link 8× GigE (L2) | `192.168.2.230` | ✅ |
 | **Edge Ingress** | public ingress (cloudflared + Caddy) | Dell Wyse 3040 · Debian/Alpine TBD | TBD | 🔨 |
 | **Home Assistant** | smart home node | Wyse 5070 · Proxmox VE | TBD | 📋 |
 | **LLM server** | local LLM inference | Minisforum X1 Lite | TBD | 🧠 (Phase 2) |
@@ -35,7 +34,6 @@ Current state — what's running or in progress. Planned work is under [What's N
 
 | # | Workload | Effort | Notes |
 |---|---|---|---|
-| [#74](https://github.com/jaroslaw-bagnicki/Homelab/issues/74) | **M910q OS refresh** | ⭐⭐⭐ | Reinstall Ubuntu 24.04 LTS + Arc enrolment — unblocks k3s (#44); DNS/Caddy/tunnel move to the edge — [runbook 25](runbooks/25-m910q-os-refresh.md) |
 | [#13](https://github.com/jaroslaw-bagnicki/Homelab/issues/13) | **Restic backup** (redo) | ⭐⭐ | Daily snapshots to Azure Blob Storage — see [runbook](runbooks/07-restic-backup.md) |
 | [#65](https://github.com/jaroslaw-bagnicki/Homelab/issues/65) | **Edge Ingress** | ⭐⭐ | Move public ingress (`cloudflared` + Caddy) to the Wyse 3040 — [runbook 24](runbooks/24-edge-appliance.md) · [ADR 24](decisions/24-edge-ingress-appliance.md) |
 | [#54](https://github.com/jaroslaw-bagnicki/Homelab/issues/54) | **OMV NAS Phase 2** | ⭐⭐ | NFS/SMB exports + Longhorn backup target — [runbook 23](runbooks/23-ml110-omv-setup.md) |
