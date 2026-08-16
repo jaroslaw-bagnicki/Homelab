@@ -49,7 +49,7 @@ chown -R labadmin:labadmin /home/labadmin/.ssh
 passwd -l labadmin
 echo 'PasswordAuthentication no' > /etc/ssh/sshd_config.d/99-password-off.conf
 systemctl restart ssh
-'@.Replace('__PUBKEY__', $pubKey)
+'@ -replace "`r`n", "`n").Replace('__PUBKEY__', $pubKey)
 
 # sudo -S reads the first stdin line as the password, then bash -s runs the script.
 $secure = Read-Host "Password for $TargetUser@$TargetHost (sudo)" -AsSecureString
