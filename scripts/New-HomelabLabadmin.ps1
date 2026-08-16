@@ -36,7 +36,7 @@ if (-not (Test-Path $PubKeyPath)) {
 }
 $pubKey = (Get-Content $PubKeyPath -Raw).Trim()
 
-$remote = @'
+$remote = (@'
 set -e
 id -u labadmin >/dev/null 2>&1 || useradd -m -s /bin/bash labadmin
 usermod -aG sudo labadmin
