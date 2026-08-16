@@ -86,7 +86,7 @@ fail2ban, Docker, Arc) is done by Ansible in §3.
    | Name servers | `1.1.1.1, 8.8.8.8` |
 
 3. **Create your personal breaking-glass account** — on the installer's profile screen
-   use **"Create a user"**: your name, server name `homelab`, a username (e.g. `jarek`),
+   use **"Create a user"**: your name, server name `homelab`, a username of your choice,
    and a **strong password**. Store the password in **Keeper** — it is the breaking-glass
    credential used by the bootstrap script in §2 and for emergency console/SSH access.
    (The installer adds the first user to `sudo` automatically.) Optionally set an
@@ -149,7 +149,7 @@ regular users, so the bootstrap connects straight in over SSH.
 
 **From the control node**, run the bootstrap script (PowerShell, native ssh):
 ```powershell
-./scripts/New-HomelabLabadmin.ps1          # add -TargetUser <name> if not 'jarek'
+./scripts/New-HomelabLabadmin.ps1 -TargetUser <your-username>
 ```
 It connects as **your personal breaking-glass user** (`<user>@homelab`) via the native
 `ssh` client — the user authenticates by **password** (the breaking-glass password from

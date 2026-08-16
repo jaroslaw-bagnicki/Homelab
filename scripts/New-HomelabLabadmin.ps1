@@ -17,14 +17,15 @@
 .PARAMETER TargetHost
     M910q hostname/IP. Default: homelab (resolves on the LAN via LLMNR).
 .PARAMETER TargetUser
-    Personal breaking-glass user on the M910q. Default: jarek.
+    Personal breaking-glass user on the M910q. Required — pass your install username.
 .PARAMETER PubKeyPath
     Control node's public key to install for labadmin. Default: ~/.ssh/id_ed25519.pub
 #>
 [CmdletBinding()]
 param(
   [string] $TargetHost = 'homelab',
-  [string] $TargetUser = 'jarek',
+  [Parameter(Mandatory = $true)]
+  [string] $TargetUser,
   [string] $PubKeyPath = "$HOME/.ssh/id_ed25519.pub"
 )
 
