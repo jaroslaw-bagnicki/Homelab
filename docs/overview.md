@@ -10,7 +10,7 @@ hardware detail see [Hardware Inventory](hardware.md); for change history see
 
 | Node | Role | Hardware / OS | IP | Status |
 |---|---|---|---|---|
-| **Homelab** | main workload host (Docker → k3s) | Lenovo M910q Tiny · **Ubuntu 26.04 → 24.04 LTS** (refresh in progress) | `192.168.2.200` | 🔨 |
+| **Homelab** | main workload host (Docker → k3s) | Lenovo M910q Tiny · Ubuntu 24.04 LTS · Azure Arc | `192.168.2.200` | ✅ |
 | **OMV NAS** | backup target / NFS for Longhorn | HP ProLiant ML110 G5 · OMV 8.3 | `192.168.2.210` | ✅ |
 | **TL-SG108E** | access switch | TP-Link 8× GigE (L2) | `192.168.2.230` | ✅ |
 | **Edge Ingress** | public ingress (cloudflared + Caddy) | Dell Wyse 3040 · Debian/Alpine TBD | TBD | 🔨 |
