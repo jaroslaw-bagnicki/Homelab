@@ -241,9 +241,9 @@ sudo azcmagent show
 - [x] §0 hardware audit captured in `docs/hardware.md`
 - [x] Ubuntu 24.04 installed; static IP `192.168.2.200` reachable
 - [x] SSH key login works: `ssh labadmin@homelab`
-- [ ] `ansible-playbook playbook-homelab.yml` completes with no failed tasks
-- [ ] `azcmagent show` → `Connected`
-- [ ] `docs/overview.md` M910q row reflects Ubuntu 24.04 + Arc (update if needed)
+- [x] `ansible-playbook playbook-homelab.yml` completes with no failed tasks
+- [x] `azcmagent show` → `Connected`
+- [x] `docs/overview.md` M910q row reflects Ubuntu 24.04 + Arc (update if needed)
 
 ## Follow-Ups
 
