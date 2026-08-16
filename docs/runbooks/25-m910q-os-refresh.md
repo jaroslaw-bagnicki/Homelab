@@ -18,7 +18,7 @@ The refresh re-aligns the box with ADR 05 and unblocks that track.
 - **Reinstall** to Ubuntu Server 24.04 LTS on the 256 GB NVMe; static IP `192.168.2.200` (switch port 2, runbook 21).
 - **Ansible-provisioned base**: `common` → `security` → `docker_host` → `azure_arc` via `ansible/playbooks/playbook-homelab.yml`.
 - **DNS / Caddy / cloudflared leave the M910q** (Option B): the edge appliance (ADR 24 / [#65](https://github.com/jaroslaw-bagnicki/Homelab/issues/65)) takes over `*.home` DNS, internal `.home` Caddy, and the external tunnel. The refreshed M910q is **compute-only** — dnsmasq and `homelab-tunnel` are **not** reinstalled. Accept a temporary `.home` + external-access gap until the edge box is live.
-- **Operator account — `labadmin`.** Both hosts (cloudlab + homelab) use the generic `labadmin` account: key-only SSH (full pattern in the [ansible README](../ansible/README.md)).
+- **Operator account — `labadmin`.** Both hosts (cloudlab + homelab) use the generic `labadmin` account: key-only SSH (full pattern in the [ansible README](../../ansible/README.md)).
 - **Breaking-glass account — your personal user.** Created during install (password in **Keeper**); it's the emergency **console** credential — SSH password login is disabled after §2 — while `labadmin` stays the key-only SSH automation account.
 
 > **Execution note.** Run this runbook **interactively from the repo's dev container**
@@ -32,8 +32,8 @@ The refresh re-aligns the box with ADR 05 and unblocks that track.
 - **Control node** (the machine that runs Ansible — must be on the same LAN as the M910q):
   - `ssh` client (native OpenSSH)
   - Ansible + collections: `ansible-galaxy install -r ansible/requirements.yml`
-  - `az` CLI (or Az PowerShell) **logged in** — the `azure_arc` role fetches the SPN
-    secret from Key Vault on the control node
+  - `az` CLI **logged in** (`az login`) — the `azure_arc` role fetches the SPN secret
+    from Key Vault via the `azure.azcollection` lookup on the control node
   - The control node's SSH **public** key (uploaded to `labadmin` by the bootstrap script)
 - **Bootable USB** with Ubuntu Server 24.04 LTS ISO and a **SystemRescue** ISO.
 
@@ -249,10 +249,10 @@ sudo azcmagent show
 
 ## References
 
-- [ADR 05 — OS decision](decisions/05-os-decision-ubuntu-server.md) · [research 09 — OS decision](research/09-os-decision.md)
-- [ADR 22 — k3s + Azure Arc](decisions/22-k3s-arc-homelab.md) · [issue #44](https://github.com/jaroslaw-bagnicki/Homelab/issues/44)
-- [ADR 24 — Edge ingress appliance](decisions/24-edge-ingress-appliance.md) · [issue #65](https://github.com/jaroslaw-bagnicki/Homelab/issues/65)
-- [Runbook 01](runbooks/01-init.md) — original install (USB, static IP, SSH, hardening)
-- [Runbook 22](runbooks/22-ml110-nas-inventory.md) — SystemRescue audit pattern (ML110)
-- [Runbook 21](runbooks/21-tl-sg108e-switch.md) — switch port 2, M910q placement
+- [ADR 05 — OS decision](../decisions/05-os-decision-ubuntu-server.md) · [research 09 — OS decision](../research/09-os-decision.md)
+- [ADR 22 — k3s + Azure Arc](../decisions/22-k3s-arc-homelab.md) · [issue #44](https://github.com/jaroslaw-bagnicki/Homelab/issues/44)
+- [ADR 24 — Edge ingress appliance](../decisions/24-edge-ingress-appliance.md) · [issue #65](https://github.com/jaroslaw-bagnicki/Homelab/issues/65)
+- [Runbook 01](01-init.md) — original install (USB, static IP, SSH, hardening)
+- [Runbook 22](22-ml110-nas-inventory.md) — SystemRescue audit pattern (ML110)
+- [Runbook 21](21-tl-sg108e-switch.md) — switch port 2, M910q placement
 - [Issue #74](https://github.com/jaroslaw-bagnicki/Homelab/issues/74) — this refresh
