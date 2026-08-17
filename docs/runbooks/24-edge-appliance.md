@@ -39,8 +39,9 @@ Debian 13.6.0 install **completed** on the eMMC. Decisions locked during install
 >    from the F2 Setup Boot Sequence (re-add so the box boots without F12).
 
 **Handoff to next thread:** SSH in as `jarek`; settle swap keep/remove → verify apt
-mirror works → continue with §2 base setup (static IP `192.168.2.240` live — verify the
-typo fix persists across reboot; root SSH locked by default `prohibit-password`).
+mirror works → continue with §2 base setup (static IP `192.168.2.240` live and fixed —
+the installer typo `192.198.2.240` was corrected in `/etc/network/interfaces`; root SSH
+locked by default `prohibit-password`).
 
 ## Goals
 
