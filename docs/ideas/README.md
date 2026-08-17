@@ -4,7 +4,8 @@ Pre-decision exploration and brainstorming. Unlike `docs/decisions/` (ADRs) whic
 
 | # | Idea | Status | Description |
 |---|---|---|---|
-| 01 | [Homelab NAS](01-nas-backup-target.md) | 🧠 Idea | Budget NAS built from Fujitsu Esprimo Q956 + 2× WD Black 500GB, running OMV (V1 — superseded in practice by idea 03) |
+| 01 | [Homelab NAS](01-nas-backup-target.md) | 🧠 Idea | Fujitsu Esprimo Q956 + 2× WD Black 500GB on OMV (V1, superseded in practice by idea 03) |
+| 01b | [Homelab NAS (EliteDesk 800 G1 / Unraid)](01b-nas-backup-target-elitedesk.md) | 🧠 Idea | Extensible alternative to idea 01: HP EliteDesk 800 G1 SFF + 3× WD 1TB + NVMe cache on Unraid |
 | 02 | [DevContainers for OpenCode with DevPod](02-devcontainers-opencode-k3s.md) | 🧠 Idea | Long-lived, project-isolated OpenCode workspaces declared as Dev Containers, using Docker now and K3s later |
 | 03 | [Homelab NAS on ML110 (OMV)](03-nas-backup-target-ml110.md) | 🔨 Implementing | Repurpose retired HP ProLiant ML110 (was FreeNAS) as OMV backup target NAS; Phase 0 inventory in [runbook 22](../runbooks/22-ml110-nas-inventory.md), tracked in [issue #54](https://github.com/jaroslaw-bagnicki/Homelab/issues/54) |
 | 04 | [Dedicated Edge Device for Cloudflare Tunnel + Caddy](04-edge-device-tunnel-caddy.md) | 🔨 Implementing | Move the homelab's public ingress (`cloudflared` + Caddy) off the M910q onto a low-power edge box — decouple ingress from k3s churn (ADR 22), route to OMV without breaking storage-only scope (ADR 23). Decision: [ADR 24](https://github.com/jaroslaw-bagnicki/Homelab/blob/main/docs/decisions/24-edge-ingress-appliance.md) · runbook 24 · Wyse 3040 acquired 2026-08-13 |
