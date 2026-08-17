@@ -4,7 +4,7 @@
 
 **Scope**: Pre-boot hardware audit of the newly arrived **Dell Wyse 3040** thin client (the edge ingress appliance, [ADR 24](../decisions/24-edge-ingress-appliance.md)) — full hardware inventory plus the investigation of the **8 GB eMMC that SystemRescue failed to enumerate**, resolved by the Debian installer recognizing it as `mmcblk0`.
 
-**Status**: ✅ Analysis mostly resolved — the eMMC **exists and is usable**; the SystemRescue enumeration gap was a **live-media kernel/driver artifact, not a hardware or firmware issue**. A single implementation step remains: confirm the firmware actually boots from the eMMC once an EFI System Partition is installed on it.
+**Status**: ✅ Fully resolved — the eMMC **exists, is usable, and boots the installed Debian 13**; the SystemRescue enumeration gap was a **live-media kernel/driver artifact, not a hardware or firmware issue**. The eMMC is confirmed as the OS medium (ADR 24 premise holds); a post-install EXT_CSD read shows it in near-mint condition (0–10% lifetime used, see [eMMC Health Inspection](#emmc-health-inspection-post-install-2026-08-18)).
 
 ---
 
@@ -112,9 +112,9 @@ One-Time Boot Menu). That hypothesis is the one remaining check.
 - [x] Dell ePSA Pre-boot System Assessment — all tests Pass, incl. **eMMC Drive**
 - [x] BIOS Setup (F2) menu walk — PXE-only Boot Sequence; no storage toggle exists in Setup
 - [x] Debian installer confirms **`mmcblk0` = 7.8 GB MMC H8G4a** (the eMMC, usable)
-- [ ] Partition `mmcblk0` (guided "use entire disk"), install GRUB to `/dev/mmcblk0` (not `sda` = the live USB)
-- [ ] Reboot → F12 One-Time Boot Menu → confirm the firmware discovers the eMMC's EFI partition
-- [ ] Re-add eMMC to the BIOS Boot Sequence for persistent boot
+- [x] Partition `mmcblk0` (guided "use entire disk"), install GRUB to `/dev/mmcblk0` (not `sda` = the live USB) — done, runbook 24 §1
+- [x] Reboot → F12 One-Time Boot Menu → confirm the firmware discovers the eMMC's EFI partition
+- [x] Re-add eMMC to the BIOS Boot Sequence for persistent boot — entry present, boots without F12 (2026-08-18)
 
 ### Why the eMMC path wins (no ADR 24 amendment)
 
@@ -125,12 +125,43 @@ One-Time Boot Menu). That hypothesis is the one remaining check.
 
 ---
 
-## Open Questions
+## eMMC Health Inspection (post-install, 2026-08-18)
 
-1. **Firmware boot discovery** — once an EFI System Partition is installed on `mmcblk0`, does the firmware boot from it (F12 One-Time Boot Menu / auto-discovery), or does it stay PXE-locked? This is the only remaining gate on the eMMC path — check during the Debian install (runbook 24 §1).
-2. **OS trial target** — Debian minimal on the eMMC is the baseline (ADR 24); Alpine trial would reflash the same `mmcblk0`.
-3. **Static IP — resolved:** `192.168.2.240` (new `24x` edge/appliance block, research 24) decided during the install — see runbook 24 §2.
-4. **SystemRescue eMMC blind spot** — worth a one-line note in the edge runbook so future rescue sessions on this box don't misreport the eMMC as absent.
+Once Debian was installed on the eMMC (runbook 24 §1), the drive's wear/health state was
+read directly from the hardware via `mmc-utils` (`mmc extcsd read /dev/mmcblk0`). The
+EXT_CSD (Extended Card Specific Data) registers give the vendor's own endurance accounting:
+
+| Register | Value | Meaning |
+|---|---|---|
+| **Life Time Estimation A** | `0x01` | **0–10%** of the device's lifetime used |
+| **Life Time Estimation B** | `0x01` | **0–10%** of the device's lifetime used |
+| **Pre EOL Information** | `0x01` | **Normal** (0x01 = normal; 0x02 = 80% of reserved blocks used, 0x03 = 90% — critical) |
+
+**Interpretation:** the eMMC is effectively **new** from an endurance standpoint — well
+inside normal wear, with the full reserved-block pool intact. Combined with the planned
+write-light workload (no swap, RAM-only Netdata, aggressive log rotation — ADR 24/27), the
+drive should comfortably outlive the appliance's useful life.
+
+Other notable EXT_CSD fields from the same dump:
+
+- **MMC 5.1** device (Extended CSD rev 1.8), running at **HS200** (`HS_TIMING 0x02`) — modern, fast mode
+- **128 KiB cache, enabled** (`CACHE_CTRL 0x01`) — reduces write amplification
+- **Write reliability** on all partitions (`WR_REL_SET 0x1f`) — data protected across power loss
+- **BKOPS** (background operations / wear-leveling) supported and available
+- `SEC_COUNT 0x00e90000` = 7.28 GiB — matches the 7.3 GB partition table
+
+The post-boot `dmesg` shows a clean eMMC bring-up (`mmc0: new HS200 MMC card`, `p1 p2`,
+no MMC errors) and, after the swap partition was removed and `/` grown (runbook 24 §1
+deviation), no swap is added at boot.
+
+---
+
+## Open Questions — all resolved (as of 2026-08-18)
+
+1. **Firmware boot discovery** — ✅ **Resolved 2026-08-18.** The eMMC's EFI entry (`UEFI: Hard Drive, Partition 1`) is registered in the F2 Setup Boot Sequence and the box boots from the eMMC **without F12**. The EFI removable-media fallback (`\EFI\BOOT\BOOTX64.EFI`) carried the first boots; the entry was re-added for persistent boot (runbook 24 §1).
+2. **OS trial target** — ✅ **Resolved 2026-08-18.** **Debian 13 (trixie) minimal** is the confirmed OS; the Alpine trial is dropped. OS to be locked in ADR 24 once the edge services (cloudflared + Caddy + dnsmasq + Netdata) validate (runbook 24 §7).
+3. **Static IP** — ✅ **Resolved.** `192.168.2.240` (new `24x` edge/appliance block, research 24) decided during the install — see runbook 24 §2.
+4. **SystemRescue eMMC blind spot** — ✅ **Resolved.** The ⚠ note is in runbook 24 (audit section) — future rescue sessions on this box won't misreport the eMMC as absent.
 
 ---
 

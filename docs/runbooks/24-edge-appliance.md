@@ -39,6 +39,8 @@ Debian 13.6.0 install **completed** on the eMMC. Decisions locked during install
 > 2. **NVRAM left untouched** — boots via the EFI fallback entry, not a registered UEFI
 >    boot entry. F12 showed the eMMC and Debian boots — but the entry is still missing
 >    from the F2 Setup Boot Sequence (re-add so the box boots without F12).
+>    **Resolved 2026-08-18:** eMMC entry (`UEFI: Hard Drive, Partition 1`) re-added to
+>    the F2 Setup Boot Sequence — the box now boots from the eMMC without F12.
 
 **Handoff to next thread:** SSH in as `jarek`; continue with §2 base setup (static IP
 `192.168.2.240` live and fixed — installer typo `192.198.2.240`/`192.198.2.1` corrected
@@ -129,9 +131,8 @@ Key facts for the setup (full detail in [research 28](../research/28-wyse3040-ha
    the box boots without F12.
 
 > **OS trial note (ADR 24):** Debian minimal is the baseline. Alpine Linux was the
-> parallel lean-OS trial; it is deferred — the eMMC install path is being validated with
-> Debian first. Lock the OS in ADR 24 once cloudflared + Caddy + dnsmasq + Netdata all
-> validate on Debian.
+> parallel lean-OS trial — **dropped 2026-08-18** (staying with Debian 13 minimal). Lock
+> the OS in ADR 24 once cloudflared + Caddy + dnsmasq + Netdata all validate on Debian.
 
 ---
 
@@ -280,7 +281,7 @@ Key facts for the setup (full detail in [research 28](../research/28-wyse3040-ha
 
 ## Verification Checklist
 
-- [ ] §1 Debian minimal installed on `mmcblk0`; eMMC boots without F12
+- [x] §1 Debian minimal installed on `mmcblk0`; eMMC boots without F12 (entry re-added 2026-08-18)
 - [ ] §2 Static IP `192.168.2.X` reachable; SSH key-only login
 - [ ] §2 UFW active (SSH from LAN only); fail2ban on
 - [ ] §3 dnsmasq resolves `service.home` → edge IP; router serves it as DNS
