@@ -11,43 +11,6 @@
 > [idea 04](../ideas/04-edge-device-tunnel-caddy.md). Tracked in
 > [issue #65](https://github.com/jaroslaw-bagnicki/Homelab/issues/65).
 
-## Install Progress (2026-08-17)
-
-Debian 13.6.0 install **completed** on the eMMC. Decisions locked during install:
-
-| Item | Decision |
-|---|---|
-| Installer | Debian 13.6.0 **Expert install** (text mode) |
-| Installer components | None added (all defaults auto-loaded) |
-| Network | Manual static IP — **`192.168.2.240`/24**, gw `192.168.2.1`, DNS `1.1.1.1, 8.8.8.8` (new `24x` edge block, research 24) |
-| IPv6 | Disabled (homelab is IPv4-only, research 24) |
-| Root login | **Allowed** — breaking-glass console credential (Keeper), mirroring runbook 25 §2 |
-| Timezone | **UTC** (fleet-wide `Etc/UTC`, the `common` Ansible role) |
-| Partitioning | **Guided — use entire disk** on `mmcblk0` (eMMC; Kingston USB `sda` untouched): ESP 656 MB FAT32 `/boot/efi` + ext4 `/` 6.4 GB + **swap 790.6 MB** |
-| Kernel / initramfs | `linux-image-amd64` (standard) + **targeted** initramfs (this system's drivers only) |
-| Mirror | `deb.debian.org` — https failed, http failed (network wrinkle); apt mirror state TBD post-boot |
-| Updates | Only **security updates**; **automatic security install** selected |
-| Tasksel | **SSH server** + **standard system utilities** only (no desktop, no web server) |
-| GRUB | Installed via the **EFI removable-media path** (`/EFI/BOOT/BOOTX64.EFI`) — Wyse EFI-bug workaround; **NVRAM not updated**; os-prober not run (single-OS) |
-
-> ⚠ **Deviations from the plan above (§1):**
-> 1. **Swap partition created** (790.6 MB) — guided partitioning's default; §1 planned
->    "no swap" for eMMC endurance. **Resolved 2026-08-17: swap disabled and removed from
->    fstab** (`swapoff -a` + fstab line dropped). The `mmcblk0p3` partition remains as
->    inert dead space — reclaim into root later from SystemRescue (offline grow), not
->    while mounted.
-> 2. **NVRAM left untouched** — boots via the EFI fallback entry, not a registered UEFI
->    boot entry. F12 showed the eMMC and Debian boots — but the entry is still missing
->    from the F2 Setup Boot Sequence (re-add so the box boots without F12).
->    **Resolved 2026-08-18:** eMMC entry (`UEFI: Hard Drive, Partition 1`) re-added to
->    the F2 Setup Boot Sequence — the box now boots from the eMMC without F12.
-
-**Handoff to next thread:** SSH in as `jarek`; continue with §2 base setup (static IP
-`192.168.2.240` live and fixed — installer typo `192.198.2.240`/`192.198.2.1` corrected
-in `/etc/network/interfaces`; root SSH locked by default `prohibit-password`; apt source
-added — `deb http://deb.debian.org/debian trixie main` in `sources.list`, `apt-get
-update`/`upgrade` verified; swap removed).
-
 ## Goals
 
 - Run `cloudflared` (single outbound QUIC connection to Cloudflare's edge, UDP 7844),
@@ -66,7 +29,7 @@ update`/`upgrade` verified; swap removed).
 |---|---|
 | Dell Wyse 3040 | Atom x5-Z8350 · 2 GB DDR3L · **8 GB eMMC `mmcblk0` (7.8 GB, H8G4a)** · 1× GbE · fanless |
 | Purchase date | 2026-08-13 |
-| Device price | 89,00 PLN (~20,70 EUR) — won at auction; the 69,00 PLN offer was closed |
+| Device price | 89,00 PLN (~20,70 EUR); the 69,00 PLN offer was closed |
 | Charger | 35,94 PLN (~8,36 EUR) — 24,99 PLN + 10,95 PLN shipping |
 | **Total** | **124,94 PLN (~29,06 EUR)** |
 | Exchange rate | ≈4,30 PLN/EUR (Aug 2026) |
@@ -133,6 +96,35 @@ Key facts for the setup (full detail in [research 28](../research/28-wyse3040-ha
 > **OS trial note (ADR 24):** Debian minimal is the baseline. Alpine Linux was the
 > parallel lean-OS trial — **dropped 2026-08-18** (staying with Debian 13 minimal). Lock
 > the OS in ADR 24 once cloudflared + Caddy + dnsmasq + Netdata all validate on Debian.
+
+## Install Progress (2026-08-17)
+
+Debian 13.6.0 install **completed** on the eMMC. Decisions locked during install:
+
+| Item | Decision |
+|---|---|
+| Installer | Debian 13.6.0 **Expert install** (text mode) |
+| Installer components | None added (all defaults auto-loaded) |
+| Network | Manual static IP — **`192.168.2.240`/24**, gw `192.168.2.1`, DNS `1.1.1.1, 8.8.8.8` (new `24x` edge block, research 24) |
+| IPv6 | Disabled (homelab is IPv4-only, research 24) |
+| Root login | **Allowed** — breaking-glass console credential (Keeper), mirroring runbook 25 §2; root SSH locked by default (`prohibit-password`) |
+| Timezone | **UTC** (fleet-wide `Etc/UTC`, the `common` Ansible role) |
+| Partitioning | **Guided — use entire disk** on `mmcblk0` (eMMC; Kingston USB `sda` untouched): ESP 656 MB FAT32 `/boot/efi` + ext4 `/` 6.4 GB + **swap 790.6 MB** |
+| Kernel / initramfs | `linux-image-amd64` (standard) + **targeted** initramfs (this system's drivers only) |
+| Mirror | `deb.debian.org` — https failed, http failed (network wrinkle); apt source added post-boot — `deb http://deb.debian.org/debian trixie main` in `sources.list`; `apt-get update`/`upgrade` verified |
+| Updates | Only **security updates**; **automatic security install** selected |
+| Tasksel | **SSH server** + **standard system utilities** only (no desktop, no web server) |
+| GRUB | Installed via the **EFI removable-media path** (`/EFI/BOOT/BOOTX64.EFI`) — Wyse EFI-bug workaround; **NVRAM not updated**; os-prober not run (single-OS) |
+
+> ⚠ **Deviations from the plan above (§1):**
+> 1. **Swap partition created** (790.6 MB) — guided partitioning's default; §1 planned
+>    "no swap" for eMMC endurance. **Resolved 2026-08-18: swap fully removed and `/`
+>    grown.** `mmcblk0p3` deleted with `parted`, `/` resized **5.9G → 6.7G** (ext4 grown
+>    with `resize2fs`), swap line dropped from fstab. Confirmed post-reboot: `free -h`
+>    shows 0B swap and `dmesg` adds no swap at boot.
+> 2. **NVRAM left untouched** — boots via the EFI fallback entry, not a registered UEFI
+>    boot entry. **Resolved 2026-08-18:** eMMC entry (`UEFI: Hard Drive, Partition 1`)
+>    re-added to the F2 Setup Boot Sequence — the box now boots from the eMMC without F12.
 
 ---
 
