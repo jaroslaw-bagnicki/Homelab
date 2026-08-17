@@ -1,10 +1,10 @@
-# 28 — Wyse 3040 Hardware Diagnostic: Pre-Boot Audit & the Missing eMMC
+# 28 — Wyse 3040 Hardware Diagnostic: Pre-Boot Audit & eMMC Visibility
 
-**Source**: SystemRescue 13.02 live session + hardinfo2 report + ePSA Pre-boot System Assessment, Aug 17 2026 · Issue [#65 — Dedicated edge device for Cloudflare Tunnel + Caddy ingress](https://github.com/jaroslaw-bagnicki/Homelab/issues/65)
+**Source**: SystemRescue 13.02 live session + hardinfo2 report + Dell ePSA Pre-boot System Assessment + BIOS Setup walk + Debian installer partition disk, Aug 17 2026 · Issue [#65 — Dedicated edge device for Cloudflare Tunnel + Caddy ingress](https://github.com/jaroslaw-bagnicki/Homelab/issues/65)
 
-**Scope**: Pre-boot hardware audit of the newly arrived **Dell Wyse 3040** thin client (the edge ingress appliance, [ADR 24](../decisions/24-edge-ingress-appliance.md)) — full hardware inventory plus the **open finding that the 8 GB eMMC is not enumerated by the OS** despite being detected by the firmware-level ePSA diagnostic.
+**Scope**: Pre-boot hardware audit of the newly arrived **Dell Wyse 3040** thin client (the edge ingress appliance, [ADR 24](../decisions/24-edge-ingress-appliance.md)) — full hardware inventory plus the investigation of the **8 GB eMMC that SystemRescue failed to enumerate**, resolved by the Debian installer recognizing it as `mmcblk0`.
 
-**Status**: 📝 Analysis — diagnostic in progress; outcome feeds the edge appliance OS-medium decision and a possible ADR 24 amendment.
+**Status**: ✅ Analysis mostly resolved — the eMMC **exists and is usable**; the SystemRescue enumeration gap was a **live-media kernel/driver artifact, not a hardware or firmware issue**. A single implementation step remains: confirm the firmware actually boots from the eMMC once an EFI System Partition is installed on it.
 
 ---
 
@@ -12,16 +12,15 @@
 
 > **Decision authority:** the edge appliance decision is recorded in
 > [ADR 24 — Edge ingress on a dedicated thin-client appliance](../decisions/24-edge-ingress-appliance.md).
-> This research doc is the Phase 0 hardware audit output. If the eMMC finding settles into
-> a design change (OS on USB vs exchange for an eMMC unit), the ADR is amended in the same
-> phase as this research per the repo's co-authoring pattern.
+> This research doc is the Phase 0 hardware audit output. The eMMC finding **confirms the ADR 24
+> premise** (8 GB eMMC as OS medium) — no amendment is required.
 
 | Decision | Outcome (as of 2026-08-17) |
 |---|---|
 | Hardware | Dell Wyse 3040 — acquired 2026-08-13 (89,00 PLN + 35,94 PLN charger) |
 | Role | Edge ingress — bare-metal `cloudflared` + Caddy (runbook 24) |
-| OS medium | **OPEN** — 8 GB eMMC assumed by ADR 24 but **not OS-visible**; ePSA says the eMMC exists |
-| Static IP | **Deferred** — research 24's tens-block scheme has no edge slot yet; decide in runbook 24 §2 |
+| OS medium | **eMMC `mmcblk0` (7.8 GB, H8G4a)** — present, ePSA Pass, and enumerated by the Debian installer; matches ADR 24's 8 GB premise |
+| Static IP | Deferred — research 24's tens-block scheme has no edge slot yet; decide in runbook 24 §2 |
 
 ---
 
@@ -48,7 +47,7 @@ for surprises **before** committing an OS to the box.
 | BIOS | Dell Inc. **1.2.3**, released 2017-11-07 |
 | CPU | Intel **Atom x5-Z8350** (Cherry Trail, 4C/4T), 480–1920 MHz, x86-64-v2 |
 | RAM | **2 GB** DDR3 (1917 MB usable), 1× row-of-chips, 1600 MT/s, 64-bit data width — **soldered, no upgrade** |
-| Storage | **eMMC expected but not OS-visible** — see [eMMC Finding](#the-emmc-giving-8-gb-premise) below |
+| Storage | **eMMC `mmcblk0` 7.8 GB (H8G4a)** — see [The 8 GB eMMC](#the-8-gb-emmc--the-investigation--its-resolution) |
 | GPU | Intel Atom/Celeron/Pentium x5-E8000/J3xxx/N3xxx Integrated Graphics (PCI `00:02.0`, i915) |
 | NIC | Realtek RTL8111/8168 (`enp1s0`), MAC `8c:ec:4b:6d:6f:4f` (altname `enx8cec4b6d6f4f`) |
 | Audio | Intel HDMI/DP LPE (pcm 0–2) + `cht-bsw-rt5672` (RT5670 codec, headset jack) |
@@ -73,63 +72,65 @@ for surprises **before** committing an OS to the box.
 
 ---
 
-## The eMMC Giving 8 GB Premise — Open Finding
+## The 8 GB eMMC — the Investigation & its Resolution
 
-ADR 24, research 25, runbook 24, and `docs/hardware.md` all assume **8 GB eMMC (soldered)** as the boot/OS medium. The audit shows a **contradiction between OS-visible and firmware-visible storage**:
+ADR 24, research 25, runbook 24, and `docs/hardware.md` all assume **8 GB eMMC (soldered)** as the boot/OS medium. The pre-boot audit produced a contradiction that was fully resolved.
 
-### Evidence
+### Observations (in order)
 
-| Check | Result |
-|---|---|
-| hardinfo2 Storage | Only `scsi0: Kingston DataTraveler` (USB stick). No eMMC block device |
-| `lsblk` | Only `sda` (57.8G USB). **No `mmcblk*`** |
-| `lspci -nn` | `00:11.0 SD Host controller [8086:2295]` — SDIO/eMMC host **present on the board** |
-| `ls /dev/mmcblk*` | empty |
-| `smartctl --scan` | empty |
-| `dmesg \| grep mmc` | empty — kernel never probed a device; but `sdhci_acpi`/`mmc_core` modules are loaded |
-| **Dell ePSA (firmware)** | Panel lists **"eMMC Drive"** test with a **green Pass**; "All tests passed" — Service Tag 8YW28L2 |
+| # | Source | Result |
+|---|---|---|
+| 1 | hardinfo2 Storage / `lsblk` (SystemRescue) | Only `sda` (57.8G USB stick). **No `mmcblk*`** |
+| 2 | `lspci -nn` | `00:11.0 SD Host controller [8086:2295]` — SDIO/eMMC host **present on the board** |
+| 3 | `dmesg \| grep mmc` | empty — but `sdhci_acpi`/`mmc_core` modules are loaded |
+| 4 | Dell ePSA (firmware) | **"eMMC Drive" test — green Pass**; "All tests passed" |
+| 5 | BIOS Setup (F2 walk) | Boot Sequence lists **only PXE** (`IP4`/`IP6 Realtek PCIe GBE`); **no storage options in the Setup tree** (no SATA/eMMC/Onboard Storage entries); "Add Boot Option" → **"File System Not Found!"** (no FAT/EFI partition visible to UEFI yet); "Legacy boot mode is not allowed when Secure Boot is enabled" notice |
+| 6 | **Debian installer** | `MMC/SD card #1 (mmcblk0) — 7.8 GB MMC H8G4a` listed alongside the Kingston USB (`sda`, 62 GB) |
 
-### Interpretation
+### Interpretation (corrected)
 
-The eMMC **physically exists and passes firmware self-test**, but the Linux kernel never
-enumerates it. This is a **BIOS→OS handoff gap**, not a missing chip. Most likely causes:
+The eMMC **exists, passes firmware self-test, and is usable by an OS** — evidence #6 (Debian installer
+enumerating `mmcblk0` at 7.8 GB) is conclusive. The earlier SystemRescue session (#1–#3) simply failed to
+enumerate it — a **live-media kernel/driver/initialization difference**, not a hardware fault, not a
+firmware lock. An early hypothesis (ThinOS firmware lock) is **rejected**: a firmware-locked device would
+not appear as a block device in the Debian installer.
 
-1. **BIOS storage toggle off** — Dell thin clients often ship with embedded storage disabled
-   (designed to boot Wyse ThinOS over network/USB). Candidate menus in F2 Setup → *System
-   Configuration* / *Integrated Devices* / *Storage*: `Embedded Storage`, `eMMC`,
-   `Onboard Storage`, `SATA Operation`.
-2. **Boot mode** — eMMC may only enumerate in one of UEFI/Legacy mode.
-3. **Firmware-locked ThinOS mode** — eMMC reserved for Wyse management; not exposed to a
-   general OS. If this is a hard lock, the OS medium must move off the eMMC.
+The BIOS walk (#5) was the misleading piece: a stripped ThinOS-style Setup with no storage menu and a
+PXE-only Boot Sequence *looks* like the eMMC is hidden, but once an EFI System Partition is written to
+`mmcblk0` the firmware should auto-discover `\EFI\BOOT\BOOTX64.EFI` on the next boot (or via the F12
+One-Time Boot Menu). That hypothesis is the one remaining check.
 
-### Steps (in progress)
+> ⚠️ **SystemRescue quirk worth remembering:** this exact Wyse 3040 booted into SystemRescue 13.02 did
+> not show internal eMMC storage, yet Debian's installer does. For future rescue-boot audits on this box,
+> do not trust a bare `lsblk` from SystemRescue to prove the eMMC is absent — cross-check with the Debian
+> installer's partition-disks screen or ePSA.
+
+### Steps
 
 - [x] hardinfo2 full report captured (`hardinfo2_report.txt`)
-- [x] `lsblk` / `lspci -nn` / `dmesg` / `smartctl --scan` run on the live system
+- [x] `lsblk` / `lspci -nn` / `dmesg` / `smartctl --scan` on the SystemRescue live system
 - [x] Dell ePSA Pre-boot System Assessment — all tests Pass, incl. **eMMC Drive**
-- [ ] BIOS Setup (F2) menu walk — hunt for an embedded-storage toggle or boot-mode effect
-- [ ] If a toggle exists: enable → re-boot SystemRescue → confirm `mmcblk0` appears (~8 GB)
-- [ ] Conclude: eMMC usable for OS (ADR 24 unchanged) **vs** firmware-locked (OS medium = USB)
+- [x] BIOS Setup (F2) menu walk — PXE-only Boot Sequence; no storage toggle exists in Setup
+- [x] Debian installer confirms **`mmcblk0` = 7.8 GB MMC H8G4a** (the eMMC, usable)
+- [ ] Partition `mmcblk0` (guided "use entire disk"), install GRUB to `/dev/mmcblk0` (not `sda` = the live USB)
+- [ ] Reboot → F12 One-Time Boot Menu → confirm the firmware discovers the eMMC's EFI partition
+- [ ] Re-add eMMC to the BIOS Boot Sequence for persistent boot
 
-### Impact if the eMMC stays invisible to the OS
+### Why the eMMC path wins (no ADR 24 amendment)
 
-The 3040 has **no SATA and no M.2** — storage is eMMC or nothing. If the eMMC cannot be
-exposed to a general OS, the options are:
-
-| Option | Notes |
+| Option | Verdict |
 |---|---|
-| **USB as the OS medium** | Debian minimal ~1.5–2 GB fits; write-light cloudflared+Caddy workload is USB-endurance-fine. Keeps the 89 PLN experiment; removable medium |
-| **Exchange for another 3040** | Risk: flashless/hidden-eMMC variants appear common on the PL used market; sellers rarely list storage |
-| **Fallback per ADR 24** | Wyse 5070 / HP t640 (~150–250 PLN, real SATA) — documented escape hatch |
+| **eMMC `mmcblk0` as OS medium** | ✅ Matches ADR 24's 8 GB premise; no amendment; Debian minimal (~1.5–2 GB) fits with room for logs. The one open item is the firmware boot-discovery check |
+| USB stick as OS medium | Rejected — only needed if the firmware won't boot from eMMC; would trigger an ADR 24 amendment |
 
 ---
 
 ## Open Questions
 
-1. **eMMC visibility** — can the eMMC be exposed to the OS via BIOS (storage toggle / boot mode), or is it firmware-locked to ThinOS mode?
-2. **OS medium** — if the eMMC stays invisible: USB boot documented as the new OS medium, or does ADR 24's fallback (Wyse 5070) get triggered?
+1. **Firmware boot discovery** — once an EFI System Partition is installed on `mmcblk0`, does the firmware boot from it (F12 One-Time Boot Menu / auto-discovery), or does it stay PXE-locked? This is the only remaining gate on the eMMC path — check during the Debian install (runbook 24 §1).
+2. **OS trial target** — Debian minimal on the eMMC is the baseline (ADR 24); Alpine trial would reflash the same `mmcblk0`.
 3. **Static IP** — no edge slot in research 24's tens-block scheme (20x/21x/22x/23x used). Candidate: a `24x` edge/appliance block; deferred to runbook 24 §2.
-4. **BIOS access pattern** — need to capture the F2 Setup key + menu layout for the runbook (3040 has no iLO/Wyse management; direct console only).
+4. **SystemRescue eMMC blind spot** — worth a one-line note in the edge runbook so future rescue sessions on this box don't misreport the eMMC as absent.
 
 ---
 
