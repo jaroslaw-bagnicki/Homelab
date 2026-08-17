@@ -32,18 +32,19 @@ Debian 13.6.0 install **completed** on the eMMC. Decisions locked during install
 
 > ⚠ **Deviations from the plan above (§1):**
 > 1. **Swap partition created** (790.6 MB) — guided partitioning's default; §1 planned
->    "no swap" for eMMC endurance. Pending decision: keep as a 2 GB RAM safety valve vs
->    remove post-install.
+>    "no swap" for eMMC endurance. **Resolved 2026-08-17: swap disabled and removed from
+>    fstab** (`swapoff -a` + fstab line dropped). The `mmcblk0p3` partition remains as
+>    inert dead space — reclaim into root later from SystemRescue (offline grow), not
+>    while mounted.
 > 2. **NVRAM left untouched** — boots via the EFI fallback entry, not a registered UEFI
 >    boot entry. F12 showed the eMMC and Debian boots — but the entry is still missing
 >    from the F2 Setup Boot Sequence (re-add so the box boots without F12).
 
-**Handoff to next thread:** SSH in as `jarek`; settle swap keep/remove → continue with
-§2 base setup (static IP `192.168.2.240` live and fixed — the installer typo
-`192.198.2.240` was corrected in `/etc/network/interfaces`; root SSH locked by default
-`prohibit-password`; apt source was missing entirely — `sources.list` had only the
-disabled CD-ROM, so `deb http://deb.debian.org/debian trixie main` was added and
-`apt-get update` verified working).
+**Handoff to next thread:** SSH in as `jarek`; continue with §2 base setup (static IP
+`192.168.2.240` live and fixed — installer typo `192.198.2.240`/`192.198.2.1` corrected
+in `/etc/network/interfaces`; root SSH locked by default `prohibit-password`; apt source
+added — `deb http://deb.debian.org/debian trixie main` in `sources.list`, `apt-get
+update`/`upgrade` verified; swap removed).
 
 ## Goals
 
