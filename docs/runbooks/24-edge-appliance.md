@@ -13,7 +13,7 @@
 
 ## Install Progress (2026-08-17)
 
-Live Debian Expert-install walk-through in progress. Decisions locked during install:
+Debian 13.6.0 install **completed** on the eMMC. Decisions locked during install:
 
 | Item | Decision |
 |---|---|
@@ -23,11 +23,22 @@ Live Debian Expert-install walk-through in progress. Decisions locked during ins
 | IPv6 | Disabled (homelab is IPv4-only, research 24) |
 | Root login | **Allowed** — breaking-glass console credential (Keeper), mirroring runbook 25 §2 |
 | Timezone | **UTC** (fleet-wide `Etc/UTC`, the `common` Ansible role) |
-| **Current step** | Clock configured → **next: Detect disks → Partition disks** |
-| Partitioning (pending) | **Manual** on `mmcblk0`: ESP ~512 MB FAT32 `/boot/efi` (bootable) + ext4 `/` on the rest, **no swap** (eMMC endurance, §1) |
-| GRUB target (pending) | **`/dev/mmcblk0`** (NOT `sda` — the installer USB) |
+| Partitioning | **Guided — use entire disk** on `mmcblk0` (eMMC; Kingston USB `sda` untouched): ESP 656 MB FAT32 `/boot/efi` + ext4 `/` 6.4 GB + **swap 790.6 MB** |
+| Kernel / initramfs | `linux-image-amd64` (standard) + **targeted** initramfs (this system's drivers only) |
+| Mirror | `deb.debian.org` — https failed, http failed (network wrinkle); apt mirror state TBD post-boot |
+| Updates | Only **security updates**; **automatic security install** selected |
+| Tasksel | **SSH server** + **standard system utilities** only (no desktop, no web server) |
+| GRUB | Installed via the **EFI removable-media path** (`/EFI/BOOT/BOOTX64.EFI`) — Wyse EFI-bug workaround; **NVRAM not updated**; os-prober not run (single-OS) |
 
-**Handoff to next thread:** resume at Partition disks → Manual on `mmcblk0`; after install + reboot, confirm eMMC boot via F12 (research 28 open Q1), then continue with §2 base setup.
+> ⚠ **Deviations from the plan above (§1):**
+> 1. **Swap partition created** (790.6 MB) — guided partitioning's default; §1 planned
+>    "no swap" for eMMC endurance. Pending decision: keep as a 2 GB RAM safety valve vs
+>    remove post-install.
+> 2. **NVRAM left untouched** — boots via the EFI fallback entry, not a registered UEFI
+>    boot entry. Verify F12 shows the eMMC, then re-add it to the F2 Setup Boot Sequence.
+
+**Handoff to next thread:** reboot → confirm eMMC boot via F12 (research 28 open Q1) →
+settle swap keep/remove → verify apt mirror works → continue with §2 base setup.
 
 ## Goals
 
@@ -120,10 +131,8 @@ Key facts for the setup (full detail in [research 28](../research/28-wyse3040-ha
 
 ## 2. Base Setup
 
-> *Static IP decision deferred* (research 24's tens-block scheme has no edge slot yet).
-> Recommended candidate: a `24x` edge/appliance block (e.g. `192.168.2.240`). Decide in
-> this section before proceeding; the box currently caps at DHCP (`192.168.2.45` during
-> the audit).
+> **Static IP chosen — `192.168.2.240`** (research 24's new `24x` edge/appliance block,
+> set during install, see Install Progress above).
 
 1. **Static IP** — configure `enp1s0` in `/etc/network/interfaces` (or netplan if
    installed) with the chosen `192.168.2.X`, gateway `192.168.2.1`, DNS `1.1.1.1, 8.8.8.8`
