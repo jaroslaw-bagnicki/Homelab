@@ -35,10 +35,12 @@ Debian 13.6.0 install **completed** on the eMMC. Decisions locked during install
 >    "no swap" for eMMC endurance. Pending decision: keep as a 2 GB RAM safety valve vs
 >    remove post-install.
 > 2. **NVRAM left untouched** — boots via the EFI fallback entry, not a registered UEFI
->    boot entry. Verify F12 shows the eMMC, then re-add it to the F2 Setup Boot Sequence.
+>    boot entry. F12 showed the eMMC and Debian boots — but the entry is still missing
+>    from the F2 Setup Boot Sequence (re-add so the box boots without F12).
 
-**Handoff to next thread:** reboot → confirm eMMC boot via F12 (research 28 open Q1) →
-settle swap keep/remove → verify apt mirror works → continue with §2 base setup.
+**Handoff to next thread:** SSH in as `jarek`; settle swap keep/remove → verify apt
+mirror works → continue with §2 base setup (static IP `192.168.2.240` live — verify the
+typo fix persists across reboot; root SSH locked by default `prohibit-password`).
 
 ## Goals
 
