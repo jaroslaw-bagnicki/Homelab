@@ -11,6 +11,24 @@
 > [idea 04](../ideas/04-edge-device-tunnel-caddy.md). Tracked in
 > [issue #65](https://github.com/jaroslaw-bagnicki/Homelab/issues/65).
 
+## Install Progress (2026-08-17)
+
+Live Debian Expert-install walk-through in progress. Decisions locked during install:
+
+| Item | Decision |
+|---|---|
+| Installer | Debian 13.6.0 **Expert install** (text mode) |
+| Installer components | None added (all defaults auto-loaded) |
+| Network | Manual static IP — **`192.168.2.240`/24**, gw `192.168.2.1`, DNS `1.1.1.1, 8.8.8.8` (new `24x` edge block, research 24) |
+| IPv6 | Disabled (homelab is IPv4-only, research 24) |
+| Root login | **Allowed** — breaking-glass console credential (Keeper), mirroring runbook 25 §2 |
+| Timezone | **UTC** (fleet-wide `Etc/UTC`, the `common` Ansible role) |
+| **Current step** | Clock configured → **next: Detect disks → Partition disks** |
+| Partitioning (pending) | **Manual** on `mmcblk0`: ESP ~512 MB FAT32 `/boot/efi` (bootable) + ext4 `/` on the rest, **no swap** (eMMC endurance, §1) |
+| GRUB target (pending) | **`/dev/mmcblk0`** (NOT `sda` — the installer USB) |
+
+**Handoff to next thread:** resume at Partition disks → Manual on `mmcblk0`; after install + reboot, confirm eMMC boot via F12 (research 28 open Q1), then continue with §2 base setup.
+
 ## Goals
 
 - Run `cloudflared` (single outbound QUIC connection to Cloudflare's edge, UDP 7844),

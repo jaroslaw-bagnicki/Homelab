@@ -129,7 +129,7 @@ One-Time Boot Menu). That hypothesis is the one remaining check.
 
 1. **Firmware boot discovery** — once an EFI System Partition is installed on `mmcblk0`, does the firmware boot from it (F12 One-Time Boot Menu / auto-discovery), or does it stay PXE-locked? This is the only remaining gate on the eMMC path — check during the Debian install (runbook 24 §1).
 2. **OS trial target** — Debian minimal on the eMMC is the baseline (ADR 24); Alpine trial would reflash the same `mmcblk0`.
-3. **Static IP** — no edge slot in research 24's tens-block scheme (20x/21x/22x/23x used). Candidate: a `24x` edge/appliance block; deferred to runbook 24 §2.
+3. **Static IP — resolved:** `192.168.2.240` (new `24x` edge/appliance block, research 24) decided during the install — see runbook 24 §2.
 4. **SystemRescue eMMC blind spot** — worth a one-line note in the edge runbook so future rescue sessions on this box don't misreport the eMMC as absent.
 
 ---
