@@ -35,15 +35,15 @@ A used **HP EliteDesk 800 G1 SFF** (LGA1150 / Q87 / Haswell) barebones, upgraded
 
 Prices from the Allegro cart (August 2026, screenshots). Conversion: **1 EUR ≈ 4.25 PLN**.
 
-| # | Component | Seller | Unit (PLN) | Qty | Total (PLN) | Total (EUR) |
-|---|---|---|---|---|---|---|
-| 1 | HP EliteDesk 800 G1 SFF barebones (used) | DOLPARTS | 125.44 | 1 | 125.44 | 29.52 € |
-| 2 | WD 1 TB 2.5" 5400 RPM (WD10JUCX) | grzesiup255 | 185.00 | 3 | 555.00 | 130.59 € |
-| 3 | Micron M.2 2230 NVMe 256 GB | buycom_outlet | 135.00 | 1 | 135.00 | 31.76 € |
-| 4 | DDR3 8 GB (2×4 GB) 1600 MHz (used) | fp_investment | 30.00 | 1 | 30.00 | 7.06 € |
-| 5 | UGREEN PCIe 4.0 x16 → M.2 NVMe adapter | MoreleGrupa | 29.90 | 1 | 29.90 | 7.04 € |
-| | **Cart total** | | | | **875.34** | **205.96 €** |
-| 6 | CPU i5-4570 / i5-4590 (2nd-hand, not in cart) | — | ~30–50 | 1 | ~30–50 | ~7–12 € |
+| # | Component | Seller | Unit (PLN) | Qty | Total (PLN) | Total (EUR) | Link |
+|---|---|---|---|---|---|---|---|
+| 1 | HP EliteDesk 800 G1 SFF barebones (used) | DOLPARTS | 125.44 | 1 | 125.44 | 29.52 € | [oferta](https://allegro.pl/oferta/hp-elitedesk-800-g1-sff-lga-1150-0-0-gb-baza-do-rozbudowy-18569899026) |
+| 2 | WD 1 TB 2.5" 5400 RPM (WD10JUCX) | grzesiup255 | 185.00 | 3 | 555.00 | 130.59 € | [produkt](https://allegro.pl/produkt/wd-1tb-5-4k-16mb-sata-iii-2-5-wd10jucx-5a7413ab-7a36-48ac-896a-000b9486c737?offerId=18802168828) |
+| 3 | Micron M.2 2230 NVMe 256 GB | buycom_outlet | 135.00 | 1 | 135.00 | 31.76 € | [produkt](https://allegro.pl/produkt/dysk-ssd-m-2-micron-2230-pcie-x4-gen4-nvme-256-gb-mtfdkbk256tfk-2450-9893eda0-82e5-4b34-b2e7-57ad2a56ec31?offerId=18798899129) |
+| 4 | DDR3 8 GB (2×4 GB) 1600 MHz (used) | fp_investment | 30.00 | 1 | 30.00 | 7.06 € | [produkt](https://allegro.pl/produkt/pamiec-ram-ddr3-8-gb-1600-11-f86e6e7f-da74-4da4-b456-ba14b4fe434d?offerId=13774167898) |
+| 5 | UGREEN PCIe 4.0 x16 → M.2 NVMe adapter | MoreleGrupa | 29.90 | 1 | 29.90 | 7.04 € | [oferta](https://allegro.pl/oferta/kontroler-ugreen-adapter-pcie-4-0-x16-do-m-2-nvme-17379581052) |
+| | **Cart total** | | | | **875.34** | **205.96 €** | |
+| 6 | CPU i5-4570 / i5-4590 (2nd-hand, not in cart) | — | ~30–50 | 1 | ~30–50 | ~7–12 € | — |
 
 > ⚠️ **The barebones listing ships WITHOUT a CPU, RAM, and disk** — a Haswell LGA1150 CPU must be sourced separately (~30–50 zł for an i5-4570/i5-4590). Shipping differs per seller; some items qualify for free "SMART!" delivery.
 
