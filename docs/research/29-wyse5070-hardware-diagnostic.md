@@ -22,6 +22,7 @@
 | CPU | **Intel Celeron J4105** (Gemini Lake, 4C/4T) — confirmed (research 26's J4105/J5005 ambiguity resolved) |
 | RAM | **8 GB (2× 4 GB Micron DDR4-3200)** — both SODIMM slots populated |
 | OS medium | **M.2 SATA 2280 — SK hynix SC311 128 GB (used, SMART-verified ~97% NAND life left)**, installed; 14.7 GiB eMMC present but unused |
+| Zigbee coordinator | **Sonoff Zigbee 3.0 USB Dongle Plus (ZBDongle-P / CC2652P)** — acquired; stable by-id path recorded (research 26 §4 pattern); passthrough to LXC 102 later (sub-issue #85) |
 | Static IP | Deferred — DHCP `192.168.2.87` currently; reserve a slot in research 24's scheme during Proxmox install |
 
 ---
@@ -123,7 +124,7 @@ and check for surprises **before** committing an OS to the box.
 2. **BIOS Setup (F2) walk** — boot mode (UEFI), Secure Boot state, any storage toggles (M.2, eMMC/SD), boot sequence. The 3040's Setup was a stripped ThinOS-style menu; verify whether the 5070's exposes storage options.
 3. **Power adapter spec** — barrel connector voltage/amp rating on the included adapter; verify it matches the 5070's requirement (box powers up, but record the label for the runbook).
 4. **Static IP** — reserve a slot in research 24's IP scheme during the Proxmox install (currently DHCP `.87`).
-5. **Sonoff Zigbee dongle** — model to record (ZBDongle-P = CC2652P / ZBDongle-E = EFR32): read the label or `lsusb` once plugged in.
+5. **Sonoff Zigbee dongle** — ✅ **Resolved 2026-08-19.** **Sonoff Zigbee 3.0 USB Dongle Plus (ZBDongle-P / CC2652P)** — Silicon Labs CP210x UART bridge (`10c4:ea60`), stable path `/dev/serial/by-id/usb-ITead_Sonoff_Zigbee_3.0_USB_Dongle_Plus_c8f3975dd19aef1197dbb89061ce3355-if00-port0` → `ttyUSB0`. The research 26 §4 `/dev/serial/by-id` pattern; ready for LXC 102 passthrough.
 
 ---
 
