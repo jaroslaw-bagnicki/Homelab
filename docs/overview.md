@@ -13,7 +13,7 @@ hardware detail see [Hardware Inventory](hardware.md); for change history see
 | **Homelab** | main workload host (Docker → k3s) | Lenovo M910q Tiny · Ubuntu 24.04 LTS · Azure Arc | `192.168.2.200` | ✅ |
 | **OMV NAS** | backup target / NFS for Longhorn | HP ProLiant ML110 G5 · OMV 8.3 | `192.168.2.210` | ✅ |
 | **Edge Ingress** | public ingress (cloudflared + Caddy) | Dell Wyse 3040 · Debian/Alpine TBD | TBD | 🔨 |
-| **Home Assistant** | smart home node | Wyse 5070 · Proxmox VE | TBD | 📋 |
+| **Home Assistant** | smart home node | Wyse 5070 · Proxmox VE | TBD (DHCP .87) | 🔨 |
 | **LLM server** | local LLM inference | Minisforum X1 Lite | TBD | 🧠 (Phase 2) |
 | **Cloudlab VPS** | staging / Ansible playground | Contabo VPS 10 · Ubuntu 24.04 | `173.249.27.13` | ✅ |
 
@@ -37,7 +37,7 @@ Current state — what's running or in progress. Planned work is under [What's N
 | [#13](https://github.com/jaroslaw-bagnicki/Homelab/issues/13) | **Restic backup** (redo) | ⭐⭐ | Daily snapshots to Azure Blob Storage — see [runbook](runbooks/07-restic-backup.md) |
 | [#65](https://github.com/jaroslaw-bagnicki/Homelab/issues/65) | **Edge Ingress** | ⭐⭐ | Move public ingress (`cloudflared` + Caddy) to the Wyse 3040 — [runbook 24](runbooks/24-edge-appliance.md) · [ADR 24](decisions/24-edge-ingress-appliance.md) |
 | [#54](https://github.com/jaroslaw-bagnicki/Homelab/issues/54) | **OMV NAS Phase 2** | ⭐⭐ | NFS/SMB exports + Longhorn backup target — [runbook 23](runbooks/23-ml110-omv-setup.md) |
-|  | **Home Assistant** | ⭐⭐ | Dedicated HA node — Proxmox VE VM + MQTT/Zigbee2MQTT — [idea 05](ideas/05-home-assistant-thin-client.md) · [ADR 25](decisions/25-home-assistant-thin-client.md) |
+| [#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68) | **Home Assistant** | ⭐⭐ | Dedicated HA node — Proxmox VE VM + MQTT/Zigbee2MQTT — [idea 05](ideas/05-home-assistant-thin-client.md) · [ADR 25](decisions/25-home-assistant-thin-client.md) · [research 29](research/29-wyse5070-hardware-diagnostic.md) |
 | [#44](https://github.com/jaroslaw-bagnicki/Homelab/issues/44) | **k3s migration** | ⭐⭐⭐ | Migrate workloads from Docker Compose to Kubernetes (k3s + Arc) — per [ADR 22](decisions/22-k3s-arc-homelab.md) |
 |  | **Hermes Agent** | ⭐⭐⭐ | Most complex — last |
 | [#3](https://github.com/jaroslaw-bagnicki/Homelab/issues/3) | **SQL Server** | ⭐⭐ | Developer Edition in Docker — see [runbook](runbooks/09-mssql-dev.md) |

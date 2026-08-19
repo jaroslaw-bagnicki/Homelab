@@ -2,7 +2,7 @@
 
 | # | Date | Document | Topic | Source |
 |---|------|----------|-------|--------|
-| 27 | 2026‑08‑15 | [27-zigbee-energy-monitoring.md](27-zigbee-energy-monitoring.md) | Zigbee energy monitoring for the homelab — Nous A1Z plugs (USED 4-pack), Sonoff ZBDongle-P coordinator, ZHA vs Zigbee2MQTT, independent Z2M → mqtt2prometheus → Prometheus → Grafana path, AI-agent access via MQTT ACL + Prometheus API | Gemini chat 15 |
+| 29 | 2026‑08‑19 | [29-wyse5070-hardware-diagnostic.md](29-wyse5070-hardware-diagnostic.md) | Wyse 5070 hardware diagnostic — pre-boot audit of the Home Assistant node: J4105, 2× 4 GB DDR4, M.2 SATA slot empty (SSD to buy), GbE + WiFi, no NVMe | SystemRescue 13.02 + hardinfo2 + issue #68 |
 | 26 | 2026‑08‑14 | [26-home-assistant-thin-client.md](26-home-assistant-thin-client.md) | Home Assistant on a thin client — Wyse 5070/Futro S740 hardware, Home Assistant OS on Proxmox VE, MQTT/Zigbee2MQTT placement, RAM/SSD sizing, Ansible, Netdata+Fluent Bit | Gemini chat 14 |
 | 25 | 2026‑08‑09 | [25-edge-ingress-sbc.md](25-edge-ingress-sbc.md) | Edge ingress SBC for Cloudflare Tunnel + Caddy — PL-market hardware research: used x86 thin client vs Orange Pi Zero 3 | OpenCode thread + issue #65 |
 | 24 | 2026‑08‑09 | [24-network-topology-design.md](24-network-topology-design.md) | Homelab network topology & design — mesh inventory, flat vs VLAN comparison, TL-SG108E integration, static IP scheme | OpenCode thread + issue #55 |
