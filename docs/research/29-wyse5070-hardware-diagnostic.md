@@ -85,6 +85,7 @@ and check for surprises **before** committing an OS to the box.
   **Verdict:** the used drive is effectively near-new from an endurance standpoint — consistent with the seller's "almost new" claim. Note: used, so **no warranty** (issue #68 / research 26 §7 preferred new; SMART validation is the compensating evidence).
 
 - **eMMC present — `mmcblk0` = 14.7 GiB** (+ `mmcblk0boot0`/`boot1`). It was invisible in the hardinfo2 reports because hardinfo2's Storage view lists **SCSI disks only** — `lsblk` reveals the eMMC. Matches research 26 §7's "16 GB eMMC — leave unused"; it stays **unused** (M.2 SATA is the OS medium). PCI `00:1c.0` (`mmc0` IRQ 39) is the SD card reader.
+- **eMMC health (EXT_CSD, `mmc extcsd read`):** **Pre EOL `0x01` = Normal**, **Life Time A/B `0x00`/`0x01` = 0–10% used** — near-new; SEC_COUNT `0x01d5a000` (14.7 GiB), 256 KiB cache enabled, write-reliability set on all partitions (MMC 5.1, HS200/HS400-capable). Healthy spare, stays unused per ADR 25.
 - **No NVMe controller** on the board (Gemini Lake has none natively) — consistent with research 26: **M.2 SATA 2280 (B+M key) only, NVMe not supported**.
 
 ### CPU / Security notes
