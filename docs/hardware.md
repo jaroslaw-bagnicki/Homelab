@@ -12,7 +12,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | **Homelab** | main workload host | i5-7500T (4C/4T) | 16 GB DDR4 | 256 GB NVMe (+ free 2.5" bay) | 1× GbE `enp0s31f6` | ✅ |
 | **OMV NAS** | backup target / NFS | Pentium E2160 (2C/2T) | 4 GB DDR2 | Goodram 120 GB SSD + RAID1 arrays | 1× GbE BCM5722 | ✅ |
 | **Edge Ingress** | public ingress | Atom x5-Z8350 | 2 GB DDR3L | 8 GB eMMC | 1× GbE | 🔨 |
-| **Home Assistant** | smart home node | Celeron J4105 | 8 GB DDR4 (2× 4 GB) | M.2 SATA 2280 (slot empty — SSD TBD) | 1× GbE + WiFi | 🔨 |
+| **Home Assistant** | smart home node | Celeron J4105 | 8 GB DDR4 (2× 4 GB) | M.2 SATA SK hynix 128 GB | 1× GbE + WiFi | 🔨 |
 | **LLM server** | local LLM inference | Ryzen 7 255 (Hawk Point) | 64–96 GB DDR5 | NVMe | 1× GbE | 🧠 (Phase 2) |
 | **Cloudlab VPS** | staging / playground | 4 vCPU | 8 GB | 75 GB NVMe | public IP | ✅ |
 
@@ -72,11 +72,11 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 |---|---|
 | CPU | Intel Celeron J4105 (Gemini Lake, 4C/4T, 2.5 GHz) — fanless, idle ~35 °C |
 | RAM | **8 GB DDR4 (2× 4 GiB Micron `4ATF51264HZ-3G2J1`)** — both SODIMM slots populated (DDR4-3200 rated, 2400 MT/s); 16 GB = replace both with 2× 8 GB |
-| Storage | M.2 **SATA** 2280 slot — **empty as received**; new 128 GB SATA SSD to buy (no NVMe on board) |
+| Storage | M.2 **SATA** 2280 — **SK hynix SC311 SATA 128 GB** (used, SMART PASSED, ~97% NAND life left, SN `MS8BN03201230BC10`); eMMC 14.7 GiB present, unused |
 | Network | Realtek RTL8111/8168 GbE (`enp1s0`, MAC `c0:25:a5:65:02:67`) · Intel CNVi WiFi + BT (`wlp0s12f0`, MAC `d0:3c:1f:cb:76:9a`) |
 | Firmware | BIOS 1.34.0 (2024-11-08) · board 060J9C · SKU `080C` · SN `16474B3` |
 | Role | Home Assistant OS VM on Proxmox VE + Mosquitto/Zigbee2MQTT LXCs (ADR 25) |
-| Acquisition | 2026-08-19 — hardware diagnostic done ([research 29](research/29-wyse5070-hardware-diagnostic.md)); Proxmox install pending |
+| Acquisition | 2026-08-19 — hardware diagnostic done ([research 29](research/29-wyse5070-hardware-diagnostic.md)); SSD + Sonoff Zigbee dongle acquired; Proxmox install pending |
 | Docs | [idea 05](ideas/05-home-assistant-thin-client.md) · [ADR 25](decisions/25-home-assistant-thin-client.md) · [research 26](research/26-home-assistant-thin-client.md) · [research 29](research/29-wyse5070-hardware-diagnostic.md) |
 
 ### LLM server — Minisforum AI X1 (Phase 2, 🧠 idea)
