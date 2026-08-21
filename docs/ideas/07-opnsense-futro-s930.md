@@ -47,6 +47,12 @@ thread; key reasons: 2× cores for Suricata/IPS, 8 GB mSATA included, factory PC
 | OpenVPN | ~80–120 Mbps (single-core bound) |
 | IDS/IPS (Suricata) / Zenarmor | ~200–400 Mbps (G-Series CPU bound) |
 
+### Example Allegro offers (2026-08)
+
+- [Fujitsu Futro S930 — AMD GX-424CC 2.4 GHz, 4 GB, 8 GB mSATA, PSU](https://allegro.pl/oferta/terminal-fujitsu-futro-s930-amd-gx-424cc-2-4ghz-4gb-pc4-8gb-msata-zasilacz-18778659053) — the unit compared in the thread (auction states "PC4"; the S930 series actually uses **DDR3L**)
+- [Riser PCIe kątowy — dopasowany do Futro S920/S940](https://allegro.pl/oferta/riser-pcie-katowy-dopasowany-do-terminali-fujitsu-futro-s920-s940-18136168835) — the angled PCIe riser/taśma needed to mount a low-profile NIC (verify fit with the S930 case)
+- [Lenovo Intel i350-T4 ML2 4×1 GbE Full — 00JY932](https://allegro.pl/produkt/karta-sieciowa-lenovo-intel-i350-t4-ml2-4x1gbe-full-00jy932-cee69731-8a66-4bf4-84b9-63219bc841ad?offerId=18424750864) — scraped 2026-08-21: **used**, **99,00 zł**, seller `laptopy_slupsk` (VAT invoice, 14-day return), 4× RJ-45 GbE Full Duplex, 1000 Mb/s, 9 in stock. ⚠️ **Listing states "ZŁĄCZE ML2, NIE PCI-E!"** — it's a Lenovo **ML2 mezzanine** (Full Height) card, **not** a standard PCIe card; needs an ML2→PCIe adapter and won't directly fit the Futro's PCIe riser slot
+
 ## Deployment direction
 
 The thread covers several deployment shapes; the one relevant to a single home router:
