@@ -32,7 +32,7 @@ thread; key reasons: 2× cores for Suricata/IPS, 8 GB mSATA included, factory PC
 | Item | Recommendation |
 |---|---|
 | Device | **Fujitsu Futro S930** — AMD GX-424CC (4C/4T, 2.4 GHz), AES-NI |
-| NIC | Low-profile **Intel i350-T2** (2× 1 GbE) or **i350-T4** (4× 1 GbE) — FreeBSD `igb` driver, low power/heat; needs the PCIe riser/taśma in the case |
+| NIC | **Dell Broadcom 5720 2× 1 GbE** (low-profile PCIe, ~50 zł) — chosen sweet spot: dual port (WAN + LAN on the card), mature FreeBSD `bge` driver; Intel i350-T1/T2 (`igb`) = the safer-driver upgrade path; needs the PCIe riser/taśma in the case |
 | NIC cautions | Avoid 10GbE (X520/X540) and old Intel PRO/1000 PT/ET quad ports (power/heat overload the ~40–60 W PSU); beware Chinese i350 clones — prefer used OEM server cards (Dell/HP/Fujitsu/Lenovo) |
 | RAM | 4 GB DDR3L min; 8 GB for Zenarmor (Sensei) or Unbound with large DNSBL lists |
 | Disk | Replace the included 8 GB mSATA with a 32–128 GB mSATA SSD — OPNsense log writes wear flash quickly |
@@ -51,6 +51,7 @@ thread; key reasons: 2× cores for Suricata/IPS, 8 GB mSATA included, factory PC
 
 - [Fujitsu Futro S930 — AMD GX-424CC 2.4 GHz, 4 GB, 8 GB mSATA, PSU](https://allegro.pl/oferta/terminal-fujitsu-futro-s930-amd-gx-424cc-2-4ghz-4gb-pc4-8gb-msata-zasilacz-18778659053) — the unit compared in the thread; scraped 2026-08-21: **used**, **139,00 zł**, seller `Biznesowelaptopy` (Super Sprzedawca, 95,5%, VAT invoice, 14-day free return, Allegro Smart), ~1000 in stock. GX-424CC 4C @ 2.40 GHz, 4 GB, 8 GB mSATA SSD, original PSU included, no OS; ports — front: 2× USB 3.0, 2× jack, SmartCard; rear: 4× USB 2.0, DisplayPort, DVI-D, 2× jack, 2× PS/2, 2× RS-232, RJ45. ⚠️ Listing states **4 GB DDR4/"PC4"** — the S930 series actually uses **DDR3L** (per the thread). Optional bundle: + Lenovo Preferred Pro II USB keyboard → 173,00 zł
 - [Riser PCIe kątowy — dopasowany do Futro S920/S940](https://allegro.pl/oferta/riser-pcie-katowy-dopasowany-do-terminali-fujitsu-futro-s920-s940-18136168835) — the angled PCIe riser/taśma needed to mount a low-profile NIC; scraped 2026-08-21: **new**, **36,99 zł**, seller `cyberedgepl` (99,3%, VAT invoice, 14-day free return), ~100 in stock. Unbranded, EAN `5904423302312`, code `RISER_FUTRO_R3` — purpose-built length (universal risers "too high or too low"), rated **4,96/5** (23 ratings, 11 reviews; verified buyer: *"fits S920 perfectly, works great"*). ⚠️ Listed for **S920/S940** — verify fit with the S930 case (the S930 auction claims a factory riser)
+- [Dell Broadcom 5720 2× 1 GbE RJ45 PCIe — 557M9](https://allegro.pl/produkt/karta-sieciowa-dell-broadcom-5720-2x1gbe-rj45-pcie-2-0x1-557m9-75c87938-3743-42a7-9271-74e3a5cd9531?offerId=16724901924) — **chosen NIC**; scraped 2026-08-21: **used**, **50,00 zł**, seller `Hardware-Direct` (Super Sprzedawca, 100%, VAT invoice, 14-day free return), 59 in stock. BCM5720, 2× RJ-45 1GbE, PCIe 2.0 ×1, low-profile, EAN `5397051748933` — mature FreeBSD `bge` driver. ⚠️ "server-only" note = warranty boilerplate (standard PCIe, not proprietary); confirm the LP bracket is included
 
 ## Deployment direction
 
