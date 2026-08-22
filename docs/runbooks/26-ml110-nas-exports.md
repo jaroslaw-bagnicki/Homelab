@@ -34,7 +34,7 @@
 - [ ] `showmount -e 192.168.2.210` lists the export
 - [ ] NFS mount + write test from the M910q
 - [ ] Longhorn backup target → `nfs://192.168.2.210:/export/backups` + backup/restore verify (blocked by #44)
-- [ ] mDNS: `omv.local` (or `nas.local`) resolving on the homelab subnet
+- [x] mDNS verified — `omv.local` → `192.168.2.210` from the Windows workstation (2026-08-22)
 
 > **Execution log — 2026-08-22** (driven via the OMV web UI at `https://192.168.2.210`)
 > - Shared folder `shared` created on `/dev/md1` (`Storage | Shared Folders → Create`), applied.
@@ -263,16 +263,19 @@ Verify by creating a volume backup and confirming a restore path. This step is *
 
 ## 5. mDNS / name resolution
 
-OMV installs `avahi-daemon` by default (hostname `omv` → `omv.local`). Verify:
+OMV installs and runs `avahi-daemon` (hostname `omv` → **`omv.local`**), which satisfies the
+"`nas.local` (or similar)" acceptance item — verified from the Windows workstation
+(2026-08-22):
 
-```sh
-ssh jarek@192.168.2.210 "systemctl is-active avahi-daemon"      # active
-getent hosts omv.local                                           # from a client on the subnet
+```powershell
+Resolve-DnsName omv.local      # A 192.168.2.210
+ping omv.local                 # reply from 192.168.2.210
 ```
 
-If the `nas.local` alias is wanted instead, either set OMV's hostname alias via
-`System | Network | DNS` (or `/etc/hosts` + avahi) or add a static entry in the M910q dnsmasq
-(ADR 06). Not required to unblock #79 — the IP `192.168.2.210` works in Rescuezilla.
+> **`nas.local` specifically** would need either an OMV hostname rename (`System | Network |
+> General`) or an Avahi alias (`/etc/avahi/hosts`) — the latter needs root on the NAS. Not
+> worth it; `omv.local` + the static IP `192.168.2.210` cover the use cases (Rescuezilla takes
+> the IP directly).
 
 ---
 
