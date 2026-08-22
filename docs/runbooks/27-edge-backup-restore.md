@@ -47,12 +47,13 @@ mkdir -p /mnt/backup
 mount -t cifs //192.168.2.210/shared /mnt/backup \
   -o username=rescuezilla,password=<pw>,vers=3.1.1,seal
 
-# 4. Full bit-by-bit image, timestamped, compressed
+# 4. Full bit-by-bit image, timestamped, compressed, into edge/
+mkdir -p /mnt/backup/edge
 dd if=/dev/mmcblkX status=progress bs=4M | gzip -1 -c \
-  > /mnt/backup/wyse3040_$(date +%Y%m%d-%H%M%S).img.gz
+  > /mnt/backup/edge/wyse3040_$(date +%Y%m%d-%H%M%S).img.gz
 
 # 5. Verify + unmount
-ls -lh /mnt/backup/*.img.gz
+ls -lh /mnt/backup/edge/*.img.gz
 umount /mnt/backup
 ```
 
@@ -74,7 +75,7 @@ mount -t cifs //192.168.2.210/shared /mnt/backup \
   -o username=rescuezilla,password=<pw>,vers=3.1.1,seal
 
 # 3. Write the image back to the eMMC
-gzip -dc /mnt/backup/wyse3040_<timestamp>.img.gz | dd of=/dev/mmcblkX bs=4M status=progress
+gzip -dc /mnt/backup/edge/wyse3040_<timestamp>.img.gz | dd of=/dev/mmcblkX bs=4M status=progress
 
 # 4. Unmount, remove the USB, reboot
 umount /mnt/backup
