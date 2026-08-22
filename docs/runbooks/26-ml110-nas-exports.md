@@ -27,7 +27,7 @@
 - [x] SMB share `shared` — non-public, writable, browseable, `Hosts allow 192.168.2.0/24`
 - [x] SMB share **transport encryption enforced** (`smb encrypt = required` — SMB3-only)
 - [x] Dedicated SMB user **`rescuezilla`** created (`users` group) for Rescuezilla auth
-- [ ] Client write test from a homelab client (Rescuezilla / workstation)
+- [x] Client write test — verified from the Windows workstation (`net use` + mapped `Z:`, 2026-08-22)
 - [ ] Shared folder `export/backups` on `/dev/md0` (XFS)
 - [ ] NFS plugin (`openmediavault-nfs`) installed
 - [ ] NFS export restricted to `192.168.2.0/24`, options `sync,no_root_squash`
@@ -176,17 +176,35 @@ Create`):
 
 ### 2d. Client test (writable)
 
-From a homelab client (workstation / M910q):
+**Windows (workstation — verified 2026-08-22):**
 
-```sh
-# Linux (cifs-utils)
-sudo mkdir -p /mnt/nas-shared
-sudo mount -t cifs //192.168.2.210/shared /mnt/nas-shared -o username=rescuezilla,uid=$(id -u),gid=$(id -g)
-echo "hello from $(hostname) $(date)" | tee /mnt/nas-shared/connectivity-test.txt
-# Windows: \\192.168.2.210\shared (net use / map drive) — sign in as rescuezilla
+```powershell
+# One-off connection (no drive letter) — proves auth + share:
+net use \\192.168.2.210\shared /user:rescuezilla Backup1!
+
+# Or map a persistent drive (shows under This PC):
+net use Z: \\192.168.2.210\shared /user:rescuezilla Backup1! /persistent:yes
+
+# Open the share in File Explorer:
+explorer \\192.168.2.210\shared
 ```
 
-Clean up the test file afterwards.
+Drop a test file to confirm write access (`echo test | Set-Content Z:\connectivity-test.txt`), then delete it.
+
+**Linux (cifs-utils):**
+
+```sh
+sudo mkdir -p /mnt/nas-shared
+sudo mount -t cifs //192.168.2.210/shared /mnt/nas-shared \
+  -o username=rescuezilla,password=<password>,uid=$(id -u),gid=$(id -g)
+echo "hello from $(hostname) $(date)" | tee /mnt/nas-shared/connectivity-test.txt
+sudo umount /mnt/nas-shared
+```
+
+> **Gotcha — WSL2 cifs:** WSL2's cifs client may fail this share with *"cannot mount …
+> read-only"* because the share enforces SMB3 transport encryption. Windows and standard
+> Linux (Rescuezilla) handle it fine; WSL2 often needs `vers=3.1.1,seal` (or still fails —
+> not worth chasing; use Windows or Rescuezilla instead).
 
 ---
 
