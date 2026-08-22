@@ -180,10 +180,10 @@ Create`):
 
 ```powershell
 # One-off connection (no drive letter) — proves auth + share:
-net use \\192.168.2.210\shared /user:rescuezilla <password>
+net use \\192.168.2.210\shared /user:rescuezilla YOUR_PASSWORD
 
 # Or map a persistent drive (shows under This PC):
-net use Z: \\192.168.2.210\shared /user:rescuezilla <password> /persistent:yes
+net use Z: \\192.168.2.210\shared /user:rescuezilla YOUR_PASSWORD /persistent:yes
 
 # Open the share in File Explorer:
 explorer \\192.168.2.210\shared
@@ -196,7 +196,7 @@ Drop a test file to confirm write access (`echo test | Set-Content Z:\connectivi
 ```sh
 sudo mkdir -p /mnt/nas-shared
 sudo mount -t cifs //192.168.2.210/shared /mnt/nas-shared \
-  -o username=rescuezilla,password=<password>,uid=$(id -u),gid=$(id -g)
+  -o username=rescuezilla,password=YOUR_PASSWORD,uid=$(id -u),gid=$(id -g)
 echo "hello from $(hostname) $(date)" | tee /mnt/nas-shared/connectivity-test.txt
 sudo umount /mnt/nas-shared
 ```

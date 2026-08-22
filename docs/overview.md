@@ -28,7 +28,7 @@ Current state — what's running or in progress. Planned work is under [What's N
 | **cloudflared** | Cloudlab VPS | Cloudflare Tunnel public HTTPS | ✅ |
 | **OpenCode instances** (`homelab`, `prospera`) | Cloudlab VPS | per-project agentic dev servers | ✅ |
 | **Zot** | Cloudlab VPS | self-hosted OCI registry + pull-through cache | ✅ |
-| **OMV NAS shares** | OMV NAS | SMB `/shared` backup share live (enforced TLS + `rescuezilla` user — unblocks #79); NFS `/export/backups` + Longhorn pending | 🔨 (Phase 2) |
+| **OMV NAS shares** | OMV NAS | SMB `/shared` backup share live (SMB3 transport encryption required + `rescuezilla` user — unblocks #79); NFS `/export/backups` + Longhorn pending (k3s #44) | 🔨 (Phase 2) |
 
 ## What's Next
 
