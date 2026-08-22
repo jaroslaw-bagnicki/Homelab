@@ -180,10 +180,10 @@ Create`):
 
 ```powershell
 # One-off connection (no drive letter) — proves auth + share:
-net use \\192.168.2.210\shared /user:rescuezilla Backup1!
+net use \\192.168.2.210\shared /user:rescuezilla <password>
 
 # Or map a persistent drive (shows under This PC):
-net use Z: \\192.168.2.210\shared /user:rescuezilla Backup1! /persistent:yes
+net use Z: \\192.168.2.210\shared /user:rescuezilla <password> /persistent:yes
 
 # Open the share in File Explorer:
 explorer \\192.168.2.210\shared
