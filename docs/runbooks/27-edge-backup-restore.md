@@ -16,7 +16,7 @@
 - **YUMI/Ventoy stick** with a Debian-based live ISO (**Rescuezilla** or **Debian Live / GParted Live**).
 - **NAS SMB share**: `//192.168.2.210/shared` (OMV on `omv.local`, see runbook 26 — NAS exports),
   user **`rescuezilla`**.
-- Backup script on the share root: `//192.168.2.210/shared/edge-backup.sh` (mount + dd + timestamped name).
+- Backup script on the share: `//192.168.2.210/shared/edge/edge-backup.sh` (mount + dd + timestamped name).
 
 ## Known gotchas (Wyse 3040 eMMC)
 
@@ -90,12 +90,12 @@ gzip -t wyse3040_<timestamp>.img.gz   # no output = archive is intact
 gzip -l wyse3040_<timestamp>.img.gz   # shows uncompressed size (≈7.8 GB raw)
 ```
 
-## File layout on the NAS (`//192.168.2.210/shared/`)
+## File layout on the NAS (`//192.168.2.210/shared/edge/`)
 
 | File | Purpose |
 |---|---|
 | `wyse3040_<timestamp>.img.gz` | The full eMMC image (bit-by-bit, compressed) |
-| `backup.log` | `dd` output captured at backup time |
+| `wyse3040_<timestamp>.img.log` | `dd` output captured at backup time |
 | `edge-backup.sh` | Reusable backup snippet (mount + dd + timestamp) |
 
 ## References
