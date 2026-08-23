@@ -96,7 +96,6 @@ Prices scraped / quoted (August 2026). Conversion: **1 EUR ≈ 4.25 PLN**.
 ## Open Questions
 
 - **Board revision**: confirm actual ports on arrival — 3× SATA + 1× mSATA + 3× PCIe (thread 4 mentions M.2 on some revisions; thread 5 says no M.2 — verify)
-- **SMR risk**: large 2.5" HDDs (e.g. WD10JUCX 1 TB) are SMR — verify parity-write behaviour under Unraid (CMR/SSD preferred)
 - **HDD fit/airflow**: 4× 2.5" total (factory bracket + 3.5"→2×2.5" sled) — physical fit, airflow, and SATA power splitter count on the actual PSU
 - **Noise target**: factory turbine + Gelid at ~35 % reduction should hit ~32–35 dB — verify CPU stays cool at 65 W TDP under parity-check load
 - **Timeline**: retire ML110 next month → replace as idea 03's successor? Keep ML110 until the Beetle array is verified
