@@ -1,7 +1,7 @@
 # Idea 01b — Homelab NAS: HP EliteDesk 800 G1 SFF (Unraid)
 
-**Status**: 🧠 Idea
-**Date**: 2026-08-17
+**Status**: 🧠 Idea  
+**Date**: 2026-08-17  
 **Sources**:
 - [Gemini thread 3](https://share.gemini.google/U5zpt2ypVual) — HP EliteDesk 800 G1 SFF (Variant B): platform limits, CPU/RAM, power, fan control, SATA/NVMe controllers, link aggregation
 - Allegro offers: [HP EliteDesk 800 G1 SFF](https://allegro.pl/oferta/hp-elitedesk-800-g1-sff-lga-1150-0-0-gb-baza-do-rozbudowy-18569899026) · [UGREEN PCIe→M.2 adapter](https://allegro.pl/oferta/kontroler-ugreen-adapter-pcie-4-0-x16-do-m-2-nvme-17379581052) · [RAM DDR3 8GB](https://allegro.pl/produkt/pamiec-ram-ddr3-8-gb-1600-11-f86e6e7f-da74-4da4-b456-ba14b4fe434d?offerId=13774167898) · [Micron M.2 2230 NVMe 256GB](https://allegro.pl/produkt/dysk-ssd-m-2-micron-2230-pcie-x4-gen4-nvme-256-gb-mtfdkbk256tfk-2450-9893eda0-82e5-4b34-b2e7-57ad2a56ec31?offerId=18798899129) · [WD 1TB 2.5" WD10JUCX ×3](https://allegro.pl/produkt/wd-1tb-5-4k-16mb-sata-iii-2-5-wd10jucx-5a7413ab-7a36-48ac-896a-000b9486c737?offerId=18802168828)

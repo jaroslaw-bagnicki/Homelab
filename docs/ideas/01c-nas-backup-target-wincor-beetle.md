@@ -1,7 +1,7 @@
 # Idea 01c — Homelab NAS: Wincor Beetle M-III (Unraid)
 
-**Status**: 🧠 Idea
-**Date**: 2026-08-22
+**Status**: 🧠 Idea  
+**Date**: 2026-08-22  
 **Sources**:
 - [Gemini thread 4 — Wincor Beetle M-III vs EliteDesk 800 G1 SFF](https://share.gemini.google/H4KW01K8tTUZ) — dimensions, CPU support, cooling, fan control/noise, Zigbee fan control, disk capacity/mounting, NAS-platform analysis
 - [Gemini thread 5 — Cache SSD mSATA for Unraid HDD](https://share.gemini.google/lyviXlDkXm7Y) — cache choice (mSATA vs NVMe vs SATA SSD), link aggregation vs 2.5 GbE, Unraid build plan
