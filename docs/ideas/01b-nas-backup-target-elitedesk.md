@@ -39,10 +39,10 @@ Prices from the Allegro cart (August 2026, screenshots). Conversion: **1 EUR ≈
 | # | Component | Unit (PLN) | Qty | Total (PLN) | Total (EUR) | Link |
 |---|---|---|---|---|---|---|
 | 1 | HP EliteDesk 800 G1 SFF barebones (used) | 125 | 1 | 125 | 30 € | [offer](https://allegro.pl/oferta/hp-elitedesk-800-g1-sff-lga-1150-0-0-gb-baza-do-rozbudowy-18569899026) |
-| 2 | Intel Core i5-4570T (2C/4T, 35 W, used) | 19 | 1 | 19 | 4 € | [product](https://allegro.pl/produkt/intel-core-i5-4570t-2-90ghz-sr1ca-s1150-tdp-35w-edbe2065-6f26-424d-b54c-a50c8c9789ac?offerId=18408407677) |
-| 3 | DDR3 8 GB (2×4 GB) 1600 MHz (used) | 30 | 1 | 30 | 7 € | [product](https://allegro.pl/produkt/pamiec-ram-ddr3-8-gb-1600-11-f86e6e7f-da74-4da4-b456-ba14b4fe434d?offerId=13774167898) |
-| 4 | WD 1 TB 2.5" 5400 RPM (WD10JUCX) | 185 | 2 | 370 | 87 € | [product](https://allegro.pl/produkt/wd-1tb-5-4k-16mb-sata-iii-2-5-wd10jucx-5a7413ab-7a36-48ac-896a-000b9486c737?offerId=18802168828) |
-| 5 | Micron M.2 2230 NVMe 256 GB | 135 | 1 | 135 | 32 € | [product](https://allegro.pl/produkt/dysk-ssd-m-2-micron-2230-pcie-x4-gen4-nvme-256-gb-mtfdkbk256tfk-2450-9893eda0-82e5-4b34-b2e7-57ad2a56ec31?offerId=18798899129) |
+| 2 | Intel Core i5-4570T (2C/4T, 35 W, used) | 19 | 1 | 19 | 4 € | [offer](https://allegro.pl/produkt/intel-core-i5-4570t-2-90ghz-sr1ca-s1150-tdp-35w-edbe2065-6f26-424d-b54c-a50c8c9789ac?offerId=18408407677) |
+| 3 | DDR3 8 GB (2×4 GB) 1600 MHz (used) | 30 | 1 | 30 | 7 € | [offer](https://allegro.pl/produkt/pamiec-ram-ddr3-8-gb-1600-11-f86e6e7f-da74-4da4-b456-ba14b4fe434d?offerId=13774167898) |
+| 4 | WD 1 TB 2.5" 5400 RPM (WD10JUCX) | 185 | 2 | 370 | 87 € | [offer](https://allegro.pl/produkt/wd-1tb-5-4k-16mb-sata-iii-2-5-wd10jucx-5a7413ab-7a36-48ac-896a-000b9486c737?offerId=18802168828) |
+| 5 | Micron M.2 2230 NVMe 256 GB | 135 | 1 | 135 | 32 € | [offer](https://allegro.pl/produkt/dysk-ssd-m-2-micron-2230-pcie-x4-gen4-nvme-256-gb-mtfdkbk256tfk-2450-9893eda0-82e5-4b34-b2e7-57ad2a56ec31?offerId=18798899129) |
 | 6 | UGREEN PCIe x16 → M.2 NVMe adapter | 30 | 1 | 30 | 7 € | [offer](https://allegro.pl/oferta/kontroler-ugreen-adapter-pcie-4-0-x16-do-m-2-nvme-17379581052) |
 | | **Total** | | | **709** | **167 €** | |
 
