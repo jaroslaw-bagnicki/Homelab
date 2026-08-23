@@ -2,7 +2,6 @@
 
 | # | Date | Document | Topic | Source |
 |---|------|----------|-------|--------|
-| 30 | 2026‑08‑22 | [30-wincor-beetle-m3-nas.md](30-wincor-beetle-m3-nas.md) | Wincor Beetle M-III as Homelab NAS (Unraid) — POS-terminal platform (LGA1151/DDR4, 3× PCIe, industrial PSU), vs EliteDesk 01b and ML110, cooling/fan control, cache (NVMe vs mSATA vs SATA SSD), networking | Gemini chats 16–17 |
 | 27 | 2026‑08‑15 | [27-zigbee-energy-monitoring.md](27-zigbee-energy-monitoring.md) | Zigbee energy monitoring for the homelab — Nous A1Z plugs (USED 4-pack), Sonoff ZBDongle-P coordinator, ZHA vs Zigbee2MQTT, independent Z2M → mqtt2prometheus → Prometheus → Grafana path, AI-agent access via MQTT ACL + Prometheus API | Gemini chat 15 |
 | 26 | 2026‑08‑14 | [26-home-assistant-thin-client.md](26-home-assistant-thin-client.md) | Home Assistant on a thin client — Wyse 5070/Futro S740 hardware, Home Assistant OS on Proxmox VE, MQTT/Zigbee2MQTT placement, RAM/SSD sizing, Ansible, Netdata+Fluent Bit | Gemini chat 14 |
 | 25 | 2026‑08‑09 | [25-edge-ingress-sbc.md](25-edge-ingress-sbc.md) | Edge ingress SBC for Cloudflare Tunnel + Caddy — PL-market hardware research: used x86 thin client vs Orange Pi Zero 3 | OpenCode thread + issue #65 |
