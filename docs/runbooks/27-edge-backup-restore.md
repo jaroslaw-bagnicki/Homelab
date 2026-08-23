@@ -17,6 +17,8 @@
 - **NAS SMB share**: `//192.168.2.210/shared` (OMV on `omv.local`, see runbook 26 — NAS exports),
   user **`rescuezilla`**.
 - Backup script on the share: `//192.168.2.210/shared/edge/edge-backup.sh` (mount + dd + timestamped name).
+- **`cifs-utils`** on the box mounting the share — `apt install cifs-utils` (provides `mount.cifs`).
+  Installed on the edge **2026-08-23** for the online backup flow (§ Online backup).
 
 ## Known gotchas (Wyse 3040 eMMC)
 
@@ -59,6 +61,32 @@ umount /mnt/backup
 
 **Expected**: ~3 min at ~40–44 MB/s (Atom x5-Z8350 does gzip + encrypted SMB). Image ≈ 600 MB
 for a ~7.3 GiB disk with ~1 GB used. `records in == records out` and no I/O errors = clean copy.
+
+### Online backup (no live USB)
+
+If the box is running and SSH-reachable, the same backup can be done from the live OS —
+no console, no USB. Slightly less clean than the live-session flow (the filesystem is
+mounted and can change mid-read), but fine on this low-write box. Needs `cifs-utils` (§ Prerequisites):
+
+```sh
+# 1. Mount the NAS share (as root)
+sudo mkdir -p /mnt/backup
+sudo mount -t cifs //192.168.2.210/shared /mnt/backup \
+  -o username=rescuezilla,password=<pw>,vers=3.1.1,seal
+
+# 2. dd straight to the NAS (device name confirmed with lsblk first)
+sudo mkdir -p /mnt/backup/edge
+sudo sh -c 'dd if=/dev/mmcblk0 bs=4M status=progress | gzip -1 -c \
+  > /mnt/backup/edge/wyse3040_$(date +%Y%m%d-%H%M%S).img.gz'
+
+# 3. Verify + unmount
+gzip -t /mnt/backup/edge/wyse3040_*.img.gz
+sudo umount /mnt/backup
+```
+
+> ⚠ On this box, `mount.cifs` lives in `/sbin` (not on the non-login PATH) — call
+> `/sbin/mount.cifs` or use `sudo mount` which resolves it. Verified 2026-08-23:
+> first online snapshot `wyse3040_20260823-104107.img.gz` (546 MB, ~6.7 GiB raw, gzip OK).
 
 ## Restore
 
