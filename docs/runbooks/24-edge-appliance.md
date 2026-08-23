@@ -147,17 +147,23 @@ ip route show default         # via 192.168.2.1
 ping -c1 192.168.2.1          # gateway reachable
 ```
 
-### 2.2 SSH for Ansible — not executed yet
+### 2.2 SSH for Ansible — done (2026-08-23)
 
 Mirroring [runbook 25](25-m910q-os-refresh.md) §2: create the `labadmin` agent account (sudo,
 agent-account pattern) and install the control node's public key so Ansible can connect —
 mirror [runbook 01](01-init.md) §2.
 
-- `openssh-server` is already present (tasksel "SSH server" during install).
-- Bootstrap SSH currently runs via the **break-glass account** created during OS installation
-  (runbook 25 §1–§2 pattern) — reachable from the control node over SSH.
-- Running this step creates **`labadmin`** (sudo, NOPASSWD, control-node key) as the key-only
-  SSH account for Ansible.
+Executed on the box (2026-08-23):
+
+- `openssh-server` was already present (tasksel "SSH server" during install).
+- **Deviation — `sudo` installed**: the Debian Expert install (tasksel) did **not** ship
+  `sudo`; installed via `apt install sudo` as a prerequisite for `labadmin`'s sudo role.
+- Created **`labadmin`** (uid 1001, `/bin/bash`), added to the **`sudo`** group, with
+  `/etc/sudoers.d/labadmin` NOPASSWD (440).
+- Installed the **control-node key** (`lenovo-slim`) as `/home/labadmin/.ssh/authorized_keys`
+  (600, owner `labadmin`); password **locked** (`passwd -l`).
+- **Verified** from the control node: `ssh labadmin@192.168.2.240` → key-only login works
+  (hostname `edge`, uid 1001, sudo group).
 
 ---
 
