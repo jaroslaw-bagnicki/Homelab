@@ -50,9 +50,11 @@ mount -t cifs //192.168.2.210/shared /mnt/backup \
   -o username=rescuezilla,password=<pw>,vers=3.1.1,seal
 
 # 4. Full bit-by-bit image, timestamped, compressed, into edge/
+#    (dd stderr → .img.log so the layout matches reality)
 mkdir -p /mnt/backup/edge
-dd if=/dev/mmcblkX status=progress bs=4M | gzip -1 -c \
-  > /mnt/backup/edge/wyse3040_$(date +%Y%m%d-%H%M%S).img.gz
+TS=$(date +%Y%m%d-%H%M%S)
+dd if=/dev/mmcblkX status=progress bs=4M 2> /mnt/backup/edge/wyse3040_$TS.img.log | gzip -1 -c \
+  > /mnt/backup/edge/wyse3040_$TS.img.gz
 
 # 5. Verify + unmount
 ls -lh /mnt/backup/edge/*.img.gz
@@ -74,10 +76,10 @@ sudo mkdir -p /mnt/backup
 sudo mount -t cifs //192.168.2.210/shared /mnt/backup \
   -o username=rescuezilla,password=<pw>,vers=3.1.1,seal
 
-# 2. dd straight to the NAS (device name confirmed with lsblk first)
+# 2. dd straight to the NAS (device name confirmed with lsblk first;
+#    dd stderr → .img.log so the layout matches reality)
 sudo mkdir -p /mnt/backup/edge
-sudo sh -c 'dd if=/dev/mmcblk0 bs=4M status=progress | gzip -1 -c \
-  > /mnt/backup/edge/wyse3040_$(date +%Y%m%d-%H%M%S).img.gz'
+sudo sh -c 'TS=$(date +%Y%m%d-%H%M%S); dd if=/dev/mmcblk0 bs=4M status=progress 2> /mnt/backup/edge/wyse3040_$TS.img.log | gzip -1 -c > /mnt/backup/edge/wyse3040_$TS.img.gz'
 
 # 3. Verify + unmount
 gzip -t /mnt/backup/edge/wyse3040_*.img.gz
@@ -102,10 +104,11 @@ mkdir -p /mnt/backup
 mount -t cifs //192.168.2.210/shared /mnt/backup \
   -o username=rescuezilla,password=<pw>,vers=3.1.1,seal
 
-# 3. Write the image back to the eMMC
-gzip -dc /mnt/backup/edge/wyse3040_<timestamp>.img.gz | dd of=/dev/mmcblkX bs=4M status=progress
+# 3. Write the image back to the eMMC (conv=fsync flushes before dd exits)
+gzip -dc /mnt/backup/edge/wyse3040_<timestamp>.img.gz | dd of=/dev/mmcblkX bs=4M status=progress conv=fsync
 
-# 4. Unmount, remove the USB, reboot
+# 4. Flush, unmount, remove the USB, reboot
+sync
 umount /mnt/backup
 reboot
 ```
@@ -114,9 +117,11 @@ reboot
 
 ## Verify the archive
 
+Images live under `/mnt/backup/edge/` — use the full path (or `cd /mnt/backup/edge` first):
+
 ```sh
-gzip -t wyse3040_<timestamp>.img.gz   # no output = archive is intact
-gzip -l wyse3040_<timestamp>.img.gz   # shows uncompressed size (≈7.8 GB raw)
+gzip -t /mnt/backup/edge/wyse3040_<timestamp>.img.gz   # no output = archive is intact
+gzip -l /mnt/backup/edge/wyse3040_<timestamp>.img.gz   # shows uncompressed size (≈7.8 GB raw)
 ```
 
 ## File layout on the NAS (`//192.168.2.210/shared/edge/`)
