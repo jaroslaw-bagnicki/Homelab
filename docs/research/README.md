@@ -50,3 +50,5 @@
 | 13 | [Gemini chat 13](https://gemini.google.com/share/6b9bfa24d3a2) | 21 |
 | 14 | [Gemini chat 14](https://gemini.google.com/share/e52d75c28976) | 26 |
 | 15 | [Gemini chat 15](https://gemini.google.com/share/daf15799b559) | 27 |
+| 16 | [Gemini chat 16](https://share.gemini.google/H4KW01K8tTUZ) | 30 |
+| 17 | [Gemini chat 17](https://share.gemini.google/lyviXlDkXm7Y) | 30 |

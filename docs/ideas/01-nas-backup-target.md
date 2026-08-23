@@ -6,9 +6,15 @@
 - [Gemini thread 1](https://share.gemini.google/IT4sMLWoypH6) — hardware selection, Unraid vs OMV, disk/RAM config
 - [Gemini thread 2](https://share.gemini.google/9EUcOTYIaaDo) — USFF/SFF form factor exploration, port counts, alternatives
 
+Companion to [idea 01b](01b-nas-backup-target-elitedesk.md) — the extensible HP EliteDesk 800 G1 SFF / Unraid variant.
+
 ## Topic
 
 Build a small, quiet, energy-efficient NAS for Homelab backups (~256 GB target), using repurposed enterprise mini-PC hardware and free/open-source software.
+
+## Hardware Build
+
+The V1 build: a ~1.9 L USFF mini-PC with 2× WD Black 500 GB drives running OpenMediaVault.
 
 ## Final Hardware Shape
 
