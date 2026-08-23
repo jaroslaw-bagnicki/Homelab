@@ -129,18 +129,36 @@ Debian 13.6.0 install **completed** on the eMMC. Decisions locked during install
 
 ## 2. Base Setup — bootstrap only (unblock Ansible)
 
-> **Static IP chosen — `192.168.2.240`** (research 24's new `24x` edge/appliance block,
-> set during install, see Install Progress above).
+> **Static IP chosen — `192.168.2.240`** (research 24's `24x` edge/appliance block, set during
+> install — see Install Progress above).
 >
-> Everything else is provisioned by the Ansible `edge_host` role — see §3. §2 only
-> unblocks Ansible.
+> §2 exists **only to unblock Ansible**; everything beyond the bootstrap is provisioned by the
+> `edge_host` role (§3), idempotently. Don't hand-configure what the role owns (accounts,
+> hardening, services) — that's how drift happens.
 
-1. **Static IP** — configure `enp1s0` in `/etc/network/interfaces` (or netplan if
-   installed) with the chosen `192.168.2.240`, gateway `192.168.2.1`, DNS `1.1.1.1, 8.8.8.8`
-   — mirror [runbook 01](01-init.md) §1.2.
-2. **SSH for Ansible** — install `openssh-server`; create `labadmin` (sudo group, agent
-   account pattern — runbook 25 §2); add the control node's public key to `labadmin` so
-   Ansible can connect — mirror [runbook 01](01-init.md) §2.
+### 2.1 Static IP
+
+Configured **during install** (Expert install → manual network) on `enp1s0`:
+`192.168.2.240`/24, gw `192.168.2.1`, DNS `1.1.1.1, 8.8.8.8` (research 24 `24x` block).
+Verify:
+
+```sh
+ip -4 addr show enp1s0        # 192.168.2.240/24
+ip route show default         # via 192.168.2.1
+ping -c1 192.168.2.1          # gateway reachable
+```
+
+### 2.2 SSH for Ansible — not executed yet
+
+Mirroring [runbook 25](25-m910q-os-refresh.md) §2: create the `labadmin` agent account (sudo,
+agent-account pattern) and install the control node's public key so Ansible can connect —
+mirror [runbook 01](01-init.md) §2.
+
+- `openssh-server` is already present (tasksel "SSH server" during install).
+- Bootstrap SSH currently runs via the **break-glass account** created during OS installation
+  (runbook 25 §1–§2 pattern) — reachable from the control node over SSH.
+- Running this step creates **`labadmin`** (sudo, NOPASSWD, control-node key) as the key-only
+  SSH account for Ansible.
 
 ---
 
