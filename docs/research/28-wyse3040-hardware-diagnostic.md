@@ -17,7 +17,7 @@
 
 | Decision | Outcome (as of 2026-08-17) |
 |---|---|
-| Hardware | Dell Wyse 3040 — acquired 2026-08-13 (89,00 PLN + 35,94 PLN charger) |
+| Hardware | Dell Wyse 3040 — acquired 2026-08-13, ~125 PLN total (89,00 PLN device + 35,94 PLN charger, ≈4,30 PLN/EUR) |
 | Role | Edge ingress — bare-metal `cloudflared` + Caddy (runbook 24) |
 | OS medium | **eMMC `mmcblk0` (7.8 GB, H8G4a)** — present, ePSA Pass, and enumerated by the Debian installer; matches ADR 24's 8 GB premise |
 | Static IP | Deferred — research 24's tens-block scheme has no edge slot yet; decide in runbook 24 §2 |

@@ -10,6 +10,10 @@
 > [idea 04](../ideas/04-edge-device-tunnel-caddy.md). Tracked in
 > [issue #65](https://github.com/jaroslaw-bagnicki/Homelab/issues/65).
 
+> 🛟 **Snapshot before risky changes** — this box has no reinstall shortcut (the Debian Expert
+> install took ~2 h). Take a full eMMC system snapshot before any change that could break it —
+> see [runbook 27 — Backup & Restore](27-edge-backup-restore.md).
+
 ## Goals
 
 - Run `cloudflared` (single outbound QUIC connection to Cloudflare's edge, UDP 7844),
@@ -22,20 +26,11 @@
 - **Monitoring:** Netdata **child node** with RAM-only buffering (no eMMC DB; ADR 27).
 - Stay lean: 2 GB RAM / 8 GB eMMC, ~2–3 W idle, fanless.
 
-## Hardware (purchased)
+## Hardware
 
 | Item | Detail |
 |---|---|
 | Dell Wyse 3040 | Atom x5-Z8350 · 2 GB DDR3L · **8 GB eMMC `mmcblk0` (7.8 GB, H8G4a)** · 1× GbE · fanless |
-| Purchase date | 2026-08-13 |
-| Device price | 89,00 PLN (~20,70 EUR); the 69,00 PLN offer was closed |
-| Charger | 35,94 PLN (~8,36 EUR) — 24,99 PLN + 10,95 PLN shipping |
-| **Total** | **124,94 PLN (~29,06 EUR)** |
-| Exchange rate | ≈4,30 PLN/EUR (Aug 2026) |
-
-> ⚠ **Charger compatibility**: the device shipped without a charger — verify the
-> purchased one matches the Wyse 3040's power spec (barrel connector size + voltage)
-> before first boot. Verified working 2026-08-17 (AC `ADP1` attached during the audit).
 
 ## Hardware audit — complete (research 28)
 
@@ -124,6 +119,10 @@ Debian 13.6.0 install **completed** on the eMMC. Decisions locked during install
 > 2. **NVRAM left untouched** — boots via the EFI fallback entry, not a registered UEFI
 >    boot entry. **Resolved 2026-08-18:** eMMC entry (`UEFI: Hard Drive, Partition 1`)
 >    re-added to the F2 Setup Boot Sequence — the box now boots from the eMMC without F12.
+
+> ✅ **2026-08-22 — System disk snapshot taken.** Full eMMC baseline image (`dd` + gzip) to the
+> NAS SMB share (`//192.168.2.210/shared/edge/`), taken before the Netdata (#80) /
+> service-migration (#81) work — see [runbook 27 — Backup & Restore](27-edge-backup-restore.md).
 
 ---
 
