@@ -168,10 +168,11 @@ backup WAN for a **5G modem** in a Multi-WAN / failover setup. It never has to c
 continuous 24/7 traffic in that role, so the `re` chip's hardware limits don't matter.
 
 **Data plan**: use an **additional SIM from the existing Orange Flex subscription** (no
-additional cost) in the 5G modem — sufficient for a backup link. PL mobile-internet
-alternatives (Fonia 31 GB/17 zł, a2mobile, aero2, …) are compared in
-[research 29](../research/29-mobile-internet-failover-offers.md) as fallback context.
-Verify the Flex terms allow modem/router use and check the shared data-pool limit.
+additional cost) in the 5G modem — sufficient for a backup link. FAQ-verified (2026-08-24):
+order it as **internet-only** for router use; it shares the plan's data pool and does **not**
+work in roaming. PL mobile-internet alternatives (Fonia 31 GB/17 zł, a2mobile, aero2, …)
+are compared in [research 29](../research/29-mobile-internet-failover-offers.md) as fallback
+context. Check the shared data-pool limit on exhaustion and Orange coverage at the router.
 
 1. **Interface assignment** — the onboard Realtek shows up as `re0`; assign it as a second
    WAN (e.g. `WAN_5G`).

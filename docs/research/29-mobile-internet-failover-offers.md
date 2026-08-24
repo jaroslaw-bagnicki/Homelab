@@ -7,15 +7,16 @@
 **Scope**: Choosing a mobile-data plan for the **OPNsense router's 5G-modem failover WAN**
 ([idea 07](../ideas/07-opnsense-futro-s930.md) — Multi-WAN section).
 
-**Status**: 📝 Analysis — nothing ordered. **The practical answer turned out to be free**:
-an **additional SIM on the existing Orange Flex subscription** costs nothing extra, so it
-supersedes the paid offers below. This doc stays as the alternatives / cost reference if
-the Flex SIM is ever unsuitable (modem-use restriction, insufficient data, coverage).
+**Status**: 📝 Analysis — **Flex SIM path FAQ-verified (2026-08-24)**. The additional Orange
+Flex SIM is free, works in a router (configured as internet-only), and supersedes the paid
+offers below. This doc stays as the alternatives / cost reference if the Flex SIM is ever
+unsuitable (data pool, coverage).
 
-> ⚠️ **Verification needed**: (1) confirm the additional Flex SIM works in a 5G modem/router
-> and check its data-pool sharing / fair use; (2) if falling back to a paid plan, confirm
-> router/modem use is allowed in the operator's terms; (3) check coverage of the chosen
-> network at the S930's location; (4) prices/promos rotate monthly.
+> ✅ **FAQ-verified (2026-08-24)**: additional Flex SIM is free; usable in a **router** —
+> Orange Flex recommends enabling **internet-only** services on it for router/iPad use; it
+> does **not** work in roaming; PESEL must not be reserved (zastrzeżony) to order.
+> ⚠️ **Still to check**: shared data-pool behaviour on exhaustion (throttle vs stop) and
+> Orange 5G/LTE coverage at the S930's location; paid-plan prices rotate monthly.
 
 ---
 
@@ -29,14 +30,27 @@ router compatibility. 31 GB is the user's sufficiency threshold.
 ## The chosen path — Orange Flex additional SIM (Aug 2026)
 
 The user holds an **Orange Flex** subscription and can order an **additional SIM card at no
-extra cost**. That SIM goes in the 5G modem as the backup WAN — the cheapest failover data
-option (0 zł/month), sharing the Flex plan's data pool. Before relying on it:
+extra cost** (verified in the official [FAQ](https://flex.orange.pl/pomoc?category=dodatkowa-karta-sim)).
+That SIM goes in the 5G modem as the backup WAN — the cheapest failover data option
+(0 zł/month), sharing the Flex plan's data pool.
 
-- Confirm the Flex terms allow **modem/router use** (an additional Flex SIM is a regular
-  data SIM, but verify there's no tethering/modem restriction).
-- Check how the additional SIM draws from the **shared data pool** and what happens when
-  the pool is exhausted (speed throttle vs stop).
-- Flex is **Orange-network** — verify 5G/LTE coverage at the S930's location.
+**FAQ-verified facts (2026-08-24):**
+
+- **Free** — all additional SIMs/eSIMs are free. Count depends on the plan: 1 by default,
+  2 on the 50 zł plan, 3 on the 80 zł plan.
+- **Router use confirmed** — the FAQ explicitly recommends enabling **internet-only**
+  services on the additional SIM when using it in a **router or iPad**. Order it with the
+  "tylko internet" (internet-only) purpose.
+- **Same number, same plan** — the additional SIM shares the main line's number and the
+  plan's services/data.
+- **No roaming** — the additional SIM does not work abroad; the main SIM does. Fine for a
+  router that stays in Poland.
+- **Ordering** — in the Flex app: *Mój numer → Dodaj SIM lub eSIM* (eSIM instantly;
+  physical SIM via InPost Paczkomat or salon, ~3 business days). The **PESEL must not be
+  reserved** (zastrzeżony) to order or swap the card.
+
+**Still to verify before relying on it:** shared data-pool behaviour when the pool is
+exhausted (speed throttle vs stop), and Orange 5G/LTE coverage at the S930's location.
 
 If the Flex SIM is unsuitable, the paid offers below remain the fallback.
 
@@ -132,8 +146,8 @@ found — before the Orange Flex additional SIM (0 zł) superseded it.
 
 ## Open questions
 
-1. Is the additional Orange Flex SIM usable in a 5G modem/router, and how does it draw from
-   the shared data pool (throttle vs stop on exhaustion)?
+1. How does the additional Flex SIM draw from the shared data pool on exhaustion (speed
+   throttle vs stop)?
 2. Which network has better signal at home? (Orange Flex is Orange-only; paid fallbacks
    offer Orange/Plus/Play/T-Mobile choice.)
 3. Is 31 GB/month a realistic cap, or should the fallback plan scale up (50/100 GB) during
