@@ -41,23 +41,23 @@
 > [research 28](../research/28-wyse3040-hardware-diagnostic.md) — they apply to any non-Debian
 > live tooling on this box.
 
-## Backup
+## Which tool — comparison (measured on the 3040, 2026-08-24)
 
-> **Method comparison (measured on the 3040, 2026-08-24):**
->
-> | | Clonezilla `savedisk` | `dd` + `gzip` |
-> |---|---|---|
-> | Image size | ~456 MB | ~611–614 MB |
-> | Time | ~40 s save (+ ~56 s check) | ~177 s (~3 min) |
-> | Coverage | Used data + GPT partition table | Full raw 7.8 GB (every sector) |
-> | Verify | Built-in "restorable" check | Manual (ISIZE / `gzip -l`) |
-> | Restore tested | ⏳ pending | ✅ proven |
->
-> Clonezilla is first choice: self-describing image (partition table saved), built-in
-> verification, and faster restore. The size/time gap on this small eMMC is modest — the
-> deciding factor is the clean restore workflow.
+| | Clonezilla `savedisk` | `dd` + `gzip` |
+|---|---|---|
+| Image size | ~456 MB | ~611–614 MB |
+| Time | ~40 s save (+ ~56 s check) | ~177 s (~3 min) |
+| Coverage | Used data + GPT partition table | Full raw 7.8 GB (every sector) |
+| Verify | Built-in "restorable" check | Manual (ISIZE / `gzip -l`) |
+| Restore tested | ⏳ pending | ✅ proven |
 
-### Method A — Clonezilla `savedisk` (first choice)
+Clonezilla is first choice: self-describing image (partition table saved), built-in
+verification, and faster restore. The size/time gap on this small eMMC is modest — the
+deciding factor is the clean restore workflow.
+
+## Clonezilla — first choice
+
+### Backup (`savedisk`)
 
 Boot the live USB (F12) → open a terminal (root):
 
@@ -82,7 +82,32 @@ ocs-sr -q2 -c -z1p -i 0 -p true savedisk wyse3040-$(date +%Y%m%d-%H%M%S) mmcblk0
 and **"restorable"** — that is the verification. The `jq: command not found` lines are
 cosmetic (gotcha 7). **Do not unplug the boot USB until the run finishes** (gotcha 5).
 
-### Method B — `dd` + `gzip` (fallback)
+### Restore (`restoredisk`)
+
+Wipe → restore → boot cycle **not yet run** on the 3040; once it passes, this is the default.
+Until then the `dd` flow below remains the proven path.
+
+Boot the live USB (F12) → open a terminal (root):
+
+```sh
+# 1. eMMC visible
+modprobe mmc_block
+lsblk                    # note the device name
+
+# 2. Mount the NAS at /home/partimag
+mkdir -p /home/partimag /var/log/clonezilla
+mount -t cifs //192.168.2.210/shared /home/partimag -o username=rescuezilla,password=<pw>,vers=3.1.1,seal
+
+# 3. Restore the whole disk (partition table + partitions, only used blocks)
+ocs-sr -q2 -p true restoredisk wyse3040-<timestamp> mmcblk0
+
+# 4. Remove the USB and reboot
+reboot
+```
+
+## `dd` + `gzip` — fallback
+
+### Backup
 
 Boot the live USB (F12) → open a terminal (root):
 
@@ -111,7 +136,7 @@ umount /mnt/backup
 **Expected**: ~3 min at ~40–44 MB/s (Atom x5-Z8350 does gzip + encrypted SMB). Image ≈ 600 MB
 for a ~7.3 GiB disk with ~1 GB used. `records in == records out` and no I/O errors = clean copy.
 
-### Online backup (no live USB) — `dd` only
+### Online backup (no live USB)
 
 Clonezilla needs unmounted partitions, so the online flow uses `dd` + `gzip`. If the box is
 running and SSH-reachable, the backup can be done from the live OS — no console, no USB.
@@ -137,32 +162,7 @@ sudo umount /mnt/backup
 > `/sbin/mount.cifs` or use `sudo mount` which resolves it. Verified 2026-08-23:
 > first online snapshot `wyse3040_20260823-104107.img.gz` (546 MB, ~6.7 GiB raw, gzip OK).
 
-## Restore
-
-### Method A — Clonezilla `restoredisk` (first choice — ⏳ restore still pending validation)
-
-Wipe → restore → boot cycle **not yet run** on the 3040; once it passes, this is the default.
-Until then the `dd` flow below remains the proven path.
-
-Boot the live USB (F12) → open a terminal (root):
-
-```sh
-# 1. eMMC visible
-modprobe mmc_block
-lsblk                    # note the device name
-
-# 2. Mount the NAS at /home/partimag
-mkdir -p /home/partimag /var/log/clonezilla
-mount -t cifs //192.168.2.210/shared /home/partimag -o username=rescuezilla,password=<pw>,vers=3.1.1,seal
-
-# 3. Restore the whole disk (partition table + partitions, only used blocks)
-ocs-sr -q2 -p true restoredisk wyse3040-<timestamp> mmcblk0
-
-# 4. Remove the USB and reboot
-reboot
-```
-
-### Method B — `dd` restore (proven fallback)
+### Restore
 
 Boot the live USB (F12) → open a terminal (root):
 
