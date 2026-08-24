@@ -75,7 +75,7 @@ mount -t cifs //192.168.2.210/shared /home/partimag -o username=rescuezilla,pass
 
 # 4. Whole-disk image, timestamped (saves GPT partition table + both partitions,
 #    only used data). Image lands at /home/partimag/wyse3040-<ts>/
-ocs-sr -q2 -c -z1p -i 0 -p true savedisk wyse3040-$(date +%Y%m%d-%H%M%S) mmcblk0
+ocs-sr -q2 -c -z1p -i 0 savedisk wyse3040-$(date +%Y%m%d-%H%M%S) mmcblk0
 ```
 
 **Expected**: ~40 s; image ≈ 456 MB for ~1.3 GB used. Output shows both partitions cloned
@@ -102,12 +102,10 @@ mount -t cifs //192.168.2.210/shared /home/partimag -o username=rescuezilla,pass
 
 # 3. Restore the whole disk (partition table + partitions, only used blocks).
 #    No manual wipe needed — Clonezilla cleans the destination first (zeroes
-#    MBR + recreates GPT).
-ocs-sr -q2 -p true restoredisk wyse3040-<timestamp> mmcblk0
+#    MBR + recreates GPT). No `-p true` — an auto-reboot is not wanted.
+ocs-sr -q2 restoredisk wyse3040-<timestamp> mmcblk0
 
 # 4. Reboot manually when ready (remove the USB first).
-#    Note: `-p true` did NOT auto-reboot on this build (2026-08-24) — the box
-#    was left running, so no USB-pull-at-reboot race.
 reboot
 ```
 
