@@ -1,72 +1,294 @@
 # Edge Appliance (Wyse 3040) — Runbook
 
-> Deploy the homelab's **dedicated edge appliance** — bare-metal `cloudflared` + Caddy
-> on a Dell Wyse 3040 thin client — as the single public ingress for the LAN.
-> Device acquired **2026-08-13**; implementation in progress.
+> Deploy the homelab's **dedicated edge appliance** — bare-metal `cloudflared` + Caddy +
+> Netdata on a Dell Wyse 3040 thin client — as the single public ingress for the LAN.
+> Device acquired **2026-08-13**; hardware audit complete **2026-08-17**; implementation in progress.
 > See [ADR 24 — Edge ingress on a dedicated thin-client appliance](../decisions/24-edge-ingress-appliance.md),
+> [ADR 27 — Monitoring strategy](../decisions/27-monitoring-strategy.md) (Netdata child node),
+> [research 28 — Hardware diagnostic](../research/28-wyse3040-hardware-diagnostic.md),
 > [research 25 — PL-market hardware](../research/25-edge-ingress-sbc.md),
 > [idea 04](../ideas/04-edge-device-tunnel-caddy.md). Tracked in
 > [issue #65](https://github.com/jaroslaw-bagnicki/Homelab/issues/65).
 
+> 🛟 **Snapshot before risky changes** — this box has no reinstall shortcut (the Debian Expert
+> install took ~2 h). Take a full eMMC system snapshot before any change that could break it —
+> see [runbook 27 — Backup & Restore](27-edge-backup-restore.md).
+
 ## Goals
 
-- Run `cloudflared` (single outbound QUIC connection to Cloudflare's edge, UDP 7844)
-  + Caddy as **systemd services** on a minimal distro — bare-metal, no Docker.
-- Own external routing: `*.example.com` → Caddy → backends over the LAN
+- Run `cloudflared` (single outbound QUIC connection to Cloudflare's edge, UDP 7844),
+  Caddy, and Netdata as **systemd services** on a minimal distro — bare-metal,
+  no Docker.
+- **External routing:** `*.example.com` → Caddy → backends over the LAN
   (M910q k3s, ML110 OMV, future gear).
+- **Internal routing:** `.home` Caddy routing served by the edge box; `*.home` DNS
+  handled by the OPNsense router (idea 07) — ADR 24 architecture split, M910q is compute-only.
+- **Monitoring:** Netdata **child node** with RAM-only buffering (no eMMC DB; ADR 27).
 - Stay lean: 2 GB RAM / 8 GB eMMC, ~2–3 W idle, fanless.
 
-## Hardware (purchased)
+## Hardware
 
 | Item | Detail |
 |---|---|
-| Dell Wyse 3040 | Atom x5-Z8350 · 2 GB DDR3L · 8 GB eMMC · 1× GbE · fanless |
-| Purchase date | 2026-08-13 |
-| Device price | 89,00 PLN (~20,70 EUR) — won at auction; the 69,00 PLN offer was closed |
-| Charger | 35,94 PLN (~8,36 EUR) — 24,99 PLN + 10,95 PLN shipping |
-| **Total** | **124,94 PLN (~29,06 EUR)** |
-| Exchange rate | ≈4,30 PLN/EUR (Aug 2026) |
+| Dell Wyse 3040 | Atom x5-Z8350 · 2 GB DDR3L · **8 GB eMMC `mmcblk0` (7.8 GB, H8G4a)** · 1× GbE · fanless |
 
-> ⚠ **Charger compatibility**: the device shipped without a charger — verify the
-> purchased one matches the Wyse 3040's power spec (barrel connector size + voltage)
-> before first boot.
+## Hardware audit — complete (research 28)
+
+Pre-boot diagnostic via SystemRescue + Dell ePSA + Debian installer is finished.
+Key facts for the setup (full detail in [research 28](../research/28-wyse3040-hardware-diagnostic.md)):
+
+- **Serial** `8YW28L2`, SKU `07C1`, BIOS Dell **1.2.3** (2017-11-07)
+- **CPU** Atom x5-Z8350 (4C/4T, 480–1920 MHz); **RAM** 2 GB DDR3-1600 soldered
+- **eMMC** `mmcblk0` = 7.8 GB — present, ePSA Pass, enumerated by the Debian installer.
+  ⚠ **SystemRescue 13.02 does NOT show it** (live-media kernel artifact) — don't trust a
+  bare `lsblk` from SystemRescue to prove it absent.
+- **NIC** Realtek RTL8111/8168, interface `enp1s0`, MAC `8c:ec:4b:6d:6f:4f`
+- **BIOS boot** — Setup's Boot Sequence lists **only PXE** (IP4/IP6 Realtek); no storage
+  menu exists. Booting the installer/OS from USB/eMMC works via the **F12 One-Time Boot
+  Menu**. After install, verify/re-add the eMMC EFI entry to the Boot Sequence.
+- Idle temps 51–55 °C; fanless; display DP-1 (active only during console work).
 
 ## Prerequisites
 
 - Wyse 3040 + verified charger (see Hardware above)
-- USB flash drive + flasher (balenaEtcher / `dd`)
-- OS images for the trial: **Debian minimal** (netinst) + **Alpine Linux**
-- Console or SSH reachability during setup
-- Refs: [research 25](../research/25-edge-ingress-sbc.md) (hardware), [ADR 24](../decisions/24-edge-ingress-appliance.md) (decision), [runbook 21](21-tl-sg108e-switch.md) (switch placement)
+- USB flash drive + flasher (balenaEtcher / `dd` / Ventoy)
+- **Debian minimal (netinst)** ISO — baseline install on the eMMC
+- Console (keyboard + monitor) or SSH reachability during setup
+- Refs: [research 28](../research/28-wyse3040-hardware-diagnostic.md) (audit), [research 25](../research/25-edge-ingress-sbc.md) (hardware/OS eval), [ADR 24](../decisions/24-edge-ingress-appliance.md) (decision), [runbook 21](21-tl-sg108e-switch.md) (switch placement)
 
 ---
 
-## 1. OS Trial — Debian minimal vs Alpine (sequential)
+## 1. OS Install — Debian Minimal on the eMMC
 
-> *To be completed.* Install Debian minimal → validate `cloudflared` + Caddy → reflash
-> Alpine → validate. Lock the OS before the provisioning role is written (research 25 §OS Evaluation).
+> **Use the minimal/custom manual install, not the default.** The default Debian desktop
+> profile pulls GNOME + apps, far over what a 2 GB/8 GB appliance needs and wastes eMMC
+> write endurance. If the default install was already started, abort and restart.
 
-## 2. Base Setup
+1. Boot the Debian netinst USB via **F12** → USB.
+2. Choose **Advanced options → Expert install** (or plain **Install** with tasks deselected)
+   so the desktop tasksel profile is skipped.
+3. **Partitioning** — choose **Manual** and target `mmcblk0` (the eMMC; the Kingston USB
+   `sda` is your installer media — do not touch it):
+   - **No swap partition** — 2 GB RAM is tight but the workload is write-light and swap
+     on eMMC shortens its life; rely on `systemd-oomd`-free default behavior and the
+     2 GB ceiling (ADR 24's constrained-resources design).
+   - Single **ext4 `/` partition** for the whole 7.8 GB (or a small ESP + root if the
+     installer insists on UEFI/EFI partition — it will, on this firmware: **create the
+     EFI System Partition (~100–512 MB, FAT32)** + ext4 root, with `/boot/efi` mount).
+   - Flags: bootable on the root/ESP.
+4. **Base system** — accept the defaults (standard system utilities only; **no desktop,
+   no laptop tasks, no print server**).
+5. **GRUB** — install it to **`/dev/mmcblk0`** (NOT `/dev/sda`). Let it register the
+   UEFI boot entry for the eMMC.
+6. After reboot prompt: remove the USB, press power on, hit **F12** and confirm the eMMC
+   now appears as a boot device (it will have a `\EFI\BOOT\BOOTX64.EFI` / GRUB shim entry).
+   If it does **not** appear, the firmware is PXE-locked for local media → fall to the
+   USB-as-OS-medium decision (research 28 open question 1) and amend ADR 24.
+7. If needed afterwards, re-enter **F2 Setup → Boot Sequence** and add the eMMC entry so
+   the box boots without F12.
 
-> *To be completed.* Static IP on the reserved `192.168.2.x` block (research 24), SSH,
-> hardening — mirror [runbook 01](01-init.md).
+> **OS trial note (ADR 24):** Debian minimal is the baseline. Alpine Linux was the
+> parallel lean-OS trial — **dropped 2026-08-18** (staying with Debian 13 minimal). Lock
+> the OS in ADR 24 once cloudflared + Caddy + Netdata all validate on Debian.
 
-## 3. cloudflared — Tunnel
+## Install Progress (2026-08-17)
 
-> *To be completed.* Install via the official apt repo (`pkg.cloudflare.com`), configure
-> the tunnel token, systemd unit, outbound-only.
+Debian 13.6.0 install **completed** on the eMMC. Decisions locked during install:
 
-## 4. Caddy — Reverse Proxy
+| Item | Decision |
+|---|---|
+| Installer | Debian 13.6.0 **Expert install** (text mode) |
+| Installer components | None added (all defaults auto-loaded) |
+| Network | Manual static IP — **`192.168.2.240`/24**, gw `192.168.2.1`, DNS `1.1.1.1, 8.8.8.8` (new `24x` edge block, research 24) |
+| IPv6 | Disabled (homelab is IPv4-only, research 24) |
+| Root login | **Allowed** — breaking-glass console credential (Keeper), mirroring runbook 25 §2; root SSH locked by default (`prohibit-password`) |
+| Timezone | **UTC** (fleet-wide `Etc/UTC`, the `common` Ansible role) |
+| Partitioning | **Guided — use entire disk** on `mmcblk0` (eMMC; Kingston USB `sda` untouched): ESP 656 MB FAT32 `/boot/efi` + ext4 `/` 6.4 GB + **swap 790.6 MB** |
+| Kernel / initramfs | `linux-image-amd64` (standard) + **targeted** initramfs (this system's drivers only) |
+| Mirror | `deb.debian.org` — https failed, http failed (network wrinkle); apt source added post-boot — `deb http://deb.debian.org/debian trixie main` in `sources.list`; `apt-get update`/`upgrade` verified |
+| Updates | Only **security updates**; **automatic security install** selected |
+| Tasksel | **SSH server** + **standard system utilities** only (no desktop, no web server) |
+| GRUB | Installed via the **EFI removable-media path** (`/EFI/BOOT/BOOTX64.EFI`) — Wyse EFI-bug workaround; **NVRAM not updated**; os-prober not run (single-OS) |
 
-> *To be completed.* Install via the Caddy apt repo, Caddyfile templated by Ansible
-> (ADR 10), Cloudflare Origin CA certs, CF SSL mode Full (Strict) — the ADR 19 pattern.
+> ⚠ **Deviations from the plan above (§1):**
+> 1. **Swap partition created** (790.6 MB) — guided partitioning's default; §1 planned
+>    "no swap" for eMMC endurance. **Resolved 2026-08-18: swap fully removed and `/`
+>    grown.** `mmcblk0p3` deleted with `parted`, `/` resized **5.9G → 6.7G** (ext4 grown
+>    with `resize2fs`), swap line dropped from fstab. Confirmed post-reboot: `free -h`
+>    shows 0B swap and `dmesg` adds no swap at boot.
+> 2. **NVRAM left untouched** — boots via the EFI fallback entry, not a registered UEFI
+>    boot entry. **Resolved 2026-08-18:** eMMC entry (`UEFI: Hard Drive, Partition 1`)
+>    re-added to the F2 Setup Boot Sequence — the box now boots from the eMMC without F12.
 
-## 5. Validation
+> ✅ **2026-08-22 — System disk snapshot taken.** Full eMMC baseline image (`dd` + gzip) to the
+> NAS SMB share (`//192.168.2.210/shared/edge/`), taken before the Netdata (#80) /
+> service-migration (#81) work — see [runbook 27 — Backup & Restore](27-edge-backup-restore.md).
 
-> *To be completed.* End-to-end checks: `*.example.com` → Cloudflare edge → edge box →
-> backend; failover behaviour with the M910q tunnel (replace vs parallel, idea 04).
+---
 
-## 6. Switch Placement
+## 2. Base Setup — bootstrap only (unblock Ansible)
 
-> *To be completed.* Port on the TL-SG108E (runbook 21), static IP per research 24's
-> reserved block.
+> **Static IP chosen — `192.168.2.240`** (research 24's `24x` edge/appliance block, set during
+> install — see Install Progress above).
+>
+> §2 exists **only to unblock Ansible**; everything beyond the bootstrap is provisioned by the
+> `edge_host` role (§3), idempotently. Don't hand-configure what the role owns (accounts,
+> hardening, services) — that's how drift happens.
+
+### 2.1 Static IP
+
+Configured **during install** (Expert install → manual network) on `enp1s0`:
+`192.168.2.240`/24, gw `192.168.2.1`, DNS `1.1.1.1, 8.8.8.8` (research 24 `24x` block).
+Verify:
+
+```sh
+ip -4 addr show enp1s0        # 192.168.2.240/24
+ip route show default         # via 192.168.2.1
+ping -c1 192.168.2.1          # gateway reachable
+```
+
+### 2.2 SSH for Ansible — done (2026-08-23)
+
+Mirroring [runbook 25](25-m910q-os-refresh.md) §2: create the `labadmin` agent account (sudo,
+agent-account pattern) and install the control node's public key so Ansible can connect —
+mirror [runbook 01](01-init.md) §2.
+
+Executed on the box (2026-08-23):
+
+- `openssh-server` was already present (tasksel "SSH server" during install).
+- **Deviation — `sudo` installed**: the Debian Expert install (tasksel) did **not** ship
+  `sudo`; installed via `apt install sudo` as a prerequisite for `labadmin`'s sudo role.
+- Created **`labadmin`** (uid 1001, `/bin/bash`), added to the **`sudo`** group, with
+  `/etc/sudoers.d/labadmin` NOPASSWD (440).
+- Installed the **control-node key** (`lenovo-slim`) as `/home/labadmin/.ssh/authorized_keys`
+  (600, owner `labadmin`); password **locked** (`passwd -l`).
+- **Verified** from the control node: `ssh labadmin@192.168.2.240` → key-only login works
+  (hostname `edge`, uid 1001, sudo group).
+
+---
+
+## 3. Ansible provisioning — `edge_host` role
+
+ADR 24 specifies a new `edge_host`-style role (systemd units) distinct from `docker_services`.
+The role provisions everything beyond the §2 bootstrap, idempotently:
+
+- **hostname `edge`** + **name broadcast** — Avahi (`edge.local`) + nmbd (bare `edge`)
+- **SSH hardening** — password auth off, key-only login
+- **UFW** (SSH from `192.168.2.0/24`, deny inbound otherwise) + **fail2ban** +
+  `unattended-upgrades`
+- **eMMC longevity** — journald `Storage=volatile`, logrotate; Netdata is RAM-only (see §6)
+- **services §4–§6** — cloudflared, Caddy, Netdata (install + config + systemd units)
+
+The role is written once the OS + services validate (§8); the §2 bootstrap steps map 1:1 to it.
+
+---
+
+## 4. cloudflared — Tunnel
+
+Deployed by the Ansible `edge_host` role (§3) — this documents the resulting state:
+
+- **systemd unit** — `cloudflared tunnel run --token …`, `Enabled` + `Restart=on-failure`;
+  outbound-only path (UDP 7844 QUIC to CF edge; UFW keeps all inbound closed).
+- **Tunnel token** — from the Zero Trust dashboard, stored in a root-only file (secret via
+  the KV/Ansible secret pattern, ADR 10/16/19) — **never in git**.
+- **Route** the tunnel to Caddy over **HTTP** (the ADR 19/24 pattern): dashboard ingress
+  rules point hostnames (`*.example.com`) at `http://192.168.2.240:80` — TLS terminates at
+  the CF edge; cloudflared ↔ Caddy is plain LAN HTTP.
+
+---
+
+## 5. Caddy — Reverse Proxy
+
+Installed and configured by the Ansible `edge_host` role (§3) — the Caddyfile lives in the
+repo, rendered to `/etc/caddy/Caddyfile`, `Caddyfile reload` on change (ADR 10).
+
+- **Single Caddyfile for both planes** (ADR 20 — one Caddyfile is the source of truth):
+  - **External** `*.example.com` sites → backends over the LAN (M910q k3s, ML110 OMV,
+    future gear). Served on :80, TLS handled at the CF edge (ADR 19).
+  - **Internal** `*.home` sites (DNS via OPNsense, idea 07) → routed by the same Caddy on
+    :80/:443 with Caddy's local auto-TLS or plain HTTP per service.
+- No Cloudflare Origin CA needed on the edge: per ADR 19's revised pattern, cloudflared →
+  Caddy is **plain HTTP** on the LAN (the earlier HTTPS-origin attempt failed on SNI
+  mismatch and config-file override limits).
+
+> **Terminology note — TLS split (plain language):** Cloudflare's edge terminates TLS for
+> public clients (`https://*.example.com` → CF). The hop from cloudflared to Caddy is a
+> private LAN connection and can be plain HTTP — no cert needed on the edge. This is the
+> same pattern cloudlab already uses (ADR 19 revised).
+
+---
+
+## 6. Monitoring — Netdata Child Node
+
+Installed and configured by the Ansible `edge_host` role (§3) — this documents the
+resulting state:
+
+- **RAM-only buffering** — `/etc/netdata/netdata.conf`:
+  ```ini
+  [db]
+      mode = ram
+  ```
+  No `dbengine` disk store — per ADR 24 (eMMC endurance) and ADR 27 (lightweight Edge
+  child node).
+- **Standalone-first, parent-later (ADR 27):** run as a standalone child with local
+  alarms now; re-point to the M910q Netdata Parent (k3s workload) when it lands.
+- Resource check: expect ~60–100 MB RSS with the minimal profile — fits the 2 GB budget
+  alongside cloudflared + Caddy.
+
+---
+
+## 7. Validation
+
+> *To be completed.* End-to-end checks:
+
+- **Boot:** power-cycle → eMMC boots without F12 (Boot Sequence entry present).
+- **Services:** `systemctl status cloudflared caddy netdata` all active.
+- **External:** `curl https://app.example.com` resolves + serves from the backend edge box
+  path; `*.example.com` wildcard → Caddy → backend.
+- **Internal DNS:** `nslookup service.home <edge-ip>` → edge IP; client on DHCP → router
+  hands out edge DNS → `service.home` resolves.
+- **Monitoring:** Netdata dashboard reachable; child streams to parent once it lands.
+- **Failover:** behaviour with the M910q tunnel (replace vs parallel, idea 04) — decide
+  during cutover.
+- **eMMC wear sanity:** `dmesg | grep -i mmc` clean; `df -h /` shows expected usage
+  (<50% of 7.8 GB after services + logs with rotation).
+
+---
+
+## 8. Switch Placement
+
+- Port on the TL-SG108E (runbook 21) — a spare port (6–8 is fine; the switch plan has
+  ports 2/3/5 in use).
+- Static IP `192.168.2.240` from the reserved `24x` block — assigned during install (see §2).
+- Update the topology diagrams in [overview](../overview.md) and [research 24](../research/24-network-topology-design.md)
+  once the IP is assigned.
+- Repoint internal `.home` DNS consumers (router DHCP DNS, device configs) at the edge,
+  and note the M910q dnsmasq is retired (runbook 25 §What changes — DNS/Caddy/tunnel leave
+  the M910q).
+
+---
+
+## Verification Checklist
+
+- [x] §1 Debian minimal installed on `mmcblk0`; eMMC boots without F12 (entry re-added 2026-08-18)
+- [ ] §2 Static IP `192.168.2.240` reachable; SSH key-only login
+- [ ] §3 `edge.local` + bare `edge` resolve on the LAN; SSH by name
+- [ ] §3 UFW active (SSH from LAN only); fail2ban on
+- [ ] §4 cloudflared tunnel up (`cloudflared tunnel list`)
+- [ ] §5 Caddy serves `*.example.com` and `*.home`
+- [ ] §6 Netdata child running (RAM-only); dashboard reachable
+- [ ] §7 all validation checks pass
+- [ ] §8 switch port wired; `docs/overview.md` / `docs/hardware.md` reflect the edge node
+
+## References
+
+- [Diagnostic — research 28](../research/28-wyse3040-hardware-diagnostic.md) — hardware audit + eMMC investigation
+- [ADR 24](../decisions/24-edge-ingress-appliance.md) — edge appliance decision (OS, DNS, bare-metal)
+- [ADR 27](../decisions/27-monitoring-strategy.md) — Netdata child node on the edge (RAM-only)
+- [ADR 20](../decisions/20-caddy-single-routing-layer.md) — single Caddyfile routing layer
+- [ADR 19](../decisions/19-cloudflare-tunnel-https-origin.md) — CF HTTPS origin pattern (HTTP to origin)
+- [Research 25](../research/25-edge-ingress-sbc.md) — PL-market hardware + OS evaluation
+- [Idea 04](../ideas/04-edge-device-tunnel-caddy.md) — original edge idea
+- [Runbook 01](01-init.md) — base setup / hardening pattern · [Runbook 03](03-dns.md) — dnsmasq pattern
+- [Runbook 21](21-tl-sg108e-switch.md) — switch placement · [Runbook 25](25-m910q-os-refresh.md) — DNS/Caddy/tunnel migration context
+- [Issue #65](https://github.com/jaroslaw-bagnicki/Homelab/issues/65) — this work
