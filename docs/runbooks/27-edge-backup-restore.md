@@ -71,8 +71,7 @@ lsblk
 # 3. Mount the NAS AT /home/partimag (Clonezilla's hardwired image dir —
 #    the -s override did NOT work on this box; see gotcha 6)
 mkdir -p /home/partimag /var/log/clonezilla
-mount -t cifs //192.168.2.210/shared /home/partimag \
-  -o username=rescuezilla,password=<pw>,vers=3.1.1,seal
+mount -t cifs //192.168.2.210/shared /home/partimag -o username=rescuezilla,password=<pw>,vers=3.1.1,seal
 
 # 4. Whole-disk image, timestamped (saves GPT partition table + both partitions,
 #    only used data). Image lands at /home/partimag/wyse3040-<ts>/
@@ -96,15 +95,13 @@ lsblk
 
 # 3. Mount the NAS SMB share (share enforces SMB3 encryption → seal)
 mkdir -p /mnt/backup
-mount -t cifs //192.168.2.210/shared /mnt/backup \
-  -o username=rescuezilla,password=<pw>,vers=3.1.1,seal
+mount -t cifs //192.168.2.210/shared /mnt/backup -o username=rescuezilla,password=<pw>,vers=3.1.1,seal
 
 # 4. Full bit-by-bit image, timestamped, compressed, into edge/
 #    (dd stderr → .img.log so the layout matches reality)
 mkdir -p /mnt/backup/edge
 TS=$(date +%Y%m%d-%H%M%S)
-dd if=/dev/mmcblkX status=progress bs=4M 2> /mnt/backup/edge/wyse3040_$TS.img.log | gzip -1 -c \
-  > /mnt/backup/edge/wyse3040_$TS.img.gz
+dd if=/dev/mmcblkX status=progress bs=4M 2> /mnt/backup/edge/wyse3040_$TS.img.log | gzip -1 -c > /mnt/backup/edge/wyse3040_$TS.img.gz
 
 # 5. Verify + unmount
 ls -lh /mnt/backup/edge/*.img.gz
@@ -124,8 +121,7 @@ mid-read), but fine on this low-write box. Needs `cifs-utils` (§ Prerequisites)
 ```sh
 # 1. Mount the NAS share (as root)
 sudo mkdir -p /mnt/backup
-sudo mount -t cifs //192.168.2.210/shared /mnt/backup \
-  -o username=rescuezilla,password=<pw>,vers=3.1.1,seal
+sudo mount -t cifs //192.168.2.210/shared /mnt/backup -o username=rescuezilla,password=<pw>,vers=3.1.1,seal
 
 # 2. dd straight to the NAS (device name confirmed with lsblk first;
 #    dd stderr → .img.log so the layout matches reality)
@@ -157,8 +153,7 @@ lsblk                    # note the device name
 
 # 2. Mount the NAS at /home/partimag
 mkdir -p /home/partimag /var/log/clonezilla
-mount -t cifs //192.168.2.210/shared /home/partimag \
-  -o username=rescuezilla,password=<pw>,vers=3.1.1,seal
+mount -t cifs //192.168.2.210/shared /home/partimag -o username=rescuezilla,password=<pw>,vers=3.1.1,seal
 
 # 3. Restore the whole disk (partition table + partitions, only used blocks)
 ocs-sr -q2 -p true restoredisk wyse3040-<timestamp> mmcblk0
@@ -178,8 +173,7 @@ lsblk                    # note the device name
 
 # 2. Mount the NAS share
 mkdir -p /mnt/backup
-mount -t cifs //192.168.2.210/shared /mnt/backup \
-  -o username=rescuezilla,password=<pw>,vers=3.1.1,seal
+mount -t cifs //192.168.2.210/shared /mnt/backup -o username=rescuezilla,password=<pw>,vers=3.1.1,seal
 
 # 3. Write the image back to the eMMC (conv=fsync flushes before dd exits)
 gzip -dc /mnt/backup/edge/wyse3040_<timestamp>.img.gz | dd of=/dev/mmcblkX bs=4M status=progress conv=fsync
