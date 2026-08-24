@@ -8,7 +8,7 @@
 
 **Status**: 🧠 Idea — Gemini discovery thread, no hardware acquired  
 **Date**: 2026-08-21  
-**Updated**: 2026-08-24 — NIC-comparison + 5G-failover supplement  
+**Updated**: 2026-08-24 — NIC comparison; Multi-WAN failover split out to idea 08  
 **Source**: [Gemini discussion — OPNsense firewall i router](https://share.gemini.google/k8PVbnk90fuo) (published 2026-08-21)
 
 ---
@@ -161,30 +161,13 @@ The thread covers several deployment shapes; the one relevant to a single home r
 - **Placement**: WAN port ← ISP fiber router, LAN port(s) → TL-SG108E switch / mesh in
   bridge mode. The Tenda Nova mesh would drop to AP-only behind OPNsense.
 
-## Multi-WAN failover — onboard Realtek + 5G modem (2026-08-24)
+## Backup WAN / failover → idea 08
 
-The same thread confirms the S930's onboard **Realtek RTL8111G** port works well as a
-backup WAN for a **5G modem** in a Multi-WAN / failover setup. It never has to carry large
-continuous 24/7 traffic in that role, so the `re` chip's hardware limits don't matter.
-
-1. **Interface assignment** — the onboard Realtek shows up as `re0`; assign it as a second
-   WAN (e.g. `WAN_5G`).
-2. **Gateways** (**System → Gateways → Configuration**) — two gateways: `GW_WAN1` (main
-   link, e.g. fiber on the Broadcom card) with **Priority 1**, and `GW_5G` (5G modem on
-   the Realtek card) with **Priority 2**. Enable IP monitoring on `GW_5G` (ping `1.1.1.1`
-   or `8.8.8.8`) so OPNsense knows when the link is up.
-3. **Failover group** (**System → Gateways → Group**) — create e.g. `WAN_FAILOVER`:
-   `GW_WAN1` → **Tier 1**, `GW_5G` → **Tier 2**, trigger level **Packet Loss or High
-   Latency**.
-4. **Firewall rule** (**Firewall → Rules → LAN**) — in the default LAN→Any outbound rule,
-   expand **Advanced** and set the **Gateway** field from `default` to the `WAN_FAILOVER`
-   group.
-
-**5G modem + Realtek notes**: run the 5G modem (ZTE / Huawei / MikroTik) in **Bridge / IP
-Passthrough** mode, or as a router on a subnet different from the LAN (avoids double-NAT).
-The default FreeBSD `re` driver can be flaky under heavy load, but is fine for a backup
-link out-of-the-box; if instability shows up, install the vendor's newer driver from the
-OPNsense repo (package `os-realtek-re`).
+The homelab **LTE/5G WAN failover** — reused ZTE WF830 LTE modem, Passive PoE 24V hookup,
+Orange Flex additional SIM, OPNsense multi-WAN config — is tracked separately in
+**[idea 08 — Homelab LTE/5G WAN Failover](08-lte-wan-failover.md)**. It is **dependent on
+this idea** (the backup terminates on the router's spare WAN port); this idea does not
+depend on it.
 
 ## Observability & management (from the thread)
 
@@ -207,7 +190,7 @@ OPNsense repo (package `os-realtek-re`).
 4. Physical placement — same rack/utility spot as the switch?
 5. Double-NAT handling vs the ISP router — does OPNsense replace its routing entirely?
 6. Is any HA (CARP, second unit) wanted now, or single-unit only?
-7. Is a 5G-modem failover (multi-WAN on the onboard Realtek port) in scope for V1?
+7. Is the backup-WAN failover ([idea 08](08-lte-wan-failover.md)) wanted within this router's V1 scope?
 
 ## Lifecycle
 
@@ -218,6 +201,7 @@ New hardware + a new network role for the lab — expect research/ADR before acq
 
 - [Gemini discussion — OPNsense firewall i router](https://share.gemini.google/k8PVbnk90fuo) — the full thread this idea is based on
 - [Gemini discussion — Porównanie kart sieciowych Dell (BCM5719 vs BCM5720, OPNsense, 5G failover)](https://share.gemini.google/Z2xgg2TSotrn) (published 2026-08-24) — NIC comparison + Futro S930 compatibility + 5G-failover supplement
+- [Idea 08 — Homelab LTE/5G WAN Failover](08-lte-wan-failover.md) — backup WAN, split out of this idea's Multi-WAN section
 - [ADR 24 — Edge ingress appliance](../decisions/24-edge-ingress-appliance.md) · [research 24](../research/24-network-topology-design.md) — network topology context
 - [ADR 22 — k3s + Azure Arc](../decisions/22-k3s-arc-homelab.md) — the cluster behind this router
 - [ADR 27 — Monitoring strategy](../decisions/27-monitoring-strategy.md) · [Idea 06](06-homelab-energy-monitoring.md) — where Netdata/observability fits
