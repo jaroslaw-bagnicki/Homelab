@@ -1,8 +1,8 @@
 # Edge Ingress on a Dedicated Thin-Client Appliance
 
-**Date:** 2026-08-09
-**Status:** Accepted
-**Amended:** 2026-08-24 — `.home` DNS changed from dnsmasq-on-edge to the **OPNsense router** ([idea 07](../ideas/07-opnsense-futro-s930.md)); see Decision/Consequences.
+**Date:** 2026-08-09  
+**Status:** Accepted  
+**Amended:** 2026-08-24 — `.home` DNS changed from dnsmasq-on-edge to the **OPNsense router** ([idea 07](../ideas/07-opnsense-futro-s930.md)); see Decision/Consequences.  
 
 ---
 
