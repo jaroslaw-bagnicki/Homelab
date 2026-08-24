@@ -4,8 +4,9 @@
 [Antyweb — Internet na kartę roundup](https://antyweb.pl/internet-5g-na-karte-2026) (Jan 2026) +
 [RankingOperatorzy — Internet na kartę bez umowy](https://rankingoperatorzy.pl/operatorzy/internet_na_karte_bez_umowy/) (Aug 2026)
 
-**Scope**: Choosing a mobile-data plan for the **OPNsense router's 5G-modem failover WAN**
-([idea 07](../ideas/07-opnsense-futro-s930.md) — Multi-WAN section).
+**Scope**: Choosing a mobile-data plan for the homelab's **LTE/5G backup WAN** ([idea 08 —
+Homelab LTE/5G WAN Failover](../ideas/08-lte-wan-failover.md), which hosts the OPNsense
+multi-WAN failover).
 
 **Status**: 📝 Analysis — **Flex SIM path FAQ-verified (2026-08-24)**. The additional Orange
 Flex SIM is free, works in a router (configured as internet-only), and supersedes the paid
@@ -22,8 +23,9 @@ unsuitable (data pool, coverage).
 
 ## Context
 
-The OPNsense router (idea 07) plans a **Multi-WAN failover**: primary fiber WAN on the
-Broadcom card, backup WAN on the S930's onboard Realtek port (`re0`) fed by a **5G modem**.
+The homelab edge plans a **Multi-WAN failover** ([idea 08](../ideas/08-lte-wan-failover.md)):
+primary fiber WAN on the router's Broadcom card, backup WAN on the S930's onboard Realtek
+port (`re0`) fed by the **reused ZTE WF830 LTE modem**.
 The backup SIM needs: low recurring cost, ~30 GB/month comfort, no long-term contract, and
 router compatibility. 31 GB is the user's sufficiency threshold.
 
@@ -178,4 +180,4 @@ found — before the Orange Flex additional SIM (0 zł) superseded it.
 - a2mobile — [pakiety](https://www.a2mobile.pl/pakiety) · [5G](https://www.a2mobile.pl/5g)
 - Antyweb — [Internet na kartę — wszystkie oferty (Jan 2026)](https://antyweb.pl/internet-5g-na-karte-2026)
 - RankingOperatorzy — [Internet na kartę bez umowy (Aug 2026)](https://rankingoperatorzy.pl/operatorzy/internet_na_karte_bez_umowy/)
-- Idea context — [idea 07 — OPNsense router](../ideas/07-opnsense-futro-s930.md) (Multi-WAN 5G failover)
+- Idea context — [idea 08 — Homelab LTE/5G WAN Failover](../ideas/08-lte-wan-failover.md) · [idea 07 — OPNsense router](../ideas/07-opnsense-futro-s930.md)
