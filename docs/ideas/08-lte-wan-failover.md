@@ -53,7 +53,7 @@ Use an **additional SIM from the existing Orange Flex subscription** (no additio
 the LTE modem — sufficient for a backup link. [FAQ-verified](https://flex.orange.pl/pomoc?category=dodatkowa-karta-sim)
 (2026-08-24): order it as **internet-only** for router use; it shares the plan's data pool
 and does **not** work in roaming. Cheaper no-contract standby strategies (Virgin/Play or
-Orange na kartę with account-validity promos, Plush/Play auto-top-up) and the full PL
+Orange "na kartę" with account-validity promos, Plush/Play auto-top-up) and the full PL
 comparison are in [research 30](../research/30-mobile-internet-failover-offers.md).
 Check the shared data-pool limit on exhaustion and Orange coverage at the router.
 
