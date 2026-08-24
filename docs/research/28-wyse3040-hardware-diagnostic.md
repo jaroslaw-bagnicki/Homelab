@@ -142,6 +142,21 @@ inside normal wear, with the full reserved-block pool intact. Combined with the 
 write-light workload (no swap, RAM-only Netdata, aggressive log rotation — ADR 24/27), the
 drive should comfortably outlive the appliance's useful life.
 
+### Follow-up — post backup/restore validation (2026-08-24)
+
+Re-read the same EXT_CSD registers after the full Clonezilla backup/restore cycle
+(runbook 27, issue #79) to confirm the operations had no measurable wear impact:
+
+| Register | 2026-08-18 | 2026-08-24 | Delta |
+|---|---|---|---|
+| Life Time Estimation A | `0x01` (0–10%) | `0x01` (0–10%) | none |
+| Life Time Estimation B | `0x01` (0–10%) | `0x01` (0–10%) | none |
+| Pre EOL Information | `0x01` (Normal) | `0x01` (Normal) | none |
+
+**Result:** identical — no measurable wear impact. Reads (backups) cause no NAND wear, and
+the restore's ~1.3 GB of writes (plus the earlier `dd` wipe/restore cycle) is negligible
+against the eMMC's endurance, well below the 10% EXT_CSD reporting granularity.
+
 Other notable EXT_CSD fields from the same dump:
 
 - **MMC 5.1** device (Extended CSD rev 1.8), running at **HS200** (`HS_TIMING 0x02`) — modern, fast mode
