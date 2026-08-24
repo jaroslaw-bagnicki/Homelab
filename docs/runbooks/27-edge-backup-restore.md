@@ -75,7 +75,8 @@ mount -t cifs //192.168.2.210/shared /home/partimag -o username=rescuezilla,pass
 
 # 4. Whole-disk image, timestamped (saves GPT partition table + both partitions,
 #    only used data). Image lands at /home/partimag/wyse3040-<ts>/
-ocs-sr -q2 -c -z1p -i 0 savedisk wyse3040-$(date +%Y%m%d-%H%M%S) mmcblk0
+#    (no -i 0: it is ignored in this build — the image check runs anyway)
+ocs-sr -q2 -c -z1p savedisk wyse3040-$(date +%Y%m%d-%H%M%S) mmcblk0
 ```
 
 **Expected**: ~40 s; image ≈ 456 MB for ~1.3 GB used. Output shows both partitions cloned
