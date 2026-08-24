@@ -70,17 +70,20 @@ modprobe mmc_block
 lsblk
 
 # 3. Mount the NAS AT /home/partimag (Clonezilla's hardwired image dir —
-#    the -s override did NOT work on this box; see gotcha 6)
+#    the -s override did NOT work on this box; see gotcha 6).
+#    Mount the edge/ subfolder so images + logs stay under shared/edge/,
+#    matching the dd layout. mount.cifs prompts for the password.
 mkdir -p /home/partimag /var/log/clonezilla
-mount -t cifs //192.168.2.210/shared /home/partimag -o username=rescuezilla,password=<pw>,vers=3.1.1,seal
+mount -t cifs //192.168.2.210/shared/edge /home/partimag -o username=rescuezilla,vers=3.1.1,seal
 
 # 3b. Persist Clonezilla logs on the NAS — they default to RAM-only
 #    /var/log/clonezilla and are lost on reboot. Bind-mount a logs dir.
-mkdir -p /home/partimag/edge/clonezilla-logs
-mount --bind /home/partimag/edge/clonezilla-logs /var/log/clonezilla
+mkdir -p /home/partimag/clonezilla-logs
+mount --bind /home/partimag/clonezilla-logs /var/log/clonezilla
 
 # 4. Whole-disk image, timestamped (saves GPT partition table + both partitions,
 #    only used data). Image lands at /home/partimag/wyse3040-<ts>/
+#    (= shared/edge/wyse3040-<ts>/ on the NAS).
 #    (no -i 0: it is ignored in this build — the image check runs anyway)
 ocs-sr -q2 -c -z1p savedisk wyse3040-$(date +%Y%m%d-%H%M%S) mmcblk0
 ```
@@ -104,14 +107,14 @@ Boot the live USB (F12) → open a terminal (root):
 modprobe mmc_block
 lsblk                    # note the device name
 
-# 2. Mount the NAS at /home/partimag
+# 2. Mount the NAS at /home/partimag (edge/ subfolder; mount.cifs prompts for password)
 mkdir -p /home/partimag /var/log/clonezilla
-mount -t cifs //192.168.2.210/shared /home/partimag -o username=rescuezilla,password=<pw>,vers=3.1.1,seal
+mount -t cifs //192.168.2.210/shared/edge /home/partimag -o username=rescuezilla,vers=3.1.1,seal
 
 # 2b. Persist Clonezilla logs on the NAS (RAM-only /var/log/clonezilla is lost
 #    on reboot). Bind-mount a logs dir.
-mkdir -p /home/partimag/edge/clonezilla-logs
-mount --bind /home/partimag/edge/clonezilla-logs /var/log/clonezilla
+mkdir -p /home/partimag/clonezilla-logs
+mount --bind /home/partimag/clonezilla-logs /var/log/clonezilla
 
 # 3. Restore the whole disk (partition table + partitions, only used blocks).
 #    No manual wipe needed — Clonezilla cleans the destination first (zeroes
@@ -135,9 +138,10 @@ modprobe mmc_block
 # 2. Confirm the device name (may be mmcblk0 or mmcblk1!)
 lsblk
 
-# 3. Mount the NAS SMB share (share enforces SMB3 encryption → seal)
+# 3. Mount the NAS SMB share (share enforces SMB3 encryption → seal;
+#    mount.cifs prompts for the password)
 mkdir -p /mnt/backup
-mount -t cifs //192.168.2.210/shared /mnt/backup -o username=rescuezilla,password=<pw>,vers=3.1.1,seal
+mount -t cifs //192.168.2.210/shared /mnt/backup -o username=rescuezilla,vers=3.1.1,seal
 
 # 4. Full bit-by-bit image, timestamped, compressed, into edge/
 #    (dd stderr → .img.log so the layout matches reality)
@@ -161,9 +165,9 @@ Slightly less clean than the live-session flow (the filesystem is mounted and ca
 mid-read), but fine on this low-write box. Needs `cifs-utils` (§ Prerequisites):
 
 ```sh
-# 1. Mount the NAS share (as root)
+# 1. Mount the NAS share (as root; mount.cifs prompts for the password)
 sudo mkdir -p /mnt/backup
-sudo mount -t cifs //192.168.2.210/shared /mnt/backup -o username=rescuezilla,password=<pw>,vers=3.1.1,seal
+sudo mount -t cifs //192.168.2.210/shared /mnt/backup -o username=rescuezilla,vers=3.1.1,seal
 
 # 2. dd straight to the NAS (device name confirmed with lsblk first;
 #    dd stderr → .img.log so the layout matches reality)
@@ -188,9 +192,9 @@ Boot the live USB (F12) → open a terminal (root):
 modprobe mmc_block
 lsblk                    # note the device name
 
-# 2. Mount the NAS share
+# 2. Mount the NAS share (mount.cifs prompts for the password)
 mkdir -p /mnt/backup
-mount -t cifs //192.168.2.210/shared /mnt/backup -o username=rescuezilla,password=<pw>,vers=3.1.1,seal
+mount -t cifs //192.168.2.210/shared /mnt/backup -o username=rescuezilla,vers=3.1.1,seal
 
 # 3. Write the image back to the eMMC (conv=fsync flushes before dd exits)
 gzip -dc /mnt/backup/edge/wyse3040_<timestamp>.img.gz | dd of=/dev/mmcblkX bs=4M status=progress conv=fsync
