@@ -53,3 +53,4 @@
 | 15 | [Gemini chat 15](https://gemini.google.com/share/daf15799b559) | 27 |
 | 16 | [Gemini chat 16](https://share.gemini.google/H4KW01K8tTUZ) | 30 |
 | 17 | [Gemini chat 17](https://share.gemini.google/lyviXlDkXm7Y) | 30 |
+| 18 | [Gemini chat 18 — Homelab LTE failover](https://share.gemini.google/gc2ZIcPHbVue) | 29 |

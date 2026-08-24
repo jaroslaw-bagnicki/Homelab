@@ -8,7 +8,7 @@
 
 **Status**: 🧠 Idea — Gemini discovery thread, no hardware acquired  
 **Date**: 2026-08-21  
-**Updated**: 2026-08-24 — NIC-comparison + 5G-failover supplement  
+**Updated**: 2026-08-24 — NIC comparison + Multi-WAN failover (Orange Flex SIM, reused ZTE WF830 LTE modem)  
 **Source**: [Gemini discussion — OPNsense firewall i router](https://share.gemini.google/k8PVbnk90fuo) (published 2026-08-21)
 
 ---
@@ -161,37 +161,72 @@ The thread covers several deployment shapes; the one relevant to a single home r
 - **Placement**: WAN port ← ISP fiber router, LAN port(s) → TL-SG108E switch / mesh in
   bridge mode. The Tenda Nova mesh would drop to AP-only behind OPNsense.
 
-## Multi-WAN failover — onboard Realtek + 5G modem (2026-08-24)
+## Multi-WAN failover — onboard Realtek + reused LTE modem (2026-08-24)
 
-The same thread confirms the S930's onboard **Realtek RTL8111G** port works well as a
-backup WAN for a **5G modem** in a Multi-WAN / failover setup. It never has to carry large
+The S930's onboard **Realtek RTL8111G** port works well as the backup-WAN interface for a
+**reused LTE modem** in a Multi-WAN / failover setup. It never has to carry large
 continuous 24/7 traffic in that role, so the `re` chip's hardware limits don't matter.
 
 **Data plan**: use an **additional SIM from the existing Orange Flex subscription** (no
-additional cost) in the 5G modem — sufficient for a backup link. FAQ-verified (2026-08-24):
+additional cost) in the LTE modem — sufficient for a backup link. FAQ-verified (2026-08-24):
 order it as **internet-only** for router use; it shares the plan's data pool and does **not**
-work in roaming. PL mobile-internet alternatives (Fonia 31 GB/17 zł, a2mobile, aero2, …)
-are compared in [research 29](../research/29-mobile-internet-failover-offers.md) as fallback
-context. Check the shared data-pool limit on exhaustion and Orange coverage at the router.
+work in roaming. Cheaper standby-only strategies (OTVARTA 10 GB/13,99 zł, Virgin/Play or
+Orange na kartę with account-validity promos, Plush/Play auto-top-up) and the full PL
+comparison are in [research 29](../research/29-mobile-internet-failover-offers.md). Check
+the shared data-pool limit on exhaustion and Orange coverage at the router.
 
-1. **Interface assignment** — the onboard Realtek shows up as `re0`; assign it as a second
-   WAN (e.g. `WAN_5G`).
-2. **Gateways** (**System → Gateways → Configuration**) — two gateways: `GW_WAN1` (main
-   link, e.g. fiber on the Broadcom card) with **Priority 1**, and `GW_5G` (5G modem on
-   the Realtek card) with **Priority 2**. Enable IP monitoring on `GW_5G` (ping `1.1.1.1`
-   or `8.8.8.8`) so OPNsense knows when the link is up.
-3. **Failover group** (**System → Gateways → Group**) — create e.g. `WAN_FAILOVER`:
-   `GW_WAN1` → **Tier 1**, `GW_5G` → **Tier 2**, trigger level **Packet Loss or High
-   Latency**.
-4. **Firewall rule** (**Firewall → Rules → LAN**) — in the default LAN→Any outbound rule,
-   expand **Advanced** and set the **Gateway** field from `default` to the `WAN_FAILOVER`
-   group.
+### Reused LTE modem — ZTE WF830 (primary) vs Huawei B593u-12 (fallback) (2026-08-24)
 
-**5G modem + Realtek notes**: run the 5G modem (ZTE / Huawei / MikroTik) in **Bridge / IP
-Passthrough** mode, or as a router on a subnet different from the LAN (avoids double-NAT).
-The default FreeBSD `re` driver can be flaky under heavy load, but is fine for a backup
-link out-of-the-box; if instability shows up, install the vendor's newer driver from the
-OPNsense repo (package `os-realtek-re`).
+A Gemini thread ([supplement source](#references)) confirms the user's **old ZTE WF830**
+set (ODU outdoor antenna + IDU indoor router) is a great backup WAN for OPNsense:
+
+- **ZTE WF830** — LTE **Cat. 6** (2-band aggregation: B1/B3/B7/B8/B20), no 5G; real-world
+  30–80 Mbps — far more than a failover link needs (ssh, notifications, tunnels). Outdoor
+  ODU antenna is directional (~30–45°); no precise BTS aiming needed — face it toward open
+  space and it catches the nearest 1–2 km, giving better SINR/RSRP than an indoor modem.
+- **Huawei B593u-12** (Speedport LTE II, ~2012) — LTE **Cat. 3**, Fast Ethernet (100 Mbps)
+  ports, old T-Mobile firmware usually blocks Bridge mode → double NAT. **Last-resort only**
+  if the WF830 can't be used.
+
+**Wiring — skip the IDU, connect the ODU straight to OPNsense:**
+
+- The ODU is an autonomous IP65 LTE modem that only needs **Passive PoE 24V** (24 V/1 A) +
+  Ethernet. Replace the IDU with a **Passive PoE 24V injector** (~20–40 zł) — do **not** use
+  802.3af/at (48 V), it would damage the ODU.
+- Cable ODU ↔ injector: standard **Cat 5e/6, RJ45 (T568B)**, up to 50–80 m; for an outdoor
+  run use **gel-filled outdoor cable** (black PE sheath; indoor PVC cracks under UV).
+- Injector LAN (data) port → short patch cord → **physical WAN2 port** on the S930 (Realtek
+  `re0`).
+- ODU default IP `192.168.1.1`, DHCP server on → set OPNsense WAN2 as **IPv4 DHCP**, then
+  switch the ODU to **Bridge Mode** → OPNsense gets the operator IP directly on WAN2 (no
+  double NAT). Disable the ODU's Wi-Fi.
+
+**Managing the ODU without the IDU:** in bridge mode WAN2 has no `192.168.1.x` address, so
+reach `http://192.168.1.1` from the LAN via a **Virtual IP** (`Interfaces → VIPs`, mode IP
+Alias, `192.168.1.254/24` on WAN2) and an **Outbound NAT** rule (`Firewall → NAT →
+Outbound`, mode Hybrid: source LAN net → destination `192.168.1.1/32`). The LAN must not
+use the `192.168.1.x` subnet. If Bridge mode is unavailable (branded firmware), keep Router
+mode but change the ZTE LAN to e.g. `192.168.8.1/24` and let WAN2 take DHCP.
+
+**OPNsense multi-WAN steps:**
+
+1. **Interface assignment** — onboard Realtek shows up as `re0`; assign as second WAN (e.g.
+   `WAN2_LTE`).
+2. **Gateways** (**System → Gateways → Configuration**) — `GW_WAN1` (fiber on the Broadcom
+   card) **Priority 1**; `GW_WAN2_LTE` **Priority 2**, enable **Far Gateway** (DHCP) and IP
+   monitoring (ping `1.1.1.1` / `8.8.8.8`).
+3. **Failover group** (**System → Gateways → Group**) — `WAN_FAILOVER`: `GW_WAN1` → **Tier
+   1**, `GW_WAN2_LTE` → **Tier 2**, trigger **Packet Loss or High Latency**.
+4. **Firewall rule** (**Firewall → Rules → LAN**) — in the default LAN→Any rule, expand
+   **Advanced** and set **Gateway** to the `WAN_FAILOVER` group.
+
+**LTE modem + Realtek notes**: run the LTE modem in **Bridge / IP Passthrough** mode (or as
+a router on a different subnet, avoids double-NAT). The FreeBSD `re` driver can be flaky
+under heavy load but is fine for a backup link; if instability shows up, install the
+vendor's newer driver from the OPNsense repo (package `os-realtek-re`). Most mobile
+operators use **CGNAT** on the backup WAN — fine when inbound traffic flows over Cloudflare
+Tunnel / Tailscale; a direct WireGuard/IPsec endpoint over the backup link needs a
+(sometimes paid) public-IP add-on.
 
 ## Observability & management (from the thread)
 
@@ -214,7 +249,7 @@ OPNsense repo (package `os-realtek-re`).
 4. Physical placement — same rack/utility spot as the switch?
 5. Double-NAT handling vs the ISP router — does OPNsense replace its routing entirely?
 6. Is any HA (CARP, second unit) wanted now, or single-unit only?
-7. Is a 5G-modem failover (multi-WAN on the onboard Realtek port) in scope for V1?
+7. Is the reused-LTE-modem failover (multi-WAN on the onboard Realtek port) in scope for V1?
 
 ## Lifecycle
 
@@ -225,6 +260,7 @@ New hardware + a new network role for the lab — expect research/ADR before acq
 
 - [Gemini discussion — OPNsense firewall i router](https://share.gemini.google/k8PVbnk90fuo) — the full thread this idea is based on
 - [Gemini discussion — Porównanie kart sieciowych Dell (BCM5719 vs BCM5720, OPNsense, 5G failover)](https://share.gemini.google/Z2xgg2TSotrn) (published 2026-08-24) — NIC comparison + Futro S930 compatibility + 5G-failover supplement
+- [Gemini discussion — Homelab LTE failover (reused ZTE WF830, OPNsense multi-WAN)](https://share.gemini.google/gc2ZIcPHbVue) (published 2026-08-24) — reusing the old LTE modem as the backup WAN + cheapest standby data plans
 - [ADR 24 — Edge ingress appliance](../decisions/24-edge-ingress-appliance.md) · [research 24](../research/24-network-topology-design.md) — network topology context
 - [ADR 22 — k3s + Azure Arc](../decisions/22-k3s-arc-homelab.md) — the cluster behind this router
 - [ADR 27 — Monitoring strategy](../decisions/27-monitoring-strategy.md) · [Idea 06](06-homelab-energy-monitoring.md) — where Netdata/observability fits

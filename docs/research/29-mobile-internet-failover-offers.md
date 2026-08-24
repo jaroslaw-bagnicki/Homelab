@@ -54,6 +54,22 @@ exhausted (speed throttle vs stop), and Orange 5G/LTE coverage at the S930's loc
 
 If the Flex SIM is unsuitable, the paid offers below remain the fallback.
 
+### Cheapest failover-only strategies (0–15 zł, from the LTE-modem thread)
+
+For a link that mostly sits in standby (gateway pings, tunnels, notifications), the
+cheapest strategies from the "Homelab LTE failover" thread:
+
+| Strategy | Cost | How it works |
+|---|---|---|
+| **OTVARTA** "O! Szybki" 10 GB | 13,99 zł/mo | Indefinite (1-mo notice), Plus network; always 10 GB — hands-free, no account-validity care |
+| **Virgin Mobile / Play na kartę** | ~0–5 zł/mo | Starter + 5 zł top-up + "Rok Ważności Konta" promo; activate a one-off GB pack (app/SMS) only when fiber is down |
+| **Orange na kartę + KWR** | ~15 zł/year | "Konto Ważne Rok" keeps the line alive almost free; dense 5G coverage, low ping; top up for a GB pack only during an outage |
+| **Plush / Play na kartę** (autotop-up) | 10–15 zł/mo | Recurring 10–15 zł top-ups earn bonus GB packs (often 10–30 GB) that roll over while top-ups continue |
+
+**CGNAT**: most mobile operators CGNAT the backup WAN — fine when inbound traffic flows
+over Cloudflare Tunnel / Tailscale; a direct WireGuard/IPsec endpoint over the backup link
+needs a (sometimes paid) public-IP add-on.
+
 ## Requirements for a paid failover SIM (fallback)
 
 | Criterion | Target |
@@ -99,7 +115,7 @@ found — before the Orange Flex additional SIM (0 zł) superseded it.
 | a2mobile (Plus) | Niewyczerpalne Wszystko | 29,90 zł | up to 95 GB | Bestseller; code `*299*1#` |
 | a2mobile (Plus) | Niewyczerpalne Wszystko | 34,90 / 39,90 / 49,90 zł | up to 140 / 190 / 400 GB | 5G, unlimited calls/SMS/MMS; 999 GB promo extras |
 | a2mobile (Plus) | Internet na kartę (data-only) | 12,90 zł | 5 GB (throttle 3→1→0,5 Mb/s) | data-only; per Antyweb Jan 2026 |
-| **aero2** (Plus) | data-only packs | 30 zł | 50 GB | aero2 = Plus data brand for routers; pack extends account 12 mo + free 512 kb/s |
+| **aero2** (Plus) | data-only packs | 30 zł | 50 GB | aero2 = Plus data brand for routers; pack extends account 12 mo (free 512 kb/s BDI discontinued 2024) |
 | aero2 (Plus) | data-only | 50 zł | 150 GB | |
 | **Lycamobile** (Plus) | internet pack | 25 zł | 30 GB | |
 | Lycamobile (Plus) | internet pack | 35 zł | 50 GB | |
@@ -137,8 +153,10 @@ found — before the Orange Flex additional SIM (0 zł) superseded it.
 
 - **Primary: Orange Flex additional SIM (0 zł/mo)** in the 5G modem — verify modem/router
   use and data-pool behaviour before relying on it.
-- **Fallback if Flex isn't suitable**: Fonia 31 GB / 17 zł (cheapest ≥30 GB absolute cost),
-  or a2mobile (best zł/GB, Plus network) if more data is wanted.
+- **Fallback if Flex isn't suitable**: OTVARTA 10 GB / 13,99 zł for a hands-free always-on
+  standby; Fonia 31 GB / 17 zł for more headroom; a2mobile (best zł/GB, Plus network) if a
+  lot of data is wanted. Near-zero-cost idling via Virgin/Play or Orange na kartę +
+  account-validity promos (top up for a GB pack only during an outage).
 - **Router-native fallbacks**: aero2 (data-only by design) or Play/Orange
   internet-na-kartę data SIMs if router compatibility is a hard requirement.
 - **Coverage first**: verify the chosen network's coverage at the S930's location — signal
