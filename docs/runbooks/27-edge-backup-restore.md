@@ -3,7 +3,8 @@
 > Full-system image backup/restore of the edge appliance's eMMC to the ML110 NAS.
 > Baseline image taken **2026-08-22** (issue [#79](https://github.com/jaroslaw-bagnicki/Homelab/issues/79)).
 > **First choice: Clonezilla** (`ocs-sr savedisk`/`restoredisk`) — whole-disk image incl. GPT
-> partition table + all partitions, only used data, backup + restore validated on the 3040 (2026-08-24).
+> partition table + all partitions, only used data, full wipe→restore→boot cycle validated on
+> the 3040 (2026-08-24).
 > **Fallback: `dd` + `gzip`** (proven wipe→restore cycle, 2026-08-23). Images stored on the OMV
 > SMB share.
 
@@ -49,7 +50,7 @@
 | Time | ~40 s save (+ ~56 s check) | ~177 s (~3 min) |
 | Coverage | Used data + GPT partition table | Full raw 7.8 GB (every sector) |
 | Verify | Built-in "restorable" check | Manual (ISIZE / `gzip -l`) |
-| Restore tested | ✅ restore (boot pending) | ✅ proven |
+| Restore tested | ✅ proven | ✅ proven |
 
 Clonezilla is first choice: self-describing image (partition table saved), built-in
 verification, and faster restore. The size/time gap on this small eMMC is modest — the
@@ -90,10 +91,11 @@ cosmetic (gotcha 7). **Do not unplug the boot USB until the run finishes** (gotc
 
 ### Restore (`restoredisk`)
 
-Restore **validated 2026-08-24** — Clonezilla wiped the destination itself (zeroed the MBR,
+**Validated end-to-end 2026-08-24** — Clonezilla wiped the destination itself (zeroed the MBR,
 recreated the GPT with the original GUID), restored both partitions (100%, partclone), rebuilt
-initramfs and re-created the EFI NVRAM boot entry; all clean per the clonezilla logs. Boot
-confirmation still pending (box was left running; no reboot performed).
+initramfs and re-created the EFI NVRAM boot entry (clean logs), and the box **booted
+successfully** from the restored eMMC (back at `192.168.2.240`, SSH OK). Full
+wipe → `restoredisk` → boot cycle proven.
 
 Boot the live USB (F12) → open a terminal (root):
 
