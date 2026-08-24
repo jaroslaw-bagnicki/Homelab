@@ -73,6 +73,11 @@ lsblk
 mkdir -p /home/partimag /var/log/clonezilla
 mount -t cifs //192.168.2.210/shared /home/partimag -o username=rescuezilla,password=<pw>,vers=3.1.1,seal
 
+# 3b. Persist Clonezilla logs on the NAS — they default to RAM-only
+#    /var/log/clonezilla and are lost on reboot. Bind-mount a logs dir.
+mkdir -p /home/partimag/edge/clonezilla-logs
+mount --bind /home/partimag/edge/clonezilla-logs /var/log/clonezilla
+
 # 4. Whole-disk image, timestamped (saves GPT partition table + both partitions,
 #    only used data). Image lands at /home/partimag/wyse3040-<ts>/
 #    (no -i 0: it is ignored in this build — the image check runs anyway)
@@ -100,6 +105,11 @@ lsblk                    # note the device name
 # 2. Mount the NAS at /home/partimag
 mkdir -p /home/partimag /var/log/clonezilla
 mount -t cifs //192.168.2.210/shared /home/partimag -o username=rescuezilla,password=<pw>,vers=3.1.1,seal
+
+# 2b. Persist Clonezilla logs on the NAS (RAM-only /var/log/clonezilla is lost
+#    on reboot). Bind-mount a logs dir.
+mkdir -p /home/partimag/edge/clonezilla-logs
+mount --bind /home/partimag/edge/clonezilla-logs /var/log/clonezilla
 
 # 3. Restore the whole disk (partition table + partitions, only used blocks).
 #    No manual wipe needed — Clonezilla cleans the destination first (zeroes
@@ -208,6 +218,7 @@ gzip -l /mnt/backup/edge/wyse3040_<timestamp>.img.gz   # shows uncompressed size
 | File | Purpose |
 |---|---|
 | `wyse3040-<timestamp>/` | **Clonezilla image dir** — `mmcblk0p1.vfat-ptcl-img.gz`, `mmcblk0p2.ext4-ptcl-img.gz`, GPT dumps, `blkid.list`, partition-table copies |
+| `clonezilla-logs/` | Clonezilla run logs persisted from `/var/log/clonezilla` (clonezilla.log, partclone*, img-chk) |
 | `wyse3040_<timestamp>.img.gz` | `dd` image (bit-by-bit, compressed) |
 | `wyse3040_<timestamp>.img.log` | `dd` output captured at backup time |
 | `edge-backup.sh` | Reusable backup snippet (mount + dd + timestamp) |
