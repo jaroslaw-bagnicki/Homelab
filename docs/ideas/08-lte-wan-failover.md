@@ -52,9 +52,9 @@ a great backup WAN for OPNsense:
 Use an **additional SIM from the existing Orange Flex subscription** (no additional cost) in
 the LTE modem — sufficient for a backup link. [FAQ-verified](https://flex.orange.pl/pomoc?category=dodatkowa-karta-sim)
 (2026-08-24): order it as **internet-only** for router use; it shares the plan's data pool
-and does **not** work in roaming. Cheaper standby-only strategies (OTVARTA 10 GB/13,99 zł,
-Virgin/Play or Orange na kartę with account-validity promos, Plush/Play auto-top-up) and the
-full PL comparison are in [research 30](../research/30-mobile-internet-failover-offers.md).
+and does **not** work in roaming. Cheaper no-contract standby strategies (Virgin/Play or
+Orange na kartę with account-validity promos, Plush/Play auto-top-up) and the full PL
+comparison are in [research 30](../research/30-mobile-internet-failover-offers.md).
 Check the shared data-pool limit on exhaustion and Orange coverage at the router.
 
 ## Router configuration (OPNsense reference)

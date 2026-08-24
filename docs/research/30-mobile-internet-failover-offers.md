@@ -33,7 +33,7 @@ router compatibility. 31 GB is the user's sufficiency threshold.
 
 The user holds an **Orange Flex** subscription and can order an **additional SIM card at no
 extra cost** (verified in the official [FAQ](https://flex.orange.pl/pomoc?category=dodatkowa-karta-sim)).
-That SIM goes in the 5G modem as the backup WAN — the cheapest failover data option
+That SIM goes in the LTE modem as the backup WAN — the cheapest failover data option
 (0 zł/month), sharing the Flex plan's data pool.
 
 **FAQ-verified facts (2026-08-24):**
@@ -63,7 +63,6 @@ cheapest strategies from the "Homelab LTE failover" thread:
 
 | Strategy | Cost | How it works |
 |---|---|---|
-| **OTVARTA** "O! Szybki" 10 GB | 13,99 zł/mo | Indefinite (1-mo notice), Plus network; always 10 GB — hands-free, no account-validity care |
 | **Virgin Mobile / Play na kartę** | ~0–5 zł/mo | Starter + 5 zł top-up + "Rok Ważności Konta" promo; activate a one-off GB pack (app/SMS) only when fiber is down |
 | **Orange na kartę + KWR** | ~15 zł/year | "Konto Ważne Rok" keeps the line alive almost free; dense 5G coverage, low ping; top up for a GB pack only during an outage |
 | **Plush / Play na kartę** (autotop-up) | 10–15 zł/mo | Recurring 10–15 zł top-ups earn bonus GB packs (often 10–30 GB) that roll over while top-ups continue |
@@ -72,15 +71,21 @@ cheapest strategies from the "Homelab LTE failover" thread:
 over Cloudflare Tunnel / Tailscale; a direct WireGuard/IPsec endpoint over the backup link
 needs a (sometimes paid) public-IP add-on.
 
+**No-contract rule**: any plan requiring a signed contract (**abonament** — even an
+indefinite-term one with a 1-month notice) is **rejected**; only **prepaid (na kartę)** or
+**cancel-anytime** plans qualify. This rejects e.g. **OTVARTA** "O! Szybki" (13,99 zł/10 GB
+— indefinite-term abonament on Plus) plus other subscription offers (nju, lajt mobile,
+Virgin abonament, Plush abonament).
+
 ## Requirements for a paid failover SIM (fallback)
 
 | Criterion | Target |
 |---|---|
 | Monthly cost | as low as possible; user baseline 17 zł/mo |
 | Data volume | ~30 GB (user: 31 GB sufficient); more is fine |
-| Contract | none / cancel anytime (prepaid or no-term subscription) |
+| Contract | none — prepaid (na kartę) or cancel-anytime only; abonament (contract) rejected, even indefinite-term |
 | Router use | SIM must work in a 5G modem/router (data-only SIM or allowed tethering) |
-| Tech | 5G optional (modem is 5G); LTE fine as fallback |
+| Tech | LTE (ZTE WF830) primary; 5G optional |
 | Network | pick on home coverage: Orange, Plus, Play, or T-Mobile |
 
 ## Fonia — the cheapest ≥30 GB baseline (Aug 2026)
@@ -134,7 +139,7 @@ found — before the Orange Flex additional SIM (0 zł) superseded it.
 | **Play** | internet na kartę | 50 zł/mo | 200 GB | via Play24 app; code activation = half |
 | Play | internet na kartę | 20 zł/week | 30 GB | |
 | Play | Fakt Mobile | 3–15 zł | 1–10 GB | |
-| **T-Mobile** | GO! packs | 35–50 zł/mo | 5G + unlimited calls/SMS | richer but pricier |
+| **T-Mobile** | GO! packs (prepaid) | 35–50 zł/mo | 5G + unlimited calls/SMS | prepaid (na kartę), no contract — richer but pricier |
 | T-Mobile | starter online promo | 20 zł one-off | 12×833,25 GB over a year | |
 | **tuBiedronka** (T-Mobile) | | 5 / 10 zł | 1 / 3 GB | |
 
@@ -153,11 +158,11 @@ found — before the Orange Flex additional SIM (0 zł) superseded it.
 
 ## Recommendation
 
-- **Primary: Orange Flex additional SIM (0 zł/mo)** in the 5G modem — verify modem/router
+- **Primary: Orange Flex additional SIM (0 zł/mo)** in the LTE modem — verify modem/router
   use and data-pool behaviour before relying on it.
-- **Fallback if Flex isn't suitable**: OTVARTA 10 GB / 13,99 zł for a hands-free always-on
-  standby; Fonia 31 GB / 17 zł for more headroom; a2mobile (best zł/GB, Plus network) if a
-  lot of data is wanted. Near-zero-cost idling via Virgin/Play or Orange na kartę +
+- **Fallback if Flex isn't suitable** (no-contract only): Fonia 31 GB / 17 zł for the
+  cheapest ≥30 GB headroom (cancel anytime); a2mobile (best zł/GB, Plus network) if a lot
+  of data is wanted. Near-zero-cost idling via Virgin/Play or Orange na kartę +
   account-validity promos (top up for a GB pack only during an outage).
 - **Router-native fallbacks**: aero2 (data-only by design) or Play/Orange
   internet-na-kartę data SIMs if router compatibility is a hard requirement.
