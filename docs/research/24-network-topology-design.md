@@ -75,10 +75,11 @@ Keep the single `192.168.2.0/24` broadcast domain. Reserve a dedicated static bl
 | `192.168.2.210` | HP ML110 NAS — static (proposed) |
 | `192.168.2.220` | LLM server (Phase 2, future) |
 | `192.168.2.230` | TL-SG108E management IP (proposed) |
+| `192.168.2.240` | **Edge ingress appliance (Wyse 3040)** — new `24x` block (decided 2026-08-17, runbook 24) |
 
-> **Why tens-blocks (`200/210/220/230`) rather than contiguous `200–203`:** each
+> **Why tens-blocks (`200/210/220/230/240`) rather than contiguous `200–204`:** each
 > category gets a block with headroom — `20x` server, `21x` NAS, `22x` LLM,
-> `23x` switch — so a future device in the same class (e.g. a second NAS at
+> `23x` switch, `24x` edge/ingress — so a future device in the same class (e.g. a second NAS at
 > `211` or a k3s node at `212`) slots in without renumbering existing
 > reservations.
 
