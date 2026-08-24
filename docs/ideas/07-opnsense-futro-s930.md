@@ -8,6 +8,7 @@
 
 **Status**: 🧠 Idea — Gemini discovery thread, no hardware acquired  
 **Date**: 2026-08-21  
+**Updated**: 2026-08-24 — NIC-comparison + 5G-failover supplement  
 **Source**: [Gemini discussion — OPNsense firewall i router](https://share.gemini.google/k8PVbnk90fuo) (published 2026-08-21)
 
 ---
@@ -71,6 +72,82 @@ The same Broadcom 5720 NIC + PCIe riser approach applies. The RX-427BB is a perc
 - [Dell Broadcom 5720 2× 1 GbE RJ45 PCIe — 557M9](https://allegro.pl/produkt/karta-sieciowa-dell-broadcom-5720-2x1gbe-rj45-pcie-2-0x1-557m9-75c87938-3743-42a7-9271-74e3a5cd9531?offerId=16724901924) — **chosen NIC**; scraped 2026-08-21: **used**, **50,00 zł**, seller `Hardware-Direct` (Super Sprzedawca, 100%, VAT invoice, 14-day free return), 59 in stock. BCM5720, 2× RJ-45 1GbE, PCIe 2.0 ×1, low-profile, EAN `5397051748933` — mature FreeBSD `bge` driver. ⚠️ "server-only" note = warranty boilerplate (standard PCIe, not proprietary); confirm the LP bracket is included
 - [HP T730 — AMD RX-427BB, 8 GB, 32 GB SSD, WiFi, PSU](https://allegro.pl/produkt/mini-pc-terminal-hp-t730-4x2-7ghz-8gb-ram-32ssd-wifi-zasilacz-100acb00-a0c2-4049-b03e-a1553cbce1f7?offerId=17945813802) — alternative platform; scraped 2026-08-21: **used**, **189,00 zł**, seller `PandaTech_pl` (Super Sprzedawca, 100%, VAT invoice), 22 in stock. RX-427BB (4C, 2.7/3.6 GHz), 8 GB DDR3, 32 GB M.2 SSD, Radeon R7, 1× GbE + WiFi, 4× DisplayPort, RS-232, LPT; original HP PSU + DP→HDMI adapter, no OS. Has a **PCIe ×4 slot** for the Broadcom 5720 NIC
 
+## NIC comparison — Dell 0TMGR6 (BCM5719) vs Dell Broadcom 5720 (BCM5720) — 2026-08-24
+
+A follow-up Gemini thread ([supplement source](#references)) deep-dives the two Dell
+Broadcom NetXtreme I cards — the 5720 was chosen in the first thread, and the 5719
+quad-port is the natural "more ports" alternative. Both chips share the same Broadcom
+NetXtreme I generation; the differences are port density, PCIe interface, and power draw.
+
+| Feature | Dell 0TMGR6 (Broadcom BCM5719) | Dell Broadcom BCM5720 |
+|---|---|---|
+| Ports | 4× 1 GbE RJ-45 | 2× 1 GbE RJ-45 |
+| Host interface | PCIe 2.0 ×4 | PCIe 2.0 ×1 or ×2 (depends on variant) |
+| Power draw | ~5.0–6.5 W | ~2.5–3.5 W |
+| Throughput | up to 4 Gbps (8 Gbps full duplex) | up to 2 Gbps (4 Gbps full duplex) |
+| Virtualization support | SR-IOV, EEE (802.3az), RSS, MSI-X, offloading (TSO/CSO) | SR-IOV, EEE (802.3az), RSS, MSI-X, offloading (TSO/CSO) |
+| Use case | Virtualization hosts (Proxmox/ESXi), routers/firewalls (pfSense/OPNsense), LACP trunking | Standard servers, cluster nodes, dedicated mgmt port + WAN/LAN |
+
+**Choosing between them** — pick the BCM5719 (4×1GbE) if you need several separate
+physical interfaces (VM passthrough, physical segregation into VLANs/subnets without
+extra managed switches, or aggressive link aggregation/LACP). Pick the BCM5720 (2×1GbE)
+if you value low power, less heat, and PCIe-lane savings and 2× RJ-45 (NIC teaming /
+WAN+LAN) is enough. Both are supported out-of-the-box by Linux, Proxmox VE, ESXi, and
+Windows Server.
+
+### OPNsense behaviour (`bge` driver)
+
+Both cards use the FreeBSD `bge(4)` driver in OPNsense and are very stable out-of-the-box,
+saturating a full 1 Gbps with routing + NAT at low CPU load. Two OPNsense specifics:
+
+- **Hardware offloading (CSO/TSO/LRO)**: FreeBSD's offload support for Broadcom is more
+  limited than Intel (`igb`/`ixgbe`). OPNsense recommends **disabling** *Hardware CRC
+  Checksum Offloading*, *Hardware TCP Segmentation Offloading (TSO)*, and *Hardware Large
+  Receive Offloading (LRO)* under **Interfaces → Settings** — prevents instability and
+  packet loss under load.
+- **RSS**: `bge` multiqueue support is limited; fine for home/lab traffic, but under heavy
+  multithreaded routing Intel cards (e.g. I350) distribute interrupts across CPU cores a
+  bit better.
+
+### Port mapping
+
+- **BCM5719 (4-port)** — Multi-WAN / physical segregation:
+  `Port 0` = WAN (ISP 1) · `Port 1` = WAN 2 (failover / load balancing) ·
+  `Port 2` = LAN (trunk to switch) · `Port 3` = dedicated DMZ / IoT zone or a separate
+  interface for AP / HA (CARP sync). ⚠️ Needs a PCIe ×4 (or larger) slot — a constraint in
+  small SFF cases/boards.
+- **BCM5720 (2-port)** — classic router: `Port 0` = WAN · `Port 1` = LAN (to a managed
+  switch with 802.1q VLAN split). Low power + low heat suit cramped 1U / desktop firewall
+  hosts.
+
+### Virtualized (Proxmox) notes
+
+- **PCI passthrough** of the whole card (or specific ports) gives best performance, but
+  BCM5719/5720 sometimes need `pcie_acs_override` in Proxmox when ports share an IOMMU
+  group.
+- **VirtIO bridge (recommended)**: create Linux bridges (`vmbrX`) in Proxmox and attach
+  them to OPNsense as `virtio` interfaces — Proxmox handles the `bge` driver, and OPNsense
+  sees efficient virtual NICs, sidestepping FreeBSD driver quirks.
+
+### Futro S930 compatibility
+
+Both cards fit the S930 **only** with: (1) an angled **PCIe riser (×4/×8)** — the S930's
+slot sits perpendicular to the rear wall, and (2) a **low-profile bracket** (the case only
+fits LP cards; a full-height bracket must be swapped or removed).
+
+| | BCM5719 (4-port) | BCM5720 (2-port) |
+|---|---|---|
+| S930 compatibility | Yes (riser ×4/×8 + LP bracket) | Yes (riser ×4/×8 + LP bracket) |
+| Total LAN ports | 5× 1 GbE (1× onboard Realtek + 4× Broadcom) | 3× 1 GbE (1× onboard Realtek + 2× Broadcom) |
+| Thermal in the S930 | Needs attention / light airflow | Good for passive operation |
+
+The S930 is **fully passively cooled**: the 5719 (~5–6.5 W, 4× RJ-45) can run hot in the
+cramped case — glue a small heatsink on the controller and/or add a quiet Noctua 40/60 mm
+fan if OPNsense runs 24/7 under load. The 5720 (~2.5–3.5 W) is thermally "ideal" with no
+extra cooling. **Bottom line**: the 5720 stays the safer/cooler pick for the compact S930
+unless you truly need 4 physical LAN ports on the card (then the 5719 works, but plan for
+airflow).
+
 ## Deployment direction
 
 The thread covers several deployment shapes; the one relevant to a single home router:
@@ -83,6 +160,31 @@ The thread covers several deployment shapes; the one relevant to a single home r
   break).
 - **Placement**: WAN port ← ISP fiber router, LAN port(s) → TL-SG108E switch / mesh in
   bridge mode. The Tenda Nova mesh would drop to AP-only behind OPNsense.
+
+## Multi-WAN failover — onboard Realtek + 5G modem (2026-08-24)
+
+The same thread confirms the S930's onboard **Realtek RTL8111G** port works well as a
+backup WAN for a **5G modem** in a Multi-WAN / failover setup. It never has to carry large
+continuous 24/7 traffic in that role, so the `re` chip's hardware limits don't matter.
+
+1. **Interface assignment** — the onboard Realtek shows up as `re0`; assign it as a second
+   WAN (e.g. `WAN_5G`).
+2. **Gateways** (**System → Gateways → Configuration**) — two gateways: `GW_WAN1` (main
+   link, e.g. fiber on the Broadcom card) with **Priority 1**, and `GW_5G` (5G modem on
+   the Realtek card) with **Priority 2**. Enable IP monitoring on `GW_5G` (ping `1.1.1.1`
+   or `8.8.8.8`) so OPNsense knows when the link is up.
+3. **Failover group** (**System → Gateways → Group**) — create e.g. `WAN_FAILOVER`:
+   `GW_WAN1` → **Tier 1**, `GW_5G` → **Tier 2**, trigger level **Packet Loss or High
+   Latency**.
+4. **Firewall rule** (**Firewall → Rules → LAN**) — in the default LAN→Any outbound rule,
+   expand **Advanced** and set the **Gateway** field from `default` to the `WAN_FAILOVER`
+   group.
+
+**5G modem + Realtek notes**: run the 5G modem (ZTE / Huawei / MikroTik) in **Bridge / IP
+Passthrough** mode, or as a router on a subnet different from the LAN (avoids double-NAT).
+The default FreeBSD `re` driver can be flaky under heavy load, but is fine for a backup
+link out-of-the-box; if instability shows up, install the vendor's newer driver from the
+OPNsense repo (package `os-realtek-re`).
 
 ## Observability & management (from the thread)
 
@@ -105,6 +207,7 @@ The thread covers several deployment shapes; the one relevant to a single home r
 4. Physical placement — same rack/utility spot as the switch?
 5. Double-NAT handling vs the ISP router — does OPNsense replace its routing entirely?
 6. Is any HA (CARP, second unit) wanted now, or single-unit only?
+7. Is a 5G-modem failover (multi-WAN on the onboard Realtek port) in scope for V1?
 
 ## Lifecycle
 
@@ -114,6 +217,7 @@ New hardware + a new network role for the lab — expect research/ADR before acq
 ## References
 
 - [Gemini discussion — OPNsense firewall i router](https://share.gemini.google/k8PVbnk90fuo) — the full thread this idea is based on
+- [Gemini discussion — Porównanie kart sieciowych Dell (BCM5719 vs BCM5720, OPNsense, 5G failover)](https://share.gemini.google/Z2xgg2TSotrn) (published 2026-08-24) — NIC comparison + Futro S930 compatibility + 5G-failover supplement
 - [ADR 24 — Edge ingress appliance](../decisions/24-edge-ingress-appliance.md) · [research 24](../research/24-network-topology-design.md) — network topology context
 - [ADR 22 — k3s + Azure Arc](../decisions/22-k3s-arc-homelab.md) — the cluster behind this router
 - [ADR 27 — Monitoring strategy](../decisions/27-monitoring-strategy.md) · [Idea 06](06-homelab-energy-monitoring.md) — where Netdata/observability fits
