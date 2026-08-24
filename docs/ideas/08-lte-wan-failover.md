@@ -54,7 +54,7 @@ the LTE modem — sufficient for a backup link. [FAQ-verified](https://flex.oran
 (2026-08-24): order it as **internet-only** for router use; it shares the plan's data pool
 and does **not** work in roaming. Cheaper standby-only strategies (OTVARTA 10 GB/13,99 zł,
 Virgin/Play or Orange na kartę with account-validity promos, Plush/Play auto-top-up) and the
-full PL comparison are in [research 29](../research/29-mobile-internet-failover-offers.md).
+full PL comparison are in [research 30](../research/30-mobile-internet-failover-offers.md).
 Check the shared data-pool limit on exhaustion and Orange coverage at the router.
 
 ## Router configuration (OPNsense reference)
@@ -107,6 +107,6 @@ owned, needs a Passive PoE 24V injector + outdoor cable.
 
 - [Gemini discussion — Homelab LTE failover (reused ZTE WF830, OPNsense multi-WAN)](https://share.gemini.google/gc2ZIcPHbVue) (published 2026-08-24)
 - [Orange Flex — pomoc: dodatkowa karta SIM](https://flex.orange.pl/pomoc?category=dodatkowa-karta-sim) (FAQ, 2026-08-24)
-- [Research 29 — Mobile internet offers for router failover](../research/29-mobile-internet-failover-offers.md) — PL data plans
+- [Research 30 — Mobile internet offers for router failover](../research/30-mobile-internet-failover-offers.md) — PL data plans
 - [Idea 07 — OPNsense router](07-opnsense-futro-s930.md) — the host router this depends on
 - [Research 24 — Network topology design](../research/24-network-topology-design.md) · [ADR 24 — Edge ingress appliance](../decisions/24-edge-ingress-appliance.md)

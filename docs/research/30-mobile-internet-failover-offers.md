@@ -1,4 +1,4 @@
-# 29 — Mobile Internet (5G/LTE data SIM) for Router Failover — PL offers
+# 30 — Mobile Internet (5G/LTE data SIM) for Router Failover — PL offers
 
 **Source**: Web research, Aug 24 2026 — operator sites (fonia.app, a2mobile.pl) +
 [Antyweb — Internet na kartę roundup](https://antyweb.pl/internet-5g-na-karte-2026) (Jan 2026) +
