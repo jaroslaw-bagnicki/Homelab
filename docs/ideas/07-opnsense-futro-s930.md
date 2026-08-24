@@ -167,6 +167,12 @@ The same thread confirms the S930's onboard **Realtek RTL8111G** port works well
 backup WAN for a **5G modem** in a Multi-WAN / failover setup. It never has to carry large
 continuous 24/7 traffic in that role, so the `re` chip's hardware limits don't matter.
 
+**Data plan**: use an **additional SIM from the existing Orange Flex subscription** (no
+additional cost) in the 5G modem — sufficient for a backup link. PL mobile-internet
+alternatives (Fonia 31 GB/17 zł, a2mobile, aero2, …) are compared in
+[research 29](../research/29-mobile-internet-failover-offers.md) as fallback context.
+Verify the Flex terms allow modem/router use and check the shared data-pool limit.
+
 1. **Interface assignment** — the onboard Realtek shows up as `re0`; assign it as a second
    WAN (e.g. `WAN_5G`).
 2. **Gateways** (**System → Gateways → Configuration**) — two gateways: `GW_WAN1` (main

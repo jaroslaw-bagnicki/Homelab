@@ -2,6 +2,7 @@
 
 | # | Date | Document | Topic | Source |
 |---|------|----------|-------|--------|
+| 29 | 2026‑08‑24 | [29-mobile-internet-failover-offers.md](29-mobile-internet-failover-offers.md) | Mobile internet (5G/LTE data SIM) for the OPNsense router's failover WAN — Orange Flex additional SIM (free) as primary; Fonia 31 GB/17 zł baseline vs a2mobile/aero2/Orange/Play/T-Mobile data plans | Web research: operator sites + Antyweb + RankingOperatorzy |
 | 28 | 2026‑08‑17 | [28-wyse3040-hardware-diagnostic.md](28-wyse3040-hardware-diagnostic.md) | Wyse 3040 pre-boot hardware audit — full spec inventory; the 8 GB eMMC was invisible to SystemRescue but confirmed present/usable by ePSA and the Debian installer (`mmcblk0`); ADR 24's eMMC premise holds | SystemRescue 13.02 + hardinfo2 + ePSA + BIOS walk + Debian installer + issue #65 |
 | 27 | 2026‑08‑15 | [27-zigbee-energy-monitoring.md](27-zigbee-energy-monitoring.md) | Zigbee energy monitoring for the homelab — Nous A1Z plugs (USED 4-pack), Sonoff ZBDongle-P coordinator, ZHA vs Zigbee2MQTT, independent Z2M → mqtt2prometheus → Prometheus → Grafana path, AI-agent access via MQTT ACL + Prometheus API | Gemini chat 15 |
 | 26 | 2026‑08‑14 | [26-home-assistant-thin-client.md](26-home-assistant-thin-client.md) | Home Assistant on a thin client — Wyse 5070/Futro S740 hardware, Home Assistant OS on Proxmox VE, MQTT/Zigbee2MQTT placement, RAM/SSD sizing, Ansible, Netdata+Fluent Bit | Gemini chat 14 |
