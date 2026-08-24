@@ -2,8 +2,10 @@
 
 > Full-system image backup/restore of the edge appliance's eMMC to the ML110 NAS.
 > Baseline image taken **2026-08-22** (issue [#79](https://github.com/jaroslaw-bagnicki/Homelab/issues/79)).
-> Method settled from [Gemini research](https://share.gemini.google/5hpXJV0KC1K1) — `dd` + `gzip`
-> from a live environment, stored on the OMV SMB share. Restore is the reverse pipe.
+> **First choice: Clonezilla** (`ocs-sr savedisk`/`restoredisk`) — whole-disk image incl. GPT
+> partition table + all partitions, only used data, verified restorable on the 3040 (2026-08-24).
+> **Fallback: `dd` + `gzip`** (proven wipe→restore cycle, 2026-08-23). Images stored on the OMV
+> SMB share.
 
 ## When to use
 
@@ -19,6 +21,8 @@
 - Backup script on the share: `//192.168.2.210/shared/edge/edge-backup.sh` (mount + dd + timestamped name).
 - **`cifs-utils`** on the box mounting the share — `apt install cifs-utils` (provides `mount.cifs`).
   Installed on the edge **2026-08-23** for the online backup flow (§ Online backup).
+- **Clonezilla tooling**: the current **Rescuezilla** live ISO bundles both `ocs-sr` and
+  `mount.cifs` — no separate Clonezilla live USB needed (verified 2026-08-24).
 
 ## Known gotchas (Wyse 3040 eMMC)
 
@@ -27,13 +31,59 @@
 | 1 | eMMC block device missing in live envs | `modprobe mmc_block` in the live terminal |
 | 2 | Device name **shifts** between sessions (`mmcblk0` ↔ `mmcblk1`) | Always `lsblk` first; never hardcode |
 | 3 | Some live kernels don't enumerate it at all (SystemRescue, Clonezilla) | Use Debian-based live media (installer proved it works) + `modprobe mmc_block` |
-| 4 | **Rescuezilla GUI crashes** with `UnicodeDecodeError: … byte 0x92` | The eMMC model string (`H8G4a\x92`) contains a non-UTF-8 byte; Rescuezilla's Python parses it at the partition-table step. **Workaround: use the terminal `dd` flow, not the GUI** |
+| 4 | **Rescuezilla GUI crashes** with `UnicodeDecodeError: … byte 0x92` | The eMMC model string (`H8G4a\x92`) contains a non-UTF-8 byte; Rescuezilla's Python parses it at the partition-table step. **Workaround: use the terminal `ocs-sr`/`dd` flow, not the GUI** |
+| 5 | **Unplugging the boot USB mid-session** breaks the live FS (I/O errors; `mount.cifs` then fails with `failed to execute /sbin/mount.cifs`) | Leave the stick in until the run is done; reboot to recover |
+| 6 | Clonezilla image dir is hardwired to `/home/partimag` — the `-s /mnt/backup` override **did not work** here | `mkdir -p /home/partimag` and mount the NAS **at `/home/partimag`** |
+| 7 | `jq` missing in Rescuezilla → `ocs-sr` prints `jq: command not found`, disk info shows `No_size\|No_Model` | Cosmetic only; does not affect the image |
+| 8 | eMMC SMART not readable in live env (`smartctl: Unable to detect device type`) | No health telemetry from the live session; treat the earlier full-`dd` read as the integrity probe |
 
 > ⚠ The `0x92` byte and the live-media enumeration gap are the same quirks documented in
 > [research 28](../research/28-wyse3040-hardware-diagnostic.md) — they apply to any non-Debian
 > live tooling on this box.
 
 ## Backup
+
+> **Method comparison (measured on the 3040, 2026-08-24):**
+>
+> | | Clonezilla `savedisk` | `dd` + `gzip` |
+> |---|---|---|
+> | Image size | ~456 MB | ~611–614 MB |
+> | Time | ~40 s save (+ ~56 s check) | ~177 s (~3 min) |
+> | Coverage | Used data + GPT partition table | Full raw 7.8 GB (every sector) |
+> | Verify | Built-in "restorable" check | Manual (ISIZE / `gzip -l`) |
+> | Restore tested | ⏳ pending | ✅ proven |
+>
+> Clonezilla is first choice: self-describing image (partition table saved), built-in
+> verification, and faster restore. The size/time gap on this small eMMC is modest — the
+> deciding factor is the clean restore workflow.
+
+### Method A — Clonezilla `savedisk` (first choice)
+
+Boot the live USB (F12) → open a terminal (root):
+
+```sh
+# 1. Make the eMMC visible (fresh live session)
+modprobe mmc_block
+
+# 2. Confirm the device name (may be mmcblk0 or mmcblk1!)
+lsblk
+
+# 3. Mount the NAS AT /home/partimag (Clonezilla's hardwired image dir —
+#    the -s override did NOT work on this box; see gotcha 6)
+mkdir -p /home/partimag /var/log/clonezilla
+mount -t cifs //192.168.2.210/shared /home/partimag \
+  -o username=rescuezilla,password=<pw>,vers=3.1.1,seal
+
+# 4. Whole-disk image, timestamped (saves GPT partition table + both partitions,
+#    only used data). Image lands at /home/partimag/wyse3040-<ts>/
+ocs-sr -q2 -c -z1p -i 0 -p true savedisk wyse3040-$(date +%Y%m%d-%H%M%S) mmcblk0
+```
+
+**Expected**: ~40 s; image ≈ 456 MB for ~1.3 GB used. Output shows both partitions cloned
+and **"restorable"** — that is the verification. The `jq: command not found` lines are
+cosmetic (gotcha 7). **Do not unplug the boot USB until the run finishes** (gotcha 5).
+
+### Method B — `dd` + `gzip` (fallback)
 
 Boot the live USB (F12) → open a terminal (root):
 
@@ -64,11 +114,12 @@ umount /mnt/backup
 **Expected**: ~3 min at ~40–44 MB/s (Atom x5-Z8350 does gzip + encrypted SMB). Image ≈ 600 MB
 for a ~7.3 GiB disk with ~1 GB used. `records in == records out` and no I/O errors = clean copy.
 
-### Online backup (no live USB)
+### Online backup (no live USB) — `dd` only
 
-If the box is running and SSH-reachable, the same backup can be done from the live OS —
-no console, no USB. Slightly less clean than the live-session flow (the filesystem is
-mounted and can change mid-read), but fine on this low-write box. Needs `cifs-utils` (§ Prerequisites):
+Clonezilla needs unmounted partitions, so the online flow uses `dd` + `gzip`. If the box is
+running and SSH-reachable, the backup can be done from the live OS — no console, no USB.
+Slightly less clean than the live-session flow (the filesystem is mounted and can change
+mid-read), but fine on this low-write box. Needs `cifs-utils` (§ Prerequisites):
 
 ```sh
 # 1. Mount the NAS share (as root)
@@ -91,6 +142,32 @@ sudo umount /mnt/backup
 > first online snapshot `wyse3040_20260823-104107.img.gz` (546 MB, ~6.7 GiB raw, gzip OK).
 
 ## Restore
+
+### Method A — Clonezilla `restoredisk` (first choice — ⏳ restore still pending validation)
+
+Wipe → restore → boot cycle **not yet run** on the 3040; once it passes, this is the default.
+Until then the `dd` flow below remains the proven path.
+
+Boot the live USB (F12) → open a terminal (root):
+
+```sh
+# 1. eMMC visible
+modprobe mmc_block
+lsblk                    # note the device name
+
+# 2. Mount the NAS at /home/partimag
+mkdir -p /home/partimag /var/log/clonezilla
+mount -t cifs //192.168.2.210/shared /home/partimag \
+  -o username=rescuezilla,password=<pw>,vers=3.1.1,seal
+
+# 3. Restore the whole disk (partition table + partitions, only used blocks)
+ocs-sr -q2 -p true restoredisk wyse3040-<timestamp> mmcblk0
+
+# 4. Remove the USB and reboot
+reboot
+```
+
+### Method B — `dd` restore (proven fallback)
 
 Boot the live USB (F12) → open a terminal (root):
 
@@ -117,7 +194,10 @@ reboot
 
 ## Verify the archive
 
-Images live under `/mnt/backup/edge/` — use the full path (or `cd /mnt/backup/edge` first):
+- **Clonezilla image** (`wyse3040-<timestamp>/`): the `ocs-sr` run itself reports both partitions
+  **"restorable"** (built-in check). Spot-check the gzip stream if desired:
+  `gzip -t /home/partimag/wyse3040-<timestamp>/mmcblk0p2.ext4-ptcl-img.gz`.
+- **`dd` image**: images live under `/mnt/backup/edge/` — use the full path (or `cd /mnt/backup/edge` first):
 
 ```sh
 gzip -t /mnt/backup/edge/wyse3040_<timestamp>.img.gz   # no output = archive is intact
@@ -128,7 +208,8 @@ gzip -l /mnt/backup/edge/wyse3040_<timestamp>.img.gz   # shows uncompressed size
 
 | File | Purpose |
 |---|---|
-| `wyse3040_<timestamp>.img.gz` | The full eMMC image (bit-by-bit, compressed) |
+| `wyse3040-<timestamp>/` | **Clonezilla image dir** — `mmcblk0p1.vfat-ptcl-img.gz`, `mmcblk0p2.ext4-ptcl-img.gz`, GPT dumps, `blkid.list`, partition-table copies |
+| `wyse3040_<timestamp>.img.gz` | `dd` image (bit-by-bit, compressed) |
 | `wyse3040_<timestamp>.img.log` | `dd` output captured at backup time |
 | `edge-backup.sh` | Reusable backup snippet (mount + dd + timestamp) |
 
@@ -138,3 +219,4 @@ gzip -l /mnt/backup/edge/wyse3040_<timestamp>.img.gz   # shows uncompressed size
 - [Runbook 26 — NAS exports](26-ml110-nas-exports.md) — the SMB `shared` target (nas-phase2 worktree)
 - [Research 28](../research/28-wyse3040-hardware-diagnostic.md) — hardware audit + eMMC quirks
 - [Issue #79](https://github.com/jaroslaw-bagnicki/Homelab/issues/79) — initial system backup
+  (Clonezilla-vs-`dd` decision and validation comments)
