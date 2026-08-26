@@ -173,7 +173,7 @@ ADR 24 specifies a new `edge_host`-style role (systemd units) distinct from `doc
 The role provisions everything beyond the §2 bootstrap, idempotently, via
 `ansible/playbooks/playbook-edge.yml` (`common → security → edge_host`):
 
-- **hostname `edge`** + **name broadcast** — Avahi (`edge.local`, via `common`) + nmbd (bare `edge`)
+- **hostname `edge`** + **name broadcast** — Avahi (`edge.local`, via `common`) — nmbd dropped 2026-08-26 (mDNS suffices; the bare `edge` NetBIOS name is not needed)
 - **SSH hardening** — password auth off, key-only login (**added to the shared `security` role**,
   fleet-wide drop-in `/etc/ssh/sshd_config.d/99-homelab-hardening.conf`)
 - **UFW** (SSH from `192.168.2.0/24`, deny inbound otherwise) + **fail2ban** +
@@ -191,8 +191,8 @@ reuse — see §3a). Services §4–§6 are a follow-up once the base is verifie
 - `ansible/roles/security` (reused, tuned via `host_vars/edge.yml`) — UFW default-deny +
   SSH allow from `192.168.2.0/24` (`security_ufw_allow_ssh_from`), fail2ban, sshd key-only
   hardening; `security_ufw_deny_inbound_tcp_80: false` (the edge owns :80)
-- `ansible/roles/edge_host` (new) — nmbd (bare `edge`, smbd masked), `unattended-upgrades`,
-  `logrotate`, journald `Storage=volatile`, UFW allow inbound :80 from the LAN
+- `ansible/roles/edge_host` (new) — `unattended-upgrades`, `logrotate`, journald
+  `Storage=volatile`, UFW allow inbound :80 from the LAN (nmbd dropped 2026-08-26 — Avahi suffices)
 - `ansible/host_vars/edge.yml` + `inventory.ini` (`edge` → `192.168.2.240`)
 
 ---

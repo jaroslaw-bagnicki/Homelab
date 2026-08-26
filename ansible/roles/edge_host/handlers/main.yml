@@ -1,9 +1,4 @@
 ---
-- name: Restart nmbd
-  ansible.builtin.service:
-    name: nmbd
-    state: restarted
-
 - name: Restart systemd-journald
   ansible.builtin.systemd_service:
     name: systemd-journald

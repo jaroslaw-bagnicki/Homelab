@@ -70,7 +70,7 @@ Manages the core Docker Compose stack on the host: `portainer`, `caddy` (with `c
 
 ### `edge_host`
 
-Bare-metal base provisioning for the **Edge Wyse 3040** ingress appliance (ADR 24) — no Docker, no Arc. Runs after `common` + `security`. Installs `samba` and runs **nmbd only** (smbd masked) for the bare `edge` NetBIOS name, `unattended-upgrades`, `logrotate`, journald `Storage=volatile` (eMMC longevity), and allows inbound HTTP from the LAN (`edge_allow_http_from`, default `192.168.2.0/24`) for cloudflared → Caddy + `.home` routing. Hostname (`edge`), UTC, Avahi (`edge.local`) come from `common`; SSH hardening + UFW + fail2ban from `security`.
+Bare-metal base provisioning for the **Edge Wyse 3040** ingress appliance (ADR 24) — no Docker, no Arc. Runs after `common` + `security`. Installs `unattended-upgrades`, `logrotate`, configures journald `Storage=volatile` (eMMC longevity), and allows inbound HTTP from the LAN (`edge_allow_http_from`, default `192.168.2.0/24`) for cloudflared → Caddy + `.home` routing. Hostname (`edge`), UTC, and name broadcast (Avahi `edge.local`) come from `common`; SSH hardening + UFW + fail2ban from `security`.
 
 ## Playbooks
 
