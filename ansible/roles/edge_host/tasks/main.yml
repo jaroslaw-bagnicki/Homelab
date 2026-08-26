@@ -1,0 +1,66 @@
+---
+- name: Install samba (provides nmbd for NetBIOS name broadcast)
+  ansible.builtin.apt:
+    name: samba
+    state: present
+    update_cache: true
+
+- name: Deploy minimal smb.conf (nmbd-only, no file shares)
+  ansible.builtin.template:
+    src: smb.conf.j2
+    dest: /etc/samba/smb.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart nmbd
+
+- name: Mask smbd (file server not used on the edge)
+  ansible.builtin.systemd_service:
+    name: smbd
+    masked: true
+
+- name: Enable and start nmbd
+  ansible.builtin.systemd_service:
+    name: nmbd
+    enabled: true
+    state: started
+
+- name: Install unattended-upgrades
+  ansible.builtin.apt:
+    name: unattended-upgrades
+    state: present
+
+- name: Enable periodic unattended upgrades
+  ansible.builtin.copy:
+    content: |
+      APT::Periodic::Update-Package-Lists "1";
+      APT::Periodic::Unattended-Upgrade "1";
+    dest: /etc/apt/apt.conf.d/20auto-upgrades
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Install logrotate
+  ansible.builtin.apt:
+    name: logrotate
+    state: present
+
+- name: Configure journald volatile storage (eMMC longevity)
+  ansible.builtin.copy:
+    content: |
+      [Journal]
+      Storage=volatile
+    dest: /etc/systemd/journald.conf.d/90-edge-volatile.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart systemd-journald
+
+- name: UFW allow inbound HTTP from LAN (cloudflared -> Caddy, .home routing)
+  community.general.ufw:
+    rule: allow
+    direction: in
+    proto: tcp
+    to_port: "80"
+    from_ip: "{{ edge_allow_http_from }}"
+  when: edge_allow_http_from | length > 0

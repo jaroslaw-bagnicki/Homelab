@@ -12,7 +12,7 @@ hardware detail see [Hardware Inventory](hardware.md); for change history see
 |---|---|---|---|---|
 | **Homelab** | main workload host (Docker → k3s) | Lenovo M910q Tiny · Ubuntu 24.04 LTS · Azure Arc | `192.168.2.200` | ✅ |
 | **OMV NAS** | backup target / NFS for Longhorn | HP ProLiant ML110 G5 · OMV 8.3 | `192.168.2.210` | ✅ |
-| **Edge Ingress** | public ingress (cloudflared + Caddy) | Dell Wyse 3040 · Debian/Alpine TBD | TBD | 🔨 |
+| **Edge Ingress** | public ingress (cloudflared + Caddy) | Dell Wyse 3040 · Debian 13 minimal | `192.168.2.240` | 🔨 |
 | **Home Assistant** | smart home node | Wyse 5070 · Proxmox VE | TBD | 📋 |
 | **LLM server** | local LLM inference | Minisforum X1 Lite | TBD | 🧠 (Phase 2) |
 | **Cloudlab VPS** | staging / Ansible playground | Contabo VPS 10 · Ubuntu 24.04 | `173.249.27.13` | ✅ |
@@ -54,7 +54,7 @@ Tenda Nova mesh — 192.168.2.0/24, gateway 192.168.2.1 (single broadcast domain
         └── TL-SG108E switch (192.168.2.230)
                  ├── Homelab M910q    — 192.168.2.200
                  ├── OMV NAS         — 192.168.2.210
-                 ├── Edge Ingress      — TBD (future ingress)
+                 ├── Edge Ingress      — 192.168.2.240
                  └── work laptop dock — DHCP (corporate)
 ```
 

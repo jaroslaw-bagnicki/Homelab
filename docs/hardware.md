@@ -52,7 +52,8 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | RAM | 2 GB DDR3L |
 | Storage | 8 GB eMMC |
 | Firmware | BIOS Dell 1.2.3 (2017-11-07) · SKU 07C1 · serial `8YW28L2` |
-| Network | 1× GbE Realtek RTL8111/8168 (`enp1s0`, MAC `8c:ec:4b:6d:6f:4f`) |
+| Network | 1× GbE Realtek RTL8111/8168 (`enp1s0`, MAC `8c:ec:4b:6d:6f:4f`) · static `192.168.2.240/24` |
+| OS | Debian 13 minimal (netinst on eMMC, no desktop) |
 | Cooling | Fanless · ~2–3 W idle |
 | Role | Dedicated public ingress — bare-metal `cloudflared` + Caddy (ADR 24) |
 | Docs | [runbook 24](runbooks/24-edge-appliance.md) · [ADR 24](decisions/24-edge-ingress-appliance.md) · [research 25](research/25-edge-ingress-sbc.md) · [idea 04](ideas/04-edge-device-tunnel-caddy.md) |

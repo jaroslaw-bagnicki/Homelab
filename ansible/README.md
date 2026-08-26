@@ -16,6 +16,9 @@ ansible-playbook ansible/playbooks/playbook-arc.yml
 # Homelab M910q base provision (from a LAN workstation, runbook 25)
 ansible-playbook ansible/playbooks/playbook-homelab.yml
 
+# Edge Wyse 3040 base provision (from a LAN workstation, runbook 24)
+ansible-playbook ansible/playbooks/playbook-edge.yml
+
 # OpenCode per-project workload (decoupled recipe)
 ansible-playbook ansible/workloads/opencode/opencode-playbook.yml
 ```
@@ -30,9 +33,10 @@ ansible-playbook ansible/workloads/opencode/opencode-playbook.yml
 | `playbooks/playbook.yml` | Base provision: common → security → azure_arc → docker_host → docker_services; pre_tasks declares `opencode_net` |
 | `playbooks/playbook-arc.yml` | Arc enrolment only (for already-configured hosts) |
 | `playbooks/playbook-homelab.yml` | M910q base provision: common → security → docker_host → azure_arc (no `docker_services` — see below) |
+| `playbooks/playbook-edge.yml` | Wyse 3040 edge base provision: common → security → edge_host (bare-metal, no Docker/Arc — ADR 24) |
 | `workloads/` | Self-contained workload recipes — playbook entrypoint, role recipes, ansible-side README, all co-located per workload |
 | `workloads/opencode/` | OpenCode per-project server workload (see [README](workloads/opencode/README.md)) |
-| `roles/` | Base shared roles: `common`, `security`, `azure_arc`, `docker_host`, `docker_services` |
+| `roles/` | Base shared roles: `common`, `security`, `azure_arc`, `docker_host`, `docker_services`, `edge_host` |
 
 ## Workloads
 
@@ -64,6 +68,10 @@ Manages the core Docker Compose stack on the host: `portainer`, `caddy` (with `c
 
 > **Not applied to `homelab`.** The M910q is compute-only (k3s target, ADR 22); its DNS/Caddy/tunnel roles moved to the edge appliance (ADR 24). The `docker_services` stack stays cloudlab-only.
 
+### `edge_host`
+
+Bare-metal base provisioning for the **Edge Wyse 3040** ingress appliance (ADR 24) — no Docker, no Arc. Runs after `common` + `security`. Installs `samba` and runs **nmbd only** (smbd masked) for the bare `edge` NetBIOS name, `unattended-upgrades`, `logrotate`, journald `Storage=volatile` (eMMC longevity), and allows inbound HTTP from the LAN (`edge_allow_http_from`, default `192.168.2.0/24`) for cloudflared → Caddy + `.home` routing. Hostname (`edge`), UTC, Avahi (`edge.local`) come from `common`; SSH hardening + UFW + fail2ban from `security`.
+
 ## Playbooks
 
 | Playbook | Roles | When to use |
@@ -71,6 +79,7 @@ Manages the core Docker Compose stack on the host: `portainer`, `caddy` (with `c
 | `playbook.yml` | common → security → azure_arc → docker_host → docker_services | First-time VPS provision after initial SSH hardening (see [runbook 10](../docs/runbooks/10-vps-playground.md)) |
 | `playbook-arc.yml` | azure_arc | Adding Arc to an already-configured host |
 | `playbook-homelab.yml` | common → security → docker_host → azure_arc | M910q base provision after the 24.04 reinstall (see [runbook 25](../docs/runbooks/25-m910q-os-refresh.md)) |
+| `playbook-edge.yml` | common → security → edge_host | Wyse 3040 edge base provision (see [runbook 24](../docs/runbooks/24-edge-appliance.md)) |
 | `workloads/opencode/opencode-playbook.yml` | docker_opencode_ingress → docker_opencode_instances | Deploy the OpenCode per-project server workload (see [runbook 17](../docs/runbooks/17-deploy-opencode-on-cloudlab.md)) |
 
 ## Inventory
@@ -81,9 +90,10 @@ cloudlab ansible_host=173.249.27.13 ansible_user=labadmin
 
 [physical]
 homelab ansible_host=192.168.2.200 ansible_user=labadmin
+edge ansible_host=192.168.2.240 ansible_user=labadmin
 ```
 
-Both hosts use the generic **`labadmin`** operator account (key-only SSH, no password). The hostnames must resolve on the control machine — add `cloudlab` and `homelab` to `C:\Windows\System32\drivers\etc\hosts` (or the equivalent). `homelab` lives on the home LAN and is only reachable from a workstation on `192.168.2.0/24`.
+Both hosts use the generic **`labadmin`** operator account (key-only SSH, no password). The hostnames must resolve on the control machine — add `cloudlab`, `homelab`, and `edge` to `C:\Windows\System32\drivers\etc\hosts` (or the equivalent). `homelab` and `edge` live on the home LAN and are only reachable from a workstation on `192.168.2.0/24` — run their playbooks there (runbook 25 / runbook 24).
 
 ### Agent account pattern (`labadmin`)
 

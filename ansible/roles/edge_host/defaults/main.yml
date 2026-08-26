@@ -1,0 +1,2 @@
+---
+edge_allow_http_from: "192.168.2.0/24"
