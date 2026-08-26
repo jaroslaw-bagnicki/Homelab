@@ -114,3 +114,16 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 |---|---|
 | Network | `192.168.1.0/24` (WAN side of the mesh) |
 | Role | ISP edge; home connection is **CGNAT** — no public inbound, remote access via Cloudflare Tunnel (ADR 08) |
+
+### Huawei B593u-12 LTE modem — Speedport LTE II (backup WAN)
+
+| Item | Spec |
+|---|---|
+| Model | Huawei B593u-12 (Telekom Speedport LTE II) · LTE **Cat. 3** · material `40264880` |
+| Serial | `N4Y5TD9331405207` |
+| Network | 4× 100 Mbps Ethernet (Fast Ethernet) + Wi-Fi; **Orange APN** added manually (legacy T-Mobile APN was the default) |
+| Speed | ~3–8 Mbps down / ~4–7 Mbps up, ping ~25–36 ms (measured 2026-08-26) |
+| Stability | ⚠️ Unstable — frequently fails to attach to the BTS; power cycle recovers |
+| Data plan | Orange Flex additional SIM (free) — internet-only, shares the plan data pool |
+| Role | Backup WAN (LTE failover) for the homelab edge — fallback until the ZTE WF830 ODU is found (idea 08) |
+| Docs | [idea 08](ideas/08-lte-wan-failover.md) · [research 30](research/30-mobile-internet-failover-offers.md) |
