@@ -38,3 +38,17 @@
     to_port: "80"
     from_ip: "{{ edge_allow_http_from }}"
   when: edge_allow_http_from | length > 0
+
+- name: Manage DNS search domain in interfaces (DR source of truth)
+  ansible.builtin.lineinfile:
+    path: /etc/network/interfaces
+    regexp: "^\\s*dns-search.*$"
+    line: "        dns-search {{ edge_dns_search }}"
+    state: "{{ 'present' if edge_dns_search else 'absent' }}"
+
+- name: Apply DNS search domain to live resolv.conf
+  ansible.builtin.lineinfile:
+    path: /etc/resolv.conf
+    regexp: "^search\\s+.*$"
+    line: "search {{ edge_dns_search }}"
+    state: "{{ 'present' if edge_dns_search else 'absent' }}"

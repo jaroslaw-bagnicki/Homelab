@@ -1,2 +1,7 @@
 ---
 edge_allow_http_from: "192.168.2.0/24"
+
+# DNS search domain for the edge resolver. Empty (default) removes the search
+# domain entirely — clears the installer's `cloud5.ovh` leftover that hijacks
+# bare LAN names to public records. Set to `home` once OPNsense .home DNS lands.
+edge_dns_search: ""

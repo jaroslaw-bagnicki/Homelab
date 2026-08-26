@@ -192,7 +192,9 @@ reuse — see §3a). Services §4–§6 are a follow-up once the base is verifie
   SSH allow from `192.168.2.0/24` (`security_ufw_allow_ssh_from`), fail2ban, sshd key-only
   hardening; `security_ufw_deny_inbound_tcp_80: false` (the edge owns :80)
 - `ansible/roles/edge_host` (new) — `unattended-upgrades`, `logrotate`, journald
-  `Storage=volatile`, UFW allow inbound :80 from the LAN (nmbd dropped 2026-08-26 — Avahi suffices)
+  `Storage=volatile`, UFW allow inbound :80 from the LAN, and the DNS search domain
+  (`edge_dns_search`, default empty — removes the installer's `cloud5.ovh` search leftover;
+  nmbd dropped 2026-08-26 — Avahi suffices)
 - `ansible/host_vars/edge.yml` + `inventory.ini` (`edge` → `192.168.2.240`)
 
 ---
