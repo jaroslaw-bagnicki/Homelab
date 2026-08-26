@@ -192,9 +192,9 @@ reuse — see §3a). Services §4–§6 are a follow-up once the base is verifie
   SSH allow from `192.168.2.0/24` (`security_ufw_allow_ssh_from`), fail2ban, sshd key-only
   hardening; `security_ufw_deny_inbound_tcp_80: false` (the edge owns :80)
 - `ansible/roles/edge_host` (new) — `unattended-upgrades`, `logrotate`, journald
-  `Storage=volatile`, UFW allow inbound :80 from the LAN, and the DNS search domain
-  (`edge_dns_search`, default empty — removes the installer's `cloud5.ovh` search leftover;
-  nmbd dropped 2026-08-26 — Avahi suffices)
+  `Storage=volatile`, the DNS search domain (`edge_dns_search`, default empty — removes the
+  installer's `cloud5.ovh` search leftover); UFW stays deny-inbound — cloudflared → Caddy
+  runs over loopback, no :80 opened (nmbd dropped 2026-08-26 — Avahi suffices)
 - `ansible/host_vars/edge.yml` + `inventory.ini` (`edge` → `192.168.2.240`)
 
 ---
@@ -208,8 +208,9 @@ Deployed by the Ansible `edge_host` role (§3) — this documents the resulting 
 - **Tunnel token** — from the Zero Trust dashboard, stored in a root-only file (secret via
   the KV/Ansible secret pattern, ADR 10/16/19) — **never in git**.
 - **Route** the tunnel to Caddy over **HTTP** (the ADR 19/24 pattern): dashboard ingress
-  rules point hostnames (`*.example.com`) at `http://192.168.2.240:80` — TLS terminates at
-  the CF edge; cloudflared ↔ Caddy is plain LAN HTTP.
+  rules point hostnames (`*.example.com`) at `http://127.0.0.1:80` — TLS terminates at the
+  CF edge; cloudflared ↔ Caddy is plain HTTP over **loopback** (both on the edge box), so no
+  inbound :80 is opened on UFW.
 
 ---
 
@@ -224,12 +225,12 @@ repo, rendered to `/etc/caddy/Caddyfile`, `Caddyfile reload` on change (ADR 10).
   - **Internal** `*.home` sites (DNS via OPNsense, idea 07) → routed by the same Caddy on
     :80/:443 with Caddy's local auto-TLS or plain HTTP per service.
 - No Cloudflare Origin CA needed on the edge: per ADR 19's revised pattern, cloudflared →
-  Caddy is **plain HTTP** on the LAN (the earlier HTTPS-origin attempt failed on SNI
-  mismatch and config-file override limits).
+  Caddy is **plain HTTP over loopback** (`127.0.0.1:80`, both on the edge box) — the earlier
+  HTTPS-origin attempt failed on SNI mismatch and config-file override limits.
 
 > **Terminology note — TLS split (plain language):** Cloudflare's edge terminates TLS for
 > public clients (`https://*.example.com` → CF). The hop from cloudflared to Caddy is a
-> private LAN connection and can be plain HTTP — no cert needed on the edge. This is the
+> private loopback connection on the edge box and can be plain HTTP — no cert needed on the edge. This is the
 > same pattern cloudlab already uses (ADR 19 revised).
 
 ---

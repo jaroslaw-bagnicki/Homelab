@@ -30,15 +30,6 @@
     mode: "0644"
   notify: Restart systemd-journald
 
-- name: UFW allow inbound HTTP from LAN (cloudflared -> Caddy, .home routing)
-  community.general.ufw:
-    rule: allow
-    direction: in
-    proto: tcp
-    to_port: "80"
-    from_ip: "{{ edge_allow_http_from }}"
-  when: edge_allow_http_from | length > 0
-
 - name: Manage DNS search domain in interfaces (DR source of truth)
   ansible.builtin.lineinfile:
     path: /etc/network/interfaces
