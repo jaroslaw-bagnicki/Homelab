@@ -151,4 +151,4 @@ read `ansible.cfg` from world-writable directories as a security measure.
 | Legacy VPS key | `homelab-bysxdb-kv/cloudlab-vps-key-priv` (cloudlab only) |
 | Key Vault | `homelab-bysxdb-kv` |
 | Ansible inventory | `ansible/inventory.ini` |
-| Fleet design | [ADR 28](../decisions/28-fleet-ssh-key.md) |
+| Fleet design | [ADR 28](../../../docs/decisions/28-fleet-ssh-key.md) |
