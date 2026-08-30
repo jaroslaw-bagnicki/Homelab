@@ -1,0 +1,8 @@
+---
+- name: Configure edge Wyse 3040 base
+  hosts: edge
+  become: true
+  roles:
+    - common
+    - security
+    - edge_host

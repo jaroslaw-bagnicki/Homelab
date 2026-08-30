@@ -1,5 +1,6 @@
 ---
 security_ssh_port: 22
+security_ufw_allow_ssh_from: "0.0.0.0/0"
 fail2ban_max_retries: 3
 fail2ban_ban_time: 1h
 

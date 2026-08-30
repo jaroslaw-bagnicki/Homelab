@@ -1,0 +1,5 @@
+---
+common_enable_avahi: true
+
+security_ufw_deny_inbound_tcp_80: false
+security_ufw_allow_ssh_from: "192.168.2.0/24"
