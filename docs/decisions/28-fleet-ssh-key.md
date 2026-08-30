@@ -21,7 +21,7 @@ Adopt a single **dedicated fleet-wide Ed25519 SSH keypair** for fleet-wide autom
 
 - **Fleet admin account** — the account is **`fleetadm`**: a shared, non-interactive fleet administration account with key-only SSH and NOPASSWD sudo, created as a **new account** by the break-glass account at bootstrap (runbooks 24/25) — separate from the legacy `labadmin`, which is left in place on already-provisioned hosts until they are migrated — and re-provisioned by Ansible. **Account + key are managed as one unit** — creating/retiring the account, rotating the key, or changing its sudo scope is a fleet-wide change applied by the playbook and runbooks together.
 - **Private key** — stored as `fleetadm-key-priv` in `homelab-bysxdb-kv`; never committed, never persisted on disk; loaded into `ssh-agent` each session by `profile.ps1` (alongside `cloudlab-vps-key-priv`). Agent-only storage means tools and agents can *use* the key for connections but cannot read or copy it.
-- **Public key** — committed to the repo at `ansible/roles/common/files/ssh/ansible-fleet.pub` (public keys are not secrets). The breaking-glass account installs it into `fleetadm` **at bootstrap** (runbooks 24/25) so the fleet key establishes the first connection from day 1; the `common` role re-arms it on every host via `ansible.posix.authorized_key` as the rotation/DR path, with restrictive `key_options` (`no-port-forwarding,no-agent-forwarding,no-X11-forwarding`) — Ansible and agents only need exec + sftp/scp.
+- **Public key** — committed to the repo at `ansible/roles/common/files/ssh/fleetadm.pub` (public keys are not secrets). The breaking-glass account installs it into `fleetadm` **at bootstrap** (runbooks 24/25) so the fleet key establishes the first connection from day 1; the `common` role re-arms it on every host via `ansible.posix.authorized_key` as the rotation/DR path, with restrictive `key_options` (`no-port-forwarding,no-agent-forwarding,no-X11-forwarding`) — Ansible and agents only need exec + sftp/scp.
 - **Generation/rotation** — `scripts/New-HomelabFleetSshKey.ps1` generates the keypair, uploads the private key to Key Vault, and writes the public key to the committed repo location; `-Force` rotates.
 
 ## Consequences
@@ -67,4 +67,4 @@ Then run each host's playbook so the `common` role re-arms the key on `fleetadm`
 
 ---
 
-**Reference:** `scripts/New-HomelabFleetSshKey.ps1` · `ansible/roles/common/files/ssh/ansible-fleet.pub` · ADR [10](10-ansible-host-config.md) · ADR [16](16-agent-identity-pattern.md) · runbooks [24](../runbooks/24-edge-appliance.md) / [25](../runbooks/25-m910q-os-refresh.md)
+**Reference:** `scripts/New-HomelabFleetSshKey.ps1` · `ansible/roles/common/files/ssh/fleetadm.pub` · ADR [10](10-ansible-host-config.md) · ADR [16](16-agent-identity-pattern.md) · runbooks [24](../runbooks/24-edge-appliance.md) / [25](../runbooks/25-m910q-os-refresh.md)

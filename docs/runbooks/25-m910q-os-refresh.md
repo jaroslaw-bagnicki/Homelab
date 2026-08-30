@@ -36,7 +36,7 @@ The refresh re-aligns the box with ADR 05 and unblocks that track.
     from Key Vault via the `azure.azcollection` lookup on the control node
   - The **fleet key** (ADR 28): **private** key loaded into `ssh-agent` (from Key Vault
     `homelab-bysxdb-kv/fleetadm-key-priv`) so Ansible can connect; the **public** key
-    (committed `ansible/roles/common/files/ssh/ansible-fleet.pub`) is installed by the
+    (committed `ansible/roles/common/files/ssh/fleetadm.pub`) is installed by the
     bootstrap script
 - **Bootable USB** with Ubuntu Server 24.04 LTS ISO and a **SystemRescue** ISO.
 
@@ -157,7 +157,7 @@ then proceed unchanged.
 Run these commands **on the M910q** as your personal breaking-glass user (console, or
 over SSH from the LAN — password login stays enabled on `192.168.2.0/24`). They create the
 key-only `fleetadm` agent account and scope password SSH to the local network. The snippet prompts you to paste the
-**fleet public key** (ADR 28) — from `ansible/roles/common/files/ssh/ansible-fleet.pub`
+**fleet public key** (ADR 28) — from `ansible/roles/common/files/ssh/fleetadm.pub`
 in the repo (the same key Ansible and AI agents use fleet-wide). It is installed with
 the same restrictive `key_options` the `common` role manages
 (`no-port-forwarding,no-agent-forwarding,no-X11-forwarding`), so bootstrap and rotation
@@ -170,7 +170,7 @@ echo 'fleetadm ALL=(ALL) NOPASSWD: ALL' | sudo tee /etc/sudoers.d/fleetadm
 sudo chmod 440 /etc/sudoers.d/fleetadm
 
 sudo mkdir -p /home/fleetadm/.ssh && sudo chmod 700 /home/fleetadm/.ssh
-read -r -p 'Paste the fleet public key (ansible/roles/common/files/ssh/ansible-fleet.pub) and press Enter: ' pubkey
+read -r -p 'Paste the fleet public key (ansible/roles/common/files/ssh/fleetadm.pub) and press Enter: ' pubkey
 printf 'no-port-forwarding,no-agent-forwarding,no-X11-forwarding %s\n' "$pubkey" | sudo tee /home/fleetadm/.ssh/authorized_keys
 sudo chmod 600 /home/fleetadm/.ssh/authorized_keys
 sudo chown -R fleetadm:fleetadm /home/fleetadm/.ssh

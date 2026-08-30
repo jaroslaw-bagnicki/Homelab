@@ -1,7 +1,7 @@
 #!/usr/bin/env pwsh
 # Generates the fleet-wide Ansible SSH keypair, stores the private key in Key Vault
 # (fleetadm-key-priv), and writes the public key to the committed repo location
-# (ansible/roles/common/files/ssh/ansible-fleet.pub) that the `common` role deploys
+# (ansible/roles/common/files/ssh/fleetadm.pub) that the `common` role deploys
 # to fleetadm on every host. Re-run with -Force to rotate (regenerate + overwrite KV).
 
 param(
@@ -13,7 +13,7 @@ $ErrorActionPreference = 'Stop'
 $KeyVaultName = 'homelab-bysxdb-kv'
 $SecretName   = 'fleetadm-key-priv'
 $RepoRoot     = Split-Path $PSScriptRoot -Parent
-$PubDest      = Join-Path $RepoRoot 'ansible/roles/common/files/ssh/ansible-fleet.pub'
+$PubDest      = Join-Path $RepoRoot 'ansible/roles/common/files/ssh/fleetadm.pub'
 $TempPriv     = Join-Path ([System.IO.Path]::GetTempPath()) ('fleetadm-key-' + [guid]::NewGuid().ToString('N'))
 $TempPub      = "$TempPriv.pub"
 

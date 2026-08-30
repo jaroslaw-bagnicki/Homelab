@@ -165,7 +165,7 @@ Executed on the box (2026-08-23) — the **control-node key** was installed at t
   (hostname `edge`, uid 1001, sudo group).
 
 > **Update (2026-08-30):** per ADR 28, the **fleet public key** (`fleetadm@homelab`,
-> from `ansible/roles/common/files/ssh/ansible-fleet.pub`) is now the day-1 credential —
+> from `ansible/roles/common/files/ssh/fleetadm.pub`) is now the day-1 credential —
 > the `common` role adds it (with restrictive `key_options`) on the next playbook run;
 > future re-provisions install it at bootstrap (runbook 25 §2) instead of a control key.
 

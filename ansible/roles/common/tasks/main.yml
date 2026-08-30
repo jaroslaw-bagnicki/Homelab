@@ -40,5 +40,5 @@
     user: fleetadm
     state: present
     exclusive: true
-    key: "{{ lookup('file', role_path ~ '/files/ssh/ansible-fleet.pub') }}"
+    key: "{{ lookup('file', role_path ~ '/files/ssh/fleetadm.pub') }}"
     key_options: "{{ common_ssh_fleet_key_options }}"

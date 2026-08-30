@@ -48,7 +48,7 @@ Currently: [OpenCode](workloads/opencode/README.md) — per-project OpenCode ser
 
 ### `common`
 
-Sets the hostname to inventory name, configures `Etc/UTC` timezone, ensures `systemd-timesyncd` is running, optionally installs/enables Avahi mDNS (`.local`) when `common_enable_avahi: true`, and deploys the **fleet public key** (`files/ssh/ansible-fleet.pub`) to `fleetadm`'s `authorized_keys` with restrictive `key_options` (ADR 28) — used by Ansible and AI agent tooling.
+Sets the hostname to inventory name, configures `Etc/UTC` timezone, ensures `systemd-timesyncd` is running, optionally installs/enables Avahi mDNS (`.local`) when `common_enable_avahi: true`, and deploys the **fleet public key** (`files/ssh/fleetadm.pub`) to `fleetadm`'s `authorized_keys` with restrictive `key_options` (ADR 28) — used by Ansible and AI agent tooling.
 
 ### `security`
 
