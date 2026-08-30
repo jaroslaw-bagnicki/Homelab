@@ -35,7 +35,7 @@ Current state — what's running or in progress. Planned work is under [What's N
 | # | Workload | Effort | Notes |
 |---|---|---|---|
 | [#13](https://github.com/jaroslaw-bagnicki/Homelab/issues/13) | **Restic backup** (redo) | ⭐⭐ | Daily snapshots to Azure Blob Storage — see [runbook](runbooks/07-restic-backup.md) |
-| [#93](https://github.com/jaroslaw-bagnicki/Homelab/pull/93) | **Fleet admin account + key** | ⭐ | Fleet-wide SSH admin account `fleetadm` + `fleetadm@homelab` key (ADR 28) — breaking-glass bootstrap, `common` role re-arm, migration in ADR 28 — [ADR 28](decisions/28-fleet-ssh-key.md) · [PR 93](https://github.com/jaroslaw-bagnicki/Homelab/pull/93) |
+| [#93](https://github.com/jaroslaw-bagnicki/Homelab/pull/93) | **Fleet admin account + key** | ⭐ | Fleet-wide SSH admin account `fleetadm` + `fleetadm@homelab` key (ADR 28) — breaking-glass bootstrap, `common` role re-arm, migration in ADR 28 — [ADR 28](decisions/28-fleet-admin-account-and-key.md) · [PR 93](https://github.com/jaroslaw-bagnicki/Homelab/pull/93) |
 | [#65](https://github.com/jaroslaw-bagnicki/Homelab/issues/65) | **Edge Ingress** | ⭐⭐ | Move public ingress (`cloudflared` + Caddy) to the Wyse 3040 — [runbook 24](runbooks/24-edge-appliance.md) · [ADR 24](decisions/24-edge-ingress-appliance.md) |
 | [#54](https://github.com/jaroslaw-bagnicki/Homelab/issues/54) | **OMV NAS Phase 2** | ⭐⭐ | NFS/SMB exports + Longhorn backup target — [runbook 26](runbooks/26-ml110-nas-exports.md) · SMB `/shared` done (unblocks #79) |
 |  | **Home Assistant** | ⭐⭐ | Dedicated HA node — Proxmox VE VM + MQTT/Zigbee2MQTT — [idea 05](ideas/05-home-assistant-thin-client.md) · [ADR 25](decisions/25-home-assistant-thin-client.md) |
