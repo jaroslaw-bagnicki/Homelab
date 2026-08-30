@@ -7,7 +7,7 @@
 
 ## Context
 
-Ansible manages three hosts (ADR 10): the `cloudlab` Contabo VPS, the `homelab` M910q, and the `edge` Wyse 3040 ingress appliance. All use a generic **`labadmin`** agent account with key-only SSH and NOPASSWD sudo, but SSH keys are distributed **imperatively and per-host**:
+Ansible manages three hosts today (ADR 10): the `cloudlab` Contabo VPS, the `homelab` M910q, and the `edge` Wyse 3040 ingress appliance. The wider fleet also includes the OMV NAS (ADR 23), with a Home Assistant node (Proxmox VM, ADR 25) and an OPNsense router coming next. The Ansible-managed hosts share a generic **`labadmin`** agent account (key-only SSH, NOPASSWD sudo), but SSH keys are distributed **imperatively and per-host**:
 
 - `cloudlab` — the `cloudlab-vps-key-priv` secret in `homelab-bysxdb-kv`, loaded into `ssh-agent` each session by `profile.ps1` / `scripts/Import-SshKey.ps1`.
 - `homelab` and `edge` — the control-node key (`lenovo-slim`) pasted manually into `authorized_keys` during base install (runbooks 25 / 24).
@@ -30,11 +30,11 @@ Adopt a single **dedicated fleet-wide Ed25519 SSH keypair** for Ansible, `ansibl
 - **Key is root-equivalent everywhere** — `labadmin` has NOPASSWD sudo, so the fleet key is the crown jewels; key-only SSH is already enforced by the `security` role.
 - **Bootstrap chicken-and-egg** — a host that doesn't yet accept the fleet key can't receive it via Ansible. Solved once per host by running the playbook with today's access path (existing VPS/control keys), which adds the fleet key; subsequent runs use the fleet key.
 - **Not the dev-container identity** — the container's `~/.ssh/id_ed25519` (`homelab-devcontainer`) stays a separate human/control identity; the fleet key is the Ansible path and can be revoked independently.
-- **LAN reachability unchanged** — `homelab` and `edge` are LAN-only; the fleet key must be loaded in the agent of whichever control machine runs their playbooks (dev container for `cloudlab`, LAN workstation for the physical hosts).
+- **LAN reachability unchanged** — `homelab`, `edge`, and the upcoming LAN nodes are LAN-only; the fleet key must be loaded in the agent of whichever control machine runs their playbooks (dev container for `cloudlab`, LAN workstation for the physical hosts).
 
 ### Alternatives Considered
 
-- **Reuse the dev-container key (`homelab-devcontainer`)** — zero new key, but couples fleet access to one control machine's identity and can't be revoked independently. Rejected.
+- **Reuse the dev-container key (`homelab-devcontainer`)** — zero new key, but it is an **ephemeral, ad-hoc identity**: nothing in the repo's devcontainer setup provisions it (only the SSH *config* is deployed, no persisted volume), so a container rebuild loses it — and a regenerated key would not be propagated to hosts, silently breaking fleet access. It also couples access to one control machine's identity and can't be revoked independently. Rejected.
 - **Per-host keys in Key Vault** — more granular revocation, but N keys to manage, rotate, and distribute; no benefit for a personal fleet. Rejected.
 - **Commit the private key to the repo** — simplest distribution, but exposes a root-equivalent secret in a public repo. Rejected outright.
 
