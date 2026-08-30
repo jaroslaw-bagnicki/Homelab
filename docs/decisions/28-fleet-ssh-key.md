@@ -29,11 +29,29 @@ Adopt a single **dedicated fleet-wide Ed25519 SSH keypair** for fleet-wide autom
 - **One rotation point** — revoke/rotate fleet access by regenerating, updating the KV secret, and re-running the playbook (which rewrites `authorized_keys` on all hosts). A host that misses a rotation run has no SSH key until the playbook reaches it — the breaking-glass console account is the guaranteed backstop.
 - **DR self-heals** — because the public key is committed and deployed by the playbook, re-provisioning any host automatically re-arms the fleet key.
 - **Key is root-equivalent everywhere** — `fleetadm` has NOPASSWD sudo, so the fleet key is the crown jewels; key-only SSH is already enforced by the `security` role.
-- **Account + key are one unit** — the `fleetadm` account and the fleet key travel together as the single fleet administration identity; the account was renamed from `labadmin` (2026-08-30) as part of this decision. Live hosts migrate via `usermod -l` + home/sudoers/authorized_keys moves ([runbook 28](runbooks/28-fleetadm-account-migration.md)).
+- **Account + key are one unit** — the `fleetadm` account and the fleet key travel together as the single fleet administration identity; the account was renamed from `labadmin` (2026-08-30) as part of this decision, with live hosts migrated per [Migration](#migration).
 - **Fleet key from day 1** — the breaking-glass account installs the fleet public key when it creates `fleetadm`, so the fleet key is the first and only SSH credential on each host; Ansible and agents connect with it immediately, with no separate control key.
 - **Not the dev-container identity** — the container's `~/.ssh/id_ed25519` (`homelab-devcontainer`) stays a separate human/control identity; the fleet key is the automation path and can be revoked independently.
 - **Agents inherit access** — because the private key is loaded into `ssh-agent` (never written to disk), any process in the dev container that shells out to `ssh`/`ansible-playbook` — including AI agents (OpenCode, GitHub Copilot) — uses the fleet key automatically. No per-tool configuration; the key is usable but not readable by the agent, and the restrictive `key_options` cap what an SSH session can do (no port forwarding / agent forwarding / X11).
 - **LAN reachability unchanged** — `homelab`, `edge`, and the upcoming LAN nodes are LAN-only; the fleet key must be loaded in the agent of whichever control machine runs their playbooks (dev container for `cloudlab`, LAN workstation for the physical hosts).
+
+### Migration (live hosts: `labadmin` → `fleetadm`)
+
+Applies the rename to the already-provisioned hosts (`cloudlab`, `homelab`, `edge`). New hosts bootstrap directly as `fleetadm` (runbook 25 §2) and skip this.
+
+**Preconditions:** fleet key loaded in `ssh-agent` on the control machine (or current `labadmin` access); `cloudlab` from the dev container, `homelab`/`edge` from a LAN workstation.
+
+Per host, as root/sudo — `usermod -l` preserves the uid, so file ownership (uid 1000, incl. OpenCode bind mounts on `cloudlab`) stays intact:
+
+```bash
+sudo usermod -l fleetadm labadmin
+sudo usermod -d /home/fleetadm -m fleetadm
+sudo mv /etc/sudoers.d/labadmin /etc/sudoers.d/fleetadm
+echo 'fleetadm ALL=(ALL) NOPASSWD: ALL' | sudo tee /etc/sudoers.d/fleetadm
+sudo chmod 440 /etc/sudoers.d/fleetadm
+```
+
+The `authorized_keys` content doesn't reference the login, so the fleet key carries over with the home-dir move. Control-side (`inventory.ini`, `common` role task, `ssh_config`) is already updated in this PR. Verify with `ssh fleetadm@cloudlab "hostname && sudo whoami"` (→ `root`), then run each host's playbook so the `common` role re-arms the key on `fleetadm`.
 
 ### Alternatives Considered
 

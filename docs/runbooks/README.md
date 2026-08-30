@@ -4,7 +4,6 @@ Step-by-step guides for configuring the homelab server.
 
 | # | Runbook | Topic |
 |---|---|---|
-| 28 | [28-fleetadm-account-migration.md](28-fleetadm-account-migration.md) | Rename the fleet admin account `labadmin` → `fleetadm` on live hosts — `usermod -l` + home/sudoers/authorized_keys moves, control-side updates, verify — see [ADR 28](../decisions/28-fleet-ssh-key.md) |
 | 27 | [27-edge-backup-restore.md](27-edge-backup-restore.md) | Edge appliance (Wyse 3040) backup & restore — full eMMC `dd`+`gzip` image to the OMV SMB `shared` share (`rescuezilla` user); live-USB flow incl. eMMC gotchas (`modprobe mmc_block`, Rescuezilla GUI UTF-8 bug) — see [issue #79](https://github.com/jaroslaw-bagnicki/Homelab/issues/79) |
 | 26 | [26-ml110-nas-exports.md](26-ml110-nas-exports.md) | ML110 NAS Phase 2 — SMB `/shared` backup share (SMB3 transport encryption required, `rescuezilla` user — unblocks #79); NFS `/export/backups` + Longhorn pending (with k3s, #44) — see [ADR 23](../decisions/23-nas-on-ml110.md) & [issue #62](https://github.com/jaroslaw-bagnicki/Homelab/issues/62) |
 | 25 | [25-m910q-os-refresh.md](25-m910q-os-refresh.md) | M910q OS refresh — reinstall Ubuntu 24.04 LTS (ADR 05), Ansible base provision, Azure Arc enrolment; DNS/Caddy/tunnel move to the edge appliance — see [issue #74](https://github.com/jaroslaw-bagnicki/Homelab/issues/74) |
