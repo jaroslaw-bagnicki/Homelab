@@ -68,7 +68,7 @@ ssh-add -l
 
 | Node | IP | Reachable from | Playbook |
 |---|---|---|---|
-| `cloudlab` | `173.249.27.13` | the Homelab dev container | `ansible/playbooks/playbook.yml` |
+| `cloudlab` | `173.249.27.13` | anywhere (public IP) | `ansible/playbooks/playbook.yml` |
 | `lab` | `192.168.2.200` | LAN workstation (`192.168.2.0/24`) | `ansible/playbooks/playbook-lab.yml` |
 | `omv` | `192.168.2.210` | LAN workstation (`192.168.2.0/24`) | — (not Ansible-managed yet) |
 | `edge` | `192.168.2.240` | LAN workstation (`192.168.2.0/24`) | `ansible/playbooks/playbook-edge.yml` |
