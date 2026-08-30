@@ -7,7 +7,7 @@
 
 ## Context
 
-The homelab currently runs its workloads on Docker Compose, deployed via Ansible to a single homelab server (ADR 01) with staging validated on Cloudlab (ADR 13). The container substrate decision was made in ADR 03 with an explicit "Compose first, k3s migration path" framing — Compose was the right starting point for rapid iteration, and k3s was a future task.
+The homelab currently runs its workloads on Docker Compose, deployed via Ansible to a single lab server (ADR 01) with staging validated on Cloudlab (ADR 13). The container substrate decision was made in ADR 03 with an explicit "Compose first, k3s migration path" framing — Compose was the right starting point for rapid iteration, and k3s was a future task.
 
 That future is now. Compose-first has hit a ceiling: per-instance Compose files don't compose into a single operational view, every new workload repeats the same plumbing (network, secret, ingress), and the operational expectations have shifted toward "treat infra like a product" — declarative, GitOps-friendly, scalable, enterprise-shaped. The Homelab project benefits directly from the same Kubernetes API surface the operator has industry experience with; the skills and patterns transfer to the wider industry.
 
@@ -28,9 +28,9 @@ ADR 03 framed the migration as a "future task." This ADR settles that framing: t
 
 ### Key Decisions
 
-1. **k3s as the Kubernetes implementation** (not full Kubernetes). Same K8s API surface, same manifests and skills; single-binary control plane designed for single-node and edge use cases. Full Kubernetes (kubeadm) is overkill for the homelab box (ADR 01) — same API, heavier operational footprint.
+1. **k3s as the Kubernetes implementation** (not full Kubernetes). Same K8s API surface, same manifests and skills; single-binary control plane designed for single-node and edge use cases. Full Kubernetes (kubeadm) is overkill for the lab box (ADR 01) — same API, heavier operational footprint.
 
-2. **Arc-enrolled K8s cluster as continuation of ADR 4.** ADR 4 established "Arc management" for the homelab server (ADR 09 in flight via Arc Server + AMA). This ADR extends the same control-plane integration to the K8s cluster: same Azure portal, RBAC, policy, and monitoring surface as AKS-managed clusters. The cluster becomes a first-class Azure resource via the existing Arc onboarding path, not a separate decision.
+2. **Arc-enrolled K8s cluster as continuation of ADR 4.** ADR 4 established "Arc management" for the lab server (ADR 09 in flight via Arc Server + AMA). This ADR extends the same control-plane integration to the K8s cluster: same Azure portal, RBAC, policy, and monitoring surface as AKS-managed clusters. The cluster becomes a first-class Azure resource via the existing Arc onboarding path, not a separate decision.
 
 3. **Per-workload Kubernetes Deployments.** Each Homelab workload becomes a Deployment with workload-specific patterns. The per-project image hierarchy (ADR 21) ports unchanged.
 
@@ -61,14 +61,14 @@ This decision is not a commitment to specific cluster mechanics — storage clas
 - **Ecosystem tooling becomes native** — Helm, Kustomize, cert-manager, external-secrets, kube-prometheus, OpenTelemetry. All assume Kubernetes natively; the Homelab stops fighting the substrate to use them.
 - **Azure identity simplification** — UAMI per ServiceAccount replaces the per-instance Azure SP path (#40). No client_secret in the cluster, no AKV env-var plumbing, no manual rotation. The `DefaultAzureCredential` chain already includes `WorkloadIdentityCredential`, so consumer code is unchanged.
 - **Observability and operations** — kube-state-metrics, structured logging sidecars, OpenTelemetry collectors are K8s-native patterns that don't translate cleanly to Compose.
-- **Self-hosting economics** — the homelab box hosts the cluster; no AKS bill. Cluster costs are bounded by the homelab's hardware (ADR 01) and electricity.
+- **Self-hosting economics** — the homelab box hosts the cluster; no AKS bill. Cluster costs are bounded by the lab's hardware (ADR 01) and electricity.
 
 ### Negative
 
-- **Operational complexity** — Kubernetes is more complex than Docker Compose. A single-node k3s cluster on the homelab box is a reasonable starting point, but the operational surface is wider: namespaces, RBAC, network policies, storage classes, node management, control-plane upgrades.
+- **Operational complexity** — Kubernetes is more complex than Docker Compose. A single-node k3s cluster on the lab box is a reasonable starting point, but the operational surface is wider: namespaces, RBAC, network policies, storage classes, node management, control-plane upgrades.
 - **Learning curve** — for workloads that don't need the cluster's capabilities, the Compose path is simpler. The cutover decision must weigh per-workload complexity against per-workload benefit.
-- **Single-node cluster** — no control-plane HA in the initial deployment. The homelab box is a single point of failure for the cluster. HA is a future decision; the current decision accepts this trade-off.
-- **Hardware constraints** — the homelab box (ADR 01) is a specific machine with specific specs. k3s + Arc + workloads run on those specs; resource budget is bounded. Workload sizing must respect the hardware ceiling.
+- **Single-node cluster** — no control-plane HA in the initial deployment. The lab box is a single point of failure for the cluster. HA is a future decision; the current decision accepts this trade-off.
+- **Hardware constraints** — the lab box (ADR 01) is a specific machine with specific specs. k3s + Arc + workloads run on those specs; resource budget is bounded. Workload sizing must respect the hardware ceiling.
 - **In-place migration risk** — moving from Compose to k3s is a real migration with cutover windows. State, secrets, and network configuration need careful handling during the transition.
 
 ### Supersedes
@@ -79,7 +79,7 @@ This decision is not a commitment to specific cluster mechanics — storage clas
 
 ## Alternatives Considered
 
-- **Full Kubernetes (kubeadm, multi-node)** — same API surface as k3s but heavier operational footprint: etcd cluster, control-plane HA, multi-node networking. k3s gives the same API surface with a single-binary control plane designed for single-node and edge use cases. Rejected as overkill for the homelab box (ADR 01).
+- **Full Kubernetes (kubeadm, multi-node)** — same API surface as k3s but heavier operational footprint: etcd cluster, control-plane HA, multi-node networking. k3s gives the same API surface with a single-binary control plane designed for single-node and edge use cases. Rejected as overkill for the lab box (ADR 01).
 - **Azure Kubernetes Service (AKS)** — cloud-managed Kubernetes. Removes the operational burden of self-hosting but introduces a per-month cost and changes the homelab's self-hosting posture (ADR 04 explicitly keeps Azure minimal). Rejected.
 - **Docker Compose extended** — keep the Compose substrate, add tooling (Compose-spec, Docker contexts, multi-host Compose) to address the scale ceiling. Doesn't get the operator to the Kubernetes skill set; doesn't unlock the ecosystem. Rejected as a half-step.
 - **Stay on Compose, document as a deliberate choice** — reject as a non-decision. ADR 03's "k3s migration path" framing was a deferral, not a final position; the migration is now the active decision.
@@ -90,7 +90,7 @@ This decision is not a commitment to specific cluster mechanics — storage clas
 
 These are decision-level questions that affect the cluster's architecture. Implementation-level questions (POC scope, migration order, deprecation window) belong in runbooks and the issue tracker.
 
-- **Storage model** — local-path on the homelab box vs NFS vs Longhorn (distributed block storage). Affects backup strategy (ADR 02 — Restic covers file/host data; cluster resources and PVs would need Velero for the Longhorn path).
+- **Storage model** — local-path on the lab box vs NFS vs Longhorn (distributed block storage). Affects backup strategy (ADR 02 — Restic covers file/host data; cluster resources and PVs would need Velero for the Longhorn path).
 - **Network model** — none (k3s default CNI) vs Cilium vs Linkerd. Affects east-west traffic observability, network policy, and the security story.
 - **GitOps tooling** — ArgoCD vs Flux vs manual `kubectl apply`. Affects how cluster state is reviewed and rolled forward. Worth a separate decision if/when the choice gets serious.
 - **UAMI granularity** — per K8s ServiceAccount, per pod, per Deployment, or per namespace. Each choice trades off per-workload isolation vs setup complexity. ADR 16 establishes the pattern; this ADR inherits the UAMI variant for the homelab cluster; the specific granularity is a follow-up decision (not in this ADR's scope).
@@ -99,7 +99,7 @@ These are decision-level questions that affect the cluster's architecture. Imple
 
 ## References
 
-- [ADR 01 — Hardware Selection](01-hardware-selection-m910q.md) (the homelab server)
+- [ADR 01 — Hardware Selection](01-hardware-selection-m910q.md) (the lab server)
 - [ADR 03 — Container Strategy: Docker Compose First, k3s Migration Path](03-container-strategy.md) (**superseded by this ADR**)
 - [ADR 04 — Hybrid Cloud Strategy](04-hybrid-cloud-azure-arc.md) (Arc management concept)
 - [ADR 10 — Ansible for Host Configuration Management](10-ansible-host-config.md) (k3s_host role swap)

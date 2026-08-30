@@ -6,7 +6,7 @@
 
 - [ ] Docker Engine installed (see [02-docker.md](02-docker.md))
 - [ ] Portainer running (optional — can use Portainer stacks or plain `docker-compose`)
-- [ ] SSH access via `ssh jarek@homelab.local`
+- [ ] SSH access via `ssh jarek@lab.local`
 
 ---
 

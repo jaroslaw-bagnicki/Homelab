@@ -9,7 +9,7 @@
 - [ ] DNSMasq deployed and resolving `*.home` (see [03-dns.md](03-dns.md))
 - [ ] Caddy reverse proxy running (see [04-caddy.md](04-caddy.md))
 - [ ] Cloudflare Tunnel deployed with wildcard `*` public hostname → `caddy:80` (see [05-cloudflare-tunnel.md](05-cloudflare-tunnel.md) §5)
-- [ ] SSH access via `ssh jarek@homelab.local`
+- [ ] SSH access via `ssh jarek@lab.local`
 
 ---
 
