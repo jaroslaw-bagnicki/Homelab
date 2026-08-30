@@ -42,7 +42,8 @@
   ansible.builtin.lineinfile:
     path: /etc/network/interfaces
     regexp: "^\\s*dns-search.*$"
-    line: "        dns-search {{ edge_dns_search }}"
+    line: "    dns-search {{ edge_dns_search }}"
+    insertafter: "^\\s*iface .*inet static"
     state: "{{ 'present' if edge_dns_search else 'absent' }}"
 
 - name: Apply DNS search domain to live resolv.conf

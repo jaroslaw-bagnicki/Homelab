@@ -16,8 +16,6 @@ ansible-playbook ansible/playbooks/playbook-arc.yml
 # Lab M910q base provision (from a LAN workstation, runbook 25)
 ansible-playbook ansible/playbooks/playbook-lab.yml
 
-# Edge Wyse 3040 — planned (#65), no playbook yet
-
 # Edge Wyse 3040 base provision (from a LAN workstation, runbook 24)
 ansible-playbook ansible/playbooks/playbook-edge.yml
 
@@ -69,10 +67,6 @@ Removes any OS-package Docker remnants, adds the official Docker repository, and
 Manages the core Docker Compose stack on the host: `portainer`, `caddy` (with `cloudflared` reverse proxy), `hello`, plus the shared `homelab_net` and `opencode_net` bridge networks. Templates live in `roles/docker_services/templates/`.
 
 > **Not applied to `lab`.** The M910q is compute-only (k3s target, ADR 22); its DNS/Caddy/tunnel roles moved to the edge appliance (ADR 24). The `docker_services` stack stays cloudlab-only.
-
-### `edge_host` (planned — #65)
-
-Bare-metal base provisioning for the **Edge Wyse 3040** ingress appliance (ADR 24) — no Docker, no Arc. Runs after `common` + `security`. **Planned** — the role does not exist in the repo yet (#65). Installs `unattended-upgrades`, `logrotate`, configures journald `Storage=volatile` (eMMC longevity), manages the DNS search domain (`edge_dns_search`, default empty — clears the installer's `cloud5.ovh` leftover that hijacked bare LAN names; set to `home` when OPNsense `.home` DNS lands), and keeps UFW deny-inbound (SSH from the LAN only — cloudflared → Caddy runs over loopback `127.0.0.1:80`, no inbound HTTP opened). Hostname (`edge`), UTC, and name broadcast (Avahi `edge.local`) come from `common`; SSH hardening + UFW + fail2ban from `security`.
 
 ### `edge_host`
 

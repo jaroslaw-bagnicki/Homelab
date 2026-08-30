@@ -204,7 +204,7 @@ reuse — see §3a). Services §4–§6 are a follow-up once the base is verifie
 
 ## 4. cloudflared — Tunnel
 
-Deployed by the Ansible `edge_host` role (§3) — this documents the resulting state:
+**Target state (services follow-up, §4–§6)** — to be deployed by the `edge_host` role; this documents the resulting state:
 
 - **systemd unit** — `cloudflared tunnel run --token …`, `Enabled` + `Restart=on-failure`;
   outbound-only path (UDP 7844 QUIC to CF edge; UFW keeps all inbound closed).
@@ -219,7 +219,7 @@ Deployed by the Ansible `edge_host` role (§3) — this documents the resulting 
 
 ## 5. Caddy — Reverse Proxy
 
-Installed and configured by the Ansible `edge_host` role (§3) — the Caddyfile lives in the
+**Target state (services follow-up, §4–§6)** — to be installed/configured by the `edge_host` role; the Caddyfile lives in the
 repo, rendered to `/etc/caddy/Caddyfile`, `Caddyfile reload` on change (ADR 10).
 
 - **Single Caddyfile for both planes** (ADR 20 — one Caddyfile is the source of truth):
@@ -240,7 +240,7 @@ repo, rendered to `/etc/caddy/Caddyfile`, `Caddyfile reload` on change (ADR 10).
 
 ## 6. Monitoring — Netdata Child Node
 
-Installed and configured by the Ansible `edge_host` role (§3) — this documents the
+**Target state (services follow-up, §4–§6)** — to be installed/configured by the `edge_host` role; this documents the
 resulting state:
 
 - **RAM-only buffering** — `/etc/netdata/netdata.conf`:
@@ -292,8 +292,8 @@ resulting state:
 
 - [x] §1 Debian minimal installed on `mmcblk0`; eMMC boots without F12 (entry re-added 2026-08-18)
 - [x] §2 Static IP `192.168.2.240` reachable; SSH key-only login (fleet key, 2026-08-30)
-- [ ] §3 `edge.local` + bare `edge` resolve on the LAN; SSH by name (role written 2026-08-26 — pending live run)
-- [ ] §3 UFW active (SSH from LAN only); fail2ban on (role written 2026-08-26 — pending live run)
+- [ ] §3 `edge.local` + bare `edge` resolve on the LAN; SSH by name (live run 2026-08-30 — manual verify from LAN)
+- [x] §3 UFW active (SSH from LAN only); fail2ban on (live run 2026-08-30 — ok=24)
 - [ ] §4 cloudflared tunnel up (`cloudflared tunnel list`)
 - [ ] §5 Caddy serves `*.example.com` and `*.home`
 - [ ] §6 Netdata child running (RAM-only); dashboard reachable
