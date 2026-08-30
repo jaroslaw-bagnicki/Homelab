@@ -1,4 +1,10 @@
 ---
+- name: Install UFW
+  ansible.builtin.apt:
+    name: ufw
+    state: present
+    update_cache: true
+
 - name: UFW default deny incoming
   community.general.ufw:
     default: deny

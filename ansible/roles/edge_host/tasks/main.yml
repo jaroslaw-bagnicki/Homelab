@@ -19,6 +19,14 @@
     name: logrotate
     state: present
 
+- name: Ensure journald drop-in directory exists
+  ansible.builtin.file:
+    path: /etc/systemd/journald.conf.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
 - name: Configure journald volatile storage (eMMC longevity)
   ansible.builtin.copy:
     content: |
