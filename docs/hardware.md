@@ -12,7 +12,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | **Lab** | main workload host | Lenovo ThinkCentre M910q Tiny | i5-7500T (4C/4T) | 16 GB DDR4 | 256 GB NVMe (+ free 2.5" bay) | 1× GbE `enp0s31f6` | ✅ |
 | **OMV NAS** | OpenMediaVault server, backup target | HP ProLiant ML110 G5 | Pentium E2160 (2C/2T) | 4 GB DDR2 | Goodram 120 GB SSD + RAID1 arrays | 1× GbE BCM5722 | ✅ |
 | **Edge Ingress** | public ingress | Dell Wyse 3040 | Atom x5-Z8350 | 2 GB DDR3L | 8 GB eMMC | 1× GbE | 🔨 |
-| **Home Assistant** | smart home node | Dell Wyse 5070 | J4105 (planned) | 8 GB DDR4 | M.2 SATA SSD 64–256 GB | 1× GbE | 📋 |
+| **Home Assistant** | smart home node | Dell Wyse 5070 | Celeron J4105 | 8 GB DDR4 (2× 4 GB) | M.2 SATA SK hynix 128 GB | 1× GbE + WiFi | 🔨 |
 | **LLM server** | local LLM inference | Minisforum AI X1 | Ryzen 7 255 (Hawk Point) | 64–96 GB DDR5 | NVMe | 1× GbE | 🧠 (Phase 2) |
 | **Cloudlab VPS** | staging / playground | Contabo Cloud VPS 10 | 4 vCPU | 8 GB | 75 GB NVMe | public IP | ✅ |
 
@@ -58,16 +58,19 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Role | Dedicated public ingress — bare-metal `cloudflared` + Caddy (ADR 24) |
 | Docs | [runbook 24](runbooks/24-edge-appliance.md) · [ADR 24](decisions/24-edge-ingress-appliance.md) · [research 25](research/25-edge-ingress-sbc.md) · [idea 04](ideas/04-edge-device-tunnel-caddy.md) |
 
-### Home Assistant — Dell Wyse 5070 (planned)
+### Home Assistant — Dell Wyse 5070
 
 | Item | Spec |
 |---|---|
-| CPU | Intel Celeron J4105 (4C, fanless) |
-| RAM | 8 GB DDR4 SO-DIMM (dual slot, 16 GB future) — Home Assistant VM gets 4 GB |
-| Storage | M.2 **SATA** 2280 SSD 64–256 GB (128 GB practical pick; no NVMe) |
-| Role | Home Assistant OS VM on Proxmox VE + Mosquitto/Zigbee2MQTT LXCs |
-| Fallback | Fujitsu Futro S740 (same J4105, often cheaper, no PCIe/mPCIe) |
-| Docs | [idea 05](ideas/05-home-assistant-thin-client.md) · [ADR 25](decisions/25-home-assistant-thin-client.md) · [research 26](research/26-home-assistant-thin-client.md) |
+| CPU | Intel Celeron J4105 (Gemini Lake, 4C/4T, 2.5 GHz) — fanless, idle ~35 °C |
+| RAM | **8 GB DDR4 (2× 4 GiB Micron `4ATF51264HZ-3G2J1`)** — both SODIMM slots populated (DDR4-3200 rated, 2400 MT/s); 16 GB = replace both with 2× 8 GB |
+| Storage | M.2 **SATA** 2280 — **SK hynix SC311 SATA 128 GB** (used, SMART PASSED, ~97% NAND life left, SN `MS8BN03201230BC10`); eMMC 14.7 GiB present, unused |
+| Network | Realtek RTL8111/8168 GbE (`enp1s0`, MAC `c0:25:a5:65:02:67`) · Intel CNVi WiFi + BT (`wlp0s12f0`, MAC `d0:3c:1f:cb:76:9a`) |
+| Zigbee | Sonoff Zigbee 3.0 USB Dongle Plus (ZBDongle-P / CC2652P) — USB coordinator for LXC 102 passthrough (by-id pattern, research 26 §4) |
+| Firmware | BIOS 1.34.0 (2024-11-08) · board 060J9C · SKU `080C` · SN `16474B3` |
+| Role | Home Assistant OS VM on Proxmox VE + Mosquitto/Zigbee2MQTT LXCs (ADR 25) |
+| Acquisition | 2026-08-19 — hardware diagnostic done ([research 29](research/29-wyse5070-hardware-diagnostic.md)); SK hynix SSD + Sonoff ZBDongle-P acquired; Proxmox install pending |
+| Docs | [idea 05](ideas/05-home-assistant-thin-client.md) · [ADR 25](decisions/25-home-assistant-thin-client.md) · [research 26](research/26-home-assistant-thin-client.md) · [research 29](research/29-wyse5070-hardware-diagnostic.md) |
 
 ### LLM server — Minisforum AI X1 (Phase 2, 🧠 idea)
 
