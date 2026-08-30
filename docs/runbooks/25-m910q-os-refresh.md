@@ -34,7 +34,10 @@ The refresh re-aligns the box with ADR 05 and unblocks that track.
   - Ansible + collections: `ansible-galaxy install -r ansible/requirements.yml`
   - `az` CLI **logged in** (`az login`) — the `azure_arc` role fetches the SPN secret
     from Key Vault via the `azure.azcollection` lookup on the control node
-  - The control node's SSH **public** key (uploaded to `labadmin` by the bootstrap script)
+  - The **fleet key** (ADR 28): **private** key loaded into `ssh-agent` (from Key Vault
+    `homelab-bysxdb-kv/ansible-fleet-key-priv`) so Ansible can connect; the **public** key
+    (committed `ansible/roles/common/files/ssh/ansible-fleet.pub`) is installed by the
+    bootstrap script
 - **Bootable USB** with Ubuntu Server 24.04 LTS ISO and a **SystemRescue** ISO.
 
 ---
@@ -107,7 +110,7 @@ by Ansible in §3.
 
 > **Why a personal account, not root, during install:** the §2 bootstrap (run manually
 > on the box) uses this user (with `sudo`) to create the `labadmin` agent account and
-> install the control node's SSH key. It doubles as the breaking-glass account — a named
+> install the fleet public key (ADR 28). It doubles as the breaking-glass account — a named
 > identity for emergency **console** access (SSH password login is disabled when the
 > bootstrap finishes). `labadmin` is the key-only SSH agent account for Ansible; the
 > machine never carries a throwaway human account.
@@ -154,8 +157,11 @@ then proceed unchanged.
 Run these commands **on the M910q** as your personal breaking-glass user (console, or
 over SSH while password login is still enabled). They create the key-only `labadmin`
 agent account and lock SSH down to key-only. The snippet prompts you to paste the
-control node's public key (from `~/.ssh/id_ed25519.pub`; Windows + WSL keys are
-identical). Idempotent — safe to re-run.
+**fleet public key** (ADR 28) — from `ansible/roles/common/files/ssh/ansible-fleet.pub`
+in the repo (the same key Ansible and AI agents use fleet-wide). It is installed with
+the same restrictive `key_options` the `common` role manages
+(`no-port-forwarding,no-agent-forwarding,no-X11-forwarding`), so bootstrap and rotation
+stay on one identical line. Idempotent — safe to re-run.
 
 ```sh
 id -u labadmin >/dev/null 2>&1 || sudo useradd -m -s /bin/bash labadmin
@@ -164,8 +170,8 @@ echo 'labadmin ALL=(ALL) NOPASSWD: ALL' | sudo tee /etc/sudoers.d/labadmin
 sudo chmod 440 /etc/sudoers.d/labadmin
 
 sudo mkdir -p /home/labadmin/.ssh && sudo chmod 700 /home/labadmin/.ssh
-read -r -p 'Paste the control node public key and press Enter: ' pubkey
-echo "$pubkey" | sudo tee /home/labadmin/.ssh/authorized_keys
+read -r -p 'Paste the fleet public key (ansible/roles/common/files/ssh/ansible-fleet.pub) and press Enter: ' pubkey
+printf 'no-port-forwarding,no-agent-forwarding,no-X11-forwarding %s\n' "$pubkey" | sudo tee /home/labadmin/.ssh/authorized_keys
 sudo chmod 600 /home/labadmin/.ssh/authorized_keys
 sudo chown -R labadmin:labadmin /home/labadmin/.ssh
 
@@ -179,7 +185,8 @@ sudo systemctl restart ssh
 What it does:
 - creates `labadmin` (sudo group, locked password)
 - grants `NOPASSWD: ALL` (for Ansible `become`)
-- installs the control node's public key as `labadmin`'s only login
+- installs the fleet public key (with restrictive `key_options`) as `labadmin`'s only
+  login (ADR 28)
 - disables SSH password login → the personal account becomes **console-only** breaking
   glass; `labadmin` is the only SSH path (key-only)
 

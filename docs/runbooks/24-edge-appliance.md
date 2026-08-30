@@ -150,7 +150,7 @@ ping -c1 192.168.2.1          # gateway reachable
 ### 2.2 SSH for Ansible — done (2026-08-23)
 
 Mirroring [runbook 25](25-m910q-os-refresh.md) §2: create the `labadmin` agent account (sudo,
-agent-account pattern) and install the control node's public key so Ansible can connect —
+agent-account pattern) and install the **fleet public key** (ADR 28) so Ansible can connect —
 mirror [runbook 01](01-init.md) §2.
 
 Executed on the box (2026-08-23):
@@ -164,6 +164,11 @@ Executed on the box (2026-08-23):
   (600, owner `labadmin`); password **locked** (`passwd -l`).
 - **Verified** from the control node: `ssh labadmin@192.168.2.240` → key-only login works
   (hostname `edge`, uid 1001, sudo group).
+
+> **Update (2026-08-30):** per ADR 28, the **fleet public key** (`ansible-fleet@homelab`,
+> from `ansible/roles/common/files/ssh/ansible-fleet.pub`) is now the day-1 credential —
+> the `common` role adds it (with restrictive `key_options`) on the next playbook run;
+> future re-provisions install it at bootstrap (runbook 25 §2) instead of a control key.
 
 ---
 
