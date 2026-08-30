@@ -16,8 +16,7 @@ ansible-playbook ansible/playbooks/playbook-arc.yml
 # Lab M910q base provision (from a LAN workstation, runbook 25)
 ansible-playbook ansible/playbooks/playbook-lab.yml
 
-# Edge Wyse 3040 base provision (from a LAN workstation, runbook 24)
-ansible-playbook ansible/playbooks/playbook-edge.yml
+# Edge Wyse 3040 — planned (#65), no playbook yet
 
 # OpenCode per-project workload (decoupled recipe)
 ansible-playbook ansible/workloads/opencode/opencode-playbook.yml
@@ -33,10 +32,10 @@ ansible-playbook ansible/workloads/opencode/opencode-playbook.yml
 | `playbooks/playbook.yml` | Base provision: common → security → azure_arc → docker_host → docker_services; pre_tasks declares `opencode_net` |
 | `playbooks/playbook-arc.yml` | Arc enrolment only (for already-configured hosts) |
 | `playbooks/playbook-lab.yml` | M910q base provision: common → security → docker_host → azure_arc (no `docker_services` — see below) |
-| `playbooks/playbook-edge.yml` | Wyse 3040 edge base provision: common → security → edge_host (bare-metal, no Docker/Arc — ADR 24) |
+| `playbooks/` (edge — planned) | Edge base provision (`edge_host` role) not yet created — tracked in #65 (ADR 24) |
 | `workloads/` | Self-contained workload recipes — playbook entrypoint, role recipes, ansible-side README, all co-located per workload |
 | `workloads/opencode/` | OpenCode per-project server workload (see [README](workloads/opencode/README.md)) |
-| `roles/` | Base shared roles: `common`, `security`, `azure_arc`, `docker_host`, `docker_services`, `edge_host` |
+| `roles/` | Base shared roles: `common`, `security`, `azure_arc`, `docker_host`, `docker_services` (`edge_host` planned — #65) |
 
 ## Workloads
 
@@ -68,9 +67,9 @@ Manages the core Docker Compose stack on the host: `portainer`, `caddy` (with `c
 
 > **Not applied to `lab`.** The M910q is compute-only (k3s target, ADR 22); its DNS/Caddy/tunnel roles moved to the edge appliance (ADR 24). The `docker_services` stack stays cloudlab-only.
 
-### `edge_host`
+### `edge_host` (planned — #65)
 
-Bare-metal base provisioning for the **Edge Wyse 3040** ingress appliance (ADR 24) — no Docker, no Arc. Runs after `common` + `security`. Installs `unattended-upgrades`, `logrotate`, configures journald `Storage=volatile` (eMMC longevity), manages the DNS search domain (`edge_dns_search`, default empty — clears the installer's `cloud5.ovh` leftover that hijacked bare LAN names; set to `home` when OPNsense `.home` DNS lands), and keeps UFW deny-inbound (SSH from the LAN only — cloudflared → Caddy runs over loopback `127.0.0.1:80`, no inbound HTTP opened). Hostname (`edge`), UTC, and name broadcast (Avahi `edge.local`) come from `common`; SSH hardening + UFW + fail2ban from `security`.
+Bare-metal base provisioning for the **Edge Wyse 3040** ingress appliance (ADR 24) — no Docker, no Arc. Runs after `common` + `security`. **Planned** — the role does not exist in the repo yet (#65). Installs `unattended-upgrades`, `logrotate`, configures journald `Storage=volatile` (eMMC longevity), manages the DNS search domain (`edge_dns_search`, default empty — clears the installer's `cloud5.ovh` leftover that hijacked bare LAN names; set to `home` when OPNsense `.home` DNS lands), and keeps UFW deny-inbound (SSH from the LAN only — cloudflared → Caddy runs over loopback `127.0.0.1:80`, no inbound HTTP opened). Hostname (`edge`), UTC, and name broadcast (Avahi `edge.local`) come from `common`; SSH hardening + UFW + fail2ban from `security`.
 
 ## Playbooks
 
@@ -79,7 +78,7 @@ Bare-metal base provisioning for the **Edge Wyse 3040** ingress appliance (ADR 2
 | `playbook.yml` | common → security → azure_arc → docker_host → docker_services | First-time VPS provision after initial SSH hardening (see [runbook 10](../docs/runbooks/10-vps-playground.md)) |
 | `playbook-arc.yml` | azure_arc | Adding Arc to an already-configured host |
 | `playbook-lab.yml` | common → security → docker_host → azure_arc | M910q base provision after the 24.04 reinstall (see [runbook 25](../docs/runbooks/25-m910q-os-refresh.md)) |
-| `playbook-edge.yml` | common → security → edge_host | Wyse 3040 edge base provision (see [runbook 24](../docs/runbooks/24-edge-appliance.md)) |
+| — (planned, #65) | common → security → edge_host | Wyse 3040 edge base provision — playbook not yet created (see [runbook 24](../docs/runbooks/24-edge-appliance.md)) |
 | `workloads/opencode/opencode-playbook.yml` | docker_opencode_ingress → docker_opencode_instances | Deploy the OpenCode per-project server workload (see [runbook 17](../docs/runbooks/17-deploy-opencode-on-cloudlab.md)) |
 
 ## Inventory

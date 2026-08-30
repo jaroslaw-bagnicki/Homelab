@@ -2,7 +2,7 @@
 name: fleet-connect
 description: >-
   SSH connectivity to any Homelab fleet node (cloudlab VPS, lab M910q, edge
-  Wyse 3040) from the right control node — for Ansible playbooks, ad-hoc shell
+  Wyse 3040, omv NAS) from the right control node — for Ansible playbooks, ad-hoc shell
   access, file transfer, and AI agents (opencode, Copilot, …) that need to reach
   a node. Covers the fleet SSH key retrieval from Azure Key Vault, ssh-agent
   setup, per-host reachability, known connectivity pitfalls, and verification.
@@ -32,7 +32,7 @@ when:
 
 # Fleet SSH Connectivity
 
-Every fleet node (`cloudlab`, `lab`, `edge`) accepts key-based SSH as **`fleetadm`**
+Every fleet node (`cloudlab`, `lab`, `edge`, `omv`) accepts key-based SSH as **`fleetadm`** — the fleet-wide migration (ADR 28) completed 2026-08-30
 using the single **fleet key** (`fleetadm@homelab`, ADR 28). This is the **one way
 in** to every node — whether you're running Ansible, shelling in interactively,
 copying files, or an AI agent needs to reach a node, the flow is identical.
@@ -70,13 +70,13 @@ ssh-add -l
 |---|---|---|---|
 | `cloudlab` | `173.249.27.13` | anywhere (public IP) | `ansible/playbooks/playbook.yml` |
 | `lab` | `192.168.2.200` | LAN workstation (`192.168.2.0/24`) | `ansible/playbooks/playbook-lab.yml` |
-| `omv` | `192.168.2.210` | LAN workstation (`192.168.2.0/24`) | — (not Ansible-managed yet) |
-| `edge` | `192.168.2.240` | LAN workstation (`192.168.2.0/24`) | `ansible/playbooks/playbook-edge.yml` |
+| `omv` | `192.168.2.210` | LAN workstation (`192.168.2.0/24`) | — (not Ansible-managed yet, #65) |
+| `edge` | `192.168.2.240` | LAN workstation (`192.168.2.0/24`) | — (not Ansible-managed yet, #65) |
 
 `lab`, `edge`, and `omv` are LAN-only — connect to them (SSH or playbooks)
 from a machine on `192.168.2.0/24` with the fleet key loaded in its agent (see
-runbooks 24/25). `omv` (HP ML110, ADR 23) currently uses `jarek@` for SSH
-(runbook 26) — the `fleetadm`/fleet-key roll-out to OMV is pending.
+runbooks 24/25/26). All nodes are on `fleetadm` since 2026-08-30; `edge` and
+`omv` are not Ansible-managed yet (#65).
 
 ## Connecting to a Node
 
@@ -88,7 +88,7 @@ From the repo root, with the fleet key in the agent:
 cd /workspaces/Homelab
 ansible-playbook ansible/playbooks/playbook.yml          # cloudlab
 ansible-playbook ansible/playbooks/playbook-lab.yml      # lab (LAN workstation)
-ansible-playbook ansible/playbooks/playbook-edge.yml     # edge (LAN workstation)
+# edge — planned (#65), no playbook yet
 ```
 
 > **Run playbooks visibly — never pipe to `tail`/`Select-Object`.** The operator

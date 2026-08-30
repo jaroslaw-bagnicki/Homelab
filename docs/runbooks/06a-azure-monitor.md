@@ -106,9 +106,7 @@ This confirms the server is heartbeating to Log Analytics.
 
 ## 3. Known Limitations
 
-- **Ubuntu 26.04 not supported**: AMA v1.40.3 and v1.41.0 both fail with `Unsupported operating system: ubuntu 26.04` (exit code 51). The physical homelab (Ubuntu 26.04) cannot receive the AMA extension until Microsoft adds support.
-  - Tracked: [Azure/azure-linux-extensions#2173](https://github.com/Azure/azure-linux-extensions/issues/2173)
-  - Root cause: Ubuntu 26.04 ships Python 3.14 which removed `crypt`/`imp` modules, breaking extensions that depend on older Python versions.
+- **The physical `lab` server runs Ubuntu 24.04 LTS** (post-refresh, runbook 25) — **fully supported** by the AMA extension. The earlier "Ubuntu 26.04 unsupported" blocker ([Azure/azure-linux-extensions#2173](https://github.com/Azure/azure-linux-extensions/issues/2173)) applied to the pre-refresh OS and no longer applies.
 - The `cloudlab` VPS runs Ubuntu 24.04 LTS and is **fully supported** — no issues expected.
 
 ---

@@ -132,8 +132,8 @@ Debian 13.6.0 install **completed** on the eMMC. Decisions locked during install
 > install — see Install Progress above).
 >
 > §2 exists **only to unblock Ansible**; everything beyond the bootstrap is provisioned by the
-> `edge_host` role (§3), idempotently. Don't hand-configure what the role owns (accounts,
-> hardening, services) — that's how drift happens.
+> `edge_host` role (§3, **planned — #65, role not yet in the repo**), idempotently. Don't
+> hand-configure what the role owns (accounts, hardening, services) — that's how drift happens.
 
 ### 2.1 Static IP
 
@@ -171,10 +171,10 @@ fresh** per ADR 28 (new-account pattern, runbook 25 §2):
 
 ---
 
-## 3. Ansible provisioning — `edge_host` role
+## 3. Ansible provisioning — `edge_host` role (planned, #65)
 
-ADR 24 specifies a new `edge_host`-style role (systemd units) distinct from `docker_services`.
-The role provisions everything beyond the §2 bootstrap, idempotently:
+ADR 24 specifies a new `edge_host`-style role (systemd units) distinct from `docker_services` —
+**not yet created (tracked in #65)**. The role provisions everything beyond the §2 bootstrap, idempotently:
 
 - **hostname `edge`** + **name broadcast** — Avahi (`edge.local`) + nmbd (bare `edge`)
 - **SSH hardening** — password auth off, key-only login

@@ -163,7 +163,7 @@ the same restrictive `key_options` the `common` role manages
 (`no-port-forwarding,no-agent-forwarding,no-X11-forwarding`), so bootstrap and rotation
 stay on one identical line. Idempotent — safe to re-run.
 
-```ash
+```bash
 id -u fleetadm >/dev/null 2>&1 || sudo useradd -m -s /bin/bash fleetadm
 sudo usermod -aG sudo fleetadm
 echo 'fleetadm ALL=(ALL) NOPASSWD: ALL' | sudo tee /etc/sudoers.d/fleetadm
