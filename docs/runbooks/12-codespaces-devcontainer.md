@@ -155,7 +155,7 @@ Run this **once** (not per-session):
 @"
 Host cloudlab
     HostName 173.249.27.13
-    User labadmin
+    User fleetadm
 "@ | Set-Content ~/.ssh/config
 ```
 

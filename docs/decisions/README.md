@@ -13,7 +13,7 @@ Significant architectural and technology choices recorded in
 
 | # | Date | ADR | Status |
 |---|------|-----|--------|
-| 28 | 2026-08-30 | [Dedicated Fleet-Wide SSH Key for Ansible](28-fleet-ssh-key.md) | Accepted |
+| 28 | 2026-08-30 | [Dedicated Fleet-Wide SSH Admin Account & Key](28-fleet-ssh-key.md) | Accepted |
 | 27 | 2026-08-15 | [Homelab Monitoring & Observability Strategy — Two-Tier Model (Azure Monitor via Arc + Local Monitoring Stack)](27-monitoring-strategy.md) | Accepted |
 | 26 | 2026-08-15 | [Zigbee Energy Monitoring — Z2M → Prometheus, Independent of Home Assistant](26-zigbee-energy-monitoring.md) | Accepted |
 | 25 | 2026-08-14 | [Home Assistant on a Dedicated Thin-Client Node (Wyse 5070 + Proxmox VE)](25-home-assistant-thin-client.md) | Proposed |

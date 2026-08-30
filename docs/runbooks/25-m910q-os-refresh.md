@@ -18,8 +18,8 @@ The refresh re-aligns the box with ADR 05 and unblocks that track.
 - **Reinstall** to Ubuntu Server 24.04 LTS on the 256 GB NVMe; static IP `192.168.2.200` (switch port 2, runbook 21).
 - **Ansible-provisioned base**: `common` → `security` → `docker_host` → `azure_arc` via `ansible/playbooks/playbook-homelab.yml`.
 - **DNS / Caddy / cloudflared leave the M910q** (Option B): the edge appliance (ADR 24 / [#65](https://github.com/jaroslaw-bagnicki/Homelab/issues/65)) takes over `*.home` DNS, internal `.home` Caddy, and the external tunnel. The refreshed M910q is **compute-only** — dnsmasq and `homelab-tunnel` are **not** reinstalled. Accept a temporary `.home` + external-access gap until the edge box is live.
-- **Operator account — `labadmin`.** Both hosts (cloudlab + homelab) use the generic `labadmin` account: key-only SSH (full pattern in the [ansible README](../../ansible/README.md)).
-- **Breaking-glass account — your personal user.** Created during install (password in **Keeper**); it's the emergency **console** credential — SSH password login is disabled after §2 — while `labadmin` stays the key-only SSH automation account.
+- **Operator account — `fleetadm`.** All hosts (cloudlab + homelab + edge) use the generic `fleetadm` account: key-only SSH (full pattern in the [ansible README](../../ansible/README.md)).
+- **Breaking-glass account — your personal user.** Created during install (password in **Keeper**); it's the emergency **console** credential — SSH password login is disabled after §2 — while `fleetadm` stays the key-only SSH automation account.
 
 > **Execution note.** Run this runbook **interactively from the repo's dev container**
 > (any interactive session — e.g. VSCode with the GitHub Copilot extension). Do **not**
@@ -77,7 +77,7 @@ The refresh re-aligns the box with ADR 05 and unblocks that track.
 ## 1. Reinstall Ubuntu Server 24.04 LTS
 
 Manual input during install is limited to: static IP + a **personal breaking-glass
-account** (password) + OpenSSH server. Everything after (the `labadmin` agent account
+account** (password) + OpenSSH server. Everything after (the `fleetadm` agent account
 and SSH key) is done manually in §2; OS hardening (UFW, fail2ban, Docker, Arc) is done
 by Ansible in §3.
 
@@ -109,10 +109,10 @@ by Ansible in §3.
    ```
 
 > **Why a personal account, not root, during install:** the §2 bootstrap (run manually
-> on the box) uses this user (with `sudo`) to create the `labadmin` agent account and
+> on the box) uses this user (with `sudo`) to create the `fleetadm` agent account and
 > install the fleet public key (ADR 28). It doubles as the breaking-glass account — a named
 > identity for emergency **console** access (SSH password login is disabled when the
-> bootstrap finishes). `labadmin` is the key-only SSH agent account for Ansible; the
+> bootstrap finishes). `fleetadm` is the key-only SSH agent account for Ansible; the
 > machine never carries a throwaway human account.
 
 ## 1b. Alternative — PXE / network install (deferred)
@@ -152,10 +152,10 @@ input — static IP `192.168.2.200`, gateway `192.168.2.1`, DNS `1.1.1.1, 8.8.8.
 root breaking-glass password, OpenSSH — making the install fully hands-off; §2–§4
 then proceed unchanged.
 
-## 2. Bootstrap — labadmin Agent Account (manual, on the homelab)
+## 2. Bootstrap — fleetadm Agent Account (manual, on the homelab)
 
 Run these commands **on the M910q** as your personal breaking-glass user (console, or
-over SSH while password login is still enabled). They create the key-only `labadmin`
+over SSH while password login is still enabled). They create the key-only `fleetadm`
 agent account and lock SSH down to key-only. The snippet prompts you to paste the
 **fleet public key** (ADR 28) — from `ansible/roles/common/files/ssh/ansible-fleet.pub`
 in the repo (the same key Ansible and AI agents use fleet-wide). It is installed with
@@ -164,18 +164,18 @@ the same restrictive `key_options` the `common` role manages
 stay on one identical line. Idempotent — safe to re-run.
 
 ```sh
-id -u labadmin >/dev/null 2>&1 || sudo useradd -m -s /bin/bash labadmin
-sudo usermod -aG sudo labadmin
-echo 'labadmin ALL=(ALL) NOPASSWD: ALL' | sudo tee /etc/sudoers.d/labadmin
-sudo chmod 440 /etc/sudoers.d/labadmin
+id -u fleetadm >/dev/null 2>&1 || sudo useradd -m -s /bin/bash fleetadm
+sudo usermod -aG sudo fleetadm
+echo 'fleetadm ALL=(ALL) NOPASSWD: ALL' | sudo tee /etc/sudoers.d/fleetadm
+sudo chmod 440 /etc/sudoers.d/fleetadm
 
-sudo mkdir -p /home/labadmin/.ssh && sudo chmod 700 /home/labadmin/.ssh
+sudo mkdir -p /home/fleetadm/.ssh && sudo chmod 700 /home/fleetadm/.ssh
 read -r -p 'Paste the fleet public key (ansible/roles/common/files/ssh/ansible-fleet.pub) and press Enter: ' pubkey
-printf 'no-port-forwarding,no-agent-forwarding,no-X11-forwarding %s\n' "$pubkey" | sudo tee /home/labadmin/.ssh/authorized_keys
-sudo chmod 600 /home/labadmin/.ssh/authorized_keys
-sudo chown -R labadmin:labadmin /home/labadmin/.ssh
+printf 'no-port-forwarding,no-agent-forwarding,no-X11-forwarding %s\n' "$pubkey" | sudo tee /home/fleetadm/.ssh/authorized_keys
+sudo chmod 600 /home/fleetadm/.ssh/authorized_keys
+sudo chown -R fleetadm:fleetadm /home/fleetadm/.ssh
 
-sudo passwd -l labadmin
+sudo passwd -l fleetadm
 
 # sshd uses the first value read; 10- wins over cloud-init's 50-cloud-init.conf (PasswordAuthentication yes)
 echo 'PasswordAuthentication no' | sudo tee /etc/ssh/sshd_config.d/10-password-off.conf
@@ -183,16 +183,16 @@ sudo systemctl restart ssh
 ```
 
 What it does:
-- creates `labadmin` (sudo group, locked password)
+- creates `fleetadm` (sudo group, locked password)
 - grants `NOPASSWD: ALL` (for Ansible `become`)
-- installs the fleet public key (with restrictive `key_options`) as `labadmin`'s only
+- installs the fleet public key (with restrictive `key_options`) as `fleetadm`'s only
   login (ADR 28)
 - disables SSH password login → the personal account becomes **console-only** breaking
-  glass; `labadmin` is the only SSH path (key-only)
+  glass; `fleetadm` is the only SSH path (key-only)
 
 **Verify:**
 ```powershell
-ssh labadmin@homelab
+ssh fleetadm@homelab
 sudo whoami   # should print "root"
 ```
 Pure hostname resolution works out of the box via **LLMNR** (Ubuntu's
@@ -242,7 +242,7 @@ sudo azcmagent show
 
 - [x] §0 hardware audit captured in `docs/hardware.md`
 - [x] Ubuntu 24.04 installed; static IP `192.168.2.200` reachable
-- [x] SSH key login works: `ssh labadmin@homelab`
+- [x] SSH key login works: `ssh fleetadm@homelab`
 - [x] `ansible-playbook playbook-homelab.yml` completes with no failed tasks
 - [x] `azcmagent show` → `Connected`
 - [x] `docs/overview.md` M910q row reflects Ubuntu 24.04 + Arc (update if needed)

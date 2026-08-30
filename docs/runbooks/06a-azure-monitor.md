@@ -76,7 +76,7 @@ If charts show "No metrics detected", wait a few more minutes and refresh.
 Check that the Azure Monitor Agent extension is installed:
 
 ```bash
-ssh labadmin@cloudlab
+ssh fleetadm@cloudlab
 sudo azcmagent show
 ```
 

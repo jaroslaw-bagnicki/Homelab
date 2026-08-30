@@ -149,7 +149,7 @@ ping -c1 192.168.2.1          # gateway reachable
 
 ### 2.2 SSH for Ansible — done (2026-08-23)
 
-Mirroring [runbook 25](25-m910q-os-refresh.md) §2: create the `labadmin` agent account (sudo,
+Mirroring [runbook 25](25-m910q-os-refresh.md) §2: create the `fleetadm` agent account (sudo,
 agent-account pattern) and install the **fleet public key** (ADR 28) so Ansible can connect —
 mirror [runbook 01](01-init.md) §2.
 
@@ -157,12 +157,12 @@ Executed on the box (2026-08-23):
 
 - `openssh-server` was already present (tasksel "SSH server" during install).
 - **Deviation — `sudo` installed**: the Debian Expert install (tasksel) did **not** ship
-  `sudo`; installed via `apt install sudo` as a prerequisite for `labadmin`'s sudo role.
-- Created **`labadmin`** (uid 1001, `/bin/bash`), added to the **`sudo`** group, with
-  `/etc/sudoers.d/labadmin` NOPASSWD (440).
-- Installed the **control-node key** (`lenovo-slim`) as `/home/labadmin/.ssh/authorized_keys`
-  (600, owner `labadmin`); password **locked** (`passwd -l`).
-- **Verified** from the control node: `ssh labadmin@192.168.2.240` → key-only login works
+  `sudo`; installed via `apt install sudo` as a prerequisite for `fleetadm`'s sudo role.
+- Created **`fleetadm`** (uid 1001, `/bin/bash`), added to the **`sudo`** group, with
+  `/etc/sudoers.d/fleetadm` NOPASSWD (440).
+- Installed the **control-node key** (`lenovo-slim`) as `/home/fleetadm/.ssh/authorized_keys`
+  (600, owner `fleetadm`); password **locked** (`passwd -l`).
+- **Verified** from the control node: `ssh fleetadm@192.168.2.240` → key-only login works
   (hostname `edge`, uid 1001, sudo group).
 
 > **Update (2026-08-30):** per ADR 28, the **fleet public key** (`ansible-fleet@homelab`,

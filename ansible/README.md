@@ -44,7 +44,7 @@ Currently: [OpenCode](workloads/opencode/README.md) — per-project OpenCode ser
 
 ### `common`
 
-Sets the hostname to inventory name, configures `Etc/UTC` timezone, ensures `systemd-timesyncd` is running, optionally installs/enables Avahi mDNS (`.local`) when `common_enable_avahi: true`, and deploys the **fleet public key** (`files/ssh/ansible-fleet.pub`) to `labadmin`'s `authorized_keys` with restrictive `key_options` (ADR 28) — used by Ansible and AI agent tooling.
+Sets the hostname to inventory name, configures `Etc/UTC` timezone, ensures `systemd-timesyncd` is running, optionally installs/enables Avahi mDNS (`.local`) when `common_enable_avahi: true`, and deploys the **fleet public key** (`files/ssh/ansible-fleet.pub`) to `fleetadm`'s `authorized_keys` with restrictive `key_options` (ADR 28) — used by Ansible and AI agent tooling.
 
 ### `security`
 
@@ -77,19 +77,19 @@ Manages the core Docker Compose stack on the host: `portainer`, `caddy` (with `c
 
 ```ini
 [vps]
-cloudlab ansible_host=173.249.27.13 ansible_user=labadmin
+cloudlab ansible_host=173.249.27.13 ansible_user=fleetadm
 
 [physical]
-homelab ansible_host=192.168.2.200 ansible_user=labadmin
+homelab ansible_host=192.168.2.200 ansible_user=fleetadm
 ```
 
-Both hosts use the generic **`labadmin`** operator account (key-only SSH, no password). The hostnames must resolve on the control machine — add `cloudlab` and `homelab` to `C:\Windows\System32\drivers\etc\hosts` (or the equivalent). `homelab` lives on the home LAN and is only reachable from a workstation on `192.168.2.0/24`.
+Both hosts use the generic **`fleetadm`** operator account (key-only SSH, no password). The hostnames must resolve on the control machine — add `cloudlab` and `homelab` to `C:\Windows\System32\drivers\etc\hosts` (or the equivalent). `homelab` lives on the home LAN and is only reachable from a workstation on `192.168.2.0/24`.
 
-### Agent account pattern (`labadmin`)
+### Agent account pattern (`fleetadm`)
 
-`labadmin` is a dedicated, non-interactive Ansible agent account, not a human login:
+`fleetadm` is a dedicated, non-interactive fleet administration account, not a human login:
 
-- **Key-only login** — SSH public key, no password. The **fleet key** (`ansible-fleet@homelab`, ADR 28) is the single SSH credential: the breaking-glass account installs it into `labadmin` at bootstrap (runbooks 24/25), and the `common` role re-arms it on every host (restrictive `key_options`: no port/agent forwarding, no X11); its private key lives in `homelab-bysxdb-kv/ansible-fleet-key-priv` and is loaded into `ssh-agent` by `profile.ps1` each session — it is also the **agent-access path** for AI tooling (OpenCode, Copilot) in the dev container.
+- **Key-only login** — SSH public key, no password. The **fleet key** (`ansible-fleet@homelab`, ADR 28) is the single SSH credential: the breaking-glass account installs it into `fleetadm` at bootstrap (runbooks 24/25), and the `common` role re-arms it on every host (restrictive `key_options`: no port/agent forwarding, no X11); its private key lives in `homelab-bysxdb-kv/ansible-fleet-key-priv` and is loaded into `ssh-agent` by `profile.ps1` each session — it is also the **agent-access path** for AI tooling (OpenCode, Copilot) in the dev container.
 - **`NOPASSWD` sudo** (or a scoped sudoers rule) — required for Ansible `become: true`.
 - **`docker_users: []` on both hosts** — deliberately *not* in the `docker` group. The `docker` group is passwordless root-equivalent via the daemon socket, and Ansible reaches Docker through `become` anyway; a compromised agent key must not also grant instant root. Interactive `docker` commands on a host are run via `sudo`.
 

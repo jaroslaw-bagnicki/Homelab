@@ -35,9 +35,9 @@
     enabled: true
   when: common_enable_avahi | bool
 
-- name: Deploy Ansible fleet public key to labadmin
+- name: Deploy Ansible fleet public key to fleetadm
   ansible.posix.authorized_key:
-    user: labadmin
+    user: fleetadm
     state: present
     key: "{{ lookup('file', role_path ~ '/files/ssh/ansible-fleet.pub') }}"
     key_options: "{{ common_ssh_fleet_key_options }}"

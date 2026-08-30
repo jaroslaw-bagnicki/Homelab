@@ -15,7 +15,7 @@
   sudo apt install -y python3-pip
   pip3 install --break-system-packages azure-identity azure-keyvault-secrets
   ```
-- [ ] SSH access to `cloudlab` via `ansible_user: labadmin`
+- [ ] SSH access to `cloudlab` via `ansible_user: fleetadm`
 - [ ] **Cloudflare dashboard setup completed** — see §6 (one-time, manual)
 
 ---

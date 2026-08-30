@@ -41,7 +41,7 @@ All OpenCode containers attach only to `opencode_net`.
     └── workspace/                      # bind-mounted → /workspace
 ```
 
-Container process runs as `root` (uid 0). Bind-mounted directories on the host are owned by `labadmin:labadmin` (uid 1000); root inside the container can write regardless.
+Container process runs as `root` (uid 0). Bind-mounted directories on the host are owned by `fleetadm:fleetadm` (uid 1000); root inside the container can write regardless.
 
 ## Secrets
 

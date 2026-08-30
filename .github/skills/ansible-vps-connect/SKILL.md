@@ -23,7 +23,7 @@ when:
 ## SSH Key Setup (required once per session)
 
 The VPS `cloudlab` (Contabo Cloud VPS 10, `TEST-NET-1-ADDRESS`) accepts only
-key-based SSH as `labadmin`. The private key is stored in Azure Key Vault
+key-based SSH as `fleetadm`. The private key is stored in Azure Key Vault
 and must be loaded into `ssh-agent` before any `ansible-playbook` or `ssh`
 command works.
 
@@ -98,7 +98,7 @@ read `ansible.cfg` from world-writable directories as a security measure.
 | Item | Value |
 |---|---|
 | VPS IP | `173.249.27.13` |
-| SSH user | `labadmin` |
+| SSH user | `fleetadm` |
 | SSH host alias | `cloudlab` (via `~/.ssh/config`) |
 | Key Vault | `homelab-bysxdb-kv` |
 | Key Vault secret | `cloudlab-vps-key-priv` |

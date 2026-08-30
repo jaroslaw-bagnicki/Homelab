@@ -2,7 +2,7 @@
 # Generates the fleet-wide Ansible SSH keypair, stores the private key in Key Vault
 # (ansible-fleet-key-priv), and writes the public key to the committed repo location
 # (ansible/roles/common/files/ssh/ansible-fleet.pub) that the `common` role deploys
-# to labadmin on every host. Re-run with -Force to rotate (regenerate + overwrite KV).
+# to fleetadm on every host. Re-run with -Force to rotate (regenerate + overwrite KV).
 
 param(
   [switch]$Force
