@@ -132,7 +132,7 @@ Debian 13.6.0 install **completed** on the eMMC. Decisions locked during install
 > install — see Install Progress above).
 >
 > §2 exists **only to unblock Ansible**; everything beyond the bootstrap is provisioned by the
-> `edge_host` role (§3, **planned — #65, role not yet in the repo**), idempotently. Don't
+> `edge_host` role (§3), idempotently. Don't
 > hand-configure what the role owns (accounts, hardening, services) — that's how drift happens.
 
 ### 2.1 Static IP
@@ -165,45 +165,61 @@ fresh** per ADR 28 (new-account pattern, runbook 25 §2):
 - **Verified** from the control node: `ssh fleetadm@192.168.2.240` → hostname `edge`,
   `sudo -n whoami` → root.
 
-> Ansible provisioning of edge (the `edge_host` role: UFW, fail2ban, cloudflared, Caddy,
-> Netdata) is tracked in issue #65 — edge is not yet in the Ansible inventory, and there
-> is no `playbook-edge.yml` yet.
+> Ansible provisioning of edge is implemented by the `edge_host` role via
+> `ansible/playbooks/playbook-edge.yml` (edge added to the inventory on this branch).
 
 ---
 
-## 3. Ansible provisioning — `edge_host` role (planned, #65)
+## 3. Ansible provisioning — `edge_host` role
 
-ADR 24 specifies a new `edge_host`-style role (systemd units) distinct from `docker_services` —
-**not yet created (tracked in #65)**. The role provisions everything beyond the §2 bootstrap, idempotently:
+ADR 24 specifies a new `edge_host`-style role (systemd units) distinct from `docker_services`.
+The role provisions everything beyond the §2 bootstrap, idempotently, via
+`ansible/playbooks/playbook-edge.yml` (`common → security → edge_host`):
 
-- **hostname `edge`** + **name broadcast** — Avahi (`edge.local`) + nmbd (bare `edge`)
-- **SSH hardening** — password auth off, key-only login
+- **hostname `edge`** + **name broadcast** — Avahi (`edge.local`, via `common`) — nmbd dropped 2026-08-26 (mDNS suffices; the bare `edge` NetBIOS name is not needed)
+- **SSH hardening** — password auth off, key-only login (**added to the shared `security` role**,
+  fleet-wide drop-in `/etc/ssh/sshd_config.d/99-homelab-hardening.conf`)
 - **UFW** (SSH from `192.168.2.0/24`, deny inbound otherwise) + **fail2ban** +
   `unattended-upgrades`
 - **eMMC longevity** — journald `Storage=volatile`, logrotate; Netdata is RAM-only (see §6)
 - **services §4–§6** — cloudflared, Caddy, Netdata (install + config + systemd units)
 
-The role is written once the OS + services validate (§8); the §2 bootstrap steps map 1:1 to it.
+**Base provisioning is written and committed 2026-08-26** (the `edge_host` role + `common`/`security`
+reuse — see §3a). Services §4–§6 are a follow-up once the base is verified live on the box.
+
+### 3a. Role layout (base phase)
+
+- `ansible/roles/common` (reused) — hostname `edge`, `Etc/UTC`, `systemd-timesyncd`, Avahi
+  (`common_enable_avahi: true` → `edge.local`)
+- `ansible/roles/security` (reused, tuned via `host_vars/edge.yml`) — UFW default-deny +
+  SSH allow from `192.168.2.0/24` (`security_ufw_allow_ssh_from`), fail2ban, sshd key-only
+  hardening; `security_ufw_deny_inbound_tcp_80: false` (the edge owns :80)
+- `ansible/roles/edge_host` (new) — `unattended-upgrades`, `logrotate`, journald
+  `Storage=volatile`, the DNS search domain (`edge_dns_search`, default empty — removes the
+  installer's `cloud5.ovh` search leftover); UFW stays deny-inbound — cloudflared → Caddy
+  runs over loopback, no :80 opened (nmbd dropped 2026-08-26 — Avahi suffices)
+- `ansible/host_vars/edge.yml` + `inventory.ini` (`edge` → `192.168.2.240`)
 
 ---
 
 ## 4. cloudflared — Tunnel
 
-Deployed by the Ansible `edge_host` role (§3) — this documents the resulting state:
+**Target state (services follow-up, §4–§6)** — to be deployed by the `edge_host` role; this documents the resulting state:
 
 - **systemd unit** — `cloudflared tunnel run --token …`, `Enabled` + `Restart=on-failure`;
   outbound-only path (UDP 7844 QUIC to CF edge; UFW keeps all inbound closed).
 - **Tunnel token** — from the Zero Trust dashboard, stored in a root-only file (secret via
   the KV/Ansible secret pattern, ADR 10/16/19) — **never in git**.
 - **Route** the tunnel to Caddy over **HTTP** (the ADR 19/24 pattern): dashboard ingress
-  rules point hostnames (`*.example.com`) at `http://192.168.2.240:80` — TLS terminates at
-  the CF edge; cloudflared ↔ Caddy is plain LAN HTTP.
+  rules point hostnames (`*.example.com`) at `http://127.0.0.1:80` — TLS terminates at the
+  CF edge; cloudflared ↔ Caddy is plain HTTP over **loopback** (both on the edge box), so no
+  inbound :80 is opened on UFW.
 
 ---
 
 ## 5. Caddy — Reverse Proxy
 
-Installed and configured by the Ansible `edge_host` role (§3) — the Caddyfile lives in the
+**Target state (services follow-up, §4–§6)** — to be installed/configured by the `edge_host` role; the Caddyfile lives in the
 repo, rendered to `/etc/caddy/Caddyfile`, `Caddyfile reload` on change (ADR 10).
 
 - **Single Caddyfile for both planes** (ADR 20 — one Caddyfile is the source of truth):
@@ -212,19 +228,19 @@ repo, rendered to `/etc/caddy/Caddyfile`, `Caddyfile reload` on change (ADR 10).
   - **Internal** `*.home` sites (DNS via OPNsense, idea 07) → routed by the same Caddy on
     :80/:443 with Caddy's local auto-TLS or plain HTTP per service.
 - No Cloudflare Origin CA needed on the edge: per ADR 19's revised pattern, cloudflared →
-  Caddy is **plain HTTP** on the LAN (the earlier HTTPS-origin attempt failed on SNI
-  mismatch and config-file override limits).
+  Caddy is **plain HTTP over loopback** (`127.0.0.1:80`, both on the edge box) — the earlier
+  HTTPS-origin attempt failed on SNI mismatch and config-file override limits.
 
 > **Terminology note — TLS split (plain language):** Cloudflare's edge terminates TLS for
 > public clients (`https://*.example.com` → CF). The hop from cloudflared to Caddy is a
-> private LAN connection and can be plain HTTP — no cert needed on the edge. This is the
+> private loopback connection on the edge box and can be plain HTTP — no cert needed on the edge. This is the
 > same pattern cloudlab already uses (ADR 19 revised).
 
 ---
 
 ## 6. Monitoring — Netdata Child Node
 
-Installed and configured by the Ansible `edge_host` role (§3) — this documents the
+**Target state (services follow-up, §4–§6)** — to be installed/configured by the `edge_host` role; this documents the
 resulting state:
 
 - **RAM-only buffering** — `/etc/netdata/netdata.conf`:
@@ -276,8 +292,8 @@ resulting state:
 
 - [x] §1 Debian minimal installed on `mmcblk0`; eMMC boots without F12 (entry re-added 2026-08-18)
 - [x] §2 Static IP `192.168.2.240` reachable; SSH key-only login (fleet key, 2026-08-30)
-- [ ] §3 `edge.local` + bare `edge` resolve on the LAN; SSH by name
-- [ ] §3 UFW active (SSH from LAN only); fail2ban on
+- [ ] §3 `edge.local` + bare `edge` resolve on the LAN; SSH by name (live run 2026-08-30 — manual verify from LAN)
+- [x] §3 UFW active (SSH from LAN only); fail2ban on (live run 2026-08-30 — ok=24)
 - [ ] §4 cloudflared tunnel up (`cloudflared tunnel list`)
 - [ ] §5 Caddy serves `*.example.com` and `*.home`
 - [ ] §6 Netdata child running (RAM-only); dashboard reachable
