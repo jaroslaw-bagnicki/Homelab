@@ -26,7 +26,7 @@ ansible-playbook ansible/workloads/opencode/opencode-playbook.yml
 |---|---|
 | `inventory.ini` | Target hosts (`cloudlab` → `173.249.27.13`, `homelab` → `192.168.2.200`) |
 | `ansible.cfg` | Inventory path, role path, SSH options |
-| `requirements.yml` | Required Ansible Galaxy collections (`community.docker`, `community.general`, `azure.azcollection`) |
+| `requirements.yml` | Required Ansible Galaxy collections (`ansible.posix`, `community.docker`, `community.general`, `azure.azcollection`) |
 | `playbooks/playbook.yml` | Base provision: common → security → azure_arc → docker_host → docker_services; pre_tasks declares `opencode_net` |
 | `playbooks/playbook-arc.yml` | Arc enrolment only (for already-configured hosts) |
 | `playbooks/playbook-homelab.yml` | M910q base provision: common → security → docker_host → azure_arc (no `docker_services` — see below) |
@@ -44,7 +44,7 @@ Currently: [OpenCode](workloads/opencode/README.md) — per-project OpenCode ser
 
 ### `common`
 
-Sets the hostname to inventory name, configures `Etc/UTC` timezone, ensures `systemd-timesyncd` is running, and optionally installs/enables Avahi mDNS (`.local`) when `common_enable_avahi: true`.
+Sets the hostname to inventory name, configures `Etc/UTC` timezone, ensures `systemd-timesyncd` is running, optionally installs/enables Avahi mDNS (`.local`) when `common_enable_avahi: true`, and deploys the **Ansible fleet public key** (`files/ssh/ansible-fleet.pub`) to `labadmin`'s `authorized_keys` (ADR 28).
 
 ### `security`
 
@@ -89,7 +89,7 @@ Both hosts use the generic **`labadmin`** operator account (key-only SSH, no pas
 
 `labadmin` is a dedicated, non-interactive Ansible agent account, not a human login:
 
-- **Key-only login** — SSH public key, no password.
+- **Key-only login** — SSH public key, no password. The **fleet key** (`ansible-fleet@homelab`, ADR 28) is deployed to every host by the `common` role; its private key lives in `homelab-bysxdb-kv/ansible-fleet-key-priv` and is loaded into `ssh-agent` by `profile.ps1` each session.
 - **`NOPASSWD` sudo** (or a scoped sudoers rule) — required for Ansible `become: true`.
 - **`docker_users: []` on both hosts** — deliberately *not* in the `docker` group. The `docker` group is passwordless root-equivalent via the daemon socket, and Ansible reaches Docker through `become` anyway; a compromised agent key must not also grant instant root. Interactive `docker` commands on a host are run via `sudo`.
 

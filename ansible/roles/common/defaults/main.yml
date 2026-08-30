@@ -1,2 +1,4 @@
 ---
 common_enable_avahi: false
+# Optional ssh authorized_keys restrictions for the fleet key (e.g. no-port-forwarding,no-agent-forwarding)
+common_ssh_fleet_key_options: ""
