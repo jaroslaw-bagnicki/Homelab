@@ -5,7 +5,7 @@
 ## Prerequisites
 
 - [ ] Base OS is set up and hardened (see [01-init.md](01-init.md))
-- [ ] SSH access via `ssh jarek@homelab.local` or `ssh homelab`
+- [ ] SSH access via `ssh jarek@lab.local` or `ssh lab`
 - [ ] Server is up to date: `sudo apt update && sudo apt upgrade -y`
 
 ---
@@ -118,19 +118,19 @@ Expected output: `portainer` container listed with status `Up` and port `9000`.
 
 ### 3.4 Initial setup
 
-1. SSH into the server: `ssh jarek@homelab.local`
+1. SSH into the server: `ssh jarek@lab.local`
 2. Access Portainer locally: `curl -s http://127.0.0.1:9000` should return HTML.
 3. To access Portainer's web UI from your laptop, create an **SSH tunnel** — this forwards a port on your laptop to the server, bypassing the localhost-only bind:
 
    ```powershell
-   ssh -L 9000:127.0.0.1:9000 jarek@homelab.local
+   ssh -L 9000:127.0.0.1:9000 jarek@lab.local
    ```
 
    | Part | Meaning |
    |---|---|
    | `-L 9000` | Listen on your laptop's port 9000 |
    | `127.0.0.1:9000` | Forward to the server's localhost port 9000 (where Portainer listens) |
-   | `jarek@homelab.local` | SSH user + mDNS hostname of the server |
+   | `jarek@lab.local` | SSH user + mDNS hostname of the server |
 
    > Keep this SSH session open — closing it kills the tunnel. Open a separate terminal for the tunnel and leave it running.
 

@@ -6,7 +6,7 @@
 
 | Server | OS | Arc Status | AMA Status |
 |---|---|---|---|
-| `homelab` (physical) | Ubuntu 26.04 LTS | ✅ Connected | ❌ Unsupported OS — blocked upstream ([#2173](https://github.com/Azure/azure-linux-extensions/issues/2173)) |
+| `lab` (physical) | Ubuntu 26.04 LTS | ✅ Connected | ❌ Unsupported OS — blocked upstream ([#2173](https://github.com/Azure/azure-linux-extensions/issues/2173)) |
 | `cloudlab` (Contabo VPS) | Ubuntu 24.04 LTS | ✅ Connected | ✅ Installed via Bicep |
 
 ## Prerequisites
@@ -44,7 +44,7 @@ The monitoring stack is defined as **Bicep + PowerShell** in [`bicep/`](../../bi
 - **Azure Monitor Agent extensions** — `AzureMonitorLinuxAgent` on each Arc server
 - **Log Analytics workspace** (`homelab-law`) — PerGB2018 tier (5 GB/month free)
 - **Data Collection Rule** (`homelab-vm-dcr`) — `\VmInsights\DetailedMetrics` meta-counter every 60s → LAW
-- **DCR Associations** — one per Arc server (`homelab`, `cloudlab`), linking each to the shared DCR
+- **DCR Associations** — one per Arc server (`lab`, `cloudlab`), linking each to the shared DCR
 - **Key Vault** (`homelab-{suffix}-kv`) — RBAC-only, stores secrets (SSH keys, etc.)
 
 ### Deploy
@@ -76,7 +76,7 @@ If charts show "No metrics detected", wait a few more minutes and refresh.
 Check that the Azure Monitor Agent extension is installed:
 
 ```bash
-ssh labadmin@cloudlab
+ssh fleetadm@cloudlab
 sudo azcmagent show
 ```
 
@@ -106,9 +106,7 @@ This confirms the server is heartbeating to Log Analytics.
 
 ## 3. Known Limitations
 
-- **Ubuntu 26.04 not supported**: AMA v1.40.3 and v1.41.0 both fail with `Unsupported operating system: ubuntu 26.04` (exit code 51). The physical homelab (Ubuntu 26.04) cannot receive the AMA extension until Microsoft adds support.
-  - Tracked: [Azure/azure-linux-extensions#2173](https://github.com/Azure/azure-linux-extensions/issues/2173)
-  - Root cause: Ubuntu 26.04 ships Python 3.14 which removed `crypt`/`imp` modules, breaking extensions that depend on older Python versions.
+- **The physical `lab` server runs Ubuntu 24.04 LTS** (post-refresh, runbook 25) — **fully supported** by the AMA extension. The earlier "Ubuntu 26.04 unsupported" blocker ([Azure/azure-linux-extensions#2173](https://github.com/Azure/azure-linux-extensions/issues/2173)) applied to the pre-refresh OS and no longer applies.
 - The `cloudlab` VPS runs Ubuntu 24.04 LTS and is **fully supported** — no issues expected.
 
 ---
@@ -128,4 +126,4 @@ This confirms the server is heartbeating to Log Analytics.
 ## Next Steps
 
 - Configure [Azure Alert rules](https://learn.microsoft.com/en-us/azure/azure-monitor/alerts/alerts-create-new-alert-rule) for disk space, high CPU, or agent heartbeat
-- Once Microsoft adds Ubuntu 26.04 support, re-attempt AMA on the physical `homelab` server
+- Once Microsoft adds Ubuntu 26.04 support, re-attempt AMA on the physical `lab` server

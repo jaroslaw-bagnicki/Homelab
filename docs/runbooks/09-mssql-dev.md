@@ -5,7 +5,7 @@
 ## Prerequisites
 
 - [ ] Docker Engine + Docker Compose installed (see [02-docker.md](02-docker.md))
-- [ ] SSH access via `ssh jarek@homelab.local`
+- [ ] SSH access via `ssh jarek@lab.local`
 - [ ] At least 2 GB free RAM (4 GB recommended for comfortable use)
 - [ ] (Optional) `jarek` user added to `himds` group for Key Vault secret retrieval (see [06-azure-arc.md](06-azure-arc.md))
 
@@ -135,7 +135,7 @@ Server=mssql,1433;Database=master;User Id=sa;Password=...;TrustServerCertificate
 Since the port is bound to `127.0.0.1` on the server, you'd need an SSH tunnel:
 
 ```bash
-ssh -L 1433:127.0.0.1:1433 jarek@homelab.local
+ssh -L 1433:127.0.0.1:1433 jarek@lab.local
 # Then connect to localhost:1433 from your laptop
 ```
 

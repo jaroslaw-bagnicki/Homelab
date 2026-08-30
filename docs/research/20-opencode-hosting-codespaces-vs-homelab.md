@@ -18,7 +18,7 @@ backup, and background automation.
 **Homelab and Cloudlab are treated interchangeably** — Cloudlab is the dev
 environment for Homelab (ADR 13), running the same Ansible-managed stack.
 Both run Ubuntu 24.04, both have Docker and Caddy. Cloudlab is the deployment
-target for the OpenCode sandbox; the Homelab M910q could serve the same role
+target for the OpenCode sandbox; the Lab M910q could serve the same role
 but is intentionally kept focused on production services. SSH access to both
 hosts is required regardless of where OpenCode runs — the agent needs to
 execute Ansible playbooks against the M910q and manage the Cloudlab VPS itself.

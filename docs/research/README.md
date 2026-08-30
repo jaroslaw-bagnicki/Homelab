@@ -2,7 +2,10 @@
 
 | # | Date | Document | Topic | Source |
 |---|------|----------|-------|--------|
+| 30 | 2026‑08‑24 | [30-mobile-internet-failover-offers.md](30-mobile-internet-failover-offers.md) | Mobile internet (5G/LTE data SIM) for the OPNsense router's failover WAN — Orange Flex additional SIM (free) as primary; Fonia 31 GB/17 zł baseline vs a2mobile/aero2/Orange/Play/T-Mobile data plans | Web research: operator sites + Antyweb + RankingOperatorzy |
 | 29 | 2026‑08‑19 | [29-wyse5070-hardware-diagnostic.md](29-wyse5070-hardware-diagnostic.md) | Wyse 5070 hardware diagnostic — pre-boot audit of the Home Assistant node: J4105, 2× 4 GB DDR4, M.2 SATA slot empty (SSD to buy), GbE + WiFi, no NVMe | SystemRescue 13.02 + hardinfo2 + issue #68 |
+| 28 | 2026‑08‑17 | [28-wyse3040-hardware-diagnostic.md](28-wyse3040-hardware-diagnostic.md) | Wyse 3040 pre-boot hardware audit — full spec inventory; the 8 GB eMMC was invisible to SystemRescue but confirmed present/usable by ePSA and the Debian installer (`mmcblk0`); ADR 24's eMMC premise holds | SystemRescue 13.02 + hardinfo2 + ePSA + BIOS walk + Debian installer + issue #65 |
+| 27 | 2026‑08‑15 | [27-zigbee-energy-monitoring.md](27-zigbee-energy-monitoring.md) | Zigbee energy monitoring for the homelab — Nous A1Z plugs (USED 4-pack), Sonoff ZBDongle-P coordinator, ZHA vs Zigbee2MQTT, independent Z2M → mqtt2prometheus → Prometheus → Grafana path, AI-agent access via MQTT ACL + Prometheus API | Gemini chat 15 |
 | 26 | 2026‑08‑14 | [26-home-assistant-thin-client.md](26-home-assistant-thin-client.md) | Home Assistant on a thin client — Wyse 5070/Futro S740 hardware, Home Assistant OS on Proxmox VE, MQTT/Zigbee2MQTT placement, RAM/SSD sizing, Ansible, Netdata+Fluent Bit | Gemini chat 14 |
 | 25 | 2026‑08‑09 | [25-edge-ingress-sbc.md](25-edge-ingress-sbc.md) | Edge ingress SBC for Cloudflare Tunnel + Caddy — PL-market hardware research: used x86 thin client vs Orange Pi Zero 3 | OpenCode thread + issue #65 |
 | 24 | 2026‑08‑09 | [24-network-topology-design.md](24-network-topology-design.md) | Homelab network topology & design — mesh inventory, flat vs VLAN comparison, TL-SG108E integration, static IP scheme | OpenCode thread + issue #55 |
@@ -18,7 +21,7 @@
 | 14 | 2026‑06‑05 | [14-backup-cost-comparison.md](14-backup-cost-comparison.md) | Restic+Blob vs Azure Backup Arc cost comparison | Research |
 | 13 | 2026‑06‑13 | [13-ansible-adoption.md](13-ansible-adoption.md) | Ansible adoption for GitOps host config, DR strategy, Ubuntu 26→24 downgrade | Gemini chat 5 |
 | 12 | 2026‑06‑01 | [12-first-boot-setup.md](12-first-boot-setup.md) | First-boot: backup, BIOS, static IP, SSH, LVM resize, hardening | Gemini chat 4 |
-| 11 | 2026‑05‑29 | [11-local-dns-caddy.md](11-local-dns-caddy.md) | Local DNS via Caddy, mDNS for `.homelab.local` resolution | Research |
+| 11 | 2026‑05‑29 | [11-local-dns-caddy.md](11-local-dns-caddy.md) | Local DNS via Caddy, mDNS for `.lab.local` resolution | Research |
 | 10 | 2026‑05‑24 | [10-backup-strategy.md](10-backup-strategy.md) | Restic backup to secondary SATA disk, retention, disaster recovery | Research |
 | 09 | 2026‑05‑24 | [09-os-decision.md](09-os-decision.md) | OS choice | Research |
 | 08 | 2026‑05‑27 | [08-llm-server-hardware.md](08-llm-server-hardware.md) | Dedicated LLM server hardware paths; Minisforum X1 Lite selected (Phase 2) | Gemini chat 3 |
@@ -49,3 +52,6 @@
 | 13 | [Gemini chat 13](https://gemini.google.com/share/6b9bfa24d3a2) | 21 |
 | 14 | [Gemini chat 14](https://gemini.google.com/share/e52d75c28976) | 26 |
 | 15 | [Gemini chat 15](https://gemini.google.com/share/daf15799b559) | 27 |
+| 16 | [Gemini chat 16](https://share.gemini.google/H4KW01K8tTUZ) | 30 |
+| 17 | [Gemini chat 17](https://share.gemini.google/lyviXlDkXm7Y) | 30 |
+| 18 | [Gemini chat 18 — Homelab LTE failover](https://share.gemini.google/gc2ZIcPHbVue) | 30 |

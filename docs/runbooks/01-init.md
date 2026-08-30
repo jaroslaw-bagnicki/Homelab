@@ -137,9 +137,9 @@ Expected: ~232 GB (the remainder is ext4 metadata + reserved blocks).
 
 ---
 
-## 4. mDNS Service (Avahi — broadcast `homelab.local`)
+## 4. mDNS Service (Avahi — broadcast `lab.local`)
 
-Avahi daemon lets other devices on the network discover the server by `homelab.local` (mDNS protocol).
+Avahi daemon lets other devices on the network discover the server by `lab.local` (mDNS protocol).
 
 ```bash
 sudo apt update && sudo apt install avahi-daemon -y
@@ -147,7 +147,7 @@ sudo systemctl enable --now avahi-daemon
 sudo systemctl status avahi-daemon
 ```
 
-> **Note**: mDNS multicast packets may not cross subnet boundaries. If your mesh router is in Router Mode (separate subnet), `homelab.local` may not resolve from devices on the main router's subnet. In that case, use `~/.ssh/config` (step 5.1) instead.
+> **Note**: mDNS multicast packets may not cross subnet boundaries. If your mesh router is in Router Mode (separate subnet), `lab.local` may not resolve from devices on the main router's subnet. In that case, use `~/.ssh/config` (step 5.1) instead.
 
 ---
 
@@ -164,9 +164,9 @@ Host homelab
     IdentityFile ~/.ssh/id_ed25519
 ```
 
-Now you can connect with just `ssh homelab`.
+Now you can connect with just `ssh lab`.
 
-> **Why direct IP?** Windows mDNS resolution for `homelab.local` can take ~5s. Using `HostName 192.168.2.200` in the SSH config bypasses resolution entirely — connections complete in ~400ms.
+> **Why direct IP?** Windows mDNS resolution for `lab.local` can take ~5s. Using `HostName 192.168.2.200` in the SSH config bypasses resolution entirely — connections complete in ~400ms.
 
 ### 5.2 Generate an SSH key pair (on laptop — if you don't already have one)
 
@@ -181,7 +181,7 @@ Accept the default location (`~/.ssh/id_ed25519`).
 **Option A** — `ssh-copy-id` (Linux/macOS):
 
 ```bash
-ssh-copy-id -i ~/.ssh/id_ed25519.pub jarek@homelab.local
+ssh-copy-id -i ~/.ssh/id_ed25519.pub jarek@lab.local
 ```
 
 **Option B** — Manual (Windows 11 — `ssh-copy-id` is not available by default):
@@ -194,7 +194,7 @@ ssh-copy-id -i ~/.ssh/id_ed25519.pub jarek@homelab.local
 
 2. SSH into the server with your password:
    ```powershell
-   ssh jarek@homelab.local
+   ssh jarek@lab.local
    ```
 |
 3. On the server, append the key to authorized keys:
@@ -209,7 +209,7 @@ ssh-copy-id -i ~/.ssh/id_ed25519.pub jarek@homelab.local
 ### 5.4 Test key-based login
 
 ```bash
-ssh jarek@homelab.local
+ssh jarek@lab.local
 ```
 
 If it logs in **without asking for a password** (or only asks for the key passphrase), it worked.
@@ -325,7 +325,7 @@ Unattended-Upgrade::Automatic-Reboot-Time "04:00";
 
 - [ ] Static IP is reachable: `ping 192.168.2.200`
 - [ ] SSH works with IP: `ssh jarek@192.168.2.200`
-- [ ] SSH works with hostname: `ssh jarek@homelab.local` or `ssh homelab`
+- [ ] SSH works with hostname: `ssh jarek@lab.local` or `ssh lab`
 - [ ] Full disk space available: `df -h /` → ~232 GB
 - [ ] mDNS/Avahi is running: `sudo systemctl status avahi-daemon` → `active (running)`
 - [ ] SSH key login works (no password prompt)
@@ -369,7 +369,7 @@ sudo systemctl restart ssh
 
 ### SSH: Client-side speed fix
 
-Windows mDNS resolution of `homelab.local` can add ~5s to every connection. Fixed via `~/.ssh/config` on the Windows client:
+Windows mDNS resolution of `lab.local` can add ~5s to every connection. Fixed via `~/.ssh/config` on the Windows client:
 
 ```text
 Host homelab
@@ -378,7 +378,7 @@ Host homelab
     IdentityFile ~/.ssh/id_ed25519
 ```
 
-Benchmark (5 runs, `ssh jarek@homelab`): **avg 666 ms** — sub-second connections.
+Benchmark (5 runs, `ssh jarek@lab`): **avg 666 ms** — sub-second connections.
 
 ### Verification commands
 

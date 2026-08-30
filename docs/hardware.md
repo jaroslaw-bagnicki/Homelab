@@ -7,18 +7,18 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 
 ## Summary
 
-| Node | Role | CPU | RAM | Storage | Network | Status |
-|---|---|---|---|---|---|---|
-| **Homelab** | main workload host | i5-7500T (4C/4T) | 16 GB DDR4 | 256 GB NVMe (+ free 2.5" bay) | 1× GbE `enp0s31f6` | ✅ |
-| **OMV NAS** | backup target / NFS | Pentium E2160 (2C/2T) | 4 GB DDR2 | Goodram 120 GB SSD + RAID1 arrays | 1× GbE BCM5722 | ✅ |
-| **Edge Ingress** | public ingress | Atom x5-Z8350 | 2 GB DDR3L | 8 GB eMMC | 1× GbE | 🔨 |
-| **Home Assistant** | smart home node | Celeron J4105 | 8 GB DDR4 (2× 4 GB) | M.2 SATA SK hynix 128 GB | 1× GbE + WiFi | 🔨 |
-| **LLM server** | local LLM inference | Ryzen 7 255 (Hawk Point) | 64–96 GB DDR5 | NVMe | 1× GbE | 🧠 (Phase 2) |
-| **Cloudlab VPS** | staging / playground | 4 vCPU | 8 GB | 75 GB NVMe | public IP | ✅ |
+| Node | Role | Device | CPU | RAM | Storage | Network | Status |
+|---|---|---|---|---|---|---|---|
+| **Lab** | main workload host | Lenovo ThinkCentre M910q Tiny | i5-7500T (4C/4T) | 16 GB DDR4 | 256 GB NVMe (+ free 2.5" bay) | 1× GbE `enp0s31f6` | ✅ |
+| **OMV NAS** | OpenMediaVault server, backup target | HP ProLiant ML110 G5 | Pentium E2160 (2C/2T) | 4 GB DDR2 | Goodram 120 GB SSD + RAID1 arrays | 1× GbE BCM5722 | ✅ |
+| **Edge Ingress** | public ingress | Dell Wyse 3040 | Atom x5-Z8350 | 2 GB DDR3L | 8 GB eMMC | 1× GbE | 🔨 |
+| **Home Assistant** | smart home node | Dell Wyse 5070 | Celeron J4105 | 8 GB DDR4 (2× 4 GB) | M.2 SATA SK hynix 128 GB | 1× GbE + WiFi | 🔨 |
+| **LLM server** | local LLM inference | Minisforum AI X1 | Ryzen 7 255 (Hawk Point) | 64–96 GB DDR5 | NVMe | 1× GbE | 🧠 (Phase 2) |
+| **Cloudlab VPS** | staging / playground | Contabo Cloud VPS 10 | 4 vCPU | 8 GB | 75 GB NVMe | public IP | ✅ |
 
 ## Compute & Storage Nodes
 
-### Homelab — Lenovo ThinkCentre M910q Tiny
+### Lab — Lenovo ThinkCentre M910q Tiny
 
 | Item | Spec |
 |---|---|
@@ -44,16 +44,6 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Management | None — no LO100/IPMI, direct console only; fan control not software-addressable |
 | Docs | [runbook 22](runbooks/22-ml110-nas-inventory.md) · [runbook 23](runbooks/23-ml110-omv-setup.md) · [research 23](research/23-ml110-nas-omv.md) · [ADR 23](decisions/23-nas-on-ml110.md) |
 
-### Cloudlab VPS — Contabo Cloud VPS 10
-
-| Item | Spec |
-|---|---|
-| Compute | 4 vCPU, 8 GB RAM |
-| Storage | 75 GB NVMe |
-| OS | Ubuntu 24.04 LTS (pre-installed by Contabo) |
-| Role | Ansible staging/playground + hosted workloads (Portainer, Caddy, cloudflared, OpenCode, Zot) |
-| Docs | [runbook 10](runbooks/10-vps-playground.md) · [ADR 13](decisions/13-cloudlab-staging.md) |
-
 ### Edge Ingress — Dell Wyse 3040
 
 | Item | Spec |
@@ -61,9 +51,10 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | CPU | Intel Atom x5-Z8350 |
 | RAM | 2 GB DDR3L |
 | Storage | 8 GB eMMC |
-| Network | 1× GbE · fanless · ~2–3 W idle |
-| Role | Dedicated public ingress — bare-metal `cloudflared` + Caddy (ADR 24); OS trial Debian vs Alpine |
-| Acquisition | 2026-08-13 — 89,00 PLN device + 35,94 PLN charger = 124,94 PLN (~29 EUR) |
+| Firmware | BIOS Dell 1.2.3 (2017-11-07) · SKU 07C1 · serial `8YW28L2` |
+| Network | 1× GbE Realtek RTL8111/8168 (`enp1s0`, MAC `8c:ec:4b:6d:6f:4f`) |
+| Cooling | Fanless · ~2–3 W idle |
+| Role | Dedicated public ingress — bare-metal `cloudflared` + Caddy (ADR 24) |
 | Docs | [runbook 24](runbooks/24-edge-appliance.md) · [ADR 24](decisions/24-edge-ingress-appliance.md) · [research 25](research/25-edge-ingress-sbc.md) · [idea 04](ideas/04-edge-device-tunnel-caddy.md) |
 
 ### Home Assistant — Dell Wyse 5070
@@ -89,6 +80,16 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Role | Local LLM inference (Bielik, Llama-3 8B etc.) via UMA frame buffer; OCuLink future eGPU |
 | Docs | [research 08](research/08-llm-server-hardware.md) |
 
+### Cloudlab VPS — Contabo Cloud VPS 10
+
+| Item | Spec |
+|---|---|
+| Compute | 4 vCPU, 8 GB RAM |
+| Storage | 75 GB NVMe |
+| OS | Ubuntu 24.04 LTS (pre-installed by Contabo) |
+| Role | Ansible staging/playground + hosted workloads (Portainer, Caddy, cloudflared, OpenCode, Zot) |
+| Docs | [runbook 10](runbooks/10-vps-playground.md) · [ADR 13](decisions/13-cloudlab-staging.md) |
+
 ## Network Appliances
 
 ### TP-Link TL-SG108E switch
@@ -98,7 +99,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Ports | 8× Gigabit Ethernet (L2, utility-managed) |
 | Hardware | Rev V1 — web UI non-functional (HTTP 501), managed via **Easy Smart Configuration Utility** (Windows) |
 | IP | `192.168.2.230` (static) |
-| Role | Access switch — turns the single office drop into wired ports for Homelab, OMV NAS, Edge Ingress, work dock |
+| Role | Access switch — turns the single office drop into wired ports for Lab, OMV NAS, Edge Ingress, work dock |
 | Docs | [runbook 21](runbooks/21-tl-sg108e-switch.md) · [research 24](research/24-network-topology-design.md) |
 
 ### Tenda Nova mesh
@@ -116,3 +117,16 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 |---|---|
 | Network | `192.168.1.0/24` (WAN side of the mesh) |
 | Role | ISP edge; home connection is **CGNAT** — no public inbound, remote access via Cloudflare Tunnel (ADR 08) |
+
+### Huawei B593u-12 LTE modem — Speedport LTE II (backup WAN)
+
+| Item | Spec |
+|---|---|
+| Model | Huawei B593u-12 (Telekom Speedport LTE II) · LTE **Cat. 3** · material `40264880` |
+| Serial | `N4Y5TD9331405207` |
+| Network | 4× 100 Mbps Ethernet (Fast Ethernet) + Wi-Fi; **Orange APN** added manually (legacy T-Mobile APN was the default) |
+| Speed | ~3–8 Mbps down / ~4–7 Mbps up, ping ~25–36 ms (measured 2026-08-26) |
+| Stability | ⚠️ Unstable — frequently fails to attach to the BTS; power cycle recovers |
+| Data plan | Orange Flex additional SIM (free) — internet-only, shares the plan data pool |
+| Role | Backup WAN (LTE failover) for the homelab edge — fallback until the ZTE WF830 ODU is found (idea 08) |
+| Docs | [idea 08](ideas/08-lte-wan-failover.md) · [research 30](research/30-mobile-internet-failover-offers.md) |
