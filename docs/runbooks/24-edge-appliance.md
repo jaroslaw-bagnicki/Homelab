@@ -150,10 +150,9 @@ ping -c1 192.168.2.1          # gateway reachable
 ### 2.2 SSH for Ansible — done (2026-08-23)
 
 Mirroring [runbook 25](25-m910q-os-refresh.md) §2: create the `fleetadm` agent account (sudo,
-agent-account pattern) and install the **fleet public key** (ADR 28) so Ansible can connect —
-mirror [runbook 01](01-init.md) §2.
+agent-account pattern) so Ansible can connect — mirror [runbook 01](01-init.md) §2.
 
-Executed on the box (2026-08-23):
+Executed on the box (2026-08-23) — the **control-node key** was installed at the time:
 
 - `openssh-server` was already present (tasksel "SSH server" during install).
 - **Deviation — `sudo` installed**: the Debian Expert install (tasksel) did **not** ship

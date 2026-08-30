@@ -18,7 +18,7 @@ The refresh re-aligns the box with ADR 05 and unblocks that track.
 - **Reinstall** to Ubuntu Server 24.04 LTS on the 256 GB NVMe; static IP `192.168.2.200` (switch port 2, runbook 21).
 - **Ansible-provisioned base**: `common` → `security` → `docker_host` → `azure_arc` via `ansible/playbooks/playbook-lab.yml`.
 - **DNS / Caddy / cloudflared leave the M910q** (Option B): the edge appliance (ADR 24 / [#65](https://github.com/jaroslaw-bagnicki/Homelab/issues/65)) takes over `*.home` DNS, internal `.home` Caddy, and the external tunnel. The refreshed M910q is **compute-only** — dnsmasq and `homelab-tunnel` are **not** reinstalled. Accept a temporary `.home` + external-access gap until the edge box is live.
-- **Operator account — `fleetadm`.** All hosts (cloudlab + homelab + edge) use the generic `fleetadm` account: key-only SSH (full pattern in the [ansible README](../../ansible/README.md)).
+- **Operator account — `fleetadm`.** All hosts (cloudlab + lab + edge) use the generic `fleetadm` account: key-only SSH (full pattern in the [ansible README](../../ansible/README.md)).
 - **Breaking-glass account — your personal user.** Created during install (password in **Keeper**); it's the emergency **console** credential — SSH password login is disabled after §2 — while `fleetadm` stays the key-only SSH automation account.
 
 > **Execution note.** Run this runbook **interactively from the repo's dev container**
@@ -152,7 +152,7 @@ input — static IP `192.168.2.200`, gateway `192.168.2.1`, DNS `1.1.1.1, 8.8.8.
 root breaking-glass password, OpenSSH — making the install fully hands-off; §2–§4
 then proceed unchanged.
 
-## 2. Bootstrap — fleetadm Agent Account (manual, on the homelab)
+## 2. Bootstrap — fleetadm Agent Account (manual, on the lab)
 
 Run these commands **on the M910q** as your personal breaking-glass user (console, or
 over SSH while password login is still enabled). They create the key-only `fleetadm`
@@ -229,7 +229,7 @@ status.
 
 ```sh
 sudo azcmagent show
-# Expected: Status: Connected, machine name: homelab, resource group: homelab-rg
+# Expected: Status: Connected, machine name: lab, resource group: homelab-rg
 ```
 
 **Verify in the portal:** Azure Arc → Servers → `lab` shows **Connected** (OS `Ubuntu

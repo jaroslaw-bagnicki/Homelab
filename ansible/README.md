@@ -2,7 +2,7 @@
 
 Configuration management for the Homelab Ubuntu hosts — the `cloudlab` Contabo VPS and the physical `lab` M910q server. Ansible handles **pre-Arc** host provisioning (OS hardening, base tools, Docker, Arc agent install), while Azure Arc + Bicep handle **post-Arc** cloud management (monitoring, extensions, policies).
 
-> **Control node per host.** `cloudlab` is managed from this dev container (see the `fleet-connect` skill); `lab` lives on the home LAN and is only reachable from a workstation on `192.168.2.0/24` — run the homelab playbook there (runbook 25).
+> **Control node per host.** `cloudlab` is managed from this dev container (see the `fleet-connect` skill); `lab` lives on the home LAN and is only reachable from a workstation on `192.168.2.0/24` — run the `playbook-lab.yml` playbook there (runbook 25).
 
 ## Quickstart
 
