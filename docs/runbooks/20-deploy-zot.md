@@ -9,7 +9,7 @@
 - [ ] Runbooks [10](10-vps-playground.md), [16](16-docker-services-ansible-role.md) completed — cloudlab has Docker, the base Compose stack (Caddy, cloudflared), and `homelab_net`.
 - [ ] Ansible collections installed: `community.docker`, `community.general`, `azure.azcollection` (`ansible-galaxy collection install -r ansible/requirements.yml`).
 - [ ] `homelab-bysxdb-kv` Key Vault accessible from the Ansible controller identity.
-- [ ] SSH access to `cloudlab` via `ansible_user: fleetadm` (see [ansible-vps-connect skill](../../.opencode/skills/ansible-vps-connect)).
+- [ ] SSH access to `cloudlab` via `ansible_user: fleetadm` (see [ansible-fleet-connect skill](../../.opencode/skills/ansible-fleet-connect)).
 - [ ] Cloudflare Tunnel routing to `http://caddy:80` configured (see [ADR 19](../decisions/19-cloudflare-tunnel-https-origin.md)).
 
 ## 1. Provision secrets
