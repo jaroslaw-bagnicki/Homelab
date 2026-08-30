@@ -44,7 +44,7 @@ Currently: [OpenCode](workloads/opencode/README.md) — per-project OpenCode ser
 
 ### `common`
 
-Sets the hostname to inventory name, configures `Etc/UTC` timezone, ensures `systemd-timesyncd` is running, optionally installs/enables Avahi mDNS (`.local`) when `common_enable_avahi: true`, and deploys the **Ansible fleet public key** (`files/ssh/ansible-fleet.pub`) to `labadmin`'s `authorized_keys` (ADR 28).
+Sets the hostname to inventory name, configures `Etc/UTC` timezone, ensures `systemd-timesyncd` is running, optionally installs/enables Avahi mDNS (`.local`) when `common_enable_avahi: true`, and deploys the **fleet public key** (`files/ssh/ansible-fleet.pub`) to `labadmin`'s `authorized_keys` with restrictive `key_options` (ADR 28) — used by Ansible and AI agent tooling.
 
 ### `security`
 
@@ -89,7 +89,7 @@ Both hosts use the generic **`labadmin`** operator account (key-only SSH, no pas
 
 `labadmin` is a dedicated, non-interactive Ansible agent account, not a human login:
 
-- **Key-only login** — SSH public key, no password. The **fleet key** (`ansible-fleet@homelab`, ADR 28) is deployed to every host by the `common` role; its private key lives in `homelab-bysxdb-kv/ansible-fleet-key-priv` and is loaded into `ssh-agent` by `profile.ps1` each session.
+- **Key-only login** — SSH public key, no password. The **fleet key** (`ansible-fleet@homelab`, ADR 28) is deployed to every host by the `common` role (restrictive `key_options`: no port/agent forwarding, no X11); its private key lives in `homelab-bysxdb-kv/ansible-fleet-key-priv` and is loaded into `ssh-agent` by `profile.ps1` each session — it is also the **agent-access path** for AI tooling (OpenCode, Copilot) in the dev container.
 - **`NOPASSWD` sudo** (or a scoped sudoers rule) — required for Ansible `become: true`.
 - **`docker_users: []` on both hosts** — deliberately *not* in the `docker` group. The `docker` group is passwordless root-equivalent via the daemon socket, and Ansible reaches Docker through `become` anyway; a compromised agent key must not also grant instant root. Interactive `docker` commands on a host are run via `sudo`.
 
