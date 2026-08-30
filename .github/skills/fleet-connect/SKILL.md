@@ -68,14 +68,14 @@ ssh-add -l
 
 | Node | IP | Reachable from | Playbook |
 |---|---|---|---|
-| `cloudlab` | `173.249.27.13` | this dev container | `ansible/playbooks/playbook.yml` |
+| `cloudlab` | `173.249.27.13` | the Homelab dev container | `ansible/playbooks/playbook.yml` |
 | `lab` | `192.168.2.200` | LAN workstation (`192.168.2.0/24`) | `ansible/playbooks/playbook-lab.yml` |
+| `omv` | `192.168.2.210` | LAN workstation (`192.168.2.0/24`) | — (not Ansible-managed yet) |
 | `edge` | `192.168.2.240` | LAN workstation (`192.168.2.0/24`) | `ansible/playbooks/playbook-edge.yml` |
-| `omv-nas` | `192.168.2.210` | LAN workstation (`192.168.2.0/24`) | — (not Ansible-managed yet) |
 
-`lab`, `edge`, and `omv-nas` are LAN-only — connect to them (SSH or playbooks)
+`lab`, `edge`, and `omv` are LAN-only — connect to them (SSH or playbooks)
 from a machine on `192.168.2.0/24` with the fleet key loaded in its agent (see
-runbooks 24/25). `omv-nas` (HP ML110, ADR 23) currently uses `jarek@` for SSH
+runbooks 24/25). `omv` (HP ML110, ADR 23) currently uses `jarek@` for SSH
 (runbook 26) — the `fleetadm`/fleet-key roll-out to OMV is pending.
 
 ## Connecting to a Node
