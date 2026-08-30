@@ -10,7 +10,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Node | Role | IP | CPU | RAM | Storage | Network | Status |
 |---|---|---|---|---|---|---|---|
 | **Lab** | main workload host | `192.168.2.200` | i5-7500T (4C/4T) | 16 GB DDR4 | 256 GB NVMe (+ free 2.5" bay) | 1× GbE `enp0s31f6` | ✅ |
-| **NAS** | OpenMediaVault server, backup target | `192.168.2.210` | Pentium E2160 (2C/2T) | 4 GB DDR2 | Goodram 120 GB SSD + RAID1 arrays | 1× GbE BCM5722 | ✅ |
+| **OMV NAS** | OpenMediaVault server, backup target | `192.168.2.210` | Pentium E2160 (2C/2T) | 4 GB DDR2 | Goodram 120 GB SSD + RAID1 arrays | 1× GbE BCM5722 | ✅ |
 | **Edge Ingress** | public ingress | `192.168.2.240` | Atom x5-Z8350 | 2 GB DDR3L | 8 GB eMMC | 1× GbE | 🔨 |
 | **Home Assistant** | smart home node | TBD | J4105 (planned) | 8 GB DDR4 | M.2 SATA SSD 64–256 GB | 1× GbE | 📋 |
 | **LLM server** | local LLM inference | TBD | Ryzen 7 255 (Hawk Point) | 64–96 GB DDR5 | NVMe | 1× GbE | 🧠 (Phase 2) |
@@ -30,7 +30,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Role | Main workload host — OS refresh to Ubuntu 24.04 LTS + Arc enrolment in progress (runbook 25), then k3s (ADR 22) |
 | Docs | [ADR 01](decisions/01-hardware-selection-m910q.md) · [runbook 25](runbooks/25-m910q-os-refresh.md) · [overview](overview.md) |
 
-### NAS — HP ProLiant ML110 G5
+### OMV NAS — HP ProLiant ML110 G5
 
 | Item | Spec |
 |---|---|
