@@ -8,7 +8,7 @@
 
 - [ ] An Azure subscription with Contributor or Owner access
 - [ ] Cloudflare Tunnel deployed (optional — only needed if you want to use Portal from outside LAN)
-- [ ] SSH access via `ssh jarek@homelab.local`
+- [ ] SSH access via `ssh jarek@lab.local`
 
 > **Subscription ID**: `a8a36bc1-79a7-49fe-9faa-92220103c66f`
 
@@ -35,7 +35,7 @@ The Arc agent needs an identity to authenticate with Azure. Do **not** use your 
 SSH into the server and generate a certificate with OpenSSL:
 
 ```bash
-ssh jarek@homelab.local
+ssh jarek@lab.local
 
 # Generate a private key and self-signed certificate
 openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
@@ -64,7 +64,7 @@ Copy the public certificate to your laptop so Azure PowerShell can upload it:
 
 ```powershell
 # From your laptop PowerShell
-scp jarek@homelab.local:~/homelab-arc-agent.crt .
+scp jarek@lab.local:~/homelab-arc-agent.crt .
 ```
 
 ### 2.2 Assign both required roles
@@ -121,7 +121,7 @@ In the Azure Portal:
 The Portal script uses `--service-principal-secret`, but we're using **certificate auth**. So only use it for the installer download, then connect manually. Copy it to the server:
 
 ```bash
-scp OnboardingScript.sh jarek@homelab.local:~/
+scp OnboardingScript.sh jarek@lab.local:~/
 ```
 
 ---
@@ -133,7 +133,7 @@ scp OnboardingScript.sh jarek@homelab.local:~/
 Run the Portal script — it downloads and installs the agent:
 
 ```bash
-ssh jarek@homelab.local
+ssh jarek@lab.local
 sudo bash ~/OnboardingScript.sh
 ```
 

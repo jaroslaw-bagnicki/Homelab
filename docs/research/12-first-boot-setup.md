@@ -128,7 +128,7 @@ Step-by-step walkthrough of the homelab's first-boot phase: Windows backup, Ubun
 
 ### 6. Hostname Resolution (mDNS / Avahi)
 
-- **Problem**: `ssh jarek@homelab` timed out — no DNS resolution for the hostname.
+- **Problem**: `ssh jarek@lab` timed out — no DNS resolution for the hostname.
 - **Solution 1** — `~/.ssh/config` (recommended):
   ```
   Host homelab
@@ -136,7 +136,7 @@ Step-by-step walkthrough of the homelab's first-boot phase: Windows backup, Ubun
       User jarek
       IdentityFile ~/.ssh/id_ed25519
   ```
-  Now `ssh homelab` works directly.
+  Now `ssh lab` works directly.
 
 - **Solution 2** — Local `/etc/hosts` entry:
   ```
@@ -150,7 +150,7 @@ Step-by-step walkthrough of the homelab's first-boot phase: Windows backup, Ubun
   sudo apt install avahi-daemon
   sudo systemctl status avahi-daemon
   ```
-  Then try `ssh jarek@homelab.local`.
+  Then try `ssh jarek@lab.local`.
   > **Mesh caveat**: mDNS multicast packets may not cross subnet boundaries created by a mesh router in Router Mode.
 
 ---

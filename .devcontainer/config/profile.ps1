@@ -42,11 +42,13 @@ if (-not (Get-AzContext)) {
   Write-Host ":: Reusing existing Azure context: $((Get-AzContext).Account.Id)" -ForegroundColor DarkGray
 }
 
-# Load VPS key from Key Vault
+# Load fleet + VPS keys from Key Vault (only when the agent is empty)
 if ($env:SSH_AUTH_SOCK -and (Get-AzContext -ErrorAction SilentlyContinue)) {
   $loadedKeys = ssh-add -l 2>$null
   if ($LASTEXITCODE -ne 0 -or $loadedKeys -match 'The agent has no identities') {
-    Write-Host ":: Loading VPS SSH key from Key Vault..." -ForegroundColor Yellow
-    $null = Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name cloudlab-vps-key-priv -AsPlainText 2>$null | ssh-add - 2>$null
+    foreach ($secret in 'fleetadm-key-priv', 'cloudlab-vps-key-priv') {
+      Write-Host ":: Loading $secret from Key Vault..." -ForegroundColor Yellow
+      $null = Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name $secret -AsPlainText 2>$null | ssh-add - 2>$null
+    }
   }
 }

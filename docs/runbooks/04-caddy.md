@@ -6,7 +6,7 @@
 
 - [ ] DNSMasq deployed and resolving `*.home` (see [03-dns.md](03-dns.md))
 - [ ] Docker Engine installed (see [02-docker.md](02-docker.md))
-- [ ] SSH access via `ssh jarek@homelab.local`
+- [ ] SSH access via `ssh jarek@lab.local`
 
 ---
 
@@ -118,7 +118,7 @@ Caddy's internal CA issues certificates valid for 7 days (auto-renewed). To avoi
 ### 5.1 Fetch the root certificate
 
 ```bash
-ssh jarek@homelab.local "docker exec caddy cat /data/caddy/pki/authorities/local/root.crt" > caddy-root.crt
+ssh jarek@lab.local "docker exec caddy cat /data/caddy/pki/authorities/local/root.crt" > caddy-root.crt
 ```
 
 ### 5.2 Install on Windows

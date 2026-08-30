@@ -254,7 +254,7 @@ The key is a valid unencrypted `openssh-key-v1` ed25519 key — Alpine's OpenSSH
 import paramiko
 c = paramiko.SSHClient()
 c.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-c.connect(HOST, username="labadmin", key_filename="/tmp/cloudlab-key", timeout=30)
+c.connect(HOST, username="fleetadm", key_filename="/tmp/cloudlab-key", timeout=30)
 i, o, e = c.exec_command("docker version --format '{{.Server.Version}}'")
 print(o.read().decode())
 ```

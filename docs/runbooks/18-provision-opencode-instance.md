@@ -9,7 +9,7 @@
 - [ ] At least one OpenCode instance already deployed (see [runbook 17](17-deploy-opencode-on-cloudlab.md))
 - [ ] `homelab-bysxdb-kv` Key Vault accessible from the Ansible controller with write access (Key Vault Secrets Officer RBAC role)
 - [ ] Ansible collections installed: `community.docker`, `azure.azcollection`
-- [ ] SSH access to `cloudlab` via `ansible_user: labadmin`
+- [ ] SSH access to `cloudlab` via `ansible_user: fleetadm`
 - [ ] A dedicated inference provider API key for the new instance (see [Choosing a provider](#4-choose-a-model-provider))
 
 ---
@@ -93,7 +93,7 @@ No re-authentication is needed after a restart.
 
 **Inference provider API keys are stored as plaintext** in the bind-mounted `auth.json` on the Cloudlab host filesystem. This is a known concern:
 
-- Anyone with `root` or `labadmin` access to Cloudlab can read all provider API keys
+- Anyone with `root` or `fleetadm` access to Cloudlab can read all provider API keys
 - Docker volume encryption is not currently in place
 
 Future investigation: encrypting selected Docker volumes at rest (e.g., via LUKS on a dedicated mountpoint, or filesystem-level encryption scoped to `/var/lib/opencode/instances/*/data/`). This is tracked in [issue #37](https://github.com/jaroslaw-bagnicki/Homelab/issues/37) as an open follow-up.

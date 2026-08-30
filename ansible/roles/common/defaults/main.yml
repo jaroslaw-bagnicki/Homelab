@@ -1,2 +1,4 @@
 ---
 common_enable_avahi: false
+# ssh authorized_keys restrictions for the fleet key — automation only needs exec + sftp/scp
+common_ssh_fleet_key_options: "no-port-forwarding,no-agent-forwarding,no-X11-forwarding"

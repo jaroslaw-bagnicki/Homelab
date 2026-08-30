@@ -12,7 +12,7 @@
 
 - [ ] Docker Engine + Docker Compose installed (see [02-docker.md](02-docker.md))
 - [ ] Services (dnsmasq, Caddy) deployed in a shared `docker-compose.yml` under `/opt/docker/` (see [03-dns.md](03-dns.md), [04-caddy.md](04-caddy.md))
-- [ ] SSH access via `ssh jarek@homelab.local`
+- [ ] SSH access via `ssh jarek@lab.local`
 - [ ] A domain name delegated to Cloudflare DNS
 
 ---

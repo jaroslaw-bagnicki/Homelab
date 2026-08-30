@@ -7,7 +7,7 @@
 
 ## Context
 
-The homelab server (Lenovo ThinkCentre M910q Tiny, Ubuntu 24.04 LTS) was initially set up via imperative shell commands captured in Markdown runbooks (`runbooks/01-init.md`, `runbooks/02-docker.md`, etc.). This approach has several shortcomings:
+The lab server (Lenovo ThinkCentre M910q Tiny, Ubuntu 24.04 LTS) was initially set up via imperative shell commands captured in Markdown runbooks (`runbooks/01-init.md`, `runbooks/02-docker.md`, etc.). This approach has several shortcomings:
 
 - **No idempotency** — re-running a runbook after partial failure requires manual recovery
 - **No drift detection** — there is no way to verify the host still matches the documented state after ad-hoc fixes
@@ -18,7 +18,7 @@ The research thread (see `research/13-ansible-adoption.md`) evaluated several co
 
 ## Decision
 
-**Adopt Ansible** as the declarative configuration management tool for the homelab host. The Ansible playbook(s) will live in the existing Homelab Git repository, replacing the imperative runbooks as the source of truth for host state.
+**Adopt Ansible** as the declarative configuration management tool for the lab host. The Ansible playbook(s) will live in the existing Homelab Git repository, replacing the imperative runbooks as the source of truth for host state.
 
 Key elements of the approach:
 

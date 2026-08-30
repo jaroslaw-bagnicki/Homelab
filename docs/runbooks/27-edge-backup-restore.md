@@ -2,6 +2,9 @@
 
 > Full-system image backup/restore of the edge appliance's eMMC to the ML110 NAS.
 > Baseline image taken **2026-08-22** (issue [#79](https://github.com/jaroslaw-bagnicki/Homelab/issues/79)).
+> **Current backup (2026-08-30)**: bundle `\\omv\edge\wyse3040-20260830-125805\`
+> (= `Z:\edge\wyse3040-20260830-125805\`), run logs in `\\omv\edge\wyse3040-20260830-125805\logs\`
+> (= `Z:\edge\wyse3040-20260830-125805\logs\`).
 > **First choice: Clonezilla** (`ocs-sr savedisk`/`restoredisk`) — whole-disk image incl. GPT
 > partition table + all partitions, only used data, full wipe→restore→boot cycle validated on
 > the 3040 (2026-08-24).
@@ -42,6 +45,26 @@
 > [research 28](../research/28-wyse3040-hardware-diagnostic.md) — they apply to any non-Debian
 > live tooling on this box.
 
+## Access the pendrive (Ventoy mapper)
+
+The YUMI/Ventoy stick boots the live ISO and also carries the backup checklist
+(`clonezilla-usage.txt`). In the live session the stick is **not auto-mounted**, and because
+it's a Ventoy stick its data partition is claimed by the device-mapper — mounting the raw
+`/dev/sda2` fails with **"busy"** (and 32 M `sda2` is the tiny VTOYEFI partition anyway, not
+your files). Mount the mapper node instead:
+
+```sh
+lsblk                       # data partition = the big sda1 (57.7 G); sda2 (32 M) is VTOYEFI, NOT it
+ls -l /dev/mapper/          # sda1 -> ../dm-X (data), ventoy -> ../dm-X (vtoys, mounted at /cdrom)
+mkdir -p /mnt/usb
+mount /dev/dm-1 /mnt/usb    # the dm node that maps the DATA partition — confirm the number first
+ls /mnt/usb                 # → YUMI/Data/Wyse 3040/clonezilla-usage.txt
+```
+
+> The `dm-*` number is **session-dependent** (the data partition was `dm-1` on 2026-08-30) —
+> always confirm it with `lsblk` / `ls -l /dev/mapper/` first. When the named node exists,
+> prefer it: `mount /dev/mapper/sda1 /mnt/usb`.
+
 ## Which tool — comparison (measured on the 3040, 2026-08-24)
 
 | | Clonezilla `savedisk` | `dd` + `gzip` |
@@ -77,15 +100,19 @@ mkdir -p /home/partimag /var/log/clonezilla
 mount -t cifs //192.168.2.210/shared/edge /home/partimag -o username=rescuezilla,vers=3.1.1,seal
 
 # 3b. Persist Clonezilla logs on the NAS — they default to RAM-only
-#    /var/log/clonezilla and are lost on reboot. Bind-mount a logs dir.
-mkdir -p /home/partimag/clonezilla-logs
-mount --bind /home/partimag/clonezilla-logs /var/log/clonezilla
+#    /var/log/clonezilla and are lost on reboot. Pre-create <bundle>/logs and
+#    bind-mount it, so logs stream straight into the right location.
+TS=$(date +%Y%m%d-%H%M%S)
+mkdir -p /home/partimag/wyse3040-$TS/logs
+mount --bind /home/partimag/wyse3040-$TS/logs /var/log/clonezilla
 
 # 4. Whole-disk image, timestamped (saves GPT partition table + both partitions,
 #    only used data). Image lands at /home/partimag/wyse3040-<ts>/
 #    (= shared/edge/wyse3040-<ts>/ on the NAS).
 #    (no -i 0: it is ignored in this build — the image check runs anyway)
-ocs-sr -q2 -c -z1p savedisk wyse3040-$(date +%Y%m%d-%H%M%S) mmcblk0
+ocs-sr -q2 -c -z1p savedisk wyse3040-$TS mmcblk0
+
+# 5. (done — logs already landed at \\omv\edge\wyse3040-20260830-125805\logs\ during the run)
 ```
 
 **Expected**: ~40 s; image ≈ 456 MB for ~1.3 GB used. Output shows both partitions cloned
@@ -111,10 +138,10 @@ lsblk                    # note the device name
 mkdir -p /home/partimag /var/log/clonezilla
 mount -t cifs //192.168.2.210/shared/edge /home/partimag -o username=rescuezilla,vers=3.1.1,seal
 
-# 2b. Persist Clonezilla logs on the NAS (RAM-only /var/log/clonezilla is lost
-#    on reboot). Bind-mount a logs dir.
-mkdir -p /home/partimag/clonezilla-logs
-mount --bind /home/partimag/clonezilla-logs /var/log/clonezilla
+# 2b. Persist Clonezilla logs on the NAS — bind into the image bundle's logs/
+#    dir (the backup-time logs live there too; restore logs append alongside).
+mkdir -p /home/partimag/wyse3040-<timestamp>/logs
+mount --bind /home/partimag/wyse3040-<timestamp>/logs /var/log/clonezilla
 
 # 3. Restore the whole disk (partition table + partitions, only used blocks).
 #    No manual wipe needed — Clonezilla cleans the destination first (zeroes
@@ -223,11 +250,15 @@ gzip -l /mnt/backup/edge/wyse3040_<timestamp>.img.gz   # shows uncompressed size
 
 | File | Purpose |
 |---|---|
-| `wyse3040-<timestamp>/` | **Clonezilla image dir** — `mmcblk0p1.vfat-ptcl-img.gz`, `mmcblk0p2.ext4-ptcl-img.gz`, GPT dumps, `blkid.list`, partition-table copies |
-| `clonezilla-logs/` | Clonezilla run logs persisted from `/var/log/clonezilla` (clonezilla.log, partclone*, img-chk) |
+| `wyse3040-<timestamp>/` | **Clonezilla image bundle** — `mmcblk0p1.vfat-ptcl-img.gz`, `mmcblk0p2.ext4-ptcl-img.gz`, GPT dumps, `blkid.list`, partition-table copies (prefix `mmcblk0`/`mmcblk1` varies per session) |
+| `wyse3040-<timestamp>/logs/` | Clonezilla run logs for that backup, inside the bundle (clonezilla.log, partclone*, img-chk) |
 | `wyse3040_<timestamp>.img.gz` | `dd` image (bit-by-bit, compressed) |
 | `wyse3040_<timestamp>.img.log` | `dd` output captured at backup time |
 | `edge-backup.sh` | Reusable backup snippet (mount + dd + timestamp) |
+
+> Current backup on the NAS (2026-08-30): `\\omv\edge\wyse3040-20260830-125805\` —
+> image bundle, with run logs inside at `\\omv\edge\wyse3040-20260830-125805\logs\`
+> (same as `Z:\edge\wyse3040-20260830-125805\` and `Z:\edge\wyse3040-20260830-125805\logs\`).
 
 ## References
 

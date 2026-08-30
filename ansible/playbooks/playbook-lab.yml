@@ -1,6 +1,6 @@
 ---
-- name: Configure homelab M910q base
-  hosts: homelab
+- name: Configure lab M910q base
+  hosts: lab
   become: true
   pre_tasks:
     - name: Extend LVM root volume to full disk

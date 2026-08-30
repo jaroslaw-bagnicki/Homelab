@@ -4,7 +4,7 @@
 
 ## Prerequisites
 
-- [ ] SSH access via `ssh jarek@homelab`
+- [ ] SSH access via `ssh jarek@lab`
 - [ ] Server has `curl` and `bzip2`: `sudo apt install -y curl bzip2`
 - [ ] Azure CLI installed on the server (see [02-docker.md](02-docker.md) for general server access)
 - [ ] Azure subscription + `Az` PowerShell module installed on your local machine
@@ -73,7 +73,7 @@ New-AzRoleAssignment `
 SSH into the server and download the latest release:
 
 ```bash
-ssh jarek@homelab
+ssh jarek@lab
 
 curl -LO https://github.com/restic/restic/releases/download/v0.18.1/restic_0.18.1_linux_amd64.bz2
 bunzip2 restic_0.18.1_linux_amd64.bz2

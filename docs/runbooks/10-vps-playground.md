@@ -43,26 +43,26 @@ All subsequent steps use `cloudlab` instead of the raw IP.
 
 ---
 
-## 3. Create labadmin User (on VPS as root)
+## 3. Create fleetadm User (on VPS as root)
 
 ```bash
-adduser labadmin --disabled-password
-usermod -aG sudo labadmin
-echo "labadmin ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/labadmin
-chmod 440 /etc/sudoers.d/labadmin
-passwd --lock labadmin
+adduser fleetadm --disabled-password
+usermod -aG sudo fleetadm
+echo "fleetadm ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/fleetadm
+chmod 440 /etc/sudoers.d/fleetadm
+passwd --lock fleetadm
 ```
 
 ## 4. Upload SSH Key (from your laptop)
 
 ```powershell
-ssh root@cloudlab "mkdir -p ~labadmin/.ssh && chown labadmin:labadmin ~labadmin/.ssh && chmod 700 ~labadmin/.ssh"
-type $env:USERPROFILE\.ssh\id_ed25519.pub | ssh root@cloudlab "cat >> ~labadmin/.ssh/authorized_keys && chown labadmin:labadmin ~labadmin/.ssh/authorized_keys && chmod 600 ~labadmin/.ssh/authorized_keys"
+ssh root@cloudlab "mkdir -p ~fleetadm/.ssh && chown fleetadm:fleetadm ~fleetadm/.ssh && chmod 700 ~fleetadm/.ssh"
+type $env:USERPROFILE\.ssh\id_ed25519.pub | ssh root@cloudlab "cat >> ~fleetadm/.ssh/authorized_keys && chown fleetadm:fleetadm ~fleetadm/.ssh/authorized_keys && chmod 600 ~fleetadm/.ssh/authorized_keys"
 ```
 
 Verify:
 ```powershell
-ssh labadmin@cloudlab
+ssh fleetadm@cloudlab
 sudo whoami   # should print "root"
 ```
 
@@ -76,7 +76,7 @@ Generate the key pair and store the private key in Key Vault:
 Push the public key from the Azure resource to the VPS:
 ```powershell
 $sshKey = Get-AzSshKey -ResourceGroupName homelab-rg -Name cloudlab-vps-key
-ssh labadmin@cloudlab "echo '$($sshKey.publicKey)' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
+ssh fleetadm@cloudlab "echo '$($sshKey.publicKey)' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
 ```
 
 ---
