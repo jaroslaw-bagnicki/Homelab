@@ -1,12 +1,14 @@
 ---
-name: ansible-fleet-connect
+name: fleet-connect
 description: >-
-  Connecting to any Homelab fleet node (cloudlab VPS, lab M910q, edge Wyse 3040)
-  from the right control node to run Ansible playbooks. Covers the fleet SSH key
-  retrieval from Azure Key Vault, ssh-agent setup, per-host reachability, known
-  connectivity pitfalls, and verification steps.
-  USE FOR: running ansible-playbook against cloudlab/lab/edge, loading the fleet
-  SSH key, troubleshooting SSH to a fleet node, Ansible deployment to a fleet node.
+  SSH connectivity to any Homelab fleet node (cloudlab VPS, lab M910q, edge
+  Wyse 3040) from the right control node — for Ansible playbooks, ad-hoc shell
+  access, file transfer, and AI agents (opencode, Copilot, …) that need to reach
+  a node. Covers the fleet SSH key retrieval from Azure Key Vault, ssh-agent
+  setup, per-host reachability, known connectivity pitfalls, and verification.
+  USE FOR: running ansible-playbook against cloudlab/lab/edge, SSH/SCP to a
+  fleet node, loading the fleet SSH key, AI agent SSH access to a node,
+  troubleshooting SSH to a fleet node.
   DO NOT USE FOR: provisioning the VPS (use cntb CLI), modifying the VPS in the
   Contabo portal, setting up the physical nodes (use runbooks 24/25).
 when:
@@ -14,24 +16,33 @@ when:
   - "ansible-playbook lab"
   - "ansible-playbook edge"
   - "run playbook against a fleet node"
+  - "ssh to cloudlab"
+  - "ssh to lab"
+  - "ssh to edge"
   - "SSH key fleet"
   - "load fleet key"
   - "connect to cloudlab"
   - "connect to lab"
   - "connect to edge"
+  - "AI agent ssh node"
+  - "agent connect to node"
   - "Import-SshKey"
   - "fleet SSH agent"
 ---
 
-# Fleet Ansible Connectivity
+# Fleet SSH Connectivity
+
+Every fleet node (`cloudlab`, `lab`, `edge`) accepts key-based SSH as **`fleetadm`**
+using the single **fleet key** (`fleetadm@homelab`, ADR 28). This is the **one way
+in** to every node — whether you're running Ansible, shelling in interactively,
+copying files, or an AI agent needs to reach a node, the flow is identical.
 
 ## SSH Key Setup (required once per session)
 
-Every fleet node (`cloudlab`, `lab`, `edge`) accepts key-based SSH as **`fleetadm`**
-using the single **fleet key** (`fleetadm@homelab`, ADR 28). The private key is stored
-in Azure Key Vault as `homelab-bysxdb-kv/fleetadm-key-priv`. The dev container's
-`profile.ps1` loads it (plus the legacy `cloudlab-vps-key-priv`) into `ssh-agent`
-every session — this manual flow is the fallback when that hasn't happened.
+The private key is stored in Azure Key Vault as `homelab-bysxdb-kv/fleetadm-key-priv`
+and loaded into `ssh-agent` — it never exists as a plain file in the repo. The dev
+container's `profile.ps1` loads it (plus the legacy `cloudlab-vps-key-priv`) every
+session — this manual flow is the fallback when that hasn't happened.
 
 ### 1. Load the fleet key into ssh-agent
 
@@ -61,10 +72,12 @@ ssh-add -l
 | `lab` | Lenovo M910q | LAN workstation (`192.168.2.0/24`) | `ansible/playbooks/playbook-lab.yml` |
 | `edge` | Dell Wyse 3040 | LAN workstation (`192.168.2.0/24`) | `ansible/playbooks/playbook-edge.yml` |
 
-`lab` and `edge` are LAN-only — run their playbooks from a machine on `192.168.2.0/24`
-with the fleet key loaded in its agent (see runbooks 24/25).
+`lab` and `edge` are LAN-only — connect to them (SSH or playbooks) from a machine
+on `192.168.2.0/24` with the fleet key loaded in its agent (see runbooks 24/25).
 
-## Running a Playbook
+## Connecting to a Node
+
+### Ansible playbooks
 
 From the repo root, with the fleet key in the agent:
 
@@ -74,6 +87,27 @@ ansible-playbook ansible/playbooks/playbook.yml          # cloudlab
 ansible-playbook ansible/playbooks/playbook-lab.yml      # lab (LAN workstation)
 ansible-playbook ansible/playbooks/playbook-edge.yml     # edge (LAN workstation)
 ```
+
+### Direct SSH & file transfer (ad-hoc)
+
+```powershell
+ssh cloudlab                        # dev container (alias from .devcontainer/config/ssh_config)
+ssh fleetadm@192.168.2.200          # lab from a LAN workstation
+scp file.txt fleetadm@192.168.2.200:/tmp/   # copy to lab (LAN workstation)
+```
+
+### AI agents
+
+AI agents (opencode instances, Copilot, custom agents) reach fleet nodes through
+the **same fleet key** — no separate credentials:
+
+- An agent running in the dev container uses the key already loaded in
+  `ssh-agent`; it runs `ssh`/`ansible-playbook` like a human would and never
+  touches the private key material (it stays in the agent / Key Vault).
+- An agent on `cloudlab` that must reach another node needs the fleet key loaded
+  in *cloudlab's* ssh-agent too — load it there the same way (§1).
+- LAN-only nodes (`lab`, `edge`) require the agent to run on a machine on
+  `192.168.2.0/24` with the fleet key in its agent (runbooks 24/25).
 
 ## Known Pitfalls
 
