@@ -91,6 +91,12 @@ ansible-playbook ansible/playbooks/playbook-lab.yml      # lab (LAN workstation)
 ansible-playbook ansible/playbooks/playbook-edge.yml     # edge (LAN workstation)
 ```
 
+> **Run playbooks visibly — never pipe to `tail`/`Select-Object`.** The operator
+> follows execution live, so `ansible-playbook` always runs in a visible (async)
+> terminal with full output — no `| tail -N`, no truncation. Long-running
+> apt/docker tasks are slow but progressing; check the live terminal output
+> instead of cutting it off. This is an operator requirement, not a preference.
+
 ### Direct SSH & file transfer (ad-hoc)
 
 ```powershell
