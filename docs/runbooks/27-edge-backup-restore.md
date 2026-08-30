@@ -42,6 +42,26 @@
 > [research 28](../research/28-wyse3040-hardware-diagnostic.md) — they apply to any non-Debian
 > live tooling on this box.
 
+## Access the pendrive (Ventoy mapper)
+
+The YUMI/Ventoy stick boots the live ISO and also carries the backup checklist
+(`clonezilla-usage.txt`). In the live session the stick is **not auto-mounted**, and because
+it's a Ventoy stick its data partition is claimed by the device-mapper — mounting the raw
+`/dev/sda2` fails with **"busy"** (and 32 M `sda2` is the tiny VTOYEFI partition anyway, not
+your files). Mount the mapper node instead:
+
+```sh
+lsblk                       # data partition = the big sda1 (57.7 G); sda2 (32 M) is VTOYEFI, NOT it
+ls -l /dev/mapper/          # sda1 -> ../dm-X (data), ventoy -> ../dm-X (vtoys, mounted at /cdrom)
+mkdir -p /mnt/usb
+mount /dev/dm-1 /mnt/usb    # the dm node that maps the DATA partition — confirm the number first
+ls /mnt/usb                 # → YUMI/Data/Wyse 3040/clonezilla-usage.txt
+```
+
+> The `dm-*` number is **session-dependent** (the data partition was `dm-1` on 2026-08-30) —
+> always confirm it with `lsblk` / `ls -l /dev/mapper/` first. When the named node exists,
+> prefer it: `mount /dev/mapper/sda1 /mnt/usb`.
+
 ## Which tool — comparison (measured on the 3040, 2026-08-24)
 
 | | Clonezilla `savedisk` | `dd` + `gzip` |
