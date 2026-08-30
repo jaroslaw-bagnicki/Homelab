@@ -6,7 +6,7 @@
 
 | Server | OS | Arc Status | AMA Status |
 |---|---|---|---|
-| `homelab` (physical) | Ubuntu 26.04 LTS | ✅ Connected | ❌ Unsupported OS — blocked upstream ([#2173](https://github.com/Azure/azure-linux-extensions/issues/2173)) |
+| `lab` (physical) | Ubuntu 26.04 LTS | ✅ Connected | ❌ Unsupported OS — blocked upstream ([#2173](https://github.com/Azure/azure-linux-extensions/issues/2173)) |
 | `cloudlab` (Contabo VPS) | Ubuntu 24.04 LTS | ✅ Connected | ✅ Installed via Bicep |
 
 ## Prerequisites
@@ -44,7 +44,7 @@ The monitoring stack is defined as **Bicep + PowerShell** in [`bicep/`](../../bi
 - **Azure Monitor Agent extensions** — `AzureMonitorLinuxAgent` on each Arc server
 - **Log Analytics workspace** (`homelab-law`) — PerGB2018 tier (5 GB/month free)
 - **Data Collection Rule** (`homelab-vm-dcr`) — `\VmInsights\DetailedMetrics` meta-counter every 60s → LAW
-- **DCR Associations** — one per Arc server (`homelab`, `cloudlab`), linking each to the shared DCR
+- **DCR Associations** — one per Arc server (`lab`, `cloudlab`), linking each to the shared DCR
 - **Key Vault** (`homelab-{suffix}-kv`) — RBAC-only, stores secrets (SSH keys, etc.)
 
 ### Deploy
@@ -128,4 +128,4 @@ This confirms the server is heartbeating to Log Analytics.
 ## Next Steps
 
 - Configure [Azure Alert rules](https://learn.microsoft.com/en-us/azure/azure-monitor/alerts/alerts-create-new-alert-rule) for disk space, high CPU, or agent heartbeat
-- Once Microsoft adds Ubuntu 26.04 support, re-attempt AMA on the physical `homelab` server
+- Once Microsoft adds Ubuntu 26.04 support, re-attempt AMA on the physical `lab` server

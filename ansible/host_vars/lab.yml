@@ -1,4 +1,4 @@
 ---
-arc_machine_name: homelab
+arc_machine_name: lab
 docker_users: []
 common_enable_avahi: true

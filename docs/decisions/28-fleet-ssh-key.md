@@ -7,10 +7,10 @@
 
 ## Context
 
-Ansible manages three hosts today (ADR 10): the `cloudlab` Contabo VPS, the `homelab` M910q, and the `edge` Wyse 3040 ingress appliance. The wider fleet also includes the OMV NAS (ADR 23), with a Home Assistant node (Proxmox VM, ADR 25) and an OPNsense router coming next. The Ansible-managed hosts share a generic **`fleetadm`** administration account (key-only SSH, NOPASSWD sudo, renamed from `labadmin` on 2026‑08‑30), but SSH keys are distributed **imperatively and per-host**:
+Ansible manages three hosts today (ADR 10): the `cloudlab` Contabo VPS, the `lab` M910q, and the `edge` Wyse 3040 ingress appliance. The wider fleet also includes the OMV NAS (ADR 23), with a Home Assistant node (Proxmox VM, ADR 25) and an OPNsense router coming next. The Ansible-managed hosts share a generic **`fleetadm`** administration account (key-only SSH, NOPASSWD sudo, renamed from `labadmin` on 2026‑08‑30), but SSH keys are distributed **imperatively and per-host**:
 
 - `cloudlab` — the `cloudlab-vps-key-priv` secret in `homelab-bysxdb-kv`, loaded into `ssh-agent` each session by `profile.ps1` / `scripts/Import-SshKey.ps1`.
-- `homelab` and `edge` — a public key pasted manually into `authorized_keys` during base install (runbooks 25 / 24) — the role the fleet key now fills at bootstrap.
+- `lab` and `edge` — a public key pasted manually into `authorized_keys` during base install (runbooks 25 / 24) — the role the fleet key now fills at bootstrap.
 - No role manages `authorized_keys` declaratively, so a fresh Ansible connection depends on keys added by hand outside the playbooks.
 
 This is a DR gap: re-provisioning any host (or onboarding a new control machine) requires manually re-arming the right key, and there is no single place to rotate access across the fleet.
@@ -33,13 +33,13 @@ Adopt a single **dedicated fleet-wide Ed25519 SSH keypair** for fleet-wide autom
 - **Fleet key from day 1** — the breaking-glass account installs the fleet public key when it creates `fleetadm`, so the fleet key is the first and only SSH credential on each host; Ansible and agents connect with it immediately, with no separate control key.
 - **Not the dev-container identity** — the container's `~/.ssh/id_ed25519` (`homelab-devcontainer`) stays a separate human/control identity; the fleet key is the automation path and can be revoked independently.
 - **Agents inherit access** — because the private key is loaded into `ssh-agent` (never written to disk), any process in the dev container that shells out to `ssh`/`ansible-playbook` — including AI agents (OpenCode, GitHub Copilot) — uses the fleet key automatically. No per-tool configuration; the key is usable but not readable by the agent, and the restrictive `key_options` cap what an SSH session can do (no port forwarding / agent forwarding / X11).
-- **LAN reachability unchanged** — `homelab`, `edge`, and the upcoming LAN nodes are LAN-only; the fleet key must be loaded in the agent of whichever control machine runs their playbooks (dev container for `cloudlab`, LAN workstation for the physical hosts).
+- **LAN reachability unchanged** — `lab`, `edge`, and the upcoming LAN nodes are LAN-only; the fleet key must be loaded in the agent of whichever control machine runs their playbooks (dev container for `cloudlab`, LAN workstation for the physical hosts).
 
 ### Migration (live hosts: `labadmin` → `fleetadm`)
 
-Applies the rename to the already-provisioned hosts (`cloudlab`, `homelab`, `edge`). New hosts bootstrap directly as `fleetadm` (runbook 25 §2) and skip this.
+Applies the rename to the already-provisioned hosts (`cloudlab`, `lab`, `edge`). New hosts bootstrap directly as `fleetadm` (runbook 25 §2) and skip this.
 
-**Preconditions:** fleet key loaded in `ssh-agent` on the control machine (or current `labadmin` access); `cloudlab` from the dev container, `homelab`/`edge` from a LAN workstation.
+**Preconditions:** fleet key loaded in `ssh-agent` on the control machine (or current `labadmin` access); `cloudlab` from the dev container, `lab`/`edge` from a LAN workstation.
 
 Per host, as root/sudo — `usermod -l` preserves the uid, so file ownership (uid 1000, incl. OpenCode bind mounts on `cloudlab`) stays intact:
 

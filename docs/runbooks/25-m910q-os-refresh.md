@@ -16,7 +16,7 @@ The refresh re-aligns the box with ADR 05 and unblocks that track.
 ## What changes
 
 - **Reinstall** to Ubuntu Server 24.04 LTS on the 256 GB NVMe; static IP `192.168.2.200` (switch port 2, runbook 21).
-- **Ansible-provisioned base**: `common` → `security` → `docker_host` → `azure_arc` via `ansible/playbooks/playbook-homelab.yml`.
+- **Ansible-provisioned base**: `common` → `security` → `docker_host` → `azure_arc` via `ansible/playbooks/playbook-lab.yml`.
 - **DNS / Caddy / cloudflared leave the M910q** (Option B): the edge appliance (ADR 24 / [#65](https://github.com/jaroslaw-bagnicki/Homelab/issues/65)) takes over `*.home` DNS, internal `.home` Caddy, and the external tunnel. The refreshed M910q is **compute-only** — dnsmasq and `homelab-tunnel` are **not** reinstalled. Accept a temporary `.home` + external-access gap until the edge box is live.
 - **Operator account — `fleetadm`.** All hosts (cloudlab + homelab + edge) use the generic `fleetadm` account: key-only SSH (full pattern in the [ansible README](../../ansible/README.md)).
 - **Breaking-glass account — your personal user.** Created during install (password in **Keeper**); it's the emergency **console** credential — SSH password login is disabled after §2 — while `fleetadm` stays the key-only SSH automation account.
@@ -92,7 +92,7 @@ by Ansible in §3.
    | Name servers | `1.1.1.1, 8.8.8.8` |
 
 3. **Create your personal breaking-glass account** — on the installer's profile screen
-   use **"Create a user"**: your name, server name `homelab`, a username of your choice,
+   use **"Create a user"**: your name, server name `lab`, a username of your choice,
    and a **strong password**. Store the password in **Keeper** — it is the breaking-glass
    credential used in the §2 bootstrap and for emergency console/SSH access.
    (The installer adds the first user to `sudo` automatically.) Optionally set an
@@ -192,11 +192,11 @@ What it does:
 
 **Verify:**
 ```powershell
-ssh fleetadm@homelab
+ssh fleetadm@lab
 sudo whoami   # should print "root"
 ```
 Pure hostname resolution works out of the box via **LLMNR** (Ubuntu's
-`systemd-resolved` responds by default); `homelab.local` needs Avahi (installed by
+`systemd-resolved` responds by default); `lab.local` needs Avahi (installed by
 the playbook) for mDNS.
 
 ## 3. Ansible Provision (from the control node)
@@ -211,7 +211,7 @@ needed — unlike WSL's `/mnt/c` mount, where `chmod` does not stick).
 ```bash
 cd /workspaces/Homelab
 az login --use-device-code
-ansible-playbook ansible/playbooks/playbook-homelab.yml
+ansible-playbook ansible/playbooks/playbook-lab.yml
 ```
 
 This runs `common` → `security` → `docker_host` → `azure_arc` and also handles the
@@ -232,9 +232,9 @@ sudo azcmagent show
 # Expected: Status: Connected, machine name: homelab, resource group: homelab-rg
 ```
 
-**Verify in the portal:** Azure Arc → Servers → `homelab` shows **Connected** (OS `Ubuntu
-24.04`). Confirm the M910q appears as the `homelab` machine (Arc agent name comes from
-`host_vars/homelab.yml` → `arc_machine_name: homelab`).
+**Verify in the portal:** Azure Arc → Servers → `lab` shows **Connected** (OS `Ubuntu
+24.04`). Confirm the M910q appears as the `lab` machine (Arc agent name comes from
+`host_vars/lab.yml` → `arc_machine_name: lab`).
 
 ---
 
@@ -242,8 +242,8 @@ sudo azcmagent show
 
 - [x] §0 hardware audit captured in `docs/hardware.md`
 - [x] Ubuntu 24.04 installed; static IP `192.168.2.200` reachable
-- [x] SSH key login works: `ssh fleetadm@homelab`
-- [x] `ansible-playbook playbook-homelab.yml` completes with no failed tasks
+- [x] SSH key login works: `ssh fleetadm@lab`
+- [x] `ansible-playbook playbook-lab.yml` completes with no failed tasks
 - [x] `azcmagent show` → `Connected`
 - [x] `docs/overview.md` M910q row reflects Ubuntu 24.04 + Arc (update if needed)
 

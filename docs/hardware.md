@@ -9,7 +9,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 
 | Node | Role | CPU | RAM | Storage | Network | Status |
 |---|---|---|---|---|---|---|
-| **Homelab** | main workload host | i5-7500T (4C/4T) | 16 GB DDR4 | 256 GB NVMe (+ free 2.5" bay) | 1× GbE `enp0s31f6` | ✅ |
+| **Lab** | main workload host | i5-7500T (4C/4T) | 16 GB DDR4 | 256 GB NVMe (+ free 2.5" bay) | 1× GbE `enp0s31f6` | ✅ |
 | **OMV NAS** | backup target / NFS | Pentium E2160 (2C/2T) | 4 GB DDR2 | Goodram 120 GB SSD + RAID1 arrays | 1× GbE BCM5722 | ✅ |
 | **Edge Ingress** | public ingress | Atom x5-Z8350 | 2 GB DDR3L | 8 GB eMMC | 1× GbE | 🔨 |
 | **Home Assistant** | smart home node | J4105 (planned) | 8 GB DDR4 | M.2 SATA SSD 64–256 GB | 1× GbE | 📋 |
@@ -18,7 +18,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 
 ## Compute & Storage Nodes
 
-### Homelab — Lenovo ThinkCentre M910q Tiny
+### Lab — Lenovo ThinkCentre M910q Tiny
 
 | Item | Spec |
 |---|---|
@@ -96,7 +96,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Ports | 8× Gigabit Ethernet (L2, utility-managed) |
 | Hardware | Rev V1 — web UI non-functional (HTTP 501), managed via **Easy Smart Configuration Utility** (Windows) |
 | IP | `192.168.2.230` (static) |
-| Role | Access switch — turns the single office drop into wired ports for Homelab, OMV NAS, Edge Ingress, work dock |
+| Role | Access switch — turns the single office drop into wired ports for Lab, OMV NAS, Edge Ingress, work dock |
 | Docs | [runbook 21](runbooks/21-tl-sg108e-switch.md) · [research 24](research/24-network-topology-design.md) |
 
 ### Tenda Nova mesh
