@@ -12,7 +12,7 @@ hardware detail see [Hardware Inventory](hardware.md); for change history see
 |---|---|---|---|---|
 | **Homelab** | main workload host (Docker → k3s) | Lenovo M910q Tiny · Ubuntu 24.04 LTS · Azure Arc | `192.168.2.200` | ✅ |
 | **OMV NAS** | backup target / NFS for Longhorn | HP ProLiant ML110 G5 · OMV 8.3 | `192.168.2.210` | ✅ |
-| **Edge Ingress** | public ingress (cloudflared + Caddy) | Dell Wyse 3040 · Debian/Alpine TBD | TBD | 🔨 |
+| **Edge Ingress** | public ingress (cloudflared + Caddy) | Dell Wyse 3040 · Debian 13 minimal | `192.168.2.240` | 🔨 |
 | **Home Assistant** | smart home node | Wyse 5070 · Proxmox VE | TBD | 📋 |
 | **LLM server** | local LLM inference | Minisforum X1 Lite | TBD | 🧠 (Phase 2) |
 | **Cloudlab VPS** | staging / Ansible playground | Contabo VPS 10 · Ubuntu 24.04 | `173.249.27.13` | ✅ |
@@ -35,7 +35,7 @@ Current state — what's running or in progress. Planned work is under [What's N
 | # | Workload | Effort | Notes |
 |---|---|---|---|
 | [#13](https://github.com/jaroslaw-bagnicki/Homelab/issues/13) | **Restic backup** (redo) | ⭐⭐ | Daily snapshots to Azure Blob Storage — see [runbook](runbooks/07-restic-backup.md) |
-| [#94](https://github.com/jaroslaw-bagnicki/Homelab/issues/94) | **Fleet admin account + key** | ⭐ | Fleet-wide SSH admin account `fleetadm` + `ansible-fleet@homelab` key (ADR 28) — breaking-glass bootstrap, `common` role re-arm, runbook 28 migration — [ADR 28](decisions/28-fleet-ssh-key.md) · [PR 93](https://github.com/jaroslaw-bagnicki/Homelab/pull/93) |
+| [#93](https://github.com/jaroslaw-bagnicki/Homelab/pull/93) | **Fleet admin account + key** | ⭐ | Fleet-wide SSH admin account `fleetadm` + `fleetadm@homelab` key (ADR 28) — breaking-glass bootstrap, `common` role re-arm, runbook 28 migration — [ADR 28](decisions/28-fleet-ssh-key.md) · [PR 93](https://github.com/jaroslaw-bagnicki/Homelab/pull/93) |
 | [#65](https://github.com/jaroslaw-bagnicki/Homelab/issues/65) | **Edge Ingress** | ⭐⭐ | Move public ingress (`cloudflared` + Caddy) to the Wyse 3040 — [runbook 24](runbooks/24-edge-appliance.md) · [ADR 24](decisions/24-edge-ingress-appliance.md) |
 | [#54](https://github.com/jaroslaw-bagnicki/Homelab/issues/54) | **OMV NAS Phase 2** | ⭐⭐ | NFS/SMB exports + Longhorn backup target — [runbook 26](runbooks/26-ml110-nas-exports.md) · SMB `/shared` done (unblocks #79) |
 |  | **Home Assistant** | ⭐⭐ | Dedicated HA node — Proxmox VE VM + MQTT/Zigbee2MQTT — [idea 05](ideas/05-home-assistant-thin-client.md) · [ADR 25](decisions/25-home-assistant-thin-client.md) |
@@ -55,7 +55,7 @@ Tenda Nova mesh — 192.168.2.0/24, gateway 192.168.2.1 (single broadcast domain
         └── TL-SG108E switch (192.168.2.230)
                  ├── Homelab M910q    — 192.168.2.200
                  ├── OMV NAS         — 192.168.2.210
-                 ├── Edge Ingress      — TBD (future ingress)
+                 ├── Edge Ingress      — 192.168.2.240
                  └── work laptop dock — DHCP (corporate)
 ```
 

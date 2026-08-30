@@ -21,7 +21,7 @@ if (-not $Force -and (Get-AzKeyVaultSecret -VaultName $KeyVaultName -Name $Secre
   throw "Secret '$SecretName' already exists in '$KeyVaultName'. Re-run with -Force to rotate."
 }
 
-ssh-keygen -q -t ed25519 -C "ansible-fleet@homelab" -N '' -f $TempPriv
+ssh-keygen -q -t ed25519 -C "fleetadm@homelab" -N '' -f $TempPriv
 if ($LASTEXITCODE -ne 0) { throw "ssh-keygen failed (exit code $LASTEXITCODE)" }
 
 Set-AzKeyVaultSecret -VaultName $KeyVaultName -Name $SecretName `

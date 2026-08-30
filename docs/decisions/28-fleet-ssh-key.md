@@ -17,7 +17,7 @@ This is a DR gap: re-provisioning any host (or onboarding a new control machine)
 
 ## Decision
 
-Adopt a single **dedicated fleet-wide Ed25519 SSH keypair** for fleet-wide automation — Ansible and the AI agent tooling (OpenCode, GitHub Copilot) running in the dev container — `ansible-fleet@homelab`, wired through the existing Key Vault + agent-loading pattern:
+Adopt a single **dedicated fleet-wide Ed25519 SSH keypair** for fleet-wide automation — Ansible and the AI agent tooling (OpenCode, GitHub Copilot) running in the dev container — `fleetadm@homelab`, wired through the existing Key Vault + agent-loading pattern:
 
 - **Fleet admin account** — the account is **`fleetadm`** (renamed from `labadmin`, 2026-08-30): a shared, non-interactive fleet administration account with key-only SSH and NOPASSWD sudo, created by the breaking-glass account at bootstrap (runbooks 24/25) and re-provisioned by Ansible. **Account + key are managed as one unit** — renaming the account, rotating the key, or changing its sudo scope is a fleet-wide change applied by the playbook and runbooks together.
 - **Private key** — stored as `ansible-fleet-key-priv` in `homelab-bysxdb-kv`; never committed, never persisted on disk; loaded into `ssh-agent` each session by `profile.ps1` (alongside `cloudlab-vps-key-priv`). Agent-only storage means tools and agents can *use* the key for connections but cannot read or copy it.
