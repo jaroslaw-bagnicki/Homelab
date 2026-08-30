@@ -132,7 +132,7 @@ Debian 13.6.0 install **completed** on the eMMC. Decisions locked during install
 > install — see Install Progress above).
 >
 > §2 exists **only to unblock Ansible**; everything beyond the bootstrap is provisioned by the
-> `edge_host` role (§3, **planned — #65, role not yet in the repo**), idempotently. Don't
+> `edge_host` role (§3), idempotently. Don't
 > hand-configure what the role owns (accounts, hardening, services) — that's how drift happens.
 
 ### 2.1 Static IP
