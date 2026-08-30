@@ -71,12 +71,12 @@ ssh-add -l
 | `cloudlab` | `173.249.27.13` | anywhere (public IP) | `ansible/playbooks/playbook.yml` |
 | `lab` | `192.168.2.200` | LAN workstation (`192.168.2.0/24`) | `ansible/playbooks/playbook-lab.yml` |
 | `omv` | `192.168.2.210` | LAN workstation (`192.168.2.0/24`) | — (not Ansible-managed yet, #65) |
-| `edge` | `192.168.2.240` | LAN workstation (`192.168.2.0/24`) | — (not Ansible-managed yet, #65) |
+| `edge` | `192.168.2.240` | LAN workstation (`192.168.2.0/24`) | `ansible/playbooks/playbook-edge.yml` |
 
 `lab`, `edge`, and `omv` are LAN-only — connect to them (SSH or playbooks)
 from a machine on `192.168.2.0/24` with the fleet key loaded in its agent (see
-runbooks 24/25/26). All nodes are on `fleetadm` since 2026-08-30; `edge` and
-`omv` are not Ansible-managed yet (#65).
+runbooks 24/25/26). All nodes are on `fleetadm` since 2026-08-30; `edge` is
+Ansible-managed (base, runbook 24) — `omv` is the only node not yet Ansible-enrolled (#65).
 
 ## Connecting to a Node
 
@@ -88,7 +88,7 @@ From the repo root, with the fleet key in the agent:
 cd /workspaces/Homelab
 ansible-playbook ansible/playbooks/playbook.yml          # cloudlab
 ansible-playbook ansible/playbooks/playbook-lab.yml      # lab (LAN workstation)
-# edge — planned (#65), no playbook yet
+ansible-playbook ansible/playbooks/playbook-edge.yml     # edge (LAN workstation)
 ```
 
 > **Run playbooks visibly — never pipe to `tail`/`Select-Object`.** The operator
