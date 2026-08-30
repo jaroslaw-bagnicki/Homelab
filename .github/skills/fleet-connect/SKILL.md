@@ -66,14 +66,17 @@ ssh-add -l
 
 ## Per-host reachability
 
-| Node | Device | Reachable from | Playbook |
+| Node | IP | Reachable from | Playbook |
 |---|---|---|---|
-| `cloudlab` | Contabo VPS | this dev container | `ansible/playbooks/playbook.yml` |
-| `lab` | Lenovo M910q | LAN workstation (`192.168.2.0/24`) | `ansible/playbooks/playbook-lab.yml` |
-| `edge` | Dell Wyse 3040 | LAN workstation (`192.168.2.0/24`) | `ansible/playbooks/playbook-edge.yml` |
+| `cloudlab` | `173.249.27.13` | this dev container | `ansible/playbooks/playbook.yml` |
+| `lab` | `192.168.2.200` | LAN workstation (`192.168.2.0/24`) | `ansible/playbooks/playbook-lab.yml` |
+| `edge` | `192.168.2.240` | LAN workstation (`192.168.2.0/24`) | `ansible/playbooks/playbook-edge.yml` |
+| `omv-nas` | `192.168.2.210` | LAN workstation (`192.168.2.0/24`) | — (not Ansible-managed yet) |
 
-`lab` and `edge` are LAN-only — connect to them (SSH or playbooks) from a machine
-on `192.168.2.0/24` with the fleet key loaded in its agent (see runbooks 24/25).
+`lab`, `edge`, and `omv-nas` are LAN-only — connect to them (SSH or playbooks)
+from a machine on `192.168.2.0/24` with the fleet key loaded in its agent (see
+runbooks 24/25). `omv-nas` (HP ML110, ADR 23) currently uses `jarek@` for SSH
+(runbook 26) — the `fleetadm`/fleet-key roll-out to OMV is pending.
 
 ## Connecting to a Node
 
