@@ -412,6 +412,26 @@ outside it (see the hardening block below — applied, not deferred).
 > (only a chdir warning on login). Optionally, once shared folders exist (Phase 2, issue #62),
 > `Users | Settings` → **User home directory** can place homes on the data pool instead.
 
+### Fleet admin service account — `fleetadm` (ADR 28, 2026-08-30)
+
+`fleetadm` is the fleet-wide SSH **service account** for Ansible/fleet access — **not** a web-UI
+user, and deliberately created **at the CLI** (OS-level), unlike `jarek`. It is the fleet's
+standard admin identity across all nodes (ADR 28, runbook 01):
+
+- Created via a break-glass `jarek@omv` session (root): `useradd -m -s /bin/bash fleetadm`,
+  added to `sudo`, `/etc/sudoers.d/fleetadm` NOPASSWD (440), password locked (`passwd -l`).
+- Fleet key `fleetadm@homelab` installed in `/home/fleetadm/.ssh/authorized_keys` (restrictive
+  `key_options`); private key lives in Azure Key Vault `homelab-bysxdb-kv/fleetadm-key-priv`.
+- **Gotcha — OMV requires `_ssh` membership for SSH.** UI-created users get it automatically;
+  CLI-created users must be added manually (`usermod -aG _ssh fleetadm`). This was the root cause
+  of the initial `Permission denied (publickey)` despite the correct key.
+- Because the `_ssh`/`sudo`/`users` groups were assigned via the web UI, `fleetadm` is now also
+  registered in OMV's config DB — harmless, OMV simply "knows" the account.
+- OMV is **not Ansible-enrolled yet** (#65); once it is, the fleet `common` role manages
+  `fleetadm` + fleet key (exclusively) like on the other nodes.
+
+**Verify**: `ssh fleetadm@omv` (LAN) → `sudo -n whoami` → root.
+
 ### SSH hardening (applied 2026-08-15)
 
 `Services | SSH`:
