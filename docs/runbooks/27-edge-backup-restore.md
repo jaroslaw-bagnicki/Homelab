@@ -2,9 +2,9 @@
 
 > Full-system image backup/restore of the edge appliance's eMMC to the ML110 NAS.
 > Baseline image taken **2026-08-22** (issue [#79](https://github.com/jaroslaw-bagnicki/Homelab/issues/79)).
-> **Current backup (2026-08-30)**: bundle `\\omv\shared\edge\wyse3040-20260830-125805\`
-> (= `Z:\edge\wyse3040-20260830-125805\`), run logs in `...\logs\`
-> (`Z:\edge\wyse3040-20260830-125805\logs\`).
+> **Current backup (2026-08-30)**: bundle `\\omv\edge\wyse3040-20260830-125805\`
+> (= `Z:\edge\wyse3040-20260830-125805\`), run logs in `\\omv\edge\wyse3040-20260830-125805\logs\`
+> (= `Z:\edge\wyse3040-20260830-125805\logs\`).
 > **First choice: Clonezilla** (`ocs-sr savedisk`/`restoredisk`) — whole-disk image incl. GPT
 > partition table + all partitions, only used data, full wipe→restore→boot cycle validated on
 > the 3040 (2026-08-24).
@@ -112,7 +112,7 @@ mount --bind /home/partimag/wyse3040-$TS/logs /var/log/clonezilla
 #    (no -i 0: it is ignored in this build — the image check runs anyway)
 ocs-sr -q2 -c -z1p savedisk wyse3040-$TS mmcblk0
 
-# 5. (done — logs already landed at \\omv\edge\wyse3040-<ts>\logs\ during the run)
+# 5. (done — logs already landed at \\omv\edge\wyse3040-20260830-125805\logs\ during the run)
 ```
 
 **Expected**: ~40 s; image ≈ 456 MB for ~1.3 GB used. Output shows both partitions cloned
@@ -256,8 +256,8 @@ gzip -l /mnt/backup/edge/wyse3040_<timestamp>.img.gz   # shows uncompressed size
 | `wyse3040_<timestamp>.img.log` | `dd` output captured at backup time |
 | `edge-backup.sh` | Reusable backup snippet (mount + dd + timestamp) |
 
-> Current backup on the NAS (2026-08-30): `\\omv\shared\edge\wyse3040-20260830-125805\` —
-> image bundle, with run logs inside at `\\omv\shared\edge\wyse3040-20260830-125805\logs\`
+> Current backup on the NAS (2026-08-30): `\\omv\edge\wyse3040-20260830-125805\` —
+> image bundle, with run logs inside at `\\omv\edge\wyse3040-20260830-125805\logs\`
 > (same as `Z:\edge\wyse3040-20260830-125805\` and `Z:\edge\wyse3040-20260830-125805\logs\`).
 
 ## References
