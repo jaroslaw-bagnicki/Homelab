@@ -15,7 +15,7 @@ hardware detail see [Hardware Inventory](hardware.md); for change history see
 | **Edge Ingress** | public ingress (cloudflared + Caddy) | Dell Wyse 3040 · Debian 13 minimal | `192.168.2.240` | 🔨 |
 | **Home Assistant** | smart home node | Wyse 5070 · Proxmox VE | TBD | 📋 |
 | **LLM server** | local LLM inference | Minisforum X1 Lite | TBD | 🧠 (Phase 2) |
-| **Cloudlab VPS** | staging / Ansible playground | Contabo VPS 10 · Ubuntu 24.04 | `173.249.27.13` | ✅ |
+| **Cloudlab VPS** | staging for Lab (Ansible + Docker/k3s workloads) | Contabo VPS 10 · Ubuntu 24.04 | `173.249.27.13` | ✅ |
 
 ## Workloads
 

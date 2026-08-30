@@ -147,27 +147,27 @@ ip route show default         # via 192.168.2.1
 ping -c1 192.168.2.1          # gateway reachable
 ```
 
-### 2.2 SSH for Ansible — done (2026-08-23)
+### 2.2 SSH for Ansible — fleetadm + fleet key (2026-08-30)
 
-Mirroring [runbook 25](25-m910q-os-refresh.md) §2: create the `fleetadm` agent account (sudo,
-agent-account pattern) so Ansible can connect — mirror [runbook 01](01-init.md) §2.
+Mirroring [runbook 25](25-m910q-os-refresh.md) §2 / ADR 28: the `fleetadm` agent account
+(sudo, agent-account pattern) is the key-only SSH identity Ansible uses.
 
-Executed on the box (2026-08-23) — the **control-node key** was installed at the time:
+**Update (2026-08-30):** the 2026-08-23 bootstrap (control-node `lenovo-slim` key) is
+obsolete — the box's `fleetadm` account had since been removed, so it was **re-created
+fresh** per ADR 28 (new-account pattern, runbook 25 §2):
 
-- `openssh-server` was already present (tasksel "SSH server" during install).
-- **Deviation — `sudo` installed**: the Debian Expert install (tasksel) did **not** ship
-  `sudo`; installed via `apt install sudo` as a prerequisite for `fleetadm`'s sudo role.
-- Created **`fleetadm`** (uid 1001, `/bin/bash`), added to the **`sudo`** group, with
-  `/etc/sudoers.d/fleetadm` NOPASSWD (440).
-- Installed the **control-node key** (`lenovo-slim`) as `/home/fleetadm/.ssh/authorized_keys`
-  (600, owner `fleetadm`); password **locked** (`passwd -l`).
-- **Verified** from the control node: `ssh fleetadm@192.168.2.240` → key-only login works
-  (hostname `edge`, uid 1001, sudo group).
+- Created **`fleetadm`** (uid 1002, `/bin/bash`), added to the **`sudo`** group, with
+  `/etc/sudoers.d/fleetadm` NOPASSWD (440); password **locked** (`passwd -l`).
+- Installed the **fleet public key** (`fleetadm@homelab`, from
+  `ansible/roles/common/files/ssh/fleetadm.pub`) as the **sole** entry in
+  `/home/fleetadm/.ssh/authorized_keys` (600, owner `fleetadm`), with restrictive
+  `key_options` — the `lenovo-slim` control key is retired (ADR 28).
+- **Verified** from the control node: `ssh fleetadm@192.168.2.240` → hostname `edge`,
+  `sudo -n whoami` → root.
 
-> **Update (2026-08-30):** per ADR 28, the **fleet public key** (`fleetadm@homelab`,
-> from `ansible/roles/common/files/ssh/fleetadm.pub`) is now the day-1 credential —
-> the `common` role adds it (with restrictive `key_options`) on the next playbook run;
-> future re-provisions install it at bootstrap (runbook 25 §2) instead of a control key.
+> Ansible provisioning of edge (the `edge_host` role: UFW, fail2ban, cloudflared, Caddy,
+> Netdata) is tracked in issue #65 — edge is not yet in the Ansible inventory, and there
+> is no `playbook-edge.yml` yet.
 
 ---
 
@@ -275,7 +275,7 @@ resulting state:
 ## Verification Checklist
 
 - [x] §1 Debian minimal installed on `mmcblk0`; eMMC boots without F12 (entry re-added 2026-08-18)
-- [ ] §2 Static IP `192.168.2.240` reachable; SSH key-only login
+- [x] §2 Static IP `192.168.2.240` reachable; SSH key-only login (fleet key, 2026-08-30)
 - [ ] §3 `edge.local` + bare `edge` resolve on the LAN; SSH by name
 - [ ] §3 UFW active (SSH from LAN only); fail2ban on
 - [ ] §4 cloudflared tunnel up (`cloudflared tunnel list`)
