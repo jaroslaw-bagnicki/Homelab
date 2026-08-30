@@ -13,7 +13,7 @@ hardware detail see [Hardware Inventory](hardware.md); for change history see
 | **Lab** | main workload host (Docker → k3s) | Lenovo M910q Tiny · Ubuntu 24.04 LTS · Azure Arc | `192.168.2.200` | ✅ |
 | **OMV NAS** | backup target / NFS for Longhorn | HP ProLiant ML110 G5 · OMV 8.3 | `192.168.2.210` | ✅ |
 | **Edge Ingress** | public ingress (cloudflared + Caddy) | Dell Wyse 3040 · Debian 13 minimal | `192.168.2.240` | 🔨 |
-| **Home Assistant** | smart home node | Wyse 5070 · Proxmox VE | TBD (DHCP .87) | 🔨 |
+| **Home Assistant** | smart home node | Wyse 5070 · Proxmox VE | `TBD (DHCP .87)` | 🔨 |
 | **LLM server** | local LLM inference | Minisforum X1 Lite | TBD | 🧠 (Phase 2) |
 | **Cloudlab VPS** | staging for Lab (Ansible + Docker/k3s workloads) | Contabo VPS 10 · Ubuntu 24.04 | `173.249.27.13` | ✅ |
 
