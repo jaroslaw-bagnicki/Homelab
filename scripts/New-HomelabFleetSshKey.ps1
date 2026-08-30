@@ -1,6 +1,6 @@
 #!/usr/bin/env pwsh
 # Generates the fleet-wide Ansible SSH keypair, stores the private key in Key Vault
-# (ansible-fleet-key-priv), and writes the public key to the committed repo location
+# (fleetadm-key-priv), and writes the public key to the committed repo location
 # (ansible/roles/common/files/ssh/ansible-fleet.pub) that the `common` role deploys
 # to fleetadm on every host. Re-run with -Force to rotate (regenerate + overwrite KV).
 
@@ -11,25 +11,28 @@ param(
 $ErrorActionPreference = 'Stop'
 
 $KeyVaultName = 'homelab-bysxdb-kv'
-$SecretName   = 'ansible-fleet-key-priv'
+$SecretName   = 'fleetadm-key-priv'
 $RepoRoot     = Split-Path $PSScriptRoot -Parent
 $PubDest      = Join-Path $RepoRoot 'ansible/roles/common/files/ssh/ansible-fleet.pub'
-$TempPriv     = Join-Path ([System.IO.Path]::GetTempPath()) 'ansible-fleet-ed25519'
+$TempPriv     = Join-Path ([System.IO.Path]::GetTempPath()) ('fleetadm-key-' + [guid]::NewGuid().ToString('N'))
 $TempPub      = "$TempPriv.pub"
 
 if (-not $Force -and (Get-AzKeyVaultSecret -VaultName $KeyVaultName -Name $SecretName -ErrorAction SilentlyContinue)) {
   throw "Secret '$SecretName' already exists in '$KeyVaultName'. Re-run with -Force to rotate."
 }
 
-ssh-keygen -q -t ed25519 -C "fleetadm@homelab" -N '' -f $TempPriv
-if ($LASTEXITCODE -ne 0) { throw "ssh-keygen failed (exit code $LASTEXITCODE)" }
+try {
+  ssh-keygen -q -t ed25519 -C "fleetadm@homelab" -N '' -f $TempPriv
+  if ($LASTEXITCODE -ne 0) { throw "ssh-keygen failed (exit code $LASTEXITCODE)" }
 
-Set-AzKeyVaultSecret -VaultName $KeyVaultName -Name $SecretName `
-  -SecretValue (ConvertTo-SecureString (Get-Content $TempPriv -Raw).Trim() -AsPlainText -Force) | Out-Null
+  Set-AzKeyVaultSecret -VaultName $KeyVaultName -Name $SecretName `
+    -SecretValue (ConvertTo-SecureString (Get-Content $TempPriv -Raw).Trim() -AsPlainText -Force) | Out-Null
 
-New-Item -ItemType Directory -Force -Path (Split-Path $PubDest -Parent) | Out-Null
-Copy-Item $TempPub -Destination $PubDest -Force
-Remove-Item $TempPriv, $TempPub -Force
+  New-Item -ItemType Directory -Force -Path (Split-Path $PubDest -Parent) | Out-Null
+  Copy-Item $TempPub -Destination $PubDest -Force
+} finally {
+  Remove-Item $TempPriv, $TempPub -Force -ErrorAction SilentlyContinue
+}
 
 Write-Host "Private key stored in $KeyVaultName/$SecretName"
 Write-Host "Public key written to $PubDest"

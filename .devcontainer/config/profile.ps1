@@ -42,11 +42,11 @@ if (-not (Get-AzContext)) {
   Write-Host ":: Reusing existing Azure context: $((Get-AzContext).Account.Id)" -ForegroundColor DarkGray
 }
 
-# Load fleet + VPS keys from Key Vault
+# Load fleet + VPS keys from Key Vault (only when the agent is empty)
 if ($env:SSH_AUTH_SOCK -and (Get-AzContext -ErrorAction SilentlyContinue)) {
-  foreach ($secret in 'ansible-fleet-key-priv', 'cloudlab-vps-key-priv') {
-    $loadedKeys = ssh-add -l 2>$null
-    if ($LASTEXITCODE -ne 0 -or $loadedKeys -match 'The agent has no identities') {
+  $loadedKeys = ssh-add -l 2>$null
+  if ($LASTEXITCODE -ne 0 -or $loadedKeys -match 'The agent has no identities') {
+    foreach ($secret in 'fleetadm-key-priv', 'cloudlab-vps-key-priv') {
       Write-Host ":: Loading $secret from Key Vault..." -ForegroundColor Yellow
       $null = Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name $secret -AsPlainText 2>$null | ssh-add - 2>$null
     }

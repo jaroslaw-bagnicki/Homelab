@@ -35,7 +35,7 @@ The refresh re-aligns the box with ADR 05 and unblocks that track.
   - `az` CLI **logged in** (`az login`) — the `azure_arc` role fetches the SPN secret
     from Key Vault via the `azure.azcollection` lookup on the control node
   - The **fleet key** (ADR 28): **private** key loaded into `ssh-agent` (from Key Vault
-    `homelab-bysxdb-kv/ansible-fleet-key-priv`) so Ansible can connect; the **public** key
+    `homelab-bysxdb-kv/fleetadm-key-priv`) so Ansible can connect; the **public** key
     (committed `ansible/roles/common/files/ssh/ansible-fleet.pub`) is installed by the
     bootstrap script
 - **Bootable USB** with Ubuntu Server 24.04 LTS ISO and a **SystemRescue** ISO.
@@ -163,7 +163,7 @@ the same restrictive `key_options` the `common` role manages
 (`no-port-forwarding,no-agent-forwarding,no-X11-forwarding`), so bootstrap and rotation
 stay on one identical line. Idempotent — safe to re-run.
 
-```sh
+```ash
 id -u fleetadm >/dev/null 2>&1 || sudo useradd -m -s /bin/bash fleetadm
 sudo usermod -aG sudo fleetadm
 echo 'fleetadm ALL=(ALL) NOPASSWD: ALL' | sudo tee /etc/sudoers.d/fleetadm

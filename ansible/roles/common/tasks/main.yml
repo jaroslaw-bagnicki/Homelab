@@ -39,5 +39,6 @@
   ansible.posix.authorized_key:
     user: fleetadm
     state: present
+    exclusive: true
     key: "{{ lookup('file', role_path ~ '/files/ssh/ansible-fleet.pub') }}"
     key_options: "{{ common_ssh_fleet_key_options }}"
