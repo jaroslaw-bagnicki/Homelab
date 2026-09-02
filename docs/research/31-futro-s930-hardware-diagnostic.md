@@ -2,7 +2,7 @@
 
 **Source**: SystemRescue 13.02 live session + hardinfo2 report, Sep 02 2026 · Issue [#96 — OPNsense router (Futro S930): initial setup](https://github.com/jaroslaw-bagnicki/Homelab/issues/96) · [Idea 07 — OPNsense Router on Fujitsu Futro S930](../ideas/07-opnsense-futro-s930.md)
 
-**Scope**: Pre-boot hardware audit of the newly arrived **Fujitsu FUTRO S930** thin client (the planned OPNsense network edge, [issue #96](../decisions/24-edge-ingress-appliance.md)) — full hardware inventory before committing OPNsense to the box. Same Phase 0 pattern as the [Wyse 3040 audit (research 28)](28-wyse3040-hardware-diagnostic.md) and the [Wyse 5070 audit (research 29)](29-wyse5070-hardware-diagnostic.md).
+**Scope**: Pre-boot hardware audit of the newly arrived **Fujitsu FUTRO S930** thin client (the planned OPNsense network edge, [issue #96](https://github.com/jaroslaw-bagnicki/Homelab/issues/96)) — full hardware inventory before committing OPNsense to the box. Same Phase 0 pattern as the [Wyse 3040 audit (research 28)](28-wyse3040-hardware-diagnostic.md) and the [Wyse 5070 audit (research 29)](29-wyse5070-hardware-diagnostic.md).
 
 **Status**: 🔨 In progress — SystemRescue/hardinfo2 inventory captured; internal mSATA capacity + **SMART PASSED**, and **AES-NI confirmed**; a memory-layout decision and BIOS walk still pending ([Pending checks](#pending-checks)).
 
