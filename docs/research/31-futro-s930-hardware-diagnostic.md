@@ -25,7 +25,6 @@
 | NIC (onboard) | **Realtek RTL8111/8168 GbE** (`enp2s0`, `r8169`) — reserve as MGMT/OPT behind the `bge` card |
 | PCIe slot | **Gen1 (1.1) ×1** — no BIOS Gen option → **hard platform limit** (BCM5720 is Gen2 ×2 capable); ~1.6–1.7 Gbps/dir ceiling |
 | OS medium | Internal **Innodisk DEMSR-08GB mSATA — 7.99 GB (`sda`), SMART PASSED** (~5,066 POH, 0 errors); **8 GB is tight** for OPNsense (Idea 07's replace-with-32–128 GB) |
-| GPU | AMD **Mullins [Radeon R4/R5]** (integrated; display `DP-1` → HP LA2206) — irrelevant to routing |
 | Crypto | ✅ **AES-NI present** (`aes` CPU flag, all 4 cores) — no SHA-NI (Jaguar). See [CPU & crypto](#cpu--security-notes) |
 
 ---
@@ -57,13 +56,11 @@ chipset + driver before choosing which port becomes WAN** (idea 07 §"HP T730" w
 | BIOS | Fujitsu / American Megatrends Inc. **`V4.6.5.4 R1.14.0`** for `D3313-E1x`, dated 2017-09-21 |
 | CPU | AMD **GX-424CC SOC** — 1 package, **4 cores / 4 threads**, 2400 MHz, 2 MB L2 — see [CPU](#cpu--security-notes) |
 | RAM | **4 GiB** (1× 4 GiB DDR3-1600 SO-DIMM), one socket free — see [RAM](#ram) |
-| Storage | Internal **Innodisk DEMSR-08GB mSATA 3ME3 — 7.99 GB (`sda`), SMART PASSED** + USB boot stick (Kingston DataTraveler, `sdb` 57.8 GiB / Ventoy) — see [Storage](#storage) |
-| GPU | AMD **Mullins [Radeon R4/R5]** (PCI `00:01.0`), output `DP-1` → **HP LA2206 1920×1080** |
+| Storage | Internal **Innodisk DEMSR-08GB mSATA 3ME3 — 7.99 GB (`sda`), SMART PASSED**; boot stick = `sdb` (USB) — see [Storage](#storage) |
 | NIC 0 | **Broadcom NetXtreme BCM5720** (`enp1s0f0`) — PCI `01:00.0`, altname `enx5c6f690f8714` |
 | NIC 1 | **Broadcom NetXtreme BCM5720** (`enp1s0f1`) — PCI `01:00.1`, altname `enx5c6f690f8715` |
 | NIC 2 | **Realtek RTL8111/8168** (`enp2s0`) — PCI `02:00.0`, altname `enx901b0ef0ec6b`, MAC `90:1b:0e:f0:ec:6b` (BIOS LAN 1) |
-| USB | 2× USB 3.0 (front) + 5× USB 2.0 (rear); Kingston DataTraveler boot stick; Rapoo 2.4G wireless KB/mouse |
-| Display | HP LA2206 (HWP `2946-01010101`), 1920×1080@60, DP-1 |
+| USB | 2× USB 3.0 (front) + 5× USB 2.0 (rear) |
 | Power | AC attached, no battery — adapter present and powers the box (spec TBD, [pending](#pending-checks)) |
 | Cooling | Passive/fanless; idle ~59 °C (k10temp + radeon, SystemRescue, ~54 min uptime) |
 
@@ -118,9 +115,8 @@ a wake-latency consideration, noted for a 24/7 router.)
 
 - Internal = **Innodisk DEMSR-08GB mSATA 3ME3** — `sda`, **7.99 GB (7.4 GiB)**, SN
   `20171003AAAA159004FC`, FW `S16425G3`, SATA 6.0 Gb/s, **TRIM available**. Confirmed by
-  `lsblk` + `smartctl` 2026-09-02 (matches Idea 07's "8 GB mSATA"). The USB **Kingston
-  DataTraveler** (`sdb`, 57.8 GiB, Ventoy; `sdb1` data / `sdb2` boot) is the live boot
-  medium, not the router disk.
+  `lsblk` + `smartctl` 2026-09-02 (matches Idea 07's "8 GB mSATA"). (`sdb` is the live USB
+  boot medium, not the router disk.)
 
   **SMART — PASSED** (industrial Innodisk 3ME3): overall health **PASSED**; 0 reallocated /
   pending / uncorrectable sectors; `Available_Reservd_Space` 100%; program & erase fail
@@ -145,12 +141,10 @@ a wake-latency consideration, noted for a 24/7 router.)
 - **AMD-V (SVM) present** (`kvm_amd` loaded) — irrelevant if OPNsense runs bare-metal,
   but available if the box ever virtualized.
 
-### Display / power / thermals
+### Power / thermals
 
 | Field | Value |
 |---|---|
-| Output | DisplayPort `DP-1` → HP LA2206 (2012), 1920×1080@60 |
-| Audio | HDA ATI HDMI + Realtek ALC662 |
 | Thermals | ~59 °C (k10temp / radeon) — within reason for a fanless compact box; the 5720 (~2.5–3.5 W) is Idea 07's "thermally ideal" pick |
 | AC | 100–240 V, 50–60 Hz; external PSU (label TBD) |
 
