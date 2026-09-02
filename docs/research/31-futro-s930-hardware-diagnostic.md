@@ -4,7 +4,7 @@
 
 **Scope**: Pre-boot hardware audit of the newly arrived **Fujitsu FUTRO S930** thin client (the planned OPNsense network edge, [issue #96](https://github.com/jaroslaw-bagnicki/Homelab/issues/96)) — full hardware inventory before committing OPNsense to the box. Same Phase 0 pattern as the [Wyse 3040 audit (research 28)](28-wyse3040-hardware-diagnostic.md) and the [Wyse 5070 audit (research 29)](29-wyse5070-hardware-diagnostic.md).
 
-**Status**: 🔨 In progress — SystemRescue/hardinfo2 inventory captured; internal mSATA capacity + **SMART PASSED**, and **AES-NI confirmed**; a memory-layout decision and BIOS walk still pending ([Pending checks](#pending-checks)).
+**Status**: 🔨 In progress — SystemRescue/hardinfo2 inventory captured; internal mSATA capacity + **SMART PASSED**, **AES-NI confirmed**, **PCIe confirmed Gen1 ×1 (no BIOS option — platform limit)**; a memory-layout decision still pending ([Pending checks](#pending-checks)).
 
 ---
 
@@ -23,7 +23,7 @@
 | RAM | **4 GiB (1× 4 GiB)**, one SODIMM slot free — see [RAM](#ram); Idea 07's 8 GB (Zenarmor) goal is a one-stick upgrade |
 | NIC (card) | **Broadcom NetXtreme BCM5720 2× 1 GbE** (`enp1s0f0/f1`) — **Idea 07's chosen NIC**, FreeBSD `bge` driver |
 | NIC (onboard) | **Realtek RTL8111/8168 GbE** (`enp2s0`, `r8169`) — reserve as MGMT/OPT behind the `bge` card |
-| PCIe slot | trains **Gen1 (1.1) ×1** (BCM5720 is Gen2 ×2 capable) — platform-limited; ~1.6–1.7 Gbps/dir ceiling |
+| PCIe slot | **Gen1 (1.1) ×1** — no BIOS Gen option → **hard platform limit** (BCM5720 is Gen2 ×2 capable); ~1.6–1.7 Gbps/dir ceiling |
 | OS medium | Internal **Innodisk DEMSR-08GB mSATA — 7.99 GB (`sda`), SMART PASSED** (~5,066 POH, 0 errors); **8 GB is tight** for OPNsense (Idea 07's replace-with-32–128 GB) |
 | GPU | AMD **Mullins [Radeon R4/R5]** (integrated; display `DP-1` → HP LA2206) — irrelevant to routing |
 | Crypto | ✅ **AES-NI present** (`aes` CPU flag, all 4 cores) — no SHA-NI (Jaguar). See [CPU & crypto](#cpu--security-notes) |
@@ -61,7 +61,7 @@ chipset + driver before choosing which port becomes WAN** (idea 07 §"HP T730" w
 | GPU | AMD **Mullins [Radeon R4/R5]** (PCI `00:01.0`), output `DP-1` → **HP LA2206 1920×1080** |
 | NIC 0 | **Broadcom NetXtreme BCM5720** (`enp1s0f0`) — PCI `01:00.0`, altname `enx5c6f690f8714` |
 | NIC 1 | **Broadcom NetXtreme BCM5720** (`enp1s0f1`) — PCI `01:00.1`, altname `enx5c6f690f8715` |
-| NIC 2 | **Realtek RTL8111/8168** (`enp2s0`) — PCI `02:00.0`, altname `enx901b0ef0ec6b` |
+| NIC 2 | **Realtek RTL8111/8168** (`enp2s0`) — PCI `02:00.0`, altname `enx901b0ef0ec6b`, MAC `90:1b:0e:f0:ec:6b` (BIOS LAN 1) |
 | USB | 2× USB 3.0 (front) + 5× USB 2.0 (rear); Kingston DataTraveler boot stick; Rapoo 2.4G wireless KB/mouse |
 | Display | HP LA2206 (HWP `2946-01010101`), 1920×1080@60, DP-1 |
 | Power | AC attached, no battery — adapter present and powers the box (spec TBD, [pending](#pending-checks)) |
@@ -96,8 +96,11 @@ trains down on *both* speed and width — a board/BIOS limitation, not the card 
 (Note: this BCM5720 variant is PCIe **2.0 ×2**, not ×1 as originally assumed — idea 07 said
 "×1 or ×2 depending on variant".) Effective ceiling ~**1.6–1.7 Gbps/direction**: fine for a
 single 1 Gbps WAN↔LAN route, but a possible constraint for the **VLANs-later** phase if
-inter-VLAN traffic crosses the same card. Whether the BIOS exposes a Gen2 option is still
-to be confirmed in the BIOS walk.
+inter-VLAN traffic crosses the same card. **Confirmed 2026-09-02** via the BIOS setup walk
+(F2 → Advanced: Graphics, SATA, USB, Onboard Device, Auto BIOS Update, SMART, Super IO,
+Network Stack — **no PCIe link-speed option exposed**): Gen1 ×1 is a **hard platform limit**
+of the S930, not fixable in firmware. (BIOS also shows CPU Power Saving **C6 Mode [Enabled]** —
+a wake-latency consideration, noted for a 24/7 router.)
 
 ### RAM
 
@@ -163,7 +166,7 @@ to be confirmed in the BIOS walk.
 | RAM 4 GB (→8 for Zenarmor) | 4 GiB (1×), **free slot** → 8 GB trivial | ✅ matches; upgrade path confirmed |
 | Disk = replace 8 GB mSATA | Internal **Innodisk DEMSR-08GB mSATA — 7.99 GB, SMART PASSED** (5,066 POH, 0 errors) | ⚠️ 8 GB is tight — 32–128 GB mSATA swap (Idea 07) |
 | Onboard NIC = check Realtek vs Intel | Onboard = **Realtek RTL8111/8168** (`re`) | ✅ **Realtek confirmed** — reserve as MGMT/OPT, not WAN/LAN |
-| PCIe 2.0 ×4 slot (idea 07) | Slot **trains Gen1 ×1** with the BCM5720 (Gen2 ×2-capable card) | ⚠️ platform caps at Gen1; fine for 1 Gbps WAN, revisit for VLANs |
+| PCIe 2.0 ×4 slot (idea 07) | Slot **trains Gen1 ×1**; no BIOS Gen option (confirmed) | ⚠️ hard platform limit — fine for 1 Gbps WAN, revisit for VLANs |
 | Passive/power | Fanless, ~59 °C idle, AC external PSU | ✅ matches |
 
 ---
@@ -176,19 +179,19 @@ to be confirmed in the BIOS walk.
    (Idea 07) during the OPNsense install.
 2. **AES-NI / crypto** — ✅ **resolved 2026-09-02**: AES-NI **present** (`aes` flag, 4
    cores); no SHA-NI. Idea 07's crypto premise holds; re-benchmark WireGuard/IPS at install.
-3. **BIOS Setup walk** — boot mode (UEFI/Legacy), Secure Boot state, M.2/mSATA toggles,
-   PCIe slot state, whether the 5720 card is enumerated (should be, per `lspci`). Verify
-   the angled PCIe riser + low-profile bracket are correctly fitted (Idea 07 §Futro S930
-   compatibility).
+3. **BIOS Setup walk** — ✅ **walked 2026-09-02** (Main + Advanced tabs): BIOS `R1.14.0`,
+   board `D3313-E1`, **no PCIe link-speed option**, Onboard LAN 1 (Realtek)
+   `90:1b:0e:f0:ec:6b` shown. Still open: boot mode (UEFI/Legacy) + Secure Boot state in a
+   full pass; confirm the angled riser + LP bracket seat the 5720 (Idea 07 §Futro S930).
 4. **Memory decision** — 4 GiB (as-is) vs add a 2nd 4 GiB (8 GB) for Zenarmor/Suricata;
    needs a DDR3-1600 SO-DIMM. Confirm the free `DIMM 2` slot on this board before buying.
 5. **Power adapter spec** — barrel connector voltage/amp rating on the included PSU.
 6. **Static IP** — reserve a slot in research 24's scheme for the router during the
    OPNsense install (currently the live session RMAN uses DHCP `.32` via the mesh).
 7. **PCIe link speed** — ✅ **resolved 2026-09-02**: the BCM5720 trains at **Gen1 (1.1) ×1**
-   despite a Gen2 ×2 capability — the platform caps the target at 2.5 GT/s. Acceptable for a
-   1 Gbps WAN; revisit before the VLANs phase. BIOS Gen2 option still to confirm in the
-   BIOS walk.
+   despite a Gen2 ×2 capability — and the **BIOS exposes no PCIe link-speed option**, so
+   **Gen1 ×1 is a hard platform limit** (not changeable). Acceptable for a 1 Gbps WAN;
+   revisit before the VLANs phase.
 
 ---
 
