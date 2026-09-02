@@ -23,6 +23,7 @@
 | RAM | **4 GiB (1× 4 GiB)**, one SODIMM slot free — see [RAM](#ram); Idea 07's 8 GB (Zenarmor) goal is a one-stick upgrade |
 | NIC (card) | **Broadcom NetXtreme BCM5720 2× 1 GbE** (`enp1s0f0/f1`) — **Idea 07's chosen NIC**, FreeBSD `bge` driver |
 | NIC (onboard) | **Realtek RTL8111/8168 GbE** (`enp2s0`, `r8169`) — reserve as MGMT/OPT behind the `bge` card |
+| PCIe slot | trains **Gen1 (1.1) ×1** (BCM5720 is Gen2 ×2 capable) — platform-limited; ~1.6–1.7 Gbps/dir ceiling |
 | OS medium | Internal **Innodisk DEMSR-08GB mSATA — 7.99 GB (`sda`), SMART PASSED** (~5,066 POH, 0 errors); **8 GB is tight** for OPNsense (Idea 07's replace-with-32–128 GB) |
 | GPU | AMD **Mullins [Radeon R4/R5]** (integrated; display `DP-1` → HP LA2206) — irrelevant to routing |
 | Crypto | ✅ **AES-NI present** (`aes` CPU flag, all 4 cores) — no SHA-NI (Jaguar). See [CPU & crypto](#cpu--security-notes) |
@@ -80,6 +81,23 @@ Realtek is on **bus 2** (`02:00.0`). This **confirms Idea 07 §NIC**: the Dell B
 port is Realtek. Per Idea 07 §"OPNsense behaviour (`bge` driver)", in OPNsense **disable
 Hardware CRC Checksum Offloading, TSO and LRO** (Interfaces → Settings) to avoid
 instability/packet loss on `bge`.
+
+### PCIe link speed (the slot trains at Gen1 ×1)
+
+`lspci` 2026-09-02: the BCM5720 sits in the slot via the riser, but the link trains at
+**Gen1 (1.1) ×1** despite a **Gen2 (2.0) ×2** capability:
+
+- `LnkCap: Speed 5GT/s (Gen2), Width x2, ASPM L0s/L1`
+- `LnkSta: Speed 2.5GT/s (downgraded), Width x1 (downgraded)`
+- `LnkCtl2: Target Link Speed: 2.5GT/s`
+
+The **platform side** (S930 root port / slot) advertises a **Gen1** target, so the link
+trains down on *both* speed and width — a board/BIOS limitation, not the card or riser.
+(Note: this BCM5720 variant is PCIe **2.0 ×2**, not ×1 as originally assumed — idea 07 said
+"×1 or ×2 depending on variant".) Effective ceiling ~**1.6–1.7 Gbps/direction**: fine for a
+single 1 Gbps WAN↔LAN route, but a possible constraint for the **VLANs-later** phase if
+inter-VLAN traffic crosses the same card. Whether the BIOS exposes a Gen2 option is still
+to be confirmed in the BIOS walk.
 
 ### RAM
 
@@ -145,6 +163,7 @@ instability/packet loss on `bge`.
 | RAM 4 GB (→8 for Zenarmor) | 4 GiB (1×), **free slot** → 8 GB trivial | ✅ matches; upgrade path confirmed |
 | Disk = replace 8 GB mSATA | Internal **Innodisk DEMSR-08GB mSATA — 7.99 GB, SMART PASSED** (5,066 POH, 0 errors) | ⚠️ 8 GB is tight — 32–128 GB mSATA swap (Idea 07) |
 | Onboard NIC = check Realtek vs Intel | Onboard = **Realtek RTL8111/8168** (`re`) | ✅ **Realtek confirmed** — reserve as MGMT/OPT, not WAN/LAN |
+| PCIe 2.0 ×4 slot (idea 07) | Slot **trains Gen1 ×1** with the BCM5720 (Gen2 ×2-capable card) | ⚠️ platform caps at Gen1; fine for 1 Gbps WAN, revisit for VLANs |
 | Passive/power | Fanless, ~59 °C idle, AC external PSU | ✅ matches |
 
 ---
@@ -166,8 +185,10 @@ instability/packet loss on `bge`.
 5. **Power adapter spec** — barrel connector voltage/amp rating on the included PSU.
 6. **Static IP** — reserve a slot in research 24's scheme for the router during the
    OPNsense install (currently the live session RMAN uses DHCP `.32` via the mesh).
-7. **PCIe riser fit** — confirm the bought riser + LP bracket actually seat the BCM5720 in
-   the S930 case (Idea 07 §Futro S930 compatibility / Allegro riser note).
+7. **PCIe link speed** — ✅ **resolved 2026-09-02**: the BCM5720 trains at **Gen1 (1.1) ×1**
+   despite a Gen2 ×2 capability — the platform caps the target at 2.5 GT/s. Acceptable for a
+   1 Gbps WAN; revisit before the VLANs phase. BIOS Gen2 option still to confirm in the
+   BIOS walk.
 
 ---
 
