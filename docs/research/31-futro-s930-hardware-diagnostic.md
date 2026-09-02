@@ -4,7 +4,7 @@
 
 **Scope**: Pre-boot hardware audit of the newly arrived **Fujitsu FUTRO S930** thin client (the planned OPNsense network edge, [issue #96](../decisions/24-edge-ingress-appliance.md)) — full hardware inventory before committing OPNsense to the box. Same Phase 0 pattern as the [Wyse 3040 audit (research 28)](28-wyse3040-hardware-diagnostic.md) and the [Wyse 5070 audit (research 29)](29-wyse5070-hardware-diagnostic.md).
 
-**Status**: 🔨 In progress — SystemRescue/hardinfo2 inventory captured; internal mSATA capacity/SMART, an AES-NI CPU check, and a memory-layout decision pending ([Pending checks](#pending-checks)).
+**Status**: 🔨 In progress — SystemRescue/hardinfo2 inventory captured; internal mSATA capacity **resolved (7.4 GiB)**, SMART health, an AES-NI CPU check, and a memory-layout decision pending ([Pending checks](#pending-checks)).
 
 ---
 
@@ -13,7 +13,7 @@
 > **Decision authority:** the OPNsense-on-S930 direction is still an **idea** —
 > [Idea 07](../ideas/07-opnsense-futro-s930.md). No ADR yet. This research doc is the
 > Phase 0 hardware audit output. It **confirms Idea 07's NIC & platform premise** but
-> **contests the AES-NI claim** and **leaves the internal disk capacity open**.
+> **contests the AES-NI claim** and **flags the internal 7.4 GiB disk as tight** for OPNsense.
 
 | Decision | Outcome (as of 2026-09-02) |
 |---|---|
@@ -23,7 +23,7 @@
 | RAM | **4 GiB (1× 4 GiB)**, one SODIMM slot free — see [RAM](#ram); Idea 07's 8 GB (Zenarmor) goal is a one-stick upgrade |
 | NIC (card) | **Broadcom NetXtreme BCM5720 2× 1 GbE** (`enp1s0f0/f1`) — **Idea 07's chosen NIC**, FreeBSD `bge` driver |
 | NIC (onboard) | **Realtek RTL8111/8168 GbE** (`enp2s0`, `r8169`) — reserve as MGMT/OPT behind the `bge` card |
-| OS medium | Internal **mSATA** (SCSI `Innodisk DEMSR`) — capacity/SMART **pending** ([below](#pending-checks)) |
+| OS medium | Internal **mSATA — `Innodisk DEMSR` 7.4 GiB (`sda`)**; SMART health pending; 7.4 GiB is tight for OPNsense (reinforces Idea 07's replace-with-32–128 GB) |
 | GPU | AMD **Mullins [Radeon R4/R5]** (integrated; display `DP-1` → HP LA2206) — irrelevant to routing |
 | Crypto | ⚠️ **AES-NI contested** — GX-424CC is Jaguar, which lacks AES-NI per AMD. Verify at OPNsense install; see [CPU & crypto](#cpu--security-notes) |
 
@@ -56,7 +56,7 @@ chipset + driver before choosing which port becomes WAN** (idea 07 §"HP T730" w
 | BIOS | Fujitsu / American Megatrends Inc. **`V4.6.5.4 R1.14.0`** for `D3313-E1x`, dated 2017-09-21 |
 | CPU | AMD **GX-424CC SOC** — 1 package, **4 cores / 4 threads**, 2400 MHz, 2 MB L2 — see [CPU](#cpu--security-notes) |
 | RAM | **4 GiB** (1× 4 GiB DDR3-1600 SO-DIMM), one socket free — see [RAM](#ram) |
-| Storage | Internal **mSATA** `Innodisk DEMSR` (SCSI `sda`, unmounted) + USB boot stick (Kingston DataTraveler, `sdb`/Ventoy) — see [Storage](#storage) |
+| Storage | Internal **mSATA `Innodisk DEMSR` — 7.4 GiB (`sda`)** + USB boot stick (Kingston DataTraveler, `sdb` 57.8 GiB / Ventoy) — see [Storage](#storage) |
 | GPU | AMD **Mullins [Radeon R4/R5]** (PCI `00:01.0`), output `DP-1` → **HP LA2206 1920×1080** |
 | NIC 0 | **Broadcom NetXtreme BCM5720** (`enp1s0f0`) — PCI `01:00.0`, altname `enx5c6f690f8714` |
 | NIC 1 | **Broadcom NetXtreme BCM5720** (`enp1s0f1`) — PCI `01:00.1`, altname `enx5c6f690f8715` |
@@ -95,13 +95,15 @@ instability/packet loss on `bge`.
 
 ### Storage
 
-- Internal = **SCSI `Innodisk DEMSR`** (mSATA, expected Idea 07's "replace the 8 GB mSATA"
-  target). **Capacity & SMART not captured** — the used boot is the USB **Kingston
-  DataTraveler** (`sdb`, Ventoy; mounted `sdb1` 42.6 GiB / `sdb2` boot). The internal
-  `sda`/Innodisk was **unmounted** in hardinfo2, so no `lsblk`/`smartctl` detail exists yet.
-- ⚠️ **mSATA write endurance is the key question** for OPNsense (Idea 07: "OPNsense log
-  writes wear flash quickly") — confirm the real capacity and SMART health, then decide
-  whether to upgrade the medium. See [Pending checks](#pending-checks).
+- Internal = **SCSI `Innodisk DEMSR` — 7.4 GiB (`sda`)**, confirmed by `lsblk` 2026-09-02
+  (matches Idea 07's "8 GB mSATA"). The USB **Kingston DataTraveler** (`sdb`, 57.8 GiB,
+  Ventoy; `sdb1` data / `sdb2` boot) is the live boot medium, not the router disk — note
+  hardinfo2 listed the internal `sda` as unmounted, so capacity initially had to be
+  captured from `lsblk`.
+- **7.4 GiB is tight for OPNsense** — a default install + logs can fill it (Idea 07:
+  "OPNsense log writes wear flash quickly"). Either enable **RAM-based logs** + `trim`, or
+  replace with a **32–128 GB mSATA** (Idea 07's recommendation). SMART health still
+  unverified — see [Pending checks](#pending-checks).
 
 ### CPU / Security notes
 
@@ -137,7 +139,7 @@ instability/packet loss on `bge`.
 | **AES-NI** | **Jaguar has no AES-NI** — crypto is software-only | ⚠️ **contested** — verify + revise VPN/IPS figures |
 | NIC = Dell Broadcom 5720 2× 1 GbE, `bge` | **Broadcom BCM5720 present** (`enp1s0f0/f1`), onboard Realtek | ✅ matches Idea 07's choice |
 | RAM 4 GB (→8 for Zenarmor) | 4 GiB (1×), **free slot** → 8 GB trivial | ✅ matches; upgrade path confirmed |
-| Disk = replace 8 GB mSATA | Internal **Innodisk mSATA**, capacity/SMART **pending** | ⏸️ verify before deciding |
+| Disk = replace 8 GB mSATA | Internal **Innodisk mSATA — 7.4 GiB (`sda`)** confirmed; SMART pending | ⚠️ 7.4 GiB is tight — lean toward the 32–128 GB mSATA swap (Idea 07) |
 | Onboard NIC = check Realtek vs Intel | Onboard = **Realtek RTL8111/8168** (`re`) | ✅ **Realtek confirmed** — reserve as MGMT/OPT, not WAN/LAN |
 | Passive/power | Fanless, ~59 °C idle, AC external PSU | ✅ matches |
 
@@ -145,9 +147,10 @@ instability/packet loss on `bge`.
 
 ## Pending Checks
 
-1. **Internal mSATA** — `lsblk` + `smartctl -a` on the Innodisk `sda`: capacity, SMART
-   health (write endurance) → is the included medium OPNsense-viable, or upgrade to
-   32–128 GB mSATA (Idea 07). Record the exact device + serial into `docs/hardware.md`.
+1. **Internal mSATA** — ✅ capacity **resolved 2026-09-02**: `Innodisk DEMSR` = **7.4 GiB**
+   (`sda`). Pending: `smartctl -a` for SMART health / write endurance → decide
+   **RAM-based logs + trim vs replace with 32–128 GB mSATA** (Idea 07). Record the exact
+   device + serial into `docs/hardware.md`.
 2. **AES-NI / crypto** — `grep -o aes /proc/cpuinfo` (or OPNsense cryptodev) → confirm the
    GX-424CC crypto capability; revise Idea 07's VPN/IPS throughput expectations.
 3. **BIOS Setup walk** — boot mode (UEFI/Legacy), Secure Boot state, M.2/mSATA toggles,
