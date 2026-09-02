@@ -13,6 +13,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | **OMV NAS** | OpenMediaVault server, backup target | HP ProLiant ML110 G5 | Pentium E2160 (2C/2T, 65 W) | 4 GB DDR2 | Goodram 120 GB SSD + RAID1 arrays | 1× GbE BCM5722 | ✅ |
 | **Edge Ingress** | public ingress | Dell Wyse 3040 | Atom x5-Z8350 (2 W TDP) | 2 GB DDR3L | 8 GB eMMC | 1× GbE | 🔨 |
 | **Home Assistant** | smart home node | Dell Wyse 5070 | Celeron J4105 (10 W) | 8 GB DDR4 (2× 4 GB) | M.2 SATA SK hynix 128 GB | 1× GbE + WiFi | 🔨 |
+| **OPNsense Router** | LAN edge router / firewall | Fujitsu Futro S930 | GX-424CC (4C/4T, 25 W TDP) | 4 GB DDR3 (1×, 1 free slot) | Innodisk 7.99 GB mSATA | 3× GbE (BCM5720 2× + Realtek 1×) | 📋 |
 | **LLM server** | local LLM inference | Minisforum AI X1 | Ryzen 7 255 (Hawk Point, 45 W cTDP) | 64–96 GB DDR5 | NVMe | 1× GbE | 🧠 (Phase 2) |
 | **Cloudlab VPS** | staging / playground | Contabo Cloud VPS 10 | 4 vCPU (cloud — no TDP) | 8 GB | 75 GB NVMe | public IP | ✅ |
 
