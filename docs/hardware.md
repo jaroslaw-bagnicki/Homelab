@@ -9,13 +9,12 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 
 | Node | Role | Device | CPU | RAM | Storage | Network | Status |
 |---|---|---|---|---|---|---|---|
-| **Lab** | main workload host | Lenovo ThinkCentre M910q Tiny | i5-7500T (4C/4T) | 16 GB DDR4 | 256 GB NVMe (+ free 2.5" bay) | 1× GbE `enp0s31f6` | ✅ |
-| **OMV NAS** | OpenMediaVault server, backup target | HP ProLiant ML110 G5 | Pentium E2160 (2C/2T) | 4 GB DDR2 | Goodram 120 GB SSD + RAID1 arrays | 1× GbE BCM5722 | ✅ |
-| **Edge Ingress** | public ingress | Dell Wyse 3040 | Atom x5-Z8350 | 2 GB DDR3L | 8 GB eMMC | 1× GbE | 🔨 |
-| **Home Assistant** | smart home node | Dell Wyse 5070 | Celeron J4105 | 8 GB DDR4 (2× 4 GB) | M.2 SATA SK hynix 128 GB | 1× GbE + WiFi | 🔨 |
-| **OPNsense Router** | LAN edge router / firewall | Fujitsu Futro S930 | GX-424CC (4C/4T) | 4 GB DDR3 (1×, 1 free slot) | Innodisk 7.99 GB mSATA | 3× GbE (BCM5720 2× + Realtek 1×) | 📋 |
-| **LLM server** | local LLM inference | Minisforum AI X1 | Ryzen 7 255 (Hawk Point) | 64–96 GB DDR5 | NVMe | 1× GbE | 🧠 (Phase 2) |
-| **Cloudlab VPS** | staging / playground | Contabo Cloud VPS 10 | 4 vCPU | 8 GB | 75 GB NVMe | public IP | ✅ |
+| **Lab** | main workload host | Lenovo ThinkCentre M910q Tiny | i5-7500T (4C/4T, 35 W) | 16 GB DDR4 | 256 GB NVMe (+ free 2.5" bay) | 1× GbE `enp0s31f6` | ✅ |
+| **OMV NAS** | OpenMediaVault server, backup target | HP ProLiant ML110 G5 | Pentium E2160 (2C/2T, 65 W) | 4 GB DDR2 | Goodram 120 GB SSD + RAID1 arrays | 1× GbE BCM5722 | ✅ |
+| **Edge Ingress** | public ingress | Dell Wyse 3040 | Atom x5-Z8350 (2 W TDP) | 2 GB DDR3L | 8 GB eMMC | 1× GbE | 🔨 |
+| **Home Assistant** | smart home node | Dell Wyse 5070 | Celeron J4105 (10 W) | 8 GB DDR4 (2× 4 GB) | M.2 SATA SK hynix 128 GB | 1× GbE + WiFi | 🔨 |
+| **LLM server** | local LLM inference | Minisforum AI X1 | Ryzen 7 255 (Hawk Point, 45 W cTDP) | 64–96 GB DDR5 | NVMe | 1× GbE | 🧠 (Phase 2) |
+| **Cloudlab VPS** | staging / playground | Contabo Cloud VPS 10 | 4 vCPU (cloud — no TDP) | 8 GB | 75 GB NVMe | public IP | ✅ |
 
 ## Compute & Storage Nodes
 
@@ -35,7 +34,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 
 | Item | Spec |
 |---|---|
-| CPU | Intel Pentium E2160 @ 1.8 GHz (2C/2T) |
+| CPU | Intel Pentium E2160 @ 1.8 GHz (2C/2T, 65 W TDP) |
 | RAM | 4 GB (2× 2 GiB DDR2-800) |
 | Boot | Goodram C40 120 GB SSD (ICH9 SATA #5, OMV 8.3) |
 | Data | `md0` = 2× 500 GB Hitachi HDS721050CLA660 (RAID1 → XFS) · `md1` = 2× 250 GB (RAID1 → ext4) |
@@ -49,7 +48,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 
 | Item | Spec |
 |---|---|
-| CPU | Intel Atom x5-Z8350 |
+| CPU | Intel Atom x5-Z8350 (2 W TDP) |
 | RAM | 2 GB DDR3L |
 | Storage | 8 GB eMMC |
 | Firmware | BIOS Dell 1.2.3 (2017-11-07) · SKU 07C1 · serial `8YW28L2` |
@@ -63,7 +62,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 
 | Item | Spec |
 |---|---|
-| CPU | Intel Celeron J4105 (Gemini Lake, 4C/4T, 2.5 GHz) — fanless, idle ~35 °C |
+| CPU | Intel Celeron J4105 (Gemini Lake, 4C/4T, 2.5 GHz, 10 W TDP) — fanless, idle ~35 °C |
 | RAM | **8 GB DDR4 (2× 4 GiB Micron `4ATF51264HZ-3G2J1`)** — both SODIMM slots populated (DDR4-3200 rated, 2400 MT/s); 16 GB = replace both with 2× 8 GB |
 | Storage | M.2 **SATA** 2280 — **SK hynix SC311 SATA 128 GB** (used, SMART PASSED, ~97% NAND life left, SN `MS8BN03201230BC10`); eMMC 14.7 GiB present, unused |
 | Network | Realtek RTL8111/8168 GbE (`enp1s0`, MAC `c0:25:a5:65:02:67`) · Intel CNVi WiFi + BT (`wlp0s12f0`, MAC `d0:3c:1f:cb:76:9a`) |
@@ -77,7 +76,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 
 | Item | Spec |
 |---|---|
-| CPU | AMD **GX-424CC** (Jaguar-family, 4C/4T, 2.4 GHz, 2 MB L2) — AES-NI present, no SHA-NI |
+| CPU | AMD **GX-424CC** (Jaguar-family, 4C/4T, 2.4 GHz, 2 MB L2, 25 W TDP) — AES-NI present, no SHA-NI |
 | RAM | **4 GB DDR3-1600** (1× 4 GiB SK hynix `HMT451S6BFR8A-PB` @ 1600 MT/s) — 2 SODIMM slots, **DIMM 2 free** → 8 GB is a one-stick upgrade |
 | Storage | **Innodisk DEMSR-08GB mSATA 3ME3 — 7.99 GB** (`sda`, SN `20171003AAAA159004FC`) · SMART **PASSED** (5,066 POH, 0 errors); **tight** for OPNsense — 32–128 GB mSATA swap recommended |
 | Network | **Broadcom NetXtreme BCM5720 2× 1 GbE** (FreeBSD `bge`) in the PCIe slot = WAN + LAN · onboard **Realtek RTL8111/8168** (`re`) = MGMT/OPT · **slot trains Gen1 ×1** (no BIOS option — platform limit) |
@@ -91,7 +90,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 
 | Item | Spec |
 |---|---|
-| CPU | Ryzen 7 255 (Hawk Point / Zen 4, Radeon 780M 12 CU) |
+| CPU | Ryzen 7 255 (Hawk Point / Zen 4, Radeon 780M 12 CU, 45 W cTDP) |
 | RAM | 64–96 GB DDR5 (planned) |
 | Role | Local LLM inference (Bielik, Llama-3 8B etc.) via UMA frame buffer; OCuLink future eGPU |
 | Docs | [research 08](research/08-llm-server-hardware.md) |
