@@ -57,6 +57,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | SATA | H81 **4-port AHCI** (2× SATA III 6 Gb/s + 2× SATA II 3 Gb/s) — no mSATA/NVMe installed; **mini-PCIe (mSATA) slot + PCIe 3.0 x16** available (future NVMe/HBA/NIC/cache) |
 | PSU | **AcBel 250 W, 80 Plus Gold** (Wincor `01750279900`) — +5V 10.5A rail ample for the drives |
 | Cooling | **3 fans** (front → CPU+PSU, rear PSU-end, UPS-unit); **42.5 dB @ 30 cm**; Gelid Fan Speed Controller planned (~32–35 dB) |
+| UPS | Internal **VOTEX 15.6 V 3000 mAh** — **proprietary, not OS-exposed** (no `power_supply`/ACPI/USB-HID), **not NUT-usable**; hardware nicety only — use a NUT-compatible external UPS for shutdown protection |
 | Network | 1× GbE Intel I217-V (`enp0s25`, MAC `00:01:2e:86:11:0c`) · DHCP `192.168.2.241` |
 | Board | `K2.1-H81-uATX` (WINCOR NIXDORF) · BIOS AMI `WN STD 07/16` (2018-12-19) · SN `000000001750261682 53R0455744` |
 | Role | Unraid NAS backup-target successor to the ML110 — [issue #98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98) |

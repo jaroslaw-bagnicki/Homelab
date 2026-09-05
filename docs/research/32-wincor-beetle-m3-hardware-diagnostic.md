@@ -271,7 +271,7 @@ than idea 01c's assumed "1× x16 + 1× x1".
 | PSU | **AcBel** (Wincor `01750279900`, "PSU UPS BEETLEM-III" L427) — **250 W** max (225 W @ 50 °C), **80 PLUS Gold**, 100–240 V input; SN `5427C4B78`. Rails: +3.3V 4.0A · +5V 10.5A (52.5 W) · +12V 8.2A (98.4 W) · +5Vsb 1.5A. **Confirms idea 01c's "industrial 80 Plus Gold" premise** (brand is AcBel, not FSP/Fortron). The +5V rail is ample for the 2× 2.5" HDDs + SSD |
 | Noise (measured) | **42.5 dB front / 42.0 dB back @ 30 cm** (UNI-T UT353) — uniformly ~42–42.5 dB, matches idea 01c's "~42–45 dB stress" / "44 dB" |
 | Cooling | **3 fans**: (1) right-front pushing air over the **CPU + PSU**, (2) rear at the **PSU end**, (3) inside the **UPS/battery unit**. Corrects idea 01c's "one radial tunnel turbine" model. **Gelid Fan Speed Controller** is the recorded noise-reduction step (target ~32–35 dB, keep TACH on the board, don't go below ~30 dB) |
-| UPS battery | Internal **VOTEX 15.6 V, 3000 mAh** (Wincor Nixdorf UPS) — the POS's battery-backup; potential graceful-shutdown/roll-protection for a NAS, but OS-exposure unverified (see Open Questions) |
+| UPS battery | Internal **VOTEX 15.6 V, 3000 mAh** (Wincor Nixdorf UPS) — **proprietary, not OS-exposed** (SMBus `i2c-6` = DIMM SPD + RTC only; no `power_supply`/ACPI/USB-HID), **not NUT-usable** — hardware nicety only |
 
 ---
 
@@ -329,8 +329,13 @@ decision to proceed as the Unraid successor to the ML110, or to reconsider, is *
    **42.5 dB @ 30 cm**. Gelid controller (idea 01c): confirm which fan(s) it slows, whether it
    needs a multi-head/splitter, and that the PSU-end + UPS fans are controllable (UPS fan may be
    sealed). Target ~32–35 dB; keep TACH on the board; don't drop below ~30 dB (heatsink airflow).
-6. **UPS battery** — the internal **VOTEX 15.6 V 3000 mAh** unit: is it OS-exposed (e.g. for
-   graceful shutdown / power-loss protection) or purely a POS hardware UPS?
+- ✅ **UPS battery — resolved 2026-09-05: proprietary / firmware-managed, NOT OS-exposed, NOT
+  NUT-usable.** Inspected via SMBus (`/dev/i2c-6` = i801 SMBus `00:1f.3`): only system-standard
+  chips respond — `0x52` = **DDR3 DIMM SPD** (`XW1638N4GMPP-DB` = the 4 GB stick), `0x44` = an
+  **RTC/clock**, plus board-level monitors (`0x08`/`0x18`/`0x32`). No smart-battery fuel gauge. OS
+  checks confirm no `/sys/class/power_supply`, no ACPI battery, no USB-HID UPS. → the internal
+  **VOTEX 15.6 V 3000 mAh** is a **hardware nicety only**; use a **NUT-compatible external UPS** for
+  shutdown/power-loss protection on the NAS.
 
 ---
 
