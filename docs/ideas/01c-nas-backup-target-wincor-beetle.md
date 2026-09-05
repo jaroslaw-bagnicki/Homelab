@@ -1,28 +1,6 @@
 # Idea 01c — Homelab NAS: Wincor Beetle M-III (Unraid)
 
-> ⚠️ **2026-09-05 correction — acquired unit does NOT match this analysis.** The hardware
-> diagnostic ([research 32](../research/32-wincor-beetle-m3-hardware-diagnostic.md), issue #98)
-> found the acquired Beetle M-III is a board `K2.1-H81-uATX` — **Intel H81 / Haswell / LGA1150 /
-> DDR3**, not the **H110 / Skylake / LGA1151 / DDR4** assumed below. The CPU is a **Pentium G3420**
-> (Haswell, QuickSync H.264 only, no HEVC), RAM is **1×4 GB DDR3** (2 slots, ≤16 GB), there is
-> **no mSATA/NVMe/M.2**, and the array is **2× Seagate 1 TB** (1 parity + 1 data = 1 TB usable),
-> not 4×. The box is a workable small Unraid NAS but **the same generation as the EliteDesk 01b**
-> it was meant to beat — the "modern platform" premise no longer holds. Directions tested in
-> [open questions](#open-questions) below; decision status on [issue #98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98).
->
-> **Drives (2026-09-05)** — the array is **2× Seagate ST1000VT001-1RE172** (the pre-analysis's
-> "2× WD 1 TB" never applied — the unit shipped with these). Both are **CMR-like** (verified:
-> `sdb` 138 MB/s, `sdc` 132 MB/s on rewrite-in-place), SMART **PASSED** and **extended self-test
-> clean (both `Completed without error`)**, but **~65.5k POH (~7.5 yr)** and **Seagate Video 2.5
-> (surveillance)** drives — the offer's *"removed from high-budget laptops"* description
-> **contradicts** the always-on SMART history (65,536 POH / only 4 power-cycles). **Decision
-> resolved 2026-09-05: keep the 2× Seagates** (CMR + healthy + deep-test clean) → array = 1 parity +
-> 1 data = 1 TB, SanDisk X600 cache. The WD10JUCX pair is a fallback only.
->
-> The analysis below remains as the pre-acquisition research that fed the decision; it is **not**
-> the authority for the platform. Where it conflicts with research 32, research 32 wins.
-
-**Status**: 🧠 Idea (platform premise superseded)  
+**Status**: 🧠 Idea  
 **Date**: 2026-08-22  
 **Sources**:
 - [Gemini thread 4 — Wincor Beetle M-III vs EliteDesk 800 G1 SFF](https://share.gemini.google/H4KW01K8tTUZ) — dimensions, CPU support, cooling, fan control/noise, Zigbee fan control, disk capacity/mounting, NAS-platform analysis
@@ -59,7 +37,7 @@ the industrial POS platform leaves the most room to grow:
 | **Storage** | up to **4× 2.5" HDD** — 2× factory bracket + 3.5" bay → 2× 2.5" sled (1× parity + 3× data) |
 | **Cache** | reuse the **included 128 GB SSD** for now; future upgrade: **M.2 NVMe via low-profile PCIe adapter** |
 | **Network** | on-board 1 GbE (keep); 2.5 GbE only if the switch is upgraded |
-| **Cooling** | **3 fans** (front → CPU+PSU, rear PSU-end, UPS-unit) + **Gelid Fan Speed Controller** (TACH kept on board); optional quiet 80 mm front intake fan over the disk bracket — see [research 32](../research/32-wincor-beetle-m3-hardware-diagnostic.md) |
+| **Cooling** | factory tunnel turbine + **Gelid Fan Speed Controller** (TACH kept on board); optional quiet 80 mm front intake fan over the disk bracket |
 
 ## Cost Estimation
 
@@ -83,8 +61,8 @@ Prices scraped / quoted (August 2026). Conversion: **1 EUR ≈ 4.25 PLN**.
 ## Key Findings
 
 ### Platform & extensibility
-- **Industrial PSU** (220–300 W, 80 Plus Gold/Platinum) with large 12 V headroom for multi-HDD spin-up + PoweredUSB 12/24 V — vs the EliteDesk's 240 W proprietary PSU with ~3–4 SATA plugs (confirmed on the received unit: **AcBel 250 W, 80 Plus Gold**, research 32)
-- **Expansion**: confirmed **1× PCIe 3.0 x16 + 2× PCIe 2.0 x1 + mini-PCIe (mSATA-capable)** (research 32) → HBA/SATA controller, 2.5 GbE/10 GbE NIC, or PCIe→NVMe adapter — expansion a Mini/USFF box cannot offer
+- **Industrial PSU** (220–300 W, 80 Plus Gold/Platinum) with large 12 V headroom for multi-HDD spin-up + PoweredUSB 12/24 V — vs the EliteDesk's 240 W proprietary PSU with ~3–4 SATA plugs
+- **Expansion**: 1× PCIe x16 + 1× PCIe x1 + 1× optional PCI/PCIe slot (official user manual — not 3× PCIe as first assumed) → HBA/SATA controller, 2.5 GbE/10 GbE NIC, or PCIe→NVMe adapter — expansion a Mini/USFF box cannot offer
 - **Modern platform**: LGA1151 (6th gen; some revisions 8./9.), **DDR4**, QuickSync (H.264/H.265 8-bit decode) for transcoding; **3× SATA III + 1× mSATA** on board — cache without eating a PCIe slot
 - **24/7 POS-grade build** (thick steel, industrial components, vibration-tolerant chassis)
 
@@ -93,9 +71,7 @@ Prices scraped / quoted (August 2026). Conversion: **1 EUR ≈ 4.25 PLN**.
 - CPU TDP doesn't affect idle draw — real savings come from disk spin-down + the low-idle POS platform
 
 ### Cooling & fan control
-- **Tunnel cooling**: factory assumption was one radial turbine over a passive CPU heatsink —
-  the received unit has **3 fans** (front → CPU+PSU, rear PSU-end, UPS-unit); measured **42.5 dB
-  @ 30 cm** ≈ this note's "44 dB / ~42–45 dB stress" (research 32) — the noise is high-pitched airflow
+- **Tunnel cooling**: one radial turbine over a passive CPU heatsink — the 44 dB noise is high-pitched airflow
 - **Manual fan control**: Gelid Fan Speed Controller cuts RPM ~50–60 % (→ ~32–35 dB) and **passes TACH through** → no `Fan Error` at POST; optional Zigbee dimmer for Home Assistant control
 - ⚠️ Passive heatsink needs constant airflow — don't go below ~30 dB; keep TACH on the board (non-standard pinout stalls POST)
 
