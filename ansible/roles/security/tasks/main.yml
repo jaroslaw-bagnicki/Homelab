@@ -60,6 +60,7 @@
       PermitRootLogin prohibit-password
       Match Address 192.168.2.0/24
           PasswordAuthentication yes
+      Match all
     dest: /etc/ssh/sshd_config.d/99-homelab-hardening.conf
     owner: root
     group: root
