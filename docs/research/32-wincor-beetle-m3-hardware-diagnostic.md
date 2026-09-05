@@ -33,7 +33,7 @@ pre-install follow-ups remain ([Pending checks](#pending-checks)).
 |---|---|
 | Hardware | WINCOR NIXDORF **BEETLE /MIII** — "System unit BEETLE/M-III K2 KMAT sw" · SN `000000001750261682 53R0455744` — **acquired** |
 | Board | **`K2.1-H81-uATX`** (WINCOR NIXDORF "Kit Motherboard_K2.1-H81-uATX", SN `000000001750296310 8D625Z8071`) — **Intel H81** chipset |
-| CPU | **Intel Pentium G3420** (Haswell, 2C/2T, 3.2 GHz, 3 MB L3, 53 W, AES-NI, QuickSync-H.264) — LGA1150 |
+| CPU | **Intel Pentium G3420** (Haswell, 2C/2T, 3.2 GHz, 3 MB L3, 53 W, QuickSync-H.264; AES-NI disabled) — LGA1150 |
 | RAM | **4 GiB (1× 4 GiB DDR3-1600 SODIMM)**, 2 slots, 1 free (≤16 GB → 8 GB = +1 stick); 2-slot/1-free confirmed |
 | NIC | **Intel Ethernet I217-V** (`00:19.0`, `e1000e`, MAC `00:01:2e:86:11:0c`) — on-board GbE |
 | SATA | H81 **4-port AHCI** (2× SATA III 6 Gb/s + 2× SATA II 3 Gb/s) — no mSATA/NVMe/M.2 **device**; a **mini-PCIe (mSATA-capable) slot** exists, empty |
@@ -98,11 +98,15 @@ H81 chipset). Treat "BGA1155" as a Wincor/firmware string quirk, not an upgrade 
 
 - Intel **Pentium G3420** — Haswell 4th gen, 2C/2T (no Hyper-Threading), 3.2 GHz, 3 MB L3,
   53 W. Idle clocks ~798 MHz; ~29–32 °C package (idle). **VT-x present** (`kvm_intel` loaded).
-- **AES-NI** — present (Haswell family; `kvm_intel`/gaches loaded). **QuickSync — H.264 only**:
-  Haswell does **not** hardware-encode/decode **H.265/HEVC**. Idea 01c's "QuickSync (H.264/H.265
-  8-bit decode)" is partially wrong — transcoding is H.264-only on this box.
+- **AES-NI — NOT present** (confirmed 2026-09-05: `aes` flag absent in both `lscpu` and
+  `/proc/cpuinfo`; no `aes`/`vmx` in dmesg). Haswell carries it in silicon, so its absence is
+  almost certainly **BIOS-disabled** on this POS board — check F2 Advanced/Security for an AES-NI /
+  VT-x toggle to re-enable. Consequence: no HW AES acceleration for encrypted backup targets
+  (restic/LUKS) — CPU-bound AES (minor; the ML110 lacks it too). `kvm_intel`/caches loaded.
+  **QuickSync — H.264 only**: Haswell does **not** hardware-encode/decode **H.265/HEVC**. Idea
+  01c's "QuickSync (H.264/H.265 8-bit decode)" is partially wrong — transcoding is H.264-only.
 - Security: modern mitigations present (PTI, Retpolines, etc.); fine for a 24/7 NAS behind the
-  edge ingress (ADR 08/24). `grep -o aes /proc/cpuinfo` is the formal confirmation (pending).
+  edge ingress (ADR 08/24). AES-NI confirmation now **resolved: absent**.
 
 ### CPU & chipset — offer vs received
 
@@ -123,7 +127,7 @@ H81 chipset). Treat "BGA1155" as a Wincor/firmware string quirk, not an upgrade 
 | TDP | 51 W | 53 W |
 | iGPU | Intel HD 510 (12 EU) | Intel HD (10 EU) |
 | **QuickSync** | H.264 + **HEVC decode** | **H.264 only** |
-| AES-NI / AVX2 | ✅ | ✅ |
+| AES-NI / AVX2 | ✅ | **❌ AES-NI disabled** (AVX2 ✅) |
 | Memory | DDR4 (dual-ch) | DDR3 (dual-ch) |
 
 **Chipset**
@@ -261,7 +265,7 @@ nas-friendly driver vs Realtek). 2.5 GbE remains gated on a switch upgrade (idea
 | **MINIPCIE1** | PCIe **2.0 x1** | mini-PCIe | `00:04.0` | **mSATA-capable** |
 
 **4 PCIe slots:** 1× **PCIe 3.0 x16** (CPU PEG) + 2× **PCIe 2.0 x1** + 1× **mini-PCIe (mSATA) 2.0
-x1**. The x16 (`PCIE1`) is empt — its lane is for a PCIe→M.2 NVMe cache adapter, a 2.5/10 GbE NIC,
+x1**. The x16 (`PCIE1`) is empty — its lane is for a PCIe→M.2 NVMe cache adapter, a 2.5/10 GbE NIC,
 or a SATA HBA to expand the array. **`MINIPCIE1` gives an mSATA path** (idea 01c's "1× mSATA"
 option is actually viable — slot present, just unpopulated; no M.2/NVMe slot exists). More slots
 than idea 01c's assumed "1× x16 + 1× x1".
@@ -314,7 +318,8 @@ toward the Seagates**; proceeding as the Unraid successor to the ML110 is the wo
 3. **Extended SMART self-test** — ✅ **resolved 2026-09-05**: both Seagates `# 1 Extended offline,
    Completed without error, LBA_of_first_error = -`. Do not need to re-run.
 4. **Re-seat `sdc`** to a SATA III port (currently 3.0 Gb/s) if 6 Gb/s is wanted.
-5. **`grep -o aes /proc/cpuinfo`** — formal AES-NI confirmation (expected present on Haswell).
+5. **AES-NI** — ✅ **resolved 2026-09-05: NOT present** (`aes` flag absent in `lscpu` +
+   `/proc/cpuinfo`; likely BIOS-disabled — Haswell has it in silicon; check F2 to re-enable).
 6. **Physical SATA port count** — verify 4 ports on the H81 board (2× III + 2× II) & the free
    port, to size the array-add path.
 7. **Memory test** (e.g. `/usr/sbin/memtest` or a live memtest pass) — validate the 4 GiB stick.
@@ -343,6 +348,38 @@ toward the Seagates**; proceeding as the Unraid successor to the ML110 is the wo
   checks confirm no `/sys/class/power_supply`, no ACPI battery, no USB-HID UPS. → the internal
   **VOTEX 15.6 V 3000 mAh** is a **hardware nicety only**; use a **NUT-compatible external UPS** for
   shutdown/power-loss protection on the NAS.
+
+---
+
+## Comparison: ML110 vs Beetle (anticipated/planned) vs Beetle (acquired)
+
+| Dimension | **ML110 G5** (current OMV, retiring) | **Beetle — anticipated/planned** (idea 01c / Allegro offer) | **Beetle — acquired** (this audit) |
+|---|---|---|---|
+| CPU | Pentium E2160 (Core 2, 2C/2T, ~1.8 GHz, 65 W) | Pentium **G4400** (Skylake, 2C/2T, 3.3 GHz, 51 W, **HEVC**) | Pentium **G3420** (Haswell, 2C/2T, 3.2 GHz, 53 W, H.264-only) |
+| AES-NI / QuickSync | ✗ / ✗ | ✅ / H.264+HEVC | **❌ AES-NI disabled** (likely BIOS) / H.264 |
+| RAM | 4 GB DDR2 (dead end) | **8 GB DDR4** | **4 GB DDR3** (2 slots → 8 GB) |
+| Chipset | ICH9R (LGA775) | H110 (LGA1151) | H81 (LGA1150) |
+| SATA | SATA II | 4× SATA III + mSATA | 2× SATA III + 2× SATA II; mini-PCIe mSATA (empty) |
+| Storage (array) | ~750 GB usable (2× RAID1 pairs); 1 TB spare offline | **4× 2.5" ≈ 3 TB** + SSD cache | **1 TB** (2× Seagate, data+parity) + SanDisk X600 128 GB cache |
+| NIC | Broadcom BCM5722 | 1 GbE | Intel I217-V |
+| Expansion | modest | x16 + x1 | **PCIe 3.0 x16 + 2× x1 + mini-PCIe** |
+| PSU | HP tower (wattage n/c) | FSP/Fortron 80+ Gold 220–300 W | **AcBel 250 W, 80+ Gold** |
+| Idle power | ~60–80 W | ~15–25 W | ~24 W |
+| Noise | 42–58 dB | ~35–38 dB | 42.5 dB → Gelid ~32–35 dB |
+| Footprint | full tower | ~9.7 L compact | ~9.7 L compact |
+| OS | OMV + mdadm | Unraid (planned) | Unraid (planned) |
+| Status | ✅ base for the existing OMV NAS | — (what was described/paid for) | 🔨 diagnostic complete, array decided |
+
+**Read:** the ML110 is the incumbent to retire (slow, power-hungry, noisy, Core 2 / DDR2 / SATA II).
+The **anticipated** Beetle (idea 01c based on the Allegro offer) is the ideal — Skylake, 8 GB DDR4,
+4-drive/3 TB, HEVC, SATA III + mSATA. The **acquired** Beetle is a real downgrade from that offer
+(Haswell/H81/DDR3, 4 GB, 1 TB, AES-NI disabled, no installed mSATA, H.264-only) — the basis for the
+seller-discount request — **but it is still a clear upgrade over the ML110** on every axis that
+matters (modern Haswell vs Core 2, DDR3 vs DDR2, SATA III vs II, ~1/3 the power, quiet with the
+Gelid controller, ~half the footprint, PCIe headroom, Unraid's add-a-drive model).
+
+**Verdict:** keep the Beetle as the ML110's NAS successor. The offer→acquired gap warrants a
+**seller discount (~80–100 PLN ask)**, but it does **not** change the replacement decision.
 
 ---
 
