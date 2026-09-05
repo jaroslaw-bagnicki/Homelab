@@ -121,8 +121,8 @@ devices (+1 USB boot stick); **no mSATA, no NVMe, no M.2 anywhere** (confirmed v
 | Device | Model | Size | SATA link | SMART | Notes |
 |---|---|---|---|---|---|
 | `sda` | SanDisk **SD9SB8W128G** | 128 GB (119.2 GiB) | 6.0 Gb/s | ✅ **PASSED** | 2.5" SSD, FW `X6107000`, SN `192124802192` |
-| `sdb` | Seagate **ST1000VT001-1RE172** | 1.00 TB (931.5 GiB) | 6.0 Gb/s | ✅ **PASSED** | 2.5" 5400 rpm, FW `SDC2`, SN `WDES3KB7` |
-| `sdc` | Seagate **ST1000VT001-1RE172** | 1.00 TB (931.5 GiB) | **3.0 Gb/s** | ✅ **PASSED** | 2.5" 5400 rpm, FW `SDC1`, SN `WDEPBVR3` — on a **SATA II** port |
+| `sdb` | Seagate **ST1000VT001-1RE172** | 1.00 TB (931.5 GiB) | 6.0 Gb/s | ✅ **PASSED** | Seagate **Video 2.5** (surveillance) — 2.5" 5400 rpm, FW `SDC2`, SN `WDES3KB7` |
+| `sdc` | Seagate **ST1000VT001-1RE172** | 1.00 TB (931.5 GiB) | **3.0 Gb/s** | ✅ **PASSED** | Seagate **Video 2.5** (surveillance) — 2.5" 5400 rpm, FW `SDC1`, SN `WDEPBVR3` — on a **SATA II** port |
 | `sdd` | Kingston DataTraveler 3.0 | 57.8 GiB | USB | n/a | Ventoy live medium — not a data drive |
 
 SMART detail:
@@ -133,14 +133,29 @@ SMART detail:
   self-test passed. **Healthy — reuse as Unraid cache** (matches idea 01c's "reuse the included
   128 GB SSD").
 - **Seagate `sdb`** — overall **PASSED**; **0** reallocated/pending/uncorrectable;
-  **65,536 POH (~7.5 yr continuous)** but only **4** power cycles / 4 start-stop / 4 load-cycles
-  (ran nearly non-stop, minimal parking) → archival-style, clean SMART; temp 33 °C.
+  **65,536 POH (~7.5 yr continuous)** with only **4** power cycles / 4 start-stop / 4 load-cycles
+  → the signature of an **always-on recorder/DVR drive**, not a laptop pull (laptop drives spin
+  down constantly and accrete thousands of load cycles); temp 33 °C.
 - **Seagate `sdc`** — same as `sdb`: **PASSED**, 0 bad sectors, **65,536 POH**, temp 31 °C; only
   difference is the link negotiating at **3.0 Gb/s** (SATA II port — re-seat to a SATA III port
   for 6 Gb/s; not a drive fault).
 
+### Recording type & drive provenance (2026-09-05)
+
+- **Recording type — CMR-like (empirical).** `dd` rewrite-in-place on `sdb` (4 GiB, `conv=fsync`)
+  sustained **138 MB/s** — no collapse when overwriting already-written sectors → behaves like
+  **CMR**, not SMR. (A sequential-append test alone is inconclusive: SMR is also fast on fresh
+  sequential streams; the in-place-rewrite test is the discriminator.)
+- **Provenance / offer conflict.** The drives are **Seagate Video 2.5** (`ST1000VT001` — a
+  surveillance/DVR-streaming drive family). The Allegro offer described them as *"removed from
+  high-budget laptops"* and listed `ST1000VT001` alongside laptop models `ST1000LM035`/`LM049`.
+  The **SMART contradicts the laptop claim**: 65,536 POH with only 4 power/load cycles is
+  **always-on recorder** behaviour, not laptop use. Either the provenance is misdescribed or the
+  drive class was mislabelled — relevant to the offer-vs-received discrepancy on issue #98.
+
 Both 1 TB Seagates have **no SMART self-test logged** — run an **extended self-test**
-(`smartctl -t long /dev/sdb` ≈158 min, `/dev/sdc` ≈165) before trusting them in the array.
+(`smartctl -t long /dev/sdb` ≈158 min, `/dev/sdc` ≈165) before trusting them in the array;
+also repeat the `dd` in-place-rewrite test on `sdc` (only `sdb` was tested).
 
 ### Storage plan implication
 
