@@ -52,6 +52,14 @@ $keyNames = [ordered]@{
 if ($env:SSH_AUTH_SOCK -and (Get-AzContext -ErrorAction SilentlyContinue)) {
   foreach ($secret in $keyNames.Keys) {
     Write-Host ":: Loading $($keyNames[$secret]) from Key Vault..." -ForegroundColor Yellow
-    $null = Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name $secret -AsPlainText 2>$null | ssh-add - 2>$null
+    $key = Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name $secret -AsPlainText -ErrorAction SilentlyContinue 2>$null
+    if (-not $key) {
+      Write-Warning ":: Could not read $secret from Key Vault — check Azure context / vault access"
+      continue
+    }
+    $null = $key | ssh-add - 2>$null
+    if ($LASTEXITCODE -ne 0) {
+      Write-Warning ":: ssh-add failed for $($keyNames[$secret])"
+    }
   }
 }
