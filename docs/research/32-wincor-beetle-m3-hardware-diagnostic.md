@@ -36,7 +36,7 @@ label + memory test still pending.
 | CPU | **Intel Pentium G3420** (Haswell, 2C/2T, 3.2 GHz, 3 MB L3, 53 W, AES-NI, QuickSync-H.264) — LGA1150 |
 | RAM | **4 GiB (1× 4 GiB DDR3-1600 SODIMM)**, 2 slots, 1 free (≤16 GB) — see [RAM](#ram) |
 | NIC | **Intel Ethernet I217-V** (`00:19.0`, `e1000e`, MAC `00:01:2e:86:11:0c`) — on-board GbE |
-| SATA | H81 **4-port AHCI** (2× SATA III 6 Gb/s + 2× SATA II 3 Gb/s) — **no mSATA / NVMe / M.2** |
+| SATA | H81 **4-port AHCI** (2× SATA III 6 Gb/s + 2× SATA II 3 Gb/s) — no mSATA/NVMe/M.2 **device**; a **mini-PCIe (mSATA-capable) slot** exists, empty |
 | Disk 0 | **SanDisk SD9SB8W128G** 128 GB 2.5" SATA SSD (`sda`) — **SMART PASSED** (45,577 POH) — cache |
 | Disk 1 | **Seagate ST1000VT001-1RE172** 1 TB 2.5" 5400 (`sdb`, `WDES3KB7`) — **SMART PASSED** (65,536 POH) |
 | Disk 2 | **Seagate ST1000VT001-1RE172** 1 TB 2.5" 5400 (`sdc`, `WDEPBVR3`) — **SMART PASSED** (65,536 POH), negotiating SATA II |
@@ -115,8 +115,8 @@ H81 chipset). Treat "BGA1155" as a Wincor/firmware string quirk, not an upgrade 
 ### Storage (SATA + SMART)
 
 H81 exposes 4 physical SATA ports (2× SATA III 6 Gb/s + 2× SATA II 3 Gb/s). Inventoried 3 SATA
-devices (+1 USB boot stick); **no mSATA, no NVMe, no M.2 anywhere** (confirmed via `lsblk` +
-`lspci -vv`):
+devices (+1 USB boot stick); **no mSATA/NVMe/M.2 device installed** (confirmed via `lsblk` +
+`lspci -vv`), though a **mini-PCIe (mSATA-capable) slot** (`MINIPCIE1`) is present but empty:
 
 | Device | Model | Size | SATA link | SMART | Notes |
 |---|---|---|---|---|---|
@@ -206,11 +206,20 @@ dominated by the platform + SSD + PSU (~8–12 W).
 Idea 01c said "on-board 1 GbE (keep)" — confirmed, and on an **Intel** NIC (`e1000e`, the more
 nas-friendly driver vs Realtek). 2.5 GbE remains gated on a switch upgrade (idea 01c unchanged).
 
-### PCIe / expansion
+### PCIe / expansion (dmidecode -t 9, 2026-09-05)
 
-`lspci -vv` enumerates **only** onboard devices — the **PCIe x16 slot is empty** (no NIC/HBA).
-This is the lane for: PCIe→M.2 NVMe cache adapter, a 2.5/10 GbE NIC, or a SATA HBA to expand the
-array (idea 01c's "1× x16 + 1× x1" expansion claim — slot present but unpopulated).
+| Slot | Type | Width | Bus | Notes |
+|---|---|---|---|---|
+| **PCIE1** | PCIe **3.0 x16** | x16 | `00:01.0` | CPU PEG — main expansion (empty) |
+| **PCIE2** | PCIe **2.0 x1** | x1 | `00:1c.1` | chipset |
+| **PCIE3** | PCIe **2.0 x1** | x1 | `00:1c.2` | chipset |
+| **MINIPCIE1** | PCIe **2.0 x1** | mini-PCIe | `00:04.0` | **mSATA-capable** |
+
+**4 PCIe slots:** 1× **PCIe 3.0 x16** (CPU PEG) + 2× **PCIe 2.0 x1** + 1× **mini-PCIe (mSATA) 2.0
+x1**. The x16 (`PCIE1`) is empt — its lane is for a PCIe→M.2 NVMe cache adapter, a 2.5/10 GbE NIC,
+or a SATA HBA to expand the array. **`MINIPCIE1` gives an mSATA path** (idea 01c's "1× mSATA"
+option is actually viable — slot present, just unpopulated; no M.2/NVMe slot exists). More slots
+than idea 01c's assumed "1× x16 + 1× x1".
 
 ### Power / thermals
 
@@ -230,7 +239,7 @@ array (idea 01c's "1× x16 + 1× x1" expansion claim — slot present but unpopu
 | CPU G4400 (Skylake) | **Pentium G3420** (Haswell) | ❌ Haswell (older) |
 | 4× DIMM **DDR4**, 32 GB | 1× 4 GiB **DDR3-1600**, 2 slots, ≤16 GB | ❌ DDR3, 4 GB |
 | QuickSync **H.264/H.265** | QuickSync **H.264 only** (Haswell) | ⚠️ H.265/HEVC absent |
-| 3× SATA III + **1× mSATA** | **No mSATA / NVMe / M.2**; H81 4-port AHCI | ❌ no mSATA |
+| 3× SATA III + **1× mSATA** | **mini-PCIe (mSATA-capable) slot present, empty**; no NVMe/M.2; H81 4-port AHCI | ⚠️ mSATA slot (empty) ✅ path |
 | 4× 2.5" HDD array | **2× Seagate 1 TB** (+ 1 free SATA port) | ⚠️ 1 TB usable, not 3 TB |
 | reuse 128 GB SSD as cache | SanDisk 128 GB SSD, **PASSED** | ✅ matches |
 | 2× WD 1 TB purchase | unit came with **2× Seagate 1 TB** | ✅ no purchase needed |
