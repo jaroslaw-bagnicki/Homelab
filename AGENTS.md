@@ -56,6 +56,7 @@ Avoid ADR bloat — reference other ADRs and issues by name, do not restate thei
 - **Always push** after a commit on a feature branch in a worktree — push immediately, don't defer to user
 - **Do not push** to `main`, or after `git commit --amend` — amended commits require user confirmation before force-pushing
 - **Scope commits tightly** — one logical change per commit; do not bundle unrelated edits
+- **PRs ship with their `CHANGELOG.md` entry** — any PR that changes behaviour or docs adds/updates its changelog entry (newest first, with runbook/ADR links) in the same PR
 
 ## Workloads as self-contained recipes
 
