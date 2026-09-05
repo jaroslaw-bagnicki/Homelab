@@ -6,6 +6,7 @@
 - [Gemini thread 4 — Wincor Beetle M-III vs EliteDesk 800 G1 SFF](https://share.gemini.google/H4KW01K8tTUZ) — dimensions, CPU support, cooling, fan control/noise, Zigbee fan control, disk capacity/mounting, NAS-platform analysis
 - [Gemini thread 5 — Cache SSD mSATA for Unraid HDD](https://share.gemini.google/lyviXlDkXm7Y) — cache choice (mSATA vs NVMe vs SATA SSD), link aggregation vs 2.5 GbE, Unraid build plan
 - [Allegro offer 18851315845 — Wincor Beetle M-III G4400 8GB 128GB SSD](https://allegro.pl/oferta/wincor-beetle-m-iii-g4400-8gb-128gb-ssd-terminal-pos-komputer-18851315845) (scraped 2026-08-22)
+- [Research 32 — acquired-unit hardware diagnostic](../research/32-wincor-beetle-m3-hardware-diagnostic.md) (2026-09-05)
 
 Companion to [idea 01b](01b-nas-backup-target-elitedesk.md) (EliteDesk 800 G1 SFF) and
 **successor candidate to [idea 03](03-nas-backup-target-ml110.md)** (ML110 — too noisy and
