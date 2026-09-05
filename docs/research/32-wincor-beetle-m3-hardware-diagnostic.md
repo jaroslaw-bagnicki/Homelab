@@ -161,7 +161,7 @@ devices (+1 USB boot stick); **no mSATA/NVMe/M.2 device installed** (confirmed v
 
 | Device | Model | Size | SATA link | SMART | Notes |
 |---|---|---|---|---|---|
-| `sda` | SanDisk **SD9SB8W128G** | 128 GB (119.2 GiB) | 6.0 Gb/s | ✅ **PASSED** | 2.5" SSD, FW `X6107000`, SN `192124802192` |
+| `sda` | SanDisk **X600** (SD9SB8W-128G) | 128 GB (119.2 GiB) | 6.0 Gb/s | ✅ **PASSED** | 2.5" SSD, FW `X6107000`, SN `192124802192` |
 | `sdb` | Seagate **ST1000VT001-1RE172** | 1.00 TB (931.5 GiB) | 6.0 Gb/s | ✅ **PASSED** | Seagate **Video 2.5** (surveillance) — 2.5" 5400 rpm, FW `SDC2`, SN `WDES3KB7` |
 | `sdc` | Seagate **ST1000VT001-1RE172** | 1.00 TB (931.5 GiB) | **3.0 Gb/s** | ✅ **PASSED** | Seagate **Video 2.5** (surveillance) — 2.5" 5400 rpm, FW `SDC1`, SN `WDEPBVR3` — on a **SATA II** port |
 | `sdd` | Kingston DataTraveler 3.0 | 57.8 GiB | USB | n/a | Ventoy live medium — not a data drive |
@@ -231,7 +231,7 @@ dominated by the platform + SSD + PSU (~8–12 W).
 
 ### Storage plan implication
 
-- **Cache** — SanDisk 128 GB SSD (healthy).
+- **Cache** — SanDisk **X600** 128 GB SSD (healthy).
 - **Array** — **2 drives → 1 parity + 1 data = 1 TB usable** (not idea 01c's 4× = 3 TB).
 - To reach 4-drive (idea 01c's shape): the board has **1 free physical SATA port**; adding 2 more
   2.5" drives requires a **PCIe SATA card / HBA** in the empty x16 slot (or dropping to 3× 2.5").
@@ -268,7 +268,10 @@ than idea 01c's assumed "1× x16 + 1× x1".
 |---|---|
 | Thermals | acpitz 27.8/29.8 °C; package 32 °C; cores 29 °C (idle, live session) |
 | CPU idle | ~798 MHz (power state) |
-| AC/PSU | **label not captured** — pending check (idea 01c expects industrial FSP/Fortron 220–300 W) |
+| PSU | **AcBel** (Wincor `01750279900`, "PSU UPS BEETLEM-III" L427) — **250 W** max (225 W @ 50 °C), **80 PLUS Gold**, 100–240 V input; SN `5427C4B78`. Rails: +3.3V 4.0A · +5V 10.5A (52.5 W) · +12V 8.2A (98.4 W) · +5Vsb 1.5A. **Confirms idea 01c's "industrial 80 Plus Gold" premise** (brand is AcBel, not FSP/Fortron). The +5V rail is ample for the 2× 2.5" HDDs + SSD |
+| Noise (measured) | **42.5 dB @ 30 cm** (UNI-T UT353) — matches idea 01c's "~42–45 dB stress" / "44 dB" |
+| Cooling | **3 fans**: (1) right-front pushing air over the **CPU + PSU**, (2) rear at the **PSU end**, (3) inside the **UPS/battery unit**. Corrects idea 01c's "one radial tunnel turbine" model. **Gelid Fan Speed Controller** is the recorded noise-reduction step (target ~32–35 dB, keep TACH on the board, don't go below ~30 dB) |
+| UPS battery | Internal **VOTEX 15.6 V, 3000 mAh** (Wincor Nixdorf UPS) — the POS's battery-backup; potential graceful-shutdown/roll-protection for a NAS, but OS-exposure unverified (see Open Questions) |
 
 ---
 
@@ -282,10 +285,10 @@ than idea 01c's assumed "1× x16 + 1× x1".
 | QuickSync **H.264/H.265** | QuickSync **H.264 only** (Haswell) | ⚠️ H.265/HEVC absent |
 | 3× SATA III + **1× mSATA** | **mini-PCIe (mSATA-capable) slot present, empty**; no NVMe/M.2; H81 4-port AHCI | ⚠️ mSATA slot (empty) ✅ path |
 | 4× 2.5" HDD array | **2× Seagate 1 TB** (+ 1 free SATA port) | ⚠️ 1 TB usable, not 3 TB |
-| reuse 128 GB SSD as cache | SanDisk 128 GB SSD, **PASSED** | ✅ matches |
+| reuse 128 GB SSD as cache | SanDisk **X600** 128 GB SSD (SD9SB8W-128G), **PASSED** | ✅ matches |
 | 2× WD 1 TB purchase | unit came with **2× Seagate 1 TB** | ✅ no purchase needed |
 | on-board 1 GbE | **Intel I217-V** | ✅ Intel (≥ expectation) |
-| PSU industrial FSP 220–300 W | label TBD | ⏳ pending |
+| PSU industrial FSP 220–300 W | **AcBel 250 W, 80 Plus Gold** (Wincor `01750279900`) | ✅ matches (brand = AcBel, same class) |
 | Chosen over EliteDesk (01b) for "modern" | **same Haswell/DDR3 generation as 01b** | ❌ rationale weakened |
 
 **Bottom line:** the box is a healthy, workable small Unraid NAS — **but it is a Haswell/H81/DDR3
@@ -298,7 +301,8 @@ decision to proceed as the Unraid successor to the ML110, or to reconsider, is *
 
 ## Pending Checks
 
-1. **PSU label** — wattage/voltage on the industrial PSU (idea 01c expects 220–300 W).
+1. **PSU label** — ✅ **resolved 2026-09-05**: **AcBel 250 W, 80 Plus Gold** (Wincor `01750279900`,
+   SN `5427C4B78`); +5V 10.5A rail ample for the drives. Matches idea 01c's industrial-Gold premise.
 2. **RAM decision** — 4 GiB (Unraid floor) vs add a 2nd 4 GiB DD3-1600 SODIMM → 8 GB (recommended).
 3. **Extended SMART self-test** on both Seagates (`smartctl -t long /dev/sdb` `/dev/sdc`) —
    verify no latent bad sectors before array formation (~7.5 yr runtime).
@@ -321,8 +325,12 @@ decision to proceed as the Unraid successor to the ML110, or to reconsider, is *
    the Beetle array is verified and holds the backup?
 4. **Cache mirror** — idea 01c open Q: single SanDisk cache isn't parity-protected until Mover
    flushes (mirror if the backups are critical); still applies (only 1 SSD present).
-5. **Noise** — factory tunnel turbine + Gelid controller (idea 01c): confirm the Haswell G3420
-   (53 W) and 2× 5400 rpm drives stay cool at the ~32–35 dB target under parity-check load.
+5. **Noise** — **3 fans** (front CPU+PSU, rear PSU-end, UPS-unit) contributed to the measured
+   **42.5 dB @ 30 cm**. Gelid controller (idea 01c): confirm which fan(s) it slows, whether it
+   needs a multi-head/splitter, and that the PSU-end + UPS fans are controllable (UPS fan may be
+   sealed). Target ~32–35 dB; keep TACH on the board; don't drop below ~30 dB (heatsink airflow).
+6. **UPS battery** — the internal **VOTEX 15.6 V 3000 mAh** unit: is it OS-exposed (e.g. for
+   graceful shutdown / power-loss protection) or purely a POS hardware UPS?
 
 ---
 

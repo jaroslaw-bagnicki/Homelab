@@ -58,7 +58,7 @@ the industrial POS platform leaves the most room to grow:
 | **Storage** | up to **4× 2.5" HDD** — 2× factory bracket + 3.5" bay → 2× 2.5" sled (1× parity + 3× data) |
 | **Cache** | reuse the **included 128 GB SSD** for now; future upgrade: **M.2 NVMe via low-profile PCIe adapter** |
 | **Network** | on-board 1 GbE (keep); 2.5 GbE only if the switch is upgraded |
-| **Cooling** | factory tunnel turbine + **Gelid Fan Speed Controller** (TACH kept on board); optional quiet 80 mm front intake fan over the disk bracket |
+| **Cooling** | **3 fans** (front → CPU+PSU, rear PSU-end, UPS-unit) + **Gelid Fan Speed Controller** (TACH kept on board); optional quiet 80 mm front intake fan over the disk bracket — see [research 32](../research/32-wincor-beetle-m3-hardware-diagnostic.md) |
 
 ## Cost Estimation
 
@@ -82,8 +82,8 @@ Prices scraped / quoted (August 2026). Conversion: **1 EUR ≈ 4.25 PLN**.
 ## Key Findings
 
 ### Platform & extensibility
-- **Industrial PSU** (220–300 W, 80 Plus Gold/Platinum) with large 12 V headroom for multi-HDD spin-up + PoweredUSB 12/24 V — vs the EliteDesk's 240 W proprietary PSU with ~3–4 SATA plugs
-- **Expansion**: 1× PCIe x16 + 1× PCIe x1 + 1× optional PCI/PCIe slot (official user manual — not 3× PCIe as first assumed) → HBA/SATA controller, 2.5 GbE/10 GbE NIC, or PCIe→NVMe adapter — expansion a Mini/USFF box cannot offer
+- **Industrial PSU** (220–300 W, 80 Plus Gold/Platinum) with large 12 V headroom for multi-HDD spin-up + PoweredUSB 12/24 V — vs the EliteDesk's 240 W proprietary PSU with ~3–4 SATA plugs (confirmed on the received unit: **AcBel 250 W, 80 Plus Gold**, research 32)
+- **Expansion**: confirmed **1× PCIe 3.0 x16 + 2× PCIe 2.0 x1 + mini-PCIe (mSATA-capable)** (research 32) → HBA/SATA controller, 2.5 GbE/10 GbE NIC, or PCIe→NVMe adapter — expansion a Mini/USFF box cannot offer
 - **Modern platform**: LGA1151 (6th gen; some revisions 8./9.), **DDR4**, QuickSync (H.264/H.265 8-bit decode) for transcoding; **3× SATA III + 1× mSATA** on board — cache without eating a PCIe slot
 - **24/7 POS-grade build** (thick steel, industrial components, vibration-tolerant chassis)
 
@@ -92,7 +92,9 @@ Prices scraped / quoted (August 2026). Conversion: **1 EUR ≈ 4.25 PLN**.
 - CPU TDP doesn't affect idle draw — real savings come from disk spin-down + the low-idle POS platform
 
 ### Cooling & fan control
-- **Tunnel cooling**: one radial turbine over a passive CPU heatsink — the 44 dB noise is high-pitched airflow
+- **Tunnel cooling**: factory assumption was one radial turbine over a passive CPU heatsink —
+  the received unit has **3 fans** (front → CPU+PSU, rear PSU-end, UPS-unit); measured **42.5 dB
+  @ 30 cm** ≈ this note's "44 dB / ~42–45 dB stress" (research 32) — the noise is high-pitched airflow
 - **Manual fan control**: Gelid Fan Speed Controller cuts RPM ~50–60 % (→ ~32–35 dB) and **passes TACH through** → no `Fan Error` at POST; optional Zigbee dimmer for Home Assistant control
 - ⚠️ Passive heatsink needs constant airflow — don't go below ~30 dB; keep TACH on the board (non-standard pinout stalls POST)
 
