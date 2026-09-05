@@ -46,11 +46,11 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Management | None — no LO100/IPMI, direct console only; fan control not software-addressable |
 | Docs | [runbook 22](runbooks/22-ml110-nas-inventory.md) · [runbook 23](runbooks/23-ml110-omv-setup.md) · [research 23](research/23-ml110-nas-omv.md) · [ADR 23](decisions/23-nas-on-ml110.md) |
 
-### Beetle NAS — Wincor Beetle M-III (planned)
+### Beetle NAS — Wincor Beetle M-III (acquired, Unraid pending)
 
 | Item | Spec |
 |---|---|
-| CPU | Intel **Pentium G3420** (Haswell, 2C/2T, 3.2 GHz, 3 MB L3, 53 W) — AES-NI, QuickSync (H.264 only) |
+| CPU | Intel **Pentium G3420** (Haswell, 2C/2T, 3.2 GHz, 3 MB L3, 53 W) — QuickSync (H.264 only) |
 | RAM | **4 GB DDR3-1600** (1× 4 GiB SODIMM — 2 slots, 1 free → 8 GB upgrade) |
 | Storage | **SanDisk X600 128 GB SSD** (cache) + **2× Seagate ST1000VT001-1RE172 1 TB 2.5"** (data + parity = 1 TB usable) |
 | SATA | H81 **4-port AHCI** (2× SATA III + 2× SATA II); mini-PCIe (mSATA) slot + PCIe 3.0 x16 free |

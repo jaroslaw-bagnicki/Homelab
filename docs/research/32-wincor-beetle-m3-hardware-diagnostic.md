@@ -99,7 +99,7 @@ H81 chipset). Treat "BGA1155" as a Wincor/firmware string quirk, not an upgrade 
 - Intel **Pentium G3420** — Haswell 4th gen, 2C/2T (no Hyper-Threading), 3.2 GHz, 3 MB L3,
   53 W. Idle clocks ~798 MHz; ~29–32 °C package (idle). Processor ID `306C3` (stepping C0),
   **microcode 25**, GT1 iGPU (700 MHz), ME FW **9.1.40.1000** (1.5 MB). **VT-x** —
-  **VT-x** — [Enabled] in CPU Configuration (`kvm_intel` loaded) · **VT-d — Unsupported** (H81 /
+  [Enabled] in CPU Configuration (`kvm_intel` loaded) · **VT-d — Unsupported** (H81 /
   entry Haswell — no I/O-mmu, per Chipset tab "VT-d Capability: Unsupported").
 - **AES-NI — NOT present and NOT toggleable** (confirmed 2026-09-05): the `aes` flag is absent in
   both `lscpu` and `/proc/cpuinfo`, no `aes`/`vmx` in dmesg, and the **CPU Configuration menu
