@@ -51,17 +51,16 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Item | Spec |
 |---|---|
 | CPU | Intel **Pentium G3420** (Haswell, 2C/2T, 3.2 GHz, 3 MB L3, 53 W) — AES-NI, QuickSync (H.264 only) |
-| RAM | **4 GB DDR3-1600** (1× 4 GiB SODIMM — 2 slots, **DIMM 1 free** → 8 GB is a one-stick upgrade) |
-| Storage | **SanDisk X600 128 GB SSD** (cache, SMART PASSED) + **2× Seagate ST1000VT001-1RE172 1 TB 2.5"** (Seagate **Video 2.5** surveillance; **CMR (Perpendicular)** — `sdb` 138 MB/s, `sdc` 132 MB/s rewrite; SMART PASSED + **extended self-test clean** (~65.5k POH); array 1 parity + 1 data = 1 TB usable — **DECIDED 2026-09-05**). ✅ Keep the Seagates |
-| Acquire notes | Offer described these as *"removed from high-budget laptops"* — **contradicted** by the always-on SMART history (65,536 POH / 4 power-cycles); drive provenance misdescription (seller-complaint point, issue #98) |
-| SATA | H81 **4-port AHCI** (2× SATA III 6 Gb/s + 2× SATA II 3 Gb/s) — no mSATA/NVMe installed; **mini-PCIe (mSATA) slot + PCIe 3.0 x16** available (future NVMe/HBA/NIC/cache) |
-| PSU | **AcBel 250 W, 80 Plus Gold** (Wincor `01750279900`) — +5V 10.5A rail ample for the drives |
-| Cooling | **3 fans** (front → CPU+PSU, rear PSU-end, UPS-unit); **42.5 dB @ 30 cm**; Gelid Fan Speed Controller planned (~32–35 dB) |
-| UPS | Internal **VOTEX 15.6 V 3000 mAh** — **proprietary, not OS-exposed** (no `power_supply`/ACPI/USB-HID), **not NUT-usable**; hardware nicety only — use a NUT-compatible external UPS for shutdown protection |
+| RAM | **4 GB DDR3-1600** (1× 4 GiB SODIMM — 2 slots, 1 free → 8 GB upgrade) |
+| Storage | **SanDisk X600 128 GB SSD** (cache) + **2× Seagate ST1000VT001-1RE172 1 TB 2.5"** (data + parity = 1 TB usable) |
+| SATA | H81 **4-port AHCI** (2× SATA III + 2× SATA II); mini-PCIe (mSATA) slot + PCIe 3.0 x16 free |
+| PSU | **AcBel 250 W, 80 Plus Gold** (Wincor `01750279900`) |
 | Network | 1× GbE Intel I217-V (`enp0s25`, MAC `00:01:2e:86:11:0c`) · DHCP `192.168.2.241` |
-| Board | `K2.1-H81-uATX` (WINCOR NIXDORF) · BIOS AMI `WN STD 07/16` (2018-12-19) · SN `000000001750261682 53R0455744` |
+| Firmware | BIOS AMI `WN STD 07/16` (2018-12-19) · board `K2.1-H81-uATX` · SN `000000001750261682` |
+| OS | Unraid (planned, USB-boot) |
+| Cooling | 3 fans (front CPU+PSU, rear PSU-end, UPS-unit); internal UPS battery (VOTEX 15.6 V 3000 mAh) |
 | Role | Unraid NAS backup-target successor to the ML110 — [issue #98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98) |
-| Acquisition | 2026-09-05 — hardware diagnostic complete ([research 32](research/32-wincor-beetle-m3-hardware-diagnostic.md)); Unraid install pending |
+| Acquired | 2026-09-01 · diagnostic complete 2026-09-05 ([research 32](research/32-wincor-beetle-m3-hardware-diagnostic.md)); Unraid install pending |
 | Docs | [idea 01c](ideas/01c-nas-backup-target-wincor-beetle.md) · [research 32](research/32-wincor-beetle-m3-hardware-diagnostic.md) · [issue #98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98) |
 
 ### Edge Ingress — Dell Wyse 3040
