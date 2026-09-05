@@ -97,12 +97,14 @@ H81 chipset). Treat "BGA1155" as a Wincor/firmware string quirk, not an upgrade 
 ### CPU / Security notes
 
 - Intel **Pentium G3420** — Haswell 4th gen, 2C/2T (no Hyper-Threading), 3.2 GHz, 3 MB L3,
-  53 W. Idle clocks ~798 MHz; ~29–32 °C package (idle). **VT-x present** (`kvm_intel` loaded).
-- **AES-NI — NOT present** (confirmed 2026-09-05: `aes` flag absent in both `lscpu` and
-  `/proc/cpuinfo`; no `aes`/`vmx` in dmesg). Haswell carries it in silicon, so its absence is
-  almost certainly **BIOS-disabled** on this POS board — check F2 Advanced/Security for an AES-NI /
-  VT-x toggle to re-enable. Consequence: no HW AES acceleration for encrypted backup targets
-  (restic/LUKS) — CPU-bound AES (minor; the ML110 lacks it too). `kvm_intel`/caches loaded.
+  53 W. Idle clocks ~798 MHz; ~29–32 °C package (idle). Processor ID `306C3` (stepping C0),
+  **microcode 25**, GT1 iGPU (700 MHz), ME FW **9.1.40.1000** (1.5 MB). **VT-x** —
+  [Enabled] in CPU Configuration (`kvm_intel` loaded) · **VT-d** — [Enabled].
+- **AES-NI — NOT present and NOT toggleable** (confirmed 2026-09-05): the `aes` flag is absent in
+  both `lscpu` and `/proc/cpuinfo`, no `aes`/`vmx` in dmesg, and the **CPU Configuration menu
+  exposes no Intel AES-NI option** → **firmware-masked** on this POS board (Haswell has it in
+  silicon, but the Wincor firmware doesn't expose a toggle). Consequence: no HW AES acceleration
+  for encrypted backup targets (restic/LUKS) — CPU-bound AES (minor; the ML110 lacks it too).
   **QuickSync — H.264 only**: Haswell does **not** hardware-encode/decode **H.265/HEVC**. Idea
   01c's "QuickSync (H.264/H.265 8-bit decode)" is partially wrong — transcoding is H.264-only.
 - Security: modern mitigations present (PTI, Retpolines, etc.); fine for a 24/7 NAS behind the
@@ -318,11 +320,15 @@ toward the Seagates**; proceeding as the Unraid successor to the ML110 is the wo
 3. **Extended SMART self-test** — ✅ **resolved 2026-09-05**: both Seagates `# 1 Extended offline,
    Completed without error, LBA_of_first_error = -`. Do not need to re-run.
 4. **Re-seat `sdc`** to a SATA III port (currently 3.0 Gb/s) if 6 Gb/s is wanted.
-5. **AES-NI** — ✅ **resolved 2026-09-05: NOT present** (`aes` flag absent in `lscpu` +
-   `/proc/cpuinfo`; likely BIOS-disabled — Haswell has it in silicon; check F2 to re-enable).
+5. **AES-NI** — ✅ **resolved 2026-09-05: NOT present / firmware-masked** (`aes` flag absent in
+   `lscpu` + `/proc/cpuinfo`; **no BIOS toggle in CPU Configuration** → not re-enableable — accept;
+   minor: software AES for an encrypted backup target).
 6. **Physical SATA port count** — verify 4 ports on the H81 board (2× III + 2× II) & the free
    port, to size the array-add path.
 7. **Memory test** (e.g. `/usr/sbin/memtest` or a live memtest pass) — validate the 4 GiB stick.
+8. **AC power-loss behavior** — ✅ **set 2026-09-05: BIOS "Restore AC Power Loss" → [Last state]**
+   (was Power Off), VT-x [Enabled], VT-d [Enabled]; ME FW 9.1.40.1000. So the NAS returns to its
+   prior power state after a cut (and stays on).
 
 ---
 
