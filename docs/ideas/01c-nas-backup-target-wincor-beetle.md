@@ -1,6 +1,19 @@
 # Idea 01c — Homelab NAS: Wincor Beetle M-III (Unraid)
 
-**Status**: 🧠 Idea  
+> ⚠️ **2026-09-05 correction — acquired unit does NOT match this analysis.** The hardware
+> diagnostic ([research 32](../research/32-wincor-beetle-m3-hardware-diagnostic.md), issue #98)
+> found the acquired Beetle M-III is a board `K2.1-H81-uATX` — **Intel H81 / Haswell / LGA1150 /
+> DDR3**, not the **H110 / Skylake / LGA1151 / DDR4** assumed below. The CPU is a **Pentium G3420**
+> (Haswell, QuickSync H.264 only, no HEVC), RAM is **1×4 GB DDR3** (2 slots, ≤16 GB), there is
+> **no mSATA/NVMe/M.2**, and the array is **2× Seagate 1 TB** (1 parity + 1 data = 1 TB usable),
+> not 4×. The box is a workable small Unraid NAS but **the same generation as the EliteDesk 01b**
+> it was meant to beat — the "modern platform" premise no longer holds. Directions tested in
+> [open questions](#open-questions) below; decision status on [issue #98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98).
+>
+> The analysis below remains as the pre-acquisition research that fed the decision; it is **not**
+> the authority for the platform. Where it conflicts with research 32, research 32 wins.
+
+**Status**: 🧠 Idea (platform premise superseded)  
 **Date**: 2026-08-22  
 **Sources**:
 - [Gemini thread 4 — Wincor Beetle M-III vs EliteDesk 800 G1 SFF](https://share.gemini.google/H4KW01K8tTUZ) — dimensions, CPU support, cooling, fan control/noise, Zigbee fan control, disk capacity/mounting, NAS-platform analysis

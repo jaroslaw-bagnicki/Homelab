@@ -11,6 +11,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 |---|---|---|---|---|---|---|---|
 | **Lab** | main workload host | Lenovo ThinkCentre M910q Tiny | i5-7500T (4C/4T, 35 W) | 16 GB DDR4 | 256 GB NVMe (+ free 2.5" bay) | 1× GbE `enp0s31f6` | ✅ |
 | **OMV NAS** | OpenMediaVault server, backup target | HP ProLiant ML110 G5 | Pentium E2160 (2C/2T, 65 W) | 4 GB DDR2 | Goodram 120 GB SSD + RAID1 arrays | 1× GbE BCM5722 | ✅ |
+| **Beetle NAS** | Unraid NAS backup target (successor to ML110) | Wincor Beetle M-III | Pentium G3420 (2C/2T, 53 W) | 4 GB DDR3 (1×, 1 free slot) | SanDisk 128 GB SSD + 2× Seagate 1 TB 2.5" | 1× GbE Intel I217-V | 🔨 |
 | **Edge Ingress** | public ingress | Dell Wyse 3040 | Atom x5-Z8350 (2 W TDP) | 2 GB DDR3L | 8 GB eMMC | 1× GbE | 🔨 |
 | **Home Assistant** | smart home node | Dell Wyse 5070 | Celeron J4105 (10 W) | 8 GB DDR4 (2× 4 GB) | M.2 SATA SK hynix 128 GB | 1× GbE + WiFi | 🔨 |
 | **OPNsense Router** | LAN edge router / firewall | Fujitsu Futro S930 | GX-424CC (4C/4T, 25 W TDP) | 4 GB DDR3 (1×, 1 free slot) | Innodisk 7.99 GB mSATA | 3× GbE (BCM5720 2× + Realtek 1×) | 📋 |
@@ -44,6 +45,20 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Network | 1× GbE Broadcom BCM5722 (`enp14s0`), MAC `78:e7:d1:53:fb:87` |
 | Management | None — no LO100/IPMI, direct console only; fan control not software-addressable |
 | Docs | [runbook 22](runbooks/22-ml110-nas-inventory.md) · [runbook 23](runbooks/23-ml110-omv-setup.md) · [research 23](research/23-ml110-nas-omv.md) · [ADR 23](decisions/23-nas-on-ml110.md) |
+
+### Beetle NAS — Wincor Beetle M-III (planned)
+
+| Item | Spec |
+|---|---|
+| CPU | Intel **Pentium G3420** (Haswell, 2C/2T, 3.2 GHz, 3 MB L3, 53 W) — AES-NI, QuickSync (H.264 only) |
+| RAM | **4 GB DDR3-1600** (1× 4 GiB SODIMM — 2 slots, **DIMM 1 free** → 8 GB is a one-stick upgrade) |
+| Storage | **SanDisk SD9SB8W128G 128 GB SSD** (cache, SMART PASSED) + **2× Seagate ST1000VT001-1RE172 1 TB 2.5" 5400** (array: 1 parity + 1 data = 1 TB usable) |
+| SATA | H81 **4-port AHCI** (2× SATA III 6 Gb/s + 2× SATA II 3 Gb/s) — no mSATA/NVMe; PCIe x16 empty (future NVMe/HBA/NIC) |
+| Network | 1× GbE Intel I217-V (`enp0s25`, MAC `00:01:2e:86:11:0c`) · DHCP `192.168.2.241` |
+| Board | `K2.1-H81-uATX` (WINCOR NIXDORF) · BIOS AMI `WN STD 07/16` (2018-12-19) · SN `000000001750261682 53R0455744` |
+| Role | Unraid NAS backup-target successor to the ML110 — [issue #98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98) |
+| Acquisition | 2026-09-05 — hardware diagnostic complete ([research 32](research/32-wincor-beetle-m3-hardware-diagnostic.md)); Unraid install pending |
+| Docs | [idea 01c](ideas/01c-nas-backup-target-wincor-beetle.md) · [research 32](research/32-wincor-beetle-m3-hardware-diagnostic.md) · [issue #98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98) |
 
 ### Edge Ingress — Dell Wyse 3040
 
