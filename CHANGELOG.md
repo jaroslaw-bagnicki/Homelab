@@ -6,7 +6,7 @@ same `(type)` prefixes as commit messages; types: `feat`, `fix`, `docs`, `chore`
 
 ## 2026‑09
 
-- **(docs)** Require `CHANGELOG.md` entries to ship with every PR — `.github/copilot-instructions.md` / `AGENTS.md` now state that any PR changing behaviour or docs adds/updates its changelog entry in the same PR
+- **(docs)** Require `CHANGELOG.md` entries to ship with any PR that changes behaviour or docs — `.github/copilot-instructions.md` / `AGENTS.md` now state that such PRs add/update their changelog entry in the same PR
 - **(feat)** SSH access LAN-only + devcontainer fleet-key autoload — `security` role allows password auth from the LAN (`192.168.2.0/24`, closed with `Match all`) for the human breakglass (`jarek`) while key-only elsewhere; `lab` UFW SSH scoped to the LAN; devcontainer profile always loads `fleetadm-key-priv` at session start (idempotent `ssh-add`, visible load-failure warnings); runbook 24 §3 base verification ticked (`edge.local` + SSH key-only; bare `edge` deferred to OPNsense `.home` DNS) — [runbook 24](docs/runbooks/24-edge-appliance.md) · [#78](https://github.com/jaroslaw-bagnicki/Homelab/issues/78)
 - **(docs)** Wincor Beetle M-III hardware diagnostic — NAS successor pre-boot audit (research 32); hardware.md + overview updated — [research 32](docs/research/32-wincor-beetle-m3-hardware-diagnostic.md) · [idea 01c](docs/ideas/01c-nas-backup-target-wincor-beetle.md) · [#99](https://github.com/jaroslaw-bagnicki/Homelab/issues/99)
 - **(docs)** Futro S930 hardware diagnostic — OPNsense router candidate pre-boot audit (research 31); hardware.md updated — [research 31](docs/research/31-futro-s930-hardware-diagnostic.md) · [#97](https://github.com/jaroslaw-bagnicki/Homelab/issues/97)
