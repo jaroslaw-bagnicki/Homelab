@@ -52,7 +52,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 |---|---|
 | CPU | Intel **Pentium G3420** (Haswell, 2C/2T, 3.2 GHz, 3 MB L3, 53 W) — AES-NI, QuickSync (H.264 only) |
 | RAM | **4 GB DDR3-1600** (1× 4 GiB SODIMM — 2 slots, **DIMM 1 free** → 8 GB is a one-stick upgrade) |
-| Storage | **SanDisk X600 128 GB SSD** (cache, SMART PASSED) + **2× Seagate ST1000VT001-1RE172 1 TB 2.5"** (Seagate **Video 2.5** surveillance; **CMR (Perpendicular)** — `sdb` 138 MB/s, `sdc` 132 MB/s rewrite; SMART PASSED, **~65.5k POH**; array 1 parity + 1 data = 1 TB usable). ⚠️ Extended self-test pending — final Seagate-vs-WD decision held |
+| Storage | **SanDisk X600 128 GB SSD** (cache, SMART PASSED) + **2× Seagate ST1000VT001-1RE172 1 TB 2.5"** (Seagate **Video 2.5** surveillance; **CMR (Perpendicular)** — `sdb` 138 MB/s, `sdc` 132 MB/s rewrite; SMART PASSED + **extended self-test clean** (~65.5k POH); array 1 parity + 1 data = 1 TB usable — **DECIDED 2026-09-05**). ✅ Keep the Seagates |
 | Acquire notes | Offer described these as *"removed from high-budget laptops"* — **contradicted** by the always-on SMART history (65,536 POH / 4 power-cycles); drive provenance misdescription (seller-complaint point, issue #98) |
 | SATA | H81 **4-port AHCI** (2× SATA III 6 Gb/s + 2× SATA II 3 Gb/s) — no mSATA/NVMe installed; **mini-PCIe (mSATA) slot + PCIe 3.0 x16** available (future NVMe/HBA/NIC/cache) |
 | PSU | **AcBel 250 W, 80 Plus Gold** (Wincor `01750279900`) — +5V 10.5A rail ample for the drives |

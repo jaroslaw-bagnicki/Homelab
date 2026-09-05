@@ -11,12 +11,12 @@ full hardware inventory and SMART health before committing an OS. Same Phase 0 p
 [Wyse 5070 audit (research 29)](29-wyse5070-hardware-diagnostic.md), and the
 [Wyse 3040 audit (research 28)](28-wyse3040-hardware-diagnostic.md).
 
-**Status**: 🟡 Complete with caveats — platform, CPU, RAM, NIC, SATA and disks inventoried and
-checked. **Major finding: the acquired unit is an H81 / Haswell / LGA1150 / DDR3 board
-(`K2.1-H81-uATX`), NOT the H110 / Skylake / LGA1151 / DDR4 platform idea 01c assumed.** The
-idea's core premises (DDR4, QuickSync-HEVC, mSATA, 4-drive array) **do not hold** on this box;
-a direction decision is pending ([Implications](#implications-for-idea-01c--issue-98)). PSU
-label + memory test still pending.
+**Status**: ✅ Complete — platform, CPU, RAM, NIC, SATA, PCIe, PSU, SSD and disks inventoried and
+checked; **drives verified CMR + PASSED extended self-test → keep the 2× Seagates** (array
+decision resolved). **Major finding: the acquired unit is an H81 / Haswell / LGA1150 / DDR3 board
+(`K2.1-H81-uATX`), NOT the H110 / Skylake / LGA1151 / DDR4 platform idea 01c assumed.** The idea's
+core premises (DDR4, QuickSync-HEVC, mSATA, 4-drive array) **do not hold** on this box. Only
+pre-install follow-ups remain ([Pending checks](#pending-checks)).
 
 ---
 
@@ -25,22 +25,23 @@ label + memory test still pending.
 > **Decision authority:** the Unraid-on-Beetle direction is still an **idea** —
 > [Idea 01c](../ideas/01c-nas-backup-target-wincor-beetle.md). No ADR yet. This research doc is
 > the Phase 0 hardware audit output. It **invalidates Idea 01c's platform premise** (this is a
-> Haswell/H81 box, not Skylake/H110) and **confirms the disks are healthy**, so the box is at
-> least a workable small NAS — but the "modern platform" rationale that motivated Idea 01c over
-> the EliteDesk (01b) no longer applies.
+> Haswell/H81 box, not Skylake/H110) and **confirms the disks are healthy (CMR, extended-test
+> clean)**, so the box is at least a workable small NAS — but the "modern platform" rationale
+> that motivated Idea 01c over the EliteDesk (01b) no longer applies.
 
 | Decision | Outcome (as of 2026-09-05) |
 |---|---|
 | Hardware | WINCOR NIXDORF **BEETLE /MIII** — "System unit BEETLE/M-III K2 KMAT sw" · SN `000000001750261682 53R0455744` — **acquired** |
 | Board | **`K2.1-H81-uATX`** (WINCOR NIXDORF "Kit Motherboard_K2.1-H81-uATX", SN `000000001750296310 8D625Z8071`) — **Intel H81** chipset |
 | CPU | **Intel Pentium G3420** (Haswell, 2C/2T, 3.2 GHz, 3 MB L3, 53 W, AES-NI, QuickSync-H.264) — LGA1150 |
-| RAM | **4 GiB (1× 4 GiB DDR3-1600 SODIMM)**, 2 slots, 1 free (≤16 GB) — see [RAM](#ram) |
+| RAM | **4 GiB (1× 4 GiB DDR3-1600 SODIMM)**, 2 slots, 1 free (≤16 GB → 8 GB = +1 stick); 2-slot/1-free confirmed |
 | NIC | **Intel Ethernet I217-V** (`00:19.0`, `e1000e`, MAC `00:01:2e:86:11:0c`) — on-board GbE |
 | SATA | H81 **4-port AHCI** (2× SATA III 6 Gb/s + 2× SATA II 3 Gb/s) — no mSATA/NVMe/M.2 **device**; a **mini-PCIe (mSATA-capable) slot** exists, empty |
-| Disk 0 | **SanDisk SD9SB8W128G** 128 GB 2.5" SATA SSD (`sda`) — **SMART PASSED** (45,577 POH) — cache |
-| Disk 1 | **Seagate ST1000VT001-1RE172** 1 TB 2.5" 5400 (`sdb`, `WDES3KB7`) — **SMART PASSED** (65,536 POH) |
-| Disk 2 | **Seagate ST1000VT001-1RE172** 1 TB 2.5" 5400 (`sdc`, `WDEPBVR3`) — **SMART PASSED** (65,536 POH), negotiating SATA II |
+| Disk 0 | **SanDisk X600** (SD9SB8W-128G) 128 GB 2.5" SATA SSD (`sda`) — **SMART PASSED** (45,577 POH) — cache |
+| Disk 1 | **Seagate ST1000VT001-1RE172** 1 TB 2.5" 5400 (`sdb`, `WDES3KB7`) — **CMR**, SMART PASSED, **extended self-test clean** (65,536 POH) |
+| Disk 2 | **Seagate ST1000VT001-1RE172** 1 TB 2.5" 5400 (`sdc`, `WDEPBVR3`) — **CMR**, SMART PASSED, **extended self-test clean** (65,536 POH), negotiating SATA II |
 | USB | Kingston DataTraveler 3.0 64 GB (`sdd`) = Ventoy live USB, **not** a data drive |
+| PSU | **AcBel 250 W, 80 Plus Gold** (Wincor `01750279900`) |
 | Dynamic IP | `192.168.2.241` (DHCP via mesh `192.168.2.1`) |
 
 ---
@@ -201,10 +202,11 @@ SMART detail:
   **always-on recorder** behaviour, not laptop use. Either the provenance is misdescribed or the
   drive class was mislabelled — relevant to the offer-vs-received discrepancy on issue #98.
 
-Both 1 TB Seagates had **no SMART self-test logged**; an **extended self-test**
-(`smartctl -t long /dev/sdb` ≈158 min, `/dev/sdc` ≈165) is **running (2026-09-05)** — the final
-array health gate. **Decision on keeping the Seagates vs the WD10JUCX is held until it
-completes** (`smartctl -l selftest /dev/sdb /dev/sdc` → `Completed without error`, 0 bad LBAs).
+**Extended SMART self-test — PASSED on both (2026-09-05):** `# 1 Extended offline,
+Completed without error, LBA_of_first_error = -` on `sdb` and `sdc`. → **drive decision resolved:
+keep the 2× Seagates** (CMR + SMART clean + full-surface scan clean). The `LifeTime(hours)` field
+shows `4`/`5` — a Seagate 16-bit wrap quirk at 65,536 h, not real age (attribute 9 still ~65,537).
+The WD10JUCX plan is dropped (fallback only if a Seagate later degrades).
 
 ### Drive power specs (Seagate Video 2.5 manual)
 
@@ -232,9 +234,11 @@ dominated by the platform + SSD + PSU (~8–12 W).
 ### Storage plan implication
 
 - **Cache** — SanDisk **X600** 128 GB SSD (healthy).
-- **Array** — **2 drives → 1 parity + 1 data = 1 TB usable** (not idea 01c's 4× = 3 TB).
-- To reach 4-drive (idea 01c's shape): the board has **1 free physical SATA port**; adding 2 more
-  2.5" drives requires a **PCIe SATA card / HBA** in the empty x16 slot (or dropping to 3× 2.5").
+- **Array — DECIDED: 2× Seagate → 1 parity + 1 data = 1 TB usable** (CMR, deep-test clean). Not
+  idea 01c's 4× = 3 TB. **RAM**: 2 SODIMM slots, **1 free** → 8 GB = add a **2nd 4 GB DDR3-1600
+  1.5 V** stick (pre-install follow-up). To reach 4-drive (idea 01c's shape): the board has **1 free
+  physical SATA port**; adding 2 more 2.5" drives requires a **PCIe SATA card / HBA** in the empty
+  x16 slot (or dropping to 3× 2.5").
 
 ### Network
 
@@ -293,9 +297,11 @@ than idea 01c's assumed "1× x16 + 1× x1".
 
 **Bottom line:** the box is a healthy, workable small Unraid NAS — **but it is a Haswell/H81/DDR3
 platform, effectively the same generation as the EliteDesk 800 G1 that idea 01c was chosen
-against.** Idea 01c's central premise (a modern Skylake/DDR4/mSATA box) is invalidated. The
-decision to proceed as the Unraid successor to the ML110, or to reconsider, is **not settled**
-(see [Open Questions](#open-questions)) and is captured on issue #98.
+against.** Idea 01c's central premise (a modern Skylake/DDR4/mSATA box) is invalidated, and the
+idea's "modern platform" rationale no longer holds (the received unit is same-gen as 01b). The
+**drives are verified good (CMR, extended-self-test clean)** and the array decision is **resolved
+toward the Seagates**; proceeding as the Unraid successor to the ML110 is the working direction
+(captured on issue #98).
 
 ---
 
@@ -303,9 +309,10 @@ decision to proceed as the Unraid successor to the ML110, or to reconsider, is *
 
 1. **PSU label** — ✅ **resolved 2026-09-05**: **AcBel 250 W, 80 Plus Gold** (Wincor `01750279900`,
    SN `5427C4B78`); +5V 10.5A rail ample for the drives. Matches idea 01c's industrial-Gold premise.
-2. **RAM decision** — 4 GiB (Unraid floor) vs add a 2nd 4 GiB DD3-1600 SODIMM → 8 GB (recommended).
-3. **Extended SMART self-test** on both Seagates (`smartctl -t long /dev/sdb` `/dev/sdc`) —
-   verify no latent bad sectors before array formation (~7.5 yr runtime).
+2. **RAM decision** — ✅ **resolved 2026-09-05**: **8 GB = add a 2nd 4 GB DDR3-1600 1.5 V SODIMM**
+   (2 slots, 1 free confirmed; ≤16 GB). Do at the Unraid install.
+3. **Extended SMART self-test** — ✅ **resolved 2026-09-05**: both Seagates `# 1 Extended offline,
+   Completed without error, LBA_of_first_error = -`. Do not need to re-run.
 4. **Re-seat `sdc`** to a SATA III port (currently 3.0 Gb/s) if 6 Gb/s is wanted.
 5. **`grep -o aes /proc/cpuinfo`** — formal AES-NI confirmation (expected present on Haswell).
 6. **Physical SATA port count** — verify 4 ports on the H81 board (2× III + 2× II) & the free
@@ -316,11 +323,11 @@ decision to proceed as the Unraid successor to the ML110, or to reconsider, is *
 
 ## Open Questions
 
-1. **Direction** — proceed as Unraid NAS on this Haswell/H81/DDR3 unit, or reconsider the
-   platform? Idea 01c's "modern, beats the EliteDesk" rationale is gone; the box is now same-gen
-   as 01b.
-2. **Storage scope** — 1 TB (parity+data) + SSD cache now, or add drives (needs a PCIe SATA
-   HBA for a 4th, or drop to 3× 2.5")?
+1. **Direction** — working decision: proceed as Unraid NAS on this Haswell/H81/DDR3 unit. Idea
+   01c's "modern, beats the EliteDesk" rationale is gone (same-gen as 01b) — the box is used
+   anyway and the drives are verified good. Confirm as Phase 1.
+2. **Storage scope** — ✅ **resolved 2026-09-05**: **2× Seagate → 1 parity + 1 data = 1 TB** + SanDisk
+   X600 cache. (To grow later, add a PCIe SATA HBA in the x16 slot; the board has 1 free SATA port.)
 3. **ML110 retirement timing** — idea 01c (and idea 03) target retiring the ML110; keep it until
    the Beetle array is verified and holds the backup?
 4. **Cache mirror** — idea 01c open Q: single SanDisk cache isn't parity-protected until Mover

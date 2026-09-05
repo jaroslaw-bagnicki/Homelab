@@ -12,11 +12,12 @@
 >
 > **Drives (2026-09-05)** — the array is **2× Seagate ST1000VT001-1RE172** (the pre-analysis's
 > "2× WD 1 TB" never applied — the unit shipped with these). Both are **CMR-like** (verified:
-> `sdb` 138 MB/s, `sdc` 132 MB/s on rewrite-in-place), SMART **PASSED** (0 bad sectors), but
-> **~65.5k POH (~7.5 yr)** and **Seagate Video 2.5 (surveillance)** drives — the offer's *"removed
-> from high-budget laptops"* description **contradicts** the always-on SMART history (65,536 POH /
-> only 4 power-cycles). **Final decision (keep these vs buy the WD10JUCX pair) is held until the
-> extended self-test completes**; snapshot pending, so treat the Seagate WD-array question as open.
+> `sdb` 138 MB/s, `sdc` 132 MB/s on rewrite-in-place), SMART **PASSED** and **extended self-test
+> clean (both `Completed without error`)**, but **~65.5k POH (~7.5 yr)** and **Seagate Video 2.5
+> (surveillance)** drives — the offer's *"removed from high-budget laptops"* description
+> **contradicts** the always-on SMART history (65,536 POH / only 4 power-cycles). **Decision
+> resolved 2026-09-05: keep the 2× Seagates** (CMR + healthy + deep-test clean) → array = 1 parity +
+> 1 data = 1 TB, SanDisk X600 cache. The WD10JUCX pair is a fallback only.
 >
 > The analysis below remains as the pre-acquisition research that fed the decision; it is **not**
 > the authority for the platform. Where it conflicts with research 32, research 32 wins.
