@@ -269,7 +269,7 @@ than idea 01c's assumed "1× x16 + 1× x1".
 | Thermals | acpitz 27.8/29.8 °C; package 32 °C; cores 29 °C (idle, live session) |
 | CPU idle | ~798 MHz (power state) |
 | PSU | **AcBel** (Wincor `01750279900`, "PSU UPS BEETLEM-III" L427) — **250 W** max (225 W @ 50 °C), **80 PLUS Gold**, 100–240 V input; SN `5427C4B78`. Rails: +3.3V 4.0A · +5V 10.5A (52.5 W) · +12V 8.2A (98.4 W) · +5Vsb 1.5A. **Confirms idea 01c's "industrial 80 Plus Gold" premise** (brand is AcBel, not FSP/Fortron). The +5V rail is ample for the 2× 2.5" HDDs + SSD |
-| Noise (measured) | **42.5 dB @ 30 cm** (UNI-T UT353) — matches idea 01c's "~42–45 dB stress" / "44 dB" |
+| Noise (measured) | **42.5 dB front / 42.0 dB back @ 30 cm** (UNI-T UT353) — uniformly ~42–42.5 dB, matches idea 01c's "~42–45 dB stress" / "44 dB" |
 | Cooling | **3 fans**: (1) right-front pushing air over the **CPU + PSU**, (2) rear at the **PSU end**, (3) inside the **UPS/battery unit**. Corrects idea 01c's "one radial tunnel turbine" model. **Gelid Fan Speed Controller** is the recorded noise-reduction step (target ~32–35 dB, keep TACH on the board, don't go below ~30 dB) |
 | UPS battery | Internal **VOTEX 15.6 V, 3000 mAh** (Wincor Nixdorf UPS) — the POS's battery-backup; potential graceful-shutdown/roll-protection for a NAS, but OS-exposure unverified (see Open Questions) |
 
