@@ -2,3 +2,4 @@
 arc_machine_name: lab
 docker_users: []
 common_enable_avahi: true
+security_ufw_allow_ssh_from: "192.168.2.0/24"

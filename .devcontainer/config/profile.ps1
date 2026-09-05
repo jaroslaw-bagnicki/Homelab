@@ -42,13 +42,24 @@ if (-not (Get-AzContext)) {
   Write-Host ":: Reusing existing Azure context: $((Get-AzContext).Account.Id)" -ForegroundColor DarkGray
 }
 
-# Load fleet + VPS keys from Key Vault (only when the agent is empty)
+# Load fleet + VPS keys from Key Vault (ssh-add is idempotent — run every
+# session so fleetadm-key-priv is always present, even when the agent already
+# holds other keys)
+$keyNames = [ordered]@{
+  'fleetadm-key-priv'     = 'fleetadm SSH key (fleetadm@homelab)'
+  'cloudlab-vps-key-priv' = 'legacy cloudlab VPS SSH key'
+}
 if ($env:SSH_AUTH_SOCK -and (Get-AzContext -ErrorAction SilentlyContinue)) {
-  $loadedKeys = ssh-add -l 2>$null
-  if ($LASTEXITCODE -ne 0 -or $loadedKeys -match 'The agent has no identities') {
-    foreach ($secret in 'fleetadm-key-priv', 'cloudlab-vps-key-priv') {
-      Write-Host ":: Loading $secret from Key Vault..." -ForegroundColor Yellow
-      $null = Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name $secret -AsPlainText 2>$null | ssh-add - 2>$null
+  foreach ($secret in $keyNames.Keys) {
+    Write-Host ":: Loading $($keyNames[$secret]) from Key Vault..." -ForegroundColor Yellow
+    $key = Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name $secret -AsPlainText -ErrorAction SilentlyContinue 2>$null
+    if (-not $key) {
+      Write-Warning ":: Could not read $secret from Key Vault — check Azure context / vault access"
+      continue
+    }
+    $null = $key | ssh-add - 2>$null
+    if ($LASTEXITCODE -ne 0) {
+      Write-Warning ":: ssh-add failed for $($keyNames[$secret])"
     }
   }
 }

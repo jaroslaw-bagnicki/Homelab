@@ -292,7 +292,7 @@ resulting state:
 
 - [x] §1 Debian minimal installed on `mmcblk0`; eMMC boots without F12 (entry re-added 2026-08-18)
 - [x] §2 Static IP `192.168.2.240` reachable; SSH key-only login (fleet key, 2026-08-30)
-- [ ] §3 `edge.local` + bare `edge` resolve on the LAN; SSH by name (live run 2026-08-30 — manual verify from LAN)
+- [x] §3 `edge.local` resolves on the LAN (mDNS); SSH key-only via fleet key (2026-09-05) — bare `edge` name deferred to OPNsense `.home` DNS (#96/#57)
 - [x] §3 UFW active (SSH from LAN only); fail2ban on (live run 2026-08-30 — ok=24)
 - [ ] §4 cloudflared tunnel up (`cloudflared tunnel list`)
 - [ ] §5 Caddy serves `*.example.com` and `*.home`

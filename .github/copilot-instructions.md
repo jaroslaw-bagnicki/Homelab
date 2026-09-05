@@ -48,7 +48,8 @@
 - **GitHub repository**: `https://github.com/jaroslaw-bagnicki/Homelab` (owner: `jaroslaw-bagnicki`, repo: `Homelab`)
 - **Always use GitHub MCP tools** for GitHub operations — never GitKraken MCP tools for GitHub
 - **If a GitHub MCP tool call fails**, report the error to the user and do not attempt the operation via any other tool or CLI
-- **Always commit directly to `main`** — no feature branches, no PRs
+- **Default workflow: feature branch → PR → review → merge.** Do not commit to `main` directly — create a feature branch (`fix/…`, `feat/…`, `docs/…`), push it, and open a PR. The user reviews and merges; never merge the PR yourself.
+- **Direct commits to `main` only when the user explicitly asks** ("commit to main", "no PR", "skip the branch")
 - **Commit message format**: `(type) description` with parentheses. Common types: `docs`, `feat`, `fix`, `chore`, `refactor`
 - **Never rebase** unless explicitly asked
 
