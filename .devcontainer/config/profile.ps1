@@ -45,9 +45,13 @@ if (-not (Get-AzContext)) {
 # Load fleet + VPS keys from Key Vault (ssh-add is idempotent — run every
 # session so fleetadm-key-priv is always present, even when the agent already
 # holds other keys)
+$keyNames = [ordered]@{
+  'fleetadm-key-priv'     = 'fleetadm SSH key (fleetadm@homelab)'
+  'cloudlab-vps-key-priv' = 'legacy cloudlab VPS SSH key'
+}
 if ($env:SSH_AUTH_SOCK -and (Get-AzContext -ErrorAction SilentlyContinue)) {
-  foreach ($secret in 'fleetadm-key-priv', 'cloudlab-vps-key-priv') {
-    Write-Host ":: Loading $secret from Key Vault..." -ForegroundColor Yellow
+  foreach ($secret in $keyNames.Keys) {
+    Write-Host ":: Loading $($keyNames[$secret]) from Key Vault..." -ForegroundColor Yellow
     $null = Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name $secret -AsPlainText 2>$null | ssh-add - 2>$null
   }
 }
