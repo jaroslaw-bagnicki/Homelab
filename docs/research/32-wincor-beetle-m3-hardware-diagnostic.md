@@ -32,7 +32,7 @@ pre-install follow-ups remain ([Pending checks](#pending-checks)).
 | Decision | Outcome (as of 2026-09-05) |
 |---|---|
 | Hardware | WINCOR NIXDORF **BEETLE /MIII** — "System unit BEETLE/M-III K2 KMAT sw" · SN `000000001750261682 53R0455744` — **acquired** |
-| Board | **`K2.1-H81-uATX`** (WINCOR NIXDORF "Kit Motherboard_K2.1-H81-uATX", SN `000000001750296310 8D625Z8071`) — **Intel H81** chipset |
+| Board | Product **`K2.1-H81-uATX-STD`** (WINCOR NIXDORF "Kit Motherboard_K2.1-H81-uATX", SN `000000001750296310 8D625Z8071`) — **Intel H81** chipset · UUID `478619d0-8f82-11e9-b43e-6775839a2700` |
 | CPU | **Intel Pentium G3420** (Haswell, 2C/2T, 3.2 GHz, 3 MB L3, 53 W, QuickSync-H.264; AES-NI disabled) — LGA1150 |
 | RAM | **4 GiB (1× 4 GiB DDR3-1600 SODIMM)**, 2 slots, 1 free (≤16 GB → 8 GB = +1 stick); 2-slot/1-free confirmed |
 | NIC | **Intel Ethernet I217-V** (`00:19.0`, `e1000e`, MAC `00:01:2e:86:11:0c`) — on-board GbE |
@@ -41,7 +41,7 @@ pre-install follow-ups remain ([Pending checks](#pending-checks)).
 | Disk 1 | **Seagate ST1000VT001-1RE172** 1 TB 2.5" 5400 (`sdb`, `WDES3KB7`) — **CMR**, SMART PASSED, **extended self-test clean** (65,536 POH) |
 | Disk 2 | **Seagate ST1000VT001-1RE172** 1 TB 2.5" 5400 (`sdc`, `WDEPBVR3`) — **CMR**, SMART PASSED, **extended self-test clean** (65,536 POH), negotiating SATA II |
 | USB | Kingston DataTraveler 3.0 64 GB (`sdd`) = Ventoy live USB, **not** a data drive |
-| PSU | **AcBel 250 W, 80 Plus Gold** (Wincor `01750279900`) |
+| PSU | **AcBel USV Einheit `POF001-280G`** (UPS-integrated PSU) — **250 W** (225 W @ 50 °C), **80 Plus Gold** (Wincor `01750279900`, SN `5421C4B78`) |
 | Dynamic IP | `192.168.2.241` (DHCP via mesh `192.168.2.1`) |
 
 ---
@@ -68,7 +68,7 @@ Skylake/H110/DDR4.
 |---|---|
 | Product | WINCOR NIXDORF **BEETLE /MIII** — `System unit BEETLE/M-III K2 KMAT sw` |
 | Serial | `000000001750261682 53R0455744` |
-| Board | `K2.1-H81-uATX` — WINCOR NIXDORF `Kit Motherboard_K2.1-H81-uATX`, SN `000000001750296310 8D625Z8071` |
+| Board | Product **`K2.1-H81-uATX-STD`** — WINCOR NIXDORF `Kit Motherboard_K2.1-H81-uATX`, SN `000000001750296310 8D625Z8071` · UUID `478619d0-8f82-11e9-b43e-6775839a2700` |
 | BIOS | American Megatrends **`WN STD 07/16`**, dated **2018-12-19** |
 | CPU | Intel **Pentium G3420** (Haswell, 4th gen) — 1 package, **2 cores / 2 threads**, 3200 MHz, **3 MB L3** — see [CPU](#cpu--security-notes) |
 | RAM | **4 GiB** (1× 4 GiB DDR3-1600 SODIMM), one slot free — see [RAM](#ram) |
@@ -99,7 +99,8 @@ H81 chipset). Treat "BGA1155" as a Wincor/firmware string quirk, not an upgrade 
 - Intel **Pentium G3420** — Haswell 4th gen, 2C/2T (no Hyper-Threading), 3.2 GHz, 3 MB L3,
   53 W. Idle clocks ~798 MHz; ~29–32 °C package (idle). Processor ID `306C3` (stepping C0),
   **microcode 25**, GT1 iGPU (700 MHz), ME FW **9.1.40.1000** (1.5 MB). **VT-x** —
-  [Enabled] in CPU Configuration (`kvm_intel` loaded) · **VT-d** — [Enabled].
+  **VT-x** — [Enabled] in CPU Configuration (`kvm_intel` loaded) · **VT-d — Unsupported** (H81 /
+  entry Haswell — no I/O-mmu, per Chipset tab "VT-d Capability: Unsupported").
 - **AES-NI — NOT present and NOT toggleable** (confirmed 2026-09-05): the `aes` flag is absent in
   both `lscpu` and `/proc/cpuinfo`, no `aes`/`vmx` in dmesg, and the **CPU Configuration menu
   exposes no Intel AES-NI option** → **firmware-masked** on this POS board (Haswell has it in
@@ -278,10 +279,10 @@ than idea 01c's assumed "1× x16 + 1× x1".
 |---|---|
 | Thermals | acpitz 27.8/29.8 °C; package 32 °C; cores 29 °C (idle, live session) |
 | CPU idle | ~798 MHz (power state) |
-| PSU | **AcBel** (Wincor `01750279900`, "PSU UPS BEETLEM-III" L427) — **250 W** max (225 W @ 50 °C), **80 PLUS Gold**, 100–240 V input; SN `5427C4B78`. Rails: +3.3V 4.0A · +5V 10.5A (52.5 W) · +12V 8.2A (98.4 W) · +5Vsb 1.5A. **Confirms idea 01c's "industrial 80 Plus Gold" premise** (brand is AcBel, not FSP/Fortron). The +5V rail is ample for the 2× 2.5" HDDs + SSD |
+| PSU | **AcBel USV Einheit `POF001-280G`** (Wincor `01750279900`, "PSU UPS BEETLEM-III" L427) — **250 W** max (225 W @ 50 °C), **80 PLUS Gold**, 100–240 V input; SN `5421C4B78` (BIOS Info page — the sticker OCR read `5427`, but BIOS is authoritative). Rails: +3.3V 4.0A · +5V 10.5A (52.5 W) · +12V 8.2A (98.4 W) · +5Vsb 1.5A. **Confirms idea 01c's "industrial 80 Plus Gold" premise** (brand AcBel, not FSP/Fortron). "USV Einheit" = German for **UPS unit** — this is a **UPS-integrated PSU** (ties to the internal VOTEX battery). The +5V rail is ample for the 2× 2.5" HDDs + SSD |
 | Noise (measured) | **42.5 dB front / 42.0 dB back @ 30 cm** (UNI-T UT353) — uniformly ~42–42.5 dB, matches idea 01c's "~42–45 dB stress" / "44 dB" |
 | Cooling | **3 fans**: (1) right-front pushing air over the **CPU + PSU**, (2) rear at the **PSU end**, (3) inside the **UPS/battery unit**. Corrects idea 01c's "one radial tunnel turbine" model. **Gelid Fan Speed Controller** is the recorded noise-reduction step (target ~32–35 dB, keep TACH on the board, don't go below ~30 dB) |
-| UPS battery | Internal **VOTEX 15.6 V, 3000 mAh** (Wincor Nixdorf UPS) — **proprietary, not OS-exposed** (SMBus `i2c-6` = DIMM SPD + RTC only; no `power_supply`/ACPI/USB-HID), **not NUT-usable** — hardware nicety only |
+| UPS battery | Internal **VOTEX 15.6 V, 3000 mAh** (the PSU's UPS **USV Einheit** battery; AcBel `POF001-280G`) — **proprietary, not OS-exposed** (SMBus `i2c-6` = DIMM SPD + RTC only; no `power_supply`/ACPI/USB-HID), **not NUT-usable** — hardware nicety only |
 
 ---
 
@@ -313,8 +314,9 @@ toward the Seagates**; proceeding as the Unraid successor to the ML110 is the wo
 
 ## Pending Checks
 
-1. **PSU label** — ✅ **resolved 2026-09-05**: **AcBel 250 W, 80 Plus Gold** (Wincor `01750279900`,
-   SN `5427C4B78`); +5V 10.5A rail ample for the drives. Matches idea 01c's industrial-Gold premise.
+1. **PSU label** — ✅ **resolved 2026-09-05**: **AcBel USV Einheit `POF001-280G`** (UPS-integrated
+   PSU), **250 W** (225 W @ 50 °C), **80 Plus Gold** (Wincor `01750279900`, SN `5421C4B78` per BIOS
+   Info page); +5V 10.5A rail ample for the drives. Matches idea 01c's industrial-Gold premise.
 2. **RAM decision** — ✅ **resolved 2026-09-05**: **8 GB = add a 2nd 4 GB DDR3-1600 1.5 V SODIMM**
    (2 slots, 1 free confirmed; ≤16 GB). Do at the Unraid install.
 3. **Extended SMART self-test** — ✅ **resolved 2026-09-05**: both Seagates `# 1 Extended offline,
@@ -327,8 +329,8 @@ toward the Seagates**; proceeding as the Unraid successor to the ML110 is the wo
    port, to size the array-add path.
 7. **Memory test** (e.g. `/usr/sbin/memtest` or a live memtest pass) — validate the 4 GiB stick.
 8. **AC power-loss behavior** — ✅ **set 2026-09-05: BIOS "Restore AC Power Loss" → [Last state]**
-   (was Power Off), VT-x [Enabled], VT-d [Enabled]; ME FW 9.1.40.1000. So the NAS returns to its
-   prior power state after a cut (and stays on).
+   (was Power Off); VT-x [Enabled], **VT-d [Unsupported]** (H81 platform, no I/O-mmu); ME FW
+   9.1.40.1000. So the NAS returns to its prior power state after a cut (and stays on).
 
 ---
 
