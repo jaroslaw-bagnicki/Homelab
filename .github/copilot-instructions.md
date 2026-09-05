@@ -49,6 +49,7 @@
 - **Always use GitHub MCP tools** for GitHub operations — never GitKraken MCP tools for GitHub
 - **If a GitHub MCP tool call fails**, report the error to the user and do not attempt the operation via any other tool or CLI
 - **Default workflow: feature branch → PR → review → merge.** Do not commit to `main` directly — create a feature branch (`fix/…`, `feat/…`, `docs/…`), push it, and open a PR. The user reviews and merges; never merge the PR yourself.
+- **PRs ship with their `CHANGELOG.md` entry** — any PR that changes behaviour or docs adds/updates its changelog entry (newest first, with runbook/ADR links) in the same PR, so the log merges with the change, not after
 - **Direct commits to `main` only when the user explicitly asks** ("commit to main", "no PR", "skip the branch")
 - **Commit message format**: `(type) description` with parentheses. Common types: `docs`, `feat`, `fix`, `chore`, `refactor`
 - **Never rebase** unless explicitly asked

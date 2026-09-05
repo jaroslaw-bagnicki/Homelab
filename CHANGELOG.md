@@ -4,6 +4,11 @@ Notable changes to the Homelab repo, newest first. This log supersedes the
 "What's Done" table that used to live in the root `README.md`. Entries use the
 same `(type)` prefixes as commit messages; types: `feat`, `fix`, `docs`, `chore`, `refactor`.
 
+## 2026‑09
+
+- **(docs)** Require `CHANGELOG.md` entries to ship with every PR — `.github/copilot-instructions.md` / `AGENTS.md` now state that any PR changing behaviour or docs adds/updates its changelog entry in the same PR
+- **(feat)** SSH access LAN-only + devcontainer fleet-key autoload — `security` role allows password auth from the LAN (`192.168.2.0/24`, closed with `Match all`) for the human breakglass (`jarek`) while key-only elsewhere; `lab` UFW SSH scoped to the LAN; devcontainer profile always loads `fleetadm-key-priv` at session start (idempotent `ssh-add`, visible load-failure warnings); runbook 24 §3 base verification ticked (`edge.local` + SSH key-only; bare `edge` deferred to OPNsense `.home` DNS) — [runbook 24](docs/runbooks/24-edge-appliance.md) · [#78](https://github.com/jaroslaw-bagnicki/Homelab/issues/78)
+
 ## 2026‑08
 
 - **(docs)** Wyse 5070 hardware diagnostic — pre-boot audit of the Home Assistant node (research 29): J4105 confirmed, 2× 4 GB Micron DDR4 (both slots full — 16 GB = replace both), M.2 SATA 2280 — SK hynix SC311 128 GB installed (used, SMART-verified), eMMC 14.7 GiB present but unused, Realtek GbE + Intel WiFi, no NVMe; hardware.md/overview updated — [research 29](docs/research/29-wyse5070-hardware-diagnostic.md) · [issue #68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68)
