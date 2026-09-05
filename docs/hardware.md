@@ -52,7 +52,8 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 |---|---|
 | CPU | Intel **Pentium G3420** (Haswell, 2C/2T, 3.2 GHz, 3 MB L3, 53 W) — AES-NI, QuickSync (H.264 only) |
 | RAM | **4 GB DDR3-1600** (1× 4 GiB SODIMM — 2 slots, **DIMM 1 free** → 8 GB is a one-stick upgrade) |
-| Storage | **SanDisk SD9SB8W128G 128 GB SSD** (cache, SMART PASSED) + **2× Seagate ST1000VT001-1RE172 1 TB 2.5" 5400** (array: 1 parity + 1 data = 1 TB usable) |
+| Storage | **SanDisk SD9SB8W128G 128 GB SSD** (cache, SMART PASSED) + **2× Seagate ST1000VT001-1RE172 1 TB 2.5"** (Seagate **Video 2.5** surveillance; **CMR-like** — `sdb` 138 MB/s, `sdc` 132 MB/s rewrite; SMART PASSED, **~65.5k POH**; array 1 parity + 1 data = 1 TB usable). ⚠️ Extended self-test pending — final Seagate-vs-WD decision held |
+| Acquire notes | Offer described these as *"removed from high-budget laptops"* — **contradicted** by the always-on SMART history (65,536 POH / 4 power-cycles); drive provenance misdescription (seller-complaint point, issue #98) |
 | SATA | H81 **4-port AHCI** (2× SATA III 6 Gb/s + 2× SATA II 3 Gb/s) — no mSATA/NVMe; PCIe x16 empty (future NVMe/HBA/NIC) |
 | Network | 1× GbE Intel I217-V (`enp0s25`, MAC `00:01:2e:86:11:0c`) · DHCP `192.168.2.241` |
 | Board | `K2.1-H81-uATX` (WINCOR NIXDORF) · BIOS AMI `WN STD 07/16` (2018-12-19) · SN `000000001750261682 53R0455744` |

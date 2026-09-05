@@ -142,10 +142,12 @@ SMART detail:
 
 ### Recording type & drive provenance (2026-09-05)
 
-- **Recording type — CMR-like (empirical).** `dd` rewrite-in-place on `sdb` (4 GiB, `conv=fsync`)
-  sustained **138 MB/s** — no collapse when overwriting already-written sectors → behaves like
-  **CMR**, not SMR. (A sequential-append test alone is inconclusive: SMR is also fast on fresh
-  sequential streams; the in-place-rewrite test is the discriminator.)
+- **Recording type — CMR-like (empirical).** `dd` rewrite-in-place (4 GiB, `conv=fsync`,
+  2026-09-05) on **`sdb` = 138 MB/s** and **`sdc` = 132 MB/s** — no collapse when overwriting
+  already-written sectors → behaves like **CMR**, not SMR. (A sequential-append test alone is
+  inconclusive: SMR is also fast on fresh sequential streams; the in-place-rewrite test is the
+  discriminator.) POH counter verified **live** (65536 → 65537 over the running self-test), so the
+  ~7.5 yr figure is genuine, not a placeholder.
 - **Provenance / offer conflict.** The drives are **Seagate Video 2.5** (`ST1000VT001` — a
   surveillance/DVR-streaming drive family). The Allegro offer described them as *"removed from
   high-budget laptops"* and listed `ST1000VT001` alongside laptop models `ST1000LM035`/`LM049`.
@@ -153,9 +155,10 @@ SMART detail:
   **always-on recorder** behaviour, not laptop use. Either the provenance is misdescribed or the
   drive class was mislabelled — relevant to the offer-vs-received discrepancy on issue #98.
 
-Both 1 TB Seagates have **no SMART self-test logged** — run an **extended self-test**
-(`smartctl -t long /dev/sdb` ≈158 min, `/dev/sdc` ≈165) before trusting them in the array;
-also repeat the `dd` in-place-rewrite test on `sdc` (only `sdb` was tested).
+Both 1 TB Seagates had **no SMART self-test logged**; an **extended self-test**
+(`smartctl -t long /dev/sdb` ≈158 min, `/dev/sdc` ≈165) is **running (2026-09-05)** — the final
+array health gate. **Decision on keeping the Seagates vs the WD10JUCX is held until it
+completes** (`smartctl -l selftest /dev/sdb /dev/sdc` → `Completed without error`, 0 bad LBAs).
 
 ### Storage plan implication
 
