@@ -142,15 +142,17 @@ SMART detail:
 
 ### Recording type & drive provenance (2026-09-05)
 
-- **Recording type — NOT disclosed by Seagate; empirically CMR-like.** The Seagate Video 2.5
-  manual/spec tables list 512e (512 logical / 4096 physical), recording/track/areal density, 5400
-  RPM, **140 MB/s** and 128 MB cache — but **never state SMR vs CMR**. The "SMR" label circulating
-  comes from **third-party reseller listings, NOT Seagate's spec**. So treat it as **unconfirmed
-  either way**, and on the empirical evidence lean **CMR-like**: `dd` rewrite-in-place (4 GiB,
-  `conv=fsync`, 2026-09-05) on **`sdb` = 138 MB/s** and **`sdc` = 132 MB/s** — no collapse when
-  overwriting already-written sectors (a sequential-append test alone is inconclusive: SMR is also
-  fast on fresh streams; the in-place-rewrite test is the discriminator). POH counter verified
-  **live** (65536 → 65537 over the running self-test), so the ~7.5 yr figure is genuine.
+- **Recording type — CMR (PMR), confirmed by Seagate's manual.** The Video 2.5 spec §2.3
+  "Recording and Interface Technology" states **"Recording method: Perpendicular"** →
+  **Perpendicular Magnetic Recording (PMR)**, the recording tech behind conventional **CMR**.
+  (SMR is a shingled *variant* of PMR that Seagate would label "Shingled Magnetic Recording"; with
+  2 heads / 1 disc and a moderate ~1320 Gb/in² areal density, this is PMR/CMR, not shingled.)
+  Third-party reseller "SMR" labels are therefore **contradicted by the authoritative spec**.
+  **Empirical confirmation:** `dd` rewrite-in-place (4 GiB, `conv=fsync`, 2026-09-05) on
+  **`sdb` = 138 MB/s** and **`sdc` = 132 MB/s** — no collapse when overwriting already-written
+  sectors (a sequential-append test alone is inconclusive: SMR is also fast on fresh streams; the
+  in-place-rewrite test is the discriminator). POH counter verified **live** (65536 → 65537 over
+  the running self-test), so the ~7.5 yr figure is genuine.
 - **Provenance / offer conflict.** The drives are **Seagate Video 2.5** (`ST1000VT001` — a
   surveillance/DVR-streaming drive family). The Allegro offer described them as *"removed from
   high-budget laptops"* and listed `ST1000VT001` alongside laptop models `ST1000LM035`/`LM049`.
