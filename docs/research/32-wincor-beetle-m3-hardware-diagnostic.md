@@ -103,6 +103,47 @@ H81 chipset). Treat "BGA1155" as a Wincor/firmware string quirk, not an upgrade 
 - Security: modern mitigations present (PTI, Retpolines, etc.); fine for a 24/7 NAS behind the
   edge ingress (ADR 08/24). `grep -o aes /proc/cpuinfo` is the formal confirmation (pending).
 
+### CPU & chipset — offer vs received
+
+> The offer (idea 01c, from the Allegro listing / Gemini threads) assumed a **Skylake** platform.
+> The received unit is **Haswell**. Both are entry-level 2-core Pentium + PCH platforms; the
+> differences below matter little for a **backup-only NAS** but do undercut the idea-01c
+> "modern platform" claim.
+
+**CPU**
+
+| | Offer — Pentium **G4400** | Received — Pentium **G3420** |
+|---|---|---|
+| Generation / node | Skylake 6th gen, 14 nm | Haswell 4th gen, 22 nm |
+| Socket | LGA1151 | LGA1150 |
+| Cores / threads | 2C / 2T | 2C / 2T |
+| Base clock | 3.3 GHz | 3.2 GHz |
+| L3 cache | 3 MB | 3 MB |
+| TDP | 51 W | 53 W |
+| iGPU | Intel HD 510 (12 EU) | Intel HD (10 EU) |
+| **QuickSync** | H.264 + **HEVC decode** | **H.264 only** |
+| AES-NI / AVX2 | ✅ | ✅ |
+| Memory | DDR4 (dual-ch) | DDR3 (dual-ch) |
+
+**Chipset**
+
+| | **H110** (offer) | **H81** (received) |
+|---|---|---|
+| Platform | LGA1151 / Skylake | LGA1150 / Haswell |
+| Memory | DDR4 | DDR3 |
+| SATA | 4× **SATA III** (6 Gb/s) | **2× III + 2× II** |
+| USB 3.0 | 6 | 2 |
+| USB 2.0 | 6 | 8 |
+| GbE / RAID / PCH PCIe | 1× GbE · no HW RAID · 6× PCIe 2.0 | 1× GbE · no HW RAID · 6× PCIe 2.0 |
+
+**Net effect for a NAS:** CPU is effectively a **wash** (both 2C/2T low-power; G4400's only edge is
+HEVC transcoding, irrelevant for a backup target). Chipset is a **minor step down** (H81 has 2×
+SATA II and 2× USB 3.0) — but 2× SATA II is **not a bottleneck** for 5400 rpm HDDs (~140 MB/s),
+and USB 3.0 count is irrelevant. The real deltas from the offer remain **platform age (Haswell vs
+Skylake), DDR3 / 4 GB vs DDR4 / 8 GB, and no installed mSATA** (a mini-PCIe mSATA slot does exist).
+> ⚠️ The hardinfo/DMI fields "Socket BGA1155" and "Max Frequency 3800 MHz" for the G3420 are
+> firmware quirks — the real socket is **LGA1150** (Haswell), base **3.2 GHz**; ignore them.
+
 ### RAM
 
 - **1× 4 GiB DDR3-1600** SODIMM (vendor `1322`, part `XW1638N4GMPP-DB`, rank 1, 1.5 V,
