@@ -52,12 +52,15 @@
     state: started
     enabled: true
 
-- name: Harden SSH — key-only login drop-in
+- name: Harden SSH — key-only, LAN password for breakglass
   ansible.builtin.copy:
     content: |
       PasswordAuthentication no
       KbdInteractiveAuthentication no
       PermitRootLogin prohibit-password
+      Match Address 192.168.2.0/24
+          PasswordAuthentication yes
+      Match all
     dest: /etc/ssh/sshd_config.d/99-homelab-hardening.conf
     owner: root
     group: root
