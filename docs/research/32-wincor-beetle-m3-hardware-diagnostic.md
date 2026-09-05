@@ -142,12 +142,15 @@ SMART detail:
 
 ### Recording type & drive provenance (2026-09-05)
 
-- **Recording type — CMR-like (empirical).** `dd` rewrite-in-place (4 GiB, `conv=fsync`,
-  2026-09-05) on **`sdb` = 138 MB/s** and **`sdc` = 132 MB/s** — no collapse when overwriting
-  already-written sectors → behaves like **CMR**, not SMR. (A sequential-append test alone is
-  inconclusive: SMR is also fast on fresh sequential streams; the in-place-rewrite test is the
-  discriminator.) POH counter verified **live** (65536 → 65537 over the running self-test), so the
-  ~7.5 yr figure is genuine, not a placeholder.
+- **Recording type — NOT disclosed by Seagate; empirically CMR-like.** The Seagate Video 2.5
+  manual/spec tables list 512e (512 logical / 4096 physical), recording/track/areal density, 5400
+  RPM, **140 MB/s** and 128 MB cache — but **never state SMR vs CMR**. The "SMR" label circulating
+  comes from **third-party reseller listings, NOT Seagate's spec**. So treat it as **unconfirmed
+  either way**, and on the empirical evidence lean **CMR-like**: `dd` rewrite-in-place (4 GiB,
+  `conv=fsync`, 2026-09-05) on **`sdb` = 138 MB/s** and **`sdc` = 132 MB/s** — no collapse when
+  overwriting already-written sectors (a sequential-append test alone is inconclusive: SMR is also
+  fast on fresh streams; the in-place-rewrite test is the discriminator). POH counter verified
+  **live** (65536 → 65537 over the running self-test), so the ~7.5 yr figure is genuine.
 - **Provenance / offer conflict.** The drives are **Seagate Video 2.5** (`ST1000VT001` — a
   surveillance/DVR-streaming drive family). The Allegro offer described them as *"removed from
   high-budget laptops"* and listed `ST1000VT001` alongside laptop models `ST1000LM035`/`LM049`.
@@ -159,6 +162,29 @@ Both 1 TB Seagates had **no SMART self-test logged**; an **extended self-test**
 (`smartctl -t long /dev/sdb` ≈158 min, `/dev/sdc` ≈165) is **running (2026-09-05)** — the final
 array health gate. **Decision on keeping the Seagates vs the WD10JUCX is held until it
 completes** (`smartctl -l selftest /dev/sdb /dev/sdc` → `Completed without error`, 0 bad LBAs).
+
+### Drive power specs (Seagate Video 2.5 manual)
+
+Authoritative (Table 4 `DC Power Requirements`, +5 V): the **1.0 A figure is spin-up (startup)
+max only** — operating draw is far lower and is what drives monthly energy:
+
+| State | 1-disk model | 2-disk model |
+|---|---|---|
+| Spin-up (max) | **1.00 A** | 1.00 A |
+| Write average | 1.70 W | 1.80 W |
+| Read average | 1.60 W | 1.70 W |
+| Idle, low power mode | **0.45 W** | 0.50 W |
+| Standby / Sleep | **0.13 W** | 0.13 W |
+| Max sustained OD read | **140 MB/s** | |
+
+Start/stop (Table 3): power-on→ready 2.8–3.0 s, standby→ready 2.5–3.0 s — fine for spin-down.
+Measured 138 MB/s ≈ the 140 MB/s spec (validates the drive).
+
+**Effect on power estimate:** during an active backup each drive draws ~1.6–1.8 W (≈3.4 W for 2
+drives); once the drive enters its **low-power idle** (0.45–0.50 W, after a short inactivity
+timeout) the two drives drop to **~0.9–1.0 W**, and in full **standby/spin-down** to **~0.26 W**.
+So with Unraid disk spin-down the HDDs are no longer the dominant idle consumer — idle is then
+dominated by the platform + SSD + PSU (~8–12 W).
 
 ### Storage plan implication
 
