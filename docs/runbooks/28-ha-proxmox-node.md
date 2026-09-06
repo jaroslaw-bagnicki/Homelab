@@ -116,11 +116,15 @@ apt update && apt dist-upgrade
 ## 3. `fleetadm` Bootstrap (ADR 28) — unblock Ansible
 
 Mirrors [runbook 25 §2](25-m910q-os-refresh.md) / ADR 28. On the box (console or SSH as `root`), create
-the key-only `fleetadm` agent account + NOPASSWD sudo + install the fleet key. Paste the following at
-the **root console / Proxmox Shell** (the fleet key is inlined; it lives at
-`ansible/roles/common/files/ssh/fleetadm.pub`, ADR 28):
+the key-only `fleetadm` agent account + NOPASSWD sudo + install the fleet key. **Proxmox VE does not
+ship `sudo` by default** — install it first, otherwise Ansible's `become` (which uses `sudo`) will
+fail. Paste the following at the **root console / Proxmox Shell** (the fleet key is inlined; it lives
+at `ansible/roles/common/files/ssh/fleetadm.pub`, ADR 28):
 
 ```bash
+# Proxmox VE does not ship sudo by default — install it first (Ansible become needs it)
+apt update && apt install -y sudo
+
 id -u fleetadm >/dev/null 2>&1 || useradd -m -s /bin/bash fleetadm
 usermod -aG sudo fleetadm
 echo 'fleetadm ALL=(ALL) NOPASSWD: ALL' | tee /etc/sudoers.d/fleetadm
