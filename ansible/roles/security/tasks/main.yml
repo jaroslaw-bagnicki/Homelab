@@ -22,7 +22,7 @@
     rule: allow
     proto: tcp
     port: "{{ item }}"
-    from_ip: "{{ security_ufw_allow_ssh_from }}"
+    from_ip: "{{ security_ufw_allow_tcp_from }}"
   loop: "{{ security_ufw_allow_tcp_ports }}"
   when: security_ufw_allow_tcp_ports | length > 0
 
@@ -61,7 +61,7 @@
     state: started
     enabled: true
 
-- name: Harden SSH — key-only, LAN password for breakglass
+- name: Harden SSH — key-only, LAN password for non-root accounts
   ansible.builtin.copy:
     content: |
       PasswordAuthentication no
