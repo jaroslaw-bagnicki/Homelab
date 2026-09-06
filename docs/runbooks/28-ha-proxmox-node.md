@@ -165,9 +165,9 @@ ansible-playbook ansible/playbooks/playbook-ha.yml --diff
   **non-root** accounts only — `root` SSH stays key-only via `PermitRootLogin prohibit-password`).
 
 > **Time sync — `chrony` vs `systemd-timesyncd`.** Proxmox VE ships **`chrony`**, not
-> `systemd-timesyncd`, so the `common` role's `systemd-timesyncd` task + handler are **skipped** on this
-> host (the role checks for the unit file and only manages it when present — Ubuntu hosts keep the old
-> path, Proxmox keeps `chrony`). Don't force the unit.
+> `systemd-timesyncd`. The `common` role **detects which NTP daemon is present** and ensures *that one*
+> is running — `chronyd` on Proxmox, `systemd-timesyncd` on the Ubuntu/Debian fleet nodes — a symmetric
+> switch, not a skip.
 
 > **Netdata** is not part of this runbook/playbook — it is **#104**.
 

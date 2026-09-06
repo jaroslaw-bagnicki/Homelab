@@ -13,19 +13,18 @@
 - name: Set timezone to Etc/UTC
   community.general.timezone:
     name: Etc/UTC
-  notify: Restart systemd-timesyncd
+  notify: Restart time sync
 
-- name: Determine if systemd-timesyncd is the NTP service
+- name: Determine the NTP daemon (chrony or systemd-timesyncd)
   ansible.builtin.stat:
-    path: /lib/systemd/system/systemd-timesyncd.service
-  register: common_timesyncd_unit
+    path: /lib/systemd/system/chrony.service
+  register: common_chrony_unit
 
-- name: Ensure systemd-timesyncd is running
+- name: Ensure NTP service is running
   ansible.builtin.service:
-    name: systemd-timesyncd
+    name: "{{ 'chrony' if common_chrony_unit.stat.exists else 'systemd-timesyncd' }}"
     state: started
     enabled: true
-  when: common_timesyncd_unit.stat.exists
 
 - name: Install Avahi daemon
   ansible.builtin.apt:
