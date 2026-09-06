@@ -3,3 +3,4 @@
   ansible.builtin.service:
     name: systemd-timesyncd
     state: restarted
+  when: common_timesyncd_unit.stat.exists

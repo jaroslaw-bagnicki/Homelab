@@ -15,11 +15,17 @@
     name: Etc/UTC
   notify: Restart systemd-timesyncd
 
+- name: Determine if systemd-timesyncd is the NTP service
+  ansible.builtin.stat:
+    path: /lib/systemd/system/systemd-timesyncd.service
+  register: common_timesyncd_unit
+
 - name: Ensure systemd-timesyncd is running
   ansible.builtin.service:
     name: systemd-timesyncd
     state: started
     enabled: true
+  when: common_timesyncd_unit.stat.exists
 
 - name: Install Avahi daemon
   ansible.builtin.apt:

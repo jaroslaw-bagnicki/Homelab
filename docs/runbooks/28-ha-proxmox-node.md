@@ -158,11 +158,16 @@ ansible-playbook ansible/playbooks/playbook-ha.yml --diff
 ```
 
 `playbook-ha.yml` runs `common → security`:
-- **`common`** — hostname `ha`, `Etc/UTC`, systemd-timesyncd, Avahi (`ha.local`, `common_enable_avahi: true`),
-  and re-arms the fleet key on `fleetadm` (ADR 28).
+- **`common`** — hostname `ha`, `Etc/UTC`, Avahi (`ha.local`, `common_enable_avahi: true`), and re-arms
+  the fleet key on `fleetadm` (ADR 28). Time sync is left to Proxmox's **`chrony`**.
 - **`security`** — UFW default-deny + allow from `192.168.2.0/24`: SSH `22` and Proxmox UI **`8006`**
   (`security_ufw_allow_tcp_ports`), fail2ban, sshd key-only hardening (LAN password auth applies to
   **non-root** accounts only — `root` SSH stays key-only via `PermitRootLogin prohibit-password`).
+
+> **Time sync — `chrony` vs `systemd-timesyncd`.** Proxmox VE ships **`chrony`**, not
+> `systemd-timesyncd`, so the `common` role's `systemd-timesyncd` task + handler are **skipped** on this
+> host (the role checks for the unit file and only manages it when present — Ubuntu hosts keep the old
+> path, Proxmox keeps `chrony`). Don't force the unit.
 
 > **Netdata** is not part of this runbook/playbook — it is **#104**.
 
