@@ -83,7 +83,7 @@ DDR4 (both slots full — 16 GB means replacing both), M.2 **SATA** 128 GB (SK h
    ```
 7. Proxmox web UI: **https://192.168.2.201:8006** → log in as `root` (Keeper).
 
-> **Future (optional):** once OPNsense `.home` DNS lands (#65/#81 · #96), the Edge Caddy can alias
+> **Future (optional):** once OPNsense `.home` DNS lands ([#65](https://github.com/jaroslaw-bagnicki/Homelab/issues/65)/[#81](https://github.com/jaroslaw-bagnicki/Homelab/issues/81) · [#96](https://github.com/jaroslaw-bagnicki/Homelab/issues/96)), the Edge Caddy can alias
 > `http://ha.home` → `https://ha:8006` for a portless URL. Not needed here — direct `:8006` access is used.
 
 > **Proxmox reality vs runbook 25:** Proxmox VE has **no "create user" step** — `root` is the only
@@ -169,7 +169,7 @@ ansible-playbook ansible/playbooks/playbook-ha.yml --diff
 > **actual runtime state**, not what's installed — so a host running `chrony` (e.g. Proxmox VE) is handled
 > correctly, while Debian/Ubuntu hosts stay on `systemd-timesyncd`.
 
-> **Netdata** is not part of this runbook/playbook — it is **#104**.
+> **Netdata** is not part of this runbook/playbook — it is [#104](https://github.com/jaroslaw-bagnicki/Homelab/issues/104).
 
 ## Verification Checklist
 
