@@ -39,7 +39,7 @@ independent of the M910q.
 ## Prerequisites
 
 - Wyse 5070 (Celeron J4105, 8 GB, M.2 SATA 128 GB — **no NVMe**, research 26/29) · monitor + keyboard · power
-- **Proxmox VE ISO added to the YUMI multiboot USB stick** (runbook 01 §0 / research 12) — F12 one-time boot
+- **Proxmox VE ISO (x86_64/amd64)** added to the YUMI multiboot USB stick (runbook 01 §0 / research 12) — F12 one-time boot · ⚠ do **not** add the **ARM64** (`*-arm64`) build — the Wyse 5070 is an Intel J4105 (x86_64)
 - Console or SSH reachability during setup
 - Refs: [research 29](../research/29-wyse5070-hardware-diagnostic.md) (diagnostic) · [research 26](../research/26-home-assistant-thin-client.md) · [ADR 25](../decisions/25-home-assistant-thin-client.md) · [ADR 28](../decisions/28-fleet-admin-account-and-key.md) · [research 24](../research/24-network-topology-design.md) (IP scheme)
 
