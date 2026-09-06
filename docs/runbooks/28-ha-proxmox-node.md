@@ -164,10 +164,9 @@ ansible-playbook ansible/playbooks/playbook-ha.yml --diff
   (`security_ufw_allow_tcp_ports`), fail2ban, sshd key-only hardening (LAN password auth applies to
   **non-root** accounts only — `root` SSH stays key-only via `PermitRootLogin prohibit-password`).
 
-> **Time sync — `chrony` vs `systemd-timesyncd`.** Proxmox VE ships **`chrony`**, not
-> `systemd-timesyncd`. The `common` role **detects which NTP daemon is present** and ensures *that one*
-> is running — `chronyd` on Proxmox, `systemd-timesyncd` on the Ubuntu/Debian fleet nodes — a symmetric
-> switch, not a skip.
+> **Time sync — `systemd-timesyncd` standard, `chrony` the Proxmox exception.** The `common` role checks
+> for `systemd-timesyncd` first (the default on Debian/Ubuntu); if it's absent it falls back to `chrony`
+> (Proxmox VE). Either way it ensures the NTP service is running.
 
 > **Netdata** is not part of this runbook/playbook — it is **#104**.
 

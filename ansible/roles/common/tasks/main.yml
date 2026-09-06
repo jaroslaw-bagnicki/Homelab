@@ -15,22 +15,16 @@
     name: Etc/UTC
   notify: Restart time sync
 
-- name: Determine if chrony is the NTP daemon
-  ansible.builtin.stat:
-    path: /lib/systemd/system/chrony.service
-  register: common_chrony_unit
-
-- name: Determine if systemd-timesyncd is the NTP daemon
+- name: Determine NTP daemon (systemd-timesyncd preferred; chrony fallback)
   ansible.builtin.stat:
     path: /lib/systemd/system/systemd-timesyncd.service
   register: common_timesyncd_unit
 
 - name: Ensure NTP service is running
   ansible.builtin.service:
-    name: "{{ 'chrony' if common_chrony_unit.stat.exists else 'systemd-timesyncd' }}"
+    name: "{{ 'systemd-timesyncd' if common_timesyncd_unit.stat.exists else 'chrony' }}"
     state: started
     enabled: true
-  when: common_chrony_unit.stat.exists or common_timesyncd_unit.stat.exists
 
 - name: Install Avahi daemon
   ansible.builtin.apt:

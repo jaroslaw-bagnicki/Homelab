@@ -1,6 +1,5 @@
 ---
 - name: Restart time sync
   ansible.builtin.service:
-    name: "{{ 'chrony' if common_chrony_unit.stat.exists else 'systemd-timesyncd' }}"
+    name: "{{ 'systemd-timesyncd' if common_timesyncd_unit.stat.exists else 'chrony' }}"
     state: restarted
-  when: common_chrony_unit.stat.exists or common_timesyncd_unit.stat.exists
