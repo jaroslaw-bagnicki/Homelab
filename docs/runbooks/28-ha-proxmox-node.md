@@ -113,22 +113,6 @@ apt update && apt dist-upgrade
 > The **"No valid subscription"** popup is **cosmetic** — you can dismiss it; it has no effect on
 > functionality. You do **not** need a licence for a homelab.
 
-> **Storage — default layout & reclaiming the free VG space.** The Proxmox installer does **not** use
-> the whole disk — it leaves ~15 GB free in the LVM VG `pve` as headroom beyond `root` (`local`, ~39 GiB),
-> `swap` (~7.6 GiB) and the `data` thin pool (`local-lvm`, ~54 GiB, where VM/CT disks live). That free VG
-> space is a **deliberate reserve**, not lost space — you can grow any LV into it later without
-> repartitioning.
->
-> **Keep vs reclaim it.** Keeping the headroom is the recommended Proxmox pattern for a **production or
-> many-VM** host (a safety margin so an overcommitted thin pool or a full `/` never bites). For a
-> **single-purpose homelab** node like this one (one HA VM + a couple of LXCs), reclaiming it into
-> `local-lvm` maximises usable capacity. If you reclaim, note you give up easy room to grow `root` later
-> (you'd have to shrink a thin pool or add a disk instead). To reclaim, at the console (no reboot needed):
->
-> ```sh
-> lvextend -l +100%FREE /dev/pve/data   # local-lvm → ~68 GiB; `vgs` VFree → 0
-> ```
-
 ## 3. `fleetadm` Bootstrap (ADR 28) — unblock Ansible
 
 Mirrors [runbook 25 §2](25-m910q-os-refresh.md) / [ADR 28](../decisions/28-fleet-admin-account-and-key.md). On the box (console or SSH as `root`), create
@@ -187,6 +171,23 @@ ansible-playbook ansible/playbooks/playbook-ha.yml --diff
 
 > **Netdata** is not part of this runbook/playbook — it is [#104](https://github.com/jaroslaw-bagnicki/Homelab/issues/104).
 
+## 5. Storage — reclaim the free VG space (optional)
+
+The Proxmox installer does **not** use the whole disk — it leaves ~15 GB free in the LVM VG `pve` as
+headroom beyond `root` (`local`, ~39 GiB), `swap` (~7.6 GiB) and the `data` thin pool (`local-lvm`,
+~54 GiB, where VM/CT disks live). That free VG space is a **deliberate reserve**, not lost space — you
+can grow any LV into it later without repartitioning.
+
+**Keep vs reclaim it.** Keeping the headroom is the recommended Proxmox pattern for a **production or
+many-VM** host (a safety margin so an overcommitted thin pool or a full `/` never bites). For a
+**single-purpose homelab** node like this one (one HA VM + a couple of LXCs), reclaiming it into
+`local-lvm` maximises usable capacity. If you reclaim, note you give up easy room to grow `root` later
+(you'd have to shrink a thin pool or add a disk instead). To reclaim, at the console (no reboot needed):
+
+```sh
+lvextend -l +100%FREE /dev/pve/data   # local-lvm → ~68 GiB; `vgs` VFree → 0
+```
+
 ## Verification Checklist
 
 - [x] §1 Proxmox VE installed; static IP `192.168.2.201`; web UI reachable at `:8006`
@@ -194,6 +195,7 @@ ansible-playbook ansible/playbooks/playbook-ha.yml --diff
 - [x] §3 `fleetadm` key-only SSH works; `sudo -n whoami` → root
 - [x] §4 `common` + `security` applied cleanly (idempotent — second run = 0 changed)
 - [x] UFW active; SSH + 8006 allowed from LAN; `ha.local` resolves
+- [x] §5 storage: free VG space reclaimed into `local-lvm` (optional)
 
 ## References
 
