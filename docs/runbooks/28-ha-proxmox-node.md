@@ -89,16 +89,30 @@ DDR4 (both slots full — 16 GB means replacing both), M.2 **SATA** 128 GB (SK h
 > **Proxmox reality vs runbook 25:** Proxmox VE has **no "create user" step** — `root` is the only
 > built-in admin (console + web UI). There is no separate personal account like the Ubuntu installer's.
 > `root` is the breaking-glass identity, reached via the **console / Proxmox web UI**; `fleetadm` is
-> created in §2 for Ansible.
+> created in §3 for Ansible.
 
-> **"No valid subscription" popup (post-install).** This is **not an error** — Proxmox VE is free and
-> fully functional without a licence; a subscription only unlocks the `pve-enterprise` APT repo and
-> commercial support. For a homelab, switch to the free **`pve-no-subscription`** repo so `apt` works
-> without a key: node `ha` → **Updates → Repositories** → disable/remove `pve-enterprise`, then
-> **Add → No-Subscription** (it auto-selects the right Debian codename — Proxmox VE 9 = Debian 13 *trixie*).
-> The nag itself is cosmetic and can simply be dismissed.
+## 2. Repositories & OS updates (no subscription)
 
-## 2. `fleetadm` Bootstrap (ADR 28) — unblock Ansible
+Proxmox VE is free and fully functional **without a licence** — a subscription only unlocks the
+`pve-enterprise` APT repo and commercial support. A fresh install enables the **enterprise** repos by
+default, which error on `apt update` without a key, so switch to the free **no-subscription** repo:
+
+1. Node `ha` → **Updates → Repositories**.
+2. **Disable** `pve-enterprise` — and `ceph-squid` too (the enterprise Ceph repo; unused on this
+   single-node host, and it will otherwise throw the same subscription error on `apt update`).
+3. **Add → No-Subscription** — it auto-selects the correct Debian codename (Proxmox VE 9 = Debian 13 *trixie*).
+4. **Refresh** the package lists.
+
+Then bring the OS + Proxmox packages up to date (console; a reboot may be needed if a kernel updates):
+
+```sh
+apt update && apt dist-upgrade
+```
+
+> The **"No valid subscription"** popup is **cosmetic** — you can dismiss it; it has no effect on
+> functionality. You do **not** need a licence for a homelab.
+
+## 3. `fleetadm` Bootstrap (ADR 28) — unblock Ansible
 
 Mirrors [runbook 25 §2](25-m910q-os-refresh.md) / ADR 28. On the box (console or SSH as `root`):
 
@@ -112,7 +126,7 @@ Mirrors [runbook 25 §2](25-m910q-os-refresh.md) / ADR 28. On the box (console o
    sudo -n whoami      # → root
    ```
 
-## 3. Ansible Base Provision
+## 4. Ansible Base Provision
 
 From the **LAN workstation** (per `fleet-connect`), with the fleet key loaded:
 
@@ -133,8 +147,9 @@ ansible-playbook ansible/playbooks/playbook-ha.yml --diff
 ## Verification Checklist
 
 - [ ] §1 Proxmox VE installed; static IP `192.168.2.201`; web UI reachable at `:8006`
-- [ ] §2 `fleetadm` key-only SSH works; `sudo -n whoami` → root
-- [ ] §3 `common` + `security` applied cleanly (idempotent — second run = 0 changed)
+- [ ] §2 `no-subscription` repo enabled; `apt update && apt dist-upgrade` succeeds
+- [ ] §3 `fleetadm` key-only SSH works; `sudo -n whoami` → root
+- [ ] §4 `common` + `security` applied cleanly (idempotent — second run = 0 changed)
 - [ ] UFW active; SSH + 8006 allowed from LAN; `ha.local` resolves
 
 ## References
