@@ -173,11 +173,11 @@ ansible-playbook ansible/playbooks/playbook-ha.yml --diff
 
 ## Verification Checklist
 
-- [ ] §1 Proxmox VE installed; static IP `192.168.2.201`; web UI reachable at `:8006`
-- [ ] §2 `no-subscription` repo enabled; `apt update && apt dist-upgrade` succeeds
-- [ ] §3 `fleetadm` key-only SSH works; `sudo -n whoami` → root
-- [ ] §4 `common` + `security` applied cleanly (idempotent — second run = 0 changed)
-- [ ] UFW active; SSH + 8006 allowed from LAN; `ha.local` resolves
+- [x] §1 Proxmox VE installed; static IP `192.168.2.201`; web UI reachable at `:8006`
+- [x] §2 `no-subscription` repo enabled; `apt update && apt dist-upgrade` succeeds
+- [x] §3 `fleetadm` key-only SSH works; `sudo -n whoami` → root
+- [x] §4 `common` + `security` applied cleanly (idempotent — second run = 0 changed)
+- [x] UFW active; SSH + 8006 allowed from LAN; `ha.local` resolves
 
 ## References
 
