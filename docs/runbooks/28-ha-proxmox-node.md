@@ -65,8 +65,11 @@ DDR4 (both slots full — 16 GB means replacing both), M.2 **SATA** 128 GB (SK h
    | IP | `192.168.2.201/24` |
    | Gateway | `192.168.2.1` |
    | DNS | `1.1.1.1, 8.8.8.8` |
-   | Hostname | `ha` (the `common` role sets it) |
+   | Hostname (FQDN) | `ha.local` — Proxmox sets OS `hostname` to `ha` (FQDN recorded in `/etc/hosts`); the `common` role keeps `ha` |
    | Timezone | `Etc/UTC` (the `common` role enforces it) |
+
+   > `ha.local` resolves via Avahi mDNS; `ha.home` is the planned OPNsense domain (ADR 24) — revisit when OPNsense lands.
+
 4. Set a **strong root password** → **Keeper**. This is the breaking-glass account (Proxmox web UI
    admin + console).
 5. Finish the install, reboot (remove the USB).
