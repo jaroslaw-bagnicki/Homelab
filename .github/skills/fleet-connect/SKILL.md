@@ -2,28 +2,32 @@
 name: fleet-connect
 description: >-
   SSH connectivity to any Homelab fleet node (cloudlab VPS, lab M910q, edge
-  Wyse 3040, omv NAS) from the right control node — for Ansible playbooks, ad-hoc shell
-  access, file transfer, and AI agents (opencode, Copilot, …) that need to reach
-  a node. Covers the fleet SSH key retrieval from Azure Key Vault, ssh-agent
-  setup, per-host reachability, known connectivity pitfalls, and verification.
-  USE FOR: running ansible-playbook against cloudlab/lab/edge, SSH/SCP to a
+  Wyse 3040, ha Wyse 5070 Proxmox, omv NAS) from the right control node — for
+  Ansible playbooks, ad-hoc shell access, file transfer, and AI agents
+  (opencode, Copilot, …) that need to reach a node. Covers the fleet SSH key
+  retrieval from Azure Key Vault, ssh-agent setup, per-host reachability, known
+  connectivity pitfalls, and verification.
+  USE FOR: running ansible-playbook against cloudlab/lab/edge/ha, SSH/SCP to a
   fleet node, loading the fleet SSH key, AI agent SSH access to a node,
   troubleshooting SSH to a fleet node.
   DO NOT USE FOR: provisioning the VPS (use cntb CLI), modifying the VPS in the
-  Contabo portal, setting up the physical nodes (use runbooks 24/25).
+  Contabo portal, setting up the physical nodes (use runbooks 24/25/28).
 when:
   - "ansible-playbook cloudlab"
   - "ansible-playbook lab"
   - "ansible-playbook edge"
+  - "ansible-playbook ha"
   - "run playbook against a fleet node"
   - "ssh to cloudlab"
   - "ssh to lab"
   - "ssh to edge"
+  - "ssh to ha"
   - "SSH key fleet"
   - "load fleet key"
   - "connect to cloudlab"
   - "connect to lab"
   - "connect to edge"
+  - "connect to ha"
   - "AI agent ssh node"
   - "agent connect to node"
   - "Import-SshKey"
@@ -70,13 +74,15 @@ ssh-add -l
 |---|---|---|---|
 | `cloudlab` | `173.249.27.13` | anywhere (public IP) | `ansible/playbooks/playbook.yml` |
 | `lab` | `192.168.2.200` | LAN workstation (`192.168.2.0/24`) | `ansible/playbooks/playbook-lab.yml` |
-| `omv` | `192.168.2.210` | LAN workstation (`192.168.2.0/24`) | — (not Ansible-managed yet, #65) |
+| `ha` | `192.168.2.201` | LAN workstation (`192.168.2.0/24`) | `ansible/playbooks/playbook-ha.yml` |
+| `omv` | `192.168.2.210` | LAN workstation (`192.168.2.0/24`) | — (not Ansible-managed yet) |
 | `edge` | `192.168.2.240` | LAN workstation (`192.168.2.0/24`) | `ansible/playbooks/playbook-edge.yml` |
 
-`lab`, `edge`, and `omv` are LAN-only — connect to them (SSH or playbooks)
+`lab`, `ha`, `edge`, and `omv` are LAN-only — connect to them (SSH or playbooks)
 from a machine on `192.168.2.0/24` with the fleet key loaded in its agent (see
-runbooks 24/25/26). All nodes are on `fleetadm` since 2026-08-30; `edge` is
-Ansible-managed (base, runbook 24) — `omv` is the only node not yet Ansible-enrolled (#65).
+runbooks 24/25/26/28). All nodes are on `fleetadm` since 2026-08-30; `edge` and
+`ha` are Ansible-managed (runbooks 24/28) — `omv` is the only LAN node not yet
+Ansible-enrolled.
 
 ## Connecting to a Node
 
@@ -88,6 +94,7 @@ From the repo root, with the fleet key in the agent:
 cd /workspaces/Homelab
 ansible-playbook ansible/playbooks/playbook.yml          # cloudlab
 ansible-playbook ansible/playbooks/playbook-lab.yml      # lab (LAN workstation)
+ansible-playbook ansible/playbooks/playbook-ha.yml       # ha (LAN workstation)
 ansible-playbook ansible/playbooks/playbook-edge.yml     # edge (LAN workstation)
 ```
 
@@ -100,7 +107,7 @@ ansible-playbook ansible/playbooks/playbook-edge.yml     # edge (LAN workstation
 ### Direct SSH & file transfer (ad-hoc)
 
 ```powershell
-ssh cloudlab                        # dev container (alias from .devcontainer/config/ssh_config)
+ssh cloudlab                        # dev container
 ssh fleetadm@192.168.2.200          # lab from a LAN workstation
 scp file.txt fleetadm@192.168.2.200:/tmp/   # copy to lab (LAN workstation)
 ```
@@ -115,8 +122,8 @@ the **same fleet key** — no separate credentials:
   touches the private key material (it stays in the agent / Key Vault).
 - An agent on `cloudlab` that must reach another node needs the fleet key loaded
   in *cloudlab's* ssh-agent too — load it there the same way (§1).
-- LAN-only nodes (`lab`, `edge`) require the agent to run on a machine on
-  `192.168.2.0/24` with the fleet key in its agent (runbooks 24/25).
+- LAN-only nodes (`lab`, `edge`, `ha`) require the agent to run on a machine on
+  `192.168.2.0/24` with the fleet key in its agent (runbooks 24/25/28).
 
 ## Known Pitfalls
 
