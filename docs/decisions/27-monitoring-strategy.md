@@ -2,6 +2,7 @@
 
 **Date:** 2026-08-15  
 **Status:** Accepted
+**Revised:** 2026-09-06 — Tier B parent placement on the HA-node Proxmox, host-native Lab child, and a shared `netdata` role (see §Decision → Tier B).
 
 ---
 
@@ -28,12 +29,13 @@ AMA → Log Analytics (`homelab-law`) on **Arc-enrolled nodes only**: the M910q 
 
 ### Tier B — Local monitoring stack (local real-time plane)
 
-**Tier B is the local monitoring stack on the homelab; Netdata is its first component.** A Netdata agent on every node → **Netdata Parent** (k3s workload on the M910q) → **Netdata dashboard + alarms** — covering the full fleet, Arc or not.
+**Tier B is the local monitoring stack on the homelab; Netdata is its first component.** A Netdata agent on every node → **Netdata Parent** (always-on LXC on the HA node's Proxmox) → **Netdata dashboard + alarms** — covering the full fleet, Arc or not.
 
 - **Unified monitoring agent across all nodes** — one Netdata agent runs on every node in the fleet: a uniform agent across Ubuntu, Debian, OMV, Proxmox, and (trial pending) Alpine.
-- **Parent placement** — Netdata Parent runs as a **k3s workload on the M910q** after the ADR 22 migration; until then children run **standalone** (local `dbengine` + alarms) and re-point to the parent when it lands.
+- **Parent placement (revised 2026-09-06)** — Netdata Parent runs as an **always-on LXC container on the HA node (Wyse 5070 / Proxmox)** — independent of the HA VM (ADR 26) and of the M910q (ADR 24's churn-independence rationale). It supersedes the earlier "k3s workload on the M910q" placement. Until Proxmox is live, children run **standalone** (local `dbengine` + alarms) and re-point to the parent when it lands.
+- **Lab (M910q) child is host-native** — a **systemd host process**, not a container/k8s workload: it monitors the host itself, auto-discovers the Docker stack now and the k3s node/kubelet later, and survives cluster churn.
 - **Edge Wyse 3040 — lightweight components only.** A **Netdata child node** (minimal footprint, **RAM-only buffering** — no eMMC `dbengine`, per [ADR 24](24-edge-ingress-appliance.md)) and Fluent Bit if adopted as a Tier B component; Alpine compatibility validated during the Debian-vs-Alpine on-device trial.
-- **Metrics-only scope.** Provisioned via a new Ansible `netdata` role following the ADR 10 Ansible approach.
+- **Metrics-only scope.** Provisioned via a **shared Ansible `netdata` role** (the ADR 10 approach) parameterized per node: `netdata_role: parent|child` · `netdata_stream_target` · `netdata_storage: dbengine|ram` (Edge → `ram`) · `netdata_retention` · `netdata_bind`. Applies to the Debian-family fleet (Edge, Lab, Proxmox, OMV); **OPNsense (FreeBSD) and Unraid (Beetle NAS) are per-OS exceptions** and need their own path.
 - **Future components of Tier B (extensions — not adopted, no ADR yet):** **Grafana, Prometheus, Fluent Bit, Loki.** Netdata's Prometheus-compatible export is the future integration point for a dashboard/analytics (and log) component; **ADR 26's power path** (Z2M → `mqtt2prometheus` → Prometheus → Grafana) is the only committed Prometheus/Grafana usage today. Components are added incrementally via their own future ADRs.
 
 ### Boundary rule
@@ -44,13 +46,13 @@ AMA → Log Analytics (`homelab-law`) on **Arc-enrolled nodes only**: the M910q 
 
 ## Consequences
 
-- **Two planes to run** — Azure Monitor (Tier A) and the local monitoring stack (Tier B, Netdata as its first component). Tier A stays within the LAW free tier; Tier B is self-hosted on the M910q.
+- **Two planes to run** — Azure Monitor (Tier A) and the local monitoring stack (Tier B, Netdata as its first component). Tier A stays within the LAW free tier; Tier B is self-hosted — **Parent LXC on the HA-node Proxmox**.
 - **Single Netdata Parent pane** for every node's real-time metrics; **non-Arc nodes fully covered** (Edge, HA, NAS) where Azure could never reach.
 - **One agent everywhere** — a uniform monitoring tool across heterogeneous nodes; auto-discovers containers, VMs/LXC (Proxmox), and services with rich out-of-the-box metrics.
-- **Standalone-first, parent-later** — every child is useful immediately (local dashboard + alarms) before the k3s central plane exists; re-pointing to the parent is a config change, not a reinstall.
+- **Standalone-first, parent-later** — every child is useful immediately (local dashboard + alarms) before the central plane exists; re-pointing to the parent is a config change, not a reinstall.
 - **ADR 09 is amended in place** — scoped to Tier A (management plane); its "no separate monitoring stack" framing is superseded by this strategy.
 - **Container Insights (ADR 22)** is now defined as the Tier A cluster extension, not a replacement for the local plane.
-- **ADR 26's independence requirement** (monitoring survives Home Assistant restarts) is satisfied: the Tier B plane lives on the M910q k3s, not the HA node.
+- **ADR 26's independence requirement** (monitoring survives Home Assistant restarts) is satisfied: the Tier B plane lives on the **HA node's Proxmox**, not the HA VM.
 - **New operational overhead** — a Netdata agent per node (~100–150 MB default; minimal profile ~60–100 MB on the constrained Edge) and a central plane to maintain.
 - **Two dashboards to learn** — Azure Portal (management) and the Netdata dashboard (operations); a Grafana surface appears only if a future Tier B component is adopted.
 
@@ -66,7 +68,7 @@ AMA → Log Analytics (`homelab-law`) on **Arc-enrolled nodes only**: the M910q 
 
 - [ADR 04](04-hybrid-cloud-azure-arc.md) — Hybrid Cloud Strategy (Arc management concept)
 - [ADR 09](09-azure-monitor-via-arc.md) — Azure Monitor via Arc (**amended — Tier A only**)
-- [ADR 10](10-ansible-host-config.md) — Ansible host configuration (pattern for the new `netdata` role)
+- [ADR 10](10-ansible-host-config.md) — Ansible host configuration (pattern for the shared `netdata` role)
 - [ADR 22](22-k3s-arc-homelab.md) — k3s + Arc (Container Insights = Tier A cluster extension)
 - [ADR 24](24-edge-ingress-appliance.md) — Edge Wyse 3040 (amended — lightweight Edge components, RAM-only buffering)
 - [ADR 25](25-home-assistant-thin-client.md) — HA node (Netdata → Tier B plane)
