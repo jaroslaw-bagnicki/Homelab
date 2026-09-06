@@ -2,11 +2,12 @@
 
 **Date:** 2026-08-15  
 **Status:** Accepted
-**Revised:** 2026-09-06 — Tier B parent placement on the HA-node Proxmox, host-native Lab child, and a shared `netdata` role (see §Decision → Tier B).
 
 ---
 
 ## Context
+
+> **Revised 2026-09-06:** Tier B Netdata parent placement moved to an always-on LXC on the HA-node Proxmox; the Lab (M910q) child is host-native (systemd, not a k8s workload); the `netdata` Ansible role is shared and parameterized (see §Decision → Tier B).
 
 The homelab monitoring posture drifted as the node fleet grew. The record holds several overlapping and partly contradictory decisions:
 
