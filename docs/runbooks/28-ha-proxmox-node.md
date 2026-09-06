@@ -113,6 +113,15 @@ apt update && apt dist-upgrade
 > The **"No valid subscription"** popup is **cosmetic** — you can dismiss it; it has no effect on
 > functionality. You do **not** need a licence for a homelab.
 
+> **Storage — default layout & reclaiming the free VG space.** The Proxmox installer does **not** use
+> the whole disk — it leaves ~15 GB free in the LVM VG `pve` as headroom beyond `root` (`local`, ~39 GiB),
+> `swap` (~7.6 GiB) and the `data` thin pool (`local-lvm`, ~54 GiB, where VM/CT disks live). To avoid
+> wasting it, grow the thin pool into the free space (a reboot is not required):
+>
+> ```sh
+> lvextend -l +100%FREE /dev/pve/data   # local-lvm → ~68 GiB; `vgs` VFree → 0
+> ```
+
 ## 3. `fleetadm` Bootstrap (ADR 28) — unblock Ansible
 
 Mirrors [runbook 25 §2](25-m910q-os-refresh.md) / [ADR 28](../decisions/28-fleet-admin-account-and-key.md). On the box (console or SSH as `root`), create
