@@ -75,14 +75,14 @@ ssh-add -l
 | `cloudlab` | `173.249.27.13` | anywhere (public IP) | `ansible/playbooks/playbook.yml` |
 | `lab` | `192.168.2.200` | LAN workstation (`192.168.2.0/24`) | `ansible/playbooks/playbook-lab.yml` |
 | `ha` | `192.168.2.201` | LAN workstation (`192.168.2.0/24`) | `ansible/playbooks/playbook-ha.yml` |
-| `omv` | `192.168.2.210` | LAN workstation (`192.168.2.0/24`) | — (not Ansible-managed yet, #65) |
+| `omv` | `192.168.2.210` | LAN workstation (`192.168.2.0/24`) | — (not Ansible-managed yet) |
 | `edge` | `192.168.2.240` | LAN workstation (`192.168.2.0/24`) | `ansible/playbooks/playbook-edge.yml` |
 
 `lab`, `ha`, `edge`, and `omv` are LAN-only — connect to them (SSH or playbooks)
 from a machine on `192.168.2.0/24` with the fleet key loaded in its agent (see
 runbooks 24/25/26/28). All nodes are on `fleetadm` since 2026-08-30; `edge` and
-`ha` are Ansible-managed (runbooks 24/28) — `omv` is the only node not yet
-Ansible-enrolled (#65).
+`ha` are Ansible-managed (runbooks 24/28) — `omv` is the only LAN node not yet
+Ansible-enrolled.
 
 ## Connecting to a Node
 
