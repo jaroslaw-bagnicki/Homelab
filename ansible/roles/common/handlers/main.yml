@@ -1,5 +1,5 @@
 ---
 - name: Restart time sync
   ansible.builtin.service:
-    name: "{{ 'chrony' if (ansible_facts.services.get('chrony.service') | default({})).state == 'running' else 'systemd-timesyncd' }}"
+    name: "{{ common_ntp_service }}"
     state: restarted
