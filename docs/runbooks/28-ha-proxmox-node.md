@@ -81,6 +81,9 @@ DDR4 (both slots full — 16 GB means replacing both), M.2 **SATA** 128 GB (SK h
    ```
 7. Proxmox web UI: **https://192.168.2.201:8006** → log in as `root` (Keeper).
 
+> **Future (optional):** once OPNsense `.home` DNS lands (#65/#81 · #96), the Edge Caddy can alias
+> `http://ha.home` → `https://ha:8006` for a portless URL. Not needed here — direct `:8006` access is used.
+
 > **Proxmox reality vs runbook 25:** Proxmox VE has **no "create user" step** — `root` is the only
 > built-in admin (console + web UI). There is no separate personal account like the Ubuntu installer's.
 > `root` is the breaking-glass identity, reached via the **console / Proxmox web UI**; `fleetadm` is
