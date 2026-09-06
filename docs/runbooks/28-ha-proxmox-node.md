@@ -38,7 +38,7 @@ independent of the M910q.
 ## Prerequisites
 
 - Wyse 5070 (Celeron J4105, 8 GB, M.2 SATA 128 GB — **no NVMe**, research 26/29) · monitor + keyboard · power
-- **Proxmox VE ISO** on a bootable USB (F12 one-time boot)
+- **Proxmox VE ISO added to the YUMI multiboot USB stick** (runbook 01 §0 / research 12) — F12 one-time boot
 - Console or SSH reachability during setup
 - Refs: [research 29](../research/29-wyse5070-hardware-diagnostic.md) (diagnostic) · [research 26](../research/26-home-assistant-thin-client.md) · [ADR 25](../decisions/25-home-assistant-thin-client.md) · [ADR 28](../decisions/28-fleet-admin-account-and-key.md) · [research 24](../research/24-network-topology-design.md) (IP scheme)
 
@@ -53,7 +53,7 @@ DDR4 (both slots full — 16 GB means replacing both), M.2 **SATA** 128 GB (SK h
 
 ## 1. Install Proxmox VE
 
-1. Boot the Wyse 5070 from the **Proxmox VE ISO** USB (F12 → USB).
+1. Boot the Wyse 5070 from the **YUMI** USB stick → select the **Proxmox VE** entry (F12 → USB).
 2. Select **Install Proxmox VE**; accept defaults, **manual partitioning** to the M.2 SATA SSD (the
    128 GB SK hynix) — single ext4 root; Proxmox defaults are fine here.
 3. **Network config:**
@@ -126,4 +126,5 @@ ansible-playbook ansible/playbooks/playbook-ha.yml --diff
 - [research 29](../research/29-wyse5070-hardware-diagnostic.md) (diagnostic) · issue #82 (diagnostic, closed)
 - [ADR 28](../decisions/28-fleet-admin-account-and-key.md) (fleetadm) · [research 24 §Option A](../research/24-network-topology-design.md) (IP scheme)
 - [Runbook 25 §2](25-m910q-os-refresh.md) (fleetadm bootstrap pattern)
+- [runbook 01 §0](01-init.md) / [research 12](../research/12-first-boot-setup.md) (YUMI multiboot stick)
 - [Issue #103](https://github.com/jaroslaw-bagnicki/Homelab/issues/103) · parent [#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68) · Netdata [#104](https://github.com/jaroslaw-bagnicki/Homelab/issues/104)
