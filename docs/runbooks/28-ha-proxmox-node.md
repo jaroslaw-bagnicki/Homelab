@@ -64,9 +64,11 @@ DDR4 (both slots full — 16 GB means replacing both), M.2 **SATA** 128 GB (SK h
    | Management interface | `enp1s0` (Realtek GbE) |
    | IP | `192.168.2.201/24` |
    | Gateway | `192.168.2.1` |
-   | DNS | `1.1.1.1, 8.8.8.8` |
+   | DNS | `1.1.1.1` — the Proxmox installer exposes a **single** DNS Server field (not two); the secondary `8.8.8.8` is added later (web UI → Datacenter → DNS) or by the `common` role |
    | Hostname (FQDN) | `ha.local` — Proxmox sets OS `hostname` to `ha` (FQDN recorded in `/etc/hosts`); the `common` role keeps `ha` |
    | Timezone | `Etc/UTC` (the `common` role enforces it) |
+
+   > **Single DNS field.** The installer's network screen accepts **one** DNS server only — don't try to enter `1.1.1.1, 8.8.8.8` (it will reject the value as invalid). Enter just `1.1.1.1`; add `8.8.8.8` as a secondary later. A single resolver is fine for this host.
 
    > `ha.local` resolves via Avahi mDNS; `ha.home` is the planned OPNsense domain (ADR 24) — revisit when OPNsense lands.
 
