@@ -4,6 +4,7 @@ Step-by-step guides for configuring the homelab server.
 
 | # | Runbook | Topic |
 |---|---|---|
+| 28 | [28-ha-proxmox-node.md](28-ha-proxmox-node.md) | HA node (Wyse 5070) — Proxmox VE install, static IP `192.168.2.201`, `fleetadm` bootstrap + base Ansible (`playbook-ha.yml` `common`→`security`); Netdata Parent tracked separately — see [issue #103](https://github.com/jaroslaw-bagnicki/Homelab/issues/103), [ADR 25](../decisions/25-home-assistant-thin-client.md), [research 29](../research/29-wyse5070-hardware-diagnostic.md) |
 | 27 | [27-edge-backup-restore.md](27-edge-backup-restore.md) | Edge appliance (Wyse 3040) backup & restore — full eMMC `dd`+`gzip` image to the OMV SMB `shared` share (`rescuezilla` user); live-USB flow incl. eMMC gotchas (`modprobe mmc_block`, Rescuezilla GUI UTF-8 bug) — see [issue #79](https://github.com/jaroslaw-bagnicki/Homelab/issues/79) |
 | 26 | [26-ml110-nas-exports.md](26-ml110-nas-exports.md) | ML110 NAS Phase 2 — SMB `/shared` backup share (SMB3 transport encryption required, `rescuezilla` user — unblocks #79); NFS `/export/backups` + Longhorn pending (with k3s, #44) — see [ADR 23](../decisions/23-nas-on-ml110.md) & [issue #62](https://github.com/jaroslaw-bagnicki/Homelab/issues/62) |
 | 25 | [25-m910q-os-refresh.md](25-m910q-os-refresh.md) | M910q OS refresh — reinstall Ubuntu 24.04 LTS (ADR 05), Ansible base provision, Azure Arc enrolment; DNS/Caddy/tunnel move to the edge appliance — see [issue #74](https://github.com/jaroslaw-bagnicki/Homelab/issues/74) |
