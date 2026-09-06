@@ -26,7 +26,8 @@ independent of the M910q.
 - **Agent account — `fleetadm`** — key-only SSH (ADR 28), installed at bootstrap (full pattern in the
   [ansible README](../../ansible/README.md)).
 - **Breaking-glass account — `root`** — the Proxmox admin (web UI `:8006` + console), password stored
-  in **Keeper**; SSH password login allowed from the LAN (§3).
+  in **Keeper**; it is reached via the **console / Proxmox web UI** (SSH for `root` is key-only — the
+  shared sshd uses `PermitRootLogin prohibit-password`).
 - **Firewall** — the fleet `security` role (**UFW**), default-deny with LAN allow: SSH `22` + Proxmox
   web UI `8006`. UFW is host-management-plane only; bridged VM traffic is unaffected (LAN-trusted).
 
@@ -79,7 +80,8 @@ DDR4 (both slots full — 16 GB means replacing both), M.2 **SATA** 128 GB (SK h
 
 > **Proxmox reality vs runbook 25:** Proxmox VE has **no "create user" step** — `root` is the only
 > built-in admin (console + web UI). There is no separate personal account like the Ubuntu installer's.
-> `root` is the breaking-glass identity; `fleetadm` is created in §2 for Ansible.
+> `root` is the breaking-glass identity, reached via the **console / Proxmox web UI**; `fleetadm` is
+> created in §2 for Ansible.
 
 ## 2. `fleetadm` Bootstrap (ADR 28) — unblock Ansible
 
@@ -108,8 +110,8 @@ ansible-playbook ansible/playbooks/playbook-ha.yml --diff
 - **`common`** — hostname `ha`, `Etc/UTC`, systemd-timesyncd, Avahi (`ha.local`, `common_enable_avahi: true`),
   and re-arms the fleet key on `fleetadm` (ADR 28).
 - **`security`** — UFW default-deny + allow from `192.168.2.0/24`: SSH `22` and Proxmox UI **`8006`**
-  (`security_ufw_allow_tcp_ports`), fail2ban, sshd key-only hardening with LAN password auth for the
-  breakglass `root`.
+  (`security_ufw_allow_tcp_ports`), fail2ban, sshd key-only hardening (LAN password auth applies to
+  **non-root** accounts only — `root` SSH stays key-only via `PermitRootLogin prohibit-password`).
 
 > **Netdata** is not part of this runbook/playbook — it is **#104**.
 
