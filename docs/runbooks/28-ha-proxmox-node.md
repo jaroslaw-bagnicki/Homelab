@@ -103,7 +103,8 @@ default, which error on `apt update` without a key, so switch to the free **no-s
 3. **Add → No-Subscription** — it auto-selects the correct Debian codename (Proxmox VE 9 = Debian 13 *trixie*).
 4. **Refresh** the package lists.
 
-Then bring the OS + Proxmox packages up to date (console; a reboot may be needed if a kernel updates):
+Then bring the OS + Proxmox packages up to date — either from the web UI (**Updates → Refresh**, then
+**Upgrade**) or at the console (a reboot may be needed if a kernel updates):
 
 ```sh
 apt update && apt dist-upgrade
