@@ -91,6 +91,13 @@ DDR4 (both slots full — 16 GB means replacing both), M.2 **SATA** 128 GB (SK h
 > `root` is the breaking-glass identity, reached via the **console / Proxmox web UI**; `fleetadm` is
 > created in §2 for Ansible.
 
+> **"No valid subscription" popup (post-install).** This is **not an error** — Proxmox VE is free and
+> fully functional without a licence; a subscription only unlocks the `pve-enterprise` APT repo and
+> commercial support. For a homelab, switch to the free **`pve-no-subscription`** repo so `apt` works
+> without a key: node `ha` → **Updates → Repositories** → disable/remove `pve-enterprise`, then
+> **Add → No-Subscription** (it auto-selects the right Debian codename — Proxmox VE 9 = Debian 13 *trixie*).
+> The nag itself is cosmetic and can simply be dismissed.
+
 ## 2. `fleetadm` Bootstrap (ADR 28) — unblock Ansible
 
 Mirrors [runbook 25 §2](25-m910q-os-refresh.md) / ADR 28. On the box (console or SSH as `root`):
