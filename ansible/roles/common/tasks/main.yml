@@ -15,14 +15,12 @@
     name: Etc/UTC
   notify: Restart time sync
 
-- name: Determine NTP daemon (systemd-timesyncd preferred; chrony fallback)
-  ansible.builtin.stat:
-    path: /lib/systemd/system/systemd-timesyncd.service
-  register: common_timesyncd_unit
+- name: Gather service facts
+  ansible.builtin.service_facts:
 
 - name: Ensure NTP service is running
   ansible.builtin.service:
-    name: "{{ 'systemd-timesyncd' if common_timesyncd_unit.stat.exists else 'chrony' }}"
+    name: "{{ 'chrony' if (ansible_facts.services.get('chrony.service') | default({})).state == 'running' else 'systemd-timesyncd' }}"
     state: started
     enabled: true
 
