@@ -13,11 +13,20 @@
 - name: Set timezone to Etc/UTC
   community.general.timezone:
     name: Etc/UTC
-  notify: Restart systemd-timesyncd
+  notify: Restart time sync
 
-- name: Ensure systemd-timesyncd is running
+- name: Gather service facts
+  ansible.builtin.service_facts:
+
+- name: Determine the active NTP service
+  ansible.builtin.set_fact:
+    common_ntp_service: >-
+      {{ 'chrony' if ('chrony.service' in ansible_facts.services and ansible_facts.services['chrony.service'].state == 'running')
+         else 'systemd-timesyncd' }}
+
+- name: Ensure NTP service is running
   ansible.builtin.service:
-    name: systemd-timesyncd
+    name: "{{ common_ntp_service }}"
     state: started
     enabled: true
 

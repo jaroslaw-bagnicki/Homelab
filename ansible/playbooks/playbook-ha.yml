@@ -1,0 +1,7 @@
+---
+- name: Configure ha (Wyse 5070 Proxmox) base
+  hosts: ha
+  become: true
+  roles:
+    - common
+    - security

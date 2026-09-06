@@ -2,7 +2,7 @@
 
 Configuration management for the Homelab Ubuntu hosts — the `cloudlab` Contabo VPS and the physical `lab` M910q server. Ansible handles **pre-Arc** host provisioning (OS hardening, base tools, Docker, Arc agent install), while Azure Arc + Bicep handle **post-Arc** cloud management (monitoring, extensions, policies).
 
-> **Control node per host.** `cloudlab` is managed from this dev container (see the `fleet-connect` skill); `lab` lives on the home LAN and is only reachable from a workstation on `192.168.2.0/24` — run the `playbook-lab.yml` playbook there (runbook 25).
+> **Control node per host.** `cloudlab` is managed from this dev container (see the `fleet-connect` skill); `lab`, `ha`, and `edge` live on the home LAN and are only reachable from a workstation on `192.168.2.0/24` — run their playbooks there (runbooks 24/25/28).
 
 ## Quickstart
 
@@ -19,6 +19,9 @@ ansible-playbook ansible/playbooks/playbook-lab.yml
 # Edge Wyse 3040 base provision (from a LAN workstation, runbook 24)
 ansible-playbook ansible/playbooks/playbook-edge.yml
 
+# ha Wyse 5070 Proxmox base provision (from a LAN workstation, runbook 28)
+ansible-playbook ansible/playbooks/playbook-ha.yml
+
 # OpenCode per-project workload (decoupled recipe)
 ansible-playbook ansible/workloads/opencode/opencode-playbook.yml
 ```
@@ -34,6 +37,7 @@ ansible-playbook ansible/workloads/opencode/opencode-playbook.yml
 | `playbooks/playbook-arc.yml` | Arc enrolment only (for already-configured hosts) |
 | `playbooks/playbook-lab.yml` | M910q base provision: common → security → docker_host → azure_arc (no `docker_services` — see below) |
 | `playbooks/playbook-edge.yml` | Wyse 3040 edge base provision: common → security → edge_host (bare-metal, no Docker/Arc — ADR 24) |
+| `playbooks/playbook-ha.yml` | Wyse 5070 HA node base provision: common → security (Proxmox host; UFW LAN allow for SSH + Proxmox UI 8006) |
 | `workloads/` | Self-contained workload recipes — playbook entrypoint, role recipes, ansible-side README, all co-located per workload |
 | `workloads/opencode/` | OpenCode per-project server workload (see [README](workloads/opencode/README.md)) |
 | `roles/` | Base shared roles: `common`, `security`, `azure_arc`, `docker_host`, `docker_services`, `edge_host` |
@@ -52,7 +56,7 @@ Sets the hostname to inventory name, configures `Etc/UTC` timezone, ensures `sys
 
 ### `security`
 
-Configures UFW with default-deny incoming policy, explicit SSH allow on configurable port, and deny inbound TCP/80 (ingress via the edge appliance). Installs and enables fail2ban with SSH hardening (config in `templates/fail2ban-jail.local.j2`).
+Configures UFW with default-deny incoming policy, explicit SSH allow on configurable port, optional extra TCP allowlist (`security_ufw_allow_tcp_ports`), and deny inbound TCP/80 (ingress via the edge appliance). Installs and enables fail2ban with SSH hardening (config in `templates/fail2ban-jail.local.j2`).
 
 ### `azure_arc`
 
@@ -80,6 +84,7 @@ Bare-metal base provisioning for the **Edge Wyse 3040** ingress appliance (ADR 2
 | `playbook-arc.yml` | azure_arc | Adding Arc to an already-configured host |
 | `playbook-lab.yml` | common → security → docker_host → azure_arc | M910q base provision after the 24.04 reinstall (see [runbook 25](../docs/runbooks/25-m910q-os-refresh.md)) |
 | `playbook-edge.yml` | common → security → edge_host | Wyse 3040 edge base provision (see [runbook 24](../docs/runbooks/24-edge-appliance.md)) |
+| `playbook-ha.yml` | common → security | Wyse 5070 HA node base provision (see [runbook 28](../docs/runbooks/28-ha-proxmox-node.md)) |
 | `workloads/opencode/opencode-playbook.yml` | docker_opencode_ingress → docker_opencode_instances | Deploy the OpenCode per-project server workload (see [runbook 17](../docs/runbooks/17-deploy-opencode-on-cloudlab.md)) |
 
 ## Inventory
@@ -91,9 +96,10 @@ cloudlab ansible_host=173.249.27.13 ansible_user=fleetadm
 [physical]
 lab ansible_host=192.168.2.200 ansible_user=fleetadm
 edge ansible_host=192.168.2.240 ansible_user=fleetadm
+ha ansible_host=192.168.2.201 ansible_user=fleetadm
 ```
 
-All hosts use the generic **`fleetadm`** operator account (key-only SSH, no password). The hostnames must resolve on the control machine — add `cloudlab`, `lab`, and `edge` to `C:\Windows\System32\drivers\etc\hosts` (or the equivalent). `lab` and `edge` live on the home LAN and are only reachable from a workstation on `192.168.2.0/24` — run their playbooks there (runbook 25 / runbook 24).
+All hosts use the generic **`fleetadm`** operator account (key-only SSH, no password). The hostnames must resolve on the control machine — add `cloudlab`, `lab`, `edge`, and `ha` to the hosts file (or the equivalent). `lab`, `edge`, and `ha` live on the home LAN and are only reachable from a workstation on `192.168.2.0/24` — run their playbooks there (runbook 25 / runbook 24 / runbook 28).
 
 ### Agent account pattern (`fleetadm`)
 
