@@ -4,14 +4,15 @@ Notable changes to the Homelab repo, newest first. This log supersedes the
 "What's Done" table that used to live in the root `README.md`. Entries use the
 same `(type)` prefixes as commit messages; types: `feat`, `fix`, `docs`, `chore`, `refactor`.
 
-## 2026‑09
+## 2026-09
 
+- **(feat)** HA node (Wyse 5070) — Proxmox VE install runbook (static IP `192.168.2.201`, 20x server block); `ha` added to the Ansible inventory, `playbook-ha.yml` (`common` → `security`), and a new `security_ufw_allow_tcp_ports` var to expose the Proxmox UI `8006` from the LAN — [runbook 28](docs/runbooks/28-ha-proxmox-node.md) · [#103](https://github.com/jaroslaw-bagnicki/Homelab/issues/103) · [#104](https://github.com/jaroslaw-bagnicki/Homelab/issues/104) (Netdata parent, deferred)
 - **(docs)** Require `CHANGELOG.md` entries to ship with any PR that changes behaviour or docs — `.github/copilot-instructions.md` / `AGENTS.md` now state that such PRs add/update their changelog entry in the same PR
 - **(feat)** SSH access LAN-only + devcontainer fleet-key autoload — `security` role allows password auth from the LAN (`192.168.2.0/24`, closed with `Match all`) for the human breakglass (`jarek`) while key-only elsewhere; `lab` UFW SSH scoped to the LAN; devcontainer profile always loads `fleetadm-key-priv` at session start (idempotent `ssh-add`, visible load-failure warnings); runbook 24 §3 base verification ticked (`edge.local` + SSH key-only; bare `edge` deferred to OPNsense `.home` DNS) — [runbook 24](docs/runbooks/24-edge-appliance.md) · [#78](https://github.com/jaroslaw-bagnicki/Homelab/issues/78)
 - **(docs)** Wincor Beetle M-III hardware diagnostic — NAS successor pre-boot audit (research 32); hardware.md + overview updated — [research 32](docs/research/32-wincor-beetle-m3-hardware-diagnostic.md) · [idea 01c](docs/ideas/01c-nas-backup-target-wincor-beetle.md) · [#99](https://github.com/jaroslaw-bagnicki/Homelab/issues/99)
 - **(docs)** Futro S930 hardware diagnostic — OPNsense router candidate pre-boot audit (research 31); hardware.md updated — [research 31](docs/research/31-futro-s930-hardware-diagnostic.md) · [#97](https://github.com/jaroslaw-bagnicki/Homelab/issues/97)
 
-## 2026‑08
+## 2026-08
 
 - **(docs)** Edge appliance — diagnostics, install progress, and backup runbook (runbook 24 §install-progress + research 28; runbook 27 backup flow); later post-merge fleet-connect skill + runbook 24 updated (edge is Ansible-managed) — [runbook 24](docs/runbooks/24-edge-appliance.md) · [runbook 27](docs/runbooks/27-edge-backup-restore.md) · [#88](https://github.com/jaroslaw-bagnicki/Homelab/issues/88)
 - **(docs)** Nominate Clonezilla as the primary backup/restore method — edge eMMC imaging — [runbook 27](docs/runbooks/27-edge-backup-restore.md) · [#91](https://github.com/jaroslaw-bagnicki/Homelab/issues/91)
@@ -43,7 +44,7 @@ same `(type)` prefixes as commit messages; types: `feat`, `fix`, `docs`, `chore`
 - **(chore)** Drop the `(type)` prefix from issue and PR titles — labels convey the type
 - **(docs)** Adopt "research settles, ADR owns" co-authoring pattern — research/idea docs defer decision authority to the ADR
 
-## 2026‑07
+## 2026-07
 
 - **(feat)** Provision `homelab-oc` Azure service principal for OpenCode instances — AKV-sourced `AZURE_*` env vars — [runbook 19](docs/runbooks/19-azure-sp-for-opencode.md) · [#40](https://github.com/jaroslaw-bagnicki/Homelab/issues/40) · [#46](https://github.com/jaroslaw-bagnicki/Homelab/issues/46)
 - **(docs)** Add ADR 22 — migrate Homelab workloads to Kubernetes (k3s + Azure Arc) — [ADR 22](docs/decisions/22-k3s-arc-homelab.md)
@@ -58,34 +59,3 @@ same `(type)` prefixes as commit messages; types: `feat`, `fix`, `docs`, `chore`
 - **(feat)** Expose Portainer via `portainer.cloud5.ovh` with injected admin password — [#29](https://github.com/jaroslaw-bagnicki/Homelab/issues/29)
 - **(docs)** Document Cloudflare Access policy for admin services
 - **(docs)** Document Codespaces secret + `containerEnv` for DeepSeek in the dev container
-
-## 2026‑06
-
-- **(docs)** Add ADR 17 — adopt OpenCode for agentic Homelab development — [ADR 17](docs/decisions/17-adopt-opencode.md)
-- **(feat)** OpenCode session persistence + Azure Blob backup — survives Dev Container rebuilds and Codespace deletion — [runbook 15](docs/runbooks/15-opencode-session-persistence.md)
-- **(feat)** GH Codespaces service principal for Homelab — enables Azure MCP — [runbook 14](docs/runbooks/14-gh-codespaces-sp-for-homelab.md) · [ADR 16](docs/decisions/16-agent-identity-pattern.md)
-- **(docs)** Add ADR 15 — evaluate GitHub Copilot Desktop for agentic development (deferred) — [ADR 15](docs/decisions/15-copilot-desktop-agentic.md)
-- **(docs)** Add ADR 14 — adopt GitHub Codespaces for occasional remote work — [ADR 14](docs/decisions/14-codespaces-adoption.md)
-- **(feat)** Add `docker_services` Ansible role — deploys Portainer, Caddy, and Hello World on Cloudlab via `docker_compose_v2` — [runbook 16](docs/runbooks/16-docker-services-ansible-role.md) · [#14](https://github.com/jaroslaw-bagnicki/Homelab/issues/14)
-- **(docs)** Add ADR 13 — use Contabo Cloud VPS 10 as staging environment — [ADR 13](docs/decisions/13-cloudlab-staging.md)
-- **(docs)** Add ADR 12 — lightweight ADR log in MADR format — [ADR 12](docs/decisions/12-establish-adr-log.md)
-- **(docs)** Add ADR 11 — GitHub Issues for ticketing — [ADR 11](docs/decisions/11-ticketing-github-issues.md)
-- **(docs)** Add ADR 10 — Ansible for host configuration management — [ADR 10](docs/decisions/10-ansible-host-config.md)
-- **(docs)** Add ADR 09 — Azure Monitor via Arc — [ADR 09](docs/decisions/09-azure-monitor-via-arc.md)
-- **(feat)** Contabo Cloud VPS 10 as Ansible dev/test sandbox — SSH hardening, UFW, fail2ban, Docker — [runbook 10](docs/runbooks/10-vps-playground.md)
-- **(feat)** Azure Monitor metrics and log collection on Arc-connected servers — [runbook 06a](docs/runbooks/06a-azure-monitor.md)
-- **(docs)** Research: GitHub Codespaces & Dev Containers setup — [research 16](docs/research/16-github-codespaces-devcontainers.md)
-- **(docs)** Research: Docker Compose replication options after rebuild — [research 18](docs/research/18-docker-compose-replication.md)
-
-## 2026‑05
-
-- **(feat)** Base setup — Ubuntu 24.04, static IP, SSH, LVM, mDNS, hardening — [runbook 01](docs/runbooks/01-init.md)
-- **(feat)** Docker Engine + Portainer CE — [runbook 02](docs/runbooks/02-docker.md)
-- **(feat)** Local DNS via DNSMasq — `*.home` wildcard resolution — [runbook 03](docs/runbooks/03-dns.md)
-- **(feat)** Caddy reverse proxy with auto-TLS — [runbook 04](docs/runbooks/04-caddy.md)
-- **(feat)** Cloudflare Tunnel for remote HTTPS access — [runbook 05](docs/runbooks/05-cloudflare-tunnel.md)
-- **(feat)** Azure Arc hybrid server enrollment — cert-based auth — [runbook 06](docs/runbooks/06-azure-arc.md)
-- **(feat)** Container registries in Portainer (GHCR) — [runbook 02a](docs/runbooks/02a-ghcr-portainer.md)
-- **(feat)** Hello World demo behind Caddy + Cloudflare — [runbook 04a](docs/runbooks/04a-hello-world.md)
-- **(docs)** Add ADRs 01–08 — hardware, OS, backup, hybrid cloud, reverse proxy, local DNS, remote access, Azure Monitor — [decision log](docs/decisions/README.md)
-- **(docs)** Research 01–18 — hardware, OS, container stack, networking, VPS selection, backup, Copilot Desktop — [research index](docs/research/README.md)
