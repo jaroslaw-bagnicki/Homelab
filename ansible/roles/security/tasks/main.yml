@@ -17,6 +17,15 @@
     proto: tcp
     from_ip: "{{ security_ufw_allow_ssh_from }}"
 
+- name: UFW allow additional TCP ports
+  community.general.ufw:
+    rule: allow
+    proto: tcp
+    port: "{{ item }}"
+    from_ip: "{{ security_ufw_allow_ssh_from }}"
+  loop: "{{ security_ufw_allow_tcp_ports }}"
+  when: security_ufw_allow_tcp_ports | length > 0
+
 - name: UFW deny inbound TCP/80
   community.general.ufw:
     rule: deny
