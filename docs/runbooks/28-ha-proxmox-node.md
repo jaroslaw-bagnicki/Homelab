@@ -115,17 +115,34 @@ apt update && apt dist-upgrade
 
 ## 3. `fleetadm` Bootstrap (ADR 28) — unblock Ansible
 
-Mirrors [runbook 25 §2](25-m910q-os-refresh.md) / ADR 28. On the box (console or SSH as `root`):
+Mirrors [runbook 25 §2](25-m910q-os-refresh.md) / ADR 28. On the box (console or SSH as `root`), create
+the key-only `fleetadm` agent account + NOPASSWD sudo + install the fleet key. Paste the following at
+the **root console / Proxmox Shell** (the fleet key is inlined; it lives at
+`ansible/roles/common/files/ssh/fleetadm.pub`, ADR 28):
 
-1. Create the agent account + NOPASSWD sudo + install the fleet key — copy the exact snippet
-   (`useradd`/`usermod`/`chmod 440` `sudoers.d`, `.ssh` perms, `authorized_keys` with the fleet key
-   + restrictive `key_options`, `passwd -l fleetadm`) from [runbook 25 §2](25-m910q-os-refresh.md),
-   using the public key at `ansible/roles/common/files/ssh/fleetadm.pub`.
-2. **Verify from the control node** (LAN workstation with the fleet key in the agent):
-   ```sh
-   ssh fleetadm@192.168.2.201
-   sudo -n whoami      # → root
-   ```
+```bash
+id -u fleetadm >/dev/null 2>&1 || useradd -m -s /bin/bash fleetadm
+usermod -aG sudo fleetadm
+echo 'fleetadm ALL=(ALL) NOPASSWD: ALL' | tee /etc/sudoers.d/fleetadm
+chmod 440 /etc/sudoers.d/fleetadm
+
+mkdir -p /home/fleetadm/.ssh && chmod 700 /home/fleetadm/.ssh
+printf 'no-port-forwarding,no-agent-forwarding,no-X11-forwarding ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKAucOXvwvHvSn11uzG49QFvJPxodbOjPEWkvdS9vCVG fleetadm@homelab\n' | tee /home/fleetadm/.ssh/authorized_keys
+chmod 600 /home/fleetadm/.ssh/authorized_keys
+chown -R fleetadm:fleetadm /home/fleetadm/.ssh
+
+passwd -l fleetadm
+```
+
+> `sudo` is a no-op if you're already `root` (console/Shell). The `common` role re-arms the same
+> `key_options` line on every run, so bootstrap and rotation stay on one identical line.
+
+**Verify from the control node** (LAN workstation with the fleet key in the agent):
+
+```sh
+ssh fleetadm@192.168.2.201
+sudo -n whoami      # → root
+```
 
 ## 4. Ansible Base Provision
 
