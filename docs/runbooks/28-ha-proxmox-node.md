@@ -115,8 +115,15 @@ apt update && apt dist-upgrade
 
 > **Storage — default layout & reclaiming the free VG space.** The Proxmox installer does **not** use
 > the whole disk — it leaves ~15 GB free in the LVM VG `pve` as headroom beyond `root` (`local`, ~39 GiB),
-> `swap` (~7.6 GiB) and the `data` thin pool (`local-lvm`, ~54 GiB, where VM/CT disks live). To avoid
-> wasting it, grow the thin pool into the free space (a reboot is not required):
+> `swap` (~7.6 GiB) and the `data` thin pool (`local-lvm`, ~54 GiB, where VM/CT disks live). That free VG
+> space is a **deliberate reserve**, not lost space — you can grow any LV into it later without
+> repartitioning.
+>
+> **Keep vs reclaim it.** Keeping the headroom is the recommended Proxmox pattern for a **production or
+> many-VM** host (a safety margin so an overcommitted thin pool or a full `/` never bites). For a
+> **single-purpose homelab** node like this one (one HA VM + a couple of LXCs), reclaiming it into
+> `local-lvm` maximises usable capacity. If you reclaim, note you give up easy room to grow `root` later
+> (you'd have to shrink a thin pool or add a disk instead). To reclaim, at the console (no reboot needed):
 >
 > ```sh
 > lvextend -l +100%FREE /dev/pve/data   # local-lvm → ~68 GiB; `vgs` VFree → 0
