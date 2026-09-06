@@ -164,9 +164,9 @@ ansible-playbook ansible/playbooks/playbook-ha.yml --diff
   (`security_ufw_allow_tcp_ports`), fail2ban, sshd key-only hardening (LAN password auth applies to
   **non-root** accounts only — `root` SSH stays key-only via `PermitRootLogin prohibit-password`).
 
-> **Time sync.** The `common` role asks `systemctl is-active chrony`; if `chrony` is the running NTP
-> daemon it manages `chrony`, otherwise it manages the standard `systemd-timesyncd`. This reads the
-> **actual runtime state**, not what's installed — so a host running `chrony` (e.g. Proxmox VE) is handled
+> **Time sync.** The `common` role gathers `service_facts` and, if `chrony.service` is **running**,
+> manages `chrony`; otherwise it manages the standard `systemd-timesyncd`. This reads the **actual
+> runtime state**, not what's installed — so a host running `chrony` (e.g. Proxmox VE) is handled
 > correctly, while Debian/Ubuntu hosts stay on `systemd-timesyncd`.
 
 > **Netdata** is not part of this runbook/playbook — it is [#104](https://github.com/jaroslaw-bagnicki/Homelab/issues/104).
