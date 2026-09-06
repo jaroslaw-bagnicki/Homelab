@@ -4,7 +4,7 @@
 > — the dedicated smart-home hypervisor ([ADR 25](../decisions/25-home-assistant-thin-client.md)).
 > Tracked in [issue #103](https://github.com/jaroslaw-bagnicki/Homelab/issues/103) (child of
 > [#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68)). The hardware diagnostic is
-> already done ([research 29](../research/29-wyse5070-hardware-diagnostic.md), issue #82).
+> already done ([research 29](../research/29-wyse5070-hardware-diagnostic.md), [issue #82](https://github.com/jaroslaw-bagnicki/Homelab/issues/82)).
 >
 > ⚠ **Netdata is out of scope here.** The Netdata **Parent** (which will also run on this host) is
 > tracked under [#104](https://github.com/jaroslaw-bagnicki/Homelab/issues/104).
@@ -13,7 +13,7 @@
 
 ADR 25 needs Home Assistant on a **dedicated thin-client node** (good Zigbee mesh location, and
 MQTT/Zigbee2MQTT as LXCs so HA restarts don't drop the mesh). Proxmox VE is that hypervisor. It is
-also the future home of the **Netdata Parent** (ADR 27 / #104) — a central Tier B monitoring plane
+also the future home of the **Netdata Parent** ([ADR 27](../decisions/27-monitoring-strategy.md) / [#104](https://github.com/jaroslaw-bagnicki/Homelab/issues/104)) — a central Tier B monitoring plane
 independent of the M910q.
 
 ## What changes
@@ -23,7 +23,7 @@ independent of the M910q.
   host, not an edge/ingress device).
 - **`ha`** added to the Ansible inventory; base provisioned via `ansible/playbooks/playbook-ha.yml`
   (`common` → `security`).
-- **Agent account — `fleetadm`** — key-only SSH (ADR 28), installed at bootstrap (full pattern in the
+- **Agent account — `fleetadm`** — key-only SSH ([ADR 28](../decisions/28-fleet-admin-account-and-key.md)), installed at bootstrap (full pattern in the
   [ansible README](../../ansible/README.md)).
 - **Breaking-glass account — `root`** — the Proxmox admin (web UI `:8006` + console), password stored
   in **Keeper**; it is reached via the **console / Proxmox web UI** (SSH for `root` is key-only — the
@@ -39,7 +39,7 @@ independent of the M910q.
 ## Prerequisites
 
 - Wyse 5070 (Celeron J4105, 8 GB, M.2 SATA 128 GB — **no NVMe**, research 26/29) · monitor + keyboard · power
-- **Proxmox VE ISO (x86_64/amd64)** added to the YUMI multiboot USB stick (runbook 01 §0 / research 12) — F12 one-time boot · ⚠ do **not** add the **ARM64** (`*-arm64`) build — the Wyse 5070 is an Intel J4105 (x86_64)
+- **Proxmox VE ISO (x86_64/amd64)** added to the YUMI multiboot USB stick ([runbook 01 §0](01-init.md) / [research 12](../research/12-first-boot-setup.md)) — F12 one-time boot · ⚠ do **not** add the **ARM64** (`*-arm64`) build — the Wyse 5070 is an Intel J4105 (x86_64)
 - Console or SSH reachability during setup
 - Refs: [research 29](../research/29-wyse5070-hardware-diagnostic.md) (diagnostic) · [research 26](../research/26-home-assistant-thin-client.md) · [ADR 25](../decisions/25-home-assistant-thin-client.md) · [ADR 28](../decisions/28-fleet-admin-account-and-key.md) · [research 24](../research/24-network-topology-design.md) (IP scheme)
 
@@ -47,7 +47,7 @@ independent of the M910q.
 
 ## 0. Hardware — Diagnostic (already done)
 
-The Phase 0 pre-boot audit is **complete** — see research 29 / issue #82: Celeron J4105, **2× 4 GB** Micron
+The Phase 0 pre-boot audit is **complete** — see research 29 / [issue #82](https://github.com/jaroslaw-bagnicki/Homelab/issues/82): Celeron J4105, **2× 4 GB** Micron
 DDR4 (both slots full — 16 GB means replacing both), M.2 **SATA** 128 GB (SK hynix SC311, used/SMART-verified
 — **B+M key only, no NVMe**), eMMC 14.7 GiB present/unused, Realtek GbE + Intel WiFi + Sonoff ZBDongle-P
 (Zigbee coordinator).
@@ -70,7 +70,7 @@ DDR4 (both slots full — 16 GB means replacing both), M.2 **SATA** 128 GB (SK h
 
    > **Single DNS field.** The installer's network screen accepts **one** DNS server only — don't try to enter `1.1.1.1, 8.8.8.8` (it will reject the value as invalid). Enter just `1.1.1.1`; add `8.8.8.8` as a secondary via **Node `ha` → System → DNS**. A single resolver is fine for this host.
 
-   > `ha.local` resolves via Avahi mDNS; `ha.home` is the planned OPNsense domain (ADR 24) — revisit when OPNsense lands.
+   > `ha.local` resolves via Avahi mDNS; `ha.home` is the planned OPNsense domain ([ADR 24](../decisions/24-edge-ingress-appliance.md)) — revisit when OPNsense lands.
 
 4. Set a **strong root password** → **Keeper**. This is the breaking-glass account (Proxmox web UI
    admin + console).
@@ -115,7 +115,7 @@ apt update && apt dist-upgrade
 
 ## 3. `fleetadm` Bootstrap (ADR 28) — unblock Ansible
 
-Mirrors [runbook 25 §2](25-m910q-os-refresh.md) / ADR 28. On the box (console or SSH as `root`), create
+Mirrors [runbook 25 §2](25-m910q-os-refresh.md) / [ADR 28](../decisions/28-fleet-admin-account-and-key.md). On the box (console or SSH as `root`), create
 the key-only `fleetadm` agent account + NOPASSWD sudo + install the fleet key. **Proxmox VE does not
 ship `sudo` by default** — install it first, otherwise Ansible's `become` (which uses `sudo`) will
 fail. Paste the following at the **root console / Proxmox Shell** (the fleet key is inlined; it lives
@@ -159,7 +159,7 @@ ansible-playbook ansible/playbooks/playbook-ha.yml --diff
 
 `playbook-ha.yml` runs `common → security`:
 - **`common`** — hostname `ha`, `Etc/UTC`, Avahi (`ha.local`, `common_enable_avahi: true`), and re-arms
-  the fleet key on `fleetadm` (ADR 28). Time sync is left to Proxmox's **`chrony`**.
+  the fleet key on `fleetadm` ([ADR 28](../decisions/28-fleet-admin-account-and-key.md)). Time sync is left to Proxmox's **`chrony`**.
 - **`security`** — UFW default-deny + allow from `192.168.2.0/24`: SSH `22` and Proxmox UI **`8006`**
   (`security_ufw_allow_tcp_ports`), fail2ban, sshd key-only hardening (LAN password auth applies to
   **non-root** accounts only — `root` SSH stays key-only via `PermitRootLogin prohibit-password`).
@@ -182,7 +182,7 @@ ansible-playbook ansible/playbooks/playbook-ha.yml --diff
 ## References
 
 - [ADR 25](../decisions/25-home-assistant-thin-client.md) · [research 26](../research/26-home-assistant-thin-client.md) · [idea 05](../ideas/05-home-assistant-thin-client.md)
-- [research 29](../research/29-wyse5070-hardware-diagnostic.md) (diagnostic) · issue #82 (diagnostic, closed)
+- [research 29](../research/29-wyse5070-hardware-diagnostic.md) (diagnostic) · [issue #82](https://github.com/jaroslaw-bagnicki/Homelab/issues/82) (diagnostic, closed)
 - [ADR 28](../decisions/28-fleet-admin-account-and-key.md) (fleetadm) · [research 24 §Option A](../research/24-network-topology-design.md) (IP scheme)
 - [Runbook 25 §2](25-m910q-os-refresh.md) (fleetadm bootstrap pattern)
 - [runbook 01 §0](01-init.md) / [research 12](../research/12-first-boot-setup.md) (YUMI multiboot stick)
