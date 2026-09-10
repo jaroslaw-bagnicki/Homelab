@@ -10,7 +10,7 @@
 **Status**: 🧠 Idea — models evaluated (Green Cell), no hardware acquired  
 **Date**: 2026-09-10  
 **Source**: [Gemini — Green Cell UPSLM360 spec + homelab fit](https://gemini.google.com/share/fd9149b0c95e) (2026-09-08) · [Gemini — Green Cell PowerProof 1500VA + NUT configuration](https://gemini.google.com/share/65989fbedc98) (2026-08-20)  
-**Related**: [Idea 05](05-home-assistant-thin-client.md) / [research 26](../research/26-home-assistant-thin-client.md) / [ADR 25](../decisions/25-home-assistant-thin-client.md) (HA node — where NUT would live) · [Idea 07](07-opnsense-futro-s930.md) / [research 31](../research/31-futro-s930-hardware-diagnostic.md) (OPNsense router — acquired, adds a battery-backed load) · [Idea 06](06-homelab-energy-monitoring.md) / [research 27](../research/27-zigbee-energy-monitoring.md) (power telemetry) · [ADR 22](../decisions/22-k3s-arc-homelab.md) (k3s) · [ADR 23](../decisions/23-nas-on-ml110.md) (OMV NAS)
+**Related**: [Idea 05](05-home-assistant-thin-client.md) / [research 26](../research/26-home-assistant-thin-client.md) / [ADR 25](../decisions/25-home-assistant-thin-client.md) (HA node — where NUT would live) · [Idea 07](07-opnsense-futro-s930.md) (OPNsense router — adds a battery-backed load) · [Idea 06](06-homelab-energy-monitoring.md) / [research 27](../research/27-zigbee-energy-monitoring.md) (power telemetry) · [ADR 22](../decisions/22-k3s-arc-homelab.md) (k3s) · [ADR 23](../decisions/23-nas-on-ml110.md) (OMV NAS)
 
 ---
 
@@ -116,8 +116,6 @@ installed **host-native on the PVE Debian base**, with the UPS USB cable plugged
    netclient      netclient      netclient       netclient      netclient
    (k3s)          (ML110)        (Unraid)        (edge)         (OPNsense)
 ```
-
-The **acquired Fujitsu Futro S930** ([idea 07](07-opnsense-futro-s930.md), [research 31](../research/31-futro-s930-hardware-diagnostic.md)) joins this fleet as a battery-backed NUT client — it stays on the UPS so the LAN keeps routing during an outage, and it must shut down in its own order (FreeBSD side; see open questions).
 
 **Why the PVE host and not k8s (M910q):**
 - **No orchestrator in the path.** A pod holding the USB device depends on kubelet, CNI,
