@@ -10,7 +10,7 @@
 **Status**: 🧠 Idea — models evaluated (Green Cell), no hardware acquired  
 **Date**: 2026-09-10  
 **Source**: [Gemini — Green Cell UPSLM360 spec + homelab fit](https://gemini.google.com/share/fd9149b0c95e) (2026-09-08) · [Gemini — Green Cell PowerProof 1500VA + NUT configuration](https://gemini.google.com/share/65989fbedc98) (2026-08-20)  
-**Related**: [Idea 05](05-home-assistant-thin-client.md) / [research 26](../research/26-home-assistant-thin-client.md) / [ADR 25](../decisions/25-home-assistant-thin-client.md) (HA node — where NUT would live) · [Idea 06](06-homelab-energy-monitoring.md) / [research 27](../research/27-zigbee-energy-monitoring.md) (power telemetry) · [ADR 22](../decisions/22-k3s-arc-homelab.md) (k3s) · [ADR 23](../decisions/23-nas-on-ml110.md) (OMV NAS)
+**Related**: [Idea 05](05-home-assistant-thin-client.md) / [research 26](../research/26-home-assistant-thin-client.md) / [ADR 25](../decisions/25-home-assistant-thin-client.md) (HA node — where NUT would live) · [Idea 07](07-opnsense-futro-s930.md) / [research 31](../research/31-futro-s930-hardware-diagnostic.md) (OPNsense router — acquired, adds a battery-backed load) · [Idea 06](06-homelab-energy-monitoring.md) / [research 27](../research/27-zigbee-energy-monitoring.md) (power telemetry) · [ADR 22](../decisions/22-k3s-arc-homelab.md) (k3s) · [ADR 23](../decisions/23-nas-on-ml110.md) (OMV NAS)
 
 ---
 
@@ -31,7 +31,8 @@ work in [idea 06](06-homelab-energy-monitoring.md) (per-device plugs) — the UP
 
 ## Load profile — what the UPS actually has to carry
 
-Figures from both Gemini threads (idle / light-load):
+Figures from both Gemini threads (idle / light-load); the **S930 router row** is sourced from
+the repo's own audit docs ([idea 07](07-opnsense-futro-s930.md) / [research 31](../research/31-futro-s930-hardware-diagnostic.md)):
 
 | Device | Idle | Peak |
 |---|---|---|
@@ -39,9 +40,13 @@ Figures from both Gemini threads (idle / light-load):
 | Wyse 5070 — Home Assistant / Proxmox VE | 6–15 W | — |
 | Lenovo M910q — lab (k3s) | 12–15 W | 45–65 W |
 | TP-Link TL-SG108E — 8-port switch | 5–10 W | — |
+| **Fujitsu Futro S930 — OPNsense router** (+ add-in **Broadcom BCM5720 2× 1 GbE** NIC) — *acquired, setup pending* | ~10–15 W (est.)¹ | ~28 W (GX-424CC ~25 W TDP + NIC ~2.5–3.5 W); PSU 40/65 W |
 | Wincor Beetle M-III — NAS (coming) | 25–50 W | + 3.5″ HDD spin-up surge |
 | **Total (3 nodes + switch, today's core)** | **35–50 W** | — |
-| **Total incl. Beetle NAS** | **~50–70 W** | 100–120 W |
+| **Total incl. Futro S930 router (planned)** | **~45–65 W** | ~130 W |
+| **Total incl. Futro S930 router + Beetle NAS (planned)** | **~60–85 W** | 130–150 W |
+
+¹ The S930 was **acquired** and confirmed by the pre-boot audit ([research 31](../research/31-futro-s930-hardware-diagnostic.md) — GX-424CC 4C/4T, the **BCM5720 dual-port NIC in the PCIe slot**, fanless ~59 °C idle); its **actual draw was not measured** (research 31 captured thermals only, and the external PSU rating is still pending). The ~10–15 W idle figure is an estimate for a fanless GX-424CC + NIC; measure it at the OPNsense install ([idea 07](07-opnsense-futro-s930.md) / [issue #96](https://github.com/jaroslaw-bagnicki/Homelab/issues/96)) and replace the estimate. The router is a **battery-backed device** — it belongs on the UPS so the LAN keeps routing during an outage — so it counts toward the sizing maths once it goes in.
 
 Optional **workstation add-on** (if a dock/monitors/chargers also land on the UPS):
 
@@ -66,7 +71,10 @@ the battery exists to save the servers, not to charge a phone.
 | **UPSLM600** | 1000 VA / 600 W | 2× 12V 7Ah (24 V) | ~168 Wh | 4× Schuko | ~35–45 min | 304 zł |
 | **PowerProof 1500VA** (UPS05) | 1500 VA / 900 W | 2× 12V 9Ah (24 V) | ~216 Wh | 4× Schuko | 60–90 min | ~450 zł |
 
-All three speak USB and are NUT-compatible (see below). The two evaluated trade-offs:
+All three speak USB and are NUT-compatible (see below). Runtimes are quoted for a ~60 W
+load — about where the fleet settles once the **Futro S930 router** and the Beetle NAS are
+online (~60–85 W), so budget the lower end of each range for the full fleet. The two
+evaluated trade-offs:
 
 - **UPSLM360 → too small.** Only **2 Schuko outlets** (forces a power strip, which defeats
   the point) and ~15–20 min at the fleet's load — enough for a clean shutdown but no margin.
@@ -75,12 +83,13 @@ All three speak USB and are NUT-compatible (see below). The two evaluated trade-
   headroom for HDD spin-up, and a 24 V battery train (lower currents, less heat) for +139 zł
   over the 360.
 - **PowerProof 1500VA → the runtime pick.** 900 W / ~216 Wh gives **60–90 min** on the
-  fleet's ~35–50 W idle — comfortably riding out micro-outages and giving long graceful-
-  shutdown windows. Costs ~150 zł more than the 600; noted for a noticeably louder fan
-  under battery/charging.
+  fleet's idle load (~45–65 W with the router, ~35–50 W today) — comfortably riding out
+  micro-outages and giving long graceful-shutdown windows. Costs ~150 zł more than the 600;
+  noted for a noticeably louder fan under battery/charging.
 
 **The sine-wave caveat (the one real risk).** Modified sine is harmless for the fleet's
-**external DC bricks** (Wyse 3040/5070, M910q's 65/90 W Lenovo brick, the TP-Link switch) —
+**external DC bricks** (Wyse 3040/5070, the **Futro S930's PSU**, M910q's 65/90 W Lenovo
+brick, the TP-Link switch) —
 their switching converters rectify it without complaint. It is **risky for an internal ATX
 PSU with active PFC**, which describes the **Beetle M-III** and would describe a future
 full-size NAS/rack box: the PSU can buzz loudly, overheat, or trip its protection and reset
@@ -104,12 +113,14 @@ installed **host-native on the PVE Debian base**, with the UPS USB cable plugged
         [ Wyse 5070 · Proxmox VE · 192.168.2.201 ]
         nut-server + nut-client  (MODE=netserver, :3493)
                         │ LAN
-        ┌───────────────┼────────────────┬────────────────┐
-        ▼               ▼                ▼                ▼
-   [ M910q ]      [ OMV NAS ]     [ Beetle NAS ]   [ Wyse 3040 ]
-   netclient      netclient       netclient        netclient
-   (k3s)          (ML110)         (Unraid)         (edge)
+        ┌───────────────┼───────────────┬───────────────┬───────────────┐
+        ▼               ▼               ▼               ▼               ▼
+   [ M910q ]      [ OMV NAS ]    [ Beetle NAS ]  [ Wyse 3040 ]  [ Futro S930 ]
+   netclient      netclient      netclient       netclient      netclient
+   (k3s)          (ML110)        (Unraid)        (edge)         (OPNsense)
 ```
+
+The **acquired Fujitsu Futro S930** ([idea 07](07-opnsense-futro-s930.md), [research 31](../research/31-futro-s930-hardware-diagnostic.md)) joins this fleet as a battery-backed NUT client — it stays on the UPS so the LAN keeps routing during an outage, and it must shut down in its own order (FreeBSD side; see open questions).
 
 **Why the PVE host and not k8s (M910q):**
 - **No orchestrator in the path.** A pod holding the USB device depends on kubelet, CNI,
@@ -239,8 +250,10 @@ Automation direction (dashboard + notifications first, escalation later):
    committing to the config above.
 4. **NUT server host-native or LXC?** Host-native is the simpler default; LXC needs
    passthrough + host-side shutdown decision.
-5. **Shutdown choreography across the fleet** — what order do M910q (k3s), OMV NAS, Beetle
-   and edge follow, and does k3s need a drain/cordon step before the host stops?
+5. **Shutdown choreography across the fleet** — what order do M910q (k3s), OMV NAS, Beetle,
+   edge and the **Futro S930 router** follow, and does k3s need a drain/cordon step before
+   the host stops? The router runs FreeBSD (OPNsense), so its NUT client path differs from
+   the Debian nodes — confirm the available package/plugin before relying on it.
 6. **Is the workstation (dock, monitors, chargers) on the UPS?** Changes the sizing maths
    by 2–3× and forces a 600 W+ unit.
 7. **Telemetry depth** — is `upsc` enough, or should UPS metrics land in Prometheus/Grafana
