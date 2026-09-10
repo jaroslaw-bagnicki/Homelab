@@ -40,13 +40,11 @@ the repo's own audit docs ([idea 07](07-opnsense-futro-s930.md) / [research 31](
 | Wyse 5070 — Home Assistant / Proxmox VE | 6–15 W | — |
 | Lenovo M910q — lab (k3s) | 12–15 W | 45–65 W |
 | TP-Link TL-SG108E — 8-port switch | 5–10 W | — |
-| Futro S930 — OPNsense router (coming) | ~10–15 W (est.)¹ | ~28 W (GX-424CC ~25 W TDP + NIC ~2.5–3.5 W); PSU 40/65 W |
+| Futro S930 — OPNsense router (coming) | ~10–15 W (est.) | ~28 W (GX-424CC ~25 W TDP + NIC ~2.5–3.5 W); PSU 40/65 W |
 | Wincor Beetle M-III — NAS (coming) | 25–50 W | + 3.5″ HDD spin-up surge |
 | **Total (full fleet — core + router + Beetle NAS)** | **~60–85 W** | 130–150 W |
 
-¹ The S930 was **acquired** and confirmed by the pre-boot audit ([research 31](../research/31-futro-s930-hardware-diagnostic.md) — GX-424CC 4C/4T, the **BCM5720 dual-port NIC in the PCIe slot**, fanless ~59 °C idle); its **actual draw was not measured** (research 31 captured thermals only, and the external PSU rating is still pending). The ~10–15 W idle figure is an estimate for a fanless GX-424CC + NIC; measure it at the OPNsense install ([idea 07](07-opnsense-futro-s930.md) / [issue #96](https://github.com/jaroslaw-bagnicki/Homelab/issues/96)) and replace the estimate. The router is a **battery-backed device** — it belongs on the UPS so the LAN keeps routing during an outage — so it counts toward the sizing maths once it goes in.
-
-Optional **workstation add-on** (if a dock/monitors/chargers also land on the UPS):
+Optional **workstation add-on** (if a dock and monitors also land on the UPS):
 
 | Device | Office avg | Peak |
 |---|---|---|
