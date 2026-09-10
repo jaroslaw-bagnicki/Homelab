@@ -64,7 +64,7 @@ peripherals.
 | Model | Power | Batteries | Energy | Outlets | Runtime @ ~60 W | Price |
 |---|---|---|---|---|---|---|
 | **UPSLM360** | 650 VA / 360 W | 1× 12V 7Ah (12 V) | ~84 Wh | 2× Schuko | ~15–20 min | 165 zł |
-| **UPSLM600** | 1000 VA / 600 W | 2× 12V 7Ah (24 V) | ~168 Wh | 4× Schuko | ~35–45 min | 304 zł |
+| **UPSLM600** | 1000 VA / 600 W | 2× 12V 7Ah (24 V) | ~168 Wh | 2× Schuko + 2× IEC | ~35–45 min | **~279 zł** (MSRP 399 zł) |
 | **PowerProof 1500VA** (UPS05) | 1500 VA / 900 W | 2× 12V 9Ah (24 V) | ~216 Wh | 4× Schuko | 60–90 min | ~450 zł |
 
 All three speak USB and are NUT-compatible (see below). Runtimes are quoted for a ~60 W
@@ -72,12 +72,13 @@ load — about where the fleet settles once the **Futro S930 router** and the Be
 online (~60–85 W), so budget the lower end of each range for the full fleet. The two
 evaluated trade-offs:
 
-- **UPSLM360 → too small.** Only **2 Schuko outlets** (forces a power strip, which defeats
-  the point) and ~15–20 min at the fleet's load — enough for a clean shutdown but no margin.
-  At a ~200 W load it drops to **2–4 min**.
-- **UPSLM600 → best value.** 2× the battery of the UPSLM360, **4 outlets**, 600 W of real
-  headroom for HDD spin-up, and a 24 V battery train (lower currents, less heat) for +139 zł
-  over the 360.
+- **UPSLM360 → too small.** Only **2 Schuko outlets** (no IEC pair, so a strip is
+  unavoidable) and ~15–20 min at the fleet's load — enough for a clean shutdown but no
+  margin. At a ~200 W load it drops to **2–4 min**.
+- **UPSLM600 → best value.** 2× the battery of the UPSLM360, **4 outputs (2× Schuko + 2×
+  IEC)**, 600 W of real headroom for HDD spin-up, and a 24 V battery train (lower currents,
+  less heat) for +114 zł over the 360 — and it currently sells at **~279 zł** against a
+  **399 zł** list price, a meaningful discount that widens the value gap further.
 - **PowerProof 1500VA → the runtime pick.** 900 W / ~216 Wh gives **60–90 min** on the
   fleet's idle load (~35–50 W today, ~60–85 W once the full fleet is up) — comfortably
   riding out micro-outages and giving long graceful-shutdown windows. Costs ~150 zł more
@@ -226,8 +227,8 @@ Automation direction (dashboard + notifications first, escalation later):
 
 | Option | Verdict | Reason |
 |---|---|---|
-| **Green Cell UPSLM360** (650 VA/360 W) | Rejected for the fleet | Only 2 outlets, ~15–20 min at load, overload risk once monitors/chargers are added |
-| **Green Cell UPSLM600** (1000 VA/600 W) | **Recommended (value)** | 4 outlets, 2× battery, 24 V train, 600 W headroom, +139 zł |
+| **Green Cell UPSLM360** (650 VA/360 W) | Rejected for the fleet | Only 2 outlets, ~15–20 min at load, overload risk once the workstation is added |
+| **Green Cell UPSLM600** (1000 VA/600 W) | **Recommended (value)** | 2× Schuko + 2× IEC, 2× battery, 24 V train, 600 W headroom, **~279 zł** vs 399 zł MSRP |
 | **Green Cell PowerProof 1500VA/900W** | **Recommended (runtime)** | 60–90 min on the fleet's idle load, 900 W; ~150 zł more, louder fan |
 | **Pure-sine UPS** (GC Pure Power / CyberPower PFC) | Only if Beetle/NAS/rack on battery | Needed for active-PFC ATX supplies; ~800–1200 zł — revisit if the test fails |
 | **NUT server in k8s** (M910q) | Rejected | USB device-plugin + dependency on cluster health; shutdown orchestration spills into API/SSH hacks |
@@ -237,8 +238,8 @@ Automation direction (dashboard + notifications first, escalation later):
 
 ## Open questions
 
-1. **Which model to buy** — UPSLM600 (best value) vs PowerProof 1500VA (runtime)? Decides
-   "ride out a 30-min outage" vs "clean shutdown only".
+1. **Which model to buy** — UPSLM600 (best value, **~279 zł** on offer vs 399 zł MSRP) vs
+   PowerProof 1500VA (runtime)? Decides "ride out a 30-min outage" vs "clean shutdown only".
 2. **Will the Beetle M-III (or a future NAS/rack box) sit on battery outlets?** If yes,
    modified sine must be proven by a pull-the-plug test, or the budget shifts to pure sine.
 3. **Which USB controller is in the actual unit?** Verify with `lsusb` (ID should be
