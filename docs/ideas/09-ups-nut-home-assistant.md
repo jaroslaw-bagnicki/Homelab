@@ -32,7 +32,7 @@ work in [idea 06](06-homelab-energy-monitoring.md) (per-device plugs) — the UP
 ## Load profile — what the UPS actually has to carry
 
 Figures from both Gemini threads (idle / light-load); the **S930 router row** is sourced from
-the repo's own audit docs ([idea 07](07-opnsense-futro-s930.md) / [research 31](../research/31-futro-s930-hardware-diagnostic.md)):
+the repo's own audit docs ([idea 07](07-opnsense-futro-s930.md) / [research 31](../research/31-futro-s930-hardware-diagnostic.md)). The **Total** row covers the full planned fleet — today's 3-node core + switch alone draws **35–50 W**:
 
 | Device | Idle | Peak |
 |---|---|---|
@@ -42,9 +42,7 @@ the repo's own audit docs ([idea 07](07-opnsense-futro-s930.md) / [research 31](
 | TP-Link TL-SG108E — 8-port switch | 5–10 W | — |
 | Futro S930 — OPNsense router (coming) | ~10–15 W (est.)¹ | ~28 W (GX-424CC ~25 W TDP + NIC ~2.5–3.5 W); PSU 40/65 W |
 | Wincor Beetle M-III — NAS (coming) | 25–50 W | + 3.5″ HDD spin-up surge |
-| **Total (3 nodes + switch, today's core)** | **35–50 W** | — |
-| **Total incl. Futro S930 router (planned)** | **~45–65 W** | ~130 W |
-| **Total incl. Futro S930 router + Beetle NAS (planned)** | **~60–85 W** | 130–150 W |
+| **Total (full fleet — core + router + Beetle NAS)** | **~60–85 W** | 130–150 W |
 
 ¹ The S930 was **acquired** and confirmed by the pre-boot audit ([research 31](../research/31-futro-s930-hardware-diagnostic.md) — GX-424CC 4C/4T, the **BCM5720 dual-port NIC in the PCIe slot**, fanless ~59 °C idle); its **actual draw was not measured** (research 31 captured thermals only, and the external PSU rating is still pending). The ~10–15 W idle figure is an estimate for a fanless GX-424CC + NIC; measure it at the OPNsense install ([idea 07](07-opnsense-futro-s930.md) / [issue #96](https://github.com/jaroslaw-bagnicki/Homelab/issues/96)) and replace the estimate. The router is a **battery-backed device** — it belongs on the UPS so the LAN keeps routing during an outage — so it counts toward the sizing maths once it goes in.
 
@@ -83,9 +81,9 @@ evaluated trade-offs:
   headroom for HDD spin-up, and a 24 V battery train (lower currents, less heat) for +139 zł
   over the 360.
 - **PowerProof 1500VA → the runtime pick.** 900 W / ~216 Wh gives **60–90 min** on the
-  fleet's idle load (~45–65 W with the router, ~35–50 W today) — comfortably riding out
-  micro-outages and giving long graceful-shutdown windows. Costs ~150 zł more than the 600;
-  noted for a noticeably louder fan under battery/charging.
+  fleet's idle load (~35–50 W today, ~60–85 W once the full fleet is up) — comfortably
+  riding out micro-outages and giving long graceful-shutdown windows. Costs ~150 zł more
+  than the 600; noted for a noticeably louder fan under battery/charging.
 
 **The sine-wave caveat (the one real risk).** Modified sine is harmless for the fleet's
 **external DC bricks** (Wyse 3040/5070, the **Futro S930's PSU**, M910q's 65/90 W Lenovo
