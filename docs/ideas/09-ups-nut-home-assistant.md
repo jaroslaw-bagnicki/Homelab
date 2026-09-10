@@ -40,7 +40,7 @@ the repo's own audit docs ([idea 07](07-opnsense-futro-s930.md) / [research 31](
 | Wyse 5070 — Home Assistant / Proxmox VE | 6–15 W | — |
 | Lenovo M910q — lab (k3s) | 12–15 W | 45–65 W |
 | TP-Link TL-SG108E — 8-port switch | 5–10 W | — |
-| **Fujitsu Futro S930 — OPNsense router** (+ add-in **Broadcom BCM5720 2× 1 GbE** NIC) — *acquired, setup pending* | ~10–15 W (est.)¹ | ~28 W (GX-424CC ~25 W TDP + NIC ~2.5–3.5 W); PSU 40/65 W |
+| Futro S930 — OPNsense router (coming) | ~10–15 W (est.)¹ | ~28 W (GX-424CC ~25 W TDP + NIC ~2.5–3.5 W); PSU 40/65 W |
 | Wincor Beetle M-III — NAS (coming) | 25–50 W | + 3.5″ HDD spin-up surge |
 | **Total (3 nodes + switch, today's core)** | **35–50 W** | — |
 | **Total incl. Futro S930 router (planned)** | **~45–65 W** | ~130 W |
