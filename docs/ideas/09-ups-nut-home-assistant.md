@@ -138,71 +138,6 @@ client on the PVE host** (or SSH from the LXC) to actually power the hypervisor 
 an unprivileged container cannot shut down its own host. Verdict: **host-native is the
 simpler default**; LXC is a valid refinement for repo-purists.
 
-## NUT configuration (reference)
-
-The Green Cell units expose the common **Megatec/Q1 USB controller**; the driver is
-`nutdrv_qx` (older `blazer_usb` as fallback). Typical USB IDs: `0665:5161`, `1386:0001`,
-`0f10:0001` — confirm the actual chip with `lsusb` before trusting the config.
-
-```ini
-# /etc/nut/ups.conf
-[greencell]
-  driver = nutdrv_qx
-  port = auto
-  desc = "Green Cell UPS"
-  pollinterval = 5   # cheap USB controllers occasionally drop a packet
-  maxretry = 3
-```
-
-```ini
-# /etc/nut/nut.conf
-MODE=netserver        # slaves use MODE=netclient
-```
-
-```ini
-# /etc/nut/upsd.conf
-LISTEN 0.0.0.0 3493
-```
-
-```ini
-# /etc/nut/upsd.users
-[upsmon_user]
-  password = <redacted>
-  upsmon master
-```
-
-```ini
-# /etc/nut/upsmon.conf
-MONITOR greencell@localhost 1 upsmon_user <redacted> master
-SHUTDOWNCMD "/sbin/shutdown -h now"
-```
-
-Bring it up and verify:
-
-```bash
-sudo apt install nut
-sudo upsdrvctl start
-sudo systemctl enable --now nut-server nut-client
-upsc greencell@localhost      # battery.charge, input.voltage, output.voltage, ups.status
-```
-
-`ups.status` carries the semantics the automations key off: `OL` (on line), `OB` (on
-battery), `LB` (low battery — the shutdown trigger). Expect **basic telemetry only** —
-battery %, voltages, load, status; no cell temperatures or precise runtime estimates (the
-firmware derives "remaining time" from a voltage curve).
-
-Clients on the other nodes run `nut-client` only, monitoring `greencell@192.168.2.201`;
-expectations should be modest and explicit:
-
-```ini
-# slave: /etc/nut/upsmon.conf
-MONITOR greencell@192.168.2.201 1 upsmon_user <redacted> slave
-```
-
-If a container path is preferred instead of host packages, the same daemon ships as
-`ghcr.io/kmdsc/nut-upsd` (env-driven `NAME`/`DRIVER`/`PORT`, `/dev/bus/usb` device mount,
-port `3493`) — useful for a Docker/LXC deployment of the same `nutdrv_qx` config.
-
 ## Home Assistant integration
 
 With HAOS running as a VM on the same Proxmox host, Home Assistant connects to the NUT
@@ -244,7 +179,7 @@ Automation direction (dashboard + notifications first, escalation later):
    modified sine must be proven by a pull-the-plug test, or the budget shifts to pure sine.
 3. **Which USB controller is in the actual unit?** Verify with `lsusb` (ID should be
    `0665:5161`, `1386:0001` or `0f10:0001`) and confirm `nutdrv_qx` attaches before
-   committing to the config above.
+   committing to the driver choice.
 4. **NUT server host-native or LXC?** Host-native is the simpler default; LXC needs
    passthrough + host-side shutdown decision.
 5. **Shutdown choreography across the fleet** — what order do M910q (k3s), OMV NAS, Beetle,
