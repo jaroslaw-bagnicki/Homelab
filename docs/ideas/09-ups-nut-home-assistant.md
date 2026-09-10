@@ -53,13 +53,13 @@ Optional **workstation add-on** (if a dock/monitors/chargers also land on the UP
 | 2× monitor | 30–50 W | 60–80 W |
 | HP ZBook (via dock/charger) | 40–70 W | 120–200 W |
 | Dell TB16 dock (self-loss) | 10–15 W | 15–25 W |
-| 33 W phone charger | 0–15 W | 33 W |
-| **Workstation subtotal** | **80–150 W** | **228–338 W** |
-| **Whole-UPS total (lab + workstation)** | **130–220 W** | **328–458 W** |
+| **Workstation subtotal** | **80–135 W** | **195–305 W** |
+| **Whole-UPS total (fleet + workstation)** | **140–220 W** | **325–455 W** |
 
 ⚠️ A 360 W-class UPS is fine for the fleet alone but **can be tripped into overload** by the
-workstation peak. Keep fast chargers and the second monitor on a **non-battery** outlet —
-the battery exists to save the servers, not to charge a phone.
+workstation peak. Phone chargers stay on a plain **wall socket**, and the second monitor
+belongs on a **non-battery** outlet — the battery exists to save the servers, not to power
+peripherals.
 
 ## UPS candidates (Green Cell, line-interactive + AVR, modified sine, USB)
 
@@ -252,8 +252,8 @@ Automation direction (dashboard + notifications first, escalation later):
    edge and the **Futro S930 router** follow, and does k3s need a drain/cordon step before
    the host stops? The router runs FreeBSD (OPNsense), so its NUT client path differs from
    the Debian nodes — confirm the available package/plugin before relying on it.
-6. **Is the workstation (dock, monitors, chargers) on the UPS?** Changes the sizing maths
-   by 2–3× and forces a 600 W+ unit.
+6. **Is the workstation (dock, monitors) on the UPS?** Changes the sizing maths by 2–3×
+   and forces a 600 W+ unit; chargers are already off it (wall socket).
 7. **Telemetry depth** — is `upsc` enough, or should UPS metrics land in Prometheus/Grafana
    next to the energy-monitoring stack?
 8. **Physical placement + CEE/plug type** (Schuko vs PL) and battery-replacement/TBW plan.
