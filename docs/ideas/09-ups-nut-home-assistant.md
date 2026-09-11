@@ -188,7 +188,7 @@ Automation direction (dashboard + notifications first, escalation later):
    and forces a 600 W+ unit; chargers are already off it (wall socket).
 7. **Telemetry depth** — is `upsc` enough, or should UPS metrics land in Prometheus/Grafana
    next to the energy-monitoring stack?
-8. **Physical placement + CEE/plug type** (Schuko vs PL) and battery-replacement/TBW plan.
+8. **Physical placement + CEE/plug type** (Schuko vs PL) and battery-replacement interval.
 
 ## Lifecycle
 
