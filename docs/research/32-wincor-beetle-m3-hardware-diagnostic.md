@@ -13,10 +13,10 @@ SMART health before committing the OS. Same Phase 0 pattern as the
 [Wyse 5070 audit (research 29)](29-wyse5070-hardware-diagnostic.md), and the
 [Wyse 3040 audit (research 28)](28-wyse3040-hardware-diagnostic.md).
 
-**Status**: 🔨 In progress — platform, CPU, RAM, SSD, NIC, expansion and **all three drives**
-examined (2026-09-12); the delivered unit is the **offered Skylake / H110 / DDR4 platform**.
-Pending: `sdc` fresh long-test confirmation (error log clean, count stable), PSU label, BIOS
-walk, physical SATA ports, Memtest86+, noise ([Pending checks](#pending-checks)).
+**Status**: 🔨 In progress — platform, CPU, RAM, SSD, NIC, expansion, **all three drives** and the
+**PSU/UPS** examined (2026-09-12); the delivered unit is the **offered Skylake / H110 / DDR4
+platform**. Pending: `sdc` fresh long-test confirmation (error log clean, count stable), BIOS
+walk, physical SATA ports, Memtest86+, fan count ([Pending checks](#pending-checks)).
 
 ---
 
@@ -27,8 +27,8 @@ walk, physical SATA ports, Memtest86+, noise ([Pending checks](#pending-checks))
 > This research doc is the Phase 0 hardware audit output that grounds that decision. It confirms
 > the delivered unit matches [Idea 01c](../ideas/01c-nas-backup-target-wincor-beetle.md)'s
 > platform premise (Skylake / H110 / LGA1151 / DDR4, G4400, AES-NI, QuickSync H.264+HEVC decode);
-> the PSU/BIOS details remain to be confirmed, and the `sdc` reallocated-sector finding needs a
-> verdict before the array is built.
+> the BIOS details remain to be confirmed, and the `sdc` reallocated-sector finding calls for an
+> array-member decision before the mirror is built.
 
 | Decision | Outcome (as of 2026-09-12) |
 |---|---|
@@ -38,11 +38,11 @@ walk, physical SATA ports, Memtest86+, noise ([Pending checks](#pending-checks))
 | RAM | **8 GiB (1× 8 GiB DDR4-2667 SODIMM @ 2133 MT/s)**, 2 slots, 1 free (max 32 GiB) |
 | NIC | **Intel Ethernet Connection (2) I219-V** (`00:1f.6`, `e1000e`, MAC `00:01:2e:8e:14:0d`) — on-board GbE |
 | SATA | Intel 100/C230 **SATA Controller [AHCI]** (`00:17.0`) — H110; physical port count pending |
-| Disk 0 | **SanDisk SD9SB8W128G** 128 GB 2.5" SATA SSD (`sda`) — **SMART PASSED** (41,802 POH) — cache |
+| Disk 0 | **SanDisk X600** `SD9SB8W-128G` 128 GB 2.5" SATA SSD (`sda`) — **SMART PASSED** (41,802 POH) — cache |
 | Disk 1 | **Seagate ST1000VT001-1RE172** 1 TB 2.5" (`sdb`, `WDES3KB7`) — **PASSED**, 0 reallocated, 65,545 POH |
 | Disk 2 | **Seagate ST1000VT001-1RE172** 1 TB 2.5" (`sdc`, `WDEPBVR3`) — **PASSED** but **1,056 reallocated** ⚠️ (past media event, currently stable; replace recommended) — see [Storage](#storage-sata--smart) |
 | USB | Kingston DataTraveler 3.0 64 GB (`sdb`) = Ventoy live USB, **not** a data drive |
-| PSU | ⏳ **pending** — label photo; version string flags a **UPS variant** (`UPS IKEA BK`) |
+| PSU | **AcBel `POF001-280G`** (UPS-integrated `PSU UPS BEETLE/M-III`, DN P/N `01750279900`, S/N `5421CP10JW`) — **250 W** (225 W @50 °C), **80 Plus Gold** |
 | Dynamic IP | `192.168.2.158` (DHCP via mesh `192.168.2.1`) |
 
 ---
@@ -157,7 +157,7 @@ Inventoried **3 SATA devices + 1 USB boot stick** on 2026-09-12; **no M.2/NVMe d
 
 | Device | Model | SN | Size | SATA link | SMART | Notes |
 |---|---|---|---|---|---|---|
-| `sda` | SanDisk **SD9SB8W128G** | `191702804011` | 128 GB (119.2 GiB) | 6.0 Gb/s | ✅ **PASSED** | 2.5" SSD, FW `X6107000` — **cache / boot** |
+| `sda` | SanDisk **X600** (`SD9SB8W-128G`) | `191702804011` | 128 GB (119.2 GiB) | 6.0 Gb/s | ✅ **PASSED** | 2.5" SSD, FW `X6107000` — **cache / boot** |
 | `sdb` | Seagate **ST1000VT001-1RE172** | `WDES3KB7` | 1.00 TB | 6.0 Gb/s | ✅ **PASSED** | FW `SDC2`, 5400 rpm, 512e, **0 reallocated** — clean |
 | `sdc` | Seagate **ST1000VT001-1RE172** | `WDEPBVR3` | 1.00 TB | 6.0 Gb/s | ⚠️ **PASSED** | FW `SDC1`, 5400 rpm, 512e, **1,056 reallocated** — see below |
 | `sdd` | Kingston DataTraveler 3.0 | `E0D55EA573F0E791494E0C5F` | 57.8 GiB | USB | n/a | Ventoy live medium — not a data drive |
@@ -179,9 +179,12 @@ SMART detail:
     **1 historical `Reported Uncorrectable Error`** and **3 read-recovery attempts**;
     `Realloc. Candidate Logical Sectors = 0`.
   - **Auto Offline Data Collection is Disabled / never started** — the drive does **not** run
-    background surface scans, so the 1,056 remaps came from explicit reads/writes. The prime
-    suspect is the **2026-09-05 full-surface `smartctl -t long` + 4 GiB `dd` rewrite** (its
-    old "0" reading was taken before those ran); the extended test completed without error.
+    background surface scans, so the 1,056 remaps came from explicit reads/writes.
+  - **Confirmed timeline** — the pre-audit `smartctl -a` (2026-09-05 08:27) read **0 reallocated**,
+    POH 65,536, and logged **"No self-tests have been logged"**; the audit then ran the drive's
+    **first-ever full-surface `smartctl -t long`** and wrote **exactly 4 GiB** (`dd`: LBAs written
+    369,533 → 8,758,141). By 2026-09-12 the count is **1,056** (POH 65,545). The diagnostic
+    itself created the remaps; they were simply not re-read until 09-12.
   - SCT temperature history shows the drive powered across 2026-09-11/12 (21–49 °C).
   - **Read:** a **past, one-time media event** (one uncorrectable read → 1,056 sectors
     remapped), **not ongoing degradation** — 0 pending / 0 candidates and a clean extended
@@ -228,9 +231,9 @@ The `-uATX` M2.0 board offers **2× x1** rather than idea 01c's assumed "1× x16
 |---|---|
 | Thermals | pch 32 °C; package 30 °C; cores 25/30 °C (idle, live session) |
 | CPU idle | ~800 MHz (power state) |
-| PSU | ⏳ **pending** — label photo; version string `UPS IKEA BK` flags a **UPS-integrated PSU** variant. Wattage / rails / 80-Plus efficiency TBC |
-| Cooling | ⏳ pending — fan count + noise measurement |
-| UPS battery | **not OS-exposed** in the live session (`/sys/class/power_supply` empty); the internal UPS is a hardware nicety only — use a NUT-compatible external UPS for shutdown (idea 09) |
+| PSU | **AcBel `POF001-280G`** — `PSU UPS BEETLE/M-III` (UPS-integrated), DN P/N `01750279900`, S/N `5421CP10JW`, date `B2202` REV `E9`. **250 W** max @45 °C (225 W @50 °C), **80 Plus Gold**; 100–240 V input. Rails: +3.3 V 4.0 A · **+12.2 V 10.5 A** · +5.1 V 8.2 A · +12.0 V 1.5 A · +5 Vsb 2.3 A · +24.8 V 0.6 A · +19 VBat 6.0 A. +12 V ≈ 128 W — ample for 2× 2.5" HDDs + SSD |
+| Cooling | **43.7 dB(A)** measured with a **UNI-T UT353**; fan count still TBC (a chassis blower + the PSU's own fan are visible) |
+| UPS battery | Internal **TOTEX International NiMH, 15.6 V 3000 mAh** (`first use 12/2022`, DN P/N `01750279901`) — **not OS-exposed** (`/sys/class/power_supply` empty), so a hardware nicety only; use a NUT-compatible external UPS for shutdown (idea 09) |
 
 ---
 
@@ -266,13 +269,17 @@ Unraid/OMV add-a-drive or mdadm RAID1). Phase 1 (OMV install + array) is the wor
    the 24/7 mirror.
 2. **HDD SMART** — ✅ **done 2026-09-12**: `sdb` clean (0 reallocated); `sdc` anomaly as above;
    CMR confirmed (Seagate Video 2.5 = Perpendicular); both at 6.0 Gb/s.
-3. **PSU label** — model, wattage, rails, 80-Plus rating; confirm the UPS-integrated unit.
+3. **PSU label** — ✅ **done 2026-09-12**: **AcBel `POF001-280G`** (UPS-integrated), 250 W
+   (225 W @50 °C), 80 Plus Gold, DN P/N `01750279900`, S/N `5421CP10JW`; rails recorded.
 4. **BIOS walk** — SATA mode (**AHCI**), AES-NI toggle, **VT-x / VT-d**, **Restore AC Power
    Loss → [Last state]**, boot mode (UEFI).
 5. **Physical SATA port count** + confirm the free port for array growth.
 6. **Memtest86+** — one full pass on the 8 GB stick.
-7. **Noise / cooling** — fan count + dB @ 30 cm; Gelid fan controller plan (idea 01c).
-8. **UPS OS-exposure** — confirm `/sys/class/power_supply` empty and SMBus has no fuel gauge.
+7. **Noise / cooling** — ✅ noise measured **43.7 dB(A)** (UNI-T UT353); outstanding: exact
+   **fan count** and the Gelid fan controller plan (idea 01c).
+8. **UPS OS-exposure** — ✅ **done 2026-09-12**: internal **TOTEX NiMH 15.6 V 3000 mAh**
+   (`first use 12/2022`, DN P/N `01750279901`); not OS-exposed (no `power_supply`/SMBus fuel
+   gauge) — hardware nicety only, external NUT UPS required (idea 09).
 
 ---
 
@@ -301,8 +308,8 @@ Unraid/OMV add-a-drive or mdadm RAID1). Phase 1 (OMV install + array) is the wor
 | Storage (array) | ~750 GB usable (2× RAID1 pairs) | 4× 2.5" ≈ 3 TB + SSD cache | **1 TB** (2× Seagate, mdadm RAID1 — `sdc` under review) + SanDisk 128 GB cache |
 | NIC | Broadcom BCM5722 | 1 GbE | **Intel I219-V** |
 | Expansion | modest | x16 + x1 | **PCIe 3.0 x16 + 2× x1** |
-| PSU | HP tower (wattage n/c) | FSP/Fortron 80+ Gold 220–300 W | ⏳ pending (UPS variant) |
-| Noise | 42–58 dB | ~35–38 dB | ⏳ pending |
+| PSU | HP tower (wattage n/c) | FSP/Fortron 80+ Gold 220–300 W | **AcBel `POF001-280G` 250 W, 80+ Gold** (UPS-integrated) |
+| Noise | 42–58 dB | ~35–38 dB | **43.7 dB(A)** measured (UT353) |
 | Footprint | full tower | ~9.7 L compact | ~9.7 L compact |
 | OS | OMV + mdadm | Unraid (planned) | **OMV + mdadm RAID1** (ADR 29) |
 | Status | ✅ base for the existing OMV NAS | — (what was described/paid for) | 🔨 diagnostic in progress, platform confirmed |
