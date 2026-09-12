@@ -7,7 +7,8 @@
 
 ## Context
 
-> **Revised 2026-09-06:** Tier B Netdata parent placement moved to an always-on LXC on the HA-node Proxmox; the Lab (M910q) child is host-native (systemd, not a k8s workload); the `netdata` Ansible role is shared and parameterized (see §Decision → Tier B).
+> **Revised 2026-09-06:** Tier B Netdata parent placement moved to the HA-node Proxmox; the Lab (M910q) child is host-native (systemd, not a k8s workload); the `netdata` Ansible role is shared and parameterized (see §Decision → Tier B).  
+> **Revised 2026-09-12:** the Netdata Parent runs **host-native (systemd) on the HA-node Proxmox host, not an LXC** — Netdata must run directly on the Proxmox host (not a VM/container) to read VM/CT cgroups and `/etc/pve` names; one agent per node.
 
 The homelab monitoring posture drifted as the node fleet grew. The record holds several overlapping and partly contradictory decisions:
 
@@ -30,10 +31,10 @@ AMA → Log Analytics (`homelab-law`) on **Arc-enrolled nodes only**: the M910q 
 
 ### Tier B — Local monitoring stack (local real-time plane)
 
-**Tier B is the local monitoring stack on the homelab; Netdata is its first component.** A Netdata agent on every node → **Netdata Parent** (always-on LXC on the HA node's Proxmox) → **Netdata dashboard + alarms** — covering the full fleet, Arc or not.
+**Tier B is the local monitoring stack on the homelab; Netdata is its first component.** A Netdata agent on every node → **Netdata Parent** (host-native systemd on the HA node's Proxmox) → **Netdata dashboard + alarms** — covering the full fleet, Arc or not.
 
 - **Unified monitoring agent across all nodes** — one Netdata agent runs on every node in the fleet: a uniform agent across Ubuntu, Debian, OMV, Proxmox, and (trial pending) Alpine.
-- **Parent placement (revised 2026-09-06)** — Netdata Parent runs as an **always-on LXC container on the HA node (Wyse 5070 / Proxmox)** — independent of the HA VM (ADR 26) and of the M910q (ADR 24's churn-independence rationale). It supersedes the earlier "k3s workload on the M910q" placement. Until Proxmox is live, children run **standalone** (local `dbengine` + alarms) and re-point to the parent when it lands.
+- **Parent placement (revised 2026-09-12)** — Netdata Parent runs as a **host-native systemd service on the HA node (Wyse 5070 / Proxmox)** — installed on the Proxmox host itself, not in a container or VM, so it reads VM/CT cgroups and `/etc/pve` names (the [Netdata Proxmox VE integration](https://www.netdata.cloud/integrations/data-collection/containers-and-vms/proxmox-ve-monitoring/) requires Netdata on the Proxmox host). It is independent of the HA VM (ADR 26) and of the M910q (ADR 24's churn-independence rationale), and supersedes the earlier "k3s workload on the M910q" placement. Children run **standalone** (local `dbengine` + alarms) until the parent is live, then re-point to it.
 - **Lab (M910q) child is host-native** — a **systemd host process**, not a container/k8s workload: it monitors the host itself, auto-discovers the Docker stack now and the k3s node/kubelet later, and survives cluster churn.
 - **Edge Wyse 3040 — lightweight components only.** A **Netdata child node** (minimal footprint, **RAM-only buffering** — no eMMC `dbengine`, per [ADR 24](24-edge-ingress-appliance.md)) and Fluent Bit if adopted as a Tier B component; Alpine compatibility validated during the Debian-vs-Alpine on-device trial.
 - **Metrics-only scope.** Provisioned via a **shared Ansible `netdata` role** (the ADR 10 approach) parameterized per node: `netdata_role: parent|child` · `netdata_stream_target` · `netdata_storage: dbengine|ram` (Edge → `ram`) · `netdata_retention` · `netdata_bind`. Applies to the Debian-family fleet (Edge, Lab, Proxmox, OMV, and the Beetle NAS — OMV per [ADR 29](29-nas-backup-target-beetle-m3-omv.md)); **OPNsense (FreeBSD) is a per-OS exception** and needs its own path.
@@ -47,7 +48,7 @@ AMA → Log Analytics (`homelab-law`) on **Arc-enrolled nodes only**: the M910q 
 
 ## Consequences
 
-- **Two planes to run** — Azure Monitor (Tier A) and the local monitoring stack (Tier B, Netdata as its first component). Tier A stays within the LAW free tier; Tier B is self-hosted — **Parent LXC on the HA-node Proxmox**.
+- **Two planes to run** — Azure Monitor (Tier A) and the local monitoring stack (Tier B, Netdata as its first component). Tier A stays within the LAW free tier; Tier B is self-hosted — **host-native Parent on the HA-node Proxmox**.
 - **Single Netdata Parent pane** for every node's real-time metrics; **non-Arc nodes fully covered** (Edge, HA, NAS) where Azure could never reach.
 - **One agent everywhere** — a uniform monitoring tool across heterogeneous nodes; auto-discovers containers, VMs/LXC (Proxmox), and services with rich out-of-the-box metrics.
 - **Standalone-first, parent-later** — every child is useful immediately (local dashboard + alarms) before the central plane exists; re-pointing to the parent is a config change, not a reinstall.

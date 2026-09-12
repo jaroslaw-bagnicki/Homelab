@@ -5,3 +5,10 @@ security_ufw_allow_ssh_from: "192.168.2.0/24"
 security_ufw_allow_tcp_from: "192.168.2.0/24"
 security_ufw_allow_tcp_ports:
   - 8006
+  - 19999
+
+netdata_role: parent
+netdata_proxmox_host: true
+netdata_bind: "0.0.0.0"
+netdata_storage: dbengine
+netdata_retention: "86400"

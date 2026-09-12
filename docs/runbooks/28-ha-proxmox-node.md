@@ -6,15 +6,15 @@
 > [#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68)). The hardware diagnostic is
 > already done ([research 29](../research/29-wyse5070-hardware-diagnostic.md), [issue #82](https://github.com/jaroslaw-bagnicki/Homelab/issues/82)).
 >
-> ⚠ **Netdata is out of scope here.** The Netdata **Parent** (which will also run on this host) is
-> tracked under [#104](https://github.com/jaroslaw-bagnicki/Homelab/issues/104).
+> ⚠ **Netdata is out of scope here** — it is provisioned by the shared `netdata` role via
+> `playbook-ha.yml` in [runbook 29](29-deploy-netdata.md).
 
 ## Why
 
 ADR 25 needs Home Assistant on a **dedicated thin-client node** (good Zigbee mesh location, and
 MQTT/Zigbee2MQTT as LXCs so HA restarts don't drop the mesh). Proxmox VE is that hypervisor. It is
-also the future home of the **Netdata Parent** ([ADR 27](../decisions/27-monitoring-strategy.md) / [#104](https://github.com/jaroslaw-bagnicki/Homelab/issues/104)) — a central Tier B monitoring plane
-independent of the M910q.
+also the home of the **Netdata Parent** ([ADR 27](../decisions/27-monitoring-strategy.md) / [#104](https://github.com/jaroslaw-bagnicki/Homelab/issues/104)) — a central Tier B monitoring plane
+independent of the M910q, deployed by [runbook 29](29-deploy-netdata.md).
 
 ## What changes
 
@@ -169,7 +169,7 @@ ansible-playbook ansible/playbooks/playbook-ha.yml --diff
 > runtime state**, not what's installed — so a host running `chrony` (e.g. Proxmox VE) is handled
 > correctly, while Debian/Ubuntu hosts stay on `systemd-timesyncd`.
 
-> **Netdata** is not part of this runbook/playbook — it is [#104](https://github.com/jaroslaw-bagnicki/Homelab/issues/104).
+> **Netdata** is provisioned separately by the shared `netdata` role — see [runbook 29](29-deploy-netdata.md).
 
 ## 5. Storage — reclaim the free VG space (optional)
 

@@ -1,0 +1,17 @@
+---
+# Shared Netdata role — parent + child modes (ADR 27). Parent vs child is data,
+# not code: the same task list runs fleet-wide, parameterized per host.
+netdata_role: child
+# Parent "host:port" for streaming children; empty = standalone (no streaming).
+netdata_stream_target: ""
+netdata_storage: dbengine
+netdata_retention: "86400"
+netdata_bind: "127.0.0.1"
+netdata_port: 19999
+# Parent runs on a Proxmox host — grants the netdata user read access to /etc/pve.
+netdata_proxmox_host: false
+# Override to skip the Key Vault lookup (tests); normally left empty.
+netdata_stream_api_key: ""
+netdata_stream_api_key_secret_name: netdata-stream-api-key
+netdata_keyvault_name: homelab-bysxdb-kv
+netdata_kickstart_url: https://get.netdata.cloud/kickstart.sh

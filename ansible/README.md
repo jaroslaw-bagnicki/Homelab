@@ -35,12 +35,12 @@ ansible-playbook ansible/workloads/opencode/opencode-playbook.yml
 | `requirements.yml` | Required Ansible Galaxy collections (`ansible.posix`, `community.docker`, `community.general`, `azure.azcollection`) |
 | `playbooks/playbook.yml` | Base provision: common → security → azure_arc → docker_host → docker_services; pre_tasks declares `opencode_net` |
 | `playbooks/playbook-arc.yml` | Arc enrolment only (for already-configured hosts) |
-| `playbooks/playbook-lab.yml` | M910q base provision: common → security → docker_host → azure_arc (no `docker_services` — see below) |
-| `playbooks/playbook-edge.yml` | Wyse 3040 edge base provision: common → security → edge_host (bare-metal, no Docker/Arc — ADR 24) |
-| `playbooks/playbook-ha.yml` | Wyse 5070 HA node base provision: common → security (Proxmox host; UFW LAN allow for SSH + Proxmox UI 8006) |
+| `playbooks/playbook-lab.yml` | M910q base provision: common → security → docker_host → azure_arc → netdata (no `docker_services` — see below) |
+| `playbooks/playbook-edge.yml` | Wyse 3040 edge base provision: common → security → edge_host → netdata (bare-metal, no Docker/Arc — ADR 24) |
+| `playbooks/playbook-ha.yml` | Wyse 5070 HA node base provision: common → security → netdata (Proxmox host; UFW LAN allow for SSH + Proxmox UI 8006 + Netdata 19999) |
 | `workloads/` | Self-contained workload recipes — playbook entrypoint, role recipes, ansible-side README, all co-located per workload |
 | `workloads/opencode/` | OpenCode per-project server workload (see [README](workloads/opencode/README.md)) |
-| `roles/` | Base shared roles: `common`, `security`, `azure_arc`, `docker_host`, `docker_services`, `edge_host` |
+| `roles/` | Base shared roles: `common`, `security`, `azure_arc`, `docker_host`, `docker_services`, `edge_host`, `netdata` |
 
 ## Workloads
 
@@ -76,15 +76,19 @@ Manages the core Docker Compose stack on the host: `portainer`, `caddy` (with `c
 
 Bare-metal base provisioning for the **Edge Wyse 3040** ingress appliance (ADR 24) — no Docker, no Arc. Runs after `common` + `security`. Installs `unattended-upgrades`, `logrotate`, configures journald `Storage=volatile` (eMMC longevity), manages the DNS search domain (`edge_dns_search`, default empty — clears the installer's `cloud5.ovh` leftover that hijacked bare LAN names; set to `home` when OPNsense `.home` DNS lands), and keeps UFW deny-inbound (SSH from the LAN only — cloudflared → Caddy runs over loopback `127.0.0.1:80`, no inbound HTTP opened). Hostname (`edge`), UTC, and name broadcast (Avahi `edge.local`) come from `common`; SSH hardening + UFW + fail2ban from `security`.
 
+### `netdata`
+
+Shared Netdata agent — **parent + child** modes (ADR 27). Parent vs child is data, not code: the same task list runs fleet-wide, parameterized per host. Installs Netdata from the official kickstart script (`get.netdata.cloud/kickstart.sh`), configures storage (`netdata_storage: dbengine|ram`), retention (`netdata_retention`), the web bind (`netdata_bind` / `netdata_port`), and streaming (`stream.conf`) — the **parent** accepts streams under a shared API key, a **child** streams to `netdata_stream_target`. The stream key is fetched from Key Vault (`netdata-stream-api-key`, `netdata_keyvault_name`) unless `netdata_stream_api_key` is set. `netdata_proxmox_host: true` (parent on Proxmox) adds the `netdata` user to `www-data` so VM/CT names resolve from `/etc/pve`. Applied to the Debian-family fleet (Edge, Lab, Proxmox, OMV); OPNsense (FreeBSD) is a per-OS exception.
+
 ## Playbooks
 
 | Playbook | Roles | When to use |
 |---|---|---|
 | `playbook.yml` | common → security → azure_arc → docker_host → docker_services | First-time VPS provision after initial SSH hardening (see [runbook 10](../docs/runbooks/10-vps-playground.md)) |
 | `playbook-arc.yml` | azure_arc | Adding Arc to an already-configured host |
-| `playbook-lab.yml` | common → security → docker_host → azure_arc | M910q base provision after the 24.04 reinstall (see [runbook 25](../docs/runbooks/25-m910q-os-refresh.md)) |
-| `playbook-edge.yml` | common → security → edge_host | Wyse 3040 edge base provision (see [runbook 24](../docs/runbooks/24-edge-appliance.md)) |
-| `playbook-ha.yml` | common → security | Wyse 5070 HA node base provision (see [runbook 28](../docs/runbooks/28-ha-proxmox-node.md)) |
+| `playbook-lab.yml` | common → security → docker_host → azure_arc → netdata | M910q base provision after the 24.04 reinstall (see [runbook 25](../docs/runbooks/25-m910q-os-refresh.md)) |
+| `playbook-edge.yml` | common → security → edge_host → netdata | Wyse 3040 edge base provision (see [runbook 24](../docs/runbooks/24-edge-appliance.md)) |
+| `playbook-ha.yml` | common → security → netdata | Wyse 5070 HA node base provision + Netdata Parent (see [runbook 28](../docs/runbooks/28-ha-proxmox-node.md) / [runbook 29](../docs/runbooks/29-deploy-netdata.md)) |
 | `workloads/opencode/opencode-playbook.yml` | docker_opencode_ingress → docker_opencode_instances | Deploy the OpenCode per-project server workload (see [runbook 17](../docs/runbooks/17-deploy-opencode-on-cloudlab.md)) |
 
 ## Inventory

@@ -1,0 +1,118 @@
+---
+- name: Install Netdata prerequisites
+  ansible.builtin.apt:
+    name:
+      - curl
+      - ca-certificates
+      - gnupg
+    state: present
+    update_cache: true
+
+- name: Check whether Netdata is installed
+  ansible.builtin.stat:
+    path: /usr/sbin/netdata
+  register: netdata_binary
+
+- name: Install Netdata from the official kickstart script
+  when: not netdata_binary.stat.exists
+  block:
+    - name: Download the Netdata kickstart script
+      ansible.builtin.get_url:
+        url: "{{ netdata_kickstart_url }}"
+        dest: /tmp/netdata-kickstart.sh
+        mode: "0755"
+
+    - name: Run the Netdata kickstart script
+      ansible.builtin.command:
+        cmd: >-
+          /tmp/netdata-kickstart.sh --non-interactive --stable-channel
+          --disable-telemetry --dont-wait
+        creates: /usr/sbin/netdata
+
+- name: Assert Azure controller credentials are set
+  when: >-
+    netdata_stream_api_key | length == 0 and
+    (netdata_role == 'parent' or netdata_stream_target | length > 0)
+  ansible.builtin.assert:
+    that:
+      - lookup('ansible.builtin.env', 'AZURE_CLIENT_ID', default='') | length > 0
+      - lookup('ansible.builtin.env', 'AZURE_CLIENT_SECRET', default='') | length > 0
+      - lookup('ansible.builtin.env', 'AZURE_TENANT_ID', default='') | length > 0
+    fail_msg: >-
+      AZURE_CLIENT_ID, AZURE_CLIENT_SECRET and AZURE_TENANT_ID must be set on the
+      Ansible controller for the Netdata stream-key Key Vault lookup.
+  delegate_to: localhost
+
+- name: Fetch the Netdata stream API key from Key Vault
+  when: >-
+    netdata_stream_api_key | length == 0 and
+    (netdata_role == 'parent' or netdata_stream_target | length > 0)
+  vars:
+    netdata_vault_url: "https://{{ netdata_keyvault_name }}.vault.azure.net"
+  ansible.builtin.set_fact:
+    netdata_stream_api_key: >-
+      {{ lookup('azure.azcollection.azure_keyvault_secret',
+      netdata_stream_api_key_secret_name, vault_url=netdata_vault_url) }}
+  delegate_to: localhost
+  no_log: true
+
+- name: Configure Netdata storage mode
+  community.general.ini_file:
+    path: /etc/netdata/netdata.conf
+    section: db
+    option: mode
+    value: "{{ netdata_storage }}"
+    mode: "0644"
+  notify: Restart netdata
+
+- name: Configure Netdata retention (dbengine only)
+  when: netdata_storage == 'dbengine'
+  community.general.ini_file:
+    path: /etc/netdata/netdata.conf
+    section: db
+    option: retention
+    value: "{{ netdata_retention }}"
+    mode: "0644"
+  notify: Restart netdata
+
+- name: Configure Netdata web bind address
+  community.general.ini_file:
+    path: /etc/netdata/netdata.conf
+    section: web
+    option: bind to
+    value: "{{ netdata_bind }}"
+    mode: "0644"
+  notify: Restart netdata
+
+- name: Configure Netdata web port
+  community.general.ini_file:
+    path: /etc/netdata/netdata.conf
+    section: web
+    option: default port
+    value: "{{ netdata_port }}"
+    mode: "0644"
+  notify: Restart netdata
+
+- name: Configure Netdata streaming
+  when: netdata_role == 'parent' or netdata_stream_target | length > 0
+  ansible.builtin.template:
+    src: stream.conf.j2
+    dest: /etc/netdata/stream.conf
+    owner: root
+    group: netdata
+    mode: "0640"
+  notify: Restart netdata
+
+- name: Let Netdata resolve Proxmox VM/CT names
+  when: netdata_role == 'parent' and netdata_proxmox_host | bool
+  ansible.builtin.user:
+    name: netdata
+    groups: www-data
+    append: true
+  notify: Restart netdata
+
+- name: Ensure Netdata service is enabled and running
+  ansible.builtin.systemd_service:
+    name: netdata
+    state: started
+    enabled: true
