@@ -99,11 +99,14 @@ overheat or trip its protection and reset the machine *despite* the UPS. That is
 so the Beetle is the one load that has to clear the pull-the-plug test in §7 before it is trusted on
 battery. If it resets, it moves to a surge-only outlet — or the budget moves to a pure-sine unit.
 
-⚠ **The UPS has its own overhead.** A buyer report measures this model's standby draw at ~14.2 W,
-against a fleet that idles around 60–85 W once both strips are populated
-([idea 09](../ideas/09-ups-nut-home-assistant.md)). Unverified second-hand, but worth metering
-alongside the per-plug work in [#73](https://github.com/jaroslaw-bagnicki/Homelab/issues/73) — a UPS
-that costs a fifth of the load it protects is a finding, not a footnote.
+⚠ **The UPS is the largest single consumer here.** Measured 2026-09-12 with an inline plug meter at
+the socket: the unit alone draws **17 W**, while the three servers on strip 1 draw **12–13 W**
+together (8–9 W to 19 W instantaneous) and read **25–26 W** through the UPS — so the unit's own draw
+is ~13–17 W. That is far below [idea 09](../ideas/09-ups-nut-home-assistant.md)'s estimated load, so
+runtime should be better than the 35–45 min still quoted for this model: **measure it in §7** rather
+than trusting the figure. Unconfirmed: whether the battery was still charging at the 17 W reading
+(that would inflate it), and the meter's accuracy at these levels — cross-check the LCD load %
+([#73](https://github.com/jaroslaw-bagnicki/Homelab/issues/73)).
 
 ## 1. Create LXC 103
 
