@@ -11,11 +11,11 @@ hardware detail see [Hardware Inventory](hardware.md); for change history see
 | Node | Role | Hardware / OS | IP | Status |
 |---|---|---|---|---|
 | **Lab** | main workload host (Docker → k3s) | Lenovo M910q Tiny · Ubuntu 24.04 LTS · Azure Arc | `192.168.2.200` | ✅ |
-| **OMV NAS** | backup target / NFS for Longhorn | HP ProLiant ML110 G5 · OMV 8.3 | `192.168.2.210` | ✅ |
+| **OMV NAS** | backup target (retiring) | HP ProLiant ML110 G5 · OMV 8.3 | `192.168.2.210` | ✅ |
 | **Beetle NAS** | backup target (successor to ML110) | Wincor Beetle M-III · OS TBD (Unraid vs OMV) | DHCP | 🔨 |
 | **Edge Ingress** | public ingress (cloudflared + Caddy) | Dell Wyse 3040 · Debian 13 minimal | `192.168.2.240` | 🔨 |
 | **Home Assistant** | smart home node | Wyse 5070 · Proxmox VE | `192.168.2.201` | 🔨 |
-| **LLM server** | local LLM inference | Minisforum X1 Lite | TBD | 🧠 (Phase 2) |
+| **LLM server** | local LLM inference | Minisforum X1 Lite | TBD | 🧠 |
 | **Cloudlab VPS** | staging for Lab (Ansible + Docker/k3s workloads) | Contabo VPS 10 · Ubuntu 24.04 | `173.249.27.13` | ✅ |
 
 ## Workloads
@@ -29,7 +29,7 @@ Current state — what's running or in progress. Planned work is under [What's N
 | **cloudflared** | Cloudlab VPS | Cloudflare Tunnel public HTTPS | ✅ |
 | **OpenCode instances** (`homelab`, `prospera`) | Cloudlab VPS | per-project agentic dev servers | ✅ |
 | **Zot** | Cloudlab VPS | self-hosted OCI registry + pull-through cache | ✅ |
-| **OMV NAS shares** | OMV NAS | SMB `/shared` backup share live (SMB3 transport encryption required + `rescuezilla` user — unblocks #79); NFS `/export/backups` + Longhorn land on the **Beetle NAS** — the ML110 retires once the Beetle array is verified | 🔨 (Phase 2) |
+| **OMV NAS shares** | OMV NAS | SMB `/shared` backup share + NFS/Longhorn target on the Beetle NAS | 🔨 |
 
 ## What's Next
 
@@ -52,7 +52,7 @@ once it is ready to start — a row leaves the table with the PR that completes 
 
 | Item | Effort | Next step | Refs |
 |---|---|---|---|
-| **UPS + NUT graceful shutdown** | ⭐⭐ | Unit arriving — assess it, then create the issue: NUT server on the HA node, fleet-wide clients, HA notifications | [idea 09](ideas/09-ups-nut-home-assistant.md) |
+| **UPS + NUT graceful shutdown** | ⭐⭐ | Unit arriving — record the model + USB controller, then NUT server on the HA node and the fleet-wide clients | [#111](https://github.com/jaroslaw-bagnicki/Homelab/issues/111) · [idea 09](ideas/09-ups-nut-home-assistant.md) |
 | **Netdata children — Edge (RAM-only), HA, OMV** | ⭐ | Re-point onto the Parent once it lands | [#80](https://github.com/jaroslaw-bagnicki/Homelab/issues/80) · [#84](https://github.com/jaroslaw-bagnicki/Homelab/issues/84) |
 | **Power monitoring (Zigbee/Z2M)** | ⭐⭐ | Zigbee energy plugs → Prometheus, after the HA node's Z2M LXC — sequenced **before** k3s | [#73](https://github.com/jaroslaw-bagnicki/Homelab/issues/73) · [ADR 26](decisions/26-zigbee-energy-monitoring.md) |
 | **YUMI multiboot USB standard** | ⭐ | ADR 29 + manage-YUMI runbook; de-conflate the Ventoy references | [#107](https://github.com/jaroslaw-bagnicki/Homelab/issues/107) · [research 12](research/12-first-boot-setup.md) |
