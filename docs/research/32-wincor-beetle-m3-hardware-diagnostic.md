@@ -15,8 +15,8 @@ SMART health before committing the OS. Same Phase 0 pattern as the
 
 **Status**: 🔨 In progress — platform, CPU, RAM, SSD, NIC, expansion and **all three drives**
 examined (2026-09-12); the delivered unit is the **offered Skylake / H110 / DDR4 platform**.
-Pending: `sdc` reallocated-sector verdict, PSU label, BIOS walk, physical SATA ports,
-Memtest86+, noise ([Pending checks](#pending-checks)).
+Pending: `sdc` fresh long-test confirmation (error log clean, count stable), PSU label, BIOS
+walk, physical SATA ports, Memtest86+, noise ([Pending checks](#pending-checks)).
 
 ---
 
@@ -40,7 +40,7 @@ Memtest86+, noise ([Pending checks](#pending-checks)).
 | SATA | Intel 100/C230 **SATA Controller [AHCI]** (`00:17.0`) — H110; physical port count pending |
 | Disk 0 | **SanDisk SD9SB8W128G** 128 GB 2.5" SATA SSD (`sda`) — **SMART PASSED** (41,802 POH) — cache |
 | Disk 1 | **Seagate ST1000VT001-1RE172** 1 TB 2.5" (`sdb`, `WDES3KB7`) — **PASSED**, 0 reallocated, 65,545 POH |
-| Disk 2 | **Seagate ST1000VT001-1RE172** 1 TB 2.5" (`sdc`, `WDEPBVR3`) — **PASSED but 1,056 reallocated** ⚠️ — verdict pending (see [Storage](#storage-sata--smart)) |
+| Disk 2 | **Seagate ST1000VT001-1RE172** 1 TB 2.5" (`sdc`, `WDEPBVR3`) — **PASSED** but **1,056 reallocated** ⚠️ (past media event, currently stable; replace recommended) — see [Storage](#storage-sata--smart) |
 | USB | Kingston DataTraveler 3.0 64 GB (`sdb`) = Ventoy live USB, **not** a data drive |
 | PSU | ⏳ **pending** — label photo; version string flags a **UPS variant** (`UPS IKEA BK`) |
 | Dynamic IP | `192.168.2.158` (DHCP via mesh `192.168.2.1`) |
@@ -171,20 +171,29 @@ SMART detail:
 - **Seagate `sdb`** — overall **PASSED**; **0** reallocated / 0 pending / 0 uncorrectable;
   **65,545 POH** (~7.5 yr continuous); Start_Stop / Load_Cycle **9** each (always-on recorder
   signature); temp 28 °C; short self-test passed. **Clean — keep as a mirror member.**
-- **Seagate `sdc` — ⚠️ anomaly** — overall **PASSED**, 0 pending / 0 uncorrectable, **65,545 POH**,
-  temp 26 °C, short self-test passed — **but `Reallocated_Sector_Ct` = 1,056** (normalised
-  **98** / threshold 10). This is a regression versus the previous (2026-09-05) read of **0**.
-  Reallocation is triggered by sector *reads* / background media scans (not host writes) and
-  never reverses, so a jump can appear on the first full-surface pass even with no host I/O.
-  **The array must not be built on `sdc` until a long self-test + the ATA error log settle
-  whether this is a historical one-time remap or active degradation** ([Pending checks](#pending-checks)).
+- **Seagate `sdc` — ⚠️ anomaly (past media event, currently stable)** — overall **PASSED**;
+  `Reallocated_Sector_Ct` = **1,056** (normalised **98** / threshold 10), **0** pending,
+  **0** reallocation candidates, **65,545 POH**, temp 26–33 °C, short self-test passed.
+  `smartctl -l error` + `smartctl -x` (2026-09-12):
+  - **SMART error log: empty** (comprehensive + extended); Device Statistics show
+    **1 historical `Reported Uncorrectable Error`** and **3 read-recovery attempts**;
+    `Realloc. Candidate Logical Sectors = 0`.
+  - **Auto Offline Data Collection is Disabled / never started** — the drive does **not** run
+    background surface scans, so the 1,056 remaps came from explicit reads/writes. The prime
+    suspect is the **2026-09-05 full-surface `smartctl -t long` + 4 GiB `dd` rewrite** (its
+    old "0" reading was taken before those ran); the extended test completed without error.
+  - SCT temperature history shows the drive powered across 2026-09-11/12 (21–49 °C).
+  - **Read:** a **past, one-time media event** (one uncorrectable read → 1,056 sectors
+    remapped), **not ongoing degradation** — 0 pending / 0 candidates and a clean extended
+    test afterwards. Reallocations never reverse. For a 24/7 backup mirror the safe call is to
+    **replace `sdc`**; keeping it is a **watch** decision (see [Pending checks](#pending-checks)).
 
 ### Drive provenance & recording type (2× Seagate)
 
 The 2× **ST1000VT001-1RE172** are Seagate **Video 2.5** (surveillance) drives — **CMR /
 Perpendicular** (Seagate manual §2.3), **512e AF** (4096-byte physical), 5400 rpm. Both
 previously completed an **extended self-test without error**; the 2026-09-12 re-check finds
-**`sdb` still clean** while **`sdc` has developed 1,056 reallocated sectors**
+**`sdb` still clean** while **`sdc` carries 1,056 reallocated sectors from a past media event**
 ([Storage](#storage-sata--smart)). That verification history is recorded on
 [issue #98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98). **Array plan (ADR 29):**
 **mdadm RAID1** across 2× 1 TB = **1 TB usable**; the `sdc` finding may change the member set.
@@ -249,11 +258,12 @@ Unraid/OMV add-a-drive or mdadm RAID1). Phase 1 (OMV install + array) is the wor
 
 ## Pending Checks
 
-1. **`sdc` reallocated-sector verdict** — run `smartctl -t long /dev/sdc` and capture
-   `smartctl -A` + `smartctl -l error /dev/sdc` before/after. Baseline: **1,056 reallocated**
-   (normalised 98/10), 0 pending, 0 uncorrectable, short test passed. Count growing / error log
-   entry → **replace** `sdc`; count stable and clean → usable but on watch. **Do not build the
-   array on `sdc` until resolved.**
+1. **`sdc` verdict** — ✅ **error log checked 2026-09-12: no logged errors**, 1 historic
+   uncorrectable read, 3 read-recovery attempts, 0 pending / 0 realloc candidates (see
+   [Storage](#storage-sata--smart)). Outstanding: a **fresh `smartctl -t long /dev/sdc`** with
+   `smartctl -A` before/after to confirm the count is frozen at **1,056**. Count stable → drive
+   usable (**watch**); count grows → **replace**. Recommended: replace `sdc` before building
+   the 24/7 mirror.
 2. **HDD SMART** — ✅ **done 2026-09-12**: `sdb` clean (0 reallocated); `sdc` anomaly as above;
    CMR confirmed (Seagate Video 2.5 = Perpendicular); both at 6.0 Gb/s.
 3. **PSU label** — model, wattage, rails, 80-Plus rating; confirm the UPS-integrated unit.
