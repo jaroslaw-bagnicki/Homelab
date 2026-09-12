@@ -102,8 +102,8 @@ battery. If it resets, it moves to a surge-only outlet — or the budget moves t
 ⚠ **The UPS is the largest single consumer here.** Measured 2026-09-12 with an inline plug meter at
 the socket: the unit alone draws **17 W**, while the three servers on strip 1 draw **12–13 W**
 together (8–9 W to 19 W instantaneous) and read **25–26 W** through the UPS — so the unit's own draw
-is ~13–17 W. That is far below [idea 09](../ideas/09-ups-nut-home-assistant.md)'s estimated load, so
-runtime should be better than the 35–45 min still quoted for this model: **measure it in §7** rather
+is ~13–17 W. The three-server subset sits far below [idea 09](../ideas/09-ups-nut-home-assistant.md)'s estimate for
+today's core, while the **full fleet measures 66–69 W** — inside that doc's 60–85 W prediction: **measure it in §7** rather
 than trusting the figure. Unconfirmed: whether the battery was still charging at the 17 W reading
 (that would inflate it), and the meter's accuracy at these levels — cross-check the LCD load %
 ([#73](https://github.com/jaroslaw-bagnicki/Homelab/issues/73)).
@@ -117,12 +117,13 @@ so each row states what was on the UPS at the time:
 | + M910q, Wyse 5070, Wyse 3040 | 25–26 W (those three alone at the wall: 12–13 W, 8–9 W to 19 W instantaneous) |
 | + switch, mesh node, LTE modem | 32–33 W, and 37 W on a later pass |
 | + Futro S930 | **48–50 W** — the router adds ~11–13 W, matching [research 31](../research/31-futro-s930-hardware-diagnostic.md) |
-| Beetle M-III (earlier, separate pass) | 46–48 W settled, 64–65 W for the first minutes |
+| + Beetle M-III — **the full planned fleet** | **66–69 W** settled, **~85 W** for the first couple of minutes |
 
 ⚠ **Treat these as bands, not exact figures.** The same set read 32–33 W and later 37 W with no hardware
 change — radios (mesh clients, the LTE modem's attach retries), the UPS's own charge state and meter
-error at these levels each move a reading by a few watts. The Beetle row does not stack arithmetically
-with the others because it was taken in a different pass. For sizing use a sustained average; for
+error at these levels each move a reading by a few watts. The Beetle's surge is reproducible — +30–35 W for the first minutes on two independent passes. Read
+against the same pass's baseline the rows do stack (37 W + ~12 W router + ~18 W NAS ≈ 67 W), so the
+earlier apparent mismatch was the drift band rather than a bad reading. For sizing use a sustained average; for
 per-device attribution wait for [#73](https://github.com/jaroslaw-bagnicki/Homelab/issues/73).
 
 ## 1. Create LXC 103
