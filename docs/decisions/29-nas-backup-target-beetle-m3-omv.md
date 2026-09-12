@@ -17,8 +17,8 @@ lab. It was always a stopgap.
 POS terminal as the successor, on **Unraid**. The **2026-09-12 Phase 0 audit**
 ([research 32](../research/32-wincor-beetle-m3-hardware-diagnostic.md)) settled the successor
 direction — the Beetle replaces the ML110 as the backup target, on **2× Seagate
-(1 parity + 1 data = 1 TB) + the SanDisk X600 cache** — and confirmed idea 01c's platform
-premise (the offered **Skylake / H110 / LGA1151 / DDR4** platform, Pentium G4400, 8 GB DDR4).
+(1 parity + 1 data = 1 TB) + the SanDisk X600 cache** — and confirmed the **Skylake / H110 /
+LGA1151 / DDR4** platform, Pentium G4400, 8 GB DDR4.
 
 The **OS choice stayed open past the audit**: Unraid was the working direction, gated on its
 paid licence, with OMV as the fallback ([issue #98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98)).
@@ -51,7 +51,7 @@ Unraid dropped.** The ML110 retires once the Beetle's array is verified.
   parameterisation, unlike the Unraid path.
 - **Capacity growth is less flexible than Unraid** — expansion means a second mirror pair or
   a PCIe SATA HBA, not "add a drive of any size".
-- **Phase 0 is verified on the delivered unit** — platform (Skylake / H110 / DDR4), CPU, RAM
+- **Phase 0 is verified on this unit** — platform (Skylake / H110 / DDR4), CPU, RAM
   and NIC are confirmed in [research 32](../research/32-wincor-beetle-m3-hardware-diagnostic.md);
   the PSU label, BIOS walk, HDD SMART and Memtest remain as pre-install checks.
 - **Interim dependency on the ML110** — it remains the live backup target until the Beetle

@@ -14,9 +14,9 @@ SMART health before committing the OS. Same Phase 0 pattern as the
 [Wyse 3040 audit (research 28)](28-wyse3040-hardware-diagnostic.md).
 
 **Status**: 🔨 In progress — platform, CPU, RAM, SSD, NIC, expansion, **all three drives** and the
-**PSU/UPS** examined (2026-09-12); the delivered unit is the **offered Skylake / H110 / DDR4
-platform**. Pending: `sdc` fresh long-test confirmation (error log clean, count stable), BIOS
-walk, physical SATA ports, Memtest86+, fan count ([Pending checks](#pending-checks)).
+**PSU/UPS** examined (2026-09-12); the unit is a **Skylake / H110 / DDR4 platform**. Pending:
+`sdc` fresh long-test confirmation (error log clean, count stable), BIOS walk, physical SATA
+ports, Memtest86+, fan count ([Pending checks](#pending-checks)).
 
 ---
 
@@ -25,10 +25,9 @@ walk, physical SATA ports, Memtest86+, fan count ([Pending checks](#pending-chec
 > **Decision authority:** [ADR 29](../decisions/29-nas-backup-target-beetle-m3-omv.md) — the
 > Beetle M-III is the homelab NAS backup target running OpenMediaVault, succeeding the ML110.
 > This research doc is the Phase 0 hardware audit output that grounds that decision. It confirms
-> the delivered unit matches [Idea 01c](../ideas/01c-nas-backup-target-wincor-beetle.md)'s
-> platform premise (Skylake / H110 / LGA1151 / DDR4, G4400, AES-NI, QuickSync H.264+HEVC decode);
-> the BIOS details remain to be confirmed, and the `sdc` reallocated-sector finding calls for an
-> array-member decision before the mirror is built.
+> the platform — **Skylake / H110 / LGA1151 / DDR4, Pentium G4400, AES-NI, QuickSync H.264+HEVC
+> decode**, 8 GiB DDR4; the BIOS details remain to be confirmed, and the `sdc`
+> reallocated-sector finding calls for an array-member decision before the mirror is built.
 
 | Decision | Outcome (as of 2026-09-12) |
 |---|---|
@@ -92,9 +91,8 @@ The PCI bus is a **Skylake-H110** arrangement:
 - `00:1f.0` ISA bridge — **Intel H110** LPC/eSPI Controller
 - `00:17.0` SATA — 100/C230 Series AHCI
 
-This is the **offered platform** (H110 / LGA1151 / DDR4). It is a newer generation than the
-EliteDesk 800 G1 (idea 01b, Haswell/Q87/DDR3) that idea 01c was chosen against — so the
-"modern platform" rationale for this box **holds**.
+This is a **Skylake / H110 / LGA1151 / DDR4** platform — a newer generation than the
+EliteDesk 800 G1 (idea 01b, Haswell/Q87/DDR3).
 
 ### CPU / Security notes
 
@@ -105,48 +103,16 @@ EliteDesk 800 G1 (idea 01b, Haswell/Q87/DDR3) that idea 01c was chosen against �
   **VT-d / IOMMU — pending the BIOS walk**; the memory map exposes `dmar0`/`dmar1` units, so
   the hardware may be present even though H110 nominally omits VT-d.
 - **QuickSync** — Skylake GT1 (HD Graphics 510) supports **H.264** and **HEVC 8-bit decode**
-  (no HEVC encode). Matches idea 01c's "H.264/H.265 8-bit decode".
+  (no HEVC encode).
 - CPU vulnerabilities — modern mitigations present (PTI, IBRS, MDS clear, etc.); fine for a
   24/7 NAS behind the edge ingress (ADR 08/24).
-
-### CPU & chipset — offer vs delivered
-
-> The offer (idea 01c, from the Allegro listing / Gemini threads) assumed a **Skylake G4400 /
-> H110 / DDR4** platform. The delivered unit **matches it**.
-
-**CPU**
-
-| | Offer — Pentium **G4400** | Delivered — Pentium **G4400** |
-|---|---|---|
-| Generation / node | Skylake 6th gen, 14 nm | Skylake 6th gen, 14 nm ✅ |
-| Socket | LGA1151 | LGA1151 ✅ |
-| Cores / threads | 2C / 2T | 2C / 2T ✅ |
-| Base clock | 3.3 GHz | 3.3 GHz ✅ |
-| L3 cache | 3 MB | 3 MB ✅ |
-| iGPU | Intel HD 510 | Intel HD 510 ✅ |
-| **QuickSync** | H.264 + HEVC decode | H.264 + HEVC decode ✅ |
-| AES-NI / AVX2 | ✅ | **✅ AES-NI present** |
-| Memory | DDR4 | DDR4 ✅ |
-
-**Chipset**
-
-| | **H110** (offer) | **H110** (delivered) |
-|---|---|---|
-| Platform | LGA1151 / Skylake | LGA1151 / Skylake ✅ |
-| Memory | DDR4 | DDR4 ✅ |
-| SATA | 4× **SATA III** (6 Gb/s) | ⏳ port count pending |
-| Expansion | 1× x16 + 1× x1 + optional | **1× x16 + 2× x1** (more than offered) |
-
-**Net effect:** the delivered unit is the offered specification. Idea 01c's platform premise
-(Skylake, DDR4, AES-NI, HEVC-decode QuickSync) is **validated**, and this unit is a genuine
-generation ahead of the EliteDesk 800 G1 (01b) it was chosen over.
 
 ### RAM
 
 - **1× 8 GiB DDR4 SODIMM** — populated at **DIMM CHB4** (BANK 2); **DIMM CHA3 empty**.
   Rated **2667 MT/s**, configured **2133 MT/s**, 1.2 V, rank 1, 64-bit,
   Synchronous Unbuffered (Unregistered). Vendor `04CB`, SN `6DEB0500`.
-- **2 slots total, max 32 GiB** — matches idea 01c's DDR4/32 GB+ ceiling (with 2× 16 GiB).
+- **2 slots total, max 32 GiB** (2× 16 GiB).
   One slot free → a second stick is a straight upgrade.
 - usable `MemTotal` **7,956,684 KiB (~7.6 GiB)** after iGPU reservation. **8 GB is already
   above Unraid's floor and ample for OMV + mdadm**; a 2nd 8/16 GB stick is optional later.
@@ -210,7 +176,7 @@ previously completed an **extended self-test without error**; the 2026-09-12 re-
 | Address | `192.168.2.158/24` (DHCP via mesh gateway `192.168.2.1`, MAC `e8:65:d4:df:a5:20`) |
 
 On-board 1 GbE on an **Intel** NIC (`e1000e`, the more NAS-friendly driver vs Realtek).
-2.5 GbE remains gated on a switch upgrade (idea 01c unchanged).
+2.5 GbE remains gated on a switch upgrade.
 
 ### PCIe / expansion (dmidecode -t 9, 2026-09-12)
 
@@ -223,7 +189,7 @@ On-board 1 GbE on an **Intel** NIC (`e1000e`, the more NAS-friendly driver vs Re
 **3 PCIe slots:** 1× **PCIe 3.0 x16** (CPU PEG) + 2× **PCIe 2.0 x1**. The x16 is free for a
 PCIe→M.2 NVMe cache adapter, a 2.5/10 GbE NIC, or a SATA HBA to expand the array. dmidecode
 reports **no mini-PCIe/mSATA** slot on this board.
-The `-uATX` M2.0 board offers **2× x1** rather than idea 01c's assumed "1× x16 + 1× x1".
+The `-uATX` M2.0 board provides **2× PCIe 2.0 x1** expansion slots.
 
 ### Power / thermals
 
@@ -238,24 +204,23 @@ The `-uATX` M2.0 board offers **2× x1** rather than idea 01c's assumed "1× x16
 
 ---
 
-## Implications for Idea 01c / issue #98
+## Implications for issue #98
 
-| Idea 01c expectation | Actual finding | Verdict |
-|---|---|---|
-| H110, LGA1151, 6th gen | **H110, LGA1151 (Skylake)** | ✅ matches |
-| CPU G4400 (Skylake) | **Pentium G4400** | ✅ matches |
-| DDR4, 32 GB ceiling | **8 GiB DDR4** (1×8, 1 free, 2 slots, ≤32 GiB) | ✅ (8 GB installed) |
-| QuickSync H.264/H.265 | **H.264 + HEVC 8-bit decode** (Skylake GT1) | ✅ matches |
-| 3× SATA III + 1× mSATA | Intel 100/C230 AHCI; **no mini-PCIe/mSATA** slot; port count pending | ⏳ partial |
-| 4× 2.5" HDD array | **2× Seagate 1 TB** (data + parity) | ⚠️ 1 TB usable (per ADR 29) |
-| reuse 128 GB SSD as cache | SanDisk **SD9SB8W128G** 128 GB, **PASSED** | ✅ matches |
-| on-board 1 GbE | **Intel I219-V** | ✅ Intel (≥ expectation) |
-| Chosen over EliteDesk (01b) for "modern" | **genuinely newer (Skylake vs Haswell)** | ✅ rationale holds |
+| Item | Finding |
+|---|---|
+| Platform | **Skylake / H110 / LGA1151 / DDR4** |
+| CPU | **Pentium G4400** (2C/2T, 3.3 GHz) |
+| RAM | **8 GiB DDR4** (1×8, 1 slot free, ≤32 GiB) |
+| QuickSync | H.264 + HEVC 8-bit decode |
+| SATA | Intel 100/C230 AHCI; **no mini-PCIe/mSATA**; port count pending |
+| Array | **2× Seagate 1 TB** → mdadm RAID1 = 1 TB usable; `sdc` under review |
+| Cache | SanDisk X600 `SD9SB8W-128G` 128 GB SSD, PASSED |
+| NIC | **Intel I219-V** GbE |
+| Expansion | PCIe 3.0 x16 + 2× PCIe 2.0 x1 |
 
-**Bottom line:** the delivered Beetle M-III is the **offered Skylake/H110/DDR4 platform** —
-idea 01c's premise holds, and the box is a clear upgrade over the ML110 on every axis (modern
-Skylake vs Core 2, DDR3→DDR4, SATA III, far lower power, quieter with the fan controller,
-Unraid/OMV add-a-drive or mdadm RAID1). Phase 1 (OMV install + array) is the working direction
+**Bottom line:** the Beetle M-III is a workable OMV NAS and a clear upgrade over the ML110 on
+every axis (Skylake vs Core 2, DDR4 vs DDR2, SATA III vs II, ~14–16 W idle, mdadm RAID1).
+Phase 1 (OMV install + array) is the working direction
 ([ADR 29](../decisions/29-nas-backup-target-beetle-m3-omv.md)).
 
 ---
@@ -277,7 +242,7 @@ Unraid/OMV add-a-drive or mdadm RAID1). Phase 1 (OMV install + array) is the wor
 5. **Physical SATA port count** + confirm the free port for array growth.
 6. **Memtest86+** — one full pass on the 8 GB stick.
 7. **Noise / cooling** — ✅ noise measured **43.7 dB(A)** (UNI-T UT353); outstanding: exact
-   **fan count** and the Gelid fan controller plan (idea 01c).
+   **fan count** and the Gelid fan controller plan.
 8. **UPS OS-exposure** — ✅ **done 2026-09-12**: internal **TOTEX NiMH 15.6 V 3000 mAh**
    (`first use 12/2022`, DN P/N `01750279901`); not OS-exposed (no `power_supply`/SMBus fuel
    gauge) — hardware nicety only, external NUT UPS required (idea 09).
@@ -287,7 +252,7 @@ Unraid/OMV add-a-drive or mdadm RAID1). Phase 1 (OMV install + array) is the wor
 ## Open Questions
 
 1. **SATA port count** — H110 exposes 4× SATA III nominally; verify on the D3460 board
-   (idea 01c assumed 3× + mSATA; no mSATA slot was enumerated).
+   (no mSATA slot was enumerated).
 2. **RAM growth** — 1 slot free; 8 GB is ample for OMV, 16/32 GB optional later.
 3. **Cache** — single SanDisk X600 SSD is not mirrored; fine for a backup landing cache
    (ADR 29 mdadm RAID1 is the data protection).
@@ -297,28 +262,28 @@ Unraid/OMV add-a-drive or mdadm RAID1). Phase 1 (OMV install + array) is the wor
 
 ---
 
-## Comparison: ML110 vs Beetle (planned) vs Beetle (delivered)
+## Comparison: ML110 vs Beetle (delivered)
 
-| Dimension | **ML110 G5** (current OMV, retiring) | **Beetle — planned** (idea 01c / offer) | **Beetle — delivered** (this audit) |
-|---|---|---|---|
-| CPU | Pentium E2160 (Core 2, 2C/2T, ~1.8 GHz, 65 W) | Pentium **G4400** (Skylake, 2C/2T, 3.3 GHz, HEVC) | **Pentium G4400** (Skylake, 2C/2T, 3.3 GHz) |
-| AES-NI / QuickSync | ✗ / ✗ | ✅ / H.264+HEVC | **✅ / H.264+HEVC decode** |
-| RAM | 4 GB DDR2 (dead end) | 8 GB DDR4 | **8 GB DDR4** (2 slots → 32 GB) |
-| Chipset | ICH9R (LGA775) | H110 (LGA1151) | **H110 (LGA1151)** |
-| SATA | SATA II | 4× SATA III + mSATA | 100/C230 AHCI (port count pending; no mSATA) |
-| Storage (array) | ~750 GB usable (2× RAID1 pairs) | 4× 2.5" ≈ 3 TB + SSD cache | **1 TB** (2× Seagate, mdadm RAID1 — `sdc` under review) + SanDisk 128 GB cache |
-| NIC | Broadcom BCM5722 | 1 GbE | **Intel I219-V** |
-| Expansion | modest | x16 + x1 | **PCIe 3.0 x16 + 2× x1** |
-| PSU | HP tower (wattage n/c) | FSP/Fortron 80+ Gold 220–300 W | **AcBel `POF001-280G` 250 W, 80+ Gold** (UPS-integrated) |
-| Noise | 42–58 dB | ~35–38 dB | **43.7 dB(A)** measured (UT353) |
-| Idle power | ~60–80 W | ~15–25 W | **14–16 W** measured (23–24 W start transient) |
-| Footprint | full tower | ~9.7 L compact | ~9.7 L compact |
-| OS | OMV + mdadm | Unraid (planned) | **OMV + mdadm RAID1** (ADR 29) |
-| Status | ✅ base for the existing OMV NAS | — (what was described/paid for) | 🔨 diagnostic in progress, platform confirmed |
+| Dimension | **ML110 G5** (current OMV, retiring) | **Beetle — delivered** (this audit) |
+|---|---|---|
+| CPU | Pentium E2160 (Core 2, 2C/2T, ~1.8 GHz, 65 W) | **Pentium G4400** (Skylake, 2C/2T, 3.3 GHz, HEVC) |
+| AES-NI / QuickSync | ✗ / ✗ | **✅ / H.264+HEVC decode** |
+| RAM | 4 GB DDR2 (dead end) | **8 GB DDR4** (2 slots → 32 GB) |
+| Chipset | ICH9R (LGA775) | **H110 (LGA1151)** |
+| SATA | SATA II | 100/C230 AHCI (port count pending; no mSATA) |
+| Storage (array) | ~750 GB usable (2× RAID1 pairs) | **1 TB** (2× Seagate, mdadm RAID1 — `sdc` under review) + SanDisk 128 GB cache |
+| NIC | Broadcom BCM5722 | **Intel I219-V** |
+| Expansion | modest | **PCIe 3.0 x16 + 2× x1** |
+| PSU | HP tower (wattage n/c) | **AcBel `POF001-280G` 250 W, 80+ Gold** (UPS-integrated) |
+| Noise | 42–58 dB | **43.7 dB(A)** measured (UT353) |
+| Idle power | ~60–80 W | **14–16 W** measured (23–24 W start transient) |
+| Footprint | full tower | ~9.7 L compact |
+| OS | OMV + mdadm | **OMV + mdadm RAID1** (ADR 29) |
+| Status | ✅ base for the existing OMV NAS | 🔨 diagnostic in progress, platform confirmed |
 
 **Read:** the ML110 is the incumbent to retire (slow, power-hungry, noisy, Core 2 / DDR2 /
-SATA II). The **delivered** Beetle matches the planned/offered ideal (Skylake, 8 GB DDR4,
-HEVC-decode QuickSync, SATA III, low power) and is a clear upgrade over the ML110.
+SATA II); the **delivered** Beetle is a clear upgrade over it (Skylake, DDR4, HEVC-decode
+QuickSync, SATA III, ~14–16 W).
 
 ---
 
