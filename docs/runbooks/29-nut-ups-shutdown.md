@@ -42,8 +42,7 @@ defined order.
   order itself.
 - **Fleet clients** — `lab` (M910q) and `edge` (Wyse 3040): `nut-client` + `upsmon`. The **Beetle
   M-III** joins as the NAS client once it is standing
-  ([#98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98)); the **ML110 is deliberately left
-  out** — it retires as the OMV NAS rather than being wired into this.
+  ([#98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98)).
 - **No new firewall rule** — LXC 103 is bridged on the LAN, so client traffic never traverses the
   host's UFW chains (see §6).
 
@@ -81,7 +80,7 @@ Two strips, both UPS-fed:
 | **1 — servers** | Dell Wyse 5070 (HA node) | hosts the NUT server's USB, `0665:5161` |
 | | Lenovo M910q (lab) | 65/90 W external brick · k3s |
 | | Dell Wyse 3040 (edge) | external brick |
-| | Wincor Beetle M-III | the OMV NAS, successor to the ML110 ([#98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98), [ADR 29](../decisions/29-nas-backup-target-beetle-m3-omv.md)) |
+| | Wincor Beetle M-III | the OMV NAS ([#98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98), [ADR 29](../decisions/29-nas-backup-target-beetle-m3-omv.md)) |
 | | Fujitsu Futro S930 (router) | once built — [idea 07](../ideas/07-opnsense-futro-s930.md) |
 | **2 — network** | TP-Link TL-SG108E | keeps the LAN alive while the nodes stop in order |
 | | Tenda AC1200 mesh node | house Wi-Fi **and** the office drop that feeds the switch |
@@ -320,8 +319,7 @@ Node-specific notes:
 - **The NAS (Beetle M-III), once it is up** — it runs **OMV**, which ships its **own UPS service
   that also writes `/etc/nut`**. Pick one writer: either drive it from the OMV panel or disable that
   service and use the files above. Two writers will fight and the config drifts. OMV is not
-  Ansible-managed, so this one is manual. The **ML110 is not configured at all** — it retires as the
-  OMV NAS, so it never joins this setup.
+  Ansible-managed, so this one is manual.
 
 ## 6. Shutdown choreography
 
@@ -390,7 +388,7 @@ never traverses the host's UFW chains — UFW here is host-management-plane only
   `ha` playbook (and a `nut` role) keeps them consistent with the rest of the fleet.
 - **Beetle M-III as the NAS client** — it sits on strip 1 from day one but joins NUT (§5) only once
   [#98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98) has OMV running, including the
-  OMV-panel-vs-files decision. The ML110 is retired, not joined.
+  OMV-panel-vs-files decision.
 - **Router client** — the Futro S930 is on strip 1 from day one too, but OPNsense is FreeBSD, so its
   client path differs ([#96](https://github.com/jaroslaw-bagnicki/Homelab/issues/96)).
 - **Telemetry** — `upsc` only for now; UPS metrics into the Netdata/Prometheus plane next to

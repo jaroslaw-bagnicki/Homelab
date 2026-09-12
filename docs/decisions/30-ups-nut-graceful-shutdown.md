@@ -44,8 +44,7 @@ node stop itself on low battery.**
   secondaries. An unprivileged LXC cannot power off its own host, so the hypervisor stops itself and
   Proxmox then stops the guests in order.
 - **Shutdown triggers on low battery (`LB`)**, not on a runtime countdown.
-- **The Beetle M-III becomes the NAS client once it stands; the ML110 is not joined** — it retires as
-  the OMV NAS ([ADR 29](29-nas-backup-target-beetle-m3-omv.md)).
+- **The Beetle M-III becomes the NAS client once it stands** ([ADR 29](29-nas-backup-target-beetle-m3-omv.md)).
 - **The Home Assistant NUT integration is deferred** until the HA OS VM exists.
 
 ## Consequences
