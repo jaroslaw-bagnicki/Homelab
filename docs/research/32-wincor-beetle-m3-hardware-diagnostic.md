@@ -15,7 +15,7 @@ SMART health before committing the OS. Same Phase 0 pattern as the
 
 **Status**: 🔨 In progress — platform, CPU, RAM, SSD, NIC, expansion, **all three drives** and the
 **PSU/UPS** examined (2026-09-12); the unit is a **Skylake / H110 / DDR4 platform**. Pending:
-BIOS walk, physical SATA ports, Memtest86+, fan count ([Pending checks](#pending-checks)).
+BIOS walk, physical SATA ports, Memtest86+ ([Pending checks](#pending-checks)).
 
 ---
 
@@ -25,7 +25,7 @@ BIOS walk, physical SATA ports, Memtest86+, fan count ([Pending checks](#pending
 > Beetle M-III is the homelab NAS backup target running OpenMediaVault, succeeding the ML110.
 > This research doc is the Phase 0 hardware audit output that grounds that decision. It confirms
 > the platform — **Skylake / H110 / LGA1151 / DDR4, Pentium G4400, AES-NI, QuickSync H.264+HEVC
-> decode**, 8 GiB DDR4; the BIOS details remain to be confirmed, and the `sdc` reallocated-sector
+> decode**, 8 GiB DDR4; the **BIOS configuration walk** remains, and the `sdc` reallocated-sector
 > finding is resolved — **keep + monitor** (long self-test clean, count frozen).
 
 | Decision | Outcome (as of 2026-09-12) |
@@ -39,7 +39,7 @@ BIOS walk, physical SATA ports, Memtest86+, fan count ([Pending checks](#pending
 | Disk 0 | **SanDisk X600** `SD9SB8W-128G` 128 GB 2.5" SATA SSD (`sda`) — **SMART PASSED** (41,802 POH) — cache |
 | Disk 1 | **Seagate ST1000VT001-1RE172** 1 TB 2.5" (`sdb`, `WDES3KB7`) — **PASSED**, 0 reallocated, 65,545 POH |
 | Disk 2 | **Seagate ST1000VT001-1RE172** 1 TB 2.5" (`sdc`, `WDEPBVR3`) — **PASSED** but **1,056 reallocated** (past media event; long self-test clean, count frozen at 1,056 — **keep + monitor**) — see [Storage](#storage-sata--smart) |
-| USB | Kingston DataTraveler 3.0 64 GB (`sdb`) = Ventoy live USB, **not** a data drive |
+| USB | Kingston DataTraveler 3.0 64 GB (`sdd`) = Ventoy live USB, **not** a data drive |
 | PSU | **AcBel `POF001-280G`** (UPS-integrated `PSU UPS BEETLE/M-III`, DN P/N `01750279900`, S/N `5421CP10JW`) — **250 W** (225 W @50 °C), **80 Plus Gold** |
 | Dynamic IP | `192.168.2.158` (DHCP via mesh `192.168.2.1`) |
 
@@ -200,7 +200,7 @@ The `-uATX` M2.0 board provides **2× PCIe 2.0 x1** expansion slots.
 | CPU idle | ~800 MHz (power state) |
 | **Idle power (measured)** | **14–16 W** settled (VRONE plug meter, 2026-09-12); ~**23–24 W** during/just after start (POST + spin-up transient), then drops |
 | PSU | **AcBel `POF001-280G`** — `PSU UPS BEETLE/M-III` (UPS-integrated), DN P/N `01750279900`, S/N `5421CP10JW`, date `B2202` REV `E9`. **250 W** max @45 °C (225 W @50 °C), **80 Plus Gold**; 100–240 V input. Rails: +3.3 V 4.0 A · **+12.2 V 10.5 A** · +5.1 V 8.2 A · +12.0 V 1.5 A · +5 Vsb 2.3 A · +24.8 V 0.6 A · +19 VBat 6.0 A. +12 V ≈ 128 W — ample for 2× 2.5" HDDs + SSD |
-| Cooling | **43.7 dB(A)** measured with a **UNI-T UT353**; fan count still TBC (a chassis blower + the PSU's own fan are visible) |
+| Cooling | **3 fans** — front-right (over CPU + PSU), one at the **PSU back**, one inside the **internal UPS module**; **43.7 dB(A)** measured with a **UNI-T UT353** (Gelid controller planned) |
 | UPS battery | Internal **TOTEX International NiMH, 15.6 V 3000 mAh** (`first use 12/2022`, DN P/N `01750279901`) — **not OS-exposed** (`/sys/class/power_supply` empty), so a hardware nicety only; use a NUT-compatible external UPS for shutdown (idea 09) |
 
 ---
@@ -219,8 +219,9 @@ The `-uATX` M2.0 board provides **2× PCIe 2.0 x1** expansion slots.
 | NIC | **Intel I219-V** GbE |
 | Expansion | PCIe 3.0 x16 + 2× PCIe 2.0 x1 |
 
-**Bottom line:** the Beetle M-III is a workable OMV NAS and a clear upgrade over the ML110 on
-every axis (Skylake vs Core 2, DDR4 vs DDR2, SATA III vs II, ~14–16 W idle, mdadm RAID1).
+**Bottom line:** the Beetle M-III is a workable OMV NAS — a clear **platform and power** upgrade
+over the ML110 (Skylake vs Core 2, DDR4 vs DDR2, SATA III vs II, ~14–16 W vs ~60–80 W idle).
+Noise is comparable (43.7 vs 42–58 dB) with the Gelid controller planned to bring it down.
 Phase 1 (OMV install + array) is the working direction
 ([ADR 29](../decisions/29-nas-backup-target-beetle-m3-omv.md)).
 
@@ -241,8 +242,8 @@ Phase 1 (OMV install + array) is the working direction
    Loss → [Last state]**, boot mode (UEFI).
 5. **Physical SATA port count** + confirm the free port for array growth.
 6. **Memtest86+** — one full pass on the 8 GB stick.
-7. **Noise / cooling** — ✅ noise measured **43.7 dB(A)** (UNI-T UT353); outstanding: exact
-   **fan count** and the Gelid fan controller plan.
+7. **Noise / cooling** — ✅ noise **43.7 dB(A)** (UNI-T UT353), **3 fans** (front-right CPU+PSU,
+   PSU back, internal UPS module); outstanding: the Gelid fan controller plan.
 8. **UPS OS-exposure** — ✅ **done 2026-09-12**: internal **TOTEX NiMH 15.6 V 3000 mAh**
    (`first use 12/2022`, DN P/N `01750279901`); not OS-exposed (no `power_supply`/SMBus fuel
    gauge) — hardware nicety only, external NUT UPS required (idea 09).
@@ -256,7 +257,7 @@ Phase 1 (OMV install + array) is the working direction
 2. **RAM growth** — 1 slot free; 8 GB is ample for OMV, 16/32 GB optional later.
 3. **Cache** — single SanDisk X600 SSD is not mirrored; fine for a backup landing cache
    (ADR 29 mdadm RAID1 is the data protection).
-4. **Noise** — confirm fan count and fit the Gelid controller (target ~32–35 dB).
+4. **Noise** — fit the Gelid controller (target ~32–35 dB).
 5. **ML110 retirement timing** — keep the ML110 serving backups until the Beetle's array is
    verified, then retire.
 
