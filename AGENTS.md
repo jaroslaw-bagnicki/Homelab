@@ -40,6 +40,9 @@ operating on its own.
   status, update `docs/overview.md` (nodes/workloads view) and `docs/hardware.md`
   (per-node specs + network appliances) in the same change. Do not let them go stale
   like the old "What's Done" table did.
+- **Remove the `docs/overview.md` "What's Next" row in the same PR that completes the
+  work** — alongside its `CHANGELOG.md` entry. A completed item leaves the board; an
+  item that stalls without a start date moves to `## Not Scheduled` instead.
 
 ## ADR Authoring
 
@@ -66,7 +69,7 @@ A new workload is added by:
 
 1. Creating `ansible/workloads/<workload>/` containing the playbook entrypoint, role recipes, and an ansible-side README.
 2. Adding a row to the index table in `docs/workloads.md`.
-3. Adding a row to `docs/overview.md` "What's Next", and a `CHANGELOG.md` entry on completion.
+3. Adding a row to `docs/overview.md` "What's Next", and a `CHANGELOG.md` entry on completion — the completing PR removes the row.
 4. Optionally: a runbook at `docs/runbooks/NN-deploy-<workload>.md` for operational steps.
 
 Workloads do not import each other. Workloads do not declare shared pre_tasks in the base playbook. Idempotent declarations inside a workload's roles are acceptable (e.g. networks — declare in the role and in the base playbook pre_tasks; first writer wins).

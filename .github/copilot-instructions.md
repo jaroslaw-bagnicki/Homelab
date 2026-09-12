@@ -38,9 +38,11 @@
 - **PR descriptions**: do **not** use the **Why / What / How (WWH)** format — that is **reserved for GitHub Issues only**. PR descriptions are a plain summary of the **Changes** (and any **Notes**) with no WWH headings
 - **Reference issues**: plain `#NNN` mentions link a commit/PR to an issue but do **not** auto-close it. To auto-close on merge, add `Closes #NNN` to the **PR description** or to a commit that is merged into `main` (GitHub evaluates the keyword at merge time; editing a merged PR afterwards won't close the issue)
 - **Labels**: `enhancement` (new feature), `bug` (broken), `chore` (maintenance/tooling), `research` (investigation)
-- **`docs/overview.md` "What's Next" = public status board** — shows what's planned or actively being worked on. Only items that are **planned** or **in progress** belong here.
+- **`docs/overview.md` "What's Next" = public status board** — grouped by state: **In progress** → **Planned** → **Held**. Only items that are in progress, planned, or held (blocked, or deliberately sequenced) belong here, and every row carries a concrete **Next step**; rows are listed in execution order.
+- **`docs/overview.md` "Not Scheduled" = parking lot** — work with no start date: dormant, or waiting on hardware/decisions that aren't actionable yet. It moves up to "What's Next" when it is ready to start.
 - **Issues = the backlog** — capture ideas, bugs, and multi-session work that isn't in the overview table yet. An issue becomes a `docs/overview.md` "What's Next" row when you're ready to start it.
-- **Typical flow**: idea → issue → move to `docs/overview.md` "What's Next" when starting → on completion add an entry to `CHANGELOG.md` (with runbook/ADR links) → close the issue
+- **A row leaves the table with the PR that completes it** — the same PR that adds the `CHANGELOG.md` entry removes the "What's Next" row; never leave completed rows behind. An item that stalls without a start date moves to "Not Scheduled" instead.
+- **Typical flow**: idea → issue → move to `docs/overview.md` "What's Next" when starting (or "Not Scheduled" when parked) → on completion add an entry to `CHANGELOG.md` (with runbook/ADR links) and remove the row → close the issue
 - When adding a completed entry to `CHANGELOG.md`, link the **runbook** (not the issue) — `[runbook](runbooks/NN-name.md)` — so the entry points to the implementation, not the ticket
 
 ## Git Workflow
