@@ -115,15 +115,15 @@ so each row states what was on the UPS at the time:
 |---|---|
 | UPS alone | 17 W |
 | + M910q, Wyse 5070, Wyse 3040 | 25–26 W (those three alone at the wall: 12–13 W, 8–9 W to 19 W instantaneous) |
-| + switch, mesh node, LTE modem | 32–33 W, and 37 W on a later pass |
-| + Futro S930 | **48–50 W** — the router adds ~11–13 W, matching [research 31](../research/31-futro-s930-hardware-diagnostic.md) |
+| + switch, mesh node, LTE modem | 32–33 W, and 37 W on a later pass — *Beetle disconnected* |
+| + Futro S930 | **48–50 W** — the router adds ~11–13 W, matching [research 31](../research/31-futro-s930-hardware-diagnostic.md) — *Beetle disconnected* |
 | + Beetle M-III — **the full planned fleet** | **66–69 W** settled, **~85 W** for the first couple of minutes |
 
 ⚠ **Treat these as bands, not exact figures.** The same set read 32–33 W and later 37 W with no hardware
 change — radios (mesh clients, the LTE modem's attach retries), the UPS's own charge state and meter
-error at these levels each move a reading by a few watts. The Beetle's surge is reproducible — +30–35 W for the first minutes on two independent passes. Read
-against the same pass's baseline the rows do stack (37 W + ~12 W router + ~18 W NAS ≈ 67 W), so the
-earlier apparent mismatch was the drift band rather than a bad reading. For sizing use a sustained average; for
+error at these levels each move a reading by a few watts. The Beetle's surge is reproducible — +30–35 W for the first minutes on two independent passes. The 37 W and 48–50 W passes were both taken with the Beetle **disconnected**, which confirms the
+arithmetic: read against the same pass's baseline the rows stack (37 W + ~12 W router + ~18 W NAS ≈ 67 W),
+so the earlier apparent mismatch was the drift band rather than a bad reading. For sizing use a sustained average; for
 per-device attribution wait for [#73](https://github.com/jaroslaw-bagnicki/Homelab/issues/73).
 
 ## 1. Create LXC 103
