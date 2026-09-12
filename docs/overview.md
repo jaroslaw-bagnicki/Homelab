@@ -29,7 +29,7 @@ Current state — what's running or in progress. Planned work is under [What's N
 | **cloudflared** | Cloudlab VPS | Cloudflare Tunnel public HTTPS | ✅ |
 | **OpenCode instances** (`homelab`, `prospera`) | Cloudlab VPS | per-project agentic dev servers | ✅ |
 | **Zot** | Cloudlab VPS | self-hosted OCI registry + pull-through cache | ✅ |
-| **OMV NAS shares** | OMV NAS | SMB `/shared` backup share + NFS/Longhorn target on the Beetle NAS | 🔨 |
+| **OpenMediaVault** | OMV NAS | network shares (SMB) + backup target | ✅ |
 
 ## What's Next
 
