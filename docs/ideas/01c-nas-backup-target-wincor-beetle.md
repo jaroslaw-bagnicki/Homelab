@@ -1,12 +1,21 @@
 # Idea 01c — Homelab NAS: Wincor Beetle M-III (Unraid)
 
-**Status**: 📋 Planned — **OMV**, not Unraid: [ADR 29](../decisions/29-nas-backup-target-beetle-m3-omv.md) settles the OS (Unraid deferred); the platform analysis below stands  
+**Status**: 📋 Planned — **OMV**, not Unraid: [ADR 29](../decisions/29-nas-backup-target-beetle-m3-omv.md) settles the OS (Unraid deferred). The **delivered** unit is confirmed by [research 32](../research/32-wincor-beetle-m3-hardware-diagnostic.md) as **Skylake / H110 / DDR4, G4400, 8 GB DDR4** — several offer assumptions below differ; see the historical note  
 **Date**: 2026-08-22  
 **Sources**:
 - [Gemini thread 4 — Wincor Beetle M-III vs EliteDesk 800 G1 SFF](https://share.gemini.google/H4KW01K8tTUZ) — dimensions, CPU support, cooling, fan control/noise, Zigbee fan control, disk capacity/mounting, NAS-platform analysis
 - [Gemini thread 5 — Cache SSD mSATA for Unraid HDD](https://share.gemini.google/lyviXlDkXm7Y) — cache choice (mSATA vs NVMe vs SATA SSD), link aggregation vs 2.5 GbE, Unraid build plan
 - [Allegro offer 18851315845 — Wincor Beetle M-III G4400 8GB 128GB SSD](https://allegro.pl/oferta/wincor-beetle-m-iii-g4400-8gb-128gb-ssd-terminal-pos-komputer-18851315845) (scraped 2026-08-22)
-- [Research 32 — acquired-unit hardware diagnostic](../research/32-wincor-beetle-m3-hardware-diagnostic.md) (2026-09-05)
+- [Research 32 — hardware diagnostic](../research/32-wincor-beetle-m3-hardware-diagnostic.md) (2026-09-12)
+
+> ⚠️ **Historical / offer note.** This idea captures the **pre-purchase (Allegro offer)** plan. The
+> delivered unit is confirmed **Skylake / H110 / DDR4**, but several offer assumptions differ —
+> **2 SODIMM slots** (not 4× DIMM), **no mSATA** (mini-PCIe absent), an **AcBel `POF001-280G`**
+> UPS-integrated PSU (not FSP/Fortron), **2× Seagate 1 TB** (not 4 drives), and a **3-fan** layout
+> (front-right CPU+PSU, PSU back, internal UPS module) instead of a single tunnel turbine. The
+> **Unraid** sections below are superseded by the **OMV + mdadm RAID1** decision. See
+> [research 32](../research/32-wincor-beetle-m3-hardware-diagnostic.md) and
+> [ADR 29](../decisions/29-nas-backup-target-beetle-m3-omv.md) for the delivered reality.
 
 Companion to [idea 01b](01b-nas-backup-target-elitedesk.md) (EliteDesk 800 G1 SFF) and
 **successor candidate to [idea 03](03-nas-backup-target-ml110.md)** (ML110 — too noisy and
