@@ -12,7 +12,7 @@ hardware detail see [Hardware Inventory](hardware.md); for change history see
 |---|---|---|---|---|
 | **Lab** | main workload host (Docker → k3s) | Lenovo M910q Tiny · Ubuntu 24.04 LTS · Azure Arc | `192.168.2.200` | ✅ |
 | **OMV NAS** | backup target / NFS for Longhorn | HP ProLiant ML110 G5 · OMV 8.3 | `192.168.2.210` | ✅ |
-| **Beetle NAS** | Unraid backup target (successor to ML110) | Wincor Beetle M-III · Unraid (pending) | DHCP `.241` | 🔨 |
+| **Beetle NAS** | backup target (successor to ML110) | Wincor Beetle M-III · OS TBD (Unraid vs OMV) | DHCP | 🔨 |
 | **Edge Ingress** | public ingress (cloudflared + Caddy) | Dell Wyse 3040 · Debian 13 minimal | `192.168.2.240` | 🔨 |
 | **Home Assistant** | smart home node | Wyse 5070 · Proxmox VE | `192.168.2.201` | 🔨 |
 | **LLM server** | local LLM inference | Minisforum X1 Lite | TBD | 🧠 (Phase 2) |
@@ -29,22 +29,53 @@ Current state — what's running or in progress. Planned work is under [What's N
 | **cloudflared** | Cloudlab VPS | Cloudflare Tunnel public HTTPS | ✅ |
 | **OpenCode instances** (`homelab`, `prospera`) | Cloudlab VPS | per-project agentic dev servers | ✅ |
 | **Zot** | Cloudlab VPS | self-hosted OCI registry + pull-through cache | ✅ |
-| **OMV NAS shares** | OMV NAS | SMB `/shared` backup share live (SMB3 transport encryption required + `rescuezilla` user — unblocks #79); NFS `/export/backups` + Longhorn pending (k3s #44) | 🔨 (Phase 2) |
+| **OMV NAS shares** | OMV NAS | SMB `/shared` backup share live (SMB3 transport encryption required + `rescuezilla` user — unblocks #79); NFS `/export/backups` + Longhorn land on the **Beetle NAS** — the ML110 retires once the Beetle array is verified | 🔨 (Phase 2) |
 
 ## What's Next
 
-| # | Workload | Effort | Notes |
+Planned and in-progress work only, listed in execution order. The backlog lives in
+[Issues](https://github.com/jaroslaw-bagnicki/Homelab/issues) and is pulled in here
+once it is ready to start — a row leaves the table with the PR that completes it.
+
+**Effort**: ⭐ one session · ⭐⭐ a few sessions · ⭐⭐⭐ multi-week or hardware-gated
+
+### In progress
+
+| Item | Effort | Next step | Refs |
 |---|---|---|---|
-| [#13](https://github.com/jaroslaw-bagnicki/Homelab/issues/13) | **Restic backup** (redo) | ⭐⭐ | Daily snapshots to Azure Blob Storage — see [runbook](runbooks/07-restic-backup.md) |
-| [#94](https://github.com/jaroslaw-bagnicki/Homelab/issues/94) | **Fleet admin account + key** | ⭐ | Fleet-wide SSH admin account `fleetadm` + `fleetadm@homelab` key (ADR 28) — breaking-glass bootstrap, `common` role re-arm, migration in ADR 28 — [ADR 28](decisions/28-fleet-admin-account-and-key.md) · [PR 93](https://github.com/jaroslaw-bagnicki/Homelab/pull/93) |
-| [#65](https://github.com/jaroslaw-bagnicki/Homelab/issues/65) | **Edge Ingress** | ⭐⭐ | Move public ingress (`cloudflared` + Caddy) to the Wyse 3040 — [runbook 24](runbooks/24-edge-appliance.md) · [ADR 24](decisions/24-edge-ingress-appliance.md) |
-| [#54](https://github.com/jaroslaw-bagnicki/Homelab/issues/54) | **OMV NAS Phase 2** | ⭐⭐ | NFS/SMB exports + Longhorn backup target — [runbook 26](runbooks/26-ml110-nas-exports.md) · SMB `/shared` done (unblocks #79) |
-| [#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68) | **Home Assistant** | ⭐⭐ | Dedicated HA node — Proxmox VE VM + MQTT/Zigbee2MQTT — [runbook 28](runbooks/28-ha-proxmox-node.md) · [ADR 25](decisions/25-home-assistant-thin-client.md) · [research 29](research/29-wyse5070-hardware-diagnostic.md) · [#103](https://github.com/jaroslaw-bagnicki/Homelab/issues/103) |
-| [#44](https://github.com/jaroslaw-bagnicki/Homelab/issues/44) | **k3s migration** | ⭐⭐⭐ | Migrate workloads from Docker Compose to Kubernetes (k3s + Arc) — per [ADR 22](decisions/22-k3s-arc-homelab.md) |
-|  | **Hermes Agent** | ⭐⭐⭐ | Most complex — last |
-| [#3](https://github.com/jaroslaw-bagnicki/Homelab/issues/3) | **SQL Server** | ⭐⭐ | Developer Edition in Docker — see [runbook](runbooks/09-mssql-dev.md) |
-| [#4](https://github.com/jaroslaw-bagnicki/Homelab/issues/4) | **Gitea** | ⭐⭐ | Self-hosted Git with web UI for personal repos |
-| - | **Ollama + Bielik** (Phase 2) | ⭐⭐⭐ | Needs dedicated LLM server hardware |
+| **Netdata Parent + `netdata` role** | ⭐⭐ | Parent LXC on the HA Proxmox, then the Lab (M910q) host-native child, then re-point the remaining children | [#104](https://github.com/jaroslaw-bagnicki/Homelab/issues/104) · [ADR 27](decisions/27-monitoring-strategy.md) |
+| **Edge Ingress — service migration** | ⭐⭐ | Move `cloudflared` + Caddy + dnsmasq off the M910q onto the Wyse 3040 (base OS + `edge_host` role already shipped) | [#65](https://github.com/jaroslaw-bagnicki/Homelab/issues/65) · [#81](https://github.com/jaroslaw-bagnicki/Homelab/issues/81) · [runbook 24](runbooks/24-edge-appliance.md) |
+| **Beetle NAS** | ⭐⭐⭐ | Replacement unit arriving — re-audit the spec, then OS decision (Unraid vs OMV) → array + cache online → NFS/SMB exports + Longhorn target → retire the ML110 | [#98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98) · [idea 01c](ideas/01c-nas-backup-target-wincor-beetle.md) |
+| **Home Assistant node** | ⭐⭐⭐ | VM 100 (HA OS) + LXC 101/102 (Mosquitto, Zigbee2MQTT) on the Proxmox base from runbook 28 — the Z2M LXC feeds power monitoring | [#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68) · [#85](https://github.com/jaroslaw-bagnicki/Homelab/issues/85) · [ADR 25](decisions/25-home-assistant-thin-client.md) |
+
+### Planned
+
+| Item | Effort | Next step | Refs |
+|---|---|---|---|
+| **UPS + NUT graceful shutdown** | ⭐⭐ | Unit arriving — assess it, then create the issue: NUT server on the HA node, fleet-wide clients, HA notifications | [idea 09](ideas/09-ups-nut-home-assistant.md) |
+| **Netdata children — Edge (RAM-only), HA, OMV** | ⭐ | Re-point onto the Parent once it lands | [#80](https://github.com/jaroslaw-bagnicki/Homelab/issues/80) · [#84](https://github.com/jaroslaw-bagnicki/Homelab/issues/84) |
+| **Power monitoring (Zigbee/Z2M)** | ⭐⭐ | Zigbee energy plugs → Prometheus, after the HA node's Z2M LXC — sequenced **before** k3s | [#73](https://github.com/jaroslaw-bagnicki/Homelab/issues/73) · [ADR 26](decisions/26-zigbee-energy-monitoring.md) |
+| **YUMI multiboot USB standard** | ⭐ | ADR 29 + manage-YUMI runbook; de-conflate the Ventoy references | [#107](https://github.com/jaroslaw-bagnicki/Homelab/issues/107) · [research 12](research/12-first-boot-setup.md) |
+
+### Held
+
+| Item | Waiting on | Refs |
+|---|---|---|
+| **OPNsense router (Futro S930)** | power cable for the SSD — order it, then install | [#96](https://github.com/jaroslaw-bagnicki/Homelab/issues/96) · [research 31](research/31-futro-s930-hardware-diagnostic.md) |
+| **k3s migration** | deliberate sequencing — largest item, gates NFS/Longhorn and #48 | [#44](https://github.com/jaroslaw-bagnicki/Homelab/issues/44) · [ADR 22](decisions/22-k3s-arc-homelab.md) |
+
+## Not Scheduled
+
+Parked work with no start date. An item moves to [What's Next](#whats-next) when it is
+ready to start.
+
+| Item | Parked because | Refs |
+|---|---|---|
+| **Restic backup** (redo) | dormant since June; ADR 02 still reads *In Progress* | [#13](https://github.com/jaroslaw-bagnicki/Homelab/issues/13) · [ADR 02](decisions/02-backup-strategy-restic-blob.md) · [runbook 07](runbooks/07-restic-backup.md) |
+| **SQL Server Developer Edition** | never started | [#3](https://github.com/jaroslaw-bagnicki/Homelab/issues/3) · [runbook 09](runbooks/09-mssql-dev.md) |
+| **Gitea** | never started | [#4](https://github.com/jaroslaw-bagnicki/Homelab/issues/4) |
+| **Hermes Agent** | most complex — deliberately last | — |
+| **Ollama + Bielik** (Phase 2) | needs the LLM server hardware first | — |
 
 ## Topology
 
@@ -57,6 +88,7 @@ Tenda Nova mesh — 192.168.2.0/24, gateway 192.168.2.1 (single broadcast domain
                  ├── Lab M910q        — 192.168.2.200
                  ├── OMV NAS         — 192.168.2.210
                  ├── Edge Ingress      — 192.168.2.240
+                 ├── Home Assistant    — 192.168.2.201
                  └── work laptop dock — DHCP (corporate)
 ```
 
