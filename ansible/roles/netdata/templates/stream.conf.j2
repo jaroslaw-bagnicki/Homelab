@@ -1,0 +1,13 @@
+---
+# Managed by Ansible — Netdata streaming (shared netdata role, ADR 27).
+{% if netdata_role == 'parent' %}
+# Parent: accept streams authenticated with the shared API key.
+[{{ netdata_stream_api_key }}]
+    enabled = yes
+{% elif netdata_stream_target | length > 0 %}
+# Child: stream local metrics to the parent.
+[stream]
+    enabled = yes
+    destination = {{ netdata_stream_target }}
+    api key = {{ netdata_stream_api_key }}
+{% endif %}
