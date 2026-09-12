@@ -29,7 +29,9 @@ defined order.
 ## What changes
 
 - **UPS stays on the HA node's Proxmox host** — Green Cell `UPSLM600`, USB **`0665:5161`**
-  (Cypress/INNO TECH bridge, port path `1-6.2`, no serial number).
+  (Cypress/INNO TECH bridge). The unit has **no serial number**, so NUT finds it by
+  `vendorid`/`productid` rather than by a port path — which port it occupies is irrelevant, and the
+  cable can be moved without touching any config.
 - **LXC 103** (`nut`, unprivileged, Debian) — NUT server: `nutdrv_qx` driver + `upsd` on
   **`192.168.2.202:3493`**. Next free ID after VM 100 / LXC 101 / LXC 102
   ([ADR 25](../decisions/25-home-assistant-thin-client.md)); the Netdata Parent
