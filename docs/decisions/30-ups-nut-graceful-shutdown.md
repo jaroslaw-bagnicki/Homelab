@@ -34,8 +34,8 @@ Three findings on 2026-09-12 pinned the remaining choices:
 **Drive the shared rail with NUT, run its server in a dedicated LXC on the HA node, and let every
 node stop itself on low battery.**
 
-- **NUT — not `apcupsd`, not the vendor app.** One mechanism drives a heterogeneous fleet, and it
-  already has a Home Assistant integration and a monitoring path.
+- **NUT, replacing the vendor app.** One mechanism drives a heterogeneous fleet, and it already has
+  a Home Assistant integration and a monitoring path.
 - **NUT server in a dedicated unprivileged LXC (103) on the HA node's Proxmox** — chosen over
   host-native on the base, for container isolation and config that folds into VM/LXC backups.
 - **Driver `nutdrv_qx`**, with `port = auto` plus `vendorid`/`productid`. The vendor-defined usage
@@ -76,8 +76,6 @@ node stop itself on low battery.**
 
 ### Alternatives Considered
 
-- **`apcupsd`** — rejected: NUT is the de-facto standard, drives the same clients across every OS in
-  the fleet, and already has the Home Assistant and monitoring integrations.
 - **The vendor GCUPS app** — rejected: a workstation-side app with a single-owner USB HID interface,
   no fleet-wide client, and a remote mode that is not a transport. Still useful — it identified the
   unit and its status fields while NUT did not yet exist.
