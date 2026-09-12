@@ -108,6 +108,23 @@ than trusting the figure. Unconfirmed: whether the battery was still charging at
 (that would inflate it), and the meter's accuracy at these levels — cross-check the LCD load %
 ([#73](https://github.com/jaroslaw-bagnicki/Homelab/issues/73)).
 
+**Measured draws (2026-09-12, inline plug meter at the socket)** — snapshots, not one continuous series,
+so each row states what was on the UPS at the time:
+
+| Configuration | Metered |
+|---|---|
+| UPS alone | 17 W |
+| + M910q, Wyse 5070, Wyse 3040 | 25–26 W (those three alone at the wall: 12–13 W, 8–9 W to 19 W instantaneous) |
+| + switch, mesh node, LTE modem | 32–33 W, and 37 W on a later pass |
+| + Futro S930 | **48–50 W** — the router adds ~11–13 W, matching [research 31](../research/31-futro-s930-hardware-diagnostic.md) |
+| Beetle M-III (earlier, separate pass) | 46–48 W settled, 64–65 W for the first minutes |
+
+⚠ **Treat these as bands, not exact figures.** The same set read 32–33 W and later 37 W with no hardware
+change — radios (mesh clients, the LTE modem's attach retries), the UPS's own charge state and meter
+error at these levels each move a reading by a few watts. The Beetle row does not stack arithmetically
+with the others because it was taken in a different pass. For sizing use a sustained average; for
+per-device attribution wait for [#73](https://github.com/jaroslaw-bagnicki/Homelab/issues/73).
+
 ## 1. Create LXC 103
 
 On the Proxmox host (`ssh fleetadm@192.168.2.201`, then `sudo -i`):
