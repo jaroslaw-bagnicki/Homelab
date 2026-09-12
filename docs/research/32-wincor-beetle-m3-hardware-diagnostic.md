@@ -13,9 +13,10 @@ SMART health before committing the OS. Same Phase 0 pattern as the
 [Wyse 5070 audit (research 29)](29-wyse5070-hardware-diagnostic.md), and the
 [Wyse 3040 audit (research 28)](28-wyse3040-hardware-diagnostic.md).
 
-**Status**: 🔨 In progress — platform, CPU, RAM, SSD, NIC and expansion captured (2026-09-12);
-the delivered unit is the **offered Skylake / H110 / DDR4 platform**. Pending: HDD SMART (drives
-connected), PSU label, BIOS walk, physical SATA ports, Memtest86+, noise ([Pending checks](#pending-checks)).
+**Status**: 🔨 In progress — platform, CPU, RAM, SSD, NIC, expansion and **all three drives**
+examined (2026-09-12); the delivered unit is the **offered Skylake / H110 / DDR4 platform**.
+Pending: `sdc` reallocated-sector verdict, PSU label, BIOS walk, physical SATA ports,
+Memtest86+, noise ([Pending checks](#pending-checks)).
 
 ---
 
@@ -26,7 +27,8 @@ connected), PSU label, BIOS walk, physical SATA ports, Memtest86+, noise ([Pendi
 > This research doc is the Phase 0 hardware audit output that grounds that decision. It confirms
 > the delivered unit matches [Idea 01c](../ideas/01c-nas-backup-target-wincor-beetle.md)'s
 > platform premise (Skylake / H110 / LGA1151 / DDR4, G4400, AES-NI, QuickSync H.264+HEVC decode);
-> only the storage/PSU/BIOS details remain to be confirmed.
+> the PSU/BIOS details remain to be confirmed, and the `sdc` reallocated-sector finding needs a
+> verdict before the array is built.
 
 | Decision | Outcome (as of 2026-09-12) |
 |---|---|
@@ -37,7 +39,8 @@ connected), PSU label, BIOS walk, physical SATA ports, Memtest86+, noise ([Pendi
 | NIC | **Intel Ethernet Connection (2) I219-V** (`00:1f.6`, `e1000e`, MAC `00:01:2e:8e:14:0d`) — on-board GbE |
 | SATA | Intel 100/C230 **SATA Controller [AHCI]** (`00:17.0`) — H110; physical port count pending |
 | Disk 0 | **SanDisk SD9SB8W128G** 128 GB 2.5" SATA SSD (`sda`) — **SMART PASSED** (41,802 POH) — cache |
-| Disk 1 / 2 | **2× Seagate ST1000VT001-1RE172** 1 TB 2.5" — **not connected at audit time**; previously deep-tested clean (see [Storage](#storage-sata--smart)) |
+| Disk 1 | **Seagate ST1000VT001-1RE172** 1 TB 2.5" (`sdb`, `WDES3KB7`) — **PASSED**, 0 reallocated, 65,545 POH |
+| Disk 2 | **Seagate ST1000VT001-1RE172** 1 TB 2.5" (`sdc`, `WDEPBVR3`) — **PASSED but 1,056 reallocated** ⚠️ — verdict pending (see [Storage](#storage-sata--smart)) |
 | USB | Kingston DataTraveler 3.0 64 GB (`sdb`) = Ventoy live USB, **not** a data drive |
 | PSU | ⏳ **pending** — label photo; version string flags a **UPS variant** (`UPS IKEA BK`) |
 | Dynamic IP | `192.168.2.158` (DHCP via mesh `192.168.2.1`) |
@@ -150,28 +153,41 @@ generation ahead of the EliteDesk 800 G1 (01b) it was chosen over.
 
 ### Storage (SATA + SMART)
 
-Inventoried **1 SATA SSD + 1 USB boot stick** at audit time; the 2× HDDs were **not connected**.
-No M.2/NVMe device.
+Inventoried **3 SATA devices + 1 USB boot stick** on 2026-09-12; **no M.2/NVMe device**.
 
-| Device | Model | Size | SATA link | SMART | Notes |
-|---|---|---|---|---|---|
-| `sda` | SanDisk **SD9SB8W128G** | 128 GB (119.2 GiB) | 6.0 Gb/s | ✅ **PASSED** | 2.5" SSD, FW `X6107000`, SN `191702804011` — **cache** |
-| `sdb` | Kingston DataTraveler 3.0 | 57.8 GiB | USB | n/a | Ventoy live medium — not a data drive |
-| HDD ×2 | Seagate **ST1000VT001-1RE172** | 1.00 TB each | — | ⏳ pending | Not connected at audit time — see below |
+| Device | Model | SN | Size | SATA link | SMART | Notes |
+|---|---|---|---|---|---|---|
+| `sda` | SanDisk **SD9SB8W128G** | `191702804011` | 128 GB (119.2 GiB) | 6.0 Gb/s | ✅ **PASSED** | 2.5" SSD, FW `X6107000` — **cache / boot** |
+| `sdb` | Seagate **ST1000VT001-1RE172** | `WDES3KB7` | 1.00 TB | 6.0 Gb/s | ✅ **PASSED** | FW `SDC2`, 5400 rpm, 512e, **0 reallocated** — clean |
+| `sdc` | Seagate **ST1000VT001-1RE172** | `WDEPBVR3` | 1.00 TB | 6.0 Gb/s | ⚠️ **PASSED** | FW `SDC1`, 5400 rpm, 512e, **1,056 reallocated** — see below |
+| `sdd` | Kingston DataTraveler 3.0 | `E0D55EA573F0E791494E0C5F` | 57.8 GiB | USB | n/a | Ventoy live medium — not a data drive |
 
-SMART detail — **SanDisk SSD (`sda`)**: overall **PASSED**; **0** reallocated/uncorrectable;
-`Available_Reserved_Space` **100** (Pre-fail, threshold 4); `Media_Wearout_Indicator` 4070;
-**41,802 POH** (~4.8 yr) / 5,323 power cycles; temp 23 °C (min 18 / max 41); no error log.
-**Healthy — reuse as the OMV cache / boot SSD** (matches idea 01c's "reuse the included 128 GB SSD").
+SMART detail:
 
-### Drive provenance (2× Seagate) — pending connection
+- **SanDisk SSD (`sda`)** — overall **PASSED**; **0** reallocated/pending/uncorrectable;
+  `Available_Reserved_Space` **100** (Pre-fail, threshold 4); `Media_Wearout_Indicator` 4070;
+  **41,802 POH** (~4.8 yr) / 5,324 power cycles; temp 26 °C (min 18 / max 41); no error log;
+  short self-test passed. **Healthy — reuse as the OMV cache / boot SSD.**
+- **Seagate `sdb`** — overall **PASSED**; **0** reallocated / 0 pending / 0 uncorrectable;
+  **65,545 POH** (~7.5 yr continuous); Start_Stop / Load_Cycle **9** each (always-on recorder
+  signature); temp 28 °C; short self-test passed. **Clean — keep as a mirror member.**
+- **Seagate `sdc` — ⚠️ anomaly** — overall **PASSED**, 0 pending / 0 uncorrectable, **65,545 POH**,
+  temp 26 °C, short self-test passed — **but `Reallocated_Sector_Ct` = 1,056** (normalised
+  **98** / threshold 10). This is a regression versus the previous (2026-09-05) read of **0**.
+  Reallocation is triggered by sector *reads* / background media scans (not host writes) and
+  never reverses, so a jump can appear on the first full-surface pass even with no host I/O.
+  **The array must not be built on `sdc` until a long self-test + the ATA error log settle
+  whether this is a historical one-time remap or active degradation** ([Pending checks](#pending-checks)).
 
-The 2× **Seagate ST1000VT001-1RE172** 1 TB 2.5" drives are the same physical drives previously
-deep-tested (Seagate **Video 2.5**, **CMR/Perpendicular**, SMART PASSED, **extended self-test
-completed without error**, ~65.5k POH). That verification is recorded on
-[issue #98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98); a fresh `smartctl` re-check
-runs once they are connected. **Array plan (ADR 29):** 1 parity + 1 data = **1 TB usable**,
-mirrored as **mdadm RAID1**.
+### Drive provenance & recording type (2× Seagate)
+
+The 2× **ST1000VT001-1RE172** are Seagate **Video 2.5** (surveillance) drives — **CMR /
+Perpendicular** (Seagate manual §2.3), **512e AF** (4096-byte physical), 5400 rpm. Both
+previously completed an **extended self-test without error**; the 2026-09-12 re-check finds
+**`sdb` still clean** while **`sdc` has developed 1,056 reallocated sectors**
+([Storage](#storage-sata--smart)). That verification history is recorded on
+[issue #98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98). **Array plan (ADR 29):**
+**mdadm RAID1** across 2× 1 TB = **1 TB usable**; the `sdc` finding may change the member set.
 
 ### Network
 
@@ -233,15 +249,20 @@ Unraid/OMV add-a-drive or mdadm RAID1). Phase 1 (OMV install + array) is the wor
 
 ## Pending Checks
 
-1. **HDD SMART** — connect the 2× Seagate ST1000VT001; `smartctl -i -H -A` + short/long
-   self-test; confirm CMR (Seagate Video 2.5 = Perpendicular).
-2. **PSU label** — model, wattage, rails, 80-Plus rating; confirm the UPS-integrated unit.
-3. **BIOS walk** — SATA mode (**AHCI**), AES-NI toggle, **VT-x / VT-d**, **Restore AC Power
+1. **`sdc` reallocated-sector verdict** — run `smartctl -t long /dev/sdc` and capture
+   `smartctl -A` + `smartctl -l error /dev/sdc` before/after. Baseline: **1,056 reallocated**
+   (normalised 98/10), 0 pending, 0 uncorrectable, short test passed. Count growing / error log
+   entry → **replace** `sdc`; count stable and clean → usable but on watch. **Do not build the
+   array on `sdc` until resolved.**
+2. **HDD SMART** — ✅ **done 2026-09-12**: `sdb` clean (0 reallocated); `sdc` anomaly as above;
+   CMR confirmed (Seagate Video 2.5 = Perpendicular); both at 6.0 Gb/s.
+3. **PSU label** — model, wattage, rails, 80-Plus rating; confirm the UPS-integrated unit.
+4. **BIOS walk** — SATA mode (**AHCI**), AES-NI toggle, **VT-x / VT-d**, **Restore AC Power
    Loss → [Last state]**, boot mode (UEFI).
-4. **Physical SATA port count** + confirm the free port for array growth.
-5. **Memtest86+** — one full pass on the 8 GB stick.
-6. **Noise / cooling** — fan count + dB @ 30 cm; Gelid fan controller plan (idea 01c).
-7. **UPS OS-exposure** — confirm `/sys/class/power_supply` empty and SMBus has no fuel gauge.
+5. **Physical SATA port count** + confirm the free port for array growth.
+6. **Memtest86+** — one full pass on the 8 GB stick.
+7. **Noise / cooling** — fan count + dB @ 30 cm; Gelid fan controller plan (idea 01c).
+8. **UPS OS-exposure** — confirm `/sys/class/power_supply` empty and SMBus has no fuel gauge.
 
 ---
 
@@ -267,7 +288,7 @@ Unraid/OMV add-a-drive or mdadm RAID1). Phase 1 (OMV install + array) is the wor
 | RAM | 4 GB DDR2 (dead end) | 8 GB DDR4 | **8 GB DDR4** (2 slots → 32 GB) |
 | Chipset | ICH9R (LGA775) | H110 (LGA1151) | **H110 (LGA1151)** |
 | SATA | SATA II | 4× SATA III + mSATA | 100/C230 AHCI (port count pending; no mSATA) |
-| Storage (array) | ~750 GB usable (2× RAID1 pairs) | 4× 2.5" ≈ 3 TB + SSD cache | **1 TB** (2× Seagate, mdadm RAID1) + SanDisk 128 GB cache |
+| Storage (array) | ~750 GB usable (2× RAID1 pairs) | 4× 2.5" ≈ 3 TB + SSD cache | **1 TB** (2× Seagate, mdadm RAID1 — `sdc` under review) + SanDisk 128 GB cache |
 | NIC | Broadcom BCM5722 | 1 GbE | **Intel I219-V** |
 | Expansion | modest | x16 + x1 | **PCIe 3.0 x16 + 2× x1** |
 | PSU | HP tower (wattage n/c) | FSP/Fortron 80+ Gold 220–300 W | ⏳ pending (UPS variant) |

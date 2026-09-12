@@ -52,7 +52,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 |---|---|
 | CPU | Intel **Pentium G4400** (Skylake, 2C/2T, 3.3 GHz, 3 MB L3) — **AES-NI present**; QuickSync H.264 + HEVC 8-bit decode |
 | RAM | **8 GB DDR4** (1× 8 GiB SODIMM @ 2133 MT/s — 2 slots, 1 free → 32 GB max) |
-| Storage | **SanDisk SD9SB8W128G 128 GB SSD** (cache, SMART PASSED) + **2× Seagate ST1000VT001-1RE172 1 TB 2.5"** (data + parity, mdadm RAID1 = 1 TB usable) |
+| Storage | **SanDisk SD9SB8W128G 128 GB SSD** (`sda`, SMART PASSED) + **2× Seagate ST1000VT001-1RE172 1 TB 2.5"** (`sdb` `WDES3KB7` clean; `sdc` `WDEPBVR3` ⚠️ **1,056 reallocated** — under review) → mdadm RAID1 = 1 TB usable |
 | SATA | H110 / Intel 100-C230 **AHCI** (port count pending); PCIe 3.0 x16 + 2× PCIe 2.0 x1; **no mSATA** |
 | PSU | ⏳ pending (UPS variant per version string `B/MIII(M2) UPS IKEA BK`) |
 | Network | 1× GbE Intel I219-V (`enp0s31f6`, MAC `00:01:2e:8e:14:0d`) · DHCP |
@@ -60,7 +60,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | OS | **OMV** — [ADR 29](decisions/29-nas-backup-target-beetle-m3-omv.md); Unraid deferred |
 | Cooling | ⏳ pending (fan count/noise); internal UPS battery — not OS-exposed |
 | Role | OMV NAS backup-target successor to the ML110 — [issue #98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98) |
-| Acquired | 2026-09-01 · diagnostic 2026-09-12 ([research 32](research/32-wincor-beetle-m3-hardware-diagnostic.md)) — platform confirmed; PSU / BIOS / HDD SMART / Memtest pending |
+| Acquired | 2026-09-01 · diagnostic 2026-09-12 ([research 32](research/32-wincor-beetle-m3-hardware-diagnostic.md)) — platform + drives examined; PSU / BIOS / Memtest pending, `sdc` reallocated verdict open |
 | Docs | [idea 01c](ideas/01c-nas-backup-target-wincor-beetle.md) · [research 32](research/32-wincor-beetle-m3-hardware-diagnostic.md) · [issue #98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98) |
 
 ### Edge Ingress — Dell Wyse 3040
