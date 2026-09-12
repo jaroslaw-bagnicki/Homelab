@@ -10,15 +10,15 @@
 **Status**: � Implementing — unit arrived 2026-09-12 (Green Cell **UPSLM600**, USB `0665:5161`); decisions recorded in [ADR 30](../decisions/30-ups-nut-graceful-shutdown.md), implementation tracked in #111  
 **Date**: 2026-09-10  
 **Source**: [Gemini — Green Cell UPSLM360 spec + homelab fit](https://gemini.google.com/share/fd9149b0c95e) (2026-09-08) · [Gemini — Green Cell PowerProof 1500VA + NUT configuration](https://gemini.google.com/share/65989fbedc98) (2026-08-20)  
-**Related**: [Idea 05](05-home-assistant-thin-client.md) / [research 26](../research/26-home-assistant-thin-client.md) / [ADR 25](../decisions/25-home-assistant-thin-client.md) (HA node — where NUT would live) · [Idea 07](07-opnsense-futro-s930.md) (OPNsense router — adds a battery-backed load) · [Idea 06](06-homelab-energy-monitoring.md) / [research 27](../research/27-zigbee-energy-monitoring.md) (power telemetry) · [ADR 22](../decisions/22-k3s-arc-homelab.md) (k3s) · [ADR 23](../decisions/23-nas-on-ml110.md) (OMV NAS)
+**Related**: [Idea 05](05-home-assistant-thin-client.md) / [research 26](../research/26-home-assistant-thin-client.md) / [ADR 25](../decisions/25-home-assistant-thin-client.md) (HA node — where NUT would live) · [Idea 07](07-opnsense-futro-s930.md) (OPNsense router — adds a battery-backed load) · [Idea 06](06-homelab-energy-monitoring.md) / [research 27](../research/27-zigbee-energy-monitoring.md) (power telemetry) · [ADR 22](../decisions/22-k3s-arc-homelab.md) (k3s) · [ADR 29](../decisions/29-nas-backup-target-beetle-m3-omv.md) (OMV NAS)
 
 ---
 
 ## Context
 
-The lab is now a **multi-node fleet on one power strip** — M910q (k3s), ML110 OMV NAS +
-Beetle NAS, Wyse 3040 edge ingress, Wyse 5070 Home Assistant node. Nothing protects it from
-a brownout or a plug pulled by accident, and an unclean stop is exactly the wrong outcome for
+The lab is now a **multi-node fleet across two power strips** — M910q (k3s), Beetle NAS,
+Wyse 3040 edge ingress, Wyse 5070 Home Assistant node. Nothing protects it from a brownout or
+a plug pulled by accident, and an unclean stop is exactly the wrong outcome for
 - the **OMV NAS** (mdadm RAID1 + SMB/NFS exports),
 - the **Proxmox VE host** (VMs/LXC),
 - and **k3s** (etcd/containerd state).
@@ -110,11 +110,11 @@ installed **host-native on the PVE Debian base**, with the UPS USB cable plugged
         [ Wyse 5070 · Proxmox VE · 192.168.2.201 ]
         nut-server + nut-client  (MODE=netserver, :3493)
                         │ LAN
-        ┌───────────────┼───────────────┬───────────────┬───────────────┐
-        ▼               ▼               ▼               ▼               ▼
-   [ M910q ]      [ OMV NAS ]    [ Beetle NAS ]  [ Wyse 3040 ]  [ Futro S930 ]
-   netclient      netclient      netclient       netclient      netclient
-   (k3s)          (ML110)        (Unraid)        (edge)         (OPNsense)
+        ┌───────────────┬───────────────┬───────────────┐
+        ▼               ▼               ▼               ▼
+   [ M910q ]      [ Beetle NAS ]   [ Wyse 3040 ]  [ Futro S930 ]
+   netclient      netclient        netclient      netclient
+   (k3s)          (OMV)            (edge)         (OPNsense)
 ```
 
 **Why the PVE host and not k8s (M910q):**
@@ -203,5 +203,5 @@ first. Cross-links to [idea 05](05-home-assistant-thin-client.md) (host) and
 - [Gemini — Green Cell UPS 1500VA: specyfikacja i ograniczenia](https://gemini.google.com/share/65989fbedc98) (2026-08-20) — PowerProof 1500VA specs, NUT master/slave architecture, NUT on Proxmox vs k8s vs LXC
 - [Idea 05 — Home Assistant on a thin client](05-home-assistant-thin-client.md) · [research 26](../research/26-home-assistant-thin-client.md) · [ADR 25](../decisions/25-home-assistant-thin-client.md) — the node that would host the NUT server
 - [Idea 06 — Homelab energy monitoring](06-homelab-energy-monitoring.md) · [research 27](../research/27-zigbee-energy-monitoring.md) · [ADR 26](../decisions/26-zigbee-energy-monitoring.md) — per-device power telemetry
-- [ADR 22 — k3s + Azure Arc](../decisions/22-k3s-arc-homelab.md) · [ADR 23 — NAS on the ML110](../decisions/23-nas-on-ml110.md) · [ADR 27 — monitoring strategy](../decisions/27-monitoring-strategy.md)
+- [ADR 22 — k3s + Azure Arc](../decisions/22-k3s-arc-homelab.md) · [ADR 29 — NAS backup target on the Beetle M-III](../decisions/29-nas-backup-target-beetle-m3-omv.md) · [ADR 27 — monitoring strategy](../decisions/27-monitoring-strategy.md)
 - [Network UPS Tools (NUT)](https://networkupstools.org/) — `nutdrv_qx` driver, `upsd`/`upsmon`
