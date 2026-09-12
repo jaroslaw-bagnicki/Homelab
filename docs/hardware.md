@@ -52,7 +52,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 |---|---|
 | CPU | Intel **Pentium G4400** (Skylake, 2C/2T, 3.3 GHz, 3 MB L3) — **AES-NI present**; QuickSync H.264 + HEVC 8-bit decode |
 | RAM | **8 GB DDR4** (1× 8 GiB SODIMM @ 2133 MT/s — 2 slots, 1 free → 32 GB max) |
-| Storage | **SanDisk X600 `SD9SB8W-128G` 128 GB SSD** (`sda`, SMART PASSED) + **2× Seagate ST1000VT001-1RE172 1 TB 2.5"** (`sdb` `WDES3KB7` clean; `sdc` `WDEPBVR3` ⚠️ **1,056 reallocated** — past media event, stable, replace recommended) → mdadm RAID1 = 1 TB usable |
+| Storage | **SanDisk X600 `SD9SB8W-128G` 128 GB SSD** (`sda`, SMART PASSED) + **2× Seagate ST1000VT001-1RE172 1 TB 2.5"** (`sdb` `WDES3KB7` clean; `sdc` `WDEPBVR3` *1,056 reallocated — long self-test clean, kept + monitored*) → mdadm RAID1 = 1 TB usable |
 | SATA | H110 / Intel 100-C230 **AHCI** (port count pending); PCIe 3.0 x16 + 2× PCIe 2.0 x1; **no mSATA** |
 | PSU | **AcBel `POF001-280G`** (UPS-integrated `PSU UPS BEETLE/M-III`, DN P/N `01750279900`) — 250 W (225 W @50 °C), **80 Plus Gold** |
 | Network | 1× GbE Intel I219-V (`enp0s31f6`, MAC `00:01:2e:8e:14:0d`) · DHCP |
@@ -61,7 +61,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Cooling | **43.7 dB(A)** (UNI-T UT353); chassis blower + PSU fan (count TBC); internal **TOTEX NiMH 15.6 V 3000 mAh** UPS battery (`first use 12/2022`) — not OS-exposed |
 | Idle power | **14–16 W** measured (VRONE plug meter; ~23–24 W start transient) |
 | Role | OMV NAS backup-target successor to the ML110 — [issue #98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98) |
-| Acquired | 2026-09-01 · diagnostic 2026-09-12 ([research 32](research/32-wincor-beetle-m3-hardware-diagnostic.md)) — platform, drives, PSU/UPS examined; BIOS / Memtest / SATA-port count pending, `sdc` replace recommended |
+| Acquired | 2026-09-01 · diagnostic 2026-09-12 ([research 32](research/32-wincor-beetle-m3-hardware-diagnostic.md)) — platform, drives, PSU/UPS examined; BIOS / Memtest / SATA-port count pending, `sdc` kept + monitored |
 | Docs | [idea 01c](ideas/01c-nas-backup-target-wincor-beetle.md) · [research 32](research/32-wincor-beetle-m3-hardware-diagnostic.md) · [issue #98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98) |
 
 ### Edge Ingress — Dell Wyse 3040

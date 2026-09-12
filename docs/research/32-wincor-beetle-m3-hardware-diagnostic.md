@@ -15,8 +15,7 @@ SMART health before committing the OS. Same Phase 0 pattern as the
 
 **Status**: 🔨 In progress — platform, CPU, RAM, SSD, NIC, expansion, **all three drives** and the
 **PSU/UPS** examined (2026-09-12); the unit is a **Skylake / H110 / DDR4 platform**. Pending:
-`sdc` fresh long-test confirmation (error log clean, count stable), BIOS walk, physical SATA
-ports, Memtest86+, fan count ([Pending checks](#pending-checks)).
+BIOS walk, physical SATA ports, Memtest86+, fan count ([Pending checks](#pending-checks)).
 
 ---
 
@@ -26,8 +25,8 @@ ports, Memtest86+, fan count ([Pending checks](#pending-checks)).
 > Beetle M-III is the homelab NAS backup target running OpenMediaVault, succeeding the ML110.
 > This research doc is the Phase 0 hardware audit output that grounds that decision. It confirms
 > the platform — **Skylake / H110 / LGA1151 / DDR4, Pentium G4400, AES-NI, QuickSync H.264+HEVC
-> decode**, 8 GiB DDR4; the BIOS details remain to be confirmed, and the `sdc`
-> reallocated-sector finding calls for an array-member decision before the mirror is built.
+> decode**, 8 GiB DDR4; the BIOS details remain to be confirmed, and the `sdc` reallocated-sector
+> finding is resolved — **keep + monitor** (long self-test clean, count frozen).
 
 | Decision | Outcome (as of 2026-09-12) |
 |---|---|
@@ -39,7 +38,7 @@ ports, Memtest86+, fan count ([Pending checks](#pending-checks)).
 | SATA | Intel 100/C230 **SATA Controller [AHCI]** (`00:17.0`) — H110; physical port count pending |
 | Disk 0 | **SanDisk X600** `SD9SB8W-128G` 128 GB 2.5" SATA SSD (`sda`) — **SMART PASSED** (41,802 POH) — cache |
 | Disk 1 | **Seagate ST1000VT001-1RE172** 1 TB 2.5" (`sdb`, `WDES3KB7`) — **PASSED**, 0 reallocated, 65,545 POH |
-| Disk 2 | **Seagate ST1000VT001-1RE172** 1 TB 2.5" (`sdc`, `WDEPBVR3`) — **PASSED** but **1,056 reallocated** ⚠️ (past media event, currently stable; replace recommended) — see [Storage](#storage-sata--smart) |
+| Disk 2 | **Seagate ST1000VT001-1RE172** 1 TB 2.5" (`sdc`, `WDEPBVR3`) — **PASSED** but **1,056 reallocated** (past media event; long self-test clean, count frozen at 1,056 — **keep + monitor**) — see [Storage](#storage-sata--smart) |
 | USB | Kingston DataTraveler 3.0 64 GB (`sdb`) = Ventoy live USB, **not** a data drive |
 | PSU | **AcBel `POF001-280G`** (UPS-integrated `PSU UPS BEETLE/M-III`, DN P/N `01750279900`, S/N `5421CP10JW`) — **250 W** (225 W @50 °C), **80 Plus Gold** |
 | Dynamic IP | `192.168.2.158` (DHCP via mesh `192.168.2.1`) |
@@ -152,10 +151,12 @@ SMART detail:
     369,533 → 8,758,141). By 2026-09-12 the count is **1,056** (POH 65,545). The diagnostic
     itself created the remaps; they were simply not re-read until 09-12.
   - SCT temperature history shows the drive powered across 2026-09-11/12 (21–49 °C).
-  - **Read:** a **past, one-time media event** (one uncorrectable read → 1,056 sectors
-    remapped), **not ongoing degradation** — 0 pending / 0 candidates and a clean extended
-    test afterwards. Reallocations never reverse. For a 24/7 backup mirror the safe call is to
-    **replace `sdc`**; keeping it is a **watch** decision (see [Pending checks](#pending-checks)).
+  - **Long self-test (2026-09-12):** `Extended offline — Completed without error`,
+    `LBA_of_first_error = -`; **count frozen at 1,056**, 0 pending, error log still empty.
+  - **Read / decision:** a **past, one-time media event** (one uncorrectable read → 1,056
+    sectors remapped), **not ongoing degradation** — 0 pending / 0 candidates and a clean
+    full-surface test. Reallocations never reverse. **Decision: keep `sdc` as the RAID1 mirror
+    member with `sdb` and monitor via SMART** (replace was the conservative alternative).
 
 ### Drive provenance & recording type (2× Seagate)
 
@@ -165,7 +166,7 @@ previously completed an **extended self-test without error**; the 2026-09-12 re-
 **`sdb` still clean** while **`sdc` carries 1,056 reallocated sectors from a past media event**
 ([Storage](#storage-sata--smart)). That verification history is recorded on
 [issue #98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98). **Array plan (ADR 29):**
-**mdadm RAID1** across 2× 1 TB = **1 TB usable**; the `sdc` finding may change the member set.
+**mdadm RAID1** across 2× 1 TB = **1 TB usable**; **`sdc` is kept and monitored** (long self-test clean).
 
 ### Network
 
@@ -213,7 +214,7 @@ The `-uATX` M2.0 board provides **2× PCIe 2.0 x1** expansion slots.
 | RAM | **8 GiB DDR4** (1×8, 1 slot free, ≤32 GiB) |
 | QuickSync | H.264 + HEVC 8-bit decode |
 | SATA | Intel 100/C230 AHCI; **no mini-PCIe/mSATA**; port count pending |
-| Array | **2× Seagate 1 TB** → mdadm RAID1 = 1 TB usable; `sdc` under review |
+| Array | **2× Seagate 1 TB** → mdadm RAID1 = 1 TB usable; `sdc` kept + monitored (long-test clean) |
 | Cache | SanDisk X600 `SD9SB8W-128G` 128 GB SSD, PASSED |
 | NIC | **Intel I219-V** GbE |
 | Expansion | PCIe 3.0 x16 + 2× PCIe 2.0 x1 |
@@ -227,12 +228,11 @@ Phase 1 (OMV install + array) is the working direction
 
 ## Pending Checks
 
-1. **`sdc` verdict** — ✅ **error log checked 2026-09-12: no logged errors**, 1 historic
-   uncorrectable read, 3 read-recovery attempts, 0 pending / 0 realloc candidates (see
-   [Storage](#storage-sata--smart)). Outstanding: a **fresh `smartctl -t long /dev/sdc`** with
-   `smartctl -A` before/after to confirm the count is frozen at **1,056**. Count stable → drive
-   usable (**watch**); count grows → **replace**. Recommended: replace `sdc` before building
-   the 24/7 mirror.
+1. **`sdc` verdict** — ✅ **resolved 2026-09-12**: error log empty; the **long self-test
+   (`Extended offline`) completed without error** and the count is **frozen at 1,056** (0
+   pending, 0 realloc candidates) — see [Storage](#storage-sata--smart). **Decision: keep `sdc`
+   in the RAID1 mirror with `sdb` and monitor via SMART** (replace was the conservative
+   alternative).
 2. **HDD SMART** — ✅ **done 2026-09-12**: `sdb` clean (0 reallocated); `sdc` anomaly as above;
    CMR confirmed (Seagate Video 2.5 = Perpendicular); both at 6.0 Gb/s.
 3. **PSU label** — ✅ **done 2026-09-12**: **AcBel `POF001-280G`** (UPS-integrated), 250 W
@@ -271,7 +271,7 @@ Phase 1 (OMV install + array) is the working direction
 | RAM | 4 GB DDR2 (dead end) | **8 GB DDR4** (2 slots → 32 GB) |
 | Chipset | ICH9R (LGA775) | **H110 (LGA1151)** |
 | SATA | SATA II | 100/C230 AHCI (port count pending; no mSATA) |
-| Storage (array) | ~750 GB usable (2× RAID1 pairs) | **1 TB** (2× Seagate, mdadm RAID1 — `sdc` under review) + SanDisk 128 GB cache |
+| Storage (array) | ~750 GB usable (2× RAID1 pairs) | **1 TB** (2× Seagate, mdadm RAID1 — `sdc` kept; monitor) + SanDisk 128 GB cache |
 | NIC | Broadcom BCM5722 | **Intel I219-V** |
 | Expansion | modest | **PCIe 3.0 x16 + 2× x1** |
 | PSU | HP tower (wattage n/c) | **AcBel `POF001-280G` 250 W, 80+ Gold** (UPS-integrated) |
