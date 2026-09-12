@@ -364,6 +364,12 @@ never traverses the host's UFW chains — UFW here is host-management-plane only
    strip 1, pull the plug under **disk spin-up load**, not idle, and confirm it does not hard-reset.
    A reset despite the UPS means the Beetle moves to a surge-only outlet (and the budget moves to a
    pure-sine unit); the external-brick nodes are unaffected either way.
+   **Partial pass 2026-09-12:** a 2–3 min on-battery ride — UPS switched and beeped normally, Beetle on
+   a battery-backed outlet — caused **no reset**, but at light load, booting an OS from a pendrive with
+   no spinning disks. Re-test once OMV is installed with both 1 TB HDDs and they are active.
+   **Same ride is the runtime measurement:** note the battery charge % before and after a few minutes on
+   battery at the settled load — charge-per-minute extrapolates to real runtime without draining the
+   pack, replacing the 35–45 min datasheet figure.
 
 ## Verification Checklist
 

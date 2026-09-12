@@ -44,7 +44,8 @@ node stop itself on low battery.**
   secondaries. An unprivileged LXC cannot power off its own host, so the hypervisor stops itself and
   Proxmox then stops the guests in order.
 - **Shutdown triggers on low battery (`LB`)**, not on a runtime countdown.
-- **The Beetle M-III becomes the NAS client once it stands** ([ADR 29](29-nas-backup-target-beetle-m3-omv.md)).
+- **The Beetle M-III becomes the NAS client once it stands; the ML110 is not joined** — it retires as
+  the OMV NAS ([ADR 29](29-nas-backup-target-beetle-m3-omv.md)).
 - **The Home Assistant NUT integration is deferred** until the HA OS VM exists.
 
 ## Consequences
@@ -64,7 +65,9 @@ node stop itself on low battery.**
 - **No outlet power-off** — the driver dies with its container, so the UPS is left to drain rather
   than being told to cut power.
 - **Modified sine constrains coverage** — harmless for the external DC bricks, but the Beetle's
-  active-PFC supply has to clear a pull-the-plug test; a pure-sine unit is the fallback
+  active-PFC supply has to clear a pull-the-plug test; a pure-sine unit is the fallback. A light-load on-battery ride on
+  2026-09-12 (2–3 min, no spinning disks) caused no reset — promising, but not conclusive: the
+  decisive test is OMV with both HDDs installed and active.
   ([ADR 29](29-nas-backup-target-beetle-m3-omv.md)).
 - **Recovery is manual until decided otherwise** — after a full drain the nodes stay off, so BIOS
   AC-restore behaviour is an open per-node choice.
