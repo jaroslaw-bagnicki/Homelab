@@ -13,12 +13,13 @@ Significant architectural and technology choices recorded in
 
 | # | Date | ADR | Status |
 |---|------|-----|--------|
+| 29 | 2026‑09‑12 | [NAS Backup Target — Wincor Beetle M-III (OpenMediaVault)](29-nas-backup-target-beetle-m3-omv.md) | Accepted |
 | 28 | 2026‑08‑30 | [Dedicated Fleet-Wide SSH Admin Account & Key](28-fleet-admin-account-and-key.md) | Accepted |
 | 27 | 2026‑08‑15 | [Homelab Monitoring & Observability Strategy — Two-Tier Model (Azure Monitor via Arc + Local Monitoring Stack)](27-monitoring-strategy.md) | Accepted |
 | 26 | 2026‑08‑15 | [Zigbee Energy Monitoring — Z2M → Prometheus, Independent of Home Assistant](26-zigbee-energy-monitoring.md) | Accepted |
 | 25 | 2026‑08‑14 | [Home Assistant on a Dedicated Thin-Client Node (Wyse 5070 + Proxmox VE)](25-home-assistant-thin-client.md) | Proposed |
 | 24 | 2026‑08‑09 | [Edge Ingress on a Dedicated Thin-Client Appliance](24-edge-ingress-appliance.md) | Accepted |
-| 23 | 2026‑08‑08 | [NAS on the HP ProLiant ML110 (OpenMediaVault)](23-nas-on-ml110.md) | Accepted |
+| 23 | 2026‑08‑08 | [NAS on the HP ProLiant ML110 (OpenMediaVault)](23-nas-on-ml110.md) | Superseded by [ADR 29](29-nas-backup-target-beetle-m3-omv.md) |
 | 22 | 2026‑07‑26 | [Migrate Homelab Workloads to Kubernetes (k3s + Azure Arc)](22-k3s-arc-homelab.md) | Accepted |
 | 21 | 2026‑07‑16 | [Per-Project OpenCode Container Images](21-opencode-instance-images.md) | Accepted |
 | 20 | 2026‑07‑05 | [Caddy as Single Routing Layer on Cloudlab](20-caddy-single-routing-layer.md) | Accepted |

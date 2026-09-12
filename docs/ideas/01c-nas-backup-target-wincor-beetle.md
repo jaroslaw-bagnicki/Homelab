@@ -1,6 +1,6 @@
 # Idea 01c — Homelab NAS: Wincor Beetle M-III (Unraid)
 
-**Status**: 🧠 Idea  
+**Status**: 📋 Planned — **OMV**, not Unraid: [ADR 29](../decisions/29-nas-backup-target-beetle-m3-omv.md) settles the OS (Unraid deferred); the platform analysis below stands  
 **Date**: 2026-08-22  
 **Sources**:
 - [Gemini thread 4 — Wincor Beetle M-III vs EliteDesk 800 G1 SFF](https://share.gemini.google/H4KW01K8tTUZ) — dimensions, CPU support, cooling, fan control/noise, Zigbee fan control, disk capacity/mounting, NAS-platform analysis

@@ -1,7 +1,7 @@
 # NAS on the HP ProLiant ML110 (OpenMediaVault)
 
 **Date:** 2026-08-08
-**Status:** Accepted
+**Status:** Superseded by [ADR 29](29-nas-backup-target-beetle-m3-omv.md) (2026-09-12)
 
 ---
 

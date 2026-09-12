@@ -61,7 +61,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | PSU | **AcBel 250 W, 80 Plus Gold** (Wincor `01750279900`) |
 | Network | 1× GbE Intel I217-V · DHCP (MAC and address are the returned unit's — re-verify) |
 | Firmware | BIOS AMI `WN STD 07/16` (2018-12-19) · board `K2.1-H81-uATX` · SN `000000001750261682` |
-| OS | **OMV** — decided 2026-09-12; Unraid dropped for now |
+| OS | **OMV** — [ADR 29](decisions/29-nas-backup-target-beetle-m3-omv.md) (2026-09-12); Unraid deferred |
 | Cooling | 3 fans (front CPU+PSU, rear PSU-end, UPS-unit); internal UPS battery (VOTEX 15.6 V 3000 mAh) |
 | Role | OMV NAS backup-target successor to the ML110 — [issue #98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98) |
 | Acquired | 2026-09-01 · diagnostic complete 2026-09-05 ([research 32](research/32-wincor-beetle-m3-hardware-diagnostic.md)); **returned as wrong spec** — replacement arriving 2026-09-12 |

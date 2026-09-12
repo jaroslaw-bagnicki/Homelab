@@ -1,0 +1,76 @@
+# NAS Backup Target — Wincor Beetle M-III (OpenMediaVault)
+
+**Date:** 2026-09-12
+**Status:** Accepted
+**Supersedes:** [ADR 23](23-nas-on-ml110.md)
+
+---
+
+## Context
+
+[ADR 23](23-nas-on-ml110.md) repurposed a retired **HP ProLiant ML110 G5** as the homelab
+NAS backup target. That choice was driven by **zero acquisition cost**, and its known cost
+was power and noise: ~80 W idle (~€150–200/yr) and a 3-fan chassis — the loudest box in the
+lab. It was always a stopgap.
+
+[Idea 01c](../ideas/01c-nas-backup-target-wincor-beetle.md) scoped a **Wincor Beetle M-III**
+POS terminal as the successor, on **Unraid**. A unit was acquired 2026-09-01 and audited
+([research 32](../research/32-wincor-beetle-m3-hardware-diagnostic.md)); it was returned to
+the seller as the **wrong spec**, with the replacement due 2026-09-12. The OS choice —
+Unraid's paid licence vs OMV — was the open gate in [issue #98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98).
+
+## Decision
+
+**The Wincor Beetle M-III becomes the homelab NAS backup target, running OpenMediaVault —
+Unraid dropped.** The ML110 retires once the Beetle's array is verified.
+
+- **OS: OMV, not Unraid.** Removes the licence cost and keeps the NAS on the
+  **Debian-family** path already proven on the ML110 (ADR 23) — the same mdadm + XFS/ext4
+  design, the same runbooks, and no per-OS exception to the [ADR 27](27-monitoring-strategy.md)
+  `netdata` role. Unraid's advantages (mixed-size arrays, add-a-drive, running from USB) are
+  not needed for a two-disk mirror.
+- **Storage design carries over — mdadm RAID1, no ZFS**, on ADR 23's reasoning: a thin RAM
+  budget, per-disk `smartctl` visibility, and arrays that import on any Linux box.
+- **The NAS stays the local backup target** — NFS for Longhorn volume snapshots (fires with
+  k3s, [ADR 22](22-k3s-arc-homelab.md)) and SMB backup landing (ADR 02). The successor work
+  moves off the ML110 (issues [#54](https://github.com/jaroslaw-bagnicki/Homelab/issues/54) /
+  [#62](https://github.com/jaroslaw-bagnicki/Homelab/issues/62)).
+- **Unraid stays a migration path, not a rejected option** — idea 01 notes the disks can be
+  imported if the licence ever becomes worth it.
+
+## Consequences
+
+- **Licence cost avoided**, and no USB-boot / flash-wear management.
+- **One OS across the NAS estate** — OMV tooling and runbooks 22/23/26 transfer directly.
+- **Debian-family, so not a monitoring exception** — the Beetle child fits the ADR 27 role
+  parameterisation, unlike the Unraid path.
+- **Capacity growth is less flexible than Unraid** — expansion means a second mirror pair or
+  a PCIe SATA HBA, not "add a drive of any size".
+- **The acquired unit must be re-audited** — it was the wrong spec, so research 32's
+  inventory (CPU / RAM / SATA / PSU) is unreliable until the replacement is verified; the
+  8 GB RAM upgrade and SATA-port re-seating are re-confirmed then.
+- **Interim dependency on the ML110** — it remains the live backup target until the Beetle
+  array is verified, so its power/noise saving is not realised until retirement.
+- **The Beetle's active-PFC PSU constrains UPS coverage** — a modified-sine unit must be
+  proven by a pull-the-plug test, or the box sits on non-battery outlets
+  ([idea 09](../ideas/09-ups-nut-home-assistant.md)).
+
+### Alternatives Considered
+
+- **Unraid** (paid, ~$60–130) — the original direction in idea 01c: the best mixed-disk UX,
+  cache pooling, USB boot. Deferred: the licence buys flexibility a two-disk mirror does not
+  need, and it would add a per-OS exception to the monitoring role.
+- **Keep the ML110** — rejected: ~80 W idle and 3-fan noise for a two-disk array, and the
+  successor is already owned.
+- **TrueNAS / ZFS** — rejected in ADR 23 and unchanged here (the RAM ceiling makes it a poor
+  fit).
+
+---
+
+## References
+
+- [ADR 23 — NAS on the HP ProLiant ML110 (OpenMediaVault)](23-nas-on-ml110.md) — superseded by this ADR
+- [Idea 01c — Homelab NAS: Wincor Beetle M-III](../ideas/01c-nas-backup-target-wincor-beetle.md)
+- [Research 32 — Beetle M-III hardware diagnostic](../research/32-wincor-beetle-m3-hardware-diagnostic.md) — acquired-unit audit (spec to be re-verified)
+- [ADR 27 — Monitoring strategy](27-monitoring-strategy.md) — the shared `netdata` role this keeps the Beetle inside
+- [ADR 22 — k3s + Azure Arc](22-k3s-arc-homelab.md) — Longhorn NFS backup target
