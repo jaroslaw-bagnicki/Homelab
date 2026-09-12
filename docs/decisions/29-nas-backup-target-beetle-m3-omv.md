@@ -1,6 +1,6 @@
 # NAS Backup Target — Wincor Beetle M-III (OpenMediaVault)
 
-**Date:** 2026-09-12
+**Date:** 2026-09-05
 **Status:** Accepted
 **Supersedes:** [ADR 23](23-nas-on-ml110.md)
 
@@ -14,10 +14,16 @@ was power and noise: ~80 W idle (~€150–200/yr) and a 3-fan chassis — the l
 lab. It was always a stopgap.
 
 [Idea 01c](../ideas/01c-nas-backup-target-wincor-beetle.md) scoped a **Wincor Beetle M-III**
-POS terminal as the successor, on **Unraid**. A unit was acquired 2026-09-01 and audited
-([research 32](../research/32-wincor-beetle-m3-hardware-diagnostic.md)); it was returned to
-the seller as the **wrong spec**, with the replacement due 2026-09-12. The OS choice —
-Unraid's paid licence vs OMV — was the open gate in [issue #98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98).
+POS terminal as the successor, on **Unraid**. The **2026-09-05 Phase 0 audit**
+([research 32](../research/32-wincor-beetle-m3-hardware-diagnostic.md)) settled the successor
+direction — the acquired Beetle replaces the ML110 as the backup target, on **2× Seagate
+(1 parity + 1 data = 1 TB) + the SanDisk X600 cache** — and invalidated idea 01c's platform
+premise (a Haswell/H81 box, not Skylake/H110). The unit was returned to the seller as the
+**wrong spec**, with the replacement due 2026-09-12.
+
+The **OS choice stayed open past the audit**: Unraid was the working direction, gated on its
+paid licence, with OMV as the fallback ([issue #98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98)).
+It was confirmed as **OMV** on 2026-09-12 — that part is what this ADR adds to the 09-05 direction.
 
 ## Decision
 

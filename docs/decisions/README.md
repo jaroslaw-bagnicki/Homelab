@@ -13,7 +13,7 @@ Significant architectural and technology choices recorded in
 
 | # | Date | ADR | Status |
 |---|------|-----|--------|
-| 29 | 2026‑09‑12 | [NAS Backup Target — Wincor Beetle M-III (OpenMediaVault)](29-nas-backup-target-beetle-m3-omv.md) | Accepted |
+| 29 | 2026‑09‑05 | [NAS Backup Target — Wincor Beetle M-III (OpenMediaVault)](29-nas-backup-target-beetle-m3-omv.md) | Accepted |
 | 28 | 2026‑08‑30 | [Dedicated Fleet-Wide SSH Admin Account & Key](28-fleet-admin-account-and-key.md) | Accepted |
 | 27 | 2026‑08‑15 | [Homelab Monitoring & Observability Strategy — Two-Tier Model (Azure Monitor via Arc + Local Monitoring Stack)](27-monitoring-strategy.md) | Accepted |
 | 26 | 2026‑08‑15 | [Zigbee Energy Monitoring — Z2M → Prometheus, Independent of Home Assistant](26-zigbee-energy-monitoring.md) | Accepted |
