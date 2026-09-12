@@ -1,6 +1,6 @@
 # NAS Backup Target — Wincor Beetle M-III (OpenMediaVault)
 
-**Date:** 2026-09-05
+**Date:** 2026-09-12
 **Status:** Accepted
 **Supersedes:** [ADR 23](23-nas-on-ml110.md)
 
@@ -14,16 +14,15 @@ was power and noise: ~80 W idle (~€150–200/yr) and a 3-fan chassis — the l
 lab. It was always a stopgap.
 
 [Idea 01c](../ideas/01c-nas-backup-target-wincor-beetle.md) scoped a **Wincor Beetle M-III**
-POS terminal as the successor, on **Unraid**. The **2026-09-05 Phase 0 audit**
+POS terminal as the successor, on **Unraid**. The **2026-09-12 Phase 0 audit**
 ([research 32](../research/32-wincor-beetle-m3-hardware-diagnostic.md)) settled the successor
-direction — the acquired Beetle replaces the ML110 as the backup target, on **2× Seagate
-(1 parity + 1 data = 1 TB) + the SanDisk X600 cache** — and invalidated idea 01c's platform
-premise (a Haswell/H81 box, not Skylake/H110). The unit was returned to the seller as the
-**wrong spec**, with the replacement due 2026-09-12.
+direction — the Beetle replaces the ML110 as the backup target, on **2× Seagate 1 TB in a
+RAID1 mirror (1 TB usable) + the SanDisk X600 cache** — and confirmed the **Skylake / H110 /
+LGA1151 / DDR4** platform, Pentium G4400, 8 GB DDR4.
 
 The **OS choice stayed open past the audit**: Unraid was the working direction, gated on its
 paid licence, with OMV as the fallback ([issue #98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98)).
-It was confirmed as **OMV** on 2026-09-12 — that part is what this ADR adds to the 09-05 direction.
+It was confirmed as **OMV** on 2026-09-12 — that part is what this ADR adds to the audited direction.
 
 ## Decision
 
@@ -52,9 +51,10 @@ Unraid dropped.** The ML110 retires once the Beetle's array is verified.
   parameterisation, unlike the Unraid path.
 - **Capacity growth is less flexible than Unraid** — expansion means a second mirror pair or
   a PCIe SATA HBA, not "add a drive of any size".
-- **The acquired unit must be re-audited** — it was the wrong spec, so research 32's
-  inventory (CPU / RAM / SATA / PSU) is unreliable until the replacement is verified; the
-  8 GB RAM upgrade and SATA-port re-seating are re-confirmed then.
+- **Phase 0 is verified on this unit** — platform (Skylake / H110 / DDR4), CPU, RAM, NIC,
+  PSU/UPS and all three drives are confirmed in
+  [research 32](../research/32-wincor-beetle-m3-hardware-diagnostic.md); the BIOS configuration
+  walk, SATA-port count and Memtest86+ remain as pre-install checks.
 - **Interim dependency on the ML110** — it remains the live backup target until the Beetle
   array is verified, so its power/noise saving is not realised until retirement.
 - **The Beetle's active-PFC PSU constrains UPS coverage** — a modified-sine unit must be
@@ -77,6 +77,6 @@ Unraid dropped.** The ML110 retires once the Beetle's array is verified.
 
 - [ADR 23 — NAS on the HP ProLiant ML110 (OpenMediaVault)](23-nas-on-ml110.md) — superseded by this ADR
 - [Idea 01c — Homelab NAS: Wincor Beetle M-III](../ideas/01c-nas-backup-target-wincor-beetle.md)
-- [Research 32 — Beetle M-III hardware diagnostic](../research/32-wincor-beetle-m3-hardware-diagnostic.md) — acquired-unit audit (spec to be re-verified)
+- [Research 32 — Beetle M-III hardware diagnostic](../research/32-wincor-beetle-m3-hardware-diagnostic.md) — Phase 0 audit (platform, PSU/UPS and drives confirmed; BIOS / SATA-port / Memtest pending)
 - [ADR 27 — Monitoring strategy](27-monitoring-strategy.md) — the shared `netdata` role this keeps the Beetle inside
 - [ADR 22 — k3s + Azure Arc](22-k3s-arc-homelab.md) — Longhorn NFS backup target
