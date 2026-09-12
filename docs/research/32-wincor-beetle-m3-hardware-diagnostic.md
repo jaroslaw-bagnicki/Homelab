@@ -231,6 +231,7 @@ The `-uATX` M2.0 board offers **2× x1** rather than idea 01c's assumed "1× x16
 |---|---|
 | Thermals | pch 32 °C; package 30 °C; cores 25/30 °C (idle, live session) |
 | CPU idle | ~800 MHz (power state) |
+| **Idle power (measured)** | **14–16 W** settled (VRONE plug meter, 2026-09-12); ~**23–24 W** during/just after start (POST + spin-up transient), then drops |
 | PSU | **AcBel `POF001-280G`** — `PSU UPS BEETLE/M-III` (UPS-integrated), DN P/N `01750279900`, S/N `5421CP10JW`, date `B2202` REV `E9`. **250 W** max @45 °C (225 W @50 °C), **80 Plus Gold**; 100–240 V input. Rails: +3.3 V 4.0 A · **+12.2 V 10.5 A** · +5.1 V 8.2 A · +12.0 V 1.5 A · +5 Vsb 2.3 A · +24.8 V 0.6 A · +19 VBat 6.0 A. +12 V ≈ 128 W — ample for 2× 2.5" HDDs + SSD |
 | Cooling | **43.7 dB(A)** measured with a **UNI-T UT353**; fan count still TBC (a chassis blower + the PSU's own fan are visible) |
 | UPS battery | Internal **TOTEX International NiMH, 15.6 V 3000 mAh** (`first use 12/2022`, DN P/N `01750279901`) — **not OS-exposed** (`/sys/class/power_supply` empty), so a hardware nicety only; use a NUT-compatible external UPS for shutdown (idea 09) |
@@ -310,6 +311,7 @@ Unraid/OMV add-a-drive or mdadm RAID1). Phase 1 (OMV install + array) is the wor
 | Expansion | modest | x16 + x1 | **PCIe 3.0 x16 + 2× x1** |
 | PSU | HP tower (wattage n/c) | FSP/Fortron 80+ Gold 220–300 W | **AcBel `POF001-280G` 250 W, 80+ Gold** (UPS-integrated) |
 | Noise | 42–58 dB | ~35–38 dB | **43.7 dB(A)** measured (UT353) |
+| Idle power | ~60–80 W | ~15–25 W | **14–16 W** measured (23–24 W start transient) |
 | Footprint | full tower | ~9.7 L compact | ~9.7 L compact |
 | OS | OMV + mdadm | Unraid (planned) | **OMV + mdadm RAID1** (ADR 29) |
 | Status | ✅ base for the existing OMV NAS | — (what was described/paid for) | 🔨 diagnostic in progress, platform confirmed |
