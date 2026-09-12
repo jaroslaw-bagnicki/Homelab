@@ -52,7 +52,7 @@ once it is ready to start — a row leaves the table with the PR that completes 
 
 | Item | Effort | Next step | Refs |
 |---|---|---|---|
-| **UPS + NUT graceful shutdown** | ⭐⭐ | Unit arriving — record the model + USB controller, then NUT server on the HA node and the fleet-wide clients | [#111](https://github.com/jaroslaw-bagnicki/Homelab/issues/111) · [idea 09](ideas/09-ups-nut-home-assistant.md) |
+| **UPS + NUT graceful shutdown** | ⭐⭐ | Unit on the HA node (`0665:5161`, runbook 29) — execute it: LXC 103 + `nutdrv_qx` probe, then the PVE host and the `lab`/`edge` clients | [#111](https://github.com/jaroslaw-bagnicki/Homelab/issues/111) · [runbook 29](runbooks/29-nut-ups-shutdown.md) |
 | **Netdata children — Edge (RAM-only), Lab (host-native), OMV, Beetle** | ⭐ | Re-point onto the Parent once it lands — HA runs the Parent itself, so it is not a child | [#80](https://github.com/jaroslaw-bagnicki/Homelab/issues/80) · [#104](https://github.com/jaroslaw-bagnicki/Homelab/issues/104) |
 | **Power monitoring (Zigbee/Z2M)** | ⭐⭐ | Zigbee energy plugs → Prometheus, bootstrapped standalone on the M910q (ADR 26 — independent of Home Assistant) — sequenced **before** k3s | [#73](https://github.com/jaroslaw-bagnicki/Homelab/issues/73) · [ADR 26](decisions/26-zigbee-energy-monitoring.md) |
 | **YUMI multiboot USB standard** | ⭐ | ADR 29 + manage-YUMI runbook; de-conflate the Ventoy references | [#107](https://github.com/jaroslaw-bagnicki/Homelab/issues/107) · [research 12](research/12-first-boot-setup.md) |
