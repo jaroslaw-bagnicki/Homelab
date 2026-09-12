@@ -166,7 +166,6 @@ Automation direction (dashboard + notifications first, escalation later):
 | **Pure-sine UPS** (GC Pure Power / CyberPower PFC) | Only if Beetle/NAS/rack on battery | Needed for active-PFC ATX supplies; ~800–1200 PLN — revisit if the test fails |
 | **NUT server in k8s** (M910q) | Rejected | USB device-plugin + dependency on cluster health; shutdown orchestration spills into API/SSH hacks |
 | **NUT server in LXC** (on PVE) | Optional | Keeps PVE vanilla, but needs USB passthrough + a host-side client to power off the hypervisor |
-| **Vendor GC app** | Rejected | Standard NUT drives all nodes (server + clients) and integrates with Home Assistant |
 | Charging phones/peripherals from UPS outlets | Avoid | Wastes battery runtime that belongs to the servers |
 
 ## Open questions

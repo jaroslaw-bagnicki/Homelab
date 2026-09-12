@@ -34,8 +34,8 @@ Three findings on 2026-09-12 pinned the remaining choices:
 **Drive the shared rail with NUT, run its server in a dedicated LXC on the HA node, and let every
 node stop itself on low battery.**
 
-- **NUT, replacing the vendor app.** One mechanism drives a heterogeneous fleet, and it already has
-  a Home Assistant integration and a monitoring path.
+- **NUT.** One mechanism drives a heterogeneous fleet, and it already has a Home Assistant
+  integration and a monitoring path.
 - **NUT server in a dedicated unprivileged LXC (103) on the HA node's Proxmox** — chosen over
   host-native on the base, for container isolation and config that folds into VM/LXC backups.
 - **Driver `nutdrv_qx`**, with `port = auto` plus `vendorid`/`productid`. The vendor-defined usage
@@ -52,8 +52,8 @@ node stop itself on low battery.**
 
 - **Every node reacts to the same UPS state** — the NAS array and its exports, the Proxmox guests and
   k3s get orderly stops instead of a power cut.
-- **No vendor-app coupling** — GCUPS drops back to a diagnostics-only tool, leaving the telemetry
-  path into Netdata/Prometheus open ([ADR 27](27-monitoring-strategy.md),
+- **The UPS state is served on the LAN by NUT** — nothing workstation-side sits in the path, so the
+  telemetry route into Netdata/Prometheus stays open ([ADR 27](27-monitoring-strategy.md),
   [#73](https://github.com/jaroslaw-bagnicki/Homelab/issues/73)).
 - **The LXC choice does not remove host-side NUT** — the hypervisor still needs its own `upsmon`, and
   the container has to be running for the host to know the battery state at all.
@@ -76,9 +76,6 @@ node stop itself on low battery.**
 
 ### Alternatives Considered
 
-- **The vendor GCUPS app** — rejected: a workstation-side app with a single-owner USB HID interface,
-  no fleet-wide client, and a remote mode that is not a transport. Still useful — it identified the
-  unit and its status fields while NUT did not yet exist.
 - **NUT server host-native on the base** (idea 09's recommendation) — simpler: no USB passthrough, no
   host-side client, no boot ordering to reason about. Not taken; the LXC route instead pays for
   isolation with the host-side `upsmon`, the passthrough, and a container that must be up for the

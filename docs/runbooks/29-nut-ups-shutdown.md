@@ -51,8 +51,8 @@ defined order.
 
 ## Prerequisites
 
-- UPS on the HA node's USB, mains connected, and **GCUPS closed on the Windows workstation** — the
-  HID interface is single-owner, so the container stays blind while the vendor app holds it.
+- UPS on the HA node's USB and mains connected. The HID interface is **single-owner** — nothing else
+  may be holding the device, or the container stays blind to it.
 - `fleetadm` SSH + `sudo -n` on `ha`, `lab`, `edge`.
 - Azure Key Vault access to `homelab-bysxdb-kv` for the monitor password.
 - Refs: [idea 09](../ideas/09-ups-nut-home-assistant.md) (architecture) ·
@@ -234,7 +234,7 @@ Record from the `upsc` dump:
 |---|---|
 | `ups.status` | `OL` / `OB` / `LB` — the shutdown trigger |
 | `battery.charge` | usable for a threshold trigger if runtime is absent |
-| `battery.voltage` | sanity-check against the LCD / GCUPS reading (27.3 V charging) |
+| `battery.voltage` | sanity-check against the unit's own LCD (27.3 V visible while charging) |
 | **`battery.runtime`** | **if absent → shut down on `LB` only**; do not build a countdown on it |
 
 ⚠ If the driver cannot claim the device, the cause is almost always the kernel's `usbhid` holding
@@ -243,8 +243,8 @@ the interface. Fallbacks, in order: (1) confirm the node really is visible insid
 container privileged. Do **not** paper over it by switching drivers — `usbhid-ups` is structurally
 not an option for a vendor-defined usage page.
 
-⚠ The unit exposes **no runtime estimate** in the vendor app (`-1VA` / `-1AH`), so expect
-`battery.runtime` to be missing and plan the trigger as **`LB`**. Confirm rather than assume.
+⚠ Expect the unit to expose **no runtime estimate**, so plan the trigger as **`LB`** — §3 confirms it
+rather than assuming it.
 
 ## 4. Proxmox host — NUT client
 
@@ -353,8 +353,7 @@ never traverses the host's UFW chains — UFW here is host-management-plane only
    Every node must flip to `OB` within a few seconds while the fleet keeps running. Plug back in
    and confirm `OL`.
 3. **Quick test (non-destructive)** — `upscmd -l ups@192.168.2.202` lists what the unit actually
-   supports. The vendor app greyed out the **discharge test**, so only a short self-test is likely
-   available.
+   supports. Expect a short self-test only: the discharge test is not available on this unit.
 4. **Shutdown drill** — `upsmon -c fsd` on **one client first** (that node will genuinely shut
    down). Only after that behaves, run it on the Proxmox host as the acceptance test — it takes the
    whole lab down, so schedule it.
