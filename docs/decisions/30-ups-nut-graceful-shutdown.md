@@ -68,8 +68,10 @@ node stop itself on low battery.**
   ([ADR 29](29-nas-backup-target-beetle-m3-omv.md)).
 - **Recovery is manual until decided otherwise** — after a full drain the nodes stay off, so BIOS
   AC-restore behaviour is an open per-node choice.
-- **The UPS's own consumption is material** — a ~14.2 W standby figure (unverified buyer report)
-  against a fleet that idles around 60–85 W.
+- **The UPS's own consumption is material** — measured 2026-09-12 with an inline plug meter at the
+  socket: **17 W** for the unit alone, holding three servers that draw **12–13 W** together
+  (8–9 W to 19 W instantaneous). At low load the UPS is the largest single consumer in the lab, so
+  its draw belongs in every sizing and runtime figure.
 - **The router is not covered** — OPNsense is FreeBSD and needs its own client path
   ([#96](https://github.com/jaroslaw-bagnicki/Homelab/issues/96)).
 
