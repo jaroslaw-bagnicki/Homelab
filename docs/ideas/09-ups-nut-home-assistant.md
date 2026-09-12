@@ -7,7 +7,7 @@
 > automations. A short outage should become a non-event; a long one should shut the lab
 > down in order instead of killing it.
 
-**Status**: 📋 Planned — unit acquired, arriving 2026-09-12 (model to be recorded on arrival); implementation tracked in #111  
+**Status**: � Implementing — unit arrived 2026-09-12 (Green Cell **UPSLM600**, USB `0665:5161`); decisions recorded in [ADR 30](../decisions/30-ups-nut-graceful-shutdown.md), implementation tracked in #111  
 **Date**: 2026-09-10  
 **Source**: [Gemini — Green Cell UPSLM360 spec + homelab fit](https://gemini.google.com/share/fd9149b0c95e) (2026-09-08) · [Gemini — Green Cell PowerProof 1500VA + NUT configuration](https://gemini.google.com/share/65989fbedc98) (2026-08-20)  
 **Related**: [Idea 05](05-home-assistant-thin-client.md) / [research 26](../research/26-home-assistant-thin-client.md) / [ADR 25](../decisions/25-home-assistant-thin-client.md) (HA node — where NUT would live) · [Idea 07](07-opnsense-futro-s930.md) (OPNsense router — adds a battery-backed load) · [Idea 06](06-homelab-energy-monitoring.md) / [research 27](../research/27-zigbee-energy-monitoring.md) (power telemetry) · [ADR 22](../decisions/22-k3s-arc-homelab.md) (k3s) · [ADR 23](../decisions/23-nas-on-ml110.md) (OMV NAS)

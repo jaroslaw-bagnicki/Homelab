@@ -3,9 +3,10 @@
 > Put the lab's shared power rail under **NUT (Network UPS Tools)**: the Green Cell **UPSLM600**
 > stays plugged into the Home Assistant node's Proxmox host, a dedicated **LXC 103** runs the NUT
 > server (`upsd` + `nutdrv_qx`), and the hypervisor plus the fleet each run a NUT client that stops
-> the node in order once the battery runs down. Tracked in
-> [issue #111](https://github.com/jaroslaw-bagnicki/Homelab/issues/111); the load profile, model
-> comparison and rejected alternatives are in [idea 09](../ideas/09-ups-nut-home-assistant.md).
+> the node in order once the battery runs down. The decision is recorded in
+> [ADR 30](../decisions/30-ups-nut-graceful-shutdown.md); implementation is tracked in
+> [issue #111](https://github.com/jaroslaw-bagnicki/Homelab/issues/111), and the load profile plus
+> model comparison are in [idea 09](../ideas/09-ups-nut-home-assistant.md).
 >
 > ⚠ **§3 is a gate.** The NUT server is only trusted once the driver actually attaches and answers
 > `upsc`. Until then everything below it is expected behaviour, not verified behaviour.
@@ -376,8 +377,9 @@ never traverses the host's UFW chains — UFW here is host-management-plane only
 
 ## Follow-ups
 
-- **ADR** — record the settled direction (NUT over the vendor app, server in an LXC on the HA node,
-  `nutdrv_qx` for `0665:5161`, threshold trigger) once §3 and §7 have produced the evidence.
+- **ADR** — the direction is recorded in [ADR 30](../decisions/30-ups-nut-graceful-shutdown.md). It is
+  dated to the decision, so if §3 or §7 fails the fix is to **update or supersede it** — not to leave
+  it silently wrong.
 - **Home Assistant integration** — NUT integration at `192.168.2.202:3493` plus `OB`/`LB`/`OL`
   automations, once the HA OS VM lands ([#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68) /
   [#85](https://github.com/jaroslaw-bagnicki/Homelab/issues/85)).
