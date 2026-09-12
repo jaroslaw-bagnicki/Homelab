@@ -12,7 +12,7 @@ hardware detail see [Hardware Inventory](hardware.md); for change history see
 |---|---|---|---|---|
 | **Lab** | main workload host (Docker → k3s) | Lenovo M910q Tiny · Ubuntu 24.04 LTS · Azure Arc | `192.168.2.200` | ✅ |
 | **OMV NAS** | backup target (retiring) | HP ProLiant ML110 G5 · OMV 8.3 | `192.168.2.210` | ✅ |
-| **Beetle NAS** | backup target (successor to ML110) | Wincor Beetle M-III · OS TBD (Unraid vs OMV) | DHCP | 🔨 |
+| **Beetle NAS** | backup target (successor to ML110) | Wincor Beetle M-III · OMV | DHCP | 🔨 |
 | **Edge Ingress** | public ingress (cloudflared + Caddy) | Dell Wyse 3040 · Debian 13 minimal | `192.168.2.240` | 🔨 |
 | **Home Assistant** | smart home node | Wyse 5070 · Proxmox VE | `192.168.2.201` | 🔨 |
 | **LLM server** | local LLM inference | Minisforum X1 Lite | TBD | 🧠 |
@@ -43,9 +43,9 @@ once it is ready to start — a row leaves the table with the PR that completes 
 
 | Item | Effort | Next step | Refs |
 |---|---|---|---|
-| **Netdata Parent + `netdata` role** | ⭐⭐ | Parent LXC on the HA Proxmox, then the Lab (M910q) host-native child, then re-point the remaining children | [#104](https://github.com/jaroslaw-bagnicki/Homelab/issues/104) · [ADR 27](decisions/27-monitoring-strategy.md) |
+| **Netdata Parent + `netdata` role** | ⭐⭐ | Parent LXC on the HA Proxmox, then re-point the children | [#104](https://github.com/jaroslaw-bagnicki/Homelab/issues/104) · [#84](https://github.com/jaroslaw-bagnicki/Homelab/issues/84) · [ADR 27](decisions/27-monitoring-strategy.md) |
 | **Edge Ingress — service migration** | ⭐⭐ | Move `cloudflared` + Caddy + dnsmasq off the M910q onto the Wyse 3040 (base OS + `edge_host` role already shipped) | [#65](https://github.com/jaroslaw-bagnicki/Homelab/issues/65) · [#81](https://github.com/jaroslaw-bagnicki/Homelab/issues/81) · [runbook 24](runbooks/24-edge-appliance.md) |
-| **Beetle NAS** | ⭐⭐⭐ | Replacement unit arriving — re-audit the spec, then OS decision (Unraid vs OMV) → array + cache online → NFS/SMB exports + Longhorn target → retire the ML110 | [#98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98) · [idea 01c](ideas/01c-nas-backup-target-wincor-beetle.md) |
+| **Beetle NAS** | ⭐⭐⭐ | Replacement unit arriving — re-audit the spec, then OMV install → array + cache online → NFS/SMB exports → retire the ML110 (the Longhorn backup target follows k3s) | [#98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98) · [idea 01c](ideas/01c-nas-backup-target-wincor-beetle.md) |
 | **Home Assistant node** | ⭐⭐⭐ | VM 100 (HA OS) + LXC 101/102 (Mosquitto, Zigbee2MQTT) on the Proxmox base from runbook 28 — the Z2M LXC feeds power monitoring | [#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68) · [#85](https://github.com/jaroslaw-bagnicki/Homelab/issues/85) · [ADR 25](decisions/25-home-assistant-thin-client.md) |
 
 ### Planned
@@ -53,7 +53,7 @@ once it is ready to start — a row leaves the table with the PR that completes 
 | Item | Effort | Next step | Refs |
 |---|---|---|---|
 | **UPS + NUT graceful shutdown** | ⭐⭐ | Unit arriving — record the model + USB controller, then NUT server on the HA node and the fleet-wide clients | [#111](https://github.com/jaroslaw-bagnicki/Homelab/issues/111) · [idea 09](ideas/09-ups-nut-home-assistant.md) |
-| **Netdata children — Edge (RAM-only), HA, OMV** | ⭐ | Re-point onto the Parent once it lands | [#80](https://github.com/jaroslaw-bagnicki/Homelab/issues/80) · [#84](https://github.com/jaroslaw-bagnicki/Homelab/issues/84) |
+| **Netdata children — Edge (RAM-only), Lab (host-native), OMV, Beetle** | ⭐ | Re-point onto the Parent once it lands — HA runs the Parent itself, so it is not a child | [#80](https://github.com/jaroslaw-bagnicki/Homelab/issues/80) · [#104](https://github.com/jaroslaw-bagnicki/Homelab/issues/104) |
 | **Power monitoring (Zigbee/Z2M)** | ⭐⭐ | Zigbee energy plugs → Prometheus, after the HA node's Z2M LXC — sequenced **before** k3s | [#73](https://github.com/jaroslaw-bagnicki/Homelab/issues/73) · [ADR 26](decisions/26-zigbee-energy-monitoring.md) |
 | **YUMI multiboot USB standard** | ⭐ | ADR 29 + manage-YUMI runbook; de-conflate the Ventoy references | [#107](https://github.com/jaroslaw-bagnicki/Homelab/issues/107) · [research 12](research/12-first-boot-setup.md) |
 
@@ -62,7 +62,7 @@ once it is ready to start — a row leaves the table with the PR that completes 
 | Item | Waiting on | Refs |
 |---|---|---|
 | **OPNsense router (Futro S930)** | power cable for the SSD — order it, then install | [#96](https://github.com/jaroslaw-bagnicki/Homelab/issues/96) · [research 31](research/31-futro-s930-hardware-diagnostic.md) |
-| **k3s migration** | deliberate sequencing — largest item, gates NFS/Longhorn and #48 | [#44](https://github.com/jaroslaw-bagnicki/Homelab/issues/44) · [ADR 22](decisions/22-k3s-arc-homelab.md) |
+| **k3s migration** | deliberate sequencing — largest item, gates the Longhorn backup target and #48 | [#44](https://github.com/jaroslaw-bagnicki/Homelab/issues/44) · [ADR 22](decisions/22-k3s-arc-homelab.md) |
 
 ## Not Scheduled
 
