@@ -40,6 +40,9 @@ operating on its own.
   status, update `docs/overview.md` (nodes/workloads view) and `docs/hardware.md`
   (per-node specs + network appliances) in the same change. Do not let them go stale
   like the old "What's Done" table did.
+- **Remove the `docs/overview.md` "What's Next" row in the same PR that completes the
+  work** — alongside its `CHANGELOG.md` entry. A completed item leaves the board; an
+  item that stalls without a start date moves to `## Not Scheduled` instead.
 
 ## ADR Authoring
 
@@ -51,6 +54,7 @@ Avoid ADR bloat — reference other ADRs and issues by name, do not restate thei
 - **Always use GitHub MCP tools** for GitHub operations — never GitKraken MCP tools for GitHub
 - **If a GitHub MCP tool call fails**, report the error to the user and do not attempt the operation via any other tool or CLI
 - **Work on a feature branch in a worktree** — see [Worktree Workflow](#worktree-workflow) below; do not commit to `main` from an autonomous session
+- **Never open a PR unless the user explicitly asks** — push the branch and report it, then stop. Opening the PR is the user's call, not the agent's; see [Worktree Workflow](#worktree-workflow).
 - **Commit message format**: `(type) description` with parentheses. Common types: `docs`, `feat`, `fix`, `chore`, `refactor`
 - **Never rebase** unless explicitly asked (the rebase step in [Worktree Workflow](#worktree-workflow) merge-via-PR is the standard carve-out)
 - **Always push** after a commit on a feature branch in a worktree — push immediately, don't defer to user
@@ -66,7 +70,7 @@ A new workload is added by:
 
 1. Creating `ansible/workloads/<workload>/` containing the playbook entrypoint, role recipes, and an ansible-side README.
 2. Adding a row to the index table in `docs/workloads.md`.
-3. Adding a row to `docs/overview.md` "What's Next", and a `CHANGELOG.md` entry on completion.
+3. Adding a row to `docs/overview.md` "What's Next", and a `CHANGELOG.md` entry on completion — the completing PR removes the row.
 4. Optionally: a runbook at `docs/runbooks/NN-deploy-<workload>.md` for operational steps.
 
 Workloads do not import each other. Workloads do not declare shared pre_tasks in the base playbook. Idempotent declarations inside a workload's roles are acceptable (e.g. networks — declare in the role and in the base playbook pre_tasks; first writer wins).
@@ -106,11 +110,11 @@ git rev-parse --abbrev-ref HEAD      # current branch
 
 ### Merge via PR (default path)
 
-Merges always go through a pull request — the agent never merges to `main` locally unless explicitly asked.
+Merges always go through a pull request — the agent never merges to `main` locally unless explicitly asked. The agent **pushes the branch and stops**; the PR is opened **only on an explicit user request**, never on the agent's own initiative.
 
 1. In the worktree: `git fetch origin && git rebase origin/main` — resolve any conflicts
 2. `git push -u origin <branch>` — push immediately
-3. Open a PR via GitHub MCP tools (`create_pull_request`) only when asked by the user
+3. **Stop and report the pushed branch.** Do **not** open the PR on the agent's own initiative — that is the user's call. Only when the user explicitly asks, open it via GitHub MCP tools (`create_pull_request`):
    - **PR title**: no `(type)` prefix (e.g. not `(feat) …`) — use labels to convey the type. The `(type)` prefix convention applies to **commit messages only**.
    - **PR description**: do **not** use the **Why / What / How (WWH)** format — that is **reserved for GitHub Issues only**. PR descriptions are a plain summary of the **Changes** (and any **Notes**) with no WWH headings.
 4. **Stop.** The human reviews and merges via the GitHub UI — the agent never merges the PR itself

@@ -38,9 +38,11 @@
 - **PR descriptions**: do **not** use the **Why / What / How (WWH)** format — that is **reserved for GitHub Issues only**. PR descriptions are a plain summary of the **Changes** (and any **Notes**) with no WWH headings
 - **Reference issues**: plain `#NNN` mentions link a commit/PR to an issue but do **not** auto-close it. To auto-close on merge, add `Closes #NNN` to the **PR description** or to a commit that is merged into `main` (GitHub evaluates the keyword at merge time; editing a merged PR afterwards won't close the issue)
 - **Labels**: `enhancement` (new feature), `bug` (broken), `chore` (maintenance/tooling), `research` (investigation)
-- **`docs/overview.md` "What's Next" = public status board** — shows what's planned or actively being worked on. Only items that are **planned** or **in progress** belong here.
+- **`docs/overview.md` "What's Next" = public status board** — grouped by state: **In progress** → **Planned** → **Held**. Only items that are in progress, planned, or held (blocked, or deliberately sequenced) belong here, and every row carries a concrete **Next step**; rows are listed in execution order.
+- **`docs/overview.md` "Not Scheduled" = parking lot** — work with no start date: dormant, or waiting on hardware/decisions that aren't actionable yet. It moves up to "What's Next" when it is ready to start.
 - **Issues = the backlog** — capture ideas, bugs, and multi-session work that isn't in the overview table yet. An issue becomes a `docs/overview.md` "What's Next" row when you're ready to start it.
-- **Typical flow**: idea → issue → move to `docs/overview.md` "What's Next" when starting → on completion add an entry to `CHANGELOG.md` (with runbook/ADR links) → close the issue
+- **A row leaves the table with the PR that completes it** — the same PR that adds the `CHANGELOG.md` entry removes the "What's Next" row; never leave completed rows behind. An item that stalls without a start date moves to "Not Scheduled" instead.
+- **Typical flow**: idea → issue → move to `docs/overview.md` "What's Next" when starting (or "Not Scheduled" when parked) → on completion add an entry to `CHANGELOG.md` (with runbook/ADR links) and remove the row → close the issue
 - When adding a completed entry to `CHANGELOG.md`, link the **runbook** (not the issue) — `[runbook](runbooks/NN-name.md)` — so the entry points to the implementation, not the ticket
 
 ## Git Workflow
@@ -48,7 +50,7 @@
 - **GitHub repository**: `https://github.com/jaroslaw-bagnicki/Homelab` (owner: `jaroslaw-bagnicki`, repo: `Homelab`)
 - **Always use GitHub MCP tools** for GitHub operations — never GitKraken MCP tools for GitHub
 - **If a GitHub MCP tool call fails**, report the error to the user and do not attempt the operation via any other tool or CLI
-- **Default workflow: feature branch → PR → review → merge.** Do not commit to `main` directly — create a feature branch (`fix/…`, `feat/…`, `docs/…`), push it, and open a PR. The user reviews and merges; never merge the PR yourself.
+- **Default workflow: feature branch → push → PR on request → review → merge.** Do not commit to `main` directly — create a feature branch (`fix/…`, `feat/…`, `docs/…`) and push it. **Never open a PR unless the user explicitly asks for one** — push the branch, report it, and stop; opening the PR is the user's call. The user reviews and merges; never merge the PR yourself.
 - **PRs ship with their `CHANGELOG.md` entry** — any PR that changes behaviour or docs adds/updates its changelog entry (newest first, with runbook/ADR links) in the same PR, so the log merges with the change, not after
 - **Direct commits to `main` only when the user explicitly asks** ("commit to main", "no PR", "skip the branch")
 - **Commit message format**: `(type) description` with parentheses. Common types: `docs`, `feat`, `fix`, `chore`, `refactor`
