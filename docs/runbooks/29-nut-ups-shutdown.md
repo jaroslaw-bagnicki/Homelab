@@ -18,11 +18,12 @@
 
 ## Why
 
-The lab is a multi-node fleet on one power strip — M910q (k3s), ML110 (OMV), Wyse 3040 (edge),
-Wyse 5070 (HA). Nothing protects it from a brownout, and an unclean stop is the worst outcome for
-the OMV RAID1 plus its SMB/NFS exports, for the Proxmox VMs/LXCs, and for k3s state. NUT turns a
-power cut into an orderly stop: every node sees the same UPS state and cuts itself over on
-low battery, in a defined order.
+The lab is a multi-node fleet across two power strips — the servers (M910q/k3s, Wyse 3040 edge,
+Wyse 5070 HA, and the Beetle NAS as it lands) plus the network appliances that hold the LAN
+together. Nothing protects it from a brownout, and an unclean stop is the worst outcome for the NAS
+RAID1 and its SMB/NFS exports, for the Proxmox VMs/LXCs, and for k3s state. NUT turns a power cut
+into an orderly stop: every node sees the same UPS state and cuts itself over on low battery, in a
+defined order.
 
 ## What changes
 
@@ -36,11 +37,14 @@ low battery, in a defined order.
 - **Proxmox host** — `nut-client` only. An **unprivileged LXC cannot power off its own host**, so
   the hypervisor runs its own `upsmon` and shuts itself down; Proxmox then stops the VM/LXCs in
   order itself.
-- **Fleet clients** — `lab` (M910q), `edge` (Wyse 3040), `omv` (ML110): `nut-client` + `upsmon`.
+- **Fleet clients** — `lab` (M910q) and `edge` (Wyse 3040): `nut-client` + `upsmon`. The **Beetle
+  M-III** joins as the NAS client once it is standing
+  ([#98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98)); the **ML110 is deliberately left
+  out** — it retires as the OMV NAS rather than being wired into this.
 - **No new firewall rule** — LXC 103 is bridged on the LAN, so client traffic never traverses the
   host's UFW chains (see §6).
 
-> **Execution note.** Manual steps, run interactively from the repo's dev container. All four nodes
+> **Execution note.** Manual steps, run interactively from the repo's dev container. All three nodes
 > are LAN-only — reach them from a machine on `192.168.2.0/24` with the fleet key loaded
 > (`fleet-connect` skill). Ansible ownership of LXC 103 is a follow-up, not this runbook.
 
@@ -48,7 +52,7 @@ low battery, in a defined order.
 
 - UPS on the HA node's USB, mains connected, and **GCUPS closed on the Windows workstation** — the
   HID interface is single-owner, so the container stays blind while the vendor app holds it.
-- `fleetadm` SSH + `sudo -n` on `ha`, `lab`, `edge`, `omv`.
+- `fleetadm` SSH + `sudo -n` on `ha`, `lab`, `edge`.
 - Azure Key Vault access to `homelab-bysxdb-kv` for the monitor password.
 - Refs: [idea 09](../ideas/09-ups-nut-home-assistant.md) (architecture) ·
   [ADR 25](../decisions/25-home-assistant-thin-client.md) ·
@@ -62,31 +66,42 @@ low battery, in a defined order.
 
 1. **UPS mains input → a wall socket.** Never into the strip the UPS is protecting — that is a
    circular feed and the UPS will not hold anything up.
-2. **Strip → a UPS outlet.** Confirm on the unit which of the four outlets are battery-backed
-   before committing the strip.
-3. **Chargers, second monitor and other non-essentials stay on the wall.** Battery runtime belongs
-   to the servers.
+2. **Both strips → UPS outlets.** Confirm on the unit which of the four outlets are battery-backed
+   before committing a strip — a strip on a surge-only outlet delivers nothing when the mains drops.
+3. **Monitors, the Dell dock and the laptop charger stay on the wall.** Battery runtime belongs to
+   the servers and the network, not to peripherals.
 
-| Load | Outlet | Note |
+Two strips, both UPS-fed:
+
+| Strip | Load | Note |
 |---|---|---|
-| Wyse 5070 (HA node) | battery | hosts the NUT server's USB |
-| Lenovo M910q (lab) | battery | 65/90 W external brick |
-| Wyse 3040 (edge) | battery | external brick |
-| TP-Link TL-SG108E | battery | keeps the LAN up while nodes shut down in order |
-| HP ML110 (OMV) | battery **after §7 passes** | internal PSU — test before trusting |
-| Futro S930 (router, later) | battery | [idea 07](../ideas/07-opnsense-futro-s930.md) |
-| Beetle M-III (later) | test first | active-PFC ATX — [ADR 29](../decisions/29-nas-backup-target-beetle-m3-omv.md) |
-| Phone chargers, 2nd monitor | **surge only** | wall socket |
+| **1 — servers** | Dell Wyse 5070 (HA node) | hosts the NUT server's USB, `0665:5161` |
+| | Lenovo M910q (lab) | 65/90 W external brick · k3s |
+| | Dell Wyse 3040 (edge) | external brick |
+| | Wincor Beetle M-III | the OMV NAS, successor to the ML110 ([#98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98), [ADR 29](../decisions/29-nas-backup-target-beetle-m3-omv.md)) |
+| | Fujitsu Futro S930 (router) | once built — [idea 07](../ideas/07-opnsense-futro-s930.md) |
+| **2 — network** | TP-Link TL-SG108E | keeps the LAN alive while the nodes stop in order |
+| | Tenda AC1200 mesh node | house Wi-Fi **and** the office drop that feeds the switch |
+| | Huawei B593u-12 LTE modem | backup WAN — [idea 08](../ideas/08-lte-wan-failover.md) |
+| **off the UPS** | 2× monitor, Dell dock, laptop charger | wall socket — keeps idea 09's workstation maths out of the budget |
 
-⚠ **Modified sine.** The UPSLM600 outputs a modified sine wave. The external DC bricks above
-rectify it without complaint, but an **internal ATX supply with active PFC** can buzz, overheat or
-trip its protection and reset the machine *despite* the UPS. That means the **ML110 (OMV)** is a
-candidate for exactly this failure, not just the future Beetle — hence the pull-the-plug test in §7.
+Strip 2 carries **no NUT client** — the mesh node and the LTE modem are dumb loads that simply keep
+running until the battery gives out. That is deliberate (the LAN survives the whole shutdown
+window), but it spends runtime, so it belongs in the sizing maths next to the servers.
+
+⚠ **Modified sine.** The UPSLM600 outputs a modified sine wave. The **external DC bricks** on both
+strips — Wyse 3040/5070, the M910q's Lenovo brick, the Futro S930 and the network appliances —
+rectify it without complaint. The risk is an **internal ATX supply with active PFC**: it can buzz,
+overheat or trip its protection and reset the machine *despite* the UPS. That is exactly what the
+**Beetle M-III's AcBel 250 W 80 Plus Gold** supply is ([ADR 29](../decisions/29-nas-backup-target-beetle-m3-omv.md)),
+so the Beetle is the one load that has to clear the pull-the-plug test in §7 before it is trusted on
+battery. If it resets, it moves to a surge-only outlet — or the budget moves to a pure-sine unit.
 
 ⚠ **The UPS has its own overhead.** A buyer report measures this model's standby draw at ~14.2 W,
-against a fleet that idles at 35–50 W today. Unverified second-hand, but it is worth metering
+against a fleet that idles around 60–85 W once both strips are populated
+([idea 09](../ideas/09-ups-nut-home-assistant.md)). Unverified second-hand, but worth metering
 alongside the per-plug work in [#73](https://github.com/jaroslaw-bagnicki/Homelab/issues/73) — a UPS
-that costs ~30 % of the load it protects is a finding, not a footnote.
+that costs a fifth of the load it protects is a finding, not a footnote.
 
 ## 1. Create LXC 103
 
@@ -267,7 +282,7 @@ guest shutdown, NUT only has to stop the host.
 
 ## 5. Fleet clients
 
-On `lab` (M910q), `edge` (Wyse 3040) and `omv` (ML110) — same package, same file, but **`secondary`**:
+On `lab` (M910q) and `edge` (Wyse 3040) — same package, same file, but **`secondary`**:
 
 ```sh
 apt install -y nut-client
@@ -299,20 +314,24 @@ Node-specific notes:
 - **`lab`** — k3s **starts and stops with the host**. No `kubectl drain`/cordon in v1: there is no
   other node to reschedule onto, so a drain would only delay the stop. Revisit if the cluster grows.
 - **`edge`** — 2 GB, RAM-only Netdata; `nut-client` is a rounding error next to that.
-- **`omv`** — OMV ships its **own UPS service that also writes `/etc/nut`**. Pick one writer:
-  either drive it from the OMV panel or disable that service and use the files above. Two writers
-  will fight and the config will drift. OMV is also not Ansible-managed yet, so this one is manual.
+- **The NAS (Beetle M-III), once it is up** — it runs **OMV**, which ships its **own UPS service
+  that also writes `/etc/nut`**. Pick one writer: either drive it from the OMV panel or disable that
+  service and use the files above. Two writers will fight and the config drifts. OMV is not
+  Ansible-managed, so this one is manual. The **ML110 is not configured at all** — it retires as the
+  OMV NAS, so it never joins this setup.
 
 ## 6. Shutdown choreography
 
 On `LB` (or on `OB` past the thresholds), the sequence is:
 
-1. All three clients (`lab`, `edge`, `omv`) see the state change within `POLLFREQALERT` (5 s) and
-   run their own `SHUTDOWNCMD` — the OMV RAID1 and the M910q go down first.
+1. Both clients (`lab`, `edge`) see the state change within `POLLFREQALERT` (5 s) and run their own
+   `SHUTDOWNCMD` — the M910q and the edge ingress go down first. Strip 2 stays up throughout, so no
+   node is racing the network to finish.
 2. The Proxmox host's `upsmon` — the `primary` — does the same, and Proxmox stops VM 100 and
    LXC 101/102/103 in order.
-3. The UPS battery drains and the unit powers off. **Nothing tells the UPS to cut its outlets**:
-   the driver lives in a container that Proxmox has already stopped, so there is no
+3. The battery drains and the unit powers off, taking **both strips** with it — the mesh node and the
+   LTE modem included, so the house Wi-Fi goes down with the lab. **Nothing tells the UPS to cut its
+   outlets**: the driver lives in a container Proxmox has already stopped, so there is no
    `upsdrvctl shutdown` path. That is accepted for v1.
 
 **No new firewall rule is required.** LXC 103 is bridged on `192.168.2.0/24`, so client traffic
@@ -338,21 +357,22 @@ never traverses the host's UFW chains — UFW here is host-management-plane only
 4. **Shutdown drill** — `upsmon -c fsd` on **one client first** (that node will genuinely shut
    down). Only after that behaves, run it on the Proxmox host as the acceptance test — it takes the
    whole lab down, so schedule it.
-5. **Modified-sine check** — with the OMV NAS and the M910q on battery outlets, pull the plug under
-   **disk spin-up load**, not idle, and confirm no machine hard-resets. A reset despite the UPS
-   means that node goes back to a surge-only outlet (and the budget moves to a pure-sine unit).
+5. **Modified-sine check** — the Beetle's internal supply is the one real risk (§0). Once it is up on
+   strip 1, pull the plug under **disk spin-up load**, not idle, and confirm it does not hard-reset.
+   A reset despite the UPS means the Beetle moves to a surge-only outlet (and the budget moves to a
+   pure-sine unit); the external-brick nodes are unaffected either way.
 
 ## Verification Checklist
 
-- [ ] §0 UPS input on the wall socket; strip on a battery outlet; non-essentials off it
+- [ ] §0 UPS input on the wall socket; **both strips** on battery-backed outlets; monitors/dock/charger off the UPS
 - [ ] §1 LXC 103 created unprivileged, `192.168.2.202`, `onboot 1`, starts cleanly
 - [ ] §2 `/dev/bus/usb/001/` populated inside the container; UPS node visible
 - [ ] §3 `nutdrv_qx` attaches, `upsc ups@localhost` returns real values, `battery.runtime` presence recorded
 - [ ] §3 password stored in AKV `nut-upsmon-password`; `/etc/nut` files `640 root:nut`
 - [ ] §4 host `nut-monitor` active, reads the UPS through the container
-- [ ] §5 `lab`, `edge`, `omv` clients active and reading the UPS
-- [ ] §7 on-battery propagation confirmed on all four nodes; `upsmon -c fsd` drill done
-- [ ] §7 disk-spin-up pull-the-plug test passed (or the failing node moved off battery outlets)
+- [ ] §5 `lab` + `edge` clients active and reading the UPS
+- [ ] §7 on-battery propagation confirmed on all three nodes (host, `lab`, `edge`); `upsmon -c fsd` drill done
+- [ ] §7 Beetle disk-spin-up pull-the-plug test passed (or the Beetle moved off battery outlets)
 
 ## Follow-ups
 
@@ -365,7 +385,11 @@ never traverses the host's UFW chains — UFW here is host-management-plane only
   should auto-power-on when mains returns, otherwise recovery is a manual walk to each machine.
 - **Ansible ownership** — LXC 103 and the fleet clients are manual today; folding them into the
   `ha` playbook (and a `nut` role) keeps them consistent with the rest of the fleet.
-- **Router client** — OPNsense is FreeBSD, so its client path differs ([#96](https://github.com/jaroslaw-bagnicki/Homelab/issues/96)).
+- **Beetle M-III as the NAS client** — it sits on strip 1 from day one but joins NUT (§5) only once
+  [#98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98) has OMV running, including the
+  OMV-panel-vs-files decision. The ML110 is retired, not joined.
+- **Router client** — the Futro S930 is on strip 1 from day one too, but OPNsense is FreeBSD, so its
+  client path differs ([#96](https://github.com/jaroslaw-bagnicki/Homelab/issues/96)).
 - **Telemetry** — `upsc` only for now; UPS metrics into the Netdata/Prometheus plane next to
   [#73](https://github.com/jaroslaw-bagnicki/Homelab/issues/73) is the natural upgrade.
 
@@ -373,6 +397,7 @@ never traverses the host's UFW chains — UFW here is host-management-plane only
 
 - [Idea 09 — UPS with NUT + Home Assistant](../ideas/09-ups-nut-home-assistant.md) — load profile, model comparison, NUT architecture
 - [ADR 25 — Home Assistant on a thin client](../decisions/25-home-assistant-thin-client.md) · [ADR 27 — monitoring strategy](../decisions/27-monitoring-strategy.md) · [ADR 28 — fleet admin account and key](../decisions/28-fleet-admin-account-and-key.md)
-- [Runbook 28 — HA node Proxmox VE install](28-ha-proxmox-node.md) · [Runbook 24 — edge appliance](24-edge-appliance.md) · [Runbook 23 — ML110 OMV setup](23-ml110-omv-setup.md)
+- [Runbook 28 — HA node Proxmox VE install](28-ha-proxmox-node.md) · [Runbook 24 — edge appliance](24-edge-appliance.md) · [Runbook 21 — TL-SG108E switch](21-tl-sg108e-switch.md)
+- [ADR 29 — NAS backup target on the Beetle M-III](../decisions/29-nas-backup-target-beetle-m3-omv.md) · [idea 07 — OPNsense on the Futro S930](../ideas/07-opnsense-futro-s930.md) · [idea 08 — LTE WAN failover](../ideas/08-lte-wan-failover.md)
 - [research 24 — network topology](../research/24-network-topology-design.md) (IP scheme) · [research 29 — Wyse 5070 diagnostic](../research/29-wyse5070-hardware-diagnostic.md) (USB hub topology)
 - [Network UPS Tools](https://networkupstools.org/) — `nutdrv_qx` driver, `upsd` / `upsmon`
