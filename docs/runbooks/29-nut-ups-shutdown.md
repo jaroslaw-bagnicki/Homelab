@@ -536,7 +536,7 @@ never traverses the host's UFW chains — UFW here is host-management-plane only
 
 - [ ] §0 UPS input on the wall socket; **both strips** on battery-backed outlets; monitors/dock/charger off the UPS
 - [ ] §1 LXC 213 created unprivileged, `192.168.2.213`, `nesting=1`, `onboot 1`, starts cleanly and `systemctl --failed` is empty inside
-- [ ] §2 USB node visible in the container **and** readable as `nut` (udev/permission step done)
+- [ ] §2 USB node visible in the container **and** writable as `nut` (udev/permission step done)
 - [ ] §3 `/lib/nut/nutdrv_qx` attaches (as root **and** as `nut`), `upsc ups@192.168.2.213` returns real values, `battery.runtime` presence recorded
 - [ ] §3 both monitor passwords in AKV (`nut-upsmon-primary-password`, `nut-upsmon-secondary-password`) and substituted into the files; `/etc/nut` files `640 root:nut`
 - [ ] §4 host `nut-monitor` active, reads the UPS through the container
