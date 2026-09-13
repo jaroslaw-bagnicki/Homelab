@@ -47,12 +47,12 @@ once it is ready to start — a row leaves the table with the PR that completes 
 | **Edge Ingress — service migration** | ⭐⭐ | Move `cloudflared` + Caddy off the M910q onto the Wyse 3040 (base OS + `edge_host` role already shipped); `.home` DNS is owned by the OPNsense router, not the edge | [#65](https://github.com/jaroslaw-bagnicki/Homelab/issues/65) · [#81](https://github.com/jaroslaw-bagnicki/Homelab/issues/81) · [ADR 24](decisions/24-edge-ingress-appliance.md) |
 | **Beetle NAS** | ⭐⭐⭐ | Replacement unit arriving — re-audit the spec, then OMV install → array + cache online → NFS/SMB exports → retire the ML110 (the Longhorn backup target follows k3s) | [#98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98) · [ADR 29](decisions/29-nas-backup-target-beetle-m3-omv.md) |
 | **Home Assistant node** | ⭐⭐⭐ | VM 100 (HA OS) + LXC 101/102 (Mosquitto, Zigbee2MQTT) on the Proxmox base from runbook 28 | [#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68) · [#85](https://github.com/jaroslaw-bagnicki/Homelab/issues/85) · [ADR 25](decisions/25-home-assistant-thin-client.md) |
+| **UPS + NUT graceful shutdown** | ⭐⭐ | Unit on the HA node (`0665:5161`, runbook 29) — execute it: LXC 103 + `nutdrv_qx` probe, then the PVE host and the `lab`/`edge` clients | [#111](https://github.com/jaroslaw-bagnicki/Homelab/issues/111) · [runbook 29](runbooks/29-nut-ups-shutdown.md) |
 
 ### Planned
 
 | Item | Effort | Next step | Refs |
 |---|---|---|---|
-| **UPS + NUT graceful shutdown** | ⭐⭐ | Unit on the HA node (`0665:5161`, runbook 29) — execute it: LXC 103 + `nutdrv_qx` probe, then the PVE host and the `lab`/`edge` clients | [#111](https://github.com/jaroslaw-bagnicki/Homelab/issues/111) · [runbook 29](runbooks/29-nut-ups-shutdown.md) |
 | **Netdata children — Edge (RAM-only), Lab (host-native), OMV, Beetle** | ⭐ | Re-point onto the Parent once it lands — HA runs the Parent itself, so it is not a child | [#80](https://github.com/jaroslaw-bagnicki/Homelab/issues/80) · [#104](https://github.com/jaroslaw-bagnicki/Homelab/issues/104) |
 | **Power monitoring (Zigbee/Z2M)** | ⭐⭐ | Zigbee energy plugs → Prometheus, bootstrapped standalone on the M910q (ADR 26 — independent of Home Assistant) — sequenced **before** k3s | [#73](https://github.com/jaroslaw-bagnicki/Homelab/issues/73) · [ADR 26](decisions/26-zigbee-energy-monitoring.md) |
 | **YUMI multiboot USB standard** | ⭐ | ADR 29 + manage-YUMI runbook; de-conflate the Ventoy references | [#107](https://github.com/jaroslaw-bagnicki/Homelab/issues/107) · [research 12](research/12-first-boot-setup.md) |

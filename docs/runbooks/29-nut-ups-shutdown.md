@@ -163,8 +163,26 @@ lxc.mount.entry: /dev/bus/usb dev/bus/usb none bind,optional,create=dir
 
 ```sh
 pct start 103
-pct exec 103 -- ls -l /dev/bus/usb/001/     # the UPS node must be listed
+pct exec 103 -- sh -c 'ls -l /dev/bus/usb/*/'   # the UPS node must be listed, on whatever bus
 ```
+
+Bus and device numbers are reassigned across reboots — never assume `001`.
+
+**Permissions.** A visible node is not a *readable* one: the bind mount keeps the host's `root`
+ownership, while the driver runs as the container's `nut` user. The host has no NUT package, so
+nothing grants that access for you — do it with a udev rule, matching the unit by VID:PID:
+
+```sh
+sudo groupadd -f nut                      # the host needs the group too
+getent group nut                          # note the GID — it must match the container's `nut` GID
+sudo tee /etc/udev/rules.d/85-nut-usb.rules >/dev/null <<'EOF'
+SUBSYSTEM=="usb", ATTR{idVendor}=="0665", ATTR{idProduct}=="5161", MODE="0660", GROUP="nut"
+EOF
+sudo udevadm control --reload && sudo udevadm trigger --subsystem-match=usb
+```
+
+If the container's `nut` GID differs, align the two with an `lxc.idmap` entry rather than widening
+the mode. §3 proves the driver can open the device **as `nut`**, not just as root.
 
 ⚠ Binding the whole bus also exposes the Zigbee coordinator's raw USB node to this container. That
 is acceptable here (unprivileged container, LAN-trusted host) but it is a deliberate trade: pinning
@@ -207,24 +225,44 @@ MODE=netserver
 LISTEN 192.168.2.202 3493
 ```
 
-**`/etc/nut/upsd.users`** — the password comes from Azure Key Vault, never from this file in Git:
+**`/etc/nut/upsd.users`** — **two accounts, one per role.** NUT authorizes the roles separately, so a
+`primary` account is not accepted as a `secondary`. Passwords come from Azure Key Vault, never from
+this file in Git:
 
 ```
-[upsmon]
-    password = <AKV: nut-upsmon-password>
+[upsmon-host]
+    password = <AKV: nut-upsmon-primary-password>
     upsmon primary
+[upsmon-fleet]
+    password = <AKV: nut-upsmon-secondary-password>
+    upsmon secondary
 ```
 
-> Create the secret once, from the dev container:
+> Create both secrets once, from the dev container:
 >
 > ```powershell
-> $pw = -join ((48..57) + (65..90) + (97..122) | Get-Random -Count 32 | ForEach-Object { [char]$_ })
-> Set-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name nut-upsmon-password `
->   -SecretValue (ConvertTo-SecureString $pw -AsPlainText -Force)
+> foreach ($name in 'nut-upsmon-primary-password','nut-upsmon-secondary-password') {
+>   $pw = -join ((48..57) + (65..90) + (97..122) | Get-Random -Count 32 | ForEach-Object { [char]$_ })
+>   Set-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name $name `
+>     -SecretValue (ConvertTo-SecureString $pw -AsPlainText -Force)
+> }
 > ```
 >
-> NUT ≥ 2.7.4 spells the role `primary` / `secondary`; older releases want `master` / `slave`.
-> Check with `upsd -V` before editing if the config is rejected.
+> Then **read each value back and substitute it** — the `<AKV: …>` text above is a placeholder, and a
+> literal copy fails authentication:
+>
+> ```powershell
+> Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name nut-upsmon-primary-password -AsPlainText
+> Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name nut-upsmon-secondary-password -AsPlainText
+> ```
+>
+> Put the primary value into `upsd.users` and the host's `upsmon.conf` (§4) and the secondary value
+> into each client's `MONITOR` line (§5), editing the files in place inside the container
+> (`pct exec 103 -- nano /etc/nut/upsd.users`). Neither value goes into Git.
+>
+> Recent NUT (2.8+) spells the role `primary` / `secondary`; older 2.7.x uses `master` / `slave`.
+> Check `upsd -V` and use that spelling — a wrong role surfaces as
+> `Login failed: not authorized for this mode` in the client logs.
 
 Lock the files down — they hold the password:
 
@@ -238,16 +276,20 @@ chmod 640 /etc/nut/ups.conf /etc/nut/upsd.conf /etc/nut/upsd.users
 Run the driver in the foreground first; this is the gate:
 
 ```sh
-pct exec 103 -- bash -lc 'nutdrv_qx -a ups -DDD'    # Ctrl-C once it initialises
+# Debian installs the drivers into /lib/nut, which is not on root's PATH
+pct exec 103 -- bash -lc '/lib/nut/nutdrv_qx -a ups -DDD'              # as root
+pct exec 103 -- bash -lc 'sudo -u nut /lib/nut/nutdrv_qx -a ups -DDD'  # as the service user
 ```
+
+Both runs must initialise. A driver that works as root but not as `nut` will fail the moment the
+systemd unit drops privileges.
 
 Then bring the services up and read the unit:
 
 ```sh
-systemctl enable --now nut-driver-enumerator
-systemctl enable --now nut-server
-systemctl status nut-driver@ups --no-pager
-upsc ups@localhost
+pct exec 103 -- bash -lc 'systemctl enable --now nut-driver-enumerator nut-server'
+pct exec 103 -- bash -lc 'systemctl status nut-driver@ups --no-pager'
+pct exec 103 -- bash -lc 'upsc ups@192.168.2.202'   # named address — upsd does not listen on 127.0.0.1
 ```
 
 Record from the `upsc` dump:
@@ -281,12 +323,13 @@ apt install -y nut-client
 **`/etc/nut/upsmon.conf`**
 
 ```
-MONITOR ups@192.168.2.202 1 upsmon <AKV: nut-upsmon-password> primary
+MONITOR ups@192.168.2.202 1 upsmon-host <AKV: nut-upsmon-primary-password> primary
 MINSUPPLIES 1
 SHUTDOWNCMD "/sbin/shutdown -h +0"
 POLLFREQ 5
 POLLFREQALERT 5
-HOSTSYNC 15
+FINALDELAY 30
+HOSTSYNC 30
 DEADTIME 15
 POWERDOWNFLAG /etc/killpower
 NOTIFYFLAG ONBATT SYSLOG+WALL
@@ -303,6 +346,11 @@ upsc ups@192.168.2.202     # must return the same variables as §3
 `/sbin/shutdown -h +0` is all that is needed to stop the VMs/LXCs in order — Proxmox handles the
 guest shutdown, NUT only has to stop the host.
 
+`FINALDELAY 30` is what actually creates the ordering: the primary waits that long after FSD before
+running its own `SHUTDOWNCMD`, giving the secondaries time to finish. `HOSTSYNC` bounds how long a
+secondary waits for the primary. Without both set differently from the clients, the host would race
+the fleet — the drill in §7 is what proves it.
+
 ## 5. Fleet clients
 
 On `lab` (M910q) and `edge` (Wyse 3040) — same package, same file, but **`secondary`**:
@@ -316,7 +364,7 @@ apt install -y nut-client
 `/etc/nut/upsmon.conf` — identical to §4 except the role and `SHUTDOWNCMD`:
 
 ```
-MONITOR ups@192.168.2.202 1 upsmon <AKV: nut-upsmon-password> secondary
+MONITOR ups@192.168.2.202 1 upsmon-fleet <AKV: nut-upsmon-secondary-password> secondary
 MINSUPPLIES 1
 SHUTDOWNCMD "/sbin/shutdown -h +0"
 POLLFREQ 5
@@ -344,17 +392,38 @@ Node-specific notes:
 
 ## 6. Shutdown choreography
 
-On `LB` (or on `OB` past the thresholds), the sequence is:
+On low battery it is the **primary** that starts the sequence — the secondaries do not act on the
+battery state on their own:
 
-1. Both clients (`lab`, `edge`) see the state change within `POLLFREQALERT` (5 s) and run their own
-   `SHUTDOWNCMD` — the M910q and the edge ingress go down first. Strip 2 stays up throughout, so no
-   node is racing the network to finish.
-2. The Proxmox host's `upsmon` — the `primary` — does the same, and Proxmox stops VM 100 and
-   LXC 101/102/103 in order.
-3. The battery drains and the unit powers off, taking **both strips** with it — the mesh node and the
+1. The primary's `upsmon` (the Proxmox host) has `upsd` set **FSD** on the UPS.
+2. Every `upsmon` watching that UPS — host and secondaries alike — receives FSD and runs its own
+   `SHUTDOWNCMD`. The secondaries stop first.
+3. The primary then waits `FINALDELAY` (30 s) before running its own `SHUTDOWNCMD`, which is the
+   window the secondaries get. Proxmox stops VM 100 and LXC 101/102/103 in order.
+4. The battery drains and the unit powers off, taking **both strips** with it — the mesh node and the
    LTE modem included, so the house Wi-Fi goes down with the lab. **Nothing tells the UPS to cut its
    outlets**: the driver lives in a container Proxmox has already stopped, so there is no
    `upsdrvctl shutdown` path. That is accepted for v1.
+
+⚠ **That ordering is a design intent, not an emergent property.** It holds only while `FINALDELAY`
+and `HOSTSYNC` are set as in §4/§5 — with the stock values the host races the secondaries. The §7
+drill is what proves it.
+
+⚠ **Pause the host monitor before touching LXC 103.** With `MINSUPPLIES 1`, an `upsd` that cannot be
+reached for `DEADTIME` (15 s) is indistinguishable from a failed UPS, so restarting the container —
+or letting it boot more slowly than the host's `nut-monitor` — can stop the fleet while mains is
+present:
+
+```sh
+systemctl stop nut-monitor                 # host, before stopping/upgrading LXC 103
+pct stop 103 / upgrade / pct start 103
+pct exec 103 -- bash -lc 'upsc ups@192.168.2.202'   # only continue once this answers
+systemctl start nut-monitor
+```
+
+Accepted trade-off: a genuinely unreachable UPS *does* stop the fleet — fail-safe, not fail-open. If
+that proves disruptive, raise `DEADTIME` and `POLLFREQALERT` together rather than relaxing
+`MINSUPPLIES`.
 
 **No new firewall rule is required.** LXC 103 is bridged on `192.168.2.0/24`, so client traffic
 never traverses the host's UFW chains — UFW here is host-management-plane only
@@ -375,11 +444,17 @@ never traverses the host's UFW chains — UFW here is host-management-plane only
    and confirm `OL`.
 3. **Quick test (non-destructive)** — `upscmd -l ups@192.168.2.202` lists what the unit actually
    supports. Expect a short self-test only: the discharge test is not available on this unit.
-4. **Shutdown drill** — `upsmon -c fsd` on **one client first** (that node will genuinely shut
-   down). Only after that behaves, run it on the Proxmox host as the acceptance test — it takes the
-   whole lab down, so schedule it.
-5. **Modified-sine check** — the Beetle's internal supply is the one real risk (§0). Once it is up on
-   strip 1, pull the plug under **disk spin-up load**, not idle, and confirm it does not hard-reset.
+4. **Shutdown drill** — two different tests, and they are not interchangeable:
+   - **Per-node test:** on a secondary, point `SHUTDOWNCMD` at a benign command for the test
+     (e.g. `logger "NUT drill"`), then `upsmon -c fsd` — a secondary's `-c fsd` affects **only that
+     node**, so this exercises the local shutdown path without stopping the machine.
+   - **Full drill:** `upsmon -c fsd` on the **Proxmox primary** is the fleet-wide acceptance test —
+     it sets FSD on the UPS and takes the whole lab down, so schedule it.
+   This is also where §6's ordering claim gets verified: secondaries stop, then the host after
+   `FINALDELAY`.
+5. **Modified-sine check** — the Beetle's internal supply is the one real risk (§0), and active-PFC
+   behaviour is load-dependent, so test **both** states: idle (a few quiet minutes on battery) and
+   under **disk spin-up load**. Confirm no hard reset in either.
    A reset despite the UPS means the Beetle moves to a surge-only outlet (and the budget moves to a
    pure-sine unit); the external-brick nodes are unaffected either way.
    **Partial pass 2026-09-12:** a 2–3 min on-battery ride — UPS switched and beeped normally, Beetle on
@@ -393,13 +468,14 @@ never traverses the host's UFW chains — UFW here is host-management-plane only
 
 - [ ] §0 UPS input on the wall socket; **both strips** on battery-backed outlets; monitors/dock/charger off the UPS
 - [ ] §1 LXC 103 created unprivileged, `192.168.2.202`, `onboot 1`, starts cleanly
-- [ ] §2 `/dev/bus/usb/001/` populated inside the container; UPS node visible
-- [ ] §3 `nutdrv_qx` attaches, `upsc ups@localhost` returns real values, `battery.runtime` presence recorded
-- [ ] §3 password stored in AKV `nut-upsmon-password`; `/etc/nut` files `640 root:nut`
+- [ ] §2 USB node visible in the container **and** readable as `nut` (udev/permission step done)
+- [ ] §3 `/lib/nut/nutdrv_qx` attaches (as root **and** as `nut`), `upsc ups@192.168.2.202` returns real values, `battery.runtime` presence recorded
+- [ ] §3 both monitor passwords in AKV (`nut-upsmon-primary-password`, `nut-upsmon-secondary-password`) and substituted into the files; `/etc/nut` files `640 root:nut`
 - [ ] §4 host `nut-monitor` active, reads the UPS through the container
 - [ ] §5 `lab` + `edge` clients active and reading the UPS
 - [ ] §7 on-battery propagation confirmed on all three nodes (host, `lab`, `edge`); `upsmon -c fsd` drill done
-- [ ] §7 Beetle disk-spin-up pull-the-plug test passed (or the Beetle moved off battery outlets)
+- [ ] §6 host monitor paused across an LXC 103 restart, then restored after `upsc` answered
+- [ ] §7 Beetle tested on battery at **idle and under spin-up** (or moved off battery outlets)
 
 ## Follow-ups
 

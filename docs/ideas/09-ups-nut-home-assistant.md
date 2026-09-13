@@ -101,14 +101,17 @@ either
 
 **Decision direction from the threads: the NUT server belongs on the Home Assistant node —
 the Wyse 5070 running Proxmox VE** (`192.168.2.201`, [ADR 25](../decisions/25-home-assistant-thin-client.md)),
-installed **host-native on the PVE Debian base**, with the UPS USB cable plugged into it.
+running the NUT server in a dedicated unprivileged **LXC 103** (`192.168.2.202`), with the UPS USB cable plugged into it.
 
 ```
                  [ Green Cell UPS ]
                         │ USB
                         ▼
         [ Wyse 5070 · Proxmox VE · 192.168.2.201 ]
-        nut-server + nut-client  (MODE=netserver, :3493)
+        nut-client only (upsmon · primary)
+                        │
+        [ LXC 103 · nut · 192.168.2.202 ]
+        nutdrv_qx + upsd  (:3493)
                         │ LAN
         ┌───────────────┬───────────────┬───────────────┐
         ▼               ▼               ▼               ▼
@@ -133,13 +136,14 @@ host vanilla and folds NUT config into VM/LXC backups, at the cost of medium set
 complexity: USB passthrough in `/etc/pve/lxc/<id>.conf` (e.g.
 `lxc.cgroup2.devices.allow: c 189:* rwm` + a `dev/bus/usb/001/002` bind mount) and a **NUT
 client on the PVE host** (or SSH from the LXC) to actually power the hypervisor off, because
-an unprivileged container cannot shut down its own host. Verdict: **host-native is the
-simpler default**; LXC is a valid refinement for repo-purists.
+an unprivileged container cannot shut down its own host. Verdict: **LXC is the chosen route** ([ADR 30](../decisions/30-ups-nut-graceful-shutdown.md)) — it
+keeps the PVE base vanilla, at the cost of a host-side `upsmon`, the USB passthrough and its udev
+permission step.
 
 ## Home Assistant integration
 
 With HAOS running as a VM on the same Proxmox host, Home Assistant connects to the NUT
-server over the LAN via its **NUT integration** (`192.168.2.201:3493`, `upsmon_user`
+server over the LAN via its **NUT integration** (`192.168.2.202:3493`, `upsmon-fleet`
 credentials) — no USB passthrough into the VM, no add-on needed. Expected entities:
 
 - `sensor.ups_battery_charge` — battery %
@@ -177,7 +181,7 @@ Automation direction (dashboard + notifications first, escalation later):
 3. **Which USB controller is in the actual unit?** Verify with `lsusb` (ID should be
    `0665:5161`, `1386:0001` or `0f10:0001`) and confirm `nutdrv_qx` attaches before
    committing to the driver choice.
-4. **NUT server host-native or LXC?** Host-native is the simpler default; LXC needs
+4. ~~**NUT server host-native or LXC?**~~ **Settled — LXC 103** ([ADR 30](../decisions/30-ups-nut-graceful-shutdown.md)); for reference, host-native would have been simpler, LXC needs
    passthrough + host-side shutdown decision.
 5. **Shutdown choreography across the fleet** — what order do M910q (k3s), OMV NAS, Beetle,
    edge and the **Futro S930 router** follow, and does k3s need a drain/cordon step before
