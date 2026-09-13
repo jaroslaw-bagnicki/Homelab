@@ -347,6 +347,12 @@ pct exec 213 -- bash -lc 'systemctl status nut-driver@ups --no-pager'
 pct exec 213 -- bash -lc 'upsc ups@192.168.2.213'   # named address — upsd does not listen on 127.0.0.1
 ```
 
+> **`nut-monitor` in the container is expected to be `inactive`.** The package enables it and
+> `nut.target` is active, but `upsmon` itself checks the mode and exits — `upsmon disabled, please
+> adjust the configuration to your needs` in the journal. The guard lives in the daemon, not the
+> unit: `nut-monitor.service` carries no mode condition. The container is the server; the monitors
+> are the host (§4) and the fleet (§5).
+
 Record from the `upsc` dump:
 
 | Variable | Why it matters |
