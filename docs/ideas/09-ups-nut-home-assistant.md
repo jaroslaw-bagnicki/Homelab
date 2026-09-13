@@ -101,7 +101,7 @@ either
 
 **Decision direction from the threads: the NUT server belongs on the Home Assistant node —
 the Wyse 5070 running Proxmox VE** (`192.168.2.201`, [ADR 25](../decisions/25-home-assistant-thin-client.md)),
-running the NUT server in a dedicated unprivileged **LXC 103** (`192.168.2.213`), with the UPS USB cable plugged into it.
+running the NUT server in a dedicated unprivileged **LXC 213** (`192.168.2.213`), with the UPS USB cable plugged into it.
 
 ```
                  [ Green Cell UPS ]
@@ -110,7 +110,7 @@ running the NUT server in a dedicated unprivileged **LXC 103** (`192.168.2.213`)
         [ Wyse 5070 · Proxmox VE · 192.168.2.201 ]
         nut-client only (upsmon · primary)
                         │
-        [ LXC 103 · nut · 192.168.2.213 ]
+        [ LXC 213 · nut · 192.168.2.213 ]
         nutdrv_qx + upsd  (:3493)
                         │ LAN
         ┌───────────────┬───────────────┬───────────────┐
@@ -181,7 +181,7 @@ Automation direction (dashboard + notifications first, escalation later):
 3. **Which USB controller is in the actual unit?** Verify with `lsusb` (ID should be
    `0665:5161`, `1386:0001` or `0f10:0001`) and confirm `nutdrv_qx` attaches before
    committing to the driver choice.
-4. ~~**NUT server host-native or LXC?**~~ **Settled — LXC 103** ([ADR 30](../decisions/30-ups-nut-graceful-shutdown.md)); for reference, host-native would have been simpler, LXC needs
+4. ~~**NUT server host-native or LXC?**~~ **Settled — LXC 213** ([ADR 30](../decisions/30-ups-nut-graceful-shutdown.md)); for reference, host-native would have been simpler, LXC needs
    passthrough + host-side shutdown decision.
 5. **Shutdown choreography across the fleet** — what order do M910q (k3s), OMV NAS, Beetle,
    edge and the **Futro S930 router** follow, and does k3s need a drain/cordon step before

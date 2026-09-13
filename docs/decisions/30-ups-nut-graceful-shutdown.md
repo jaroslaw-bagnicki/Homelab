@@ -36,7 +36,7 @@ node stop itself on low battery.**
 
 - **NUT.** One mechanism drives a heterogeneous fleet, and it already has a Home Assistant
   integration and a monitoring path.
-- **NUT server in a dedicated unprivileged LXC (103) on the HA node's Proxmox** — chosen over
+- **NUT server in a dedicated unprivileged LXC (213) on the HA node's Proxmox** — chosen over
   host-native on the base, for container isolation and config that folds into VM/LXC backups.
 - **Driver `nutdrv_qx`**, with `port = auto` plus `vendorid`/`productid`. The vendor-defined usage
   page rules out `usbhid-ups`, and with no serial number there is no stable device path to name.

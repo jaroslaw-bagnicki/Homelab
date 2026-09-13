@@ -74,10 +74,10 @@ Keep the single `192.168.2.0/24` broadcast domain. Reserve a dedicated static bl
 | `192.168.2.200` | Lenovo M910q Homelab (existing) |
 | `192.168.2.201` | Wyse 5070 HA node — Proxmox VE host (runbook 28) |
 | `192.168.2.202` | Beetle NAS — the ML110's successor (planned) |
-| `192.168.2.210` | VM 100 — Home Assistant OS |
-| `192.168.2.211` | LXC 101 — Mosquitto |
-| `192.168.2.212` | LXC 102 — Zigbee2MQTT |
-| `192.168.2.213` | LXC 103 — NUT server (runbook 29, ADR 30) |
+| `192.168.2.210` | VM 210 — Home Assistant OS |
+| `192.168.2.211` | LXC 211 — Mosquitto |
+| `192.168.2.212` | LXC 212 — Zigbee2MQTT |
+| `192.168.2.213` | LXC 213 — NUT server (runbook 29, ADR 30) |
 | `192.168.2.220` | LLM server (Phase 2, future) |
 | `192.168.2.230` | TL-SG108E management IP (proposed) |
 | `192.168.2.240` | **Edge ingress appliance (Wyse 3040)** — `24x` block (decided 2026-08-17, runbook 24) |
@@ -88,13 +88,11 @@ Keep the single `192.168.2.0/24` broadcast domain. Reserve a dedicated static bl
 > without renumbering existing reservations.
 
 > **Guest addressing** — policy owned by [ADR 31](../decisions/31-static-address-scheme.md); the
-> table above is the current allocation. Proxmox guests live in `21x` and derive their
-> address from the VMID: **`.210 + (VMID - 100)`** — VM 100 → `.210`, LXC 101 → `.211`,
-> LXC 103 → `.213`. The `21x` block was the NAS category; the ML110 was its only member, so the
-> block is free the moment it retires and the NAS role instead occupies a `20x` address as
-> `.202`. Two things this scheme assumes:
-> - **One hypervisor.** The rule is only unique while a single Proxmox host exists — a second
->   host with its own VMID 100 would collide, so it gets its own block.
+> table above is the current allocation. Proxmox guests live in `21x` with the **VMID equal to the
+> address's last octet** — VM 210 → `.210`, LXC 211 → `.211`, LXC 213 → `.213` — so neither the ID
+> nor the address needs a derivation. The `21x` block was the NAS category; the ML110 was its only
+> member, so the block is free the moment it retires and the NAS role instead occupies a `20x`
+> address as `.202`. One thing this scheme keeps in view:
 > - **The ML110 still answers at `.210`.** It is powered off but configured static at `.210`
 >   (runbook 23). Any boot before retirement — the data migration to the Beetle, most likely —
 >   collides with the HA VM: change its address or set it to DHCP *before* that boot.
