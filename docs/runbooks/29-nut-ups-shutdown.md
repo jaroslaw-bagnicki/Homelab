@@ -359,8 +359,10 @@ pct exec 213 -- bash -lc 'runuser -u nut -- /lib/nut/nutdrv_qx -a ups -DDD'  # a
 `runuser`, not `sudo` — the Debian template ships **no `sudo`** (verified 2026-09-13: only `su` is
 present, while `/usr/sbin/runuser` works and reports `uid=102(nut) gid=105(nut)`).
 
-Both runs must initialise. A driver that works as root but not as `nut` will fail the moment the
-systemd unit drops privileges.
+Both runs must initialise. A driver that works as root but not as `nut` fails in service too — the
+unit carries no `User=`, but NUT's drivers **drop to `nut` themselves** once started as root (verified
+2026-09-13: the running `nutdrv_qx` is uid 102 / gid 105). That is precisely what §2's permission
+step buys: the driver opens the device as `nut`, not as root.
 
 Then bring the services up and read the unit:
 
