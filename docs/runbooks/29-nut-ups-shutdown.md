@@ -196,14 +196,15 @@ pct start 213
 pct exec 213 -- sh -c 'ls -l /dev/bus/usb/*/'   # the UPS node must be listed, on whatever bus
 ```
 
-Bus and device numbers are reassigned across reboots — never assume `001`, and expect them to move on
-their own: the unit sat at device `008` in the morning of 2026-09-13 and at `016` a few hours later.
-The container's listing shows bus/device numbers but no vendors, so ask the host which node is the
-UPS:
+Bus and device numbers are reassigned across reboots — never assume `001`. Expect them to move on
+their own: the unit sat at device `008` in the morning of 2026-09-13, at `016` an hour later, and at
+`018` shortly after — three numbers in a single day, without a reboot. The container's listing shows
+bus/device numbers but no vendors, so ask the host which node is the UPS — and derive the path
+rather than pasting one:
 
 ```sh
-lsusb -d 0665:5161                      # host: e.g. Bus 001 Device 016
-pct exec 213 -- ls -l /dev/bus/usb/001/016
+dev=$(lsusb -d 0665:5161 | awk '{print "/dev/bus/usb/" $2 "/" $4}' | tr -d :)
+pct exec 213 -- ls -l "$dev"
 ```
 
 **Permissions.** A visible node is not a *writable* one. Measured 2026-09-13, inside the container the
@@ -233,9 +234,15 @@ sidestep the arithmetic by making the node world-writable on the host — this i
 Verify that the group arrives inside the container:
 
 ```sh
-pct exec 213 -- ls -l /dev/bus/usb/001/016        # expect group `nut`, mode 660
-pct exec 213 -- runuser -u nut -- test -w /dev/bus/usb/001/016 && echo "writable as nut"
+dev=$(lsusb -d 0665:5161 | awk '{print "/dev/bus/usb/" $2 "/" $4}' | tr -d :)
+pct exec 213 -- ls -l "$dev"                                    # expect group `nut`, mode 660
+pct exec 213 -- runuser -u nut -- test -w "$dev" && echo "writable as nut"
 ```
+
+Verified 2026-09-13: host side `crw-rw---- root nut`, inside the container `crw-rw---- nobody nut`,
+and the write test passes as `nut`. The owner still reads `nobody` — host `root` sits outside the
+container's ID map — while the group lands on the container's own `nut`, which is the whole point of
+the mapped GID above.
 
 §3 then repeats the same check with the driver, which is the one that counts.
 
