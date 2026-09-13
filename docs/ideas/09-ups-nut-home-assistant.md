@@ -101,7 +101,7 @@ either
 
 **Decision direction from the threads: the NUT server belongs on the Home Assistant node —
 the Wyse 5070 running Proxmox VE** (`192.168.2.201`, [ADR 25](../decisions/25-home-assistant-thin-client.md)),
-running the NUT server in a dedicated unprivileged **LXC 103** (`192.168.2.202`), with the UPS USB cable plugged into it.
+running the NUT server in a dedicated unprivileged **LXC 103** (`192.168.2.213`), with the UPS USB cable plugged into it.
 
 ```
                  [ Green Cell UPS ]
@@ -110,7 +110,7 @@ running the NUT server in a dedicated unprivileged **LXC 103** (`192.168.2.202`)
         [ Wyse 5070 · Proxmox VE · 192.168.2.201 ]
         nut-client only (upsmon · primary)
                         │
-        [ LXC 103 · nut · 192.168.2.202 ]
+        [ LXC 103 · nut · 192.168.2.213 ]
         nutdrv_qx + upsd  (:3493)
                         │ LAN
         ┌───────────────┬───────────────┬───────────────┐
@@ -143,7 +143,7 @@ permission step.
 ## Home Assistant integration
 
 With HAOS running as a VM on the same Proxmox host, Home Assistant connects to the NUT
-server over the LAN via its **NUT integration** (`192.168.2.202:3493`, `upsmon-fleet`
+server over the LAN via its **NUT integration** (`192.168.2.213:3493`, `upsmon-fleet`
 credentials) — no USB passthrough into the VM, no add-on needed. Expected entities:
 
 - `sensor.ups_battery_charge` — battery %

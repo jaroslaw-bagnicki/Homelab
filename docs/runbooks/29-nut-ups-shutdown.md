@@ -33,7 +33,8 @@ defined order.
   `vendorid`/`productid` rather than by a port path — which port it occupies is irrelevant, and the
   cable can be moved without touching any config.
 - **LXC 103** (`nut`, unprivileged, Debian) — NUT server: `nutdrv_qx` driver + `upsd` on
-  **`192.168.2.202:3493`**. Next free ID after VM 100 / LXC 101 / LXC 102
+  **`192.168.2.213:3493`** — the `21x` virtual-guest block (`210 + (VMID - 100)`, [research 24](../research/24-network-topology-design.md)).
+  Next free ID after VM 100 / LXC 101 / LXC 102
   ([ADR 25](../decisions/25-home-assistant-thin-client.md)); the Netdata Parent
   ([#104](https://github.com/jaroslaw-bagnicki/Homelab/issues/104),
   [ADR 27](../decisions/27-monitoring-strategy.md)) takes a later ID.
@@ -141,7 +142,7 @@ pct create 103 local:vztmpl/<template> \
   --hostname nut --unprivileged 1 \
   --cores 1 --memory 512 --swap 512 \
   --rootfs local-lvm:4 \
-  --net0 name=eth0,bridge=vmbr0,ip=192.168.2.202/24,gw=192.168.2.1 \
+  --net0 name=eth0,bridge=vmbr0,ip=192.168.2.213/24,gw=192.168.2.1 \
   --nameserver 1.1.1.1 --onboot 1
 ```
 
@@ -222,7 +223,7 @@ MODE=netserver
 **`/etc/nut/upsd.conf`**
 
 ```
-LISTEN 192.168.2.202 3493
+LISTEN 192.168.2.213 3493
 ```
 
 **`/etc/nut/upsd.users`** — **two accounts, one per role.** NUT authorizes the roles separately, so a
@@ -289,7 +290,7 @@ Then bring the services up and read the unit:
 ```sh
 pct exec 103 -- bash -lc 'systemctl enable --now nut-driver-enumerator nut-server'
 pct exec 103 -- bash -lc 'systemctl status nut-driver@ups --no-pager'
-pct exec 103 -- bash -lc 'upsc ups@192.168.2.202'   # named address — upsd does not listen on 127.0.0.1
+pct exec 103 -- bash -lc 'upsc ups@192.168.2.213'   # named address — upsd does not listen on 127.0.0.1
 ```
 
 Record from the `upsc` dump:
@@ -323,7 +324,7 @@ apt install -y nut-client
 **`/etc/nut/upsmon.conf`**
 
 ```
-MONITOR ups@192.168.2.202 1 upsmon-host <AKV: nut-upsmon-primary-password> primary
+MONITOR ups@192.168.2.213 1 upsmon-host <AKV: nut-upsmon-primary-password> primary
 MINSUPPLIES 1
 SHUTDOWNCMD "/sbin/shutdown -h +0"
 POLLFREQ 5
@@ -340,7 +341,7 @@ NOTIFYFLAG ONLINE SYSLOG+WALL
 ```sh
 chown root:nut /etc/nut/upsmon.conf && chmod 640 /etc/nut/upsmon.conf
 systemctl enable --now nut-monitor
-upsc ups@192.168.2.202     # must return the same variables as §3
+upsc ups@192.168.2.213     # must return the same variables as §3
 ```
 
 `/sbin/shutdown -h +0` is all that is needed to stop the VMs/LXCs in order — Proxmox handles the
@@ -364,7 +365,7 @@ apt install -y nut-client
 `/etc/nut/upsmon.conf` — identical to §4 except the role and `SHUTDOWNCMD`:
 
 ```
-MONITOR ups@192.168.2.202 1 upsmon-fleet <AKV: nut-upsmon-secondary-password> secondary
+MONITOR ups@192.168.2.213 1 upsmon-fleet <AKV: nut-upsmon-secondary-password> secondary
 MINSUPPLIES 1
 SHUTDOWNCMD "/sbin/shutdown -h +0"
 POLLFREQ 5
@@ -377,7 +378,7 @@ POWERDOWNFLAG /etc/killpower
 ```sh
 chown root:nut /etc/nut/upsmon.conf && chmod 640 /etc/nut/upsmon.conf
 systemctl enable --now nut-monitor
-upsc ups@192.168.2.202
+upsc ups@192.168.2.213
 ```
 
 Node-specific notes:
@@ -417,7 +418,7 @@ present:
 ```sh
 systemctl stop nut-monitor                 # host, before stopping/upgrading LXC 103
 pct stop 103 / upgrade / pct start 103
-pct exec 103 -- bash -lc 'upsc ups@192.168.2.202'   # only continue once this answers
+pct exec 103 -- bash -lc 'upsc ups@192.168.2.213'   # only continue once this answers
 systemctl start nut-monitor
 ```
 
@@ -433,16 +434,16 @@ never traverses the host's UFW chains — UFW here is host-management-plane only
 
 ## 7. Validation
 
-1. **Read, don't trust** — `upsc ups@192.168.2.202` from every client returns the same values.
+1. **Read, don't trust** — `upsc ups@192.168.2.213` from every client returns the same values.
 2. **On-battery propagation** — pull the UPS's mains plug:
 
    ```sh
-   watch -n2 "upsc ups@192.168.2.202 | grep -E 'ups.status|battery'"
+   watch -n2 "upsc ups@192.168.2.213 | grep -E 'ups.status|battery'"
    ```
 
    Every node must flip to `OB` within a few seconds while the fleet keeps running. Plug back in
    and confirm `OL`.
-3. **Quick test (non-destructive)** — `upscmd -l ups@192.168.2.202` lists what the unit actually
+3. **Quick test (non-destructive)** — `upscmd -l ups@192.168.2.213` lists what the unit actually
    supports. Expect a short self-test only: the discharge test is not available on this unit.
 4. **Shutdown drill** — two different tests, and they are not interchangeable:
    - **Per-node test:** on a secondary, point `SHUTDOWNCMD` at a benign command for the test
@@ -467,9 +468,9 @@ never traverses the host's UFW chains — UFW here is host-management-plane only
 ## Verification Checklist
 
 - [ ] §0 UPS input on the wall socket; **both strips** on battery-backed outlets; monitors/dock/charger off the UPS
-- [ ] §1 LXC 103 created unprivileged, `192.168.2.202`, `onboot 1`, starts cleanly
+- [ ] §1 LXC 103 created unprivileged, `192.168.2.213`, `onboot 1`, starts cleanly
 - [ ] §2 USB node visible in the container **and** readable as `nut` (udev/permission step done)
-- [ ] §3 `/lib/nut/nutdrv_qx` attaches (as root **and** as `nut`), `upsc ups@192.168.2.202` returns real values, `battery.runtime` presence recorded
+- [ ] §3 `/lib/nut/nutdrv_qx` attaches (as root **and** as `nut`), `upsc ups@192.168.2.213` returns real values, `battery.runtime` presence recorded
 - [ ] §3 both monitor passwords in AKV (`nut-upsmon-primary-password`, `nut-upsmon-secondary-password`) and substituted into the files; `/etc/nut` files `640 root:nut`
 - [ ] §4 host `nut-monitor` active, reads the UPS through the container
 - [ ] §5 `lab` + `edge` clients active and reading the UPS
@@ -482,7 +483,7 @@ never traverses the host's UFW chains — UFW here is host-management-plane only
 - **ADR** — the direction is recorded in [ADR 30](../decisions/30-ups-nut-graceful-shutdown.md). It is
   dated to the decision, so if §3 or §7 fails the fix is to **update or supersede it** — not to leave
   it silently wrong.
-- **Home Assistant integration** — NUT integration at `192.168.2.202:3493` plus `OB`/`LB`/`OL`
+- **Home Assistant integration** — NUT integration at `192.168.2.213:3493` plus `OB`/`LB`/`OL`
   automations, once the HA OS VM lands ([#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68) /
   [#85](https://github.com/jaroslaw-bagnicki/Homelab/issues/85)).
 - **AC-restore behaviour** — after a full drain the nodes stay off. Decide per node whether the BIOS
