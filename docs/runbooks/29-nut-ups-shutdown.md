@@ -425,6 +425,14 @@ The trigger is therefore **`LB`**; do not build a countdown on a variable that d
 
 ## 4. Proxmox host — NUT client
 
+> **Delivery note — §4 and §5 ship as an Ansible role, not by hand.** The fleet is Ansible-managed
+> ([ADR 28](../decisions/28-fleet-admin-account-and-key.md)), so hand-writing `upsmon.conf` on three
+> nodes is three chances to mistype a Key Vault password and three files free to drift apart. Tracked
+> in [#116](https://github.com/jaroslaw-bagnicki/Homelab/issues/116), which carries its own runbook —
+> the client rollout is a separate procedure from building the server. **The content below stays as
+> the reference the role has to encode** — role per node, the `FINALDELAY`/`HOSTSYNC` values, the
+> account names — and as the record of *why* they are set that way.
+
 On the host (`192.168.2.201`), which is the **one and only `primary`** for this UPS:
 
 ```sh
@@ -465,6 +473,10 @@ secondary waits for the primary. Without both set differently from the clients, 
 the fleet — the drill in §7 is what proves it.
 
 ## 5. Fleet clients
+
+> Same delivery note as §4: this section becomes part of the Ansible role
+> ([#116](https://github.com/jaroslaw-bagnicki/Homelab/issues/116)). The text below is the reference
+> the role implements and stays as documentation.
 
 On `lab` (M910q) and `edge` (Wyse 3040) — same package, same file, but **`secondary`**:
 
@@ -601,8 +613,11 @@ never traverses the host's UFW chains — UFW here is host-management-plane only
   [#85](https://github.com/jaroslaw-bagnicki/Homelab/issues/85)).
 - **AC-restore behaviour** — after a full drain the nodes stay off. Decide per node whether the BIOS
   should auto-power-on when mains returns, otherwise recovery is a manual walk to each machine.
-- **Ansible ownership** — LXC 213 and the fleet clients are manual today; folding them into the
-  `ha` playbook (and a `nut` role) keeps them consistent with the rest of the fleet.
+- **Ansible ownership** — split settled 2026-09-13: the **clients** are delivered as an Ansible role
+  ([#116](https://github.com/jaroslaw-bagnicki/Homelab/issues/116)) with its own runbook, while
+  **LXC 213 stays a runbook procedure** (§1–§3) — it is one container, built once, and the steps are
+  the deliverable. The server build is complete
+  ([#115](https://github.com/jaroslaw-bagnicki/Homelab/issues/115)).
 - **Beetle M-III as the NAS client** — it sits on strip 1 from day one but joins NUT (§5) only once
   [#98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98) has OMV running, including the
   OMV-panel-vs-files decision.
