@@ -55,7 +55,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Storage | **SanDisk X600 `SD9SB8W-128G` 128 GB SSD** (`sda`, SMART PASSED) + **2× Seagate ST1000VT001-1RE172 1 TB 2.5"** (`sdb` `WDES3KB7` clean; `sdc` `WDEPBVR3` *1,056 reallocated — long self-test clean, kept + monitored*) → mdadm RAID1 = 1 TB usable |
 | SATA | H110 / Intel 100-C230 **AHCI** (port count pending); PCIe 3.0 x16 + 2× PCIe 2.0 x1; **no mSATA** |
 | PSU | **AcBel `POF001-280G`** (UPS-integrated `PSU UPS BEETLE/M-III`, DN P/N `01750279900`) — 250 W (225 W @50 °C), **80 Plus Gold** |
-| Network | 1× GbE Intel I219-V (`enp0s31f6`, MAC `00:01:2e:8e:14:0d`) · DHCP |
+| Network | 1× GbE Intel I219-V (`enp0s31f6`, MAC `00:01:2e:8e:14:0d`) · DHCP — static `192.168.2.202` planned (ADR 31 / research 24) |
 | Firmware | BIOS AMI `V5.0.0.12 R1.8.0` (2021-11-22) · board `M2.0-H110-uATX` (Fujitsu D3460) · SN `000000001750341761` |
 | OS | **OMV** — [ADR 29](decisions/29-nas-backup-target-beetle-m3-omv.md); Unraid deferred |
 | Cooling | **3 fans** — front-right (CPU+PSU), PSU back, internal UPS module; **43.7 dB(A)** (UNI-T UT353); internal **TOTEX NiMH 15.6 V 3000 mAh** UPS battery (`first use 12/2022`) — not OS-exposed |
@@ -86,9 +86,10 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | RAM | **8 GB DDR4 (2× 4 GiB Micron `4ATF51264HZ-3G2J1`)** — both SODIMM slots populated (DDR4-3200 rated, 2400 MT/s); 16 GB = replace both with 2× 8 GB |
 | Storage | M.2 **SATA** 2280 — **SK hynix SC311 SATA 128 GB** (used, SMART PASSED, ~97% NAND life left, SN `MS8BN03201230BC10`); eMMC 14.7 GiB present, unused |
 | Network | Realtek RTL8111/8168 GbE (`enp1s0`, MAC `c0:25:a5:65:02:67`) · Intel CNVi WiFi + BT (`wlp0s12f0`, MAC `d0:3c:1f:cb:76:9a`) |
-| Zigbee | Sonoff Zigbee 3.0 USB Dongle Plus (ZBDongle-P / CC2652P) — USB coordinator for LXC 102 passthrough (by-id pattern, research 26 §4) |
+| Zigbee | Sonoff Zigbee 3.0 USB Dongle Plus (ZBDongle-P / CC2652P) — USB coordinator for LXC 212 passthrough (by-id pattern, research 26 §4) |
 | Firmware | BIOS 1.34.0 (2024-11-08) · board 060J9C · SKU `080C` · SN `16474B3` |
 | Role | Home Assistant OS VM on Proxmox VE + Mosquitto/Zigbee2MQTT LXCs (ADR 25) |
+| Guests | VM 210 HA OS `192.168.2.210` · LXC 211 Mosquitto `192.168.2.211` · LXC 212 Zigbee2MQTT `192.168.2.212` · LXC 213 NUT `192.168.2.213` — VMID = last octet, [ADR 31](decisions/31-static-address-scheme.md) |
 | Status | Proxmox VE **9.2.2** installed at `192.168.2.201` + base provisioned (runbook 28, 2026-09-06); HA VM/LXC still pending ([#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68) / [#85](https://github.com/jaroslaw-bagnicki/Homelab/issues/85)) |
 | Acquisition | 2026-08-19 — hardware diagnostic done ([research 29](research/29-wyse5070-hardware-diagnostic.md)); SK hynix SSD + Sonoff ZBDongle-P acquired |
 | Docs | [idea 05](ideas/05-home-assistant-thin-client.md) · [ADR 25](decisions/25-home-assistant-thin-client.md) · [research 26](research/26-home-assistant-thin-client.md) · [research 29](research/29-wyse5070-hardware-diagnostic.md) · [runbook 28](runbooks/28-ha-proxmox-node.md) |
