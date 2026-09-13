@@ -48,9 +48,10 @@ is a restore, not an edit.
   as the address plan, and a new guest's address is known from the ID it is handed.
 - **Each role sits in a block of its own class.** The Beetle takes a `20x` address as the physical
   NAS; the ML110 vacates `.210` when it retires.
-- **The numbering follows the addresses, not a shared counter.** A second Proxmox host takes the
-  VMIDs matching its own guest block (`22x` guests → `22x` IDs), so a second hypervisor does not
-  collide with this one — the coupling an offset rule (`.210 + (VMID - 100)`) cannot express.
+- **The numbering follows the addresses, not a shared counter.** A second hypervisor would need its
+  **own guest block allocated before it exists** — which is the point: the scheme scales by class, and
+  that coupling is what an offset rule (`.210 + (VMID - 100)`) cannot express. `22x` is already the
+  Phase 2 LLM server's block, so a second host's guests would need a new one.
 - **The address and the ID move together.** Re-addressing a guest means changing its ID as well, and
   Proxmox has no in-place ID change — the guest is restored under the new ID. Accepted because the
   addresses are stable by design: it is the price of the identity.

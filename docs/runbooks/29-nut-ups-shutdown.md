@@ -326,9 +326,18 @@ this file in Git:
 > Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name nut-upsmon-secondary-password -AsPlainText
 > ```
 >
+> **These two reads do print the value — that is the one deliberate exposure, not an oversight.** A
+> secret cannot reach a config file without being seen once; the script's job is to keep that from
+> happening on *every* run, and so it reports what it provisioned instead of echoing what it made.
+> Do the substitution in the same session, and if that terminal's output is ever captured or shared,
+> rotate with `-Force` and substitute again.
+>
 > Put the primary value into `upsd.users` and the host's `upsmon.conf` (§4) and the secondary value
 > into each client's `MONITOR` line (§5), editing the files in place inside the container
-> (`pct exec 213 -- nano /etc/nut/upsd.users`). Neither value goes into Git.
+> (`pct exec 213 -- nano /etc/nut/upsd.users`). Neither value goes into Git. Once §4/§5 ship as the
+> Ansible role ([#116](https://github.com/jaroslaw-bagnicki/Homelab/issues/116)) the client files need
+> no hand-editing at all — that role injects the password straight from Key Vault, so it is never
+> printed.
 >
 > Recent NUT (2.8+) spells the role `primary` / `secondary`; older 2.7.x uses `master` / `slave`.
 > Check `upsd -V` and use that spelling — a wrong role surfaces as

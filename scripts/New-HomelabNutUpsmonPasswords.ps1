@@ -12,7 +12,8 @@ foreach ($name in $secrets) {
         Write-Warning "Secret '${name}' already exists. Use -Force to rotate."
         continue
     }
-    [string]$pw = -join ((48..57) + (65..90) + (97..122) | Get-Random -Count 32 | ForEach-Object { [char]$_ })
+    $alphabet = [char[]]((48..57) + (65..90) + (97..122))
+    [string]$pw = -join (1..32 | ForEach-Object { $alphabet[[Security.Cryptography.RandomNumberGenerator]::GetInt32(0, $alphabet.Length)] })
     Set-AzKeyVaultSecret -VaultName $vault -Name $name `
         -SecretValue (ConvertTo-SecureString $pw -AsPlainText -Force) | Out-Null
     Write-Host "Secret '${name}' provisioned in '${vault}'."

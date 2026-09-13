@@ -85,7 +85,7 @@ Three options considered, **plus the one settled on**:
 └── LXC 212: Zigbee2MQTT ──────────────────> [ 1 vCPU | 512 MB RAM ] + (Passthrough USB Dongle)
 ```
 
-USB pass-through to the Z2M LXC — `/etc/pve/lxc/102.conf` (Gemini-suggested; verify syntax):
+USB pass-through to the Z2M LXC — `/etc/pve/lxc/212.conf` (Gemini-suggested; verify syntax):
 
 ```
 lxc.cgroup2.devices.allow: c 188:* rwm
