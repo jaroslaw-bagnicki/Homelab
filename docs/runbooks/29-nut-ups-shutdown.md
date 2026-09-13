@@ -210,19 +210,34 @@ pct exec 213 -- ls -l /dev/bus/usb/001/016
 node reads `nobody nogroup`, mode `crw-rw-r--`: host `root` sits outside an unprivileged container's
 ID map (so it shows as `nobody`), and that mode leaves *other* read-only — the driver as `nut` could
 open the device but not write to it. The host has no NUT package, so nothing grants that access for
-you — do it with a udev rule, matching the unit by VID:PID:
+you — do it with a udev rule, matching the unit by VID:PID.
+
+**The GID has to come from the container, and it only exists once §3 has installed NUT** — the
+package creates the `nut` user and group. Read it there, then work backwards:
 
 ```sh
-sudo groupadd -f nut                      # the host needs the group too
-getent group nut                          # note the GID — it must match the container's `nut` GID
+pct exec 213 -- getent group nut                  # e.g. nut:x:105:
+sudo groupadd -g $((100000 + 105)) nut            # 100105 — the *mapped* GID, see below
 sudo tee /etc/udev/rules.d/85-nut-usb.rules >/dev/null <<'EOF'
 SUBSYSTEM=="usb", ATTR{idVendor}=="0665", ATTR{idProduct}=="5161", MODE="0660", GROUP="nut"
 EOF
 sudo udevadm control --reload && sudo udevadm trigger --subsystem-match=usb
 ```
 
-If the container's `nut` GID differs, align the two with an `lxc.idmap` entry rather than widening
-the mode. §3 proves the driver can open the device **as `nut`**, not just as root.
+The `100000 +` is not decoration: an unprivileged container's IDs sit behind a user namespace
+(container `N` ↔ host `100000+N` — verified on this node, where the container's `init` runs as UID
+`100000` on the host). The device node itself lives on the *host*, so for it to appear as group
+`nut` **inside** the container, the host group has to carry the mapped GID. `MODE="0666"` would
+sidestep the arithmetic by making the node world-writable on the host — this is the narrower grant.
+
+Verify that the group arrives inside the container:
+
+```sh
+pct exec 213 -- ls -l /dev/bus/usb/001/016        # expect group `nut`, mode 660
+pct exec 213 -- runuser -u nut -- test -w /dev/bus/usb/001/016 && echo "writable as nut"
+```
+
+§3 then repeats the same check with the driver, which is the one that counts.
 
 ⚠ Binding the whole bus also exposes the Zigbee coordinator's raw USB node to this container. That
 is acceptable here (unprivileged container, LAN-trusted host) but it is a deliberate trade: pinning
