@@ -154,6 +154,13 @@ resolvers, so it keeps following whatever the LAN serves. A hardcoded public res
 that, including the `.home` names the OPNsense router is due to own
 ([ADR 06](../decisions/06-local-dns-dnsmasq.md), [idea 07](../ideas/07-opnsense-futro-s930.md)).
 
+⚠ **Building it in the GUI wizard instead of the snippet above?** Three wizard defaults need
+attention, because this is where the GUI and `pct create` diverge: untick **Nesting** (General) —
+`pct create` sets no `features`; untick **Firewall** on the Network tab — that is `firewall=1`
+inside `net0`, which `pct create` leaves at `0` (§6 explains why an interface carrying no rules of
+its own matters for `3493`); and set **Start at boot** under **Options** once the container exists,
+since the wizard has no `--onboot` field.
+
 ## 2. USB passthrough
 
 The UPS is a raw **usbfs** device, not a serial tty, so the container needs the USB bus mount plus
@@ -441,7 +448,8 @@ files, and `pve-firewall` running unenforced — checked 2026-09-13), but the fl
 into that second system: the day the DC firewall is enabled, LXC 213's inbound becomes rule-driven
 with **no rules defined for it** — and `3493` unreachable is precisely what the clients read as a
 dead UPS (`DEADTIME` above). `pct create` leaves the flag at `0`, so keep it that way; in the GUI
-wizard it is the **Firewall** checkbox on the Network tab — make sure it stays unticked.
+wizard it is the **Firewall** checkbox on the Network tab — make sure it stays unticked (the wizard
+defaults to check at creation time are listed in §1).
 
 ## 7. Validation
 
