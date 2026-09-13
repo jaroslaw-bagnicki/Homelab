@@ -239,18 +239,15 @@ this file in Git:
     upsmon secondary
 ```
 
-> Create both secrets once, from the dev container:
+> Create both secrets once, from the dev container — the one-shot script writes both and prints them
+> back for the substitution below:
 >
 > ```powershell
-> foreach ($name in 'nut-upsmon-primary-password','nut-upsmon-secondary-password') {
->   $pw = -join ((48..57) + (65..90) + (97..122) | Get-Random -Count 32 | ForEach-Object { [char]$_ })
->   Set-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name $name `
->     -SecretValue (ConvertTo-SecureString $pw -AsPlainText -Force)
-> }
+> ./scripts/New-HomelabNutUpsmonPasswords.ps1     # -Force rotates an existing pair
 > ```
 >
-> Then **read each value back and substitute it** — the `<AKV: …>` text above is a placeholder, and a
-> literal copy fails authentication:
+> Then **substitute the printed values** — the `<AKV: …>` text above is a placeholder, and a
+> literal copy fails authentication. To re-read them later:
 >
 > ```powershell
 > Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name nut-upsmon-primary-password -AsPlainText
