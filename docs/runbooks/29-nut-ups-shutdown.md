@@ -434,6 +434,15 @@ never traverses the host's UFW chains — UFW here is host-management-plane only
 **routed** NIC (separate subnet); then `3493` has to be added to `security_ufw_allow_tcp_ports` in
 `ansible/host_vars/ha.yml` — not by hand, or the next `security` role run drops it.
 
+⚠ **Two firewalls, not one** — the paragraph above is about **UFW on the host**. Proxmox has its own
+firewall, and each container interface carries a flag for it: `firewall=1` inside `net0`. It is
+inert while the datacenter firewall is off (no `/etc/pve/firewall/cluster.fw`, no host or guest rule
+files, and `pve-firewall` running unenforced — checked 2026-09-13), but the flag opts the interface
+into that second system: the day the DC firewall is enabled, LXC 213's inbound becomes rule-driven
+with **no rules defined for it** — and `3493` unreachable is precisely what the clients read as a
+dead UPS (`DEADTIME` above). `pct create` leaves the flag at `0`, so keep it that way; in the GUI
+wizard it is the **Firewall** checkbox on the Network tab — make sure it stays unticked.
+
 ## 7. Validation
 
 1. **Read, don't trust** — `upsc ups@192.168.2.213` from every client returns the same values.
