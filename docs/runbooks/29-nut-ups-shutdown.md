@@ -139,7 +139,7 @@ pveam download local <debian-13-template-from-the-line-above>
 pveam list local
 
 pct create 213 local:vztmpl/<template> \
-  --hostname nut --unprivileged 1 \
+  --hostname nut --unprivileged 1 --features nesting=1 \
   --cores 1 --memory 512 --swap 512 \
   --rootfs local-lvm:4 \
   --net0 name=eth0,bridge=vmbr0,ip=192.168.2.213/24,gw=192.168.2.1 \
@@ -154,11 +154,18 @@ resolvers, so it keeps following whatever the LAN serves. A hardcoded public res
 that, including the `.home` names the OPNsense router is due to own
 ([ADR 06](../decisions/06-local-dns-dnsmasq.md), [idea 07](../ideas/07-opnsense-futro-s930.md)).
 
-⚠ **Building it in the GUI wizard instead of the snippet above?** Three wizard defaults need
-attention, because this is where the GUI and `pct create` diverge: untick **Nesting** (General) —
-`pct create` sets no `features`; untick **Firewall** on the Network tab — that is `firewall=1`
-inside `net0`, which `pct create` leaves at `0` (see the note below); and set **Start at boot**
-under **Options** once the container exists, since the wizard has no `--onboot` field.
+⚠ **Building it in the GUI wizard instead of the snippet above?** Three fields need attention, because
+this is where the GUI and `pct create` diverge:
+
+- **Keep Nesting ticked** (General) — the wizard's default is right on this one. Debian 13 ships
+  **systemd 257**, and PVE warns on both create and start: `Systemd 257 detected. You may need to
+  enable nesting.` With nesting off, `tmp.mount`, `run-lock.mount` and `dev-mqueue.mount` end up in
+  `failed` state inside the container. The snippet above matches the default with
+  `--features nesting=1`.
+- **Untick Firewall** on the Network tab — that is `firewall=1` inside `net0`, which `pct create`
+  leaves at `0` (see the note below).
+- **Set Start at boot** under **Options** once the container exists — the wizard has no `--onboot`
+  field.
 
 > **Note — two firewalls, not one.** Proxmox's own firewall is a separate system from the host's UFW
 > (§6 covers that side), and every container interface carries a flag for it: `firewall=1` inside
@@ -487,7 +494,7 @@ never traverses the host's UFW chains — UFW here is host-management-plane only
 ## Verification Checklist
 
 - [ ] §0 UPS input on the wall socket; **both strips** on battery-backed outlets; monitors/dock/charger off the UPS
-- [ ] §1 LXC 213 created unprivileged, `192.168.2.213`, `onboot 1`, starts cleanly
+- [ ] §1 LXC 213 created unprivileged, `192.168.2.213`, `nesting=1`, `onboot 1`, starts cleanly and `systemctl --failed` is empty inside
 - [ ] §2 USB node visible in the container **and** readable as `nut` (udev/permission step done)
 - [ ] §3 `/lib/nut/nutdrv_qx` attaches (as root **and** as `nut`), `upsc ups@192.168.2.213` returns real values, `battery.runtime` presence recorded
 - [ ] §3 both monitor passwords in AKV (`nut-upsmon-primary-password`, `nut-upsmon-secondary-password`) and substituted into the files; `/etc/nut` files `640 root:nut`
