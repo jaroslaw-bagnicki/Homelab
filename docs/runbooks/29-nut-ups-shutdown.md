@@ -585,9 +585,19 @@ never traverses the host's UFW chains — UFW here is host-management-plane only
    **Partial pass 2026-09-12:** a 2–3 min on-battery ride — UPS switched and beeped normally, Beetle on
    a battery-backed outlet — caused **no reset**, but at light load, booting an OS from a pendrive with
    no spinning disks. Re-test once OMV is installed with both 1 TB HDDs and they are active.
-   **Same ride is the runtime measurement:** note the battery charge % before and after a few minutes on
-   battery at the settled load — charge-per-minute extrapolates to real runtime without draining the
-   pack, replacing the 35–45 min datasheet figure.
+   **2026-09-13 ride — 5.5 min on battery with the fleet attached.** `ups.status` flipped to `OB`
+   within one 2 s sample of the input being cut, and back to `OL` just as promptly: that is the signal
+   the clients act on, and it is fast enough. Two readings must **not** be used as triggers:
+   - **`input.voltage` is not a mains indicator.** It lagged `ups.status` by ~7 s on the way out, never
+     fell to 0 V (it parks at ~16.9 V with the input disconnected), and lagged again on reconnection.
+   - **`battery.charge` is a linear transform of `battery.voltage`**, not a gauge: 25.18 V maps to exactly
+     84% across the driver's 26.00/20.80 V window, so it carries nothing `battery.voltage` does not.
+   **Runtime cannot be obtained by extrapolation — this ride demonstrates why.** The pack sagged
+   27.29 → 25.88 → 25.18 V in the first 38 s (float → load, not capacity), then sat at 25.18 V for the
+   remaining 4 min 12 s without moving a hundredth of a volt. Lead-acid voltage is flat mid-discharge, so
+   there is no slope to extrapolate from; the steep part exists only in the final minutes before `LB`.
+   A real runtime figure therefore needs a ride **to `LB`**, which only becomes safe once the shutdown is
+   automatic — the DR-style test in [#117](https://github.com/jaroslaw-bagnicki/Homelab/issues/117).
 
 ## Verification Checklist
 
@@ -603,6 +613,7 @@ runbook completes on its own.
 - [x] §3 `upsd` reloaded after the accounts were written (`systemctl reload nut-server`) — a daemon that predates the edit still serves the old user list
 - [ ] §4 host `nut-monitor` active, reads the UPS through the container — **[#116]**
 - [ ] §5 `lab` + `edge` clients active and reading the UPS — **[#116]**
+- [x] §7 on-battery ride performed from the dev container (2026-09-13, 5.5 min, fleet attached) — `OB`/`OL` propagate promptly; runtime **not** derivable by extrapolation
 - [ ] §7 on-battery propagation confirmed on all three nodes (host, `lab`, `edge`); `upsmon -c fsd` drill done — **[#117]**
 - [ ] §6 host monitor paused across an LXC 213 restart, then restored after `upsc` answered — **[#116]**
 - [ ] §7 Beetle tested on battery at **idle and under spin-up** (or moved off battery outlets) — **[#117]**
