@@ -310,15 +310,16 @@ this file in Git:
     upsmon secondary
 ```
 
-> Create both secrets once, from the dev container — the one-shot script writes both and prints them
-> back for the substitution below:
+> Create both secrets once, from the dev container — the one-shot script writes both and prints the
+> **read-back commands**, never the values: a generated password belongs in the file that consumes it,
+> not in terminal scrollback or a session log.
 >
 > ```powershell
 > ./scripts/New-HomelabNutUpsmonPasswords.ps1     # -Force rotates an existing pair
 > ```
 >
-> Then **substitute the printed values** — the `<AKV: …>` text above is a placeholder, and a
-> literal copy fails authentication. To re-read them later:
+> Then **read each value and substitute it** — the `<AKV: …>` text above is a placeholder, and a
+> literal copy fails authentication:
 >
 > ```powershell
 > Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name nut-upsmon-primary-password -AsPlainText

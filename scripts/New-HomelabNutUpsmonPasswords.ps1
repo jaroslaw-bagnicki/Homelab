@@ -19,8 +19,7 @@ foreach ($name in $secrets) {
 }
 
 Write-Host ''
-Write-Host 'Values — substitute into upsd.users / upsmon.conf, never into Git:'
+Write-Host 'Values are not printed - read each one when you substitute it:'
 foreach ($name in $secrets) {
-    Get-AzKeyVaultSecret -VaultName $vault -Name $name -AsPlainText |
-        ForEach-Object { Write-Host "  ${name}: $_" }
+    Write-Host "  Get-AzKeyVaultSecret -VaultName $vault -Name $name -AsPlainText"
 }
