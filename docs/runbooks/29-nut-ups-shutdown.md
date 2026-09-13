@@ -341,6 +341,14 @@ chown root:nut /etc/nut/*
 chmod 640 /etc/nut/ups.conf /etc/nut/upsd.conf /etc/nut/upsd.users
 ```
 
+> **The packages already ship `/etc/nut/*` as `640 root:nut`** (verified 2026-09-13: all six files,
+> including the untouched `upsmon.conf`/`upssched.conf`, whose `ctime` is the install time and `mtime`
+> the 2025-06-27 build) — the daemons run as `nut` and must read their own configs. These commands
+> therefore **re-assert** a mode that is already correct: cheap and idempotent, but not a step you can
+> later prove you ran. On a file you edited, `ctime == mtime` means no separate `chmod` followed the
+> write — re-`chmod`ing an already-`640` file bumps `ctime` alone. Check the resulting mode, not the
+> fact of running the command.
+
 > **A running `upsd` does not see the new accounts.** The packages leave `nut-server` already active,
 > and `upsd` reads `upsd.users` **once at start** (verified 2026-09-13: `upsd` had been up since
 > 08:06:23, the accounts were written at 08:11:39, and nothing took effect until a reload). Reload
