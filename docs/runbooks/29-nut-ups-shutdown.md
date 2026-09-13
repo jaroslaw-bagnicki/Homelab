@@ -143,11 +143,16 @@ pct create 213 local:vztmpl/<template> \
   --cores 1 --memory 512 --swap 512 \
   --rootfs local-lvm:4 \
   --net0 name=eth0,bridge=vmbr0,ip=192.168.2.213/24,gw=192.168.2.1 \
-  --nameserver 1.1.1.1 --onboot 1
+  --onboot 1
 ```
 
 `--onboot 1` matters: if the host reboots while mains is present, the NUT server has to come back
 on its own. The container is **not** Ansible-managed in v1.
+
+DNS is deliberately **not** pinned with `--nameserver` — the container inherits the host's
+resolvers, so it keeps following whatever the LAN serves. A hardcoded public resolver would bypass
+that, including the `.home` names the OPNsense router is due to own
+([ADR 06](../decisions/06-local-dns-dnsmasq.md), [idea 07](../ideas/07-opnsense-futro-s930.md)).
 
 ## 2. USB passthrough
 
