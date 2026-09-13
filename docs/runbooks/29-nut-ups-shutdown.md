@@ -157,9 +157,19 @@ that, including the `.home` names the OPNsense router is due to own
 ⚠ **Building it in the GUI wizard instead of the snippet above?** Three wizard defaults need
 attention, because this is where the GUI and `pct create` diverge: untick **Nesting** (General) —
 `pct create` sets no `features`; untick **Firewall** on the Network tab — that is `firewall=1`
-inside `net0`, which `pct create` leaves at `0` (§6 explains why an interface carrying no rules of
-its own matters for `3493`); and set **Start at boot** under **Options** once the container exists,
-since the wizard has no `--onboot` field.
+inside `net0`, which `pct create` leaves at `0` (see the note below); and set **Start at boot**
+under **Options** once the container exists, since the wizard has no `--onboot` field.
+
+> **Note — two firewalls, not one.** Proxmox's own firewall is a separate system from the host's UFW
+> (§6 covers that side), and every container interface carries a flag for it: `firewall=1` inside
+> `net0`.
+> - **Inert today** — no `/etc/pve/firewall/cluster.fw`, no host or guest rule files, and
+>   `pve-firewall` running unenforced (checked 2026-09-13).
+> - **But it arms the interface** — once the datacenter firewall is enabled, LXC 213's inbound
+>   becomes rule-driven with **no rules of its own**, and `3493` unreachable is exactly what the
+>   fleet's clients read as a dead UPS (`DEADTIME`, §6).
+> - **So keep the flag at `0`** — `pct create` does; in the wizard the Network tab's **Firewall**
+>   checkbox must stay unticked.
 
 ## 2. USB passthrough
 
@@ -440,16 +450,6 @@ never traverses the host's UFW chains — UFW here is host-management-plane only
 ([runbook 28](28-ha-proxmox-node.md)). That changes only if the container is ever moved to a
 **routed** NIC (separate subnet); then `3493` has to be added to `security_ufw_allow_tcp_ports` in
 `ansible/host_vars/ha.yml` — not by hand, or the next `security` role run drops it.
-
-⚠ **Two firewalls, not one** — the paragraph above is about **UFW on the host**. Proxmox has its own
-firewall, and each container interface carries a flag for it: `firewall=1` inside `net0`. It is
-inert while the datacenter firewall is off (no `/etc/pve/firewall/cluster.fw`, no host or guest rule
-files, and `pve-firewall` running unenforced — checked 2026-09-13), but the flag opts the interface
-into that second system: the day the DC firewall is enabled, LXC 213's inbound becomes rule-driven
-with **no rules defined for it** — and `3493` unreachable is precisely what the clients read as a
-dead UPS (`DEADTIME` above). `pct create` leaves the flag at `0`, so keep it that way; in the GUI
-wizard it is the **Firewall** checkbox on the Network tab — make sure it stays unticked (the wizard
-defaults to check at creation time are listed in §1).
 
 ## 7. Validation
 
