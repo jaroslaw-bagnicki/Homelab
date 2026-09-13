@@ -12,4 +12,5 @@
 | [Ideas](ideas/README.md) | Pre-decision brainstorming — ideas, possibilities, and early-stage exploration |
 | [Research](research/README.md) | Exploratory research — topic investigations, comparisons, trade-off analyses |
 | [Runbooks](runbooks/README.md) | Step-by-step implementation and operational guides |
+| [Reports](reports/README.md) | Project quality assessments — point-in-time reviews of process, docs, and IaC |
 | [Workloads](workloads.md) | Self-contained Ansible workload recipes — index, conventions, and deployment references |
