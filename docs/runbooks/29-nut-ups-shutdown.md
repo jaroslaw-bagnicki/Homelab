@@ -227,7 +227,10 @@ the mode. §3 proves the driver can open the device **as `nut`**, not just as ro
 ⚠ Binding the whole bus also exposes the Zigbee coordinator's raw USB node to this container. That
 is acceptable here (unprivileged container, LAN-trusted host) but it is a deliberate trade: pinning
 a single node requires the bus/device **numbering to stay consistent** inside the container, which
-is exactly what changes across reboots on a serial-less device.
+is exactly what changes across reboots on a serial-less device. The driver needs that tree anyway —
+with no serial number there is no path to name, so `nutdrv_qx` finds the unit by scanning usbfs
+(`port = auto`), and a single mounted node would have to sit at exactly `/dev/bus/usb/BBB/DDD` to be
+found: the number moved `008` → `016` within hours on 2026-09-13, without a reboot.
 
 > **Expected device identity** — `0665:5161`, manufacturer `INNO TECH`, `bcdDevice 0.03`,
 > HID class 3 / subclass 0 / protocol 0, 8-byte interrupt IN + OUT, bus-powered at 100 mA.
