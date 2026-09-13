@@ -26,9 +26,9 @@ A single, silent, low-power node running, under Proxmox VE:
 
 ```
 [ Proxmox VE - Dell Wyse 5070 ]
-├── VM 100: Home Assistant OS (VM) ────────> [ 2 vCPU | 4 GB RAM ]
-├── LXC 101: Mosquitto MQTT Broker ────────> [ 1 vCPU | 256 MB RAM ]
-└── LXC 102: Zigbee2MQTT ──────────────────> [ 1 vCPU | 512 MB RAM ] + (USB Zigbee dongle)
+├── VM 210: Home Assistant OS (VM) ────────> [ 2 vCPU | 4 GB RAM ]
+├── LXC 211: Mosquitto MQTT Broker ────────> [ 1 vCPU | 256 MB RAM ]
+└── LXC 212: Zigbee2MQTT ──────────────────> [ 1 vCPU | 512 MB RAM ] + (USB Zigbee dongle)
 ```
 
 ## Hardware direction (from research 26)

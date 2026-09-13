@@ -12,9 +12,9 @@ hardware detail see [Hardware Inventory](hardware.md); for change history see
 |---|---|---|---|---|
 | **Lab** | main workload host (Docker → k3s) | Lenovo M910q Tiny · Ubuntu 24.04 LTS · Azure Arc | `192.168.2.200` | ✅ |
 | **OMV NAS** | backup target (retiring) | HP ProLiant ML110 G5 · OMV 8.3 | `192.168.2.210` | ✅ |
-| **Beetle NAS** | backup target (successor to ML110) | Wincor Beetle M-III · OMV | DHCP | 🔨 |
+| **Beetle NAS** | backup target (successor to ML110) | Wincor Beetle M-III · OMV | `192.168.2.202` | 🔨 |
 | **Edge Ingress** | public ingress (cloudflared + Caddy) | Dell Wyse 3040 · Debian 13 minimal | `192.168.2.240` | 🔨 |
-| **Home Assistant** | smart home node | Wyse 5070 · Proxmox VE | `192.168.2.201` | 🔨 |
+| **Home Assistant** | smart home node | Wyse 5070 · Proxmox VE | `192.168.2.201` · guests `.210`–`.213` | 🔨 |
 | **LLM server** | local LLM inference | Minisforum X1 Lite | TBD | 🧠 |
 | **Cloudlab VPS** | staging for Lab (Ansible + Docker/k3s workloads) | Contabo VPS 10 · Ubuntu 24.04 | `173.249.27.13` | ✅ |
 
@@ -46,13 +46,13 @@ once it is ready to start — a row leaves the table with the PR that completes 
 | **Netdata Parent + `netdata` role** | ⭐⭐ | Parent LXC on the HA Proxmox, then re-point the children | [#104](https://github.com/jaroslaw-bagnicki/Homelab/issues/104) · [#84](https://github.com/jaroslaw-bagnicki/Homelab/issues/84) · [ADR 27](decisions/27-monitoring-strategy.md) |
 | **Edge Ingress — service migration** | ⭐⭐ | Move `cloudflared` + Caddy off the M910q onto the Wyse 3040 (base OS + `edge_host` role already shipped); `.home` DNS is owned by the OPNsense router, not the edge | [#65](https://github.com/jaroslaw-bagnicki/Homelab/issues/65) · [#81](https://github.com/jaroslaw-bagnicki/Homelab/issues/81) · [ADR 24](decisions/24-edge-ingress-appliance.md) |
 | **Beetle NAS** | ⭐⭐⭐ | Platform confirmed (Skylake/H110/DDR4, G4400) — finish Phase 0 (BIOS walk / SATA ports / Memtest), then OMV install → array + cache online → NFS/SMB exports → retire the ML110 (the Longhorn backup target follows k3s) | [#98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98) · [ADR 29](decisions/29-nas-backup-target-beetle-m3-omv.md) |
-| **Home Assistant node** | ⭐⭐⭐ | VM 100 (HA OS) + LXC 101/102 (Mosquitto, Zigbee2MQTT) on the Proxmox base from runbook 28 | [#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68) · [#85](https://github.com/jaroslaw-bagnicki/Homelab/issues/85) · [ADR 25](decisions/25-home-assistant-thin-client.md) |
+| **Home Assistant node** | ⭐⭐⭐ | VM 210 (HA OS) + LXC 211/212 (Mosquitto, Zigbee2MQTT) on the Proxmox base from runbook 28 | [#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68) · [#85](https://github.com/jaroslaw-bagnicki/Homelab/issues/85) · [ADR 25](decisions/25-home-assistant-thin-client.md) |
+| **UPS + NUT graceful shutdown** | ⭐⭐ | Server side done — LXC 213 + `nutdrv_qx` on the HA node ([#115](https://github.com/jaroslaw-bagnicki/Homelab/issues/115)); next the fleet clients as an Ansible role ([#116](https://github.com/jaroslaw-bagnicki/Homelab/issues/116)), then the DR-style shutdown test ([#117](https://github.com/jaroslaw-bagnicki/Homelab/issues/117)) | [#111](https://github.com/jaroslaw-bagnicki/Homelab/issues/111) · [runbook 29](runbooks/29-nut-ups-shutdown.md) |
 
 ### Planned
 
 | Item | Effort | Next step | Refs |
 |---|---|---|---|
-| **UPS + NUT graceful shutdown** | ⭐⭐ | Unit arriving — record the model + USB controller, then NUT server on the HA node and the fleet-wide clients | [#111](https://github.com/jaroslaw-bagnicki/Homelab/issues/111) · [idea 09](ideas/09-ups-nut-home-assistant.md) |
 | **Netdata children — Edge (RAM-only), Lab (host-native), OMV, Beetle** | ⭐ | Re-point onto the Parent once it lands — HA runs the Parent itself, so it is not a child | [#80](https://github.com/jaroslaw-bagnicki/Homelab/issues/80) · [#104](https://github.com/jaroslaw-bagnicki/Homelab/issues/104) |
 | **Power monitoring (Zigbee/Z2M)** | ⭐⭐ | Zigbee energy plugs → Prometheus, bootstrapped standalone on the M910q (ADR 26 — independent of Home Assistant) — sequenced **before** k3s | [#73](https://github.com/jaroslaw-bagnicki/Homelab/issues/73) · [ADR 26](decisions/26-zigbee-energy-monitoring.md) |
 | **YUMI multiboot USB standard** | ⭐ | ADR 29 + manage-YUMI runbook; de-conflate the Ventoy references | [#107](https://github.com/jaroslaw-bagnicki/Homelab/issues/107) · [research 12](research/12-first-boot-setup.md) |

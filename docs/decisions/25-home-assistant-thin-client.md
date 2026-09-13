@@ -17,9 +17,9 @@ The homelab has a clean role split: **M910q** = compute (k3s, ADR 22), **ML110**
 
 Adopt a dedicated, fanless **Dell Wyse 5070** (Celeron J4105, 2× DDR4 SO-DIMM, M.2 SATA 2280) as a Home Assistant node running **Proxmox VE**:
 
-- **VM 100** — Home Assistant OS (2 vCPU / 4 GB RAM)
-- **LXC 101** — Mosquitto MQTT broker (1 vCPU / 256 MB)
-- **LXC 102** — Zigbee2MQTT (1 vCPU / 512 MB, USB Zigbee coordinator passed through)
+- **VM 210** — Home Assistant OS (2 vCPU / 4 GB RAM)
+- **LXC 211** — Mosquitto MQTT broker (1 vCPU / 256 MB)
+- **LXC 212** — Zigbee2MQTT (1 vCPU / 512 MB, USB Zigbee coordinator passed through)
 - **8 GB RAM** (16 GB future-proof), **M.2 SATA SSD 64–256 GB** (128 GB practical pick; 64 GB sufficient)
 - Proxmox managed via **Ansible `community.proxmox`** (ADR 10 pattern)
 - **Netdata** on the Proxmox host, streaming metrics to the M910q Netdata Parent (Tier B, [ADR 27](27-monitoring-strategy.md))

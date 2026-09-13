@@ -80,12 +80,12 @@ Three options considered, **plus the one settled on**:
 
 ```
 [ Proxmox VE - Dell Wyse 5070 ]
-├── VM 100: Home Assistant OS (VM) ────────> [ 2 vCPU | 4 GB RAM ]
-├── LXC 101: Mosquitto MQTT Broker ────────> [ 1 vCPU | 256 MB RAM ]
-└── LXC 102: Zigbee2MQTT ──────────────────> [ 1 vCPU | 512 MB RAM ] + (Passthrough USB Dongle)
+├── VM 210: Home Assistant OS (VM) ────────> [ 2 vCPU | 4 GB RAM ]
+├── LXC 211: Mosquitto MQTT Broker ────────> [ 1 vCPU | 256 MB RAM ]
+└── LXC 212: Zigbee2MQTT ──────────────────> [ 1 vCPU | 512 MB RAM ] + (Passthrough USB Dongle)
 ```
 
-USB pass-through to the Z2M LXC — `/etc/pve/lxc/102.conf` (Gemini-suggested; verify syntax):
+USB pass-through to the Z2M LXC — `/etc/pve/lxc/212.conf` (Gemini-suggested; verify syntax):
 
 ```
 lxc.cgroup2.devices.allow: c 188:* rwm
