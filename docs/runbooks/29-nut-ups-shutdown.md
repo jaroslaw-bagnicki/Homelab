@@ -196,11 +196,21 @@ pct start 213
 pct exec 213 -- sh -c 'ls -l /dev/bus/usb/*/'   # the UPS node must be listed, on whatever bus
 ```
 
-Bus and device numbers are reassigned across reboots — never assume `001`.
+Bus and device numbers are reassigned across reboots — never assume `001`, and expect them to move on
+their own: the unit sat at device `008` in the morning of 2026-09-13 and at `016` a few hours later.
+The container's listing shows bus/device numbers but no vendors, so ask the host which node is the
+UPS:
 
-**Permissions.** A visible node is not a *readable* one: the bind mount keeps the host's `root`
-ownership, while the driver runs as the container's `nut` user. The host has no NUT package, so
-nothing grants that access for you — do it with a udev rule, matching the unit by VID:PID:
+```sh
+lsusb -d 0665:5161                      # host: e.g. Bus 001 Device 016
+pct exec 213 -- ls -l /dev/bus/usb/001/016
+```
+
+**Permissions.** A visible node is not a *writable* one. Measured 2026-09-13, inside the container the
+node reads `nobody nogroup`, mode `crw-rw-r--`: host `root` sits outside an unprivileged container's
+ID map (so it shows as `nobody`), and that mode leaves *other* read-only — the driver as `nut` could
+open the device but not write to it. The host has no NUT package, so nothing grants that access for
+you — do it with a udev rule, matching the unit by VID:PID:
 
 ```sh
 sudo groupadd -f nut                      # the host needs the group too
