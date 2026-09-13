@@ -284,6 +284,13 @@ MODE=netserver
 
 `port = auto` is not optional — with no serial number there is no stable `/dev` path to name.
 
+> **Append the section — don't insert it.** The shipped `ups.conf` carries an uncommented
+> `maxretry = 3` (Debian's own default), and the same file documents such directives as ones that
+> "should be specified outside of a driver definition". Put the `[ups]` block **below** it (end of
+> file). Inserted above, the global becomes a device option and the driver dies with
+> `Fatal error: 'maxretry' is not a valid variable name for this driver`, then exit-loops under
+> systemd — seen 2026-09-13, restart counter at 9.
+
 **`/etc/nut/upsd.conf`**
 
 ```
@@ -334,6 +341,12 @@ chmod 640 /etc/nut/ups.conf /etc/nut/upsd.conf /etc/nut/upsd.users
 ```
 
 ### Probe before enabling anything
+
+> **The driver may already be running.** `nut-driver-enumerator.path` watches `ups.conf` and starts
+> `nut-driver@ups` as soon as it holds a valid section — you do not have to enable anything for it.
+> A running driver **holds the USB device**, so a manual probe against it fails with a misleading
+> "device busy". Either read the service's own journal instead, or stop it first:
+> `systemctl stop nut-driver@ups`.
 
 Run the driver in the foreground first; this is the gate:
 
