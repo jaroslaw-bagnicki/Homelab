@@ -59,7 +59,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Storage | **SanDisk X600 128 GB SSD** (cache) + **2× Seagate ST1000VT001-1RE172 1 TB 2.5"** (data + parity = 1 TB usable) |
 | SATA | H81 **4-port AHCI** (2× SATA III + 2× SATA II); mini-PCIe (mSATA) slot + PCIe 3.0 x16 free |
 | PSU | **AcBel 250 W, 80 Plus Gold** (Wincor `01750279900`) |
-| Network | 1× GbE Intel I217-V · DHCP (MAC and address are the returned unit's — re-verify) |
+| Network | 1× GbE Intel I217-V · static `192.168.2.202` planned (research 24); MAC is the returned unit's — re-verify |
 | Firmware | BIOS AMI `WN STD 07/16` (2018-12-19) · board `K2.1-H81-uATX` · SN `000000001750261682` |
 | OS | **OMV** — [ADR 29](decisions/29-nas-backup-target-beetle-m3-omv.md); Unraid deferred |
 | Cooling | 3 fans (front CPU+PSU, rear PSU-end, UPS-unit); internal UPS battery (VOTEX 15.6 V 3000 mAh) |
@@ -92,6 +92,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Zigbee | Sonoff Zigbee 3.0 USB Dongle Plus (ZBDongle-P / CC2652P) — USB coordinator for LXC 102 passthrough (by-id pattern, research 26 §4) |
 | Firmware | BIOS 1.34.0 (2024-11-08) · board 060J9C · SKU `080C` · SN `16474B3` |
 | Role | Home Assistant OS VM on Proxmox VE + Mosquitto/Zigbee2MQTT LXCs (ADR 25) |
+| Guests | VM 100 HA OS `192.168.2.210` · LXC 101 Mosquitto `192.168.2.211` · LXC 102 Zigbee2MQTT `192.168.2.212` · LXC 103 NUT `192.168.2.213` — `.210 + (VMID - 100)`, [research 24](research/24-network-topology-design.md) |
 | Status | Proxmox VE **9.2.2** installed at `192.168.2.201` + base provisioned (runbook 28, 2026-09-06); HA VM/LXC still pending ([#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68) / [#85](https://github.com/jaroslaw-bagnicki/Homelab/issues/85)) |
 | Acquisition | 2026-08-19 — hardware diagnostic done ([research 29](research/29-wyse5070-hardware-diagnostic.md)); SK hynix SSD + Sonoff ZBDongle-P acquired |
 | Docs | [idea 05](ideas/05-home-assistant-thin-client.md) · [ADR 25](decisions/25-home-assistant-thin-client.md) · [research 26](research/26-home-assistant-thin-client.md) · [research 29](research/29-wyse5070-hardware-diagnostic.md) · [runbook 28](runbooks/28-ha-proxmox-node.md) |
