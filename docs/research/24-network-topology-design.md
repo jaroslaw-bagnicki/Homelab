@@ -87,7 +87,8 @@ Keep the single `192.168.2.0/24` broadcast domain. Reserve a dedicated static bl
 > `22x` LLM, `23x` switch, `24x` edge/ingress — so a future device in the same class slots in
 > without renumbering existing reservations.
 
-> **Guest addressing (decided 2026-09-13).** Proxmox guests live in `21x` and derive their
+> **Guest addressing** — policy owned by [ADR 31](../decisions/31-static-address-scheme.md); the
+> table above is the current allocation. Proxmox guests live in `21x` and derive their
 > address from the VMID: **`.210 + (VMID - 100)`** — VM 100 → `.210`, LXC 101 → `.211`,
 > LXC 103 → `.213`. The `21x` block was the NAS category; the ML110 was its only member, so the
 > block is free the moment it retires and the NAS role instead occupies a `20x` address as

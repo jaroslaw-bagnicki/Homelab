@@ -33,7 +33,7 @@ defined order.
   `vendorid`/`productid` rather than by a port path — which port it occupies is irrelevant, and the
   cable can be moved without touching any config.
 - **LXC 103** (`nut`, unprivileged, Debian) — NUT server: `nutdrv_qx` driver + `upsd` on
-  **`192.168.2.213:3493`** — the `21x` virtual-guest block (`210 + (VMID - 100)`, [research 24](../research/24-network-topology-design.md)).
+  **`192.168.2.213:3493`** — the `21x` virtual-guest block (`210 + (VMID - 100)`, [ADR 31](../decisions/31-static-address-scheme.md)).
   Next free ID after VM 100 / LXC 101 / LXC 102
   ([ADR 25](../decisions/25-home-assistant-thin-client.md)); the Netdata Parent
   ([#104](https://github.com/jaroslaw-bagnicki/Homelab/issues/104),
