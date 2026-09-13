@@ -339,9 +339,12 @@ Run the driver in the foreground first; this is the gate:
 
 ```sh
 # Debian installs the drivers into /lib/nut, which is not on root's PATH
-pct exec 213 -- bash -lc '/lib/nut/nutdrv_qx -a ups -DDD'              # as root
-pct exec 213 -- bash -lc 'sudo -u nut /lib/nut/nutdrv_qx -a ups -DDD'  # as the service user
+pct exec 213 -- bash -lc '/lib/nut/nutdrv_qx -a ups -DDD'                    # as root
+pct exec 213 -- bash -lc 'runuser -u nut -- /lib/nut/nutdrv_qx -a ups -DDD'  # as the service user
 ```
+
+`runuser`, not `sudo` — the Debian template ships **no `sudo`** (verified 2026-09-13: only `su` is
+present, while `/usr/sbin/runuser` works and reports `uid=102(nut) gid=105(nut)`).
 
 Both runs must initialise. A driver that works as root but not as `nut` will fail the moment the
 systemd unit drops privileges.
