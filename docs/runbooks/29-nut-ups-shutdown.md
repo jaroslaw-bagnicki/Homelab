@@ -387,14 +387,19 @@ Record from the `upsc` dump:
 | `battery.voltage` | sanity-check against the unit's own LCD (27.3 V visible while charging) |
 | **`battery.runtime`** | **if absent → shut down on `LB` only**; do not build a countdown on it |
 
+> **`ups.load` is not usable here.** The first dump reports `ups.load: 0` with the fleet attached —
+> either unsupported or below the unit's resolution. Sizing comes from the measured draws in §0 and
+> from the unit's own LCD, not from this variable (2026-09-13).
+
 ⚠ If the driver cannot claim the device, the cause is almost always the kernel's `usbhid` holding
 the interface. Fallbacks, in order: (1) confirm the node really is visible inside the container
 (§2); (2) unbind `usbhid` for this device with a host udev rule; (3) as a last resort run the
 container privileged. Do **not** paper over it by switching drivers — `usbhid-ups` is structurally
 not an option for a vendor-defined usage page.
 
-⚠ Expect the unit to expose **no runtime estimate**, so plan the trigger as **`LB`** — §3 confirms it
-rather than assuming it.
+⚠ **Confirmed 2026-09-13: no runtime estimate.** The first `upsc` dump carries no `battery.runtime`,
+and the driver states why at startup — `Battery runtime will not be calculated (runtimecal not set)`.
+The trigger is therefore **`LB`**; do not build a countdown on a variable that does not exist.
 
 ## 4. Proxmox host — NUT client
 
