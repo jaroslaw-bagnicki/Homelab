@@ -591,17 +591,21 @@ never traverses the host's UFW chains — UFW here is host-management-plane only
 
 ## Verification Checklist
 
+Items tagged **[#116]**/**[#117]** depend on the client rollout and the DR drill — sub-issues of
+[#111](https://github.com/jaroslaw-bagnicki/Homelab/issues/111). The server side (§1–§3) is what this
+runbook completes on its own.
+
 - [ ] §0 UPS input on the wall socket; **both strips** on battery-backed outlets; monitors/dock/charger off the UPS
-- [ ] §1 LXC 213 created unprivileged, `192.168.2.213`, `nesting=1`, `onboot 1`, starts cleanly and `systemctl --failed` is empty inside
-- [ ] §2 USB node visible in the container **and** writable as `nut` (udev/permission step done)
-- [ ] §3 `/lib/nut/nutdrv_qx` attaches (as root **and** as `nut`), `upsc ups@192.168.2.213` returns real values, `battery.runtime` presence recorded
-- [ ] §3 both monitor passwords in AKV (`nut-upsmon-primary-password`, `nut-upsmon-secondary-password`) and substituted into the files; `/etc/nut` files `640 root:nut`
-- [ ] §3 `upsd` reloaded after the accounts were written (`systemctl reload nut-server`) — a daemon that predates the edit still serves the old user list
-- [ ] §4 host `nut-monitor` active, reads the UPS through the container
-- [ ] §5 `lab` + `edge` clients active and reading the UPS
-- [ ] §7 on-battery propagation confirmed on all three nodes (host, `lab`, `edge`); `upsmon -c fsd` drill done
-- [ ] §6 host monitor paused across an LXC 213 restart, then restored after `upsc` answered
-- [ ] §7 Beetle tested on battery at **idle and under spin-up** (or moved off battery outlets)
+- [x] §1 LXC 213 created unprivileged, `192.168.2.213`, `nesting=1`, `onboot 1`, starts cleanly and `systemctl --failed` is empty inside
+- [x] §2 USB node visible in the container **and** writable as `nut` (udev/permission step done)
+- [x] §3 `/lib/nut/nutdrv_qx` attaches (as root **and** as `nut`), `upsc ups@192.168.2.213` returns real values, `battery.runtime` presence recorded
+- [x] §3 both monitor passwords in AKV (`nut-upsmon-primary-password`, `nut-upsmon-secondary-password`) and substituted into the files; `/etc/nut` files `640 root:nut`
+- [x] §3 `upsd` reloaded after the accounts were written (`systemctl reload nut-server`) — a daemon that predates the edit still serves the old user list
+- [ ] §4 host `nut-monitor` active, reads the UPS through the container — **[#116]**
+- [ ] §5 `lab` + `edge` clients active and reading the UPS — **[#116]**
+- [ ] §7 on-battery propagation confirmed on all three nodes (host, `lab`, `edge`); `upsmon -c fsd` drill done — **[#117]**
+- [ ] §6 host monitor paused across an LXC 213 restart, then restored after `upsc` answered — **[#116]**
+- [ ] §7 Beetle tested on battery at **idle and under spin-up** (or moved off battery outlets) — **[#117]**
 
 ## Follow-ups
 
