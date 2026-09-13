@@ -341,6 +341,19 @@ chown root:nut /etc/nut/*
 chmod 640 /etc/nut/ups.conf /etc/nut/upsd.conf /etc/nut/upsd.users
 ```
 
+> **A running `upsd` does not see the new accounts.** The packages leave `nut-server` already active,
+> and `upsd` reads `upsd.users` **once at start** (verified 2026-09-13: `upsd` had been up since
+> 08:06:23, the accounts were written at 08:11:39, and nothing took effect until a reload). Reload
+> after writing them — the unit's `ExecReload` is `upsd -c reload -P $MAINPID`, a SIGHUP:
+>
+> ```sh
+> pct exec 213 -- bash -lc 'systemctl reload nut-server'   # journal: SIGHUP: reloading configuration
+> ```
+>
+> Skipping this fails silently here and surfaces later as `Login failed` in a client's `upsmon` —
+> which reads like a wrong password. Check `systemctl show -p ActiveEnterTimestamp nut-server` against
+> the file's mtime before assuming the accounts are live.
+
 ### Probe before enabling anything
 
 > **The driver may already be running.** `nut-driver-enumerator.path` watches `ups.conf` and starts
@@ -563,6 +576,7 @@ never traverses the host's UFW chains — UFW here is host-management-plane only
 - [ ] §2 USB node visible in the container **and** writable as `nut` (udev/permission step done)
 - [ ] §3 `/lib/nut/nutdrv_qx` attaches (as root **and** as `nut`), `upsc ups@192.168.2.213` returns real values, `battery.runtime` presence recorded
 - [ ] §3 both monitor passwords in AKV (`nut-upsmon-primary-password`, `nut-upsmon-secondary-password`) and substituted into the files; `/etc/nut` files `640 root:nut`
+- [ ] §3 `upsd` reloaded after the accounts were written (`systemctl reload nut-server`) — a daemon that predates the edit still serves the old user list
 - [ ] §4 host `nut-monitor` active, reads the UPS through the container
 - [ ] §5 `lab` + `edge` clients active and reading the UPS
 - [ ] §7 on-battery propagation confirmed on all three nodes (host, `lab`, `edge`); `upsmon -c fsd` drill done
