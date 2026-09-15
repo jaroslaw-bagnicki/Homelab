@@ -3,6 +3,7 @@
 **Scope:** full assessment (process, documentation, decision log, IaC, operational readiness)
 **Method:** artefact reading + live GitHub state (repo `jaroslaw-bagnicki/Homelab`)
 **Baseline:** point-in-time snapshot at 2026-09-13, branch `docs/quality-assessment-prompt` (HEAD `ab217e2`)
+**Amended:** 2026-09-15 — two changes since the snapshot: finding **3.1** (the ADR 19 contradiction) was fixed at source (its filename, every referrer, and ADR 24's bullet), and the CI remark was **suppressed** at the operator's direction — CI is deliberately deferred, so 3.5 is now recorded as a decision rather than an antipattern and 4.1 as out of scope rather than a gap.
 
 ---
 
@@ -15,26 +16,26 @@ engineered part is genuinely strong: 31 ADRs in MADR form with an index and a te
 that completes it" convention. Documentation-as-code discipline and change traceability are the
 standout strengths; the operator also documents known debt candidly in PR bodies (PR #110 lists its own
 deferred sweeps), which makes this audit easier but does not by itself schedule the work. The dominant
-weakness is not craft but **currency and enforcement**: the decision log contradicts itself on the
-Cloudflare origin design (ADR 19 versus its own filename, index row, ADR 08, ADR 24 and the CHANGELOG),
-four ADR statuses are stale or outside the documented allowed set, and there is **no CI whatsoever**, so
-every lint, test and live-playbook check is honour-system. The written security rule to sanitise real
-domains is breached in 15 files by the committed personal domain `cloud5.ovh`, and the agent-facing
+weakness is not craft but **currency**: the decision log contradicted itself on the Cloudflare origin
+design (ADR 19 versus its own filename, index row, ADR 08, ADR 24 and the CHANGELOG — fixed 2026-09-15),
+four ADR statuses are stale or outside the documented allowed set, the written security rule to sanitise
+real domains is breached in 15 files by the committed personal domain `cloud5.ovh`, and the agent-facing
 `adr-authoring` skill still mandates a filename pattern and a "commit directly to `main`" workflow that
-the repo abandoned. Nothing found is structurally wrong; the fixes are small, and the highest-value one
-(retiring the ADR 19/24 contradiction) is time-critical because it directly misdirects the edge-ingress
-migration (#65/#81) that is next in the queue.
+the repo abandoned. Continuous integration is **deliberately out of scope** — the only check it could
+add, `ansible-lint`, already runs locally — so verification rests on documented manual rules rather than
+an enforced gate. Nothing found is structurally wrong, and the fixes are small: the time-critical one
+(the ADR 19/24 contradiction that misdirected the edge-ingress migration in #65/#81) has been retired.
 
 | Dimension | Rating (1-5) | Evidence |
 |---|---|---|
-| Decision hygiene | 3 | 31 ADRs, contiguous numbering, supersession links (ADR 03->22, 08->19, 23->29); but ADR 19 vs index/ADR 08/ADR 24/CHANGELOG contradict; ADR 02 "In Progress" and ADR 09 "Implemented (partial)" are outside the documented allowed set |
+| Decision hygiene | 4 | 31 ADRs, contiguous numbering, supersession links declared both ways (ADR 03->22, 08->19, 23->29); the ADR 19 contradiction is fixed (rename plus every referrer, 2026-09-15); residual: four stale statuses (3.2) |
 | Backlog & roadmap hygiene | 3 | Excellent board (`docs/overview.md` states + Next step + parking lot); but 33 open issues, 10 unlabelled, superseded issues still open (#54, #62, #75) |
 | Documentation currency | 3 | "state docs move together" rule and real sync discipline (PRs #95/#108/#113); but `hardware.md` HA status vs `overview.md`, idea statuses, and broken relative links |
 | Infrastructure-as-Code discipline | 4 | Role/workload modularity, `host_vars` parameterisation, idempotent network declarations, Bicep + deploy script; but `Caddyfile.j2` hardcodes three hostnames the defaults file sanitises |
 | Operational readiness | 3 | Runbook 29 checklist tagged per sub-issue; but ADR 02 backup dormant, no restore drill, no on-call/alert path |
 | Security & secret hygiene | 3 | No secrets committed (pattern sweep clean), AKV-sourced credentials, `no_log`, restrictive `key_options`; but the real domain `cloud5.ovh` is committed in 15 files against an explicit rule |
 | Change/release traceability | 4 | `CHANGELOG.md` newest-first with runbook/ADR links, "PR ships its changelog entry" rule, `Refs`/`Closes` discipline; one ADR-amendment PR without an entry |
-| Verification & automation | 2 | Zero `.github/workflows`; `ansible-lint` and live-playbook tests are documented rules only; `docker/*/tests/verify-*.sh` exist but are never executed automatically |
+| Verification & automation | 3 | `ansible-lint` and live `--diff` playbook runs are documented rules the operator runs locally, and runbooks carry completion criteria; CI is deliberately deferred (3.5/4.1), which leaves `docker/*/tests/verify-*.sh` unexecuted |
 
 ---
 
@@ -96,9 +97,9 @@ migration (#65/#81) that is next in the queue.
 ### 3.1 Decision-log self-contradiction on the Cloudflare origin design
 - **What**: ADR 19's file now records "Cloudflare Tunnel **HTTP** origin with Caddy reverse proxy on Cloudlab" and explicitly abandons the Origin CA / Full (Strict) approach - yet its **filename** is `19-cloudflare-tunnel-https-origin.md`, its **index title** is "HTTPS-only origin via Cloudflare Tunnel + Cloudflare Origin CA on Cloudlab", **ADR 08** names ADR 19 as the "HTTPS-only origin" replacement, **ADR 24** instructs "cloudflared -> Caddy over HTTPS with Cloudflare Origin CA; CF SSL mode Full (Strict)", and the **CHANGELOG** entry records an "HTTPS-only origin" change. The code follows ADR 19's revised decision (`Caddyfile.j2` serves `http://` blocks; runbook 20 states "origin traffic is plain HTTP").
 - **Why it matters here**: ADR 24 is the *governing* ADR for the in-progress edge-ingress migration (#65/#81). An agent or the operator reading the decision log to build that migration is told, by an Accepted ADR, to implement a design that a sibling Accepted ADR explicitly rejected - exactly the "why did we pick X over Y?" question the log exists to answer.
-- **Severity**: **High** - actively misdirects the next implementation step.
+- **Severity**: **High** - actively misdirected the next implementation step. **Fixed 2026-09-15.**
 - **Evidence**: `docs/decisions/19-cloudflare-tunnel-https-origin.md` (title, Status, "Original HTTPS-to-origin approach (superseded)"), `docs/decisions/README.md` row 19, `docs/decisions/08-remote-access-cloudflare-tunnel.md` "Superseded by ADR 19", `docs/decisions/24-edge-ingress-appliance.md` Decision bullet 4, `CHANGELOG.md` (2026-07 `cloudflared` entry), `docs/runbooks/20-deploy-zot.md` (traffic flow line).
-- **Existing mitigation**: none effective - the in-document banner only fixes the document, not the five artefacts that point at it.
+- **Fixed**: ADR 19 renamed to `19-cloudflare-tunnel-http-origin.md` with an `**Amended:**` line recording the in-place revision; index rows 8 and 19, ADR 08 (status, supersession section, references), ADR 24 (decision bullet, references), idea 04, research 25, runbooks 16/17/20/23/24 and the 2026-07 changelog entry all now describe the plain-HTTP origin. Verified: no reference to the old filename remains. The fix needed no workflow - CI is out of scope (3.5).
 
 ### 3.2 Stale decision statuses
 - **What**: statuses outside the documented allowed set or no longer true. ADR 02 is "In Progress" (not an allowed value; dormant since June). ADR 09 is "Implemented (partial)" (not an allowed value). ADR 25 is "Proposed" although its own promotion criteria - the hardware purchased and the dedicated-node trade-off closed - were met on 2026-08-19/2026-09-06. ADR 28's Status line says "`lab` and `edge` pending" while the `fleet-connect` skill states the fleet-wide migration "completed 2026-08-30" and the CHANGELOG records edge key-only SSH shipped.
@@ -121,12 +122,11 @@ migration (#65/#81) that is next in the queue.
 - **Evidence**: `list_issues` (open, 33); PR #110 Notes ("Deliberately outside this PR: ... the dormant-issue backlog sweep (#16, #34, #36, #38, #39, #43, #48, #53, #57, #58)"); `docs/overview.md` "Not Scheduled" (covers only #13, #3, #4).
 - **Existing mitigation**: partial - the board parks three dormant items and the CHANGELOG records `#94` as shipped-and-removed.
 
-### 3.5 No automated verification of any kind
-- **What**: `.github/` contains only `copilot-instructions.md`, `prompts/` and `skills/` - there is no `workflows/` directory. `AGENTS.md` states three verification rules (ansible-lint before commit, live `--diff` playbook run before merge, post-merge re-run), and the repo ships smoke tests (`docker/opencode-base/tests/verify-base.sh`, `docker/opencode-homelab/tests/verify-homelab.sh`, `docker/opencode-prospera/tests/verify-prospera.sh`) - but nothing executes any of them. Bicep validation is a manual MCP step; Markdown link integrity is unchecked (see 3.6).
-- **Why it matters here**: the repo's whole quality story rests on a single operator remembering three manual steps across a spare-time schedule, and the two failures this audit found in *code* (hardcoded hostnames, runbook-08-style index gaps) are exactly the class a 20-line workflow catches.
-- **Severity**: **High** (structural; it is the multiplier on every other finding)
+### 3.5 Automated verification - deliberately deferred (recorded, not an antipattern)
+- **What**: the repo has no `.github/workflows`, and that is a decision rather than an omission: **CI is out of scope for this project**. The only check a pipeline would meaningfully add is `ansible-lint` on changed roles, which is already a documented pre-commit rule (`AGENTS.md` "Ansible Verification") and runs locally in seconds. The `docker/*/tests/verify-*.sh` smoke tests and a Markdown link check are not worth a pipeline on a single-operator repo that merges a few times a week.
+- **Why it is recorded here**: so a future audit does not re-derive it as a finding. The compensating controls are the documented local lint step, PR-time Copilot review, and the runbook completion checklists.
+- **Severity**: **Negligible** (accepted trade-off - operator decision, 2026-09-15)
 - **Evidence**: `.github/` listing; `AGENTS.md` "Ansible Verification"; `docker/*/tests/`.
-- **Existing mitigation**: documented manual process + PR-time Copilot review.
 
 ### 3.6 Documentation link rot and stale cross-references
 - **What**: `docs/opencode-customization/README.md` links runbooks and ADRs with paths relative to its own folder (`runbooks/17-...`, `decisions/16-...`) but no such subfolders exist (`../runbooks/`, `../decisions/` would resolve) - 6 broken links. ADR 10 cites `260613-backup-strategy-restic-blob.md`, a filename that does not exist. ADR 13 cites `research/15-vps-selection.md` from inside `docs/decisions/` (should be `../research/`). `docs/runbooks/README.md` omits any explanation for the missing runbook number 08 (verified: it was never tracked).
@@ -165,17 +165,17 @@ migration (#65/#81) that is next in the queue.
 
 ## 4. Gaps and recommendations
 
-### 4.1 No CI gate
-- **Missing**: any automated check. All verification is manual and unenforced.
-- **Lightweight fix**: one workflow, three steps - (a) `ansible-lint` on changed role paths, (b) Bicep compile via the Bicep CLI/MCP on changed `bicep/**`, (c) a link check over `docs/**/*.md` (lychee or `markdown-link-check`). Add the three `docker/*/tests/verify-*.sh` as a matrix job if the images are to stay portable. No test framework, no coverage target.
-- **Effort**: Low-Medium (one session, no Ansible/script changes).
-- **Issue?** Yes - multi-session to tune the changed-path filters.
+### 4.1 CI gate - out of scope by decision
+- **Not a gap**: CI is deliberately deferred (see 3.5). `ansible-lint` already runs locally as a documented pre-commit rule and is the only check a workflow would usefully add; a pipeline for Markdown links or the image smoke tests is not worth the maintenance on a single-operator repo.
+- **What would change that**: a second contributor, or a check that cannot be run locally. Neither is on the roadmap.
+- **Effort**: n/a - the decision is made, not pending.
+- **Issue?** No.
 
 ### 4.2 No automated currency check for the decision log and board
 - **Missing**: nothing verifies ADR status values, index-title/filename parity, that a superseded ADR names its successor, or that a board row references a live issue. Findings 3.1, 3.2, 3.6 and 3.8 are all in this class.
-- **Lightweight fix**: a `scripts/Test-HomelabDocs.ps1` that asserts (i) every `**Status:**` value is in the allowed set, (ii) every ADR row in `docs/decisions/README.md` links a file that exists and whose `#` title matches the row, (iii) every `Superseded by` target exists, (iv) every `#NNN` on the board resolves to an open issue. Wire it into the workflow from 4.1. This is the single highest-yield guard for this repo's failure mode.
-- **Effort**: Low (one session, one script + a workflow step).
-- **Issue?** Yes - pairs with 4.1.
+- **Lightweight fix**: a `scripts/Test-HomelabDocs.ps1` that asserts (i) every `**Status:**` value is in the allowed set, (ii) every ADR row in `docs/decisions/README.md` links a file that exists and whose `#` title matches the row, (iii) every `Superseded by` target exists, (iv) every relative link in `docs/**/*.md` resolves, and (v) every `#NNN` on the board resolves to an open issue. Run it locally alongside `ansible-lint` as part of the existing pre-commit rule - no CI needed (3.5). This is the single highest-yield guard for this repo's failure mode, and it stays a script rather than a pipeline.
+- **Effort**: Low (one session, one script).
+- **Issue?** Yes - one issue covering this and the backlog sweep (4.6).
 
 ### 4.3 Backup and restore are unverified
 - **Missing**: ADR 02's Restic path is dormant, there is no scheduled backup job, and no restore drill exists even though the storage layer is being replatformed (ML110 -> Beetle). ADR 22 already flags the Velero/Longhorn gap.
@@ -211,9 +211,11 @@ migration (#65/#81) that is next in the queue.
 
 ## Top 3 actions
 
-1. **Retire the ADR 19 contradiction before the edge migration is built** - rename/retitle ADR 19 (or add an explicit "revised in place" title to the index row), correct ADR 08's supersession note, and fix ADR 24's "ADR 19 pattern applies" bullet to the plain-HTTP origin that `Caddyfile.j2` and runbook 20 actually implement. Files: `docs/decisions/19-cloudflare-tunnel-https-origin.md`, `docs/decisions/README.md`, `docs/decisions/08-remote-access-cloudflare-tunnel.md`, `docs/decisions/24-edge-ingress-appliance.md`.
-2. **Add `.github/workflows/validate.yml`** - `ansible-lint` on changed roles, Bicep diagnostics on changed `bicep/**`, and a Markdown link check; this converts the repo's three honour-system rules into enforced gates and would have caught 3.1, 3.2 and 3.6.
-3. **One doc-currency PR** - fix the `adr-authoring` skill (filename pattern, `main`-commit rule, missing skill reference), correct the stale statuses (ADR 02, 09, 25, 28) and idea rows (01c, 04), and parameterise/sanitise the domain (3.3).
+1. **Verify backup and restore** - the highest remaining severity (4.3). ADR 02 is dormant, no restore drill exists, and the storage layer is being replatformed (ML110 -> Beetle). Add a "Restore drill" section with a definite pass condition to runbook 07, and a board row. Files: `docs/runbooks/07-restic-backup.md`, `docs/overview.md`, `docs/decisions/02-backup-strategy-restic-blob.md`.
+2. **One doc-currency PR** - sanitise the real domain and parameterise the three hardcoded `Caddyfile.j2` hostnames (3.3), fix the `adr-authoring` skill's filename pattern and `main`-commit rule (3.7), and correct the stale statuses (ADR 02, 09, 25, 28) and idea rows (01c, 04) - files: `ansible/roles/docker_services/templates/Caddyfile.j2`, `docs/decisions/*`, `docs/ideas/README.md`, `.github/skills/adr-authoring/SKILL.md`.
+3. **Add the local docs-currency check** - `scripts/Test-HomelabDocs.ps1` (4.2), run alongside `ansible-lint` per the existing pre-commit rule, so the class of drift this audit found (3.1, 3.2, 3.6, 3.8) cannot silently return. No CI required.
+
+> **Retired:** the original action 1 (retire the ADR 19 contradiction) was completed on 2026-09-15 - see 3.1. The original action 2 (add a CI workflow) was withdrawn: CI is deliberately out of scope - see 3.5.
 
 ---
 
@@ -221,17 +223,17 @@ migration (#65/#81) that is next in the queue.
 
 | # | Finding | Type | Severity | Evidence |
 |---|---|---|---|---|
-| 3.1 | ADR 19's decision contradicts its filename, index row, ADR 08, ADR 24 and the CHANGELOG | Antipattern | High | `docs/decisions/19-*.md`, `decisions/README.md` row 19, ADR 08 "Superseded by", ADR 24 Decision, CHANGELOG 2026-07 |
+| 3.1 | ADR 19's decision contradicted its filename, index row, ADR 08, ADR 24 and the CHANGELOG | Antipattern | High - **fixed 2026-09-15** | `docs/decisions/19-*.md`, `decisions/README.md` row 19, ADR 08 "Superseded by", ADR 24 Decision, CHANGELOG 2026-07 |
 | 3.2 | Stale / out-of-set ADR statuses (02, 09, 25, 28) | Antipattern | Medium | `docs/decisions/README.md`, ADR 25 promotion paragraph, ADR 28 Status line |
 | 3.3 | Real domain `cloud5.ovh` committed in 15 files; `Caddyfile.j2` hostnames unparameterised | Antipattern | Medium | `.github/copilot-instructions.md` Security; `Caddyfile.j2` L1/5/9 vs `docker_services/defaults/main.yml` |
 | 3.4 | 33 open issues: 10 unlabelled, 3 superseded-but-open, 11 dormant | Antipattern | Medium | `list_issues`; PR #110 Notes |
-| 3.5 | No CI at all; lint/tests played but never enforced | Antipattern | High | `.github/` has no `workflows/`; `AGENTS.md` Ansible Verification; `docker/*/tests/` |
+| 3.5 | Automatic verification is deliberately deferred, not missing | Recorded decision | Negligible (accepted) | `.github/` has no `workflows/`; `AGENTS.md` Ansible Verification; `docker/*/tests/` |
 | 3.6 | Broken relative links + a non-existent ADR-10 filename; runbook 08 gap | Antipattern | Low | `docs/opencode-customization/README.md`; `docs/decisions/10-*.md`; `git log -- docs/runbooks/08*` |
 | 3.7 | `adr-authoring` skill mandates a dead filename pattern and "commit directly to `main`" | Antipattern | Medium | `.github/skills/adr-authoring/SKILL.md` |
 | 3.8 | `hardware.md` HA status vs `overview.md`; topology omits Beetle/OPNsense; idea statuses lag; legend clash | Antipattern | Low | `docs/hardware.md` HA Status; `docs/overview.md` Topology; `docs/ideas/README.md` rows 01c/04 |
 | 3.9 | 5 concurrent "In progress" rows; 5 merged head branches on the remote | Antipattern | Low | `docs/overview.md`; `git branch -r` |
 | 3.10 | Documentation ceremony above the minimum for one person | Antipattern | Negligible | `docs/` tree; `CHANGELOG.md` |
-| 4.1 | No CI gate | Gap | High / Low-Medium effort | `.github/` |
+| 4.1 | CI gate - out of scope by decision (see 3.5) | Recorded decision | Out of scope | `.github/`; `AGENTS.md` Ansible Verification |
 | 4.2 | No automated decision-log / board currency check | Gap | Medium / Low effort | `docs/decisions/README.md`; `docs/overview.md` |
 | 4.3 | Backup and restore unverified; ADR 02 dormant | Gap | High / Medium effort | ADR 02 Status; `docs/overview.md` Not Scheduled |
 | 4.4 | No domain-sanitisation guard | Gap | Medium / Low-Medium effort | `Caddyfile.j2`; `.github/copilot-instructions.md` Security |

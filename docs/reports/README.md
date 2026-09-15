@@ -16,4 +16,4 @@ itself; it becomes a plan only once its findings are turned into issues or rows 
 
 | Date | Report | Headline |
 |---|---|---|
-| 2026-09-13 | [Quality Assessment](260913-quality-assessment.md) | Strong docs-as-code craft, but ADR 19 contradicts ADR 24 on the Cloudflare origin design, four ADR statuses are stale, and no CI enforces any check |
+| 2026-09-13 | [Quality Assessment](260913-quality-assessment.md) | Strong docs-as-code craft; four ADR statuses are stale, the real domain is committed against the sanitisation rule, and verification rests on documented manual rules (CI is deliberately out of scope) |
