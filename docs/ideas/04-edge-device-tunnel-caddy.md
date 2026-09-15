@@ -92,7 +92,8 @@ Decided in [ADR 24](../decisions/24-edge-ingress-appliance.md): **Dell Wyse 3040
   services internally, the edge owns public routing. Decide deliberately.
 - **SSL mode vs OMV's self-signed cert** — `omv.example.com` via the edge: either CF SSL
   mode **Full** (accepts self-signed) or give OMV a Cloudflare **Origin CA** cert for
-  **Full (Strict)** (the ADR 19 pattern). Protect the admin UI with **Cloudflare Access**.
+  **Full (Strict)** (a departure from ADR 19, which keeps the cloudflared → Caddy hop plain
+  HTTP). Protect the admin UI with **Cloudflare Access**.
 
 ## Open Questions
 
@@ -115,7 +116,7 @@ before implementation, not a drive-by move.
 
 - [ADR 07 — Reverse Proxy: Caddy with Auto-TLS](../decisions/07-reverse-proxy-caddy.md)
 - [ADR 08 — Remote Access: Cloudflare Tunnel](../decisions/08-remote-access-cloudflare-tunnel.md)
-- [ADR 19 — HTTPS-only origin via Cloudflare Tunnel (Cloudlab)](../decisions/19-cloudflare-tunnel-https-origin.md)
+- [ADR 19 — Cloudflare Tunnel HTTP origin with Caddy reverse proxy (Cloudlab)](../decisions/19-cloudflare-tunnel-http-origin.md)
 - [ADR 20 — Caddy as Single Routing Layer](../decisions/20-caddy-single-routing-layer.md)
 - [ADR 22 — k3s + Azure Arc](../decisions/22-k3s-arc-homelab.md) — in-cluster ingress decision
 - [ADR 23 — NAS on the ML110 (OMV)](../decisions/23-nas-on-ml110.md) — storage-only scope

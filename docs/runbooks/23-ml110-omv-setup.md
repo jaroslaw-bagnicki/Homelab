@@ -489,7 +489,8 @@ and routes through Caddy, the single routing layer (ADR 20).
    ```
 
    OMV serves HTTPS-only (§4d) with a self-signed cert, so Caddy proxies to the HTTPS origin
-   and skips origin verification (same HTTPS-origin caveat as ADR 19).
+   and skips origin verification — this is a LAN hop, unlike the CF tunnel hop that ADR 19
+   keeps plain HTTP.
 
 3. **Reload Caddy** on the M910q: `docker compose restart caddy`.
 

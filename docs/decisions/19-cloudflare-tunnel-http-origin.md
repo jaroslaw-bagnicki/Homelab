@@ -1,7 +1,8 @@
 # Cloudflare Tunnel HTTP origin with Caddy reverse proxy on Cloudlab
 
 **Date:** 2026-07-05
-**Status:** Accepted (revised 2026-07-05)
+**Status:** Accepted
+**Amended:** 2026-07-05 — revised in place the same day: the HTTPS/Origin CA origin was abandoned for a plain-HTTP origin behind Caddy (see Decision — "Original HTTPS-to-origin approach (superseded)").
 
 ---
 
