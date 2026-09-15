@@ -19,7 +19,7 @@ The homelab's public ingress (`cloudflared` + Caddy) currently lives on the M910
 
 ### Architecture split (confirmed)
 
-- **Edge box**: `cloudflared` → Caddy for `*.example.com` (external ingress). The ADR 19 pattern (CF SSL **Full (Strict)** + Cloudflare Origin CA) applies unchanged.
+- **Edge box**: `cloudflared` → Caddy for `*.example.com` (external ingress). The ADR 19 pattern applies unchanged: TLS terminates at the CF edge and the cloudflared → Caddy hop stays plain HTTP.
 - **M910q**: keeps the internal `.home` Caddy + k3s (ADR 07/06). The tunnel origin moves off the M910q.
 
 ---
@@ -173,7 +173,7 @@ Both run the same systemd units and identical Caddy/cloudflared configs — only
 - [ADR 24 — Edge ingress on a dedicated thin-client appliance](../decisions/24-edge-ingress-appliance.md)
 - [ADR 07](../decisions/07-reverse-proxy-caddy.md) — Caddy reverse proxy
 - [ADR 08](../decisions/08-remote-access-cloudflare-tunnel.md) — Cloudflare Tunnel / CGNAT
-- [ADR 19](../decisions/19-cloudflare-tunnel-https-origin.md) — HTTPS-only origin (Full (Strict) + Origin CA)
+- [ADR 19](../decisions/19-cloudflare-tunnel-http-origin.md) — Cloudflare Tunnel HTTP origin (TLS at the CF edge)
 - [ADR 20](../decisions/20-caddy-single-routing-layer.md) — Caddy single routing layer
 - [ADR 22](../decisions/22-k3s-arc-homelab.md) — k3s + Azure Arc
 - [ADR 23](../decisions/23-nas-on-ml110.md) — ML110 OMV storage-only

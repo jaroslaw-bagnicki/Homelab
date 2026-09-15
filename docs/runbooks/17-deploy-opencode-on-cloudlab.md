@@ -10,7 +10,7 @@
 - [ ] Ansible collections installed: `community.docker`, `community.general`, `azure.azcollection` (`ansible-galaxy collection install -r ansible/requirements.yml`).
 - [ ] `homelab-bysxdb-kv` Key Vault accessible from the Ansible controller identity, with secrets for each instance (see workload README §Secrets).
 - [ ] SSH access to `cloudlab` via `ansible_user: fleetadm` (see [fleet-connect skill](../../.opencode/skills/fleet-connect)).
-- [ ] Cloudflare Tunnel `*.<domain>` → `http://caddy:80` configured (see [ADR 19](../decisions/19-cloudflare-tunnel-https-origin.md)).
+- [ ] Cloudflare Tunnel `*.<domain>` → `http://caddy:80` configured (see [ADR 19](../decisions/19-cloudflare-tunnel-http-origin.md)).
 
 ## 1. Provision secrets
 
@@ -64,7 +64,7 @@ The `example.com` literal in this runbook reflects the cloudlab deployment. The 
 
 ## 4. Cloudflare Tunnel DNS prerequisites
 
-The CF tunnel wildcard entry must cover `*.<domain>` (see [ADR 19](../decisions/19-cloudflare-tunnel-https-origin.md)) and point to `http://caddy:80`. Public hostname entries in the Cloudflare Zero Trust dashboard are not required when the tunnel uses a wildcard rule. If the existing tunnel entry is the apex only, add `*.<domain>` to route agent subdomains through the same tunnel to `caddy-main`.
+The CF tunnel wildcard entry must cover `*.<domain>` (see [ADR 19](../decisions/19-cloudflare-tunnel-http-origin.md)) and point to `http://caddy:80`. Public hostname entries in the Cloudflare Zero Trust dashboard are not required when the tunnel uses a wildcard rule. If the existing tunnel entry is the apex only, add `*.<domain>` to route agent subdomains through the same tunnel to `caddy-main`.
 
 ---
 
@@ -81,7 +81,7 @@ The CF tunnel wildcard entry must cover `*.<domain>` (see [ADR 19](../decisions/
 
 - [Workload README — OpenCode](../../ansible/workloads/opencode/README.md)
 - [ADR 18 — Host OpenCode Server Instances on Homelab](../decisions/18-opencode-sandbox.md)
-- [ADR 19 — Cloudflare Tunnel HTTP origin with Caddy reverse proxy](../decisions/19-cloudflare-tunnel-https-origin.md)
+- [ADR 19 — Cloudflare Tunnel HTTP origin with Caddy reverse proxy](../decisions/19-cloudflare-tunnel-http-origin.md)
 - [ADR 20 — Caddy as Single Routing Layer on Cloudlab](../decisions/20-caddy-single-routing-layer.md)
 - [Research 21 — OpenCode Sandboxed Architecture on Homelab](../research/21-opencode-sandboxed-homelab.md)
 - [Research 22 — Infisical vs Azure Key Vault](../research/22-infisical-vs-azure-key-vault.md)
