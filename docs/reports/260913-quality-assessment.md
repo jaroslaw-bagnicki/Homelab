@@ -74,7 +74,7 @@ an enforced gate. Nothing found is structurally wrong, and the fixes are small: 
 - **"Research settles, ADR owns" co-authoring rule** - the ADR is authored in the same phase as the research, and the research doc defers authority. (`AGENTS.md` "Documentation"; idea 09 -> ADR 30)
 - **`Supersedes` declared on both sides** - ADR 03/22, ADR 08/19, ADR 23/29 all cross-link.
 - **State docs move together** for any node status change, with the Copilot reviewer catching mismatches. (`.github/copilot-instructions.md`)
-- **Idea lifecycle stated** (Idea -> Planned -> Implementing -> On Hold -> Done — five states since 2026-09-16) with ADR cross-references. (`docs/ideas/README.md`)
+- **Idea lifecycle stated** (Idea -> Planned -> Implementing -> Done) with ADR cross-references. (`docs/ideas/README.md`)
 - **PR bodies record deliberately deferred work**, which is unusually honest engineering hygiene. (PR #110 Notes)
 
 ### Infrastructure & Engineering
@@ -101,7 +101,7 @@ an enforced gate. Nothing found is structurally wrong, and the fixes are small: 
 - **Why it matters here**: ADR 24 is the *governing* ADR for the in-progress edge-ingress migration (#65/#81). An agent or the operator reading the decision log to build that migration is told, by an Accepted ADR, to implement a design that a sibling Accepted ADR explicitly rejected - exactly the "why did we pick X over Y?" question the log exists to answer.
 - **Severity**: **High** - actively misdirected the next implementation step. **Fixed 2026-09-15.**
 - **Evidence**: `docs/decisions/19-cloudflare-tunnel-https-origin.md` (title, Status, "Original HTTPS-to-origin approach (superseded)"), `docs/decisions/README.md` row 19, `docs/decisions/08-remote-access-cloudflare-tunnel.md` "Superseded by ADR 19", `docs/decisions/24-edge-ingress-appliance.md` Decision bullet 4, `CHANGELOG.md` (2026-07 `cloudflared` entry), `docs/runbooks/20-deploy-zot.md` (traffic flow line).
-- **Fixed**: ADR 19 renamed to `19-cloudflare-tunnel-http-origin.md` with an `**Amended:**` line recording the in-place revision; index rows 8 and 19, ADR 08 (status, supersession section, references), ADR 24 (decision bullet, references), idea 04, research 25, runbooks 16/17/20/23/24 and the 2026-07 changelog entry all now describe the plain-HTTP origin. Verified: no reference to the old filename remains. The fix needed no workflow - CI is out of scope (3.5).
+- **Fixed**: ADR 19 renamed to `19-cloudflare-tunnel-http-origin.md` with an `**Amended:**` line recording the in-place revision; index rows 8 and 19, ADR 08 (status, supersession section, references), ADR 24 (decision bullet, references), idea 04, research 25, runbooks 16/17/20/23/24 and the 2026-07 changelog entry all now describe the plain-HTTP origin. Verified: no live link or referrer still uses the old filename - the citations above are kept deliberately as the finding's own record. The fix needed no workflow - CI is out of scope (3.5).
 
 ### 3.2 Stale decision statuses
 - **What**: statuses outside the documented allowed set or no longer true. ADR 02 is "In Progress" (not an allowed value; dormant since June). ADR 09 is "Implemented (partial)" (not an allowed value). ADR 25 is "Proposed" although its own promotion criteria - the hardware purchased and the dedicated-node trade-off closed - were met on 2026-08-19/2026-09-06. ADR 28's Status line says "`lab` and `edge` pending" while the `fleet-connect` skill states the fleet-wide migration "completed 2026-08-30" and the CHANGELOG records edge key-only SSH shipped.
@@ -156,7 +156,7 @@ an enforced gate. Nothing found is structurally wrong, and the fixes are small: 
 - **Residual**: nothing enforces this class of currency; that is gap 4.2, and the rule still depends on the operator (or reviewer) noticing.
 
 ### 3.9 WIP load and branch litter
-- **What**: five rows sit in "In progress" at once (one `***`, three `**`), which for a spare-time single operator is closer to a plan than a limit - though most are hardware- or sequence-gated rather than actively parallel. Two PRs covered the same UPS subject within two days (#109 then #113). Five merged head branches remain on the remote (`docs/nut-runbook`, `docs/beetle-m3-reaudit`, `docs/refresh-overview-whats-next`, `feat/ups-nut-home-assistant`, plus the open `feat/netdata-parent-role`), because GitHub does not delete remote head branches on merge.
+- **What**: five rows sit in "In progress" at once (one `***`, three `**`), which for a spare-time single operator is closer to a plan than a limit - though most are hardware- or sequence-gated rather than actively parallel. Two PRs covered the same UPS subject within two days (#109 then #113). Four merged head branches remain on the remote (`docs/nut-runbook`, `docs/beetle-m3-reaudit`, `docs/refresh-overview-whats-next`, `feat/ups-nut-home-assistant`) plus the still-open `feat/netdata-parent-role`, because GitHub does not delete remote head branches on merge.
 - **Why it matters here**: low-grade; the branch retention is a known, accepted platform behaviour, and the WIP rows are mostly legitimate gates. Noted so it does not become a trend.
 - **Severity**: **Low**
 - **Evidence**: `docs/overview.md` "In progress" (5 rows); PRs #109/#113; `git branch -r` (6 non-main branches).
@@ -218,7 +218,7 @@ an enforced gate. Nothing found is structurally wrong, and the fixes are small: 
 ## Top 3 actions
 
 1. **Verify backup and restore** - the highest remaining severity (4.3). ADR 02 is dormant, no restore drill exists, and the storage layer is being replatformed (ML110 -> Beetle). Add a "Restore drill" section with a definite pass condition to runbook 07, and a board row. Files: `docs/runbooks/07-restic-backup.md`, `docs/overview.md`, `docs/decisions/02-backup-strategy-restic-blob.md`.
-2. **One doc-currency PR** - sanitise the real domain and parameterise the three hardcoded `Caddyfile.j2` hostnames (3.3), fix the `adr-authoring` skill's filename pattern and `main`-commit rule (3.7), and correct the stale statuses (ADR 02, 09, 25, 28) and idea rows (01c, 04) - files: `ansible/roles/docker_services/templates/Caddyfile.j2`, `docs/decisions/*`, `docs/ideas/README.md`, `.github/skills/adr-authoring/SKILL.md`.
+2. **One doc-currency PR** - sanitise the real domain and parameterise the three hardcoded `Caddyfile.j2` hostnames (3.3) and correct the stale statuses (ADR 02, 09, 25, 28) - files: `ansible/roles/docker_services/templates/Caddyfile.j2`, `docs/decisions/*`.
 3. **Add the local docs-currency check** - `scripts/Test-HomelabDocs.ps1` (4.2), run alongside `ansible-lint` per the existing pre-commit rule, so the class of drift this audit found (3.1, 3.2, 3.6, 3.8) cannot silently return. No CI required.
 
 > **Retired:** the original action 1 (retire the ADR 19 contradiction) was completed on 2026-09-15 - see 3.1. The original action 2 (add a CI workflow) was withdrawn: CI is deliberately out of scope - see 3.5.
