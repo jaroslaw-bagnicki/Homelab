@@ -9,7 +9,7 @@
 - [ ] Runbooks [1](01-init.md), [2](02-docker.md), [4](04-caddy.md), [5](05-cloudflare-tunnel.md), [10](10-vps-playground.md), [16](16-docker-services-ansible-role.md) completed.
 - [ ] Ansible collections installed: `community.docker`, `community.general`, `azure.azcollection` (`ansible-galaxy collection install -r ansible/requirements.yml`).
 - [ ] `homelab-bysxdb-kv` Key Vault accessible from the Ansible controller identity, with secrets for each instance (see workload README §Secrets).
-- [ ] SSH access to `cloudlab` via `ansible_user: fleetadm` (see [fleet-connect skill](../../.opencode/skills/fleet-connect)).
+- [ ] SSH access to `cloudlab` via `ansible_user: fleetadm` (see [fleet-connect skill](../../.github/skills/fleet-connect)).
 - [ ] Cloudflare Tunnel `*.<domain>` → `http://caddy:80` configured (see [ADR 19](../decisions/19-cloudflare-tunnel-http-origin.md)).
 
 ## 1. Provision secrets
@@ -72,7 +72,7 @@ The CF tunnel wildcard entry must cover `*.<domain>` (see [ADR 19](../decisions/
 
 - **Provision a new instance** — see [runbook 18](18-provision-opencode-instance.md)
 - **Backup strategy** for `/var/lib/opencode/instances/<name>/` — follow-up issue (single `restic` snapshot covers all four data dirs per instance)
-- **Docker AI Sandboxes (`sbx`)** evaluation once KVM availability on Cloudlab is confirmed (per [Research 21](../research/21-opencode-sandboxed-homelab.md) open question #4)
+- **Docker AI Sandboxes (`sbx`)** evaluation once KVM availability on Cloudlab is confirmed (per [Research 21](../research/21-opencode-sandboxed-homelab-architecture.md) open question #4)
 - Add Cloudflare Access or Caddy basic-auth layered on top of OpenCode's built-in auth if multi-user access becomes a requirement
 
 ---
@@ -83,8 +83,8 @@ The CF tunnel wildcard entry must cover `*.<domain>` (see [ADR 19](../decisions/
 - [ADR 18 — Host OpenCode Server Instances on Homelab](../decisions/18-opencode-sandbox.md)
 - [ADR 19 — Cloudflare Tunnel HTTP origin with Caddy reverse proxy](../decisions/19-cloudflare-tunnel-http-origin.md)
 - [ADR 20 — Caddy as Single Routing Layer on Cloudlab](../decisions/20-caddy-single-routing-layer.md)
-- [Research 21 — OpenCode Sandboxed Architecture on Homelab](../research/21-opencode-sandboxed-homelab.md)
-- [Research 22 — Infisical vs Azure Key Vault](../research/22-infisical-vs-azure-key-vault.md)
+- [Research 21 — OpenCode Sandboxed Architecture on Homelab](../research/21-opencode-sandboxed-homelab-architecture.md)
+- [Research 22 — Infisical vs Azure Key Vault](../research/22-infisical-for-homelab-secret-management.md)
 - [Runbook 16 — Docker Services Ansible Role](16-docker-services-ansible-role.md)
 - [Runbook 18 — Provision a New OpenCode Instance](18-provision-opencode-instance.md)
 - [#30 — Implement server-hosted OpenCode instances on Cloudlab](https://github.com/jaroslaw-bagnicki/Homelab/issues/30)

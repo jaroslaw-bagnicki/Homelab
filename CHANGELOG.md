@@ -14,6 +14,7 @@ Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month 
 
 - **(docs)** Add the `quality-assessment` prompt + first repo assessment — [prompt](.github/prompts/quality-assessment.prompt.md) · [report](docs/reports/260913-quality-assessment.md)
 - **(docs)** Add ADR 32 — no hosted CI — [ADR 32](docs/decisions/32-no-hosted-ci.md)
+- **(docs)** Fix ADR 19's origin-design contradiction — the file renamed to `19-cloudflare-tunnel-http-origin.md` and every referrer corrected — [ADR 19](docs/decisions/19-cloudflare-tunnel-http-origin.md)
 - **(feat)** UPS graceful shutdown via **NUT** in LXC 213 on the HA node — [ADR 30](docs/decisions/30-ups-nut-graceful-shutdown.md) · [runbook 29](docs/runbooks/29-nut-ups-shutdown.md)
 - **(docs)** Re-cut the static address scheme — `20x` servers, `21x` guests, **VMID = last octet** — [ADR 31](docs/decisions/31-static-address-scheme.md)
 - **(docs)** Wincor Beetle M-III is the NAS successor on OMV, superseding the ML110 — [ADR 29](docs/decisions/29-nas-backup-target-beetle-m3-omv.md)
