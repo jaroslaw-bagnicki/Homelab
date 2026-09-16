@@ -218,7 +218,8 @@ long one that is not.
 Write the report to `docs/reports/YYMMDD-quality-assessment.md` (today's date, e.g.
 `260913-quality-assessment.md`). Create `docs/reports/` if it does not exist.
 
-Then add a row at the **top** of the index table in `docs/reports/README.md`:
+**That is the prompt's entire write set — exactly two files.** First the report above,
+then one new row at the **top** of the index table in `docs/reports/README.md`:
 
 ```markdown
 | YYYY-MM-DD | [Quality Assessment](YYMMDD-quality-assessment.md) | <one-line headline> |
