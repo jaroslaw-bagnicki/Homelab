@@ -55,6 +55,7 @@
 - **Direct commits to `main` only when the user explicitly asks** ("commit to main", "no PR", "skip the branch")
 - **Commit message format**: `(type) description` with parentheses. Common types: `docs`, `feat`, `fix`, `chore`, `refactor`
 - **Never rebase** unless explicitly asked
+- **CI is deliberately out of scope** — verification is local (`ansible-lint` on changed roles, plus a live `--diff` playbook run before merge, per `AGENTS.md`); do not propose a workflow or pipeline. See `docs/decisions/32-no-hosted-ci.md` (ADR 32).
 
 ## Security
 

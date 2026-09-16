@@ -4,6 +4,7 @@
 **Method:** artefact reading + live GitHub state (repo `jaroslaw-bagnicki/Homelab`)
 **Baseline:** point-in-time snapshot at 2026-09-13, branch `docs/quality-assessment-prompt` (HEAD `ab217e2`)
 **Amended:** 2026-09-15 — two changes since the snapshot: finding **3.1** (the ADR 19 contradiction) was fixed at source (its filename, every referrer, and ADR 24's bullet), and the CI remark was **suppressed** at the operator's direction — CI is deliberately deferred, so 3.5 is now recorded as a decision rather than an antipattern and 4.1 as out of scope rather than a gap.
+**Amended:** 2026-09-16 — the CI decision now has an authoritative home: [ADR 32](../decisions/32-no-hosted-ci.md) ("No Hosted CI — Verification Stays Local"), which 3.5 and 4.1 point to. A report is the wrong place for a policy decision, so the deferral no longer rests on a snapshot.
 
 ---
 
@@ -126,6 +127,7 @@ an enforced gate. Nothing found is structurally wrong, and the fixes are small: 
 - **What**: the repo has no `.github/workflows`, and that is a decision rather than an omission: **CI is out of scope for this project**. The only check a pipeline would meaningfully add is `ansible-lint` on changed roles, which is already a documented pre-commit rule (`AGENTS.md` "Ansible Verification") and runs locally in seconds. The `docker/*/tests/verify-*.sh` smoke tests and a Markdown link check are not worth a pipeline on a single-operator repo that merges a few times a week.
 - **Why it is recorded here**: so a future audit does not re-derive it as a finding. The compensating controls are the documented local lint step, PR-time Copilot review, and the runbook completion checklists.
 - **Severity**: **Negligible** (accepted trade-off - operator decision, 2026-09-15)
+- **Recorded as**: [`ADR 32`](../decisions/32-no-hosted-ci.md) (2026-09-16) - the decision now has an authoritative home instead of living in this snapshot, and both instruction files carry a one-line pointer so an agent session stops re-proposing a pipeline.
 - **Evidence**: `.github/` listing; `AGENTS.md` "Ansible Verification"; `docker/*/tests/`.
 
 ### 3.6 Documentation link rot and stale cross-references
@@ -166,8 +168,8 @@ an enforced gate. Nothing found is structurally wrong, and the fixes are small: 
 ## 4. Gaps and recommendations
 
 ### 4.1 CI gate - out of scope by decision
-- **Not a gap**: CI is deliberately deferred (see 3.5). `ansible-lint` already runs locally as a documented pre-commit rule and is the only check a workflow would usefully add; a pipeline for Markdown links or the image smoke tests is not worth the maintenance on a single-operator repo.
-- **What would change that**: a second contributor, or a check that cannot be run locally. Neither is on the roadmap.
+- **Not a gap**: CI is deliberately deferred (see 3.5), and the decision is now recorded as [`ADR 32`](../decisions/32-no-hosted-ci.md). `ansible-lint` already runs locally as a documented pre-commit rule and is the only check a workflow would usefully add; a pipeline for Markdown links or the image smoke tests is not worth the maintenance on a single-operator repo.
+- **What would change that**: ADR 32's "Revisit if" list - a second contributor, a check that cannot be run locally, or a release needing an auditable build record.
 - **Effort**: n/a - the decision is made, not pending.
 - **Issue?** No.
 

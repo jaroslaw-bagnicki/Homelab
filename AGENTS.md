@@ -203,3 +203,4 @@ The boundary between planning (read-only) and implementation (build) must be cle
 - **Post-merge deployment.** After the PR is merged, re-run the playbook to ensure the live host matches the merged code.
 - **Pre-flight: fix world-writable workspace.** If the dev container workspace is world-writable (default), Ansible refuses to read `ansible.cfg`. Run `chmod 755 /workspaces/Homelab /workspaces/Homelab/ansible` before `ansible-playbook`.
 - **Never commit `ansible/ansible.log`.** The file is `.gitignore`'d but may have been tracked before. Untrack it with `git rm --cached ansible/ansible.log` if it appears in `git status`.
+- **CI is deliberately out of scope.** Verification is the local rules above — `ansible-lint` plus the live playbook runs. Do not propose a workflow or pipeline; see `docs/decisions/32-no-hosted-ci.md` (ADR 32).
