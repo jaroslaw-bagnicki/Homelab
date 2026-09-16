@@ -9,8 +9,8 @@
 - [ ] Runbooks [10](10-vps-playground.md), [16](16-docker-services-ansible-role.md) completed — cloudlab has Docker, the base Compose stack (Caddy, cloudflared), and `homelab_net`.
 - [ ] Ansible collections installed: `community.docker`, `community.general`, `azure.azcollection` (`ansible-galaxy collection install -r ansible/requirements.yml`).
 - [ ] `homelab-bysxdb-kv` Key Vault accessible from the Ansible controller identity.
-- [ ] SSH access to `cloudlab` via `ansible_user: fleetadm` (see [fleet-connect skill](../../.opencode/skills/fleet-connect)).
-- [ ] Cloudflare Tunnel routing to `http://caddy:80` configured (see [ADR 19](../decisions/19-cloudflare-tunnel-https-origin.md)).
+- [ ] SSH access to `cloudlab` via `ansible_user: fleetadm` (see [fleet-connect skill](../../.github/skills/fleet-connect)).
+- [ ] Cloudflare Tunnel routing to `http://caddy:80` configured (see [ADR 19](../decisions/19-cloudflare-tunnel-http-origin.md)).
 
 ## 1. Provision secrets
 
@@ -94,7 +94,7 @@ Traffic flow: client → Cloudflare edge (TLS) → cloudflared → `http://caddy
 
 - [Workload README — Zot](../../ansible/workloads/zot/README.md)
 - [ADR 13 — Cloudlab staging](../decisions/13-cloudlab-staging.md)
-- [ADR 19 — Cloudflare Tunnel HTTP origin with Caddy reverse proxy](../decisions/19-cloudflare-tunnel-https-origin.md)
+- [ADR 19 — Cloudflare Tunnel HTTP origin with Caddy reverse proxy](../decisions/19-cloudflare-tunnel-http-origin.md)
 - [ADR 20 — Caddy as Single Routing Layer on Cloudlab](../decisions/20-caddy-single-routing-layer.md)
 - [Runbook 16 — Docker Services Ansible Role](16-docker-services-ansible-role.md)
 - [Issue #50 — Adopt Zot as self-hosted container registry](https://github.com/jaroslaw-bagnicki/Homelab/issues/50)

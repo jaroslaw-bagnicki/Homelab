@@ -9,7 +9,7 @@
 > [**Research 23 — ML110 NAS (OMV)**](../research/23-ml110-nas-omv.md);
 > this doc is the implementation plan.
 
-**Status**: 🔨 Implementing — SMB `/shared` backup share live (2026-08-22, [runbook 26](../runbooks/26-ml110-nas-exports.md)); NFS `/export/backups` + Longhorn pending  
+**Status**: 🚧 On Hold — SMB `/shared` backup share live (2026-08-22, [runbook 26](../runbooks/26-ml110-nas-exports.md)); NFS `/export/backups` + Longhorn pending  
 **Date**: 2026-08-08  
 **Idea**: 01 — [Homelab NAS](01-nas-backup-target.md) (historical V1)  
 **Research**: [23 — ML110 NAS (OMV)](../research/23-ml110-nas-omv.md)  
@@ -70,9 +70,9 @@ Runbook: [`22-ml110-nas-inventory.md`](../runbooks/22-ml110-nas-inventory.md)
 
 ## Lifecycle
 
-📋 **Planned** → 🔨 **Implementing** once Phase 0 completes and the OMV install
-begins → ✅ **Done** when the NAS is online and the Longhorn backup target is
-verified. Then graduates to an **ADR** (e.g. ADR 23 — NAS on ML110).
+📋 **Planned** → 🔨 **Implementing** → 🚧 **On Hold** — the ML110 is superseded by
+[ADR 29](../decisions/29-nas-backup-target-beetle-m3-omv.md): it stays the interim `/shared` backup target until
+the Beetle NAS replaces it, then retires. It never reaches ✅ **Done**.
 
 ---
 

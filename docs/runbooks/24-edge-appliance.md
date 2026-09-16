@@ -306,7 +306,7 @@ resulting state:
 - [ADR 24](../decisions/24-edge-ingress-appliance.md) — edge appliance decision (OS, DNS, bare-metal)
 - [ADR 27](../decisions/27-monitoring-strategy.md) — Netdata child node on the edge (RAM-only)
 - [ADR 20](../decisions/20-caddy-single-routing-layer.md) — single Caddyfile routing layer
-- [ADR 19](../decisions/19-cloudflare-tunnel-https-origin.md) — CF HTTPS origin pattern (HTTP to origin)
+- [ADR 19](../decisions/19-cloudflare-tunnel-http-origin.md) — CF tunnel origin pattern (plain HTTP to origin)
 - [Research 25](../research/25-edge-ingress-sbc.md) — PL-market hardware + OS evaluation
 - [Idea 04](../ideas/04-edge-device-tunnel-caddy.md) — original edge idea
 - [Runbook 01](01-init.md) — base setup / hardening pattern · [Runbook 03](03-dns.md) — dnsmasq pattern

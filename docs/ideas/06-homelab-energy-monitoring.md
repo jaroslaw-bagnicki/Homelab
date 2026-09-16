@@ -39,7 +39,7 @@ All substance — radio alternatives, devices, stack, metrics architecture, AI-a
 
 ## Lifecycle
 
-🧠 **Idea** → 📋 **Planned** (scoped + ADR in progress) → 🔨 **Implementing** → ✅ **Done**.
+🧠 **Idea** → 📋 **Planned** (scoped and decided, not started) → 🔨 **Implementing** → 🚧 **On Hold** (superseded, retiring, or blocked) → ✅ **Done**.
 New hardware + metrics architecture — decision recorded in [ADR 26](../decisions/26-zigbee-energy-monitoring.md) (Accepted); implementation pending acquisition.
 
 ## References

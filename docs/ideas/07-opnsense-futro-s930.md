@@ -194,7 +194,7 @@ depend on it.
 
 ## Lifecycle
 
-🧠 **Idea** → 📋 **Planned** (scoped + ADR in progress) → 🔨 **Implementing** → ✅ **Done**.
+🧠 **Idea** → 📋 **Planned** (scoped and decided, not started) → 🔨 **Implementing** → 🚧 **On Hold** (superseded, retiring, or blocked) → ✅ **Done**.
 New hardware + a new network role for the lab — expect research/ADR before acquisition.
 
 ## References

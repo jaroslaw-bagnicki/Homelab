@@ -3,6 +3,7 @@
 **Date:** 2026-08-09  
 **Status:** Accepted  
 **Amended:** 2026-08-24 — `.home` DNS changed from dnsmasq-on-edge to the **OPNsense router** ([idea 07](../ideas/07-opnsense-futro-s930.md)); see Decision/Consequences.  
+**Amended:** 2026-09-15 — the "ADR 19 pattern applies" bullet corrected: the edge uses the plain-HTTP origin (TLS terminates at the CF edge), not the abandoned Origin CA / Full (Strict) design.  
 
 ---
 
@@ -24,7 +25,7 @@ Run the homelab's public ingress on a **dedicated, low-power edge appliance** on
 - **Hardware — Dell Wyse 3040** (Atom x5-Z8350, 2 GB DDR3L, 8 GB eMMC, GbE, ~90 PLN used — actual purchase 89,00 PLN on 2026-08-13, ~2–3 W fanless). Selected as a deliberate constrained-resources experiment and by far the cheapest reachable GbE device in PL. The Wyse 5070 (4 GB, SATA SSD) is the accepted fallback if the 2 GB ceiling is hit.
 - **Deployment model — bare-metal, not Docker.** `cloudflared` and Caddy install directly on a minimal distro as systemd services. **OS: Debian minimal as the baseline; Alpine Linux trialed in parallel** (sequential on-device trial) as part of the constrained-resources experiment — the Caddy/cloudflared configs are identical either way. Config-as-code preserved: the Caddyfile and cloudflared config are templated by Ansible (ADR 10); Debian keeps the apt/.deb update path.
 - **Architecture split — the edge appliance owns all inbound routing.** External: `*.example.com` → Caddy → backends over the LAN. Internal: `.home` Caddy routing on the edge box, with `*.home` DNS via the **OPNsense router** ([idea 07](../ideas/07-opnsense-futro-s930.md)) once it lands. The M910q is **compute-only** (k3s, ADR 22) — it no longer runs dnsmasq, Caddy, or the tunnel.
-- **ADR 19 pattern applies to the homelab edge.** cloudflared → Caddy over HTTPS with Cloudflare Origin CA; CF SSL mode Full (Strict).
+- **ADR 19 pattern applies to the homelab edge.** cloudflared → Caddy in **plain HTTP over loopback** (`127.0.0.1:80`); TLS terminates at the Cloudflare edge — the HTTPS/Origin CA origin was attempted and abandoned (ADR 19).
 - **Provisioning.** A new Ansible `edge_host`-style role (systemd units), distinct from `docker_services`.
 
 ## Consequences
@@ -59,7 +60,7 @@ Run the homelab's public ingress on a **dedicated, low-power edge appliance** on
 - [ADR 07](../decisions/07-reverse-proxy-caddy.md) — Caddy reverse proxy
 - [ADR 08](../decisions/08-remote-access-cloudflare-tunnel.md) — Cloudflare Tunnel / CGNAT
 - [ADR 10](../decisions/10-ansible-host-config.md) — Ansible host configuration
-- [ADR 19](../decisions/19-cloudflare-tunnel-https-origin.md) — HTTPS-only origin (Full (Strict) + Origin CA)
+- [ADR 19](../decisions/19-cloudflare-tunnel-http-origin.md) — Cloudflare Tunnel HTTP origin (TLS at the CF edge)
 - [ADR 20](../decisions/20-caddy-single-routing-layer.md) — Caddy single routing layer
 - [ADR 22](../decisions/22-k3s-arc-homelab.md) — k3s + Azure Arc
 - [ADR 23](../decisions/23-nas-on-ml110.md) — ML110 OMV storage-only

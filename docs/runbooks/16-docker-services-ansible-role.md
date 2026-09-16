@@ -122,7 +122,7 @@ Admin-facing services (Portainer, anything with full-host control) sit behind th
 
 After saving, a hit on `https://portainer.example.com/` from an unauthenticated browser returns a 302 to `https://<team>.cloudflareaccess.com/...` for IdP login. With a valid session, traffic flows through to Caddy → Portainer as normal.
 
-**Why this matters**: the tunnel → Caddy hop carries plaintext HTTP internally (per [ADR 19](../decisions/19-cloudflare-tunnel-https-origin.md)). Cloudflare Access closes the trust gap at the edge without touching the in-cluster network — no Caddy mTLS, no per-service auth glue, no application code changes.
+**Why this matters**: the tunnel → Caddy hop carries plaintext HTTP internally (per [ADR 19](../decisions/19-cloudflare-tunnel-http-origin.md)). Cloudflare Access closes the trust gap at the edge without touching the in-cluster network — no Caddy mTLS, no per-service auth glue, no application code changes.
 
 ---
 
@@ -156,4 +156,4 @@ To expose a new service (e.g. `portainer.example.com`) through the tunnel:
 - [ADR 07 — Reverse Proxy: Caddy](../decisions/07-reverse-proxy-caddy.md)
 - [ADR 08 — Remote Access: Cloudflare Tunnel](../decisions/08-remote-access-cloudflare-tunnel.md)
 - [ADR 10 — Ansible for Host Configuration Management](../decisions/10-ansible-host-config.md)
-- [ADR 19 — Cloudflare Tunnel HTTP origin with Caddy reverse proxy on Cloudlab](../decisions/19-cloudflare-tunnel-https-origin.md)
+- [ADR 19 — Cloudflare Tunnel HTTP origin with Caddy reverse proxy on Cloudlab](../decisions/19-cloudflare-tunnel-http-origin.md)

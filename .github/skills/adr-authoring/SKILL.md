@@ -10,7 +10,7 @@ description: >-
   maintenance, and commit conventions.
   USE FOR: creating a new ADR, updating an existing ADR, reviewing an ADR,
   deciding whether a decision warrants an ADR, fixing a malformed ADR.
-  DO NOT USE FOR: writing research docs (use research-output skill), writing
+  DO NOT USE FOR: writing research docs, writing
   runbooks (use runbook format), documenting standard operating procedures.
 when:
   - user asks to "record a decision", "write an ADR", "log a decision"
@@ -74,14 +74,14 @@ the research — do not defer it to a later implementation phase.
 ## File naming
 
 ```
-docs/decisions/YYMMDD-NN-kebab-case-title.md
+docs/decisions/NN-kebab-case-title.md
 ```
 
-- `YYMMDD` — date the decision was made (e.g. `260616`)
 - `NN` — globally sequential number (01, 02, …) across all ADRs, assigned chronologically from oldest to newest
 - `kebab-case-title` — short, descriptive title
+- The **decision date does not appear in the filename** — it lives in the file's `**Date:**` line. The `YYMMDD-NN-*` form recorded in ADR 12 was never adopted and no ADR file follows it; do not introduce it.
 
-**Example:** `260616-12-establish-adr-log.md`
+**Example:** `12-establish-adr-log.md`
 
 ---
 
@@ -145,9 +145,9 @@ that creates the ADR file.
 
 ## Commit conventions
 
-- Commit message: `(docs) Add ADR: <title>`
-- Include the ADR file AND the README index update in the same commit
-- Commit directly to `main` (per Homelab workflow)
+- Commit message: `(docs) Add ADR <NN> — <short title>`
+- Ship the ADR file, its `docs/decisions/README.md` index row, and the `CHANGELOG.md` entry in the **same PR**
+- **Never commit to `main`** — feature branch → push → PR (opened only on an explicit request), per `.github/copilot-instructions.md` and `AGENTS.md`
 
 ---
 

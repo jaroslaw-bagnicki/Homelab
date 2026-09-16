@@ -1,7 +1,7 @@
 # Remote Access — Cloudflare Tunnel for Inbound HTTPS
 
 **Date:** 2026-05-30
-**Status:** Superseded by [ADR 19 — HTTPS-only origin via Cloudflare Tunnel + Cloudflare Origin CA on Cloudlab](19-cloudflare-tunnel-https-origin.md)
+**Status:** Superseded by [ADR 19 — Cloudflare Tunnel HTTP origin with Caddy reverse proxy on Cloudlab](19-cloudflare-tunnel-http-origin.md)
 
 ---
 
@@ -47,11 +47,19 @@ The original V1 design sends plain HTTP from cloudflared to Caddy (CF edge termi
 - **CF SSL mode downgrade** required: "Full (Strict)" is not possible with a plain-HTTP origin; the "Full" mode is required instead, which accepts any cert (including self-signed)
 - **Inconsistent with ADR 07** (Caddy as the reverse proxy) — Caddy can terminate TLS; making it do so aligns the architecture
 
-[ADR 19](19-cloudflare-tunnel-https-origin.md) replaces this design for **all** new deployments. The pattern: cloudflared talks to Caddy over `https://caddy:443`, Caddy presents a **Cloudflare Origin CA certificate** to validate against CF's Origin CA trust store, and CF SSL mode stays at **Full (Strict)**.
+[ADR 19](19-cloudflare-tunnel-http-origin.md) replaces this design for **all** new deployments — but not by adding TLS between cloudflared and Caddy. ADR 19 settled the opposite: the tunnel remains the only ingress path and the cloudflared → Caddy hop stays **plain HTTP** (`http://caddy:80`), because the HTTPS-origin attempt failed on an SNI mismatch (`cloudflared` presents SNI `caddy`, which the Origin CA certificate's SANs did not cover) with no dashboard or config-file override available.
 
-The physical Homelab (M910q) currently runs the V1 design; its migration to V2 is tracked as a follow-up issue (see project issue tracker).
+The weaknesses listed above are therefore accepted rather than removed, and compensated differently:
+
+- **Tunnel-only ingress** — UFW denies inbound TCP/80 and TCP/443; direct public-IP exposure is not used.
+- **Routing consolidated in Caddy** — per-service hostnames live in the Caddyfile, not the Cloudflare dashboard ([ADR 20](20-caddy-single-routing-layer.md)).
+- **The origin hop stays private** — cloudflared and Caddy communicate over the `homelab_net` Docker bridge network, which is what the design leans on instead of origin TLS.
+
+Rejected along the way: Caddy-issued Let's Encrypt over ACME HTTP-01 or DNS-01, a self-signed origin certificate, and direct public-IP exposure.
+
+The physical Homelab (M910q) still runs the V1 arrangement; its migration to the ADR 19/20 pattern is the edge-ingress work in [ADR 24](24-edge-ingress-appliance.md).
 
 ## References
 
 - [ADR 07 — Reverse Proxy: Caddy with Auto-TLS and Configuration-as-Code](../decisions/07-reverse-proxy-caddy.md)
-- [ADR 19 — HTTPS-only origin via Cloudflare Tunnel + Cloudflare Origin CA on Cloudlab](19-cloudflare-tunnel-https-origin.md) (replacement)
+- [ADR 19 — Cloudflare Tunnel HTTP origin with Caddy reverse proxy on Cloudlab](19-cloudflare-tunnel-http-origin.md) (replacement)

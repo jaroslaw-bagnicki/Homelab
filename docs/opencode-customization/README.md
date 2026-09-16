@@ -67,17 +67,17 @@ Long-term destination: migrate all Cloudlab Compose workloads to k3s on the home
 
 | # | Runbook | Topic |
 |---|---|---|
-| 17 | [17-deploy-opencode-on-cloudlab.md](runbooks/17-deploy-opencode-on-cloudlab.md) | Base deployment of the per-instance OpenCode workload |
-| 18 | [18-provision-opencode-instance.md](runbooks/18-provision-opencode-instance.md) | Adding a new OpenCode instance (inventory + password + container) |
-| 19 | [19-azure-sp-for-opencode.md](runbooks/19-azure-sp-for-opencode.md) | Per-instance Azure SP provisioning + AKV wiring |
+| 17 | [17-deploy-opencode-on-cloudlab.md](../runbooks/17-deploy-opencode-on-cloudlab.md) | Base deployment of the per-instance OpenCode workload |
+| 18 | [18-provision-opencode-instance.md](../runbooks/18-provision-opencode-instance.md) | Adding a new OpenCode instance (inventory + password + container) |
+| 19 | [19-azure-sp-for-opencode.md](../runbooks/19-azure-sp-for-opencode.md) | Per-instance Azure SP provisioning + AKV wiring |
 
 ## ADR index
 
-- [ADR 16](decisions/16-agent-identity-pattern.md) — Non-Interactive Agent Workload Identity Pattern
-- [ADR 17](decisions/17-adopt-opencode.md) — Adopt OpenCode for Agentic Homelab Development
-- [ADR 18](decisions/18-opencode-sandbox.md) — Host OpenCode Server Instances on Homelab
-- [ADR 21](decisions/21-opencode-instance-images.md) — Per-Project OpenCode Container Images
-- [ADR 22](decisions/22-k3s-arc-homelab.md) — Migrate Homelab Workloads to Kubernetes (k3s + Arc)
+- [ADR 16](../decisions/16-agent-identity-pattern.md) — Non-Interactive Agent Workload Identity Pattern
+- [ADR 17](../decisions/17-adopt-opencode.md) — Adopt OpenCode for Agentic Homelab Development
+- [ADR 18](../decisions/18-opencode-sandbox.md) — Host OpenCode Server Instances on Homelab
+- [ADR 21](../decisions/21-opencode-instance-images.md) — Per-Project OpenCode Container Images
+- [ADR 22](../decisions/22-k3s-arc-homelab.md) — Migrate Homelab Workloads to Kubernetes (k3s + Arc)
 
 ## Cross-cutting design notes
 

@@ -195,7 +195,7 @@ Automation direction (dashboard + notifications first, escalation later):
 
 ## Lifecycle
 
-🧠 **Idea** → 📋 **Planned** (model chosen + ADR in progress) → 🔨 **Implementing** → ✅ **Done**.
+🧠 **Idea** → 📋 **Planned** (scoped and decided, not started) → 🔨 **Implementing** → 🚧 **On Hold** (superseded, retiring, or blocked) → ✅ **Done**.
 Expect a decision (this idea → ADR + runbook) before any purchase: the model choice, the
 modified-vs-pure-sine call, and the NUT placement are the three things that must settle
 first. Cross-links to [idea 05](05-home-assistant-thin-client.md) (host) and
