@@ -13,6 +13,7 @@ Significant architectural and technology choices recorded in
 
 | # | Date | ADR | Status |
 |---|------|-----|--------|
+| 32 | 2026-09-16 | [No Hosted CI — Verification Stays Local](32-no-hosted-ci.md) | Accepted |
 | 31 | 2026-09-13 | [Static Address Scheme — Server and Guest Blocks](31-static-address-scheme.md) | Accepted |
 | 30 | 2026-09-12 | [UPS Graceful Shutdown — NUT on the HA Node](30-ups-nut-graceful-shutdown.md) | Accepted |
 | 29 | 2026‑09‑12 | [NAS Backup Target — Wincor Beetle M-III (OpenMediaVault)](29-nas-backup-target-beetle-m3-omv.md) | Accepted |
