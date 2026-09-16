@@ -6,7 +6,7 @@ same `(type)` prefixes as commit messages; types: `feat`, `fix`, `docs`, `chore`
 
 **One line per entry, one entry per PR.** State what changed and link the artefact — the rationale,
 measurements and failure stories live in the linked ADR, runbook or report. Notable changes only:
-no instruction-file tweaks, typo/link fixes or changelog bookkeeping.
+no instruction-file tweaks, roadmap/board edits, typo/link fixes or changelog bookkeeping.
 
 ## 2026‑09
 
@@ -15,10 +15,8 @@ no instruction-file tweaks, typo/link fixes or changelog bookkeeping.
 - **(docs)** UPS graceful shutdown via **NUT** in LXC 213 on the HA node (`nutdrv_qx`, triggered on `LB`) + the `upsmon` password script — [ADR 30](docs/decisions/30-ups-nut-graceful-shutdown.md) · [runbook 29](docs/runbooks/29-nut-ups-shutdown.md) · [#111](https://github.com/jaroslaw-bagnicki/Homelab/issues/111)
 - **(docs)** Re-cut the static address scheme — `20x` physical servers, `21x` Proxmox guests where **VMID = last octet** (VM 210 · LXC 211/212/213) — [research 24](docs/research/24-network-topology-design.md) · [ADR 31](docs/decisions/31-static-address-scheme.md) · [runbook 29](docs/runbooks/29-nut-ups-shutdown.md)
 - **(docs)** Wincor Beetle M-III is the NAS successor on OMV — hardware re-audit + the decision superseding the ML110 — [research 32](docs/research/32-wincor-beetle-m3-hardware-diagnostic.md) · [ADR 29](docs/decisions/29-nas-backup-target-beetle-m3-omv.md) · [#98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98)
-- **(docs)** Refresh `overview.md` "What's Next" into a state-grouped board — **In progress** · **Planned** · **Held** — with a `Next step` column and a `Not Scheduled` parking lot; the states and the row-removal rule are wired into both instruction files — [overview](docs/overview.md)
 - **(docs)** Add idea 09 — shared-rail UPS with NUT-driven graceful shutdown + a Home Assistant NUT integration, with the fleet load profile, Green Cell model comparison and modified-sine risk — [idea 09](docs/ideas/09-ups-nut-home-assistant.md)
 - **(feat)** HA node (Wyse 5070) — Proxmox VE **9.2.2** installed (static `.201`), base provisioned and `fleetadm` given `sudo`; HA VM/LXC still open — [hardware](docs/hardware.md) · [runbook 28](docs/runbooks/28-ha-proxmox-node.md) · [#103](https://github.com/jaroslaw-bagnicki/Homelab/issues/103) · [#104](https://github.com/jaroslaw-bagnicki/Homelab/issues/104)
-- **(docs)** Require `CHANGELOG.md` entries to ship with any PR that changes behaviour or docs — `.github/copilot-instructions.md` / `AGENTS.md` now state that such PRs add/update their changelog entry in the same PR
 - **(feat)** SSH access LAN-only + devcontainer fleet-key autoload — `security` allows LAN password auth for the human breakglass while key-only elsewhere; `profile.ps1` always loads `fleetadm-key-priv` at session start — [runbook 24](docs/runbooks/24-edge-appliance.md) · [#78](https://github.com/jaroslaw-bagnicki/Homelab/issues/78)
 - **(docs)** Futro S930 hardware diagnostic — OPNsense router candidate pre-boot audit (research 31) — [research 31](docs/research/31-futro-s930-hardware-diagnostic.md) · [#97](https://github.com/jaroslaw-bagnicki/Homelab/issues/97)
 
