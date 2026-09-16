@@ -1,7 +1,8 @@
 # Establish Lightweight ADR Log in MADR Format
 
 **Date:** 2026-06-16  
-**Status:** Implemented
+**Status:** Implemented  
+**Amended:** 2026-09-16 — the `YYMMDD-kebab-case-title.md` filename pattern in the Decision below was **never adopted**: every ADR uses `NN-kebab-case-title.md`, with the decision date in the `**Date:**` line. The `adr-authoring` skill has been corrected to match.
 
 ---
 
