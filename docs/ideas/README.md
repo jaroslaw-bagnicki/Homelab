@@ -8,7 +8,7 @@ Pre-decision exploration and brainstorming. Unlike `docs/decisions/` (ADRs) whic
 | 01b | [Homelab NAS (EliteDesk 800 G1 / Unraid)](01b-nas-backup-target-elitedesk.md) | 🧠 Idea | Extensible alternative to idea 01: HP EliteDesk 800 G1 SFF + 2× WD 1 TB + NVMe cache on Unraid |
 | 01c | [Homelab NAS (Wincor Beetle M-III)](01c-nas-backup-target-wincor-beetle.md) | 📋 Planned | Most extensible NAS variant: Wincor Beetle M-III POS terminal + 2.5" HDD array + SSD cache — **successor to idea 03 (ML110)**, OS settled on **OMV** (Unraid deferred) by [ADR 29](../decisions/29-nas-backup-target-beetle-m3-omv.md) |
 | 02 | [DevContainers for OpenCode with DevPod](02-devcontainers-opencode-k3s.md) | 🧠 Idea | Long-lived, project-isolated OpenCode workspaces declared as Dev Containers, using Docker now and K3s later |
-| 03 | [Homelab NAS on ML110 (OMV)](03-nas-backup-target-ml110.md) | 🔨 Implementing | Repurpose retired HP ProLiant ML110 (was FreeNAS) as OMV backup target NAS; Phase 0 inventory in [runbook 22](../runbooks/22-ml110-nas-inventory.md), tracked in [issue #54](https://github.com/jaroslaw-bagnicki/Homelab/issues/54) |
+| 03 | [Homelab NAS on ML110 (OMV)](03-nas-backup-target-ml110.md) | 🚧 On Hold | Repurpose retired HP ProLiant ML110 (was FreeNAS) as OMV backup target NAS; Phase 0 inventory in [runbook 22](../runbooks/22-ml110-nas-inventory.md), tracked in [issue #54](https://github.com/jaroslaw-bagnicki/Homelab/issues/54) — **superseded by [ADR 29](../decisions/29-nas-backup-target-beetle-m3-omv.md)**; the ML110 retires once the Beetle NAS is built |
 | 04 | [Dedicated Edge Device for Cloudflare Tunnel + Caddy](04-edge-device-tunnel-caddy.md) | 🔨 Implementing | Move the homelab's public ingress (`cloudflared` + Caddy) off the M910q onto a low-power edge box — decouple ingress from k3s churn (ADR 22), route to OMV without breaking storage-only scope (ADR 23). Decision: [ADR 24](https://github.com/jaroslaw-bagnicki/Homelab/blob/main/docs/decisions/24-edge-ingress-appliance.md) · runbook 24 · Wyse 3040 acquired 2026-08-13 |
 | 05 | [Home Assistant on a Thin Client](05-home-assistant-thin-client.md) | 📋 Planned | Dedicated Home Assistant smart-home node on a thin client (Wyse 5070 / Futro S740) — Home Assistant OS as VM on Proxmox VE, Mosquitto + Zigbee2MQTT in LXC next to it, central home placement for Zigbee coverage. Research: [research 26](../research/26-home-assistant-thin-client.md) · Decision: [ADR 25](../decisions/25-home-assistant-thin-client.md) (Proposed) |
 | 06 | [Homelab Energy Monitoring](06-homelab-energy-monitoring.md) | 🧠 Idea | Independent homelab power-consumption monitoring — per-device energy plugs (Zigbee leading candidate, alternatives in research), decoupled from Home Assistant, data to the lab's monitoring stack + AI agent. Details: [research 27](../research/27-zigbee-energy-monitoring.md) |
@@ -19,8 +19,9 @@ Pre-decision exploration and brainstorming. Unlike `docs/decisions/` (ADRs) whic
 ## Lifecycle
 
 1. **🧠 Idea** — initial exploration, hardware research, software comparisons
-2. **📋 Planned** — scoped, approved, an ADR is in progress
-3. **🔨 Implementing** — ADR accepted, implementation underway
-4. **✅ Done** — archived in ADR log and `docs/decisions/`
+2. **📋 Planned** — scoped and decided (an ADR exists or is being written), implementation not started
+3. **🔨 Implementing** — implementation underway
+4. **🚧 On Hold** — parked: superseded, retiring, or blocked — kept for the record
+5. **✅ Done** — archived in ADR log and `docs/decisions/`
 
 When an idea matures into a decision, it gets an ADR in `docs/decisions/` and the idea doc moves to "Done" status with a cross-reference to the ADR.

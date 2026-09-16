@@ -24,7 +24,7 @@ Key elements of the approach:
 
 - **Start flat, not modular.** A single `playbook.yml` with flat tasks (no role over-engineering) — structure emerges when a second host or readability demands it.
 - **Inventory** — a single `inventory.ini` pointing at the one Lenovo Tiny.
-- **Scope** — OS packages, SSH config, UFW firewall, Docker engine, storage directories (bind-mount paths), and Azure Arc agent registration. Stateful data backup/restore is handled separately by Restic (see `260613-backup-strategy-restic-blob.md`).
+- **Scope** — OS packages, SSH config, UFW firewall, Docker engine, storage directories (bind-mount paths), and Azure Arc agent registration. Stateful data backup/restore is handled separately by Restic (see `02-backup-strategy-restic-blob.md`).
 - **Ansible manages the host; Azure Arc manages the cloud side.** Clean separation: Ansible bootstraps and configures the OS before Arc enrolment; after enrolment, Arc handles monitoring (AMA), update management, and policy.
 - **Docker Compose deployment** delegated to `community.docker.docker_compose_v2` module in a late playbook step — keeps the Compose files as the workload definition.
 

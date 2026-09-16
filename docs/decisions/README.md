@@ -13,6 +13,7 @@ Significant architectural and technology choices recorded in
 
 | # | Date | ADR | Status |
 |---|------|-----|--------|
+| 32 | 2026-09-16 | [No Hosted CI — Verification Stays Local](32-no-hosted-ci.md) | Accepted |
 | 31 | 2026-09-13 | [Static Address Scheme — Server and Guest Blocks](31-static-address-scheme.md) | Accepted |
 | 30 | 2026-09-12 | [UPS Graceful Shutdown — NUT on the HA Node](30-ups-nut-graceful-shutdown.md) | Accepted |
 | 29 | 2026‑09‑12 | [NAS Backup Target — Wincor Beetle M-III (OpenMediaVault)](29-nas-backup-target-beetle-m3-omv.md) | Accepted |
@@ -25,7 +26,7 @@ Significant architectural and technology choices recorded in
 | 22 | 2026‑07‑26 | [Migrate Homelab Workloads to Kubernetes (k3s + Azure Arc)](22-k3s-arc-homelab.md) | Accepted |
 | 21 | 2026‑07‑16 | [Per-Project OpenCode Container Images](21-opencode-instance-images.md) | Accepted |
 | 20 | 2026‑07‑05 | [Caddy as Single Routing Layer on Cloudlab](20-caddy-single-routing-layer.md) | Accepted |
-| 19 | 2026‑07‑05 | [HTTPS-only origin via Cloudflare Tunnel + Cloudflare Origin CA on Cloudlab](19-cloudflare-tunnel-https-origin.md) | Accepted |
+| 19 | 2026‑07‑05 | [Cloudflare Tunnel HTTP origin with Caddy reverse proxy on Cloudlab](19-cloudflare-tunnel-http-origin.md) | Accepted |
 | 18 | 2026‑07‑11 | [Host OpenCode Server Instances on Homelab](18-opencode-sandbox.md) | Accepted |
 | 17 | 2026‑06‑28 | [Adopt OpenCode for Agentic Homelab Development](17-adopt-opencode.md) | Implemented |
 | 16 | 2026‑06‑28 | [Non-Interactive Agent Workload Identity Pattern](16-agent-identity-pattern.md) | Implemented |
@@ -36,7 +37,7 @@ Significant architectural and technology choices recorded in
 | 11 | 2026‑06‑13 | [Ticketing System — GitHub Issues](11-ticketing-github-issues.md) | Implemented |
 | 10 | 2026‑06‑13 | [Ansible for Host Configuration Management](10-ansible-host-config.md) | Implemented |
 | 9 | 2026‑06‑02 | [Azure Monitor via Arc for Homelab Monitoring](09-azure-monitor-via-arc.md) | Implemented (partial) |
-| 8 | 2026‑05‑30 | [Remote Access — Cloudflare Tunnel for Inbound HTTPS](08-remote-access-cloudflare-tunnel.md) | Superseded by [ADR 19](19-cloudflare-tunnel-https-origin.md) |
+| 8 | 2026‑05‑30 | [Remote Access — Cloudflare Tunnel for Inbound HTTPS](08-remote-access-cloudflare-tunnel.md) | Superseded by [ADR 19](19-cloudflare-tunnel-http-origin.md) |
 | 7 | 2026‑05‑29 | [Reverse Proxy — Caddy with Auto-TLS and Configuration-as-Code](07-reverse-proxy-caddy.md) | Implemented |
 | 6 | 2026‑05‑29 | [Local DNS Resolution — DNSMasq with Wildcard `.home` Domains](06-local-dns-dnsmasq.md) | Implemented |
 | 5 | 2026‑05‑24 | [OS Decision — Ubuntu Server 24.04 LTS](05-os-decision-ubuntu-server.md) | Implemented |
