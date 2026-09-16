@@ -4,9 +4,11 @@ Notable changes to the Homelab repo, newest first. This log supersedes the
 "What's Done" table that used to live in the root `README.md`. Entries use the
 same `(type)` prefixes as commit messages; types: `feat`, `fix`, `docs`, `chore`, `refactor`.
 
-**One line per entry, one entry per PR.** State what changed and link the artefact — the rationale,
-measurements and failure stories live in the linked ADR, runbook or report. Notable changes only:
-no instruction-file tweaks, typo/link fixes or changelog bookkeeping.
+**One line per entry, one entry per workstream.** State what changed and link one artefact — the
+rationale, measurements and configuration detail live in the linked ADR, runbook or report. Headline
+plus at most one clause, under ~200 characters: if it will not fit on one line, it is not a changelog
+entry. Notable changes only: no instruction-file tweaks, typo/link fixes or changelog bookkeeping.
+Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month and newest entry first.
 
 ## 2026‑09
 
