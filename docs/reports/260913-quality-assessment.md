@@ -22,8 +22,8 @@ weakness is not craft but **currency**: the decision log contradicted itself on 
 design (ADR 19 versus its own filename, index row, ADR 08, ADR 24 and the CHANGELOG — fixed 2026-09-15),
 four ADR statuses are stale or outside the documented allowed set, the written security rule to sanitise
 real domains is breached in 15 files by the committed personal domain `cloud5.ovh`, and the agent-facing
-`adr-authoring` skill still mandates a filename pattern and a "commit directly to `main`" workflow that
-the repo abandoned. Continuous integration is **deliberately out of scope** — the only check it could
+`adr-authoring` skill mandated a filename pattern and a "commit directly to `main`" workflow that
+the repo abandoned (both repaired 2026-09-16 — see 3.7). Continuous integration is **deliberately out of scope** — the only check it could
 add, `ansible-lint`, already runs locally — so verification rests on documented manual rules rather than
 an enforced gate. Nothing found is structurally wrong, and the fixes are small: the time-critical one
 (the ADR 19/24 contradiction that misdirected the edge-ingress migration in #65/#81) has been retired.
@@ -54,7 +54,7 @@ an enforced gate. Nothing found is structurally wrong, and the fixes are small: 
 | **Runbook-driven operations (SRE/ITIL-lite)** | Strong | 29 runbooks; runbook 29 carries a "Verification Checklist" whose rows are tagged with the sub-issue that owns them (`[#116]`, `[#117]`); runbook 28 records the verified date. No incident/change-management layer (appropriate at this scale). | `docs/runbooks/29-nut-ups-shutdown.md` "Verification Checklist"; runbook 28 |
 | **Shape Up** | Moderate | Appetite-style effort sizing on the board (`*` one session / `**` a few sessions / `***` multi-week or hardware-gated) and explicit sequencing. No cycles, betting table, or cool-down, so this is effort sizing rather than Shape Up. | `docs/overview.md` effort legend |
 | **Scrum / SAFe / PMBOK** | Weak / absent | No sprints, roles, ceremonies, estimates, or portfolio artefacts. Deliberate: ADR 11 rejects Jira and GitHub Projects as "overkill for a single-person hobby project". | ADR 11 "Rejected Options" |
-| **XP** | Weak | Partial alignment only: small scoped commits, one-logical-change-per-commit, and PR-time review (Copilot review plus the operator reading *suppressed* comments). No TDD and no continuous integration, so the XP loop is half-present. | `AGENTS.md` "Scope commits tightly"; repo memory (suppressed-comment practice) |
+| **XP** | Weak | Partial alignment only: small scoped commits, one-logical-change-per-commit, and PR-time review (Copilot review plus the operator reading *suppressed* comments). No TDD and no continuous integration, so the XP loop is half-present. | `AGENTS.md` "Scope commits tightly"; PR #110 review summary (suppressed comments) |
 
 ---
 
@@ -118,7 +118,7 @@ an enforced gate. Nothing found is structurally wrong, and the fixes are small: 
 - **Existing mitigation**: none.
 
 ### 3.4 Backlog rot and untriaged issues
-- **What**: 33 open issues. Ten carry **no label** (#13, #16, #34, #36, #39, #43, #44, #48, #104, #107). Three are superseded by accepted decisions but remain open: #54 (ML110 NAS) and #62 (ML110 Phase 2) after ADR 29 made the ML110 a retiring node, and #75 (monitoring reconciliation) after ADR 27 settled it. Eleven have had no activity since June/July (#3, #4, #13, #16, #33, #34, #36, #38, #39, #43, #48). Three titles still carry `(feat)`/`(research)` prefixes from before the naming rule (#3, #4, #57, #58).
+- **What**: 33 open issues. Ten carry **no label** (#13, #16, #34, #36, #39, #43, #44, #48, #104, #107). Three are superseded by accepted decisions but remain open: #54 (ML110 NAS) and #62 (ML110 Phase 2) after ADR 29 made the ML110 a retiring node, and #75 (monitoring reconciliation) after ADR 27 settled it. Eleven have had no activity since June/July (#3, #4, #13, #16, #33, #34, #36, #38, #39, #43, #48). Four titles still carry `(feat)`/`(research)` prefixes from before the naming rule (#3, #4, #57, #58).
 - **Why it matters here**: this is the one workstream the board rule does **not** cover, and the only place the debt was recorded is a PR body (PR #110 Notes names the dormant sweep by issue number) - which is not a durable backlog artefact and will not be re-read.
 - **Severity**: **Medium**
 - **Evidence**: `list_issues` (open, 33); PR #110 Notes ("Deliberately outside this PR: ... the dormant-issue backlog sweep (#16, #34, #36, #38, #39, #43, #48, #53, #57, #58)"); `docs/overview.md` "Not Scheduled" (covers only #13, #3, #4).

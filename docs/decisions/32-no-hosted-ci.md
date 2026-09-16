@@ -24,7 +24,7 @@ That ruling needs an authoritative home rather than a paragraph in a report. `do
 
 **Do not adopt a hosted CI service. Verification stays a local, documented, pre-commit discipline.**
 
-- No `.github/workflows` — or any other hosted pipeline — is added.
+- No `.github/workflows` — or any other hosted CI — is added.
 - `ansible-lint` on changed roles remains the one automated check, enforced by convention, run locally.
 - The `docker/*/tests/verify-*.sh` scripts stay manual; they are run when an image changes, not on every push.
 - `AGENTS.md` and `.github/copilot-instructions.md` carry a one-line pointer here, so an agent session does not re-propose a pipeline.

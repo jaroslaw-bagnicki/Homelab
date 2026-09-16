@@ -20,7 +20,7 @@ The homelab's public ingress (`cloudflared` + Caddy) currently lives on the M910
 ### Architecture split (confirmed)
 
 - **Edge box**: `cloudflared` → Caddy for `*.example.com` (external ingress). The ADR 19 pattern applies unchanged: TLS terminates at the CF edge and the cloudflared → Caddy hop stays plain HTTP.
-- **M910q**: keeps the internal `.home` Caddy + k3s (ADR 07/06). The tunnel origin moves off the M910q.
+- **M910q**: keeps k3s only — the internal `.home` Caddy (and DNS) move to the edge appliance per ADR 24, which makes the M910q compute-only. The tunnel origin moves off the M910q.
 
 ---
 
