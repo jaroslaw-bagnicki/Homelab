@@ -92,8 +92,8 @@ Decided in [ADR 24](../decisions/24-edge-ingress-appliance.md): **Dell Wyse 3040
   services internally, the edge owns public routing. Decide deliberately.
 - **SSL mode vs OMV's self-signed cert** — `omv.example.com` via the edge: either CF SSL
   mode **Full** (accepts self-signed) or give OMV a Cloudflare **Origin CA** cert for
-  **Full (Strict)** (a departure from ADR 19, which keeps the cloudflared → Caddy hop plain
-  HTTP). Protect the admin UI with **Cloudflare Access**.
+  **Full (Strict)** on the Caddy → OMV hop — a separate hop from ADR 19's cloudflared → Caddy
+  leg, which stays plain HTTP. Protect the admin UI with **Cloudflare Access**.
 
 ## Open Questions
 

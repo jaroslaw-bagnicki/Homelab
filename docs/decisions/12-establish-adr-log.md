@@ -32,7 +32,7 @@ project in this workspace.
 Adopt the MADR format for the Homelab project's decision log.
 
 - Create `docs/decisions/` as the canonical location
-- ADR filename pattern: `YYMMDD-kebab-case-title.md`
+- ADR filename pattern: `YYMMDD-kebab-case-title.md` — **never adopted**; every ADR uses `NN-kebab-case-title.md` (see the 2026-09-16 amendment above)
 - Each ADR follows the Context → Decision → Consequences arc
 - Status values: Proposed · Accepted · Implemented · Deferred · Superseded · Deprecated
 - `docs/decisions/README.md` serves as the index/log table (newest first)
