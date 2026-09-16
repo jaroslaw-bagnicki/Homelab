@@ -52,7 +52,7 @@ RAM: **8 GB optimal** (Home Assistant gets 4 GB), 16 GB future-proof. Disk: **M.
 
 ## Lifecycle
 
-🧠 **Idea** → 📋 **Planned** (scoped + ADR in progress) → 🔨 **Implementing** → ✅ **Done**.
+🧠 **Idea** → 📋 **Planned** (scoped and decided, not started) → 🔨 **Implementing** → 🚧 **On Hold** (superseded, retiring, or blocked) → ✅ **Done**.
 This is a new hardware + architecture project — expect a decision (research 26 → ADR) before any acquisition or implementation.
 
 ## References

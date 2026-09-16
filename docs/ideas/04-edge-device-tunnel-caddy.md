@@ -108,7 +108,7 @@ Decided in [ADR 24](../decisions/24-edge-ingress-appliance.md): **Dell Wyse 3040
 
 ## Lifecycle
 
-🧠 **Idea** → 📋 **Planned** (scoped + ADR in progress) → 🔨 **Implementing** → ✅ **Done**.
+🧠 **Idea** → 📋 **Planned** (scoped and decided, not started) → 🔨 **Implementing** → 🚧 **On Hold** (superseded, retiring, or blocked) → ✅ **Done**.
 This is an architecture change that touches ADR 08/20/22 — expect a research doc → ADR
 before implementation, not a drive-by move.
 

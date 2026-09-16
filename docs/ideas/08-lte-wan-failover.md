@@ -99,7 +99,7 @@ Tunnel / Tailscale; a direct WireGuard/IPsec endpoint over the backup link needs
 
 ## Lifecycle
 
-🧠 **Idea** → 📋 **Planned** (scoped + ADR in progress) → 🔨 **Implementing** → ✅ **Done**.
+🧠 **Idea** → 📋 **Planned** (scoped and decided, not started) → 🔨 **Implementing** → 🚧 **On Hold** (superseded, retiring, or blocked) → ✅ **Done**.
 Depends on [idea 07](07-opnsense-futro-s930.md) (OPNsense router); the ZTE WF830 is already
 owned, needs a Passive PoE 24V injector + outdoor cable.
 

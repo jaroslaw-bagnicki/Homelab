@@ -385,8 +385,9 @@ sudo apt update          # → "All packages are up to date."; Updates page show
   - Arrays survive reboot — **confirmed** (auto-assembled + mounted after reboot).
   - Static IP `192.168.2.210` verified from the M910q.
 - The **NFS `/export/backups`** and **SMB `/shared`** exports are **Phase 2** (issue #62).
-- Mark the idea 03 status → **🔨 Implementing** (then **✅ Done**) in
-  `docs/ideas/03-nas-backup-target-ml110.md` and `docs/ideas/README.md`.
+- Mark the idea 03 status → **🚧 On Hold** in `docs/ideas/03-nas-backup-target-ml110.md` and
+  `docs/ideas/README.md` — superseded by [ADR 29](../decisions/29-nas-backup-target-beetle-m3-omv.md), it retires
+  once the Beetle NAS replaces it, so it never reaches **✅ Done**.
 - Report completion on issue #61 (and #62 once exports are live) so the parent #54 can close.
 
 ### SSH access — workstation (user `jarek`, via web UI)

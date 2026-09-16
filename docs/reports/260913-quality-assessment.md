@@ -74,7 +74,7 @@ an enforced gate. Nothing found is structurally wrong, and the fixes are small: 
 - **"Research settles, ADR owns" co-authoring rule** - the ADR is authored in the same phase as the research, and the research doc defers authority. (`AGENTS.md` "Documentation"; idea 09 -> ADR 30)
 - **`Supersedes` declared on both sides** - ADR 03/22, ADR 08/19, ADR 23/29 all cross-link.
 - **State docs move together** for any node status change, with the Copilot reviewer catching mismatches. (`.github/copilot-instructions.md`)
-- **Idea lifecycle stated** (Idea -> Planned -> Implementing -> Done) with ADR cross-references. (`docs/ideas/README.md`)
+- **Idea lifecycle stated** (Idea -> Planned -> Implementing -> On Hold -> Done — five states since 2026-09-16) with ADR cross-references. (`docs/ideas/README.md`)
 - **PR bodies record deliberately deferred work**, which is unusually honest engineering hygiene. (PR #110 Notes)
 
 ### Infrastructure & Engineering

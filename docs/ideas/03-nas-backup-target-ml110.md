@@ -70,9 +70,9 @@ Runbook: [`22-ml110-nas-inventory.md`](../runbooks/22-ml110-nas-inventory.md)
 
 ## Lifecycle
 
-📋 **Planned** → 🔨 **Implementing** once Phase 0 completes and the OMV install
-begins → ✅ **Done** when the NAS is online and the Longhorn backup target is
-verified. Then graduates to an **ADR** (e.g. ADR 23 — NAS on ML110).
+📋 **Planned** → 🔨 **Implementing** → 🚧 **On Hold** — the ML110 is superseded by
+[ADR 29](../decisions/29-nas-backup-target-beetle-m3-omv.md): it stays the interim `/shared` backup target until
+the Beetle NAS replaces it, then retires. It never reaches ✅ **Done**.
 
 ---
 
