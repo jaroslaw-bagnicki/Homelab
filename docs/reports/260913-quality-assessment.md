@@ -4,7 +4,7 @@
 **Method:** artefact reading + live GitHub state (repo `jaroslaw-bagnicki/Homelab`)
 **Baseline:** point-in-time snapshot at 2026-09-13, branch `docs/quality-assessment-prompt` (HEAD `ab217e2`)
 **Amended:** 2026-09-15 — two changes since the snapshot: finding **3.1** (the ADR 19 contradiction) was fixed at source (its filename, every referrer, and ADR 24's bullet), and the CI remark was **suppressed** at the operator's direction — CI is deliberately deferred, so 3.5 is now recorded as a decision rather than an antipattern and 4.1 as out of scope rather than a gap.
-**Amended:** 2026-09-16 — the CI decision now has an authoritative home: [ADR 32](../decisions/32-no-hosted-ci.md) ("No Hosted CI — Verification Stays Local"), which 3.5 and 4.1 point to. A report is the wrong place for a policy decision, so the deferral no longer rests on a snapshot.
+**Amended:** 2026-09-16 — the CI decision now has an authoritative home: [ADR 32](../decisions/32-no-hosted-ci.md) ("No Hosted CI — Verification Stays Local"), which 3.5 and 4.1 point to. A report is the wrong place for a policy decision, so the deferral no longer rests on a snapshot. The same pass repaired the report's Low-severity findings — the broken links (3.6), the stale `adr-authoring` skill (3.7) and the state-doc drift (3.8) — and **narrowed 3.8**, retiring two sub-claims that did not survive re-verification (see 3.8).
 
 ---
 
@@ -31,7 +31,7 @@ an enforced gate. Nothing found is structurally wrong, and the fixes are small: 
 |---|---|---|
 | Decision hygiene | 4 | 31 ADRs, contiguous numbering, supersession links declared both ways (ADR 03->22, 08->19, 23->29); the ADR 19 contradiction is fixed (rename plus every referrer, 2026-09-15); residual: four stale statuses (3.2) |
 | Backlog & roadmap hygiene | 3 | Excellent board (`docs/overview.md` states + Next step + parking lot); but 33 open issues, 10 unlabelled, superseded issues still open (#54, #62, #75) |
-| Documentation currency | 3 | "state docs move together" rule and real sync discipline (PRs #95/#108/#113); but `hardware.md` HA status vs `overview.md`, idea statuses, and broken relative links |
+| Documentation currency | 4 | "state docs move together" rule, real sync discipline (PRs #95/#108/#113), and the drift it caught (3.6, 3.8) repaired in the same pass; residual: the two legends still disagree on glyph meaning, and nothing yet guards currency (4.2) |
 | Infrastructure-as-Code discipline | 4 | Role/workload modularity, `host_vars` parameterisation, idempotent network declarations, Bicep + deploy script; but `Caddyfile.j2` hardcodes three hostnames the defaults file sanitises |
 | Operational readiness | 3 | Runbook 29 checklist tagged per sub-issue; but ADR 02 backup dormant, no restore drill, no on-call/alert path |
 | Security & secret hygiene | 3 | No secrets committed (pattern sweep clean), AKV-sourced credentials, `no_log`, restrictive `key_options`; but the real domain `cloud5.ovh` is committed in 15 files against an explicit rule |
@@ -131,25 +131,28 @@ an enforced gate. Nothing found is structurally wrong, and the fixes are small: 
 - **Evidence**: `.github/` listing; `AGENTS.md` "Ansible Verification"; `docker/*/tests/`.
 
 ### 3.6 Documentation link rot and stale cross-references
-- **What**: `docs/opencode-customization/README.md` links runbooks and ADRs with paths relative to its own folder (`runbooks/17-...`, `decisions/16-...`) but no such subfolders exist (`../runbooks/`, `../decisions/` would resolve) - 6 broken links. ADR 10 cites `260613-backup-strategy-restic-blob.md`, a filename that does not exist. ADR 13 cites `research/15-vps-selection.md` from inside `docs/decisions/` (should be `../research/`). `docs/runbooks/README.md` omits any explanation for the missing runbook number 08 (verified: it was never tracked).
+- **What**: `docs/opencode-customization/README.md` linked runbooks and ADRs with paths relative to its own folder (`runbooks/17-...`, `decisions/16-...`) but no such subfolders exist - 8 broken links (`../runbooks/`, `../decisions/` resolve). ADR 10 cited `260613-backup-strategy-restic-blob.md`, a filename that never existed. ADR 13 cited `research/15-vps-selection.md` from inside `docs/decisions/` instead of `../research/`. `docs/runbooks/README.md` carries no explanation for the missing runbook number 08 (verified: it was never tracked).
 - **Why it matters here**: the ADR/research/runbook cross-links are the primary navigation path for both the operator and the agent.
-- **Severity**: **Low**
+- **Severity**: **Low** - fixed 2026-09-16.
 - **Evidence**: `docs/opencode-customization/README.md` (runbook + ADR indexes); `docs/decisions/10-ansible-host-config.md` Decision/Scope bullet; `docs/decisions/13-cloudlab-staging.md` References; `git log --all -- 'docs/runbooks/08*'` (empty).
-- **Existing mitigation**: none.
+- **Fixed**: all 8 links now resolve via `../`; ADR 10's filename becomes `02-backup-strategy-restic-blob.md`; ADR 13's two `research/*` links become `../research/*`.
+- **Residual**: ADR 10's *prose* code spans (`research/13-…`, `runbooks/01-…`) point one level too shallow but are not links and do not 404, so they were left alone rather than churned; the runbook index's missing 08 is a renumbering artifact from PR #64, not a defect. Nothing guards this class - that is gap 4.2.
 
 ### 3.7 The `adr-authoring` skill contradicts the repo it governs
-- **What**: the skill mandates `docs/decisions/YYMMDD-NN-kebab-case-title.md` filenames (no file in the repo uses that form) and ends with "**Commit directly to `main`** (per Homelab workflow)" - the exact opposite of the current branch -> PR rule in both instruction files. It also routes "writing research docs" to a "research-output skill" that does not exist (`skills/` holds `adr-authoring`, `fleet-connect`, `gemini-thread-summary`, `grill-me`).
+- **What**: the skill mandated `docs/decisions/YYMMDD-NN-kebab-case-title.md` filenames (no file in the repo uses that form) and ended with "**Commit directly to `main`** (per Homelab workflow)" - the exact opposite of the current branch -> PR rule in both instruction files. It also routed "writing research docs" to a "research-output skill" that does not exist (`skills/` holds `adr-authoring`, `fleet-connect`, `gemini-thread-summary`, `grill-me`).
 - **Why it matters here**: skills are read by the agent as authoritative *rules*, so this is a Rule-vs-Rule conflict, not just stale prose. It is already acknowledged in PR #110's Notes as deliberately deferred.
-- **Severity**: **Medium**
-- **Evidence**: `.github/skills/adr-authoring/SKILL.md` "File naming" + "Commit conventions" + description; actual filenames `docs/decisions/01-*.md` .. `31-*.md`; `.github/skills/` listing.
-- **Existing mitigation**: known (PR #110 Notes) but unscheduled.
+- **Severity**: **Medium** - fixed 2026-09-16.
+- **Evidence**: `.github/skills/adr-authoring/SKILL.md` "File naming" + "Commit conventions" + description; actual filenames `docs/decisions/01-*.md` .. `32-*.md`; `.github/skills/` listing.
+- **Fixed**: the filename pattern is now `NN-kebab-case-title.md`, with a note that the `YYMMDD-NN-*` form was never adopted; "commit directly to `main`" is replaced by the branch -> PR rule (plus the `CHANGELOG.md` requirement); the pointer to a non-existent "research-output skill" is dropped; and ADR 12 gains an `**Amended:**` line so the decision log no longer contradicts its own skill.
 
 ### 3.8 State-doc drift below the "move together" rule
-- **What**: `docs/hardware.md` HA node Status reads "HA VM/LXC still pending (#68 / #85)" while `docs/overview.md` reports the NUT LXC 213 server side delivered ([#115]) and ADR 30 is Accepted on the same node. `docs/overview.md`'s topology diagram still places the OMV NAS at `192.168.2.210` and omits the Beetle NAS (`192.168.2.202`, listed in its own Nodes table) and the OPNsense router. Idea lifecycle statuses lag delivery: idea 04 is still "Implementing" though ADR 24 is Accepted and the `edge_host` role shipped, and idea 01c is "Planned" though ADR 29 is Accepted and the unit is in hand. The two legends also reuse the same glyphs with different meanings (`docs/overview.md` uses a running icon for ✅; `docs/ideas/README.md` uses it for "Done").
-- **Why it matters here**: the "overview + hardware move together" rule works at the node-row level but not at the sub-node (guest/LXC) or diagram level, which is where the truth now lives.
+- **What**: `docs/hardware.md` HA node Status read "HA VM/LXC still pending (#68 / #85)" while `docs/overview.md` reported the NUT LXC 213 server side delivered ([#115]) and ADR 30 is Accepted on the same node. Two idea rows lagged delivery: idea 01c was "Planned" though ADR 29 is Accepted and the unit was in hand, and idea 05 was "Planned" though the Proxmox base had been installed and provisioned (runbook 28). The two legends also reuse the same glyphs with different meanings (`docs/overview.md` uses a running icon for ✅; `docs/ideas/README.md` uses it for "Done").
+- **Why it matters here**: the "overview + hardware move together" rule works at the node-row level but not at the sub-node (guest/LXC) or idea-status level, which is where the truth now lives.
 - **Severity**: **Low**
-- **Evidence**: `docs/hardware.md` HA "Status" row; `docs/overview.md` Nodes table + Topology block + UPS row; `docs/ideas/README.md` rows 01c/04/05; both legend lines.
-- **Existing mitigation**: Copilot review catches overview-vs-hardware mismatches at the node-row level (repo memory).
+- **Evidence**: `docs/hardware.md` HA "Status" row; `docs/overview.md` Nodes table + UPS row; `docs/ideas/README.md` rows 01c/05; both legend lines.
+- **Withdrawn after re-verification (2026-09-16)**: two earlier sub-claims did not survive checking and are retracted rather than carried. Idea 04's "Implementing" is *correct* — ADR 24 is Accepted and `edge_host` shipped, but the ingress **migration** in #65/#81 that the idea describes has not happened. The topology diagram showing the OMV NAS at `.210` is *correct* too — ADR 31 keeps `.210` occupied until the ML110 retires, and the diagram reflects what is actually wired rather than what is planned; omitting the unbuilt Beetle and the uninstalled OPNsense is a presentation choice, not drift.
+- **Fixed**: the `hardware.md` HA line now separates the delivered LXC 213 from the pending HA OS VM and LXC 211/212, and idea 01c/05 move to "Implementing". The legend clash is left in place — it is cosmetic, and rewriting two legends to buy nothing is churn.
+- **Residual**: nothing enforces this class of currency; that is gap 4.2, and the rule still depends on the operator (or reviewer) noticing.
 
 ### 3.9 WIP load and branch litter
 - **What**: five rows sit in "In progress" at once (one `***`, three `**`), which for a spare-time single operator is closer to a plan than a limit - though most are hardware- or sequence-gated rather than actively parallel. Two PRs covered the same UPS subject within two days (#109 then #113). Five merged head branches remain on the remote (`docs/nut-runbook`, `docs/beetle-m3-reaudit`, `docs/refresh-overview-whats-next`, `feat/ups-nut-home-assistant`, plus the open `feat/netdata-parent-role`), because GitHub does not delete remote head branches on merge.
@@ -230,9 +233,9 @@ an enforced gate. Nothing found is structurally wrong, and the fixes are small: 
 | 3.3 | Real domain `cloud5.ovh` committed in 15 files; `Caddyfile.j2` hostnames unparameterised | Antipattern | Medium | `.github/copilot-instructions.md` Security; `Caddyfile.j2` L1/5/9 vs `docker_services/defaults/main.yml` |
 | 3.4 | 33 open issues: 10 unlabelled, 3 superseded-but-open, 11 dormant | Antipattern | Medium | `list_issues`; PR #110 Notes |
 | 3.5 | Automatic verification is deliberately deferred, not missing | Recorded decision | Negligible (accepted) | `.github/` has no `workflows/`; `AGENTS.md` Ansible Verification; `docker/*/tests/` |
-| 3.6 | Broken relative links + a non-existent ADR-10 filename; runbook 08 gap | Antipattern | Low | `docs/opencode-customization/README.md`; `docs/decisions/10-*.md`; `git log -- docs/runbooks/08*` |
-| 3.7 | `adr-authoring` skill mandates a dead filename pattern and "commit directly to `main`" | Antipattern | Medium | `.github/skills/adr-authoring/SKILL.md` |
-| 3.8 | `hardware.md` HA status vs `overview.md`; topology omits Beetle/OPNsense; idea statuses lag; legend clash | Antipattern | Low | `docs/hardware.md` HA Status; `docs/overview.md` Topology; `docs/ideas/README.md` rows 01c/04 |
+| 3.6 | Broken relative links + a non-existent ADR-10 filename; runbook 08 gap | Antipattern | Low - **fixed 2026-09-16** | `docs/opencode-customization/README.md`; `docs/decisions/10-*.md`; `git log -- docs/runbooks/08*` |
+| 3.7 | `adr-authoring` skill mandated a dead filename pattern and "commit directly to `main`" | Antipattern | Medium - **fixed 2026-09-16** | `.github/skills/adr-authoring/SKILL.md` |
+| 3.8 | `hardware.md` HA status vs `overview.md`; two idea statuses lagged; legend clash (two further claims withdrawn) | Antipattern | Low - **fixed 2026-09-16** | `docs/hardware.md` HA Status; `docs/overview.md`; `docs/ideas/README.md` rows 01c/05 |
 | 3.9 | 5 concurrent "In progress" rows; 5 merged head branches on the remote | Antipattern | Low | `docs/overview.md`; `git branch -r` |
 | 3.10 | Documentation ceremony above the minimum for one person | Antipattern | Negligible | `docs/` tree; `CHANGELOG.md` |
 | 4.1 | CI gate - out of scope by decision (see 3.5) | Recorded decision | Out of scope | `.github/`; `AGENTS.md` Ansible Verification |
