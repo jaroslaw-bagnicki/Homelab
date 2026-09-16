@@ -4,6 +4,10 @@ Notable changes to the Homelab repo, newest first. This log supersedes the
 "What's Done" table that used to live in the root `README.md`. Entries use the
 same `(type)` prefixes as commit messages; types: `feat`, `fix`, `docs`, `chore`, `refactor`.
 
+**One line per entry, one entry per PR.** State what changed and link the artefact — the rationale,
+measurements and failure stories live in the linked ADR, runbook or report. Notable changes only:
+no instruction-file tweaks, typo/link fixes or changelog bookkeeping.
+
 ## 2026‑09
 
 - **(docs)** Add the `quality-assessment` prompt and first repo assessment, and fix what it found — ADR 19's origin-design contradiction, 8 broken links, the stale `adr-authoring` skill rules and the state-doc drift — [prompt](.github/prompts/quality-assessment.prompt.md) · [report](docs/reports/260913-quality-assessment.md)

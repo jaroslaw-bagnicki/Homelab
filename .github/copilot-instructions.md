@@ -52,6 +52,8 @@
 - **If a GitHub MCP tool call fails**, report the error to the user and do not attempt the operation via any other tool or CLI
 - **Default workflow: feature branch → push → PR on request → review → merge.** Do not commit to `main` directly — create a feature branch (`fix/…`, `feat/…`, `docs/…`) and push it. **Never open a PR unless the user explicitly asks for one** — push the branch, report it, and stop; opening the PR is the user's call. The user reviews and merges; never merge the PR yourself.
 - **PRs ship with their `CHANGELOG.md` entry** — any PR that changes behaviour or docs adds/updates its changelog entry (newest first, with runbook/ADR links) in the same PR, so the log merges with the change, not after
+- **`CHANGELOG.md` is a compact index, not a narrative.** **One line per entry, one entry per PR** — fold a multi-commit PR into a single entry rather than logging each commit. Say what changed and link the artefact; rationale, measurements, alternatives and failure stories belong in the linked ADR/runbook/report, and copying them here is what bloats the log. Target well under ~200 characters — if it will not fit on one line, it is not a changelog entry.
+- **Notable changes only.** Log a capability, a fix, a decision or a state change worth reading in a month. Never log instruction-file or PR-policy tweaks, typo/link/format fixes, single-file doc corrections, or changelog/report bookkeeping — including changes to these instruction files.
 - **Direct commits to `main` only when the user explicitly asks** ("commit to main", "no PR", "skip the branch")
 - **Commit message format**: `(type) description` with parentheses. Common types: `docs`, `feat`, `fix`, `chore`, `refactor`
 - **Never rebase** unless explicitly asked

@@ -61,6 +61,8 @@ Avoid ADR bloat — reference other ADRs and issues by name, do not restate thei
 - **Do not push** to `main`, or after `git commit --amend` — amended commits require user confirmation before force-pushing
 - **Scope commits tightly** — one logical change per commit; do not bundle unrelated edits
 - **PRs ship with their `CHANGELOG.md` entry** — any PR that changes behaviour or docs adds/updates its changelog entry (newest first, with runbook/ADR links) in the same PR
+- **`CHANGELOG.md` is a compact index, not a narrative.** **One line per entry, one entry per PR** — fold a multi-commit PR into a single entry rather than logging each commit. Say what changed and link the artefact; rationale, measurements, alternatives and failure stories belong in the linked ADR/runbook/report, and copying them here is what bloats the log. Target well under ~200 characters — if it will not fit on one line, it is not a changelog entry.
+- **Notable changes only.** Log a capability, a fix, a decision or a state change worth reading in a month. Never log instruction-file or PR-policy tweaks, typo/link/format fixes, single-file doc corrections, or changelog/report bookkeeping — including changes to these instruction files.
 
 ## Workloads as self-contained recipes
 
