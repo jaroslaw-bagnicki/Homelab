@@ -6,40 +6,41 @@ same `(type)` prefixes as commit messages; types: `feat`, `fix`, `docs`, `chore`
 
 **One line per entry, one entry per PR.** State what changed and link the artefact — the rationale,
 measurements and failure stories live in the linked ADR, runbook or report. Notable changes only:
-no instruction-file tweaks, roadmap/board edits, typo/link fixes or changelog bookkeeping.
+no instruction-file tweaks, typo/link fixes or changelog bookkeeping.
 
 ## 2026‑09
 
-- **(docs)** Add the `quality-assessment` prompt + first repo assessment, fixing ADR 19's origin-design contradiction and the Low findings it surfaced — [prompt](.github/prompts/quality-assessment.prompt.md) · [report](docs/reports/260913-quality-assessment.md)
+- **(docs)** Add the `quality-assessment` prompt + first repo assessment — [prompt](.github/prompts/quality-assessment.prompt.md) · [report](docs/reports/260913-quality-assessment.md)
 - **(docs)** Add ADR 32 — no hosted CI — [ADR 32](docs/decisions/32-no-hosted-ci.md)
-- **(docs)** UPS graceful shutdown via **NUT** in LXC 213 on the HA node (`nutdrv_qx`, triggered on `LB`) + the `upsmon` password script — [ADR 30](docs/decisions/30-ups-nut-graceful-shutdown.md) · [runbook 29](docs/runbooks/29-nut-ups-shutdown.md) · [#111](https://github.com/jaroslaw-bagnicki/Homelab/issues/111)
-- **(docs)** Re-cut the static address scheme — `20x` physical servers, `21x` Proxmox guests where **VMID = last octet** (VM 210 · LXC 211/212/213) — [research 24](docs/research/24-network-topology-design.md) · [ADR 31](docs/decisions/31-static-address-scheme.md) · [runbook 29](docs/runbooks/29-nut-ups-shutdown.md)
-- **(docs)** Wincor Beetle M-III is the NAS successor on OMV — hardware re-audit + the decision superseding the ML110 — [research 32](docs/research/32-wincor-beetle-m3-hardware-diagnostic.md) · [ADR 29](docs/decisions/29-nas-backup-target-beetle-m3-omv.md) · [#98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98)
-- **(docs)** Add idea 09 — shared-rail UPS with NUT-driven graceful shutdown + a Home Assistant NUT integration, with the fleet load profile, Green Cell model comparison and modified-sine risk — [idea 09](docs/ideas/09-ups-nut-home-assistant.md)
-- **(feat)** HA node (Wyse 5070) — Proxmox VE **9.2.2** installed (static `.201`), base provisioned and `fleetadm` given `sudo`; HA VM/LXC still open — [hardware](docs/hardware.md) · [runbook 28](docs/runbooks/28-ha-proxmox-node.md) · [#103](https://github.com/jaroslaw-bagnicki/Homelab/issues/103) · [#104](https://github.com/jaroslaw-bagnicki/Homelab/issues/104)
-- **(feat)** SSH access LAN-only + devcontainer fleet-key autoload — `security` allows LAN password auth for the human breakglass while key-only elsewhere; `profile.ps1` always loads `fleetadm-key-priv` at session start — [runbook 24](docs/runbooks/24-edge-appliance.md) · [#78](https://github.com/jaroslaw-bagnicki/Homelab/issues/78)
-- **(docs)** Futro S930 hardware diagnostic — OPNsense router candidate pre-boot audit (research 31) — [research 31](docs/research/31-futro-s930-hardware-diagnostic.md) · [#97](https://github.com/jaroslaw-bagnicki/Homelab/issues/97)
+- **(docs)** UPS graceful shutdown via **NUT** in LXC 213 on the HA node — [ADR 30](docs/decisions/30-ups-nut-graceful-shutdown.md) · [runbook 29](docs/runbooks/29-nut-ups-shutdown.md)
+- **(docs)** Re-cut the static address scheme — `20x` servers, `21x` guests, **VMID = last octet** — [ADR 31](docs/decisions/31-static-address-scheme.md)
+- **(docs)** Wincor Beetle M-III is the NAS successor on OMV, superseding the ML110 — [ADR 29](docs/decisions/29-nas-backup-target-beetle-m3-omv.md)
+- **(docs)** Make `overview.md` "What's Next" a state-grouped board with a `Not Scheduled` parking lot — [overview](docs/overview.md)
+- **(docs)** Add idea 09 — shared-rail UPS with NUT-driven shutdown — [idea 09](docs/ideas/09-ups-nut-home-assistant.md)
+- **(feat)** HA node (Wyse 5070) — Proxmox VE **9.2.2** installed and base provisioned — [runbook 28](docs/runbooks/28-ha-proxmox-node.md)
+- **(feat)** Fleet SSH access restricted to the LAN, with devcontainer key autoload — [runbook 24](docs/runbooks/24-edge-appliance.md)
+- **(docs)** Futro S930 hardware diagnostic — OPNsense router candidate — [research 31](docs/research/31-futro-s930-hardware-diagnostic.md)
 
 ## 2026‑08
 
-- **(docs)** Edge ingress appliance — Wyse 3040: hardware research, ADR 24, the `edge_host` role, Debian install and the backup/restore runbook — [ADR 24](docs/decisions/24-edge-ingress-appliance.md) · [runbook 24](docs/runbooks/24-edge-appliance.md) · [runbook 27](docs/runbooks/27-edge-backup-restore.md) · [#65](https://github.com/jaroslaw-bagnicki/Homelab/issues/65)
-- **(docs)** Homelab LTE/5G WAN failover — idea + mobile-internet offer research; Huawei B593u-12 LTE modem added to network appliances — [idea 08](docs/ideas/08-lte-wan-failover.md) · [research 30](docs/research/30-mobile-internet-failover-offers.md) · [#90](https://github.com/jaroslaw-bagnicki/Homelab/issues/90)
-- **(docs)** NAS backup-target variants — EliteDesk 800 G1 and Wincor Beetle M-III ideas — [idea 01b](docs/ideas/01b-nas-backup-target-elitedesk.md) · [idea 01c](docs/ideas/01c-nas-backup-target-wincor-beetle.md) · [#89](https://github.com/jaroslaw-bagnicki/Homelab/issues/89)
-- **(docs)** Add idea 07 — OPNsense router on a Fujitsu Futro S930 (incl. HP T730 alternative + NIC/5G-failover supplements) — [idea 07](docs/ideas/07-opnsense-futro-s930.md) · [#86](https://github.com/jaroslaw-bagnicki/Homelab/issues/86)
-- **(docs)** Wyse 5070 hardware diagnostic — J4105, 2× 4 GB DDR4 (both slots full), M.2 SATA 2280 with SK hynix SC311 128 GB installed, eMMC present but unused, no NVMe (research 29) — [research 29](docs/research/29-wyse5070-hardware-diagnostic.md) · [#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68)
-- **(feat)** Dedicated fleet-wide SSH key for automation — `fleetadm@homelab`, private key in `homelab-bysxdb-kv`, public key committed and re-armed on every host by the `common` role; used by Ansible and AI agent tooling — [ADR 28](docs/decisions/28-fleet-admin-account-and-key.md)
-- **(docs)** ML110 NAS — Phase 0 inventory, OMV install (ADR 23, mdadm RAID1) and the SMB `/shared` backup share — [ADR 23](docs/decisions/23-nas-on-ml110.md) · [runbook 23](docs/runbooks/23-ml110-omv-setup.md) · [runbook 26](docs/runbooks/26-ml110-nas-exports.md) · [#54](https://github.com/jaroslaw-bagnicki/Homelab/issues/54)
-- **(feat)** M910q OS refresh — reinstall Ubuntu 24.04 LTS (ADR 05), Ansible base provision (`playbook-homelab.yml`) and Azure Arc enrolment; DNS/Caddy/tunnel move to the edge appliance (ADR 24) — [runbook 25](docs/runbooks/25-m910q-os-refresh.md) · [#74](https://github.com/jaroslaw-bagnicki/Homelab/issues/74)
-- **(docs)** Add ADR 27 — two-tier monitoring: Azure Monitor via Arc (Tier A) + a local stack with Netdata as its first component (Tier B); Grafana/Prometheus/Fluent Bit/Loki are future Tier B components, not adopted — [ADR 27](docs/decisions/27-monitoring-strategy.md) · [#75](https://github.com/jaroslaw-bagnicki/Homelab/issues/75)
-- **(docs)** Zigbee energy monitoring — ADR 26 + research 27: per-device plugs, protocol comparison and the Z2M → Prometheus path — [ADR 26](docs/decisions/26-zigbee-energy-monitoring.md) · [research 27](docs/research/27-zigbee-energy-monitoring.md) · [idea 06](docs/ideas/06-homelab-energy-monitoring.md)
-- **(docs)** Add `docs/overview.md` (nodes, workloads, topology) and `docs/hardware.md` (per-node inventory), making overview the single state + roadmap page — [overview](docs/overview.md) · [hardware](docs/hardware.md)
-- **(docs)** Home Assistant on a dedicated thin-client node — Proxmox VE VM + Mosquitto/Zigbee2MQTT — [ADR 25](docs/decisions/25-home-assistant-thin-client.md) · [idea 05](docs/ideas/05-home-assistant-thin-client.md) · [research 26](docs/research/26-home-assistant-thin-client.md)
-- **(docs)** Homelab network topology & design — mesh inventory, flat-vs-VLAN analysis, static IP scheme — [research 24](docs/research/24-network-topology-design.md)
-- **(docs)** TL-SG108E switch setup — wiring, management IP, QoS/rate-limit, IGMP snooping — [runbook 21](docs/runbooks/21-tl-sg108e-switch.md) · [#55](https://github.com/jaroslaw-bagnicki/Homelab/issues/55)
-- **(feat)** Build per-project OpenCode container images (`opencode-homelab`, `opencode-prospera`) and push to the Zot registry — [#52](https://github.com/jaroslaw-bagnicki/Homelab/issues/52)
-- **(feat)** Adopt Zot as self-hosted OCI container registry — pull-through cache for GHCR/mcr/Docker Hub — [runbook 20](docs/runbooks/20-deploy-zot.md) · [#50](https://github.com/jaroslaw-bagnicki/Homelab/issues/50) · [#51](https://github.com/jaroslaw-bagnicki/Homelab/issues/51)
-- **(feat)** Configure MCP servers per OpenCode instance — GitHub MCP PAT + Azure MCP — [#41](https://github.com/jaroslaw-bagnicki/Homelab/issues/41) · [#47](https://github.com/jaroslaw-bagnicki/Homelab/issues/47)
-- **(docs)** Add ideas: DevPod DevContainers for OpenCode ([idea 02](docs/ideas/02-devcontainers-opencode-k3s.md)) and NAS backup target ([idea 01](docs/ideas/01-nas-backup-target.md))
+- **(docs)** Edge ingress appliance (Wyse 3040) — Debian install, `edge_host` role and backup/restore runbook — [ADR 24](docs/decisions/24-edge-ingress-appliance.md) · [runbook 24](docs/runbooks/24-edge-appliance.md)
+- **(docs)** LTE/5G WAN failover — idea + mobile-offer research — [idea 08](docs/ideas/08-lte-wan-failover.md) · [research 30](docs/research/30-mobile-internet-failover-offers.md)
+- **(docs)** NAS backup-target variants — EliteDesk 800 G1 and Wincor Beetle M-III ideas — [idea 01b](docs/ideas/01b-nas-backup-target-elitedesk.md) · [idea 01c](docs/ideas/01c-nas-backup-target-wincor-beetle.md)
+- **(docs)** Add idea 07 — OPNsense router on a Fujitsu Futro S930 — [idea 07](docs/ideas/07-opnsense-futro-s930.md)
+- **(docs)** Wyse 5070 hardware diagnostic — J4105, 8 GB DDR4, 128 GB M.2 SATA, no NVMe — [research 29](docs/research/29-wyse5070-hardware-diagnostic.md)
+- **(feat)** Fleet-wide SSH automation key (`fleetadm@homelab`, Key Vault-backed) — [ADR 28](docs/decisions/28-fleet-admin-account-and-key.md)
+- **(docs)** ML110 NAS — OMV install with mdadm RAID1 and the SMB backup share — [ADR 23](docs/decisions/23-nas-on-ml110.md) · [runbook 23](docs/runbooks/23-ml110-omv-setup.md)
+- **(feat)** M910q OS refresh — Ubuntu 24.04 reinstall, Ansible base provision and Arc enrolment — [runbook 25](docs/runbooks/25-m910q-os-refresh.md)
+- **(docs)** Add ADR 27 — two-tier monitoring: Azure Monitor via Arc + a local Netdata tier — [ADR 27](docs/decisions/27-monitoring-strategy.md)
+- **(docs)** Zigbee energy monitoring via Zigbee2MQTT → Prometheus — [ADR 26](docs/decisions/26-zigbee-energy-monitoring.md)
+- **(docs)** Add `overview.md` (state + roadmap) and `hardware.md` (per-node inventory) — [overview](docs/overview.md) · [hardware](docs/hardware.md)
+- **(docs)** Home Assistant on a dedicated thin-client node (Proxmox VM) — [ADR 25](docs/decisions/25-home-assistant-thin-client.md)
+- **(docs)** Homelab network topology & design — flat-vs-VLAN analysis and static IP scheme — [research 24](docs/research/24-network-topology-design.md)
+- **(docs)** TL-SG108E switch setup — wiring, QoS and IGMP snooping — [runbook 21](docs/runbooks/21-tl-sg108e-switch.md)
+- **(feat)** Build per-project OpenCode images and push them to Zot — [ADR 21](docs/decisions/21-opencode-instance-images.md)
+- **(feat)** Adopt Zot as self-hosted OCI registry with pull-through cache — [runbook 20](docs/runbooks/20-deploy-zot.md)
+- **(feat)** Configure MCP servers per OpenCode instance (GitHub PAT, Azure) — [runbook 18](docs/runbooks/18-provision-opencode-instance.md)
+- **(docs)** Add ideas: DevPod DevContainers for OpenCode and a NAS backup target — [ideas](docs/ideas/README.md)
 - **(chore)** Drop the `(type)` prefix from issue and PR titles — labels convey the type
 - **(docs)** Adopt "research settles, ADR owns" co-authoring pattern — research/idea docs defer decision authority to the ADR
 
