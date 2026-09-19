@@ -7,7 +7,7 @@
 > runbook is the client half, tracked in
 > [issue #116](https://github.com/jaroslaw-bagnicki/Homelab/issues/116) under
 > [ADR 30](../decisions/30-ups-nut-graceful-shutdown.md). Role facts live in the
-> [ansible README](../../ansible/README.md#nut_client).
+> [role README](../../ansible/roles/nut_client/README.md).
 >
 > ⚠ **Depends on the server.** The role is only useful once LXC 213 answers `upsc ups@192.168.2.213`
 > (runbook 29 §3, verified). It does **not** depend on the shutdown drill ([#117](https://github.com/jaroslaw-bagnicki/Homelab/issues/117)).
@@ -162,7 +162,7 @@ delete `/etc/nut/upsmon.conf` — but the node then no longer reacts to the UPS 
 
 ## Related
 
-- [Ansible README — `nut_client` role](../../ansible/README.md#nut_client)
+- [`nut_client` role README](../../ansible/roles/nut_client/README.md)
 - [Runbook 29 — UPS graceful shutdown (NUT on the HA node)](29-nut-ups-shutdown.md) — server §1–§3, choreography §6, drill §7
 - [ADR 30 — UPS graceful shutdown](../decisions/30-ups-nut-graceful-shutdown.md) · [ADR 31 — static address scheme](../decisions/31-static-address-scheme.md) · [ADR 28 — fleet admin account and key](../decisions/28-fleet-admin-account-and-key.md)
 - [Issue #116](https://github.com/jaroslaw-bagnicki/Homelab/issues/116) · parent [#111](https://github.com/jaroslaw-bagnicki/Homelab/issues/111) · drill [#117](https://github.com/jaroslaw-bagnicki/Homelab/issues/117)
