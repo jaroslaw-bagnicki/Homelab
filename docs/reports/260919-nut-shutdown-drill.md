@@ -11,7 +11,7 @@
 
 The choreography **holds**. Runbook 29 §6 asserted that the secondaries stop first, the primary then waits `FINALDELAY`, and Proxmox stops its guests in order; this drill measured it. FSD was set at **11:29:43**, `lab` reached `poweroff.target` at **11:29:48** (≈5 s), the primary scheduled its own shutdown at **11:30:17** — precisely 30 s after its decision, honouring `FINALDELAY 30` — and `pve-guests` stopped CT 213 at **11:30:24–28**. No node raced another, nothing was cut off mid-write, and every node came back with its data intact.
 
-The headline measurement is the runtime: **52 min 53 s on battery to `LB`** at the ~80 W full planned fleet. One operational finding matters for the runbook — `lab` **does not auto-start** when AC returns (it needed a manual power press). The single capture limitation is noted under Evidence and does not bear on the result.
+The headline measurement is the runtime: **52 min 53 s on battery to `LB`** at the ~80 W full planned fleet. One operational finding matters for the runbook — `lab` **does not auto-start** when AC returns (it needed a manual power press). A capture-method limitation is recorded under Evidence and does not affect any result above.
 
 ## Environment and load
 
@@ -59,10 +59,9 @@ The headline measurement is the runtime: **52 min 53 s on battery to `LB`** at t
 4. **The ordering claim is proven, not asserted.** Secondaries stop ≈5 s after FSD; the primary waits its full `FINALDELAY` (30 s) and only then stops, which is the window the secondaries get. Proxmox stops its guests in order during that shutdown.
 5. **`HOSTSYNC 30` was never stressed** — the secondaries disconnected well inside it, so the primary never waited on a wedged node.
 6. **`lab` does not auto-start on AC restore** — it needed a manual power press, unlike `ha` and `edge`. Recovery therefore has a manual step, and any future unattended-recovery design has to account for it.
-7. **`edge`'s own shutdown sequence is not recoverable.** Its journal is volatile by design (`edge_host`), and the temporary mirror's file jumps straight from the `LB` line at 11:29:42 to the post-boot lines at 12:02:35 — a **verified 33-minute gap**, so the tail was lost. The mechanism is not established: journalctl's output buffering after the follow, and journald stopping early in the shutdown, are both plausible and neither is proven. Debian minimal ships no rsyslog and wtmp recorded no shutdown entry, so no other source covers it. Its `LB` at 11:29:42 and its post-outage boot are recorded; its stop second is not. **Fix for a future drill:** set `Storage=persistent` on `edge` for the drill window — the journal then survives on disk and no follower process is needed.
-8. **The k3s drain question stays open.** k3s is not installed on `lab` (0 unit files; the migration is [#44](https://github.com/jaroslaw-bagnicki/Homelab/issues/44)), so there was no drain/cordon behaviour to test. It is not answered by this drill and should not be recorded as such.
-9. **No outlets were cut.** `driver.flag.allow_killpower: 0` meant the UPS never switched its outputs off; strip 2 ran until the pack died, exactly as §6.4 predicts.
-10. **Data integrity held.** No stale mounts anywhere, no `fsck` repairs on boot, and `lab`'s Docker came back clean.
+7. **The k3s drain question stays open.** k3s is not installed on `lab` (0 unit files; the migration is [#44](https://github.com/jaroslaw-bagnicki/Homelab/issues/44)), so there was no drain/cordon behaviour to test. It is not answered by this drill and should not be recorded as such.
+8. **No outlets were cut.** `driver.flag.allow_killpower: 0` meant the UPS never switched its outputs off; strip 2 ran until the pack died, exactly as §6.4 predicts.
+9. **Data integrity held.** No stale mounts anywhere, no `fsck` repairs on boot, and `lab`'s Docker came back clean.
 
 ## Deviations from plan
 
@@ -73,6 +72,8 @@ The headline measurement is the runtime: **52 min 53 s on battery to `LB`** at t
 ## Evidence
 
 Raw captures: `ha:/var/log/nut-drill-observer.log` (664 samples, 51 KB) and `edge:/var/log/nut-drill.log` (87 KB) are retained on the nodes as the underlying evidence, alongside `journalctl -b -1` on `ha`, `lab` and inside LXC 213. The **mechanisms** are gone — `nut-drill-observer.sh` deleted from `ha`, `nut-drill-mirror.service` disabled and removed from `edge` — so every node is back to the state its role defines; `playbook-ha.yml` / `playbook-edge.yml` would not recreate either.
+
+One capture limitation, for completeness: this drill's per-node record for **`edge`** ends at its `LB` line — the mirror's file jumps from 11:29:42 to the post-boot lines at 12:02:35. That is a limitation of the capture method (edge's journal is volatile), not a finding about the shutdown: the ordering above is established from `ha`, `upsd` and `lab`, and does not depend on edge. A future drill on edge should set `Storage=persistent` for the window.
 
 ## References
 

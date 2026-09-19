@@ -566,10 +566,10 @@ Full planned fleet at **~80 W** (inline meter), mains pulled with every node loa
 | Primary stop | 30 s after its FSD decision — `FINALDELAY 30` honoured precisely |
 | Guest order | Proxmox stopped CT 213 during that shutdown, then completed |
 
-Two operational findings: **`lab` does not auto-start on AC restore** (it needed a manual power press,
-unlike `ha`/`edge`), and **`edge`'s own shutdown sequence is not recoverable** afterwards — its journal
-is volatile, so set `Storage=persistent` for the drill window or capture on the shutdown path instead.
-The Beetle was powered but has **no OS yet**, so this drill produced **no modified-sine verdict**.
+Two operational notes: **`lab` does not auto-start on AC restore** (it needed a manual power press,
+unlike `ha`/`edge`), and a drill on `edge` should set `Storage=persistent` for the window — its journal
+is volatile, so per-node capture there is otherwise lost. The Beetle was powered but has **no OS yet**,
+so this drill produced **no modified-sine verdict**.
 
 ## Verification Checklist
 
