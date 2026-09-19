@@ -44,8 +44,9 @@ The Wyse 5070 is renamed **`ha` → `pve`**; its address `192.168.2.201` is unch
 - **The rename is a hostname change only** — inventory, `host_vars`, the playbook filename, runbook 28
   and the fleet docs follow the name; the address, the guest VMIDs and the secrets are untouched.
 - **`common` enforces the inventory hostname**, so a node's OS hostname re-converges from Ansible — the
-  name is configuration, not a manual host edit. The **Proxmox node name** is separate and is set at
-  install time (see [runbook 28](../runbooks/28-pve-proxmox-node.md)).
+  name is configuration, not a manual host edit. Proxmox derives its **node name** from that hostname,
+  so renaming a node also moves `/etc/pve/nodes/<old>` → `<new>` and regenerates the node certificate
+  ([runbook 28](../runbooks/28-pve-proxmox-node.md)).
 - **A node that changes role gets renamed.** `pve` stays correct while it is the virtualisation host; a
   replacement hypervisor inherits both the name and the address.
 
