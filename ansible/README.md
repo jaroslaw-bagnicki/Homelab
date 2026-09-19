@@ -35,12 +35,12 @@ ansible-playbook ansible/workloads/opencode/opencode-playbook.yml
 | `requirements.yml` | Required Ansible Galaxy collections (`ansible.posix`, `community.docker`, `community.general`, `azure.azcollection`) |
 | `playbooks/playbook.yml` | Base provision: common → security → azure_arc → docker_host → docker_services; pre_tasks declares `opencode_net` |
 | `playbooks/playbook-arc.yml` | Arc enrolment only (for already-configured hosts) |
-| `playbooks/playbook-lab.yml` | M910q base provision: common → security → docker_host → azure_arc (no `docker_services` — see below) |
-| `playbooks/playbook-edge.yml` | Wyse 3040 edge base provision: common → security → edge_host (bare-metal, no Docker/Arc — ADR 24) |
-| `playbooks/playbook-ha.yml` | Wyse 5070 HA node base provision: common → security (Proxmox host; UFW LAN allow for SSH + Proxmox UI 8006) |
+| `playbooks/playbook-lab.yml` | M910q base provision: common → security → docker_host → azure_arc → nut_client (no `docker_services` — see below) |
+| `playbooks/playbook-edge.yml` | Wyse 3040 edge base provision: common → security → edge_host → nut_client (bare-metal, no Docker/Arc — ADR 24) |
+| `playbooks/playbook-ha.yml` | Wyse 5070 HA node base provision: common → security → nut_client (Proxmox host; UFW LAN allow for SSH + Proxmox UI 8006) |
 | `workloads/` | Self-contained workload recipes — playbook entrypoint, role recipes, ansible-side README, all co-located per workload |
 | `workloads/opencode/` | OpenCode per-project server workload (see [README](workloads/opencode/README.md)) |
-| `roles/` | Base shared roles: `common`, `security`, `azure_arc`, `docker_host`, `docker_services`, `edge_host` |
+| `roles/` | Base shared roles — see the [roles index](roles/README.md) |
 
 ## Workloads
 
@@ -50,31 +50,7 @@ Currently: [OpenCode](workloads/opencode/README.md) — per-project OpenCode ser
 
 ## Roles
 
-### `common`
-
-Sets the hostname to inventory name, configures `Etc/UTC` timezone, ensures `systemd-timesyncd` is running, optionally installs/enables Avahi mDNS (`.local`) when `common_enable_avahi: true`, and deploys the **fleet public key** (`files/ssh/fleetadm.pub`) to `fleetadm`'s `authorized_keys` with restrictive `key_options` (ADR 28) — used by Ansible and AI agent tooling.
-
-### `security`
-
-Configures UFW with default-deny incoming policy, explicit SSH allow on configurable port, optional extra TCP allowlist (`security_ufw_allow_tcp_ports`), and deny inbound TCP/80 (ingress via the edge appliance). Installs and enables fail2ban with SSH hardening (config in `templates/fail2ban-jail.local.j2`).
-
-### `azure_arc`
-
-Installs `azcmagent` from Microsoft's Ubuntu 22.04 package repo, fetches the SPN client secret from Key Vault, and enrolls the machine in Azure Arc via `azcmagent connect`.
-
-### `docker_host`
-
-Removes any OS-package Docker remnants, adds the official Docker repository, and installs `docker-ce` / `docker-ce-cli` / `containerd.io`. Optionally adds users from `docker_users` to the `docker` group — **defaults to `[]`** (docker-group membership is passwordless root-equivalent and not needed for Ansible, which reaches Docker via `become`).
-
-### `docker_services`
-
-Manages the core Docker Compose stack on the host: `portainer`, `caddy` (with `cloudflared` reverse proxy), `hello`, plus the shared `homelab_net` and `opencode_net` bridge networks. Templates live in `roles/docker_services/templates/`.
-
-> **Not applied to `lab`.** The M910q is compute-only (k3s target, ADR 22); its DNS/Caddy/tunnel roles moved to the edge appliance (ADR 24). The `docker_services` stack stays cloudlab-only.
-
-### `edge_host`
-
-Bare-metal base provisioning for the **Edge Wyse 3040** ingress appliance (ADR 24) — no Docker, no Arc. Runs after `common` + `security`. Installs `unattended-upgrades`, `logrotate`, configures journald `Storage=volatile` (eMMC longevity), manages the DNS search domain (`edge_dns_search`, default empty — clears the installer's `cloud5.ovh` leftover that hijacked bare LAN names; set to `home` when OPNsense `.home` DNS lands), and keeps UFW deny-inbound (SSH from the LAN only — cloudflared → Caddy runs over loopback `127.0.0.1:80`, no inbound HTTP opened). Hostname (`edge`), UTC, and name broadcast (Avahi `edge.local`) come from `common`; SSH hardening + UFW + fail2ban from `security`.
+Base shared roles live in [`roles/`](roles/README.md). The [roles index](roles/README.md) lists every role with what it does and which playbooks apply it; each role's own README covers its purpose, file layout and parameters.
 
 ## Playbooks
 
@@ -82,9 +58,9 @@ Bare-metal base provisioning for the **Edge Wyse 3040** ingress appliance (ADR 2
 |---|---|---|
 | `playbook.yml` | common → security → azure_arc → docker_host → docker_services | First-time VPS provision after initial SSH hardening (see [runbook 10](../docs/runbooks/10-vps-playground.md)) |
 | `playbook-arc.yml` | azure_arc | Adding Arc to an already-configured host |
-| `playbook-lab.yml` | common → security → docker_host → azure_arc | M910q base provision after the 24.04 reinstall (see [runbook 25](../docs/runbooks/25-m910q-os-refresh.md)) |
-| `playbook-edge.yml` | common → security → edge_host | Wyse 3040 edge base provision (see [runbook 24](../docs/runbooks/24-edge-appliance.md)) |
-| `playbook-ha.yml` | common → security | Wyse 5070 HA node base provision (see [runbook 28](../docs/runbooks/28-ha-proxmox-node.md)) |
+| `playbook-lab.yml` | common → security → docker_host → azure_arc → nut_client | M910q base provision after the 24.04 reinstall (see [runbook 25](../docs/runbooks/25-m910q-os-refresh.md)) |
+| `playbook-edge.yml` | common → security → edge_host → nut_client | Wyse 3040 edge base provision (see [runbook 24](../docs/runbooks/24-edge-appliance.md)) |
+| `playbook-ha.yml` | common → security → nut_client | Wyse 5070 HA node base provision (see [runbook 28](../docs/runbooks/28-ha-proxmox-node.md)) |
 | `workloads/opencode/opencode-playbook.yml` | docker_opencode_ingress → docker_opencode_instances | Deploy the OpenCode per-project server workload (see [runbook 17](../docs/runbooks/17-deploy-opencode-on-cloudlab.md)) |
 
 ## Inventory

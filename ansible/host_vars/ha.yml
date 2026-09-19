@@ -5,3 +5,9 @@ security_ufw_allow_ssh_from: "192.168.2.0/24"
 security_ufw_allow_tcp_from: "192.168.2.0/24"
 security_ufw_allow_tcp_ports:
   - 8006
+
+nut_client_role: primary
+nut_client_account: upsmon-host
+nut_client_password_secret: nut-upsmon-primary-password
+nut_client_hostsync: 30
+nut_client_finaldelay: 30
