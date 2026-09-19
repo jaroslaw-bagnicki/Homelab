@@ -251,13 +251,15 @@ repo, rendered to `/etc/caddy/Caddyfile`, `Caddyfile reload` on change (ADR 10).
   ```
   No `dbengine` disk store — per ADR 24 (eMMC endurance) and ADR 27 (lightweight Edge
   child node).
-- **Standalone-first, parent-later (ADR 27):** the child role deploys it standalone-capable, but the
-  fleet re-points it at the **Netdata Parent on the `pve` node** (`192.168.2.201:19996:SSL` — the
-  parent refuses plaintext streams) — the M910q/k3s placement is obsolete. Netdata is provisioned by
-  the shared `netdata` role via `playbook-edge.yml`, not by `edge_host`; stream key, deployment and
-  validation are in [runbook 31](31-deploy-netdata.md).
-- Resource check: expect ~60–100 MB RSS with the minimal profile — fits the 2 GB budget
-  alongside cloudflared + Caddy.
+- **Streams to the Parent (ADR 27)** — deployed 2026-09-19: the agent streams to
+  `192.168.2.201:19996:SSL` (TLS; `ssl skip certificate verification` because the parent's
+  certificate is self-signed, and the parent refuses plaintext streams). The parent lists `edge` as a
+  mirrored host (`hops=1`). Netdata is provisioned by the shared `netdata` role via
+  `playbook-edge.yml`, not by `edge_host`; stream key, deployment and validation are in
+  [runbook 31](31-deploy-netdata.md).
+- Resource check: measured **~130 MB RSS** on 2026-09-19 (`systemctl show netdata -p MemoryCurrent`)
+  — above the earlier 60–100 MB estimate (Netdata v2 defaults), still comfortable within the 2 GB
+  budget alongside cloudflared + Caddy.
 
 ---
 

@@ -114,6 +114,9 @@ Each child installs Netdata and streams to the Parent. Edge uses `netdata_storag
 (no `dbengine` on the eMMC, ADR 24/27); Lab keeps `dbengine` locally as a fallback history
 (7 days, 256 MiB per tier).
 
+> **Observed footprint (2026-09-19):** Lab ≈ **164 MB**, Edge ≈ **130 MB** RSS. Both children bind
+their dashboard to `127.0.0.1:19999` only — the fleet view is the Parent.
+
 > **Standalone-first (ADR 27).** Deploy the Parent (§2) before the children (§3) so children
 > stream on first run. A child deployed earlier is still useful standalone; re-running its
 > playbook re-points it.
@@ -171,16 +174,16 @@ without the flag to confirm `changed=0`.
 
 ## Verification Checklist
 
-Executed against `pve` on 2026-09-19 — `ansible-playbook ansible/playbooks/playbook-pve.yml --diff`
-reported `ok=48 changed=16 failed=0`. The children (§3) follow:
+Executed on 2026-09-19 — `playbook-pve.yml --diff` `ok=48 changed=16 failed=0`, then
+`playbook-lab.yml` `ok=56 changed=10 failed=0` and `playbook-edge.yml` `ok=44 changed=8 failed=0`:
 
 - [x] §1 `netdata-stream-api-key` present in `homelab-bysxdb-kv` (created 2026-09-19, no expiry)
 - [x] §2 Parent active on `pve` (Netdata **v2.11.1**); dashboard reachable at **`https://192.168.2.201:19999`** (self-signed warning expected)
 - [x] §2 plain HTTP on `19999` answers **`399 Redirection`** → `https://` (no cleartext content); the `19996` listener completes a TLSv1.3 handshake
 - [x] §2 UFW allows `19999` + `19996` from the LAN; `netdata` in `www-data` (VM/CT names resolve)
-- [ ] §3 both children stream over TLS (`destination` ends in `:SSL`)
-- [ ] §3 Lab child streams to the Parent (visible in the Nodes view)
-- [ ] §3 Edge child streams to the Parent; `netdata.conf` `[db] mode = ram`
+- [x] §3 both children stream over TLS (`destination = 192.168.2.201:19996:SSL` on each)
+- [x] §3 Lab child streams to the Parent (parent mirrors `pve, lab, edge`; both children `hops=1`)
+- [x] §3 Edge child streams to the Parent; `netdata.conf` `mode = ram`
 - [x] §4 `dbengine tier 0/1/2 retention time = 7d` + `retention size` present (1 GiB per tier on the parent); `du -sh /var/cache/netdata/dbengine` → `512K` on a fresh install
 - [x] §4 no validation command printed the shared key
 - [ ] Idempotent — a second playbook run reports `changed=0`
