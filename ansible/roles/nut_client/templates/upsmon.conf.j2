@@ -1,0 +1,12 @@
+MONITOR {{ nut_client_ups_name }}@{{ nut_client_server }} 1 {{ nut_client_account }} {{ nut_client_upsmon_password }} {{ nut_client_role }}
+MINSUPPLIES 1
+SHUTDOWNCMD "/sbin/shutdown -h +0"
+POLLFREQ 5
+POLLFREQALERT 5
+HOSTSYNC {{ nut_client_hostsync }}
+FINALDELAY {{ nut_client_finaldelay }}
+DEADTIME 15
+POWERDOWNFLAG /etc/killpower
+NOTIFYFLAG ONBATT SYSLOG+WALL
+NOTIFYFLAG LOWBATT SYSLOG+WALL
+NOTIFYFLAG ONLINE SYSLOG+WALL

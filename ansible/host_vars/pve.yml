@@ -12,3 +12,9 @@ netdata_proxmox_host: true
 netdata_bind: "0.0.0.0"
 netdata_storage: dbengine
 netdata_retention: "86400"
+
+nut_client_role: primary
+nut_client_account: upsmon-host
+nut_client_password_secret: nut-upsmon-primary-password
+nut_client_hostsync: 30
+nut_client_finaldelay: 30

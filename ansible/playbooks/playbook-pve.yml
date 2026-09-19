@@ -1,0 +1,9 @@
+---
+- name: Configure pve (Wyse 5070 Proxmox) base
+  hosts: pve
+  become: true
+  roles:
+    - common
+    - security
+    - nut_client
+    - netdata

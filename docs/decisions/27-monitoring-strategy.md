@@ -7,8 +7,8 @@
 
 ## Context
 
-> **Revised 2026-09-06:** Tier B Netdata parent placement moved to the HA-node Proxmox; the Lab (M910q) child is host-native (systemd, not a k8s workload); the `netdata` Ansible role is shared and parameterized (see §Decision → Tier B).  
-> **Revised 2026-09-12:** the Netdata Parent runs **host-native (systemd) on the HA-node Proxmox host, not an LXC** — Netdata must run directly on the Proxmox host (not a VM/container) to read VM/CT cgroups and `/etc/pve` names; one agent per node.
+> **Revised 2026-09-06:** Tier B Netdata parent placement moved to an always-on LXC on the `pve` node; the Lab (M910q) child is host-native (systemd, not a k8s workload); the `netdata` Ansible role is shared and parameterized (see §Decision → Tier B).  
+> **Revised 2026-09-12:** the Netdata Parent runs **host-native (systemd) on the `pve` node's Proxmox host, not an LXC** — Netdata must run directly on the Proxmox host (not a VM/container) to read VM/CT cgroups and `/etc/pve` names; one agent per node.
 
 The homelab monitoring posture drifted as the node fleet grew. The record holds several overlapping and partly contradictory decisions:
 
@@ -31,10 +31,10 @@ AMA → Log Analytics (`homelab-law`) on **Arc-enrolled nodes only**: the M910q 
 
 ### Tier B — Local monitoring stack (local real-time plane)
 
-**Tier B is the local monitoring stack on the homelab; Netdata is its first component.** A Netdata agent on every node → **Netdata Parent** (host-native systemd on the HA node's Proxmox) → **Netdata dashboard + alarms** — covering the full fleet, Arc or not.
+**Tier B is the local monitoring stack on the homelab; Netdata is its first component.** A Netdata agent on every node → **Netdata Parent** (host-native systemd on the `pve` node's Proxmox) → **Netdata dashboard + alarms** — covering the full fleet, Arc or not.
 
 - **Unified monitoring agent across all nodes** — one Netdata agent runs on every node in the fleet: a uniform agent across Ubuntu, Debian, OMV, Proxmox, and (trial pending) Alpine.
-- **Parent placement (revised 2026-09-12)** — Netdata Parent runs as a **host-native systemd service on the HA node (Wyse 5070 / Proxmox)** — installed on the Proxmox host itself, not in a container or VM, so it reads VM/CT cgroups and `/etc/pve` names (the [Netdata Proxmox VE integration](https://www.netdata.cloud/integrations/data-collection/containers-and-vms/proxmox-ve-monitoring/) requires Netdata on the Proxmox host). It is independent of the HA VM (ADR 26) and of the M910q (ADR 24's churn-independence rationale), and supersedes the earlier "k3s workload on the M910q" placement. Children run **standalone** (local `dbengine` + alarms) until the parent is live, then re-point to it.
+- **Parent placement (revised 2026-09-12)** — Netdata Parent runs as a **host-native systemd service on the `pve` node (Wyse 5070 / Proxmox)** — installed on the Proxmox host itself, not in a container or VM, so it reads VM/CT cgroups and `/etc/pve` names (the [Netdata Proxmox VE integration](https://www.netdata.cloud/integrations/data-collection/containers-and-vms/proxmox-ve-monitoring/) requires Netdata on the Proxmox host). It is independent of the HA VM (ADR 26) and of the M910q (ADR 24's churn-independence rationale), and supersedes the earlier "k3s workload on the M910q" placement. Children run **standalone** (local `dbengine` + alarms) until the parent is live, then re-point to it.
 - **Lab (M910q) child is host-native** — a **systemd host process**, not a container/k8s workload: it monitors the host itself, auto-discovers the Docker stack now and the k3s node/kubelet later, and survives cluster churn.
 - **Edge Wyse 3040 — lightweight components only.** A **Netdata child node** (minimal footprint, **RAM-only buffering** — no eMMC `dbengine`, per [ADR 24](24-edge-ingress-appliance.md)) and Fluent Bit if adopted as a Tier B component; Alpine compatibility validated during the Debian-vs-Alpine on-device trial.
 - **Metrics-only scope.** Provisioned via a **shared Ansible `netdata` role** (the ADR 10 approach) parameterized per node: `netdata_role: parent|child` · `netdata_stream_target` · `netdata_storage: dbengine|ram` (Edge → `ram`) · `netdata_retention` · `netdata_bind`. Applies to the Debian-family fleet (Edge, Lab, Proxmox, OMV, and the Beetle NAS — OMV per [ADR 29](29-nas-backup-target-beetle-m3-omv.md)); **OPNsense (FreeBSD) is a per-OS exception** and needs its own path.
@@ -48,19 +48,19 @@ AMA → Log Analytics (`homelab-law`) on **Arc-enrolled nodes only**: the M910q 
 
 ## Consequences
 
-- **Two planes to run** — Azure Monitor (Tier A) and the local monitoring stack (Tier B, Netdata as its first component). Tier A stays within the LAW free tier; Tier B is self-hosted — **host-native Parent on the HA-node Proxmox**.
-- **Single Netdata Parent pane** for every node's real-time metrics; **non-Arc nodes fully covered** (Edge, HA, NAS) where Azure could never reach.
+- **Two planes to run** — Azure Monitor (Tier A) and the local monitoring stack (Tier B, Netdata as its first component). Tier A stays within the LAW free tier; Tier B is self-hosted — **host-native Parent on the `pve` node's Proxmox**.
+- **Single Netdata Parent pane** for every node's real-time metrics; **non-Arc nodes fully covered** (Edge, `pve`, NAS) where Azure could never reach.
 - **One agent everywhere** — a uniform monitoring tool across heterogeneous nodes; auto-discovers containers, VMs/LXC (Proxmox), and services with rich out-of-the-box metrics.
 - **Standalone-first, parent-later** — every child is useful immediately (local dashboard + alarms) before the central plane exists; re-pointing to the parent is a config change, not a reinstall.
 - **ADR 09 is amended in place** — scoped to Tier A (management plane); its "no separate monitoring stack" framing is superseded by this strategy.
 - **Container Insights (ADR 22)** is now defined as the Tier A cluster extension, not a replacement for the local plane.
-- **ADR 26's independence requirement** (monitoring survives Home Assistant restarts) is satisfied: the Tier B plane lives on the **HA node's Proxmox**, not the HA VM.
+- **ADR 26's independence requirement** (monitoring survives Home Assistant restarts) is satisfied: the Tier B plane lives on the **`pve` node**, not the HA VM.
 - **New operational overhead** — a Netdata agent per node (~100–150 MB default; minimal profile ~60–100 MB on the constrained Edge) and a central plane to maintain.
 - **Two dashboards to learn** — Azure Portal (management) and the Netdata dashboard (operations); a Grafana surface appears only if a future Tier B component is adopted.
 
 ### Alternatives Considered
 
-- **Azure Monitor as the sole stack** — a single sink, but structurally cannot cover Edge/HA/NAS (never Arc-enrolled), no real-time pane, and portal-centric. Rejected.
+- **Azure Monitor as the sole stack** — a single sink, but structurally cannot cover Edge/`pve`/NAS (never Arc-enrolled), no real-time pane, and portal-centric. Rejected.
 - **Pure local OSS, no Azure** — simpler, one stack, but loses the Arc management-plane benefits (policy, compliance, portal, heartbeat) that ADR 04/09 bought with zero cost. Rejected.
 - **Per-node one-off agents (cockpit/htop) with no central aggregation** — no cross-node view, no history, no alerting. Rejected.
 
@@ -73,7 +73,7 @@ AMA → Log Analytics (`homelab-law`) on **Arc-enrolled nodes only**: the M910q 
 - [ADR 10](10-ansible-host-config.md) — Ansible host configuration (pattern for the shared `netdata` role)
 - [ADR 22](22-k3s-arc-homelab.md) — k3s + Arc (Container Insights = Tier A cluster extension)
 - [ADR 24](24-edge-ingress-appliance.md) — Edge Wyse 3040 (amended — lightweight Edge components, RAM-only buffering)
-- [ADR 25](25-home-assistant-thin-client.md) — HA node (Netdata → Tier B plane)
+- [ADR 25](25-home-assistant-thin-client.md) — the `pve` node (Netdata → Tier B plane)
 - [ADR 26](26-zigbee-energy-monitoring.md) — Zigbee power monitoring (Prometheus → Grafana path, only committed Prometheus/Grafana usage)
 - [Research 17](../research/17-arc-vm-insights-setup.md) · [Research 25](../research/25-edge-ingress-sbc.md) · [Research 26](../research/26-home-assistant-thin-client.md) · [Research 27](../research/27-zigbee-energy-monitoring.md)
 - [Issue #75](https://github.com/jaroslaw-bagnicki/Homelab/issues/75) — monitoring reconciliation

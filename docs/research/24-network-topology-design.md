@@ -72,16 +72,30 @@ Keep the single `192.168.2.0/24` broadcast domain. Reserve a dedicated static bl
 | Address | Device |
 |---|---|
 | `192.168.2.200` | Lenovo M910q Homelab (existing) |
-| `192.168.2.210` | HP ML110 NAS — static (proposed) |
+| `192.168.2.201` | Wyse 5070 `pve` — Proxmox VE host (runbook 28) |
+| `192.168.2.202` | Beetle NAS — the ML110's successor (planned) |
+| `192.168.2.210` | VM 210 — Home Assistant OS |
+| `192.168.2.211` | LXC 211 — Mosquitto |
+| `192.168.2.212` | LXC 212 — Zigbee2MQTT |
+| `192.168.2.213` | LXC 213 — NUT server (runbook 29, ADR 30) |
 | `192.168.2.220` | LLM server (Phase 2, future) |
 | `192.168.2.230` | TL-SG108E management IP (proposed) |
-| `192.168.2.240` | **Edge ingress appliance (Wyse 3040)** — new `24x` block (decided 2026-08-17, runbook 24) |
+| `192.168.2.240` | **Edge ingress appliance (Wyse 3040)** — `24x` block (decided 2026-08-17, runbook 24) |
 
 > **Why tens-blocks (`200/210/220/230/240`) rather than contiguous `200–204`:** each
-> category gets a block with headroom — `20x` server, `21x` NAS, `22x` LLM,
-> `23x` switch, `24x` edge/ingress — so a future device in the same class (e.g. a second NAS at
-> `211` or a k3s node at `212`) slots in without renumbering existing
-> reservations.
+> category gets a block with headroom — `20x` physical servers, `21x` Proxmox guests,
+> `22x` LLM, `23x` switch, `24x` edge/ingress — so a future device in the same class slots in
+> without renumbering existing reservations.
+
+> **Guest addressing** — policy owned by [ADR 31](../decisions/31-static-address-scheme.md); the
+> table above is the current allocation. Proxmox guests live in `21x` with the **VMID equal to the
+> address's last octet** — VM 210 → `.210`, LXC 211 → `.211`, LXC 213 → `.213` — so neither the ID
+> nor the address needs a derivation. The `21x` block was the NAS category; the ML110 was its only
+> member, so the block is free the moment it retires and the NAS role instead occupies a `20x`
+> address as `.202`. One thing this scheme keeps in view:
+> - **The ML110 still answers at `.210`.** It is powered off but configured static at `.210`
+>   (runbook 23). Any boot before retirement — the data migration to the Beetle, most likely —
+>   collides with the HA VM: change its address or set it to DHCP *before* that boot.
 
 **Pros:**
 - Works today on the consumer mesh — zero router changes.

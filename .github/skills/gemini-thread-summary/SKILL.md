@@ -64,7 +64,7 @@ Adapt the structure to the content — a hardware research thread warrants a spe
 Ask the user (or infer from context) where to save the summary. A thread may warrant **more than one target** — pick all that apply:
 
 - **New numbered research doc** (`docs/research/NN-*.md`) — when the thread is a self-contained research session (hardware, architecture, tool evaluation). Register in `docs/research/README.md` (research table + Gemini Discussions).
-- **New numbered idea doc** (`docs/ideas/NN-*.md`) — when the thread is about a **new project idea** for the lab, not just research. Follow the ideas index and lifecycle in `docs/ideas/README.md` (🧠 Idea → 📋 Planned → 🔨 Implementing → ✅ Done).
+- **New numbered idea doc** (`docs/ideas/NN-*.md`) — when the thread is about a **new project idea** for the lab, not just research. Follow the ideas index and lifecycle in `docs/ideas/README.md` (🧠 Idea → 📋 Planned → 🔨 Implementing → 🚧 On Hold → ✅ Done).
 - **Both research + idea** — when the thread is a self-contained research session **about a new idea** (e.g. Home Assistant on a thin client → research 26 + idea 05). The research doc holds the detailed write-up; the idea doc tracks the lifecycle and cross-references it.
 - **Appended section in an existing doc** — when the thread adds to an already-documented topic.
 - **Chat only** — when the user wants a quick read without saving anything.

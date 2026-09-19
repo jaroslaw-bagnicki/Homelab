@@ -1,0 +1,9 @@
+---
+nut_client_ups_name: ups
+nut_client_server: 192.168.2.213
+nut_client_keyvault_name: homelab-bysxdb-kv
+nut_client_role: secondary
+nut_client_account: upsmon-fleet
+nut_client_password_secret: nut-upsmon-secondary-password
+nut_client_hostsync: 15
+nut_client_finaldelay: 0

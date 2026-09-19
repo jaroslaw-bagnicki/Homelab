@@ -1,51 +1,51 @@
 # Changelog
 
 Notable changes to the Homelab repo, newest first. This log supersedes the
-"What's Done" table that used to live in the root `README.md`. Entries use the
-same `(type)` prefixes as commit messages; types: `feat`, `fix`, `docs`, `chore`, `refactor`.
+"What's Done" table that used to live in the root `README.md`. Entries carry a
+`(type)` prefix describing what the change delivers — `feat`, `fix`, `docs`, `chore`, `refactor`.
+
+**One line per entry, one entry per workstream.** State what changed and link one artefact — the
+rationale, measurements and configuration detail live in the linked ADR, runbook or report. Headline
+plus at most one clause, under ~200 characters: if it will not fit on one line, it is not a changelog
+entry. Notable changes only: no instruction-file tweaks, typo/link fixes, cross-reference or rename
+corrections, or changelog bookkeeping.
+Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month and newest entry first.
 
 ## 2026‑09
 
-- **(feat)** Netdata Tier B — shared **`netdata` Ansible role** (parent + child modes) and the **Parent host-native on the HA node's Proxmox** (`ha`), with Lab and Edge children streaming to it; install via the official kickstart script, shared stream key from AKV (`netdata-stream-api-key`), UFW `19999` LAN-only, and the `netdata` user granted `/etc/pve` read so Proxmox VM/CT names resolve; **ADR 27 amended** — the Parent runs on the Proxmox host, not an LXC (one agent per node) — [runbook 29](docs/runbooks/29-deploy-netdata.md) · [ADR 27](docs/decisions/27-monitoring-strategy.md) · [#104](https://github.com/jaroslaw-bagnicki/Homelab/issues/104) · [#80](https://github.com/jaroslaw-bagnicki/Homelab/issues/80) · [#84](https://github.com/jaroslaw-bagnicki/Homelab/issues/84)
-- **(docs)** Add ADR 29 — the NAS backup target moves to the **Wincor Beetle M-III on OpenMediaVault** (Unraid deferred), superseding ADR 23 (ML110); the decision log, `docs/overview.md`, `docs/hardware.md`, idea 01c and ADR 27's Debian-family scope are synced to it — [ADR 29](docs/decisions/29-nas-backup-target-beetle-m3-omv.md) · [#98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98)
-- **(docs)** Refresh `overview.md` "What's Next" into a state-grouped board — **In progress** · **Planned** · **Held** — with a `Next step` column and capped refs per row (replaces the prose `Notes` link dump); adds a **Not Scheduled** table for parked work, and wires the new states + the row-removal rule into `.github/copilot-instructions.md`, `AGENTS.md`, and `docs/workloads.md`; content fixes: drop `#94` (shipped), add `#104`/`#85`/`#96`/`#98`/`#107`/`#80`/`#84`, correct the stale `#65`/`#68`/`#54` descriptions, move the NFS/Longhorn target from the ML110 to the **Beetle NAS**, and add the missing Home Assistant node to the topology — [overview](docs/overview.md)
-- **(docs)** Add idea 09 — shared-rail UPS with NUT-driven graceful shutdown (NUT server on the Home Assistant node, clients fleet-wide) + Home Assistant NUT integration for telemetry/notifications; fleet load profile incl. the acquired **Futro S930 OPNsense router** (+ BCM5720 NIC), Green Cell model comparison (UPSLM360/600, PowerProof 1500VA), modified- vs pure-sine risk for active-PFC supplies, NUT-on-Proxmox-vs-k3s-vs-LXC analysis — [idea 09](docs/ideas/09-ups-nut-home-assistant.md)
-- **(docs)** hardware: HA node (Wyse 5070) marked Proxmox VE **9.2.2** installed + base provisioned (runbook 28, verified 2026-09-06); HA VM/LXC still pending (#68/#85) — [hardware](docs/hardware.md) · [runbook 28](docs/runbooks/28-ha-proxmox-node.md)
-- **(feat)** HA node (Wyse 5070) — Proxmox VE install runbook (static IP `192.168.2.201`, 20x server block); `ha` added to the Ansible inventory, `playbook-ha.yml` (`common` → `security`), a reusable `security_ufw_allow_tcp_ports` var (Proxmox UI `8006`), and the shared **`common` role now selects the NTP service from runtime state** (`systemd-timesyncd` / `chrony`); the `fleetadm` bootstrap adds `sudo` (Proxmox lacks it by default) — [runbook 28](docs/runbooks/28-ha-proxmox-node.md) · [#103](https://github.com/jaroslaw-bagnicki/Homelab/issues/103) · [#104](https://github.com/jaroslaw-bagnicki/Homelab/issues/104) (Netdata parent, deferred)
-- **(docs)** Require `CHANGELOG.md` entries to ship with any PR that changes behaviour or docs — `.github/copilot-instructions.md` / `AGENTS.md` now state that such PRs add/update their changelog entry in the same PR
-- **(feat)** SSH access LAN-only + devcontainer fleet-key autoload — `security` role allows password auth from the LAN (`192.168.2.0/24`, closed with `Match all`) for the human breakglass (`jarek`) while key-only elsewhere; `lab` UFW SSH scoped to the LAN; devcontainer profile always loads `fleetadm-key-priv` at session start (idempotent `ssh-add`, visible load-failure warnings); runbook 24 §3 base verification ticked (`edge.local` + SSH key-only; bare `edge` deferred to OPNsense `.home` DNS) — [runbook 24](docs/runbooks/24-edge-appliance.md) · [#78](https://github.com/jaroslaw-bagnicki/Homelab/issues/78)
-- **(docs)** Wincor Beetle M-III hardware diagnostic — NAS successor pre-boot audit (research 32); hardware.md + overview updated — [research 32](docs/research/32-wincor-beetle-m3-hardware-diagnostic.md) · [idea 01c](docs/ideas/01c-nas-backup-target-wincor-beetle.md) · [#99](https://github.com/jaroslaw-bagnicki/Homelab/issues/99)
-- **(docs)** Futro S930 hardware diagnostic — OPNsense router candidate pre-boot audit (research 31); hardware.md updated — [research 31](docs/research/31-futro-s930-hardware-diagnostic.md) · [#97](https://github.com/jaroslaw-bagnicki/Homelab/issues/97)
+- **(feat)** Netdata Tier B — `netdata` role (parent/child), Parent **host-native on the `pve` Proxmox host** (ADR 27 amended), Lab + Edge streaming — [runbook 31](docs/runbooks/31-deploy-netdata.md)
+- **(docs)** Rename the Wyse 5070 node `ha` → `pve` — hostnames name the host role, not a guest — [ADR 33](docs/decisions/33-fleet-node-hostnames.md)
+- **(docs)** Add ADR 32 — no hosted CI — [ADR 32](docs/decisions/32-no-hosted-ci.md)
+- **(docs)** Add the `quality-assessment` prompt and the first repo assessment — [report](docs/reports/260913-quality-assessment.md)
+- **(feat)** UPS graceful shutdown via **NUT** — LXC 213 server, `nut_client` clients, and a real-outage drill (**52 min 53 s** to `LB`) — [report](docs/reports/260919-nut-shutdown-drill.md)
+- **(docs)** Re-cut the static address scheme — `20x` servers, `21x` guests, **VMID = last octet** — [ADR 31](docs/decisions/31-static-address-scheme.md)
+- **(docs)** Wincor Beetle M-III is the NAS successor on OMV, superseding the ML110 — [ADR 29](docs/decisions/29-nas-backup-target-beetle-m3-omv.md)
+- **(docs)** Make `overview.md` "What's Next" a state-grouped board with a `Not Scheduled` parking lot — [overview](docs/overview.md)
+- **(docs)** Add idea 09 — shared-rail UPS with NUT-driven shutdown — [idea 09](docs/ideas/09-ups-nut-home-assistant.md)
+- **(feat)** Proxmox VE host (Wyse 5070) — **9.2.2** installed and base provisioned — [runbook 28](docs/runbooks/28-pve-proxmox-node.md)
+- **(feat)** Fleet SSH access restricted to the LAN, with devcontainer key autoload — [runbook 24](docs/runbooks/24-edge-appliance.md)
+- **(docs)** Futro S930 hardware diagnostic — OPNsense router candidate — [research 31](docs/research/31-futro-s930-hardware-diagnostic.md)
 
 ## 2026‑08
 
-- **(docs)** Edge appliance — diagnostics, install progress, and backup runbook (runbook 24 §install-progress + research 28; runbook 27 backup flow); later post-merge fleet-connect skill + runbook 24 updated (edge is Ansible-managed) — [runbook 24](docs/runbooks/24-edge-appliance.md) · [runbook 27](docs/runbooks/27-edge-backup-restore.md) · [#88](https://github.com/jaroslaw-bagnicki/Homelab/issues/88)
-- **(docs)** Nominate Clonezilla as the primary backup/restore method — edge eMMC imaging — [runbook 27](docs/runbooks/27-edge-backup-restore.md) · [#91](https://github.com/jaroslaw-bagnicki/Homelab/issues/91)
-- **(docs)** Homelab LTE/5G WAN failover — idea + mobile-internet offer research; Huawei B593u-12 LTE modem added to network appliances — [idea 08](docs/ideas/08-lte-wan-failover.md) · [research 30](docs/research/30-mobile-internet-failover-offers.md) · [#90](https://github.com/jaroslaw-bagnicki/Homelab/issues/90)
-- **(docs)** NAS backup-target variants — EliteDesk 800 G1 and Wincor Beetle M-III ideas — [idea 01b](docs/ideas/01b-nas-backup-target-elitedesk.md) · [idea 01c](docs/ideas/01c-nas-backup-target-wincor-beetle.md) · [#89](https://github.com/jaroslaw-bagnicki/Homelab/issues/89)
-- **(docs)** Add idea 07 — OPNsense router on a Fujitsu Futro S930 (incl. HP T730 alternative + NIC/5G-failover supplements) — [idea 07](docs/ideas/07-opnsense-futro-s930.md) · [#86](https://github.com/jaroslaw-bagnicki/Homelab/issues/86)
-- **(docs)** Wyse 5070 hardware diagnostic — pre-boot audit of the Home Assistant node (research 29): J4105 confirmed, 2× 4 GB Micron DDR4 (both slots full — 16 GB = replace both), M.2 SATA 2280 — SK hynix SC311 128 GB installed (used, SMART-verified), eMMC 14.7 GiB present but unused, Realtek GbE + Intel WiFi, no NVMe; hardware.md/overview updated — [research 29](docs/research/29-wyse5070-hardware-diagnostic.md) · [issue #68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68)
-- **(feat)** Edge `edge_host` Ansible role (base phase) — `playbook-edge.yml` (`common` → `security` → `edge_host`) provisions hostname `edge`, name broadcast (Avahi `edge.local`), SSH key-only hardening (added fleet-wide to the `security` role), UFW (SSH from the LAN only), fail2ban, `unattended-upgrades`, journald `Storage=volatile` (eMMC longevity), and manages the DNS search domain (clears the installer's `cloud5.ovh` leftover); closes the #78 remainder — [runbook 24](docs/runbooks/24-edge-appliance.md) · [ADR 24](docs/decisions/24-edge-ingress-appliance.md) · [#65](https://github.com/jaroslaw-bagnicki/Homelab/issues/65)
-- **(feat)** Dedicated fleet-wide SSH key for automation — `fleetadm@homelab` keypair generated by `scripts/New-HomelabFleetSshKey.ps1`, private key in `homelab-bysxdb-kv/fleetadm-key-priv`, public key committed at `ansible/roles/common/files/ssh/fleetadm.pub` — the breaking-glass bootstrap installs it into `fleetadm` so it establishes the first connection (runbooks 24/25), and the `common` role re-arms it on every host (`ansible.posix.authorized_key`, restrictive `key_options`); `profile.ps1` loads it into `ssh-agent` alongside the VPS key — used by Ansible and AI agent tooling (OpenCode, Copilot) — [ADR 28](docs/decisions/28-fleet-admin-account-and-key.md)
-- **(feat)** ML110 NAS Phase 2 (part 1) — SMB/CIFS `/shared` backup share: shared folder on `md1` (ext4), SMB service, share with `Hosts allow 192.168.2.0/24` + enforced transport encryption, dedicated `rescuezilla` user (unblocks #79 edge backup) — [runbook 26](docs/runbooks/26-ml110-nas-exports.md) · [#62](https://github.com/jaroslaw-bagnicki/Homelab/issues/62) · [#79](https://github.com/jaroslaw-bagnicki/Homelab/issues/79)
-- **(feat)** M910q OS refresh — reinstall Ubuntu 24.04 LTS (ADR 05), Ansible base provision via new `playbook-homelab.yml` (`homelab` added to inventory), Azure Arc enrolment; `labadmin` agent account bootstrapped manually ([runbook §2](docs/runbooks/25-m910q-os-refresh.md)); DNS/Caddy/tunnel move to the edge appliance (ADR 24) — [runbook 25](docs/runbooks/25-m910q-os-refresh.md) · [issue #74](https://github.com/jaroslaw-bagnicki/Homelab/issues/74)
-- **(docs)** Add ADR 27 — two-tier monitoring strategy reconciling Azure Monitor via Arc (Tier A, management plane) with a local monitoring stack (Tier B, Netdata as first component); Grafana/Prometheus/Fluent Bit/Loki listed as future Tier B components (no ADR yet); ADR 09 amended in place, ADR 24/25/26 aligned — [ADR 27](docs/decisions/27-monitoring-strategy.md) · [#75](https://github.com/jaroslaw-bagnicki/Homelab/issues/75)
-- **(docs)** Add ADR 26 — Zigbee energy monitoring via Zigbee2MQTT → Prometheus, independent of Home Assistant — [ADR 26](docs/decisions/26-zigbee-energy-monitoring.md) · [research 27](docs/research/27-zigbee-energy-monitoring.md) · [idea 06](docs/ideas/06-homelab-energy-monitoring.md)
-- **(docs)** Zigbee energy monitoring — independent homelab power-consumption monitoring via per-device energy plugs (Zigbee leading candidate, alternatives compared); protocol/stack comparison + Z2M → Prometheus metrics architecture + AI-agent access in research — [research 27](docs/research/27-zigbee-energy-monitoring.md) · [idea 06](docs/ideas/06-homelab-energy-monitoring.md)
-- **(docs)** Make overview the single state + roadmap page — Workloads table = current state only, "What's Next" moved from root README — [overview](docs/overview.md)
-- **(docs)** Add Homelab overview — nodes, workloads, topology at a glance — [overview](docs/overview.md)
-- **(docs)** Add per-node hardware inventory incl. network appliances — [hardware](docs/hardware.md)
-- **(feat)** ML110 NAS Phase 1 — OMV 8.3 install on the Goodram SSD, BIOS AHCI, mdadm RAID1 (`md0`/`md1`), static IP `192.168.2.210`, SSH hardening — [runbook 23](docs/runbooks/23-ml110-omv-setup.md) · [ADR 23](docs/decisions/23-nas-on-ml110.md) · [#61](https://github.com/jaroslaw-bagnicki/Homelab/issues/61)
-- **(feat)** Edge ingress appliance — Wyse 3040 thin client (acquired) as bare-metal `cloudflared` + Caddy public ingress; OS trial Debian vs Alpine — [runbook 24](docs/runbooks/24-edge-appliance.md) · [ADR 24](docs/decisions/24-edge-ingress-appliance.md) · [idea 04](docs/ideas/04-edge-device-tunnel-caddy.md) · [#65](https://github.com/jaroslaw-bagnicki/Homelab/issues/65)
-- **(docs)** Home Assistant on a dedicated thin-client node — Proxmox VE VM + Mosquitto/Zigbee2MQTT — [ADR 25](docs/decisions/25-home-assistant-thin-client.md) · [idea 05](docs/ideas/05-home-assistant-thin-client.md) · [research 26](docs/research/26-home-assistant-thin-client.md)
-- **(docs)** Edge ingress SBC hardware research — used x86 thin client vs Orange Pi Zero 3 — [research 25](docs/research/25-edge-ingress-sbc.md)
-- **(docs)** ML110 NAS Phase 0 — hardware inventory & FreeNAS state audit before the OMV install — [runbook 22](docs/runbooks/22-ml110-nas-inventory.md) · [research 23](docs/research/23-ml110-nas-omv.md) · [#54](https://github.com/jaroslaw-bagnicki/Homelab/issues/54)
-- **(docs)** Homelab network topology & design — mesh inventory, flat-vs-VLAN analysis, static IP scheme — [research 24](docs/research/24-network-topology-design.md)
-- **(docs)** TL-SG108E switch setup — wiring, management IP, QoS/rate-limit, IGMP snooping — [runbook 21](docs/runbooks/21-tl-sg108e-switch.md) · [#55](https://github.com/jaroslaw-bagnicki/Homelab/issues/55)
-- **(feat)** Build per-project OpenCode container images (`opencode-homelab`, `opencode-prospera`) and push to the Zot registry — [#52](https://github.com/jaroslaw-bagnicki/Homelab/issues/52)
-- **(feat)** Adopt Zot as self-hosted OCI container registry — pull-through cache for GHCR/mcr/Docker Hub — [runbook 20](docs/runbooks/20-deploy-zot.md) · [#50](https://github.com/jaroslaw-bagnicki/Homelab/issues/50) · [#51](https://github.com/jaroslaw-bagnicki/Homelab/issues/51)
-- **(feat)** Configure MCP servers per OpenCode instance — GitHub MCP PAT + Azure MCP — [#41](https://github.com/jaroslaw-bagnicki/Homelab/issues/41) · [#47](https://github.com/jaroslaw-bagnicki/Homelab/issues/47)
-- **(docs)** Add ideas: DevPod DevContainers for OpenCode ([idea 02](docs/ideas/02-devcontainers-opencode-k3s.md)) and NAS backup target ([idea 01](docs/ideas/01-nas-backup-target.md))
+- **(feat)** Edge ingress appliance (Wyse 3040) — Debian install, `edge_host` role and backup/restore runbook — [ADR 24](docs/decisions/24-edge-ingress-appliance.md) · [runbook 24](docs/runbooks/24-edge-appliance.md)
+- **(docs)** LTE/5G WAN failover — idea + mobile-offer research — [idea 08](docs/ideas/08-lte-wan-failover.md) · [research 30](docs/research/30-mobile-internet-failover-offers.md)
+- **(docs)** NAS backup-target variants — EliteDesk 800 G1 and Wincor Beetle M-III ideas — [idea 01b](docs/ideas/01b-nas-backup-target-elitedesk.md) · [idea 01c](docs/ideas/01c-nas-backup-target-wincor-beetle.md)
+- **(docs)** Add idea 07 — OPNsense router on a Fujitsu Futro S930 — [idea 07](docs/ideas/07-opnsense-futro-s930.md)
+- **(docs)** Wyse 5070 hardware diagnostic — J4105, 8 GB DDR4, 128 GB M.2 SATA, no NVMe — [research 29](docs/research/29-wyse5070-hardware-diagnostic.md)
+- **(feat)** Fleet-wide SSH automation key (`fleetadm@homelab`, Key Vault-backed) — [ADR 28](docs/decisions/28-fleet-admin-account-and-key.md)
+- **(feat)** ML110 NAS — OMV install with mdadm RAID1 and the SMB backup share — [ADR 23](docs/decisions/23-nas-on-ml110.md) · [runbook 23](docs/runbooks/23-ml110-omv-setup.md)
+- **(feat)** M910q OS refresh — Ubuntu 24.04 reinstall, Ansible base provision and Arc enrolment — [runbook 25](docs/runbooks/25-m910q-os-refresh.md)
+- **(docs)** Add ADR 27 — two-tier monitoring: Azure Monitor via Arc + a local Netdata tier — [ADR 27](docs/decisions/27-monitoring-strategy.md)
+- **(docs)** Zigbee energy monitoring via Zigbee2MQTT → Prometheus — [ADR 26](docs/decisions/26-zigbee-energy-monitoring.md)
+- **(docs)** Add `overview.md` (state + roadmap) and `hardware.md` (per-node inventory) — [overview](docs/overview.md) · [hardware](docs/hardware.md)
+- **(docs)** Home Assistant on a dedicated thin-client node (Proxmox VM) — [ADR 25](docs/decisions/25-home-assistant-thin-client.md)
+- **(docs)** Homelab network topology & design — flat-vs-VLAN analysis and static IP scheme — [research 24](docs/research/24-network-topology-design.md)
+- **(feat)** TL-SG108E switch setup — wiring, QoS and IGMP snooping — [runbook 21](docs/runbooks/21-tl-sg108e-switch.md)
+- **(feat)** Build per-project OpenCode images and push them to Zot — [ADR 21](docs/decisions/21-opencode-instance-images.md)
+- **(feat)** Adopt Zot as self-hosted OCI registry with pull-through cache — [runbook 20](docs/runbooks/20-deploy-zot.md)
+- **(feat)** Configure MCP servers per OpenCode instance (GitHub PAT, Azure) — [runbook 18](docs/runbooks/18-provision-opencode-instance.md)
+- **(docs)** Add ideas: DevPod DevContainers for OpenCode and a NAS backup target — [ideas](docs/ideas/README.md)
 - **(chore)** Drop the `(type)` prefix from issue and PR titles — labels convey the type
 - **(docs)** Adopt "research settles, ADR owns" co-authoring pattern — research/idea docs defer decision authority to the ADR
 
@@ -60,7 +60,7 @@ same `(type)` prefixes as commit messages; types: `feat`, `fix`, `docs`, `chore`
 - **(docs)** Research: OpenCode sandboxed homelab architecture — [research 21](docs/research/21-opencode-sandboxed-homelab-architecture.md)
 - **(docs)** Research: OpenCode hosting — Codespaces vs Homelab vs Cloudlab — [research 20](docs/research/20-opencode-hosting-codespaces-vs-homelab.md)
 - **(docs)** Add ADR 18 — host OpenCode server instances on Homelab — [ADR 18](docs/decisions/18-opencode-sandbox.md)
-- **(feat)** Add `cloudflared` to the `docker_services` role — HTTPS-only origin via Cloudflare Tunnel + Origin CA — [runbook 16](docs/runbooks/16-docker-services-ansible-role.md) · [ADR 19](docs/decisions/19-cloudflare-tunnel-https-origin.md) · [#25](https://github.com/jaroslaw-bagnicki/Homelab/issues/25) · [#27](https://github.com/jaroslaw-bagnicki/Homelab/issues/27)
+- **(feat)** Add `cloudflared` to `docker_services` — Cloudflare Tunnel as the only ingress, plain-HTTP origin behind Caddy — [runbook 16](docs/runbooks/16-docker-services-ansible-role.md)
 - **(feat)** Expose Portainer via `portainer.cloud5.ovh` with injected admin password — [#29](https://github.com/jaroslaw-bagnicki/Homelab/issues/29)
 - **(docs)** Document Cloudflare Access policy for admin services
 - **(docs)** Document Codespaces secret + `containerEnv` for DeepSeek in the dev container

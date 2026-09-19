@@ -36,6 +36,7 @@ operating on its own.
   analysis that fed the decision, not the authority for it.
 - Runbooks: `runbooks/` — implementation instructions and operational procedures
 - Each area has a `README.md` as the index
+- **Fleet node naming**: the hostname (`pve`, `lab`, `edge`, `cloudlab`) wherever it is an identifier — inventory, playbook/`host_vars` filenames, commands, host lists — and the descriptive label (**Proxmox VE**, "Lab", "Edge Ingress") in state-doc tables and in prose where it reads better. Decision: [ADR 33](docs/decisions/33-fleet-node-hostnames.md).
 - **State docs stay current**: when a node or workload is added, removed, or changes
   status, update `docs/overview.md` (nodes/workloads view) and `docs/hardware.md`
   (per-node specs + network appliances) in the same change. Do not let them go stale
@@ -60,7 +61,9 @@ Avoid ADR bloat — reference other ADRs and issues by name, do not restate thei
 - **Always push** after a commit on a feature branch in a worktree — push immediately, don't defer to user
 - **Do not push** to `main`, or after `git commit --amend` — amended commits require user confirmation before force-pushing
 - **Scope commits tightly** — one logical change per commit; do not bundle unrelated edits
-- **PRs ship with their `CHANGELOG.md` entry** — any PR that changes behaviour or docs adds/updates its changelog entry (newest first, with runbook/ADR links) in the same PR
+- **PRs ship with their `CHANGELOG.md` entry** — a notable PR adds or updates its entry (newest first) in the same PR; a PR that fails the notable bar below needs none
+- **`CHANGELOG.md` is a compact index, not a narrative.** **One line per entry, one entry per workstream** — fold a multi-commit or multi-PR workstream (its ADR, its runbook, follow-up PRs) into one entry, and update that entry rather than adding a row when a later PR continues it. Headline plus at most one qualifying clause, **under ~200 characters**, ending in **one artefact link** — two when an ADR and its runbook are both new — and never `#NNN` issue links when an artefact link exists. Rationale, measurements, alternatives and configuration detail belong in the linked ADR/runbook/report, not here. **`(type)` describes what the change delivers, not the file list** — a capability shipped in the lab is `feat` even when the PR carries only docs (hand-built work is recorded, not automated), while a decision, research doc or index/state update is `docs`. Entries sit under `## YYYY‑MM` headings (non-breaking hyphen, newest month and newest entry first) — if it will not fit on one line, it is not a changelog entry.
+- **Notable changes only.** Log a capability, a fix, a decision or a state change worth reading in a month. Never log instruction-file or PR-policy tweaks, typo/link/format fixes, single-file doc corrections, cross-reference or rename corrections, review-remark fixes, or changelog/report bookkeeping — including changes to these instruction files.
 
 ## Workloads as self-contained recipes
 
@@ -117,7 +120,7 @@ Merges always go through a pull request — the agent never merges to `main` loc
 3. **Stop and report the pushed branch.** Do **not** open the PR on the agent's own initiative — that is the user's call. Only when the user explicitly asks, open it via GitHub MCP tools (`create_pull_request`):
    - **PR title**: no `(type)` prefix (e.g. not `(feat) …`) — use labels to convey the type. The `(type)` prefix convention applies to **commit messages only**.
    - **PR description**: do **not** use the **Why / What / How (WWH)** format — that is **reserved for GitHub Issues only**. PR descriptions are a plain summary of the **Changes** (and any **Notes**) with no WWH headings.
-4. **Stop.** The human reviews and merges via the GitHub UI — the agent never merges the PR itself
+4. **Stop.** The human reviews (CR). Once the review is done the change is **deployed to the target host** — a live `ansible-playbook … --diff` run for Ansible changes ([Ansible Verification](#ansible-verification)), never before the review — and only then is the PR merged via the GitHub UI. The agent never merges the PR itself
 5. After the PR is merged, clean up in the primary checkout: `git pull --ff-only origin main`, then `git worktree remove ../Homelab-<short-topic>` and `git branch -d <branch>`
 
 ### Local merge (only on explicit ask)
@@ -199,7 +202,7 @@ The boundary between planning (read-only) and implementation (build) must be cle
 ## Ansible Verification
 
 - **ansible-lint before commit.** Run `ansible-lint ansible/roles/<role>/` on every changed role before committing. Lint failures are fatal and must be resolved.
-- **Live playbook test before merge.** For non-trivial Ansible changes, run `ansible-playbook playbook.yml --diff` against the target host before opening the PR. Bugs in tasks (idempotency, output parsing, module parameters) only surface at runtime.
-- **Post-merge deployment.** After the PR is merged, re-run the playbook to ensure the live host matches the merged code.
+- **Deploy after CR, before merge — never before CR.** For non-trivial Ansible changes, run `ansible-playbook playbook.yml --diff` against the target host once the PR has been reviewed, and merge only after that run is clean. An unreviewed change is never deployed. Bugs in tasks (idempotency, output parsing, module parameters) only surface at runtime, so the live run belongs inside the review loop — there is no separate post-merge deployment step.
 - **Pre-flight: fix world-writable workspace.** If the dev container workspace is world-writable (default), Ansible refuses to read `ansible.cfg`. Run `chmod 755 /workspaces/Homelab /workspaces/Homelab/ansible` before `ansible-playbook`.
 - **Never commit `ansible/ansible.log`.** The file is `.gitignore`'d but may have been tracked before. Untrack it with `git rm --cached ansible/ansible.log` if it appears in `git status`.
+- **Hosted CI is deliberately out of scope.** Verification is the local rules above — `ansible-lint` plus the live playbook runs. Do not propose a CI workflow or pipeline; see `docs/decisions/32-no-hosted-ci.md` (ADR 32) — scoped to build/test validation, with deployment automation left to ADR 22.

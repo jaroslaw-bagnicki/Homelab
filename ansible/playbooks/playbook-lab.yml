@@ -15,4 +15,5 @@
     - security
     - docker_host
     - azure_arc
+    - nut_client
     - netdata

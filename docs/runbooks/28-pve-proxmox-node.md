@@ -1,27 +1,28 @@
-# Home Assistant Node — Proxmox VE Install
+# pve Node — Proxmox VE Install
 
-> Install **Proxmox VE** on the Dell Wyse 5070 Home Assistant node (`ha`, `192.168.2.201`)
-> — the dedicated smart-home hypervisor ([ADR 25](../decisions/25-home-assistant-thin-client.md)).
+> Install **Proxmox VE** on the Dell Wyse 5070 (`pve`, `192.168.2.201`)
+> — the fleet's virtualisation host and the dedicated smart-home hypervisor
+> ([ADR 25](../decisions/25-home-assistant-thin-client.md), [ADR 33](../decisions/33-fleet-node-hostnames.md)).
 > Tracked in [issue #103](https://github.com/jaroslaw-bagnicki/Homelab/issues/103) (child of
 > [#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68)). The hardware diagnostic is
 > already done ([research 29](../research/29-wyse5070-hardware-diagnostic.md), [issue #82](https://github.com/jaroslaw-bagnicki/Homelab/issues/82)).
 >
 > ⚠ **Netdata is out of scope here** — it is provisioned by the shared `netdata` role via
-> `playbook-ha.yml` in [runbook 29](29-deploy-netdata.md).
+> `playbook-pve.yml` in [runbook 31](31-deploy-netdata.md).
 
 ## Why
 
 ADR 25 needs Home Assistant on a **dedicated thin-client node** (good Zigbee mesh location, and
 MQTT/Zigbee2MQTT as LXCs so HA restarts don't drop the mesh). Proxmox VE is that hypervisor. It is
 also the home of the **Netdata Parent** ([ADR 27](../decisions/27-monitoring-strategy.md) / [#104](https://github.com/jaroslaw-bagnicki/Homelab/issues/104)) — a central Tier B monitoring plane
-independent of the M910q, deployed by [runbook 29](29-deploy-netdata.md).
+independent of the M910q, deployed by [runbook 31](31-deploy-netdata.md).
 
 ## What changes
 
 - **Proxmox VE** installed on the Wyse 5070; static IP **`192.168.2.201`** — the `20x` **server**
   block of [research 24](../research/24-network-topology-design.md) (this is a compute/virtualisation
   host, not an edge/ingress device).
-- **`ha`** added to the Ansible inventory; base provisioned via `ansible/playbooks/playbook-ha.yml`
+- **`pve`** added to the Ansible inventory; base provisioned via `ansible/playbooks/playbook-pve.yml`
   (`common` → `security`).
 - **Agent account — `fleetadm`** — key-only SSH ([ADR 28](../decisions/28-fleet-admin-account-and-key.md)), installed at bootstrap (full pattern in the
   [ansible README](../../ansible/README.md)).
@@ -33,7 +34,7 @@ independent of the M910q, deployed by [runbook 29](29-deploy-netdata.md).
 
 > **Execution note.** Run this runbook **interactively from the repo's dev container** (any
 > interactive session — e.g. VSCode with the GitHub Copilot extension), like runbooks 24/25. This is a
-> **physical/console install** — it cannot be delegated to a headless agent. The `ha` node is LAN-only;
+> **physical/console install** — it cannot be delegated to a headless agent. The `pve` node is LAN-only;
 > run its playbook from a machine on `192.168.2.0/24` per the `fleet-connect` skill.
 
 ## Prerequisites
@@ -65,12 +66,12 @@ DDR4 (both slots full — 16 GB means replacing both), M.2 **SATA** 128 GB (SK h
    | IP | `192.168.2.201/24` |
    | Gateway | `192.168.2.1` |
    | DNS | `1.1.1.1` — the Proxmox installer exposes a **single** DNS Server field (not two); the secondary `8.8.8.8` is added later via the node's **System → DNS** (or by the `common` role) |
-   | Hostname (FQDN) | `ha.local` — Proxmox sets OS `hostname` to `ha` (FQDN recorded in `/etc/hosts`); the `common` role keeps `ha` |
+   | Hostname (FQDN) | `pve.local` — Proxmox sets OS `hostname` to `pve` (FQDN recorded in `/etc/hosts`); the `common` role keeps `pve` |
    | Timezone | `Etc/UTC` (the `common` role enforces it) |
 
-   > **Single DNS field.** The installer's network screen accepts **one** DNS server only — don't try to enter `1.1.1.1, 8.8.8.8` (it will reject the value as invalid). Enter just `1.1.1.1`; add `8.8.8.8` as a secondary via **Node `ha` → System → DNS**. A single resolver is fine for this host.
+   > **Single DNS field.** The installer's network screen accepts **one** DNS server only — don't try to enter `1.1.1.1, 8.8.8.8` (it will reject the value as invalid). Enter just `1.1.1.1`; add `8.8.8.8` as a secondary via **Node `pve` → System → DNS**. A single resolver is fine for this host.
 
-   > `ha.local` resolves via Avahi mDNS; `ha.home` is the planned OPNsense domain ([ADR 24](../decisions/24-edge-ingress-appliance.md)) — revisit when OPNsense lands.
+   > `pve.local` resolves via Avahi mDNS; `pve.home` is the planned OPNsense domain ([ADR 24](../decisions/24-edge-ingress-appliance.md)) — revisit when OPNsense lands.
 
 4. Set a **strong root password** → **Keeper**. This is the breaking-glass account (Proxmox web UI
    admin + console).
@@ -84,7 +85,7 @@ DDR4 (both slots full — 16 GB means replacing both), M.2 **SATA** 128 GB (SK h
 7. Proxmox web UI: **https://192.168.2.201:8006** → log in as `root` (Keeper).
 
 > **Future (optional):** once OPNsense `.home` DNS lands ([#65](https://github.com/jaroslaw-bagnicki/Homelab/issues/65)/[#81](https://github.com/jaroslaw-bagnicki/Homelab/issues/81) · [#96](https://github.com/jaroslaw-bagnicki/Homelab/issues/96)), the Edge Caddy can alias
-> `http://ha.home` → `https://ha:8006` for a portless URL. Not needed here — direct `:8006` access is used.
+> `http://pve.home` → `https://pve:8006` for a portless URL. Not needed here — direct `:8006` access is used.
 
 > **Proxmox reality vs runbook 25:** Proxmox VE has **no "create user" step** — `root` is the only
 > built-in admin (console + web UI). There is no separate personal account like the Ubuntu installer's.
@@ -97,7 +98,7 @@ Proxmox VE is free and fully functional **without a licence** — a subscription
 `pve-enterprise` APT repo and commercial support. A fresh install enables the **enterprise** repos by
 default, which error on `apt update` without a key, so switch to the free **no-subscription** repo:
 
-1. Node `ha` → **Updates → Repositories**.
+1. Node `pve` → **Updates → Repositories**.
 2. **Disable** `pve-enterprise` — and `ceph-squid` too (the enterprise Ceph repo; unused on this
    single-node host, and it will otherwise throw the same subscription error on `apt update`).
 3. **Add → No-Subscription** — it auto-selects the correct Debian codename (Proxmox VE 9 = Debian 13 *trixie*).
@@ -154,22 +155,29 @@ From the **LAN workstation** (per `fleet-connect`), with the fleet key loaded:
 
 ```powershell
 chmod 755 /workspaces/Homelab /workspaces/Homelab/ansible   # world-writable fix
-ansible-playbook ansible/playbooks/playbook-ha.yml --diff
+ansible-playbook ansible/playbooks/playbook-pve.yml --diff
 ```
 
-`playbook-ha.yml` runs `common → security`:
-- **`common`** — hostname `ha`, `Etc/UTC`, Avahi (`ha.local`, `common_enable_avahi: true`), and re-arms
+`playbook-pve.yml` runs `common → security`:
+- **`common`** — hostname `pve`, `Etc/UTC`, Avahi (`pve.local`, `common_enable_avahi: true`), and re-arms
   the fleet key on `fleetadm` ([ADR 28](../decisions/28-fleet-admin-account-and-key.md)). Time sync is left to Proxmox's **`chrony`**.
 - **`security`** — UFW default-deny + allow from `192.168.2.0/24`: SSH `22` and Proxmox UI **`8006`**
   (`security_ufw_allow_tcp_ports`), fail2ban, sshd key-only hardening (LAN password auth applies to
   **non-root** accounts only — `root` SSH stays key-only via `PermitRootLogin prohibit-password`).
+
+> **Proxmox node name.** The `common` role manages the **OS** hostname (`/etc/hostname`, `/etc/hosts`),
+> and Proxmox derives its **node name** from that hostname — so a renamed host must also move
+> `/etc/pve/nodes/<old>` to `<new>`, then run `pvecm updatecerts -f` and restart
+> `pvedaemon`/`pveproxy`/`pvestatd`. Skip that and `pct`/`qm` look for guest configs under the old
+> name (`pct status` → *"nodes/\<name\>/lxc/… does not exist"*) and the API/UI have no node
+> certificate. A from-scratch install (this runbook) picks up `pve` directly.
 
 > **Time sync.** The `common` role gathers `service_facts` and, if `chrony.service` is **running**,
 > manages `chrony`; otherwise it manages the standard `systemd-timesyncd`. This reads the **actual
 > runtime state**, not what's installed — so a host running `chrony` (e.g. Proxmox VE) is handled
 > correctly, while Debian/Ubuntu hosts stay on `systemd-timesyncd`.
 
-> **Netdata** is provisioned separately by the shared `netdata` role — see [runbook 29](29-deploy-netdata.md).
+> **Netdata** is provisioned separately by the shared `netdata` role — see [runbook 31](31-deploy-netdata.md).
 
 ## 5. Storage — reclaim the free VG space (optional)
 
@@ -194,7 +202,7 @@ lvextend -l +100%FREE /dev/pve/data   # local-lvm → ~68 GiB; `vgs` VFree → 0
 - [x] §2 `no-subscription` repo enabled; `apt update && apt dist-upgrade` succeeds
 - [x] §3 `fleetadm` key-only SSH works; `sudo -n whoami` → root
 - [x] §4 `common` + `security` applied cleanly (idempotent — second run = 0 changed)
-- [x] UFW active; SSH + 8006 allowed from LAN; `ha.local` resolves
+- [x] UFW active; SSH + 8006 allowed from LAN; `pve.local` resolves
 - [x] §5 storage: free VG space reclaimed into `local-lvm` (optional)
 
 ## References

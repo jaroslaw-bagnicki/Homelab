@@ -7,18 +7,18 @@
 > automations. A short outage should become a non-event; a long one should shut the lab
 > down in order instead of killing it.
 
-**Status**: 📋 Planned — unit acquired, arriving 2026-09-12 (model to be recorded on arrival); implementation tracked in #111  
+**Status**: 🔨 Implementing — unit arrived 2026-09-12 (Green Cell **UPSLM600**, USB `0665:5161`); decisions recorded in [ADR 30](../decisions/30-ups-nut-graceful-shutdown.md), implementation tracked in #111  
 **Date**: 2026-09-10  
 **Source**: [Gemini — Green Cell UPSLM360 spec + homelab fit](https://gemini.google.com/share/fd9149b0c95e) (2026-09-08) · [Gemini — Green Cell PowerProof 1500VA + NUT configuration](https://gemini.google.com/share/65989fbedc98) (2026-08-20)  
-**Related**: [Idea 05](05-home-assistant-thin-client.md) / [research 26](../research/26-home-assistant-thin-client.md) / [ADR 25](../decisions/25-home-assistant-thin-client.md) (HA node — where NUT would live) · [Idea 07](07-opnsense-futro-s930.md) (OPNsense router — adds a battery-backed load) · [Idea 06](06-homelab-energy-monitoring.md) / [research 27](../research/27-zigbee-energy-monitoring.md) (power telemetry) · [ADR 22](../decisions/22-k3s-arc-homelab.md) (k3s) · [ADR 23](../decisions/23-nas-on-ml110.md) (OMV NAS)
+**Related**: [Idea 05](05-home-assistant-thin-client.md) / [research 26](../research/26-home-assistant-thin-client.md) / [ADR 25](../decisions/25-home-assistant-thin-client.md) (HA OS VM — NUT telemetry consumer; the server runs in LXC 213 on `pve`) · [Idea 07](07-opnsense-futro-s930.md) (OPNsense router — adds a battery-backed load) · [Idea 06](06-homelab-energy-monitoring.md) / [research 27](../research/27-zigbee-energy-monitoring.md) (power telemetry) · [ADR 22](../decisions/22-k3s-arc-homelab.md) (k3s) · [ADR 29](../decisions/29-nas-backup-target-beetle-m3-omv.md) (OMV NAS)
 
 ---
 
 ## Context
 
-The lab is now a **multi-node fleet on one power strip** — M910q (k3s), ML110 OMV NAS +
-Beetle NAS, Wyse 3040 edge ingress, Wyse 5070 Home Assistant node. Nothing protects it from
-a brownout or a plug pulled by accident, and an unclean stop is exactly the wrong outcome for
+The lab is now a **multi-node fleet across two power strips** — M910q (k3s), Beetle NAS,
+Wyse 3040 edge ingress, Wyse 5070 Home Assistant node. Nothing protects it from a brownout or
+a plug pulled by accident, and an unclean stop is exactly the wrong outcome for
 - the **OMV NAS** (mdadm RAID1 + SMB/NFS exports),
 - the **Proxmox VE host** (VMs/LXC),
 - and **k3s** (etcd/containerd state).
@@ -101,20 +101,23 @@ either
 
 **Decision direction from the threads: the NUT server belongs on the Home Assistant node —
 the Wyse 5070 running Proxmox VE** (`192.168.2.201`, [ADR 25](../decisions/25-home-assistant-thin-client.md)),
-installed **host-native on the PVE Debian base**, with the UPS USB cable plugged into it.
+running the NUT server in a dedicated unprivileged **LXC 213** (`192.168.2.213`), with the UPS USB cable plugged into it.
 
 ```
                  [ Green Cell UPS ]
                         │ USB
                         ▼
         [ Wyse 5070 · Proxmox VE · 192.168.2.201 ]
-        nut-server + nut-client  (MODE=netserver, :3493)
+        nut-client only (upsmon · primary)
+                        │
+        [ LXC 213 · nut · 192.168.2.213 ]
+        nutdrv_qx + upsd  (:3493)
                         │ LAN
-        ┌───────────────┼───────────────┬───────────────┬───────────────┐
-        ▼               ▼               ▼               ▼               ▼
-   [ M910q ]      [ OMV NAS ]    [ Beetle NAS ]  [ Wyse 3040 ]  [ Futro S930 ]
-   netclient      netclient      netclient       netclient      netclient
-   (k3s)          (ML110)        (Unraid)        (edge)         (OPNsense)
+        ┌───────────────┬───────────────┬───────────────┐
+        ▼               ▼               ▼               ▼
+   [ M910q ]      [ Beetle NAS ]   [ Wyse 3040 ]  [ Futro S930 ]
+   netclient      netclient        netclient      netclient
+   (k3s)          (OMV)            (edge)         (OPNsense)
 ```
 
 **Why the PVE host and not k8s (M910q):**
@@ -133,13 +136,14 @@ host vanilla and folds NUT config into VM/LXC backups, at the cost of medium set
 complexity: USB passthrough in `/etc/pve/lxc/<id>.conf` (e.g.
 `lxc.cgroup2.devices.allow: c 189:* rwm` + a `dev/bus/usb/001/002` bind mount) and a **NUT
 client on the PVE host** (or SSH from the LXC) to actually power the hypervisor off, because
-an unprivileged container cannot shut down its own host. Verdict: **host-native is the
-simpler default**; LXC is a valid refinement for repo-purists.
+an unprivileged container cannot shut down its own host. Verdict: **LXC is the chosen route** ([ADR 30](../decisions/30-ups-nut-graceful-shutdown.md)) — it
+keeps the PVE base vanilla, at the cost of a host-side `upsmon`, the USB passthrough and its udev
+permission step.
 
 ## Home Assistant integration
 
 With HAOS running as a VM on the same Proxmox host, Home Assistant connects to the NUT
-server over the LAN via its **NUT integration** (`192.168.2.201:3493`, `upsmon_user`
+server over the LAN via its **NUT integration** (`192.168.2.213:3493`, `upsmon-fleet`
 credentials) — no USB passthrough into the VM, no add-on needed. Expected entities:
 
 - `sensor.ups_battery_charge` — battery %
@@ -165,8 +169,7 @@ Automation direction (dashboard + notifications first, escalation later):
 | **Green Cell PowerProof 1500VA/900W** | **Recommended (runtime)** | 60–90 min on the fleet's idle load, 900 W; ~150 PLN more, louder fan |
 | **Pure-sine UPS** (GC Pure Power / CyberPower PFC) | Only if Beetle/NAS/rack on battery | Needed for active-PFC ATX supplies; ~800–1200 PLN — revisit if the test fails |
 | **NUT server in k8s** (M910q) | Rejected | USB device-plugin + dependency on cluster health; shutdown orchestration spills into API/SSH hacks |
-| **NUT server in LXC** (on PVE) | Optional | Keeps PVE vanilla, but needs USB passthrough + a host-side client to power off the hypervisor |
-| **`apcupsd` / vendor GC app** | Rejected | Standard NUT drives all nodes (server + clients) and integrates with Home Assistant |
+| **NUT server in LXC** (on `pve`) | Optional | Keeps Proxmox VE vanilla, but needs USB passthrough + a host-side client to power off the hypervisor |
 | Charging phones/peripherals from UPS outlets | Avoid | Wastes battery runtime that belongs to the servers |
 
 ## Open questions
@@ -178,7 +181,7 @@ Automation direction (dashboard + notifications first, escalation later):
 3. **Which USB controller is in the actual unit?** Verify with `lsusb` (ID should be
    `0665:5161`, `1386:0001` or `0f10:0001`) and confirm `nutdrv_qx` attaches before
    committing to the driver choice.
-4. **NUT server host-native or LXC?** Host-native is the simpler default; LXC needs
+4. ~~**NUT server host-native or LXC?**~~ **Settled — LXC 213** ([ADR 30](../decisions/30-ups-nut-graceful-shutdown.md)); for reference, host-native would have been simpler, LXC needs
    passthrough + host-side shutdown decision.
 5. **Shutdown choreography across the fleet** — what order do M910q (k3s), OMV NAS, Beetle,
    edge and the **Futro S930 router** follow, and does k3s need a drain/cordon step before
@@ -192,7 +195,7 @@ Automation direction (dashboard + notifications first, escalation later):
 
 ## Lifecycle
 
-🧠 **Idea** → 📋 **Planned** (model chosen + ADR in progress) → 🔨 **Implementing** → ✅ **Done**.
+🧠 **Idea** → 📋 **Planned** (scoped and decided, not started) → 🔨 **Implementing** → 🚧 **On Hold** (superseded, retiring, or blocked) → ✅ **Done**.
 Expect a decision (this idea → ADR + runbook) before any purchase: the model choice, the
 modified-vs-pure-sine call, and the NUT placement are the three things that must settle
 first. Cross-links to [idea 05](05-home-assistant-thin-client.md) (host) and
@@ -202,7 +205,7 @@ first. Cross-links to [idea 05](05-home-assistant-thin-client.md) (host) and
 
 - [Gemini — Green Cell UPSLM360: specyfikacja i zastosowanie](https://gemini.google.com/share/fd9149b0c95e) (2026-09-08) — model specs, homelab fit, NUT compatibility, UPSLM360 vs UPSLM600, workstation load impact
 - [Gemini — Green Cell UPS 1500VA: specyfikacja i ograniczenia](https://gemini.google.com/share/65989fbedc98) (2026-08-20) — PowerProof 1500VA specs, NUT master/slave architecture, NUT on Proxmox vs k8s vs LXC
-- [Idea 05 — Home Assistant on a thin client](05-home-assistant-thin-client.md) · [research 26](../research/26-home-assistant-thin-client.md) · [ADR 25](../decisions/25-home-assistant-thin-client.md) — the node that would host the NUT server
+- [Idea 05 — Home Assistant on a thin client](05-home-assistant-thin-client.md) · [research 26](../research/26-home-assistant-thin-client.md) · [ADR 25](../decisions/25-home-assistant-thin-client.md) — the node that runs the NUT server in LXC 213
 - [Idea 06 — Homelab energy monitoring](06-homelab-energy-monitoring.md) · [research 27](../research/27-zigbee-energy-monitoring.md) · [ADR 26](../decisions/26-zigbee-energy-monitoring.md) — per-device power telemetry
-- [ADR 22 — k3s + Azure Arc](../decisions/22-k3s-arc-homelab.md) · [ADR 23 — NAS on the ML110](../decisions/23-nas-on-ml110.md) · [ADR 27 — monitoring strategy](../decisions/27-monitoring-strategy.md)
+- [ADR 22 — k3s + Azure Arc](../decisions/22-k3s-arc-homelab.md) · [ADR 29 — NAS backup target on the Beetle M-III](../decisions/29-nas-backup-target-beetle-m3-omv.md) · [ADR 27 — monitoring strategy](../decisions/27-monitoring-strategy.md)
 - [Network UPS Tools (NUT)](https://networkupstools.org/) — `nutdrv_qx` driver, `upsd`/`upsmon`

@@ -6,4 +6,5 @@
     - common
     - security
     - edge_host
+    - nut_client
     - netdata
