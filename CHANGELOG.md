@@ -15,7 +15,7 @@ Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month 
 
 - **(docs)** Add ADR 32 — no hosted CI — [ADR 32](docs/decisions/32-no-hosted-ci.md)
 - **(docs)** Add the `quality-assessment` prompt and the first repo assessment — [report](docs/reports/260913-quality-assessment.md)
-- **(feat)** UPS graceful shutdown via **NUT** — LXC 213 server + `nut_client` fleet clients — [runbook 30](docs/runbooks/30-deploy-nut-clients.md)
+- **(feat)** UPS graceful shutdown via **NUT** — LXC 213 server, `nut_client` fleet clients, and a real-outage drill proving the choreography (52 min 53 s to `LB` at 80 W) — [report](docs/reports/260919-nut-shutdown-drill.md)
 - **(docs)** Re-cut the static address scheme — `20x` servers, `21x` guests, **VMID = last octet** — [ADR 31](docs/decisions/31-static-address-scheme.md)
 - **(docs)** Wincor Beetle M-III is the NAS successor on OMV, superseding the ML110 — [ADR 29](docs/decisions/29-nas-backup-target-beetle-m3-omv.md)
 - **(docs)** Make `overview.md` "What's Next" a state-grouped board with a `Not Scheduled` parking lot — [overview](docs/overview.md)

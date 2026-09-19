@@ -520,8 +520,12 @@ never traverses the host's UFW chains — UFW here is host-management-plane only
    - **Per-node test:** on a secondary, point `SHUTDOWNCMD` at a benign command for the test
      (e.g. `logger "NUT drill"`), then `upsmon -c fsd` — a secondary's `-c fsd` affects **only that
      node**, so this exercises the local shutdown path without stopping the machine.
-   - **Full drill:** `upsmon -c fsd` on the **Proxmox primary** is the fleet-wide acceptance test —
+   - **Full drill:** `upsmon -c fsd` on the **Proxmox primary** is the fleet-wide rehearsal —
      it sets FSD on the UPS and takes the whole lab down, so schedule it.
+   - **Real-outage drill (the acceptance test):** cut the **UPS mains input** with the fleet loaded and
+     let the pack drain to `LB`, so the trigger is genuine battery state rather than a forced flag.
+     Restore the mains as soon as the last node is down — with `allow_killpower 0` the UPS keeps strip 2
+     alive until the pack dies, so leaving it drains the battery and takes the LAN down with it.
    This is also where §6's ordering claim gets verified: secondaries stop, then the host after
    `FINALDELAY`.
 5. **Modified-sine check** — the Beetle's internal supply is the one real risk (§0), and active-PFC
@@ -544,7 +548,28 @@ never traverses the host's UFW chains — UFW here is host-management-plane only
    remaining 4 min 12 s without moving a hundredth of a volt. Lead-acid voltage is flat mid-discharge, so
    there is no slope to extrapolate from; the steep part exists only in the final minutes before `LB`.
    A real runtime figure therefore needs a ride **to `LB`**, which only becomes safe once the shutdown is
-   automatic — the DR-style test in [#117](https://github.com/jaroslaw-bagnicki/Homelab/issues/117).
+   automatic — the DR-style test in [#117](https://github.com/jaroslaw-bagnicki/Homelab/issues/117),
+   **run 2026-09-19** (result below).
+
+### 2026-09-19 real-outage drill — measured result
+
+Full planned fleet at **~80 W** (inline meter), mains pulled with every node loaded. Full write-up:
+[report](../reports/260919-nut-shutdown-drill.md).
+
+| Measurement | Value |
+|---|---|
+| Runtime to `LB` | **52 min 53 s** — the first real figure; the 24.9 V plateau revealed nothing beforehand |
+| `LB` threshold | 21.53 V under load — ~0.7 V above the driver's declared `battery.voltage.low` |
+| `OB` propagation | ≤ 7 s to all three clients |
+| FSD set by the primary | 11:29:43 (`upsd` log) |
+| Secondary stop | `lab` reached `poweroff.target` ≈5 s after FSD |
+| Primary stop | 30 s after its FSD decision — `FINALDELAY 30` honoured precisely |
+| Guest order | Proxmox stopped CT 213 during that shutdown, then completed |
+
+Two operational findings: **`lab` does not auto-start on AC restore** (it needed a manual power press,
+unlike `ha`/`edge`), and **`edge`'s own shutdown sequence is not recoverable** afterwards — its journal
+is volatile, so set `Storage=persistent` for the drill window or capture on the shutdown path instead.
+The Beetle was powered but has **no OS yet**, so this drill produced **no modified-sine verdict**.
 
 ## Verification Checklist
 
@@ -560,8 +585,8 @@ runbook completes on its own; the client rollout (§4/§5) is verified by
 - [x] §3 both monitor passwords in AKV (`nut-upsmon-primary-password`, `nut-upsmon-secondary-password`) and substituted into the files; `/etc/nut` files `640 root:nut`
 - [x] §3 `upsd` reloaded after the accounts were written (`systemctl reload nut-server`) — a daemon that predates the edit still serves the old user list
 - [x] §7 on-battery ride performed from the dev container (2026-09-13, 5.5 min, fleet attached) — `OB`/`OL` propagate promptly; runtime **not** derivable by extrapolation
-- [ ] §7 on-battery propagation confirmed on all three nodes (host, `lab`, `edge`); `upsmon -c fsd` drill done — **[#117]**
-- [ ] §7 Beetle tested on battery at **idle and under spin-up** (or moved off battery outlets) — **[#117]**
+- [x] §7 on-battery propagation confirmed on all three nodes (host, `lab`, `edge`); fleet-wide drill done — **2026-09-19** real-outage run (stronger than `upsmon -c fsd`: genuine battery trigger), FSD set by the primary, ordering proven — [report](../reports/260919-nut-shutdown-drill.md) — **[#117]**
+- [ ] §7 Beetle tested on battery at **idle and under spin-up** (or moved off battery outlets) — **[#117]**; **not** covered by the 2026-09-19 drill (the Beetle is powered but has no OS yet)
 
 ## Follow-ups
 
