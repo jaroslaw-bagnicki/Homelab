@@ -13,7 +13,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | **OMV NAS** | OpenMediaVault server, backup target | HP ProLiant ML110 G5 | Pentium E2160 (2C/2T, 65 W) | 4 GB DDR2 | Goodram 120 GB SSD + RAID1 arrays | 1× GbE BCM5722 | ✅ |
 | **Beetle NAS** | OMV NAS backup target (successor to ML110) | Wincor Beetle M-III | Pentium G4400 (2C/2T, 3.3 GHz) | 8 GB DDR4 (1×, 1 free slot) | SanDisk 128 GB SSD + 2× Seagate 1 TB 2.5" | 1× GbE Intel I219-V | 🔨 |
 | **Edge Ingress** | public ingress | Dell Wyse 3040 | Atom x5-Z8350 (2 W TDP) | 2 GB DDR3L | 8 GB eMMC | 1× GbE | 🔨 |
-| **Home Assistant** | smart home node | Dell Wyse 5070 | Celeron J4105 (10 W) | 8 GB DDR4 (2× 4 GB) | M.2 SATA SK hynix 128 GB | 1× GbE + WiFi | 🔨 |
+| **Proxmox VE** | virtualisation host — smart-home + always-on services | Dell Wyse 5070 | Celeron J4105 (10 W) | 8 GB DDR4 (2× 4 GB) | M.2 SATA SK hynix 128 GB | 1× GbE + WiFi | 🔨 |
 | **OPNsense Router** | LAN edge router / firewall | Fujitsu Futro S930 | GX-424CC (4C/4T, 25 W TDP) | 4 GB DDR3 (1×, 1 free slot) | Innodisk 7.99 GB mSATA | 3× GbE (BCM5720 2× + Realtek 1×) | 📋 |
 | **LLM server** | local LLM inference | Minisforum AI X1 | Ryzen 7 255 (Hawk Point, 45 W cTDP) | 64–96 GB DDR5 | NVMe | 1× GbE | 🧠 (Phase 2) |
 | **Cloudlab VPS** | staging / playground | Contabo Cloud VPS 10 | 4 vCPU (cloud — no TDP) | 8 GB | 75 GB NVMe | public IP | ✅ |
@@ -78,7 +78,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Role | Dedicated public ingress — bare-metal `cloudflared` + Caddy (ADR 24) |
 | Docs | [runbook 24](runbooks/24-edge-appliance.md) · [ADR 24](decisions/24-edge-ingress-appliance.md) · [research 25](research/25-edge-ingress-sbc.md) · [idea 04](ideas/04-edge-device-tunnel-caddy.md) |
 
-### Home Assistant — Dell Wyse 5070
+### Proxmox VE — Dell Wyse 5070
 
 | Item | Spec |
 |---|---|
@@ -88,11 +88,11 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Network | Realtek RTL8111/8168 GbE (`enp1s0`, MAC `c0:25:a5:65:02:67`) · Intel CNVi WiFi + BT (`wlp0s12f0`, MAC `d0:3c:1f:cb:76:9a`) |
 | Zigbee | Sonoff Zigbee 3.0 USB Dongle Plus (ZBDongle-P / CC2652P) — USB coordinator for LXC 212 passthrough (by-id pattern, research 26 §4) |
 | Firmware | BIOS 1.34.0 (2024-11-08) · board 060J9C · SKU `080C` · SN `16474B3` |
-| Role | Home Assistant OS VM on Proxmox VE + Mosquitto/Zigbee2MQTT LXCs (ADR 25) |
+| Role | Fleet virtualisation host — Home Assistant OS VM + Mosquitto/Zigbee2MQTT/NUT LXCs, Netdata Parent to follow (ADR 25, ADR 27, ADR 30) |
 | Guests | VM 210 HA OS `192.168.2.210` · LXC 211 Mosquitto `192.168.2.211` · LXC 212 Zigbee2MQTT `192.168.2.212` · LXC 213 NUT `192.168.2.213` — VMID = last octet, [ADR 31](decisions/31-static-address-scheme.md) |
 | Status | Proxmox VE **9.2.2** installed at `192.168.2.201` + base provisioned (runbook 28, 2026-09-06); **LXC 213 (NUT) delivered** (ADR 30, runbook 29 §1–§3, [#115](https://github.com/jaroslaw-bagnicki/Homelab/issues/115)); HA OS VM + LXC 211/212 still pending ([#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68) / [#85](https://github.com/jaroslaw-bagnicki/Homelab/issues/85)) |
 | Acquisition | 2026-08-19 — hardware diagnostic done ([research 29](research/29-wyse5070-hardware-diagnostic.md)); SK hynix SSD + Sonoff ZBDongle-P acquired |
-| Docs | [idea 05](ideas/05-home-assistant-thin-client.md) · [ADR 25](decisions/25-home-assistant-thin-client.md) · [research 26](research/26-home-assistant-thin-client.md) · [research 29](research/29-wyse5070-hardware-diagnostic.md) · [runbook 28](runbooks/28-ha-proxmox-node.md) |
+| Docs | [idea 05](ideas/05-home-assistant-thin-client.md) · [ADR 25](decisions/25-home-assistant-thin-client.md) · [ADR 33](decisions/33-fleet-node-hostnames.md) · [research 26](research/26-home-assistant-thin-client.md) · [research 29](research/29-wyse5070-hardware-diagnostic.md) · [runbook 28](runbooks/28-pve-proxmox-node.md) |
 
 ### OPNsense Router — Fujitsu Futro S930 (planned)
 
