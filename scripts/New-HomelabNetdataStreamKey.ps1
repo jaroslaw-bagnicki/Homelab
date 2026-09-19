@@ -6,7 +6,16 @@ param(
 $vault = "homelab-bysxdb-kv"
 $secretName = "netdata-stream-api-key"
 
-$exists = Get-AzKeyVaultSecret -VaultName $vault -Name $secretName -ErrorAction SilentlyContinue
+$exists = $null
+try {
+    $exists = Get-AzKeyVaultSecret -VaultName $vault -Name $secretName -ErrorAction Stop
+} catch {
+    $missing = $_.Exception.Message -match 'SecretNotFound|not found'
+    if (-not $missing -and $_.Exception.Response) {
+        $missing = $_.Exception.Response.StatusCode.value__ -eq 404
+    }
+    if (-not $missing) { throw }
+}
 
 if ($exists) {
     if ($Force) {

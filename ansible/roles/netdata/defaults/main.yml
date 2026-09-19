@@ -12,6 +12,14 @@ netdata_retention_time: "7d"
 netdata_retention_size: "256MiB"
 netdata_bind: "127.0.0.1"
 netdata_port: 19999
+# Serve listeners over TLS. The parent sets this, plus a per-listener `bind to` spec
+# (e.g. `192.168.2.201:19999=dashboard^SSL=force`) so the dashboard is HTTPS-only.
+netdata_tls: false
+netdata_tls_cert: /etc/netdata/ssl/cert.pem
+netdata_tls_key: /etc/netdata/ssl/key.pem
+netdata_tls_days: 3650
+# Child only: append `:SSL` to the stream destination (required when the parent forces TLS).
+netdata_stream_ssl: false
 # Parent runs on a Proxmox host — grants the netdata user read access to /etc/pve.
 netdata_proxmox_host: false
 # Re-run the kickstart installer to update an existing agent. Opt-in: set true, run, set false.

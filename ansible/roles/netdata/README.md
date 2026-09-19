@@ -14,10 +14,10 @@ deployed by [runbook 31](../../../docs/runbooks/31-deploy-netdata.md); tracked i
 
 ## Roles
 
-| Hosts | `netdata_role` | Storage | Web bind | Streaming |
+| Hosts | `netdata_role` | Storage | Listeners | Streaming |
 |---|---|---|---|---|
-| `pve` | `parent` | `dbengine` | `0.0.0.0:19999` (UFW LAN-only) | accepts children on the shared key |
-| `lab`, `edge` | `child` | `dbengine` (Lab) · `ram` (Edge) | `127.0.0.1` | streams to `192.168.2.201:19999` |
+| `pve` | `parent` | `dbengine` | `:19999=dashboard^SSL=force` · `:19996=streaming^SSL=force` (LAN-bound) | accepts **TLS** streams on the shared key |
+| `lab`, `edge` | `child` | `dbengine` (Lab) · `ram` (Edge) | `127.0.0.1:19999` (loopback, plain HTTP) | streams to `192.168.2.201:19996:SSL` |
 
 - **The Parent runs host-native on the `pve` Proxmox host** — not an LXC/VM — so it can read VM/CT cgroups and `/etc/pve` names; the overrides live in [`host_vars/pve.yml`](../../host_vars/pve.yml).
 - **Edge uses `netdata_storage: ram`** — no `dbengine` on the eMMC (ADR 24/27).
@@ -33,8 +33,11 @@ deployed by [runbook 31](../../../docs/runbooks/31-deploy-netdata.md); tracked i
 | `netdata_storage` | `dbengine` | `ram` on eMMC-only nodes. |
 | `netdata_retention_time` | `7d` | Per-tier retention target (`dbengine tier N retention time`); `dbengine` only. |
 | `netdata_retention_size` | `256MiB` | Per-tier size cap (`dbengine tier N retention size`); the parent sets `1GiB`. |
-| `netdata_bind` | `127.0.0.1` | Web bind address; the parent uses `0.0.0.0`. |
-| `netdata_port` | `19999` | Web/streaming port. |
+| `netdata_bind` | `127.0.0.1` | `[web] bind to` — a plain address, or Netdata's per-listener spec (`<ip>:<port>=<service>^SSL=force`); the parent lists two TLS-only listeners. |
+| `netdata_port` | `19999` | Default web port. |
+| `netdata_tls` | `false` | Serve listeners over TLS and write the `[web] ssl` paths; the parent sets `true`. |
+| `netdata_tls_cert` / `netdata_tls_key` | `/etc/netdata/ssl/{cert,key}.pem` | Self-signed certificate, generated once on the node when absent. |
+| `netdata_stream_ssl` | `false` | Child only: append `:SSL` to the stream destination. |
 | `netdata_proxmox_host` | `false` | Grants the `netdata` user `/etc/pve` read (parent on Proxmox). |
 | `netdata_upgrade` | `false` | `true` re-runs the kickstart installer (`--reinstall`) for one run. |
 
@@ -55,6 +58,17 @@ every streaming child — so the controller needs `AZURE_CLIENT_ID` / `AZURE_CLI
   streaming really converges to standalone.
 - A converged fleet re-runs with `changed=0` — except when `netdata_upgrade: true` is passed
   deliberately, which re-installs on purpose.
+
+## Transport security
+
+- **Dashboard — HTTPS only.** The parent's `19999` listener carries `^SSL=force`, so plain HTTP is
+  refused. The certificate is self-signed and generated on the node, so browsers warn.
+- **Streaming — TLS only.** A dedicated `19996` listener also forces TLS; children append `:SSL` to
+  the destination. The parent refuses plaintext streams.
+- **Accepted residual (ADR 27):** the certificate is self-signed and children do **not** verify it
+  (`ssl skip certificate verification = yes`), so the hop is encrypted against passive capture but
+  not against an active MITM — pinning the parent certificate via `CAfile` is the tracked follow-up.
+  The dashboard itself is still **unauthenticated**; UFW limits it to the LAN.
 
 ## Hosts
 

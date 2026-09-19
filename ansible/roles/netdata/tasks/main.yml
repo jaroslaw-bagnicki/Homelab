@@ -106,12 +106,67 @@
     - 2
   notify: Restart netdata
 
+- name: Ensure the Netdata SSL directory exists
+  when: netdata_tls | bool
+  ansible.builtin.file:
+    path: "{{ netdata_tls_cert | dirname }}"
+    state: directory
+    owner: netdata
+    group: netdata
+    mode: "0750"
+
+- name: Generate a self-signed certificate for the Netdata listeners
+  when: netdata_tls | bool
+  ansible.builtin.command:
+    cmd: >-
+      openssl req -newkey rsa:2048 -nodes -sha512 -x509 -days {{ netdata_tls_days }}
+      -keyout {{ netdata_tls_key }} -out {{ netdata_tls_cert }}
+      -subj /CN={{ inventory_hostname }}
+    creates: "{{ netdata_tls_cert }}"
+  notify: Restart netdata
+
+- name: Set the Netdata TLS key permissions
+  when: netdata_tls | bool
+  ansible.builtin.file:
+    path: "{{ netdata_tls_key }}"
+    owner: root
+    group: netdata
+    mode: "0640"
+
+- name: Set the Netdata TLS certificate permissions
+  when: netdata_tls | bool
+  ansible.builtin.file:
+    path: "{{ netdata_tls_cert }}"
+    owner: root
+    group: netdata
+    mode: "0644"
+
 - name: Configure Netdata web bind address
   community.general.ini_file:
     path: /etc/netdata/netdata.conf
     section: web
     option: bind to
     value: "{{ netdata_bind }}"
+    mode: "0644"
+  notify: Restart netdata
+
+- name: Configure Netdata web TLS certificate
+  when: netdata_tls | bool
+  community.general.ini_file:
+    path: /etc/netdata/netdata.conf
+    section: web
+    option: ssl certificate
+    value: "{{ netdata_tls_cert }}"
+    mode: "0644"
+  notify: Restart netdata
+
+- name: Configure Netdata web TLS key
+  when: netdata_tls | bool
+  community.general.ini_file:
+    path: /etc/netdata/netdata.conf
+    section: web
+    option: ssl key
+    value: "{{ netdata_tls_key }}"
     mode: "0644"
   notify: Restart netdata
 
