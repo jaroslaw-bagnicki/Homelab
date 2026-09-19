@@ -2,7 +2,8 @@
 
 > Roll the **NUT client** (`nut-client` + `upsmon`) out to `pve`, `lab`, and `edge` with the
 > `nut_client` base role, so every node stops itself in order when the shared UPS battery runs down.
-> The role is applied by the base playbooks (`playbook-pve/lab/edge.yml`); the NUT **server**
+> The role is applied by the base playbooks (`playbook-pve.yml`, `playbook-lab.yml`,
+> `playbook-edge.yml`); the NUT **server**
 > (LXC 213, `.213`, `nutdrv_qx`) is built by [runbook 29](29-nut-ups-shutdown.md) §1–§3. This
 > runbook is the client half, tracked in
 > [issue #116](https://github.com/jaroslaw-bagnicki/Homelab/issues/116) under

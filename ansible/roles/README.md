@@ -12,7 +12,7 @@ Workloads are a separate concern: self-contained recipes run on demand (see [`..
 | `docker_host` | Docker Engine from the official repository | `playbook.yml`, `playbook-lab.yml` | [README](docker_host/README.md) |
 | `docker_services` | Portainer, Caddy, cloudflared, shared Docker networks | `playbook.yml` | [README](docker_services/README.md) |
 | `edge_host` | Edge appliance extras (unattended-upgrades, journald volatile, DNS search) | `playbook-edge.yml` | [README](edge_host/README.md) |
-| `nut_client` | `nut-client` + `upsmon` fleet clients | `playbook-pve/lab/edge.yml` | [README](nut_client/README.md) |
+| `nut_client` | `nut-client` + `upsmon` fleet clients | `playbook-pve.yml`, `playbook-lab.yml`, `playbook-edge.yml` | [README](nut_client/README.md) |
 
 ---
 

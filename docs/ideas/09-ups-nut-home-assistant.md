@@ -1,7 +1,7 @@
 # Idea 09 — UPS with NUT + Home Assistant Integration
 
 > Put a **UPS** under the homelab's shared power strip and drive it with **NUT (Network
-> UPS Tools)**: a **NUT server** on the Home Assistant node reads the UPS over USB and
+> UPS Tools)**: a **NUT server** in **LXC 213** on the `pve` host reads the UPS over USB and
 > orchestrates **graceful shutdown** of every node, while a **Home Assistant NUT
 > integration** surfaces battery/status telemetry for dashboards, notifications, and
 > automations. A short outage should become a non-event; a long one should shut the lab
@@ -10,7 +10,7 @@
 **Status**: 🔨 Implementing — unit arrived 2026-09-12 (Green Cell **UPSLM600**, USB `0665:5161`); decisions recorded in [ADR 30](../decisions/30-ups-nut-graceful-shutdown.md), implementation tracked in #111  
 **Date**: 2026-09-10  
 **Source**: [Gemini — Green Cell UPSLM360 spec + homelab fit](https://gemini.google.com/share/fd9149b0c95e) (2026-09-08) · [Gemini — Green Cell PowerProof 1500VA + NUT configuration](https://gemini.google.com/share/65989fbedc98) (2026-08-20)  
-**Related**: [Idea 05](05-home-assistant-thin-client.md) / [research 26](../research/26-home-assistant-thin-client.md) / [ADR 25](../decisions/25-home-assistant-thin-client.md) (HA OS VM — where NUT would live) · [Idea 07](07-opnsense-futro-s930.md) (OPNsense router — adds a battery-backed load) · [Idea 06](06-homelab-energy-monitoring.md) / [research 27](../research/27-zigbee-energy-monitoring.md) (power telemetry) · [ADR 22](../decisions/22-k3s-arc-homelab.md) (k3s) · [ADR 29](../decisions/29-nas-backup-target-beetle-m3-omv.md) (OMV NAS)
+**Related**: [Idea 05](05-home-assistant-thin-client.md) / [research 26](../research/26-home-assistant-thin-client.md) / [ADR 25](../decisions/25-home-assistant-thin-client.md) (HA OS VM — NUT telemetry consumer; the server runs in LXC 213 on `pve`) · [Idea 07](07-opnsense-futro-s930.md) (OPNsense router — adds a battery-backed load) · [Idea 06](06-homelab-energy-monitoring.md) / [research 27](../research/27-zigbee-energy-monitoring.md) (power telemetry) · [ADR 22](../decisions/22-k3s-arc-homelab.md) (k3s) · [ADR 29](../decisions/29-nas-backup-target-beetle-m3-omv.md) (OMV NAS)
 
 ---
 
@@ -205,7 +205,7 @@ first. Cross-links to [idea 05](05-home-assistant-thin-client.md) (host) and
 
 - [Gemini — Green Cell UPSLM360: specyfikacja i zastosowanie](https://gemini.google.com/share/fd9149b0c95e) (2026-09-08) — model specs, homelab fit, NUT compatibility, UPSLM360 vs UPSLM600, workstation load impact
 - [Gemini — Green Cell UPS 1500VA: specyfikacja i ograniczenia](https://gemini.google.com/share/65989fbedc98) (2026-08-20) — PowerProof 1500VA specs, NUT master/slave architecture, NUT on Proxmox vs k8s vs LXC
-- [Idea 05 — Home Assistant on a thin client](05-home-assistant-thin-client.md) · [research 26](../research/26-home-assistant-thin-client.md) · [ADR 25](../decisions/25-home-assistant-thin-client.md) — the node that would host the NUT server
+- [Idea 05 — Home Assistant on a thin client](05-home-assistant-thin-client.md) · [research 26](../research/26-home-assistant-thin-client.md) · [ADR 25](../decisions/25-home-assistant-thin-client.md) — the `pve` host that runs the NUT server in LXC 213
 - [Idea 06 — Homelab energy monitoring](06-homelab-energy-monitoring.md) · [research 27](../research/27-zigbee-energy-monitoring.md) · [ADR 26](../decisions/26-zigbee-energy-monitoring.md) — per-device power telemetry
 - [ADR 22 — k3s + Azure Arc](../decisions/22-k3s-arc-homelab.md) · [ADR 29 — NAS backup target on the Beetle M-III](../decisions/29-nas-backup-target-beetle-m3-omv.md) · [ADR 27 — monitoring strategy](../decisions/27-monitoring-strategy.md)
 - [Network UPS Tools (NUT)](https://networkupstools.org/) — `nutdrv_qx` driver, `upsd`/`upsmon`
