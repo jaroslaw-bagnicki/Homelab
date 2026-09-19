@@ -459,8 +459,8 @@ Node-specific notes:
 - **`edge`** — 2 GB, RAM-only Netdata; `nut-client` is a rounding error next to that.
 - **The NAS (Beetle M-III), once it is up** — it runs **OMV**, which ships its **own UPS service
   that also writes `/etc/nut`**. Pick one writer: either drive it from the OMV panel or disable that
-  service and use the workload. Two writers will fight and the config drifts. OMV is not
-  Ansible-managed, so this one is manual.
+  service and configure NUT **by hand** — the `nut_client` role does not cover the NAS. Two writers
+  will fight and the config drifts. OMV is not Ansible-managed, so this one is manual.
 
 ## 6. Shutdown choreography
 

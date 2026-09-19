@@ -34,6 +34,7 @@ role. The role renders one `upsmon.conf` template; the files differ only in the 
   `AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID`.
 - [ ] `fleetadm` SSH + `sudo -n` on `ha`, `lab`, `edge`; fleet key loaded.
 - [ ] `ansible-galaxy collection install -r ansible/requirements.yml` (needs `azure.azcollection`).
+- [ ] Controller Python packages for the Key Vault lookup — `pip3 install --break-system-packages azure-identity azure-keyvault-secrets` (see [runbook 16](16-docker-services-ansible-role.md)).
 
 ## 1. Confirm the accounts and passwords exist
 
@@ -79,7 +80,8 @@ the base playbook once LXC 213 is up. This keeps a from-scratch `ha` rebuild (se
 built) from starting a fail-safe monitor with no server to reach.
 
 > Because the role fetches from Key Vault, `playbook-ha.yml`/`playbook-edge.yml` now need `AZURE_*`
-> on the controller — `playbook-lab.yml` already did.
+> and the Key Vault Python packages (`azure-identity`, `azure-keyvault-secrets`) — `playbook-lab.yml`
+> already did.
 
 ## 3. Verify
 
@@ -132,9 +134,9 @@ built) from starting a fail-safe monitor with no server to reach.
   fleet while mains is present (runbook 29 §6):
 
   ```sh
-  ssh fleetadm@192.168.2.201 systemctl stop nut-monitor
+  ssh fleetadm@192.168.2.201 sudo systemctl stop nut-monitor
   # stop/upgrade/start LXC 213, then wait for upsc ups@192.168.2.213 to answer
-  ssh fleetadm@192.168.2.201 systemctl start nut-monitor
+  ssh fleetadm@192.168.2.201 sudo systemctl start nut-monitor
   ```
 
 - **`lab`** — k3s starts and stops with the host; no drain/cordon in v1 (single node, nothing to
