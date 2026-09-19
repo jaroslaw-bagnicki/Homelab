@@ -46,8 +46,26 @@
   no_log: true
   notify: Restart nut-monitor
 
+- name: Check the NUT server is reachable
+  ansible.builtin.command:
+    cmd: upsc {{ nut_client_ups_name }}@{{ nut_client_server }}
+  register: nut_client_upsc
+  changed_when: false
+  failed_when: false
+  until: nut_client_upsc.rc == 0
+  retries: 5
+  delay: 2
+
 - name: Enable and start nut-monitor
   ansible.builtin.service:
     name: nut-monitor
     state: started
     enabled: true
+  when: nut_client_upsc.rc == 0
+
+- name: Warn when the NUT server is unreachable
+  ansible.builtin.debug:
+    msg: >-
+      NUT server {{ nut_client_server }} is unreachable — nut-client is configured but
+      nut-monitor was left stopped. Re-run this playbook once LXC 213 is up.
+  when: nut_client_upsc.rc != 0
