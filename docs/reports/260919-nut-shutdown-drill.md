@@ -77,6 +77,17 @@ Raw captures: `ha:/var/log/nut-drill-observer.log` (664 samples, 51 KB) and `edg
 
 The `edge` mirror is the only record of that node's own view, and the timeline above uses it: `on battery` at 10:36:50, `battery is low` at 11:29:42, and the post-boot `multi-user.target` plus `nut-monitor` reconnect at 12:02:35. It does **not** cover the shutdown window — the file jumps from 11:29:42 to 12:02:35. That is a limitation of the capture method (edge's journal is volatile), not a finding about the shutdown: the ordering is established from `ha`, `upsd` and `lab`, and does not depend on edge. A future drill on edge should set `Storage=persistent` for the window.
 
+`edge` raw capture (verbatim excerpt, `/var/log/nut-drill.log`):
+
+```
+2026-09-19T10:36:50+00:00 edge nut-monitor[905]: UPS ups@192.168.2.213 on battery
+2026-09-19T11:29:42+00:00 edge nut-monitor[905]: UPS ups@192.168.2.213 battery is low
+                                        [ 33-minute capture gap — see above ]
+2026-09-19T12:02:35+00:00 edge systemd[1]: Reached target multi-user.target - Multi-User System.
+2026-09-19T12:02:35+00:00 edge systemd[1]: Startup finished in 18.802s (firmware) + 12.096s (loader) + 35.117s (kernel) + 6.948s (userspace) = 1min 12.966s.
+2026-09-19T12:02:35+00:00 edge nut-monitor[902]: UPS: ups@192.168.2.213 (secondary) (power value 1)
+```
+
 ## References
 
 - [Runbook 29 — UPS graceful shutdown](../runbooks/29-nut-ups-shutdown.md) §6 choreography, §7 validation
