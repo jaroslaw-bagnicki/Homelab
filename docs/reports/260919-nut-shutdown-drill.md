@@ -34,10 +34,10 @@ The headline measurement is the runtime: **52 min 53 s on battery to `LB`** at t
 |---|---|---|
 | 10:36:43 | last sample on mains (`OL`, 27.29 V float) | observer |
 | **10:36:48** | **first `OB` sample — mains loss** | observer |
-| 10:36:50 | `lab` + `edge` log `UPS … on battery` — propagation ≈ 2–7 s | node journals |
+| 10:36:50 | `lab` + `edge` log `UPS … on battery` — propagation ≈ 2–7 s (both at 10:36:50) | `lab` journal · `edge` mirror |
 | 10:37:13 | 24.82 V / 77 % — the float→load sag, not a capacity reading | observer |
 | 10:48–11:00 | plateau 24.71 → 24.24 V (23 min in) | observer |
-| **11:29:41** | **`LB` at 21.53 V / 14 %** — after **52 min 53 s** on battery | observer, `lab` journal |
+| **11:29:41** | **`LB` at 21.53 V / 14 %** — after **52 min 53 s** on battery (per node: `lab` 11:29:41, `edge` 11:29:42, `ha` 11:29:43) | observer · `lab` journal · `edge` mirror |
 | **11:29:43** | **primary sets FSD**: `Client upsmon-host@192.168.2.201 set FSD on UPS [ups]` | `upsd` in LXC 213 |
 | 11:29:46 | `lab`: `forced shutdown in progress` → `Executing automatic power-fail shutdown` | `lab` journal |
 | 11:29:48 | `lab` reaches `poweroff.target` — **≈5 s after FSD** | `lab` journal |
@@ -49,7 +49,8 @@ The headline measurement is the runtime: **52 min 53 s on battery to `LB`** at t
 | 11:30:27–28 | CT 213 deactivated; `all VMs and CTs stopped` | `ha` journal |
 | ~11:30:30+ | `ha` off; the UPS kept strip 2 alive until the pack was exhausted | inferred |
 | ~12:00 | AC restored; `ha` + `edge` auto-start, `lab` started **manually** | wtmp, uptime |
-| 12:02:35 / 12:04:07 | `edge` / `lab` `nut-monitor` active again; all three read `OL` | nodes |
+| 12:02:35 | `edge` reaches `multi-user.target` (`Startup finished … = 1 min 12.97 s`) and its `nut-monitor` reconnects as `(secondary)` | `edge` mirror |
+| 12:04:07 | `lab`'s `nut-monitor` active again after the manual start; all three read `OL` | nodes |
 
 ## Findings
 
@@ -73,7 +74,7 @@ The headline measurement is the runtime: **52 min 53 s on battery to `LB`** at t
 
 Raw captures: `ha:/var/log/nut-drill-observer.log` (664 samples, 51 KB) and `edge:/var/log/nut-drill.log` (87 KB) are retained on the nodes as the underlying evidence, alongside `journalctl -b -1` on `ha`, `lab` and inside LXC 213. The **mechanisms** are gone — `nut-drill-observer.sh` deleted from `ha`, `nut-drill-mirror.service` disabled and removed from `edge` — so every node is back to the state its role defines; `playbook-ha.yml` / `playbook-edge.yml` would not recreate either.
 
-One capture limitation, for completeness: this drill's per-node record for **`edge`** ends at its `LB` line — the mirror's file jumps from 11:29:42 to the post-boot lines at 12:02:35. That is a limitation of the capture method (edge's journal is volatile), not a finding about the shutdown: the ordering above is established from `ha`, `upsd` and `lab`, and does not depend on edge. A future drill on edge should set `Storage=persistent` for the window.
+The `edge` mirror is the only record of that node's own view, and the timeline above uses it: `on battery` at 10:36:50, `battery is low` at 11:29:42, and the post-boot `multi-user.target` plus `nut-monitor` reconnect at 12:02:35. It does **not** cover the shutdown window — the file jumps from 11:29:42 to 12:02:35. That is a limitation of the capture method (edge's journal is volatile), not a finding about the shutdown: the ordering is established from `ha`, `upsd` and `lab`, and does not depend on edge. A future drill on edge should set `Storage=persistent` for the window.
 
 ## References
 
