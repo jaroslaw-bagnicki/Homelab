@@ -36,7 +36,8 @@ Sources named per row: **`ha`/`lab` journal** and **LXC 213 journal** are the no
 |---|---|---|
 | 10:36:43 | last sample on mains (`OL`, 27.29 V float) | observer |
 | **10:36:48** | **first `OB` sample — mains loss** | observer |
-| 10:36:50 | `lab` + `edge` log `UPS … on battery` — propagation ≈ 2–7 s (both at 10:36:50) | `lab` journal · `edge` mirror |
+| 10:36:50 | `lab`: `UPS ups@192.168.2.213 on battery` — 2 s after the `OB` sample | `lab` journal |
+| 10:36:50 | `edge`: `UPS ups@192.168.2.213 on battery` — 2 s after the `OB` sample | `edge` mirror |
 | 10:37:13 | 24.82 V / 77 % — the float→load sag, not a capacity reading | observer |
 | 10:48–11:00 | plateau 24.71 → 24.24 V (23 min in) | observer |
 | **11:29:41** | **`LB` at 21.53 V / 14 %** — after **52 min 53 s** on battery | observer |
