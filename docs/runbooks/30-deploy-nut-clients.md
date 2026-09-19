@@ -31,7 +31,9 @@ role. The role renders one `upsmon.conf` template; the files differ only in the 
   `nut-upsmon-secondary-password`
   (`scripts/New-HomelabNutUpsmonPasswords.ps1`, `-Force` to rotate).
 - [ ] Controller credentials exported for the Key Vault lookup — `AZURE_CLIENT_ID`,
-  `AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID`.
+  `AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID` — **in the same shell that runs `ansible-playbook`**.
+  The role asserts them, and a new terminal session does not inherit another session's `$env:…`
+  values, so the play aborts at the assert with the node's config left unrendered.
 - [ ] `fleetadm` SSH + `sudo -n` on `ha`, `lab`, `edge`; fleet key loaded.
 - [ ] `ansible-galaxy collection install -r ansible/requirements.yml` (needs `azure.azcollection`).
 - [ ] Controller Python packages for the Key Vault lookup — `pip3 install --break-system-packages azure-identity azure-keyvault-secrets` (see [runbook 16](16-docker-services-ansible-role.md)).
