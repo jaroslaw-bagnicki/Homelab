@@ -9,7 +9,7 @@
 
 ## Executive summary
 
-The choreography **holds**. Runbook 29 §6 asserted that the secondaries stop first, the primary then waits `FINALDELAY`, and Proxmox stops its guests in order; this drill measured it. FSD was set at **11:29:43**, `lab` reached `poweroff.target` at **11:29:48** (≈5 s), the primary scheduled its own shutdown at **11:30:17** — precisely 30 s after its decision, honouring `FINALDELAY 30` — and `pve-guests` stopped CT 213 at **11:30:24–28**. No node raced another, nothing was cut off mid-write, and every node came back with its data intact.
+The choreography **holds**. Runbook 29 §6 asserted that the secondaries stop first, the primary then waits `FINALDELAY`, and Proxmox stops its guests in order; this drill measured it. FSD was set at **11:29:43**, `lab` reached `poweroff.target` at **11:29:48** (≈5 s), the primary scheduled its own shutdown at **11:30:17** — precisely 30 s after its decision, honouring `FINALDELAY 30` — and `pve-guests` began stopping CT 213 at **11:30:24**, reporting `all VMs and CTs stopped` at **11:30:28**. No node raced another, nothing was cut off mid-write, and every node came back with its data intact.
 
 The headline measurement is the runtime: **52 min 53 s on battery to `LB`** at the ~80 W full planned fleet. One operational finding matters for the runbook — `lab` **does not auto-start** when AC returns (it needed a manual power press). A capture-method limitation is recorded under Evidence and does not affect any result above.
 
@@ -38,7 +38,9 @@ The headline measurement is the runtime: **52 min 53 s on battery to `LB`** at t
 | 10:37:13 | 24.82 V / 77 % — the float→load sag, not a capacity reading | observer |
 | 10:48–11:00 | plateau 24.71 → 24.24 V (23 min in) | observer |
 | **11:29:41** | **`LB` at 21.53 V / 14 %** — after **52 min 53 s** on battery | observer |
-| 11:29:41–43 | per-node `UPS … battery is low` — `lab` 11:29:41 · `edge` 11:29:42 · `ha` 11:29:43 | `lab` journal · `edge` mirror · `ha` journal |
+| 11:29:41 | `lab` logs `UPS ups@192.168.2.213 battery is low` — **+0 s** | `lab` journal |
+| 11:29:42 | `edge` logs the same line — **+1 s** | `edge` mirror (line 424) |
+| 11:29:43 | `ha` logs the same line — **+2 s** | `ha` journal |
 | **11:29:43** | **primary sets FSD**: `Client upsmon-host@192.168.2.201 set FSD on UPS [ups]` | `upsd` in LXC 213 |
 | 11:29:46 | `lab`: `forced shutdown in progress` → `Executing automatic power-fail shutdown` | `lab` journal |
 | 11:29:48 | `lab` reaches `poweroff.target` — **≈5 s after FSD** | `lab` journal |
@@ -47,7 +49,8 @@ The headline measurement is the runtime: **52 min 53 s on battery to `LB`** at t
 | 11:30:20 | `Stopping pve-guests.service` | `ha` journal |
 | 11:30:24 | `Stopping CT 213 (timeout = 180 seconds)`; `upsd` gets `Signal 15`, driver logs a broken pipe | `ha` + container journals |
 | 11:30:25 | CT 213 halted | container journal |
-| 11:30:27–28 | CT 213 deactivated; `all VMs and CTs stopped` | `ha` journal |
+| 11:30:27 | `vzshutdown:213` task ends — Proxmox sees the container stopped | `ha` journal |
+| 11:30:28 | `all VMs and CTs stopped`; `pve-guests.service` deactivated | `ha` journal |
 | ~11:30:30+ | `ha` off; the UPS kept strip 2 alive until the pack was exhausted | inferred |
 | ~12:00 | AC restored; `ha` + `edge` auto-start, `lab` started **manually** | wtmp, uptime |
 | 12:02:35 | `edge` reaches `multi-user.target` (`Startup finished … = 1 min 12.97 s`) and its `nut-monitor` reconnects as `(secondary)` | `edge` mirror |
