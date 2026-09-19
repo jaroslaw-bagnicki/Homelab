@@ -18,7 +18,8 @@ if ($exists) {
 }
 
 Set-AzKeyVaultSecret -VaultName $vault -Name $secretName `
-    -SecretValue (ConvertTo-SecureString -AsPlainText ([guid]::NewGuid().ToString()) -Force) |
+    -SecretValue (ConvertTo-SecureString -AsPlainText ([guid]::NewGuid().ToString()) -Force) `
+    -ErrorAction Stop |
     Out-Null
 
 Write-Host "Secret '${secretName}' provisioned in '${vault}'."

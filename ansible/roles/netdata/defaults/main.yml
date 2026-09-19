@@ -5,10 +5,11 @@ netdata_role: child
 # Parent "host:port" for streaming children; empty = standalone (no streaming).
 netdata_stream_target: ""
 netdata_storage: dbengine
-# Target retention, seconds (7 days). The dbengine space cap below is the hard ceiling.
-netdata_retention: "604800"
-# dbengine disk ceiling per node, MiB. The parent aggregates the children -> larger value.
-netdata_dbengine_disk_space: 512
+# Per-tier retention target (rendered as `dbengine tier N retention time`) — 7 days.
+netdata_retention_time: "7d"
+# Per-tier retention size cap (`dbengine tier N retention size`) — the hard bound.
+# Rendered for tiers 0-2, so the DB ceiling is ~3x this value; the parent sets 1GiB.
+netdata_retention_size: "256MiB"
 netdata_bind: "127.0.0.1"
 netdata_port: 19999
 # Parent runs on a Proxmox host — grants the netdata user read access to /etc/pve.

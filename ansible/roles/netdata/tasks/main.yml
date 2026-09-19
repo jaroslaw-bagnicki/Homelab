@@ -57,10 +57,15 @@
     (netdata_role == 'parent' or netdata_stream_target | length > 0)
   vars:
     netdata_vault_url: "https://{{ netdata_keyvault_name }}.vault.azure.net"
+    netdata_azure_client_id: "{{ lookup('ansible.builtin.env', 'AZURE_CLIENT_ID') }}"
+    netdata_azure_secret: "{{ lookup('ansible.builtin.env', 'AZURE_CLIENT_SECRET') }}"
+    netdata_azure_tenant_id: "{{ lookup('ansible.builtin.env', 'AZURE_TENANT_ID') }}"
   ansible.builtin.set_fact:
     netdata_stream_api_key: >-
       {{ lookup('azure.azcollection.azure_keyvault_secret',
-      netdata_stream_api_key_secret_name, vault_url=netdata_vault_url) }}
+      netdata_stream_api_key_secret_name, vault_url=netdata_vault_url,
+      client_id=netdata_azure_client_id, secret=netdata_azure_secret,
+      tenant=netdata_azure_tenant_id) }}
   delegate_to: localhost
   no_log: true
 
@@ -73,24 +78,32 @@
     mode: "0644"
   notify: Restart netdata
 
-- name: Configure Netdata retention (dbengine only)
+- name: Configure Netdata tier retention time (dbengine only)
   when: netdata_storage == 'dbengine'
   community.general.ini_file:
     path: /etc/netdata/netdata.conf
     section: db
-    option: retention
-    value: "{{ netdata_retention }}"
+    option: "dbengine tier {{ item }} retention time"
+    value: "{{ netdata_retention_time }}"
     mode: "0644"
+  loop:
+    - 0
+    - 1
+    - 2
   notify: Restart netdata
 
-- name: Configure Netdata dbengine disk space (dbengine only)
+- name: Configure Netdata tier retention size cap (dbengine only)
   when: netdata_storage == 'dbengine'
   community.general.ini_file:
     path: /etc/netdata/netdata.conf
     section: db
-    option: dbengine multihost disk space
-    value: "{{ netdata_dbengine_disk_space }}"
+    option: "dbengine tier {{ item }} retention size"
+    value: "{{ netdata_retention_size }}"
     mode: "0644"
+  loop:
+    - 0
+    - 1
+    - 2
   notify: Restart netdata
 
 - name: Configure Netdata web bind address
@@ -119,6 +132,14 @@
     owner: root
     group: netdata
     mode: "0640"
+  notify: Restart netdata
+  no_log: true
+
+- name: Remove the stale stream.conf when a child is standalone
+  when: netdata_role != 'parent' and netdata_stream_target | length == 0
+  ansible.builtin.file:
+    path: /etc/netdata/stream.conf
+    state: absent
   notify: Restart netdata
 
 - name: Let Netdata resolve Proxmox VM/CT names

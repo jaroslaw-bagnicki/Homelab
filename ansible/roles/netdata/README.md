@@ -21,7 +21,7 @@ deployed by [runbook 31](../../../docs/runbooks/31-deploy-netdata.md); tracked i
 
 - **The Parent runs host-native on the `pve` Proxmox host** — not an LXC/VM — so it can read VM/CT cgroups and `/etc/pve` names; the overrides live in [`host_vars/pve.yml`](../../host_vars/pve.yml).
 - **Edge uses `netdata_storage: ram`** — no `dbengine` on the eMMC (ADR 24/27).
-- **History is 7 days, disk-capped** — `[db] retention = 604800` with `dbengine multihost disk space` at 512 MiB per child and 2048 MiB on the parent (it also stores the children's metrics). Retention is a target; the cap is the ceiling.
+- **History is 7 days, disk-capped** — per-tier `dbengine tier N retention time = 7d` with `dbengine tier N retention size` (256 MiB per tier on a child, 1 GiB on the parent — its tier quota is shared by the streaming children). Time and size are combined limits, so the DB ceiling is ~3 × the size.
 - **Standalone-first** — a child with no reachable parent is still useful locally; re-pointing it is a config change, not a reinstall.
 
 ## Parameters
@@ -31,8 +31,8 @@ deployed by [runbook 31](../../../docs/runbooks/31-deploy-netdata.md); tracked i
 | `netdata_role` | `child` | `parent` accepts streams; `child` streams to `netdata_stream_target`. |
 | `netdata_stream_target` | `""` | Parent `host:port`; empty on a `child` = standalone (no streaming). |
 | `netdata_storage` | `dbengine` | `ram` on eMMC-only nodes. |
-| `netdata_retention` | `604800` | Seconds — 7 days; applied for `dbengine` only. |
-| `netdata_dbengine_disk_space` | `512` | MiB ceiling for the DB; the parent sets `2048`. |
+| `netdata_retention_time` | `7d` | Per-tier retention target (`dbengine tier N retention time`); `dbengine` only. |
+| `netdata_retention_size` | `256MiB` | Per-tier size cap (`dbengine tier N retention size`); the parent sets `1GiB`. |
 | `netdata_bind` | `127.0.0.1` | Web bind address; the parent uses `0.0.0.0`. |
 | `netdata_port` | `19999` | Web/streaming port. |
 | `netdata_proxmox_host` | `false` | Grants the `netdata` user `/etc/pve` read (parent on Proxmox). |
@@ -51,6 +51,8 @@ every streaming child — so the controller needs `AZURE_CLIENT_ID` / `AZURE_CLI
 
 - The kickstart install is guarded by `stat /usr/sbin/netdata` — a converged node skips it.
 - `ini_file` and `template` write only on change and notify a `netdata` restart.
+- A child with an empty `netdata_stream_target` has any stale `stream.conf` removed, so leaving
+  streaming really converges to standalone.
 - A converged fleet re-runs with `changed=0` — except when `netdata_upgrade: true` is passed
   deliberately, which re-installs on purpose.
 
