@@ -1,7 +1,7 @@
-# UPS Graceful Shutdown — NUT on the HA Node
+# UPS Graceful Shutdown — NUT on the pve Node
 
 > Put the lab's shared power rail under **NUT (Network UPS Tools)**: the Green Cell **UPSLM600**
-> stays plugged into the Home Assistant node's Proxmox host, a dedicated **LXC 213** runs the NUT
+> stays plugged into the `pve` node's Proxmox host, a dedicated **LXC 213** runs the NUT
 > server (`upsd` + `nutdrv_qx`), and the hypervisor plus the fleet each run a NUT client that stops
 > the node in order once the battery runs down. The decision is recorded in
 > [ADR 30](../decisions/30-ups-nut-graceful-shutdown.md); implementation is tracked in
@@ -20,7 +20,7 @@
 ## Why
 
 The lab is a multi-node fleet across two power strips — the servers (M910q/k3s, Wyse 3040 edge,
-Wyse 5070 HA, and the Beetle NAS as it lands) plus the network appliances that hold the LAN
+Wyse 5070 `pve`, and the Beetle NAS as it lands) plus the network appliances that hold the LAN
 together. Nothing protects it from a brownout, and an unclean stop is the worst outcome for the NAS
 RAID1 and its SMB/NFS exports, for the Proxmox VMs/LXCs, and for k3s state. NUT turns a power cut
 into an orderly stop: every node sees the same UPS state and cuts itself over on low battery, in a
@@ -28,7 +28,7 @@ defined order.
 
 ## What changes
 
-- **UPS stays on the HA node's Proxmox host** — Green Cell `UPSLM600`, USB **`0665:5161`**
+- **UPS stays on the `pve` node's Proxmox host** — Green Cell `UPSLM600`, USB **`0665:5161`**
   (Cypress/INNO TECH bridge). The unit has **no serial number**, so NUT finds it by
   `vendorid`/`productid` rather than by a port path — which port it occupies is irrelevant, and the
   cable can be moved without touching any config.
@@ -53,15 +53,15 @@ defined order.
 
 ## Prerequisites
 
-- UPS on the HA node's USB and mains connected. The HID interface is **single-owner** — nothing else
+- UPS on the `pve` node's USB and mains connected. The HID interface is **single-owner** — nothing else
   may be holding the device, or the container stays blind to it.
-- `fleetadm` SSH + `sudo -n` on `ha`, `lab`, `edge`.
+- `fleetadm` SSH + `sudo -n` on `pve`, `lab`, `edge`.
 - Azure Key Vault access to `homelab-bysxdb-kv` for the monitor password.
 - Refs: [idea 09](../ideas/09-ups-nut-home-assistant.md) (architecture) ·
   [ADR 25](../decisions/25-home-assistant-thin-client.md) ·
   [research 24](../research/24-network-topology-design.md) (IP scheme) ·
   [research 26 §4](../research/26-home-assistant-thin-client.md) (USB passthrough pattern) ·
-  [runbook 28](28-ha-proxmox-node.md) (the Proxmox base this builds on).
+  [runbook 28](28-pve-proxmox-node.md) (the Proxmox base this builds on).
 
 ---
 
@@ -78,7 +78,7 @@ Two strips, both UPS-fed:
 
 | Strip | Load | Note |
 |---|---|---|
-| **1 — servers** | Dell Wyse 5070 (HA node) | hosts the NUT server's USB, `0665:5161` |
+| **1 — servers** | Dell Wyse 5070 (pve node) | hosts the NUT server's USB, `0665:5161` |
 | | Lenovo M910q (lab) | 65/90 W external brick · k3s |
 | | Dell Wyse 3040 (edge) | external brick |
 | | Wincor Beetle M-III | the OMV NAS ([#98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98), [ADR 29](../decisions/29-nas-backup-target-beetle-m3-omv.md)) |
@@ -435,7 +435,7 @@ The trigger is therefore **`LB`**; do not build a countdown on a variable that d
 
 > **Superseded — delivered by the `nut_client` role.** The host is the **one and only `upsmon`
 > `primary`**: account `upsmon-host`, `FINALDELAY 30`, `HOSTSYNC 30`. It is installed and kept
-> converged by the base `playbook-ha.yml` — see [runbook 30](30-deploy-nut-clients.md). The
+> converged by the base `playbook-pve.yml` — see [runbook 30](30-deploy-nut-clients.md). The
 > hand-edited `upsmon.conf` this section used to carry is gone; the role is the reference.
 
 `/sbin/shutdown -h +0` is all that is needed to stop the VMs/LXCs in order — Proxmox handles the
@@ -499,9 +499,9 @@ that proves disruptive, raise `DEADTIME` and `POLLFREQALERT` together rather tha
 
 **No new firewall rule is required.** LXC 213 is bridged on `192.168.2.0/24`, so client traffic
 never traverses the host's UFW chains — UFW here is host-management-plane only
-([runbook 28](28-ha-proxmox-node.md)). That changes only if the container is ever moved to a
+([runbook 28](28-pve-proxmox-node.md)). That changes only if the container is ever moved to a
 **routed** NIC (separate subnet); then `3493` has to be added to `security_ufw_allow_tcp_ports` in
-`ansible/host_vars/ha.yml` — not by hand, or the next `security` role run drops it.
+`ansible/host_vars/pve.yml` — not by hand, or the next `security` role run drops it.
 
 ## 7. Validation
 
@@ -590,7 +590,7 @@ runbook completes on its own; the client rollout (§4/§5) is verified by
 
 - [Idea 09 — UPS with NUT + Home Assistant](../ideas/09-ups-nut-home-assistant.md) — load profile, model comparison, NUT architecture
 - [ADR 25 — Home Assistant on a thin client](../decisions/25-home-assistant-thin-client.md) · [ADR 27 — monitoring strategy](../decisions/27-monitoring-strategy.md) · [ADR 28 — fleet admin account and key](../decisions/28-fleet-admin-account-and-key.md)
-- [Runbook 28 — HA node Proxmox VE install](28-ha-proxmox-node.md) · [Runbook 24 — edge appliance](24-edge-appliance.md) · [Runbook 21 — TL-SG108E switch](21-tl-sg108e-switch.md)
+- [Runbook 28 — pve node Proxmox VE install](28-pve-proxmox-node.md) · [Runbook 24 — edge appliance](24-edge-appliance.md) · [Runbook 21 — TL-SG108E switch](21-tl-sg108e-switch.md)
 - [ADR 29 — NAS backup target on the Beetle M-III](../decisions/29-nas-backup-target-beetle-m3-omv.md) · [idea 07 — OPNsense on the Futro S930](../ideas/07-opnsense-futro-s930.md) · [idea 08 — LTE WAN failover](../ideas/08-lte-wan-failover.md)
 - [research 24 — network topology](../research/24-network-topology-design.md) (IP scheme) · [research 29 — Wyse 5070 diagnostic](../research/29-wyse5070-hardware-diagnostic.md) (USB hub topology)
 - [Network UPS Tools](https://networkupstools.org/) — `nutdrv_qx` driver, `upsd` / `upsmon`
