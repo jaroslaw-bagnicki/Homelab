@@ -30,7 +30,7 @@ The headline measurement is the runtime: **52 min 53 s on battery to `LB`** at t
 
 ## Timeline (UTC)
 
-Sources named per row: **`ha` journal**, **`lab` journal**, **`edge` journal** and **LXC 213 journal** are each node's own journal for the drill boot (`journalctl -b -1`); **`ha` `upsc` poller** is a script on `ha` that read the UPS state every 5 s; **`edge` wtmp** is `edge`'s own login/boot/shutdown record (`last -x -F`). `edge`'s journal is volatile, so its lines were copied to a file as they were produced — see Evidence. Every quotation below is verbatim from the named capture.
+Sources named per row: **`ha` journal**, **`lab` journal**, **`edge` journal** and **LXC 213 journal** are each node's own journal for the drill boot (`journalctl -b -1`); **`ha` `upsc` poller** is a script on `ha` that read the UPS state every 5 s; **`edge` wtmp** is the file `/var/log/wtmp` on `edge`, which every Unix login and shutdown writes to, and `last -x -F` reads back. `edge`'s journal is volatile, so its lines were copied to a file as they were produced — see Evidence. Every quotation below is verbatim from the named capture.
 
 | Time | Event | Source |
 |---|---|---|
