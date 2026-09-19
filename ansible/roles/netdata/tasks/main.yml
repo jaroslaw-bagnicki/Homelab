@@ -69,52 +69,31 @@
   delegate_to: localhost
   no_log: true
 
-- name: Configure Netdata storage mode
+# The [db] schema: a storage mode for every node, plus a time target and a size cap per
+# tier (0/1/2) when the node keeps a disk-backed DB.
+- name: Configure the Netdata database section
+  vars:
+    netdata_db_settings: >-
+      {{ [('mode', netdata_storage)]
+         + ([('dbengine tier 0 retention time', netdata_retention_time),
+             ('dbengine tier 1 retention time', netdata_retention_time),
+             ('dbengine tier 2 retention time', netdata_retention_time),
+             ('dbengine tier 0 retention size', netdata_retention_size),
+             ('dbengine tier 1 retention size', netdata_retention_size),
+             ('dbengine tier 2 retention size', netdata_retention_size)]
+            if netdata_storage == 'dbengine' else []) }}
   community.general.ini_file:
     path: /etc/netdata/netdata.conf
     section: db
-    option: mode
-    value: "{{ netdata_storage }}"
+    option: "{{ item.0 }}"
+    value: "{{ item.1 }}"
     mode: "0644"
+  loop: "{{ netdata_db_settings }}"
+  loop_control:
+    label: "{{ item.0 }}"
   notify: Restart netdata
 
-- name: Configure Netdata tier retention time (dbengine only)
-  when: netdata_storage == 'dbengine'
-  community.general.ini_file:
-    path: /etc/netdata/netdata.conf
-    section: db
-    option: "dbengine tier {{ item }} retention time"
-    value: "{{ netdata_retention_time }}"
-    mode: "0644"
-  loop:
-    - 0
-    - 1
-    - 2
-  notify: Restart netdata
-
-- name: Configure Netdata tier retention size cap (dbengine only)
-  when: netdata_storage == 'dbengine'
-  community.general.ini_file:
-    path: /etc/netdata/netdata.conf
-    section: db
-    option: "dbengine tier {{ item }} retention size"
-    value: "{{ netdata_retention_size }}"
-    mode: "0644"
-  loop:
-    - 0
-    - 1
-    - 2
-  notify: Restart netdata
-
-- name: Ensure the Netdata SSL directory exists
-  when: netdata_tls | bool
-  ansible.builtin.file:
-    path: "{{ netdata_tls_cert | dirname }}"
-    state: directory
-    owner: netdata
-    group: netdata
-    mode: "0750"
-
+# The kickstart install already creates /etc/netdata/ssl; only the certificate is ours.
 - name: Generate a self-signed certificate for the Netdata listeners
   when: netdata_tls | bool
   ansible.builtin.command:
@@ -125,58 +104,34 @@
     creates: "{{ netdata_tls_cert }}"
   notify: Restart netdata
 
-- name: Set the Netdata TLS key permissions
+- name: Set the Netdata TLS file permissions
   when: netdata_tls | bool
   ansible.builtin.file:
-    path: "{{ netdata_tls_key }}"
+    path: "{{ item.path }}"
     owner: root
     group: netdata
-    mode: "0640"
+    mode: "{{ item.mode }}"
+  loop:
+    - { path: "{{ netdata_tls_key }}", mode: "0640" }
+    - { path: "{{ netdata_tls_cert }}", mode: "0644" }
+  loop_control:
+    label: "{{ item.path }}"
 
-- name: Set the Netdata TLS certificate permissions
-  when: netdata_tls | bool
-  ansible.builtin.file:
-    path: "{{ netdata_tls_cert }}"
-    owner: root
-    group: netdata
-    mode: "0644"
-
-- name: Configure Netdata web bind address
+- name: Configure the Netdata web section
+  vars:
+    netdata_web_settings: >-
+      {{ {'bind to': netdata_bind, 'default port': netdata_port}
+         | combine({'ssl certificate': netdata_tls_cert, 'ssl key': netdata_tls_key}
+                   if netdata_tls | bool else {}) }}
   community.general.ini_file:
     path: /etc/netdata/netdata.conf
     section: web
-    option: bind to
-    value: "{{ netdata_bind }}"
+    option: "{{ item.key }}"
+    value: "{{ item.value }}"
     mode: "0644"
-  notify: Restart netdata
-
-- name: Configure Netdata web TLS certificate
-  when: netdata_tls | bool
-  community.general.ini_file:
-    path: /etc/netdata/netdata.conf
-    section: web
-    option: ssl certificate
-    value: "{{ netdata_tls_cert }}"
-    mode: "0644"
-  notify: Restart netdata
-
-- name: Configure Netdata web TLS key
-  when: netdata_tls | bool
-  community.general.ini_file:
-    path: /etc/netdata/netdata.conf
-    section: web
-    option: ssl key
-    value: "{{ netdata_tls_key }}"
-    mode: "0644"
-  notify: Restart netdata
-
-- name: Configure Netdata web port
-  community.general.ini_file:
-    path: /etc/netdata/netdata.conf
-    section: web
-    option: default port
-    value: "{{ netdata_port }}"
-    mode: "0644"
+  loop: "{{ netdata_web_settings | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"
   notify: Restart netdata
 
 - name: Configure Netdata streaming
