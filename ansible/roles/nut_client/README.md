@@ -50,6 +50,8 @@ The accounts must match `upsd.users` in LXC 213 (`upsmon-host` = `upsmon primary
 
 This keeps a from-scratch `ha` rebuild (where the server container does not exist yet) from starting a fail-safe monitor with no server to reach.
 
+The guard is **provisioning-only**: it governs whether the service is (re)started and leaves an already-running `nut-monitor` alone, so a converged node whose server genuinely goes down still stops itself — the fail-safe trade-off [ADR 30](../../../docs/decisions/30-ups-nut-graceful-shutdown.md) accepts (see runbook 29 §6).
+
 ## Idempotency
 
 - `apt` reports `ok` once `nut-client` is installed.

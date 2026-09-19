@@ -107,7 +107,7 @@ built) from starting a fail-safe monitor with no server to reach.
 3. **No auth failures** in the log:
 
    ```sh
-   journalctl -u nut-monitor --no-pager | tail -20
+   sudo journalctl -u nut-monitor --no-pager | tail -20
    ```
 
    A wrong account/role shows `Login failed`; fix the role/account and re-run the playbook.
@@ -115,8 +115,13 @@ built) from starting a fail-safe monitor with no server to reach.
 4. **Drift check** — the three files differ only in the per-role values:
 
    ```sh
-   diff <(ssh fleetadm@192.168.2.200 cat /etc/nut/upsmon.conf) <(ssh fleetadm@192.168.2.240 cat /etc/nut/upsmon.conf)
+   awk_redact="awk '/^MONITOR/{\$5=\"<redacted>\"} 1'"
+   diff <(ssh fleetadm@192.168.2.200 "sudo $awk_redact /etc/nut/upsmon.conf") \
+        <(ssh fleetadm@192.168.2.240 "sudo $awk_redact /etc/nut/upsmon.conf")
    ```
+
+   The `sudo` read is required (`upsmon.conf` is `0640 root:nut`); the `awk` redaction masks the
+   `MONITOR` password so it never reaches the terminal.
 
    Expect **no output** between the two secondaries (identical), and only the `MONITOR` account/role
    and `HOSTSYNC`/`FINALDELAY` lines differing against `ha`.
