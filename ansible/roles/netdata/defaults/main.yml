@@ -5,11 +5,16 @@ netdata_role: child
 # Parent "host:port" for streaming children; empty = standalone (no streaming).
 netdata_stream_target: ""
 netdata_storage: dbengine
-netdata_retention: "86400"
+# Target retention, seconds (7 days). The dbengine space cap below is the hard ceiling.
+netdata_retention: "604800"
+# dbengine disk ceiling per node, MiB. The parent aggregates the children -> larger value.
+netdata_dbengine_disk_space: 512
 netdata_bind: "127.0.0.1"
 netdata_port: 19999
 # Parent runs on a Proxmox host — grants the netdata user read access to /etc/pve.
 netdata_proxmox_host: false
+# Re-run the kickstart installer to update an existing agent. Opt-in: set true, run, set false.
+netdata_upgrade: false
 # Override to skip the Key Vault lookup (tests); normally left empty.
 netdata_stream_api_key: ""
 netdata_stream_api_key_secret_name: netdata-stream-api-key

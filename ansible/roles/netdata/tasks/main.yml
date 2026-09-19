@@ -13,21 +13,29 @@
     path: /usr/sbin/netdata
   register: netdata_binary
 
+- name: Fetch the Netdata kickstart script
+  when: not netdata_binary.stat.exists or netdata_upgrade | bool
+  ansible.builtin.get_url:
+    url: "{{ netdata_kickstart_url }}"
+    dest: /tmp/netdata-kickstart.sh
+    mode: "0755"
+    force: true
+
 - name: Install Netdata from the official kickstart script
   when: not netdata_binary.stat.exists
-  block:
-    - name: Download the Netdata kickstart script
-      ansible.builtin.get_url:
-        url: "{{ netdata_kickstart_url }}"
-        dest: /tmp/netdata-kickstart.sh
-        mode: "0755"
+  ansible.builtin.command:
+    cmd: >-
+      /tmp/netdata-kickstart.sh --non-interactive --stable-channel
+      --disable-telemetry --dont-wait
+    creates: /usr/sbin/netdata
 
-    - name: Run the Netdata kickstart script
-      ansible.builtin.command:
-        cmd: >-
-          /tmp/netdata-kickstart.sh --non-interactive --stable-channel
-          --disable-telemetry --dont-wait
-        creates: /usr/sbin/netdata
+- name: Update Netdata with the official kickstart script
+  when: netdata_upgrade | bool and netdata_binary.stat.exists
+  ansible.builtin.command:
+    cmd: >-
+      /tmp/netdata-kickstart.sh --non-interactive --stable-channel
+      --disable-telemetry --dont-wait --reinstall
+  changed_when: true
 
 - name: Assert Azure controller credentials are set
   when: >-
@@ -72,6 +80,16 @@
     section: db
     option: retention
     value: "{{ netdata_retention }}"
+    mode: "0644"
+  notify: Restart netdata
+
+- name: Configure Netdata dbengine disk space (dbengine only)
+  when: netdata_storage == 'dbengine'
+  community.general.ini_file:
+    path: /etc/netdata/netdata.conf
+    section: db
+    option: dbengine multihost disk space
+    value: "{{ netdata_dbengine_disk_space }}"
     mode: "0644"
   notify: Restart netdata
 

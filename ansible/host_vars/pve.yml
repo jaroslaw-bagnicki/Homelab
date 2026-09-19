@@ -11,7 +11,7 @@ netdata_role: parent
 netdata_proxmox_host: true
 netdata_bind: "0.0.0.0"
 netdata_storage: dbengine
-netdata_retention: "86400"
+netdata_dbengine_disk_space: 2048
 
 nut_client_role: primary
 nut_client_account: upsmon-host
