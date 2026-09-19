@@ -1,0 +1,53 @@
+---
+- name: Install nut-client
+  ansible.builtin.apt:
+    name: nut-client
+    state: present
+
+- name: Assert Azure controller credentials are set
+  ansible.builtin.assert:
+    that:
+      - lookup('ansible.builtin.env', 'AZURE_CLIENT_ID', default='') | length > 0
+      - lookup('ansible.builtin.env', 'AZURE_CLIENT_SECRET', default='') | length > 0
+      - lookup('ansible.builtin.env', 'AZURE_TENANT_ID', default='') | length > 0
+    fail_msg: "AZURE_CLIENT_ID, AZURE_CLIENT_SECRET and AZURE_TENANT_ID must be set on the Ansible controller for the Key Vault lookup."
+  delegate_to: localhost
+
+- name: Fetch upsmon password from Key Vault
+  vars:
+    vault_url: "https://{{ nut_client_keyvault_name }}.vault.azure.net"
+    azure_client_id: "{{ lookup('ansible.builtin.env', 'AZURE_CLIENT_ID') }}"
+    azure_secret: "{{ lookup('ansible.builtin.env', 'AZURE_CLIENT_SECRET') }}"
+    azure_tenant_id: "{{ lookup('ansible.builtin.env', 'AZURE_TENANT_ID') }}"
+  ansible.builtin.set_fact:
+    nut_client_upsmon_password: >-
+      {{ lookup('azure.azcollection.azure_keyvault_secret',
+      nut_client_password_secret, vault_url=vault_url, client_id=azure_client_id,
+      secret=azure_secret, tenant=azure_tenant_id) }}
+  delegate_to: localhost
+  no_log: true
+
+- name: Template nut.conf
+  ansible.builtin.template:
+    src: nut.conf.j2
+    dest: /etc/nut/nut.conf
+    owner: root
+    group: nut
+    mode: "0640"
+  notify: Restart nut-monitor
+
+- name: Template upsmon.conf
+  ansible.builtin.template:
+    src: upsmon.conf.j2
+    dest: /etc/nut/upsmon.conf
+    owner: root
+    group: nut
+    mode: "0640"
+  no_log: true
+  notify: Restart nut-monitor
+
+- name: Enable and start nut-monitor
+  ansible.builtin.service:
+    name: nut-monitor
+    state: started
+    enabled: true

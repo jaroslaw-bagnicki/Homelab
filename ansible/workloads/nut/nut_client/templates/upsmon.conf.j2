@@ -1,0 +1,12 @@
+MONITOR {{ nut_client_ups_name }}@{{ nut_client_server }} 1 {{ nut_client_account }} {{ nut_client_upsmon_password }} {{ nut_client_role }}
+MINSUPPLIES {{ nut_client_minsupplies }}
+SHUTDOWNCMD "{{ nut_client_shutdowncmd }}"
+POLLFREQ {{ nut_client_pollfreq }}
+POLLFREQALERT {{ nut_client_pollfreqalert }}
+HOSTSYNC {{ nut_client_hostsync }}
+FINALDELAY {{ nut_client_finaldelay }}
+DEADTIME {{ nut_client_deadtime }}
+POWERDOWNFLAG {{ nut_client_powerdownflag }}
+NOTIFYFLAG ONBATT SYSLOG+WALL
+NOTIFYFLAG LOWBATT SYSLOG+WALL
+NOTIFYFLAG ONLINE SYSLOG+WALL
