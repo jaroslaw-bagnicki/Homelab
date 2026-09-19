@@ -24,9 +24,6 @@ ansible-playbook ansible/playbooks/playbook-ha.yml
 
 # OpenCode per-project workload (decoupled recipe)
 ansible-playbook ansible/workloads/opencode/opencode-playbook.yml
-
-# NUT fleet clients workload (decoupled recipe; run from a LAN workstation)
-ansible-playbook ansible/workloads/nut/nut-playbook.yml
 ```
 
 ## Structure
@@ -38,19 +35,18 @@ ansible-playbook ansible/workloads/nut/nut-playbook.yml
 | `requirements.yml` | Required Ansible Galaxy collections (`ansible.posix`, `community.docker`, `community.general`, `azure.azcollection`) |
 | `playbooks/playbook.yml` | Base provision: common → security → azure_arc → docker_host → docker_services; pre_tasks declares `opencode_net` |
 | `playbooks/playbook-arc.yml` | Arc enrolment only (for already-configured hosts) |
-| `playbooks/playbook-lab.yml` | M910q base provision: common → security → docker_host → azure_arc (no `docker_services` — see below) |
-| `playbooks/playbook-edge.yml` | Wyse 3040 edge base provision: common → security → edge_host (bare-metal, no Docker/Arc — ADR 24) |
-| `playbooks/playbook-ha.yml` | Wyse 5070 HA node base provision: common → security (Proxmox host; UFW LAN allow for SSH + Proxmox UI 8006) |
+| `playbooks/playbook-lab.yml` | M910q base provision: common → security → docker_host → azure_arc → nut_client (no `docker_services` — see below) |
+| `playbooks/playbook-edge.yml` | Wyse 3040 edge base provision: common → security → edge_host → nut_client (bare-metal, no Docker/Arc — ADR 24) |
+| `playbooks/playbook-ha.yml` | Wyse 5070 HA node base provision: common → security → nut_client (Proxmox host; UFW LAN allow for SSH + Proxmox UI 8006) |
 | `workloads/` | Self-contained workload recipes — playbook entrypoint, role recipes, ansible-side README, all co-located per workload |
 | `workloads/opencode/` | OpenCode per-project server workload (see [README](workloads/opencode/README.md)) |
-| `workloads/nut/` | NUT fleet-client workload — `ha` primary, `lab`/`edge` secondaries (see [README](workloads/nut/README.md)) |
-| `roles/` | Base shared roles: `common`, `security`, `azure_arc`, `docker_host`, `docker_services`, `edge_host` |
+| `roles/` | Base shared roles: `common`, `security`, `azure_arc`, `docker_host`, `docker_services`, `edge_host`, `nut_client` |
 
 ## Workloads
 
 Each workload in `ansible/workloads/<workload>/` is a self-contained recipe that can run independently of the base playbook (after base setup has been applied). See [`docs/workloads.md`](../docs/workloads.md) for the index and convention rules.
 
-Currently: [OpenCode](workloads/opencode/README.md) — per-project OpenCode server instances on cloudlab; [NUT](workloads/nut/README.md) — `nut-client` + `upsmon` across the fleet.
+Currently: [OpenCode](workloads/opencode/README.md) — per-project OpenCode server instances on cloudlab.
 
 ## Roles
 
@@ -80,17 +76,20 @@ Manages the core Docker Compose stack on the host: `portainer`, `caddy` (with `c
 
 Bare-metal base provisioning for the **Edge Wyse 3040** ingress appliance (ADR 24) — no Docker, no Arc. Runs after `common` + `security`. Installs `unattended-upgrades`, `logrotate`, configures journald `Storage=volatile` (eMMC longevity), manages the DNS search domain (`edge_dns_search`, default empty — clears the installer's `cloud5.ovh` leftover that hijacked bare LAN names; set to `home` when OPNsense `.home` DNS lands), and keeps UFW deny-inbound (SSH from the LAN only — cloudflared → Caddy runs over loopback `127.0.0.1:80`, no inbound HTTP opened). Hostname (`edge`), UTC, and name broadcast (Avahi `edge.local`) come from `common`; SSH hardening + UFW + fail2ban from `security`.
 
+### `nut_client`
+
+Installs `nut-client` and runs `upsmon` so the node stops itself on low battery — the fleet side of the UPS/NUT setup ([ADR 30](../docs/decisions/30-ups-nut-graceful-shutdown.md)). Applied to the three physical nodes (`ha`, `lab`, `edge`), never `cloudlab`. `ha` is the sole `upsmon` primary (`host_vars/ha.yml`: account `upsmon-host`, `HOSTSYNC 30`, `FINALDELAY 30`); `lab`/`edge` are secondaries (role defaults: account `upsmon-fleet`, `HOSTSYNC 15`, `FINALDELAY 0`). The monitor password is fetched from Key Vault at run time (`nut_client_keyvault_name`, default `homelab-bysxdb-kv`) — so the controller needs `AZURE_*` credentials for any base run on these hosts. One `upsmon.conf` template keeps the files identical apart from the per-role values. A reachability guard starts `nut-monitor` only if the NUT server answers `upsc`; otherwise it is configured but left stopped with a warning — re-run once LXC 213 is up. The NUT **server** (LXC 213) is not Ansible-managed (runbook 29 §1–§3). Operational steps: [runbook 30](../docs/runbooks/30-deploy-nut-clients.md).
+
 ## Playbooks
 
 | Playbook | Roles | When to use |
 |---|---|---|
 | `playbook.yml` | common → security → azure_arc → docker_host → docker_services | First-time VPS provision after initial SSH hardening (see [runbook 10](../docs/runbooks/10-vps-playground.md)) |
 | `playbook-arc.yml` | azure_arc | Adding Arc to an already-configured host |
-| `playbook-lab.yml` | common → security → docker_host → azure_arc | M910q base provision after the 24.04 reinstall (see [runbook 25](../docs/runbooks/25-m910q-os-refresh.md)) |
-| `playbook-edge.yml` | common → security → edge_host | Wyse 3040 edge base provision (see [runbook 24](../docs/runbooks/24-edge-appliance.md)) |
-| `playbook-ha.yml` | common → security | Wyse 5070 HA node base provision (see [runbook 28](../docs/runbooks/28-ha-proxmox-node.md)) |
+| `playbook-lab.yml` | common → security → docker_host → azure_arc → nut_client | M910q base provision after the 24.04 reinstall (see [runbook 25](../docs/runbooks/25-m910q-os-refresh.md)) |
+| `playbook-edge.yml` | common → security → edge_host → nut_client | Wyse 3040 edge base provision (see [runbook 24](../docs/runbooks/24-edge-appliance.md)) |
+| `playbook-ha.yml` | common → security → nut_client | Wyse 5070 HA node base provision (see [runbook 28](../docs/runbooks/28-ha-proxmox-node.md)) |
 | `workloads/opencode/opencode-playbook.yml` | docker_opencode_ingress → docker_opencode_instances | Deploy the OpenCode per-project server workload (see [runbook 17](../docs/runbooks/17-deploy-opencode-on-cloudlab.md)) |
-| `workloads/nut/nut-playbook.yml` | nut_client | Install the NUT fleet clients — `ha` primary, `lab`/`edge` secondaries (see [runbook 30](../docs/runbooks/30-deploy-nut-clients.md)) |
 
 ## Inventory
 

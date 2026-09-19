@@ -1,12 +1,13 @@
 # NUT Clients on the Fleet
 
-> Roll the **NUT client** (`nut-client` + `upsmon`) out to `ha`, `lab`, and `edge` with the `nut`
-> Ansible workload, so every node stops itself in order when the shared UPS battery runs down.
-> The NUT **server** (LXC 213, `.213`, `nutdrv_qx`) is built by
-> [runbook 29](29-nut-ups-shutdown.md) §1–§3; this runbook is the client half, tracked in
+> Roll the **NUT client** (`nut-client` + `upsmon`) out to `ha`, `lab`, and `edge` with the
+> `nut_client` base role, so every node stops itself in order when the shared UPS battery runs down.
+> The role is applied by the base playbooks (`playbook-ha/lab/edge.yml`); the NUT **server**
+> (LXC 213, `.213`, `nutdrv_qx`) is built by [runbook 29](29-nut-ups-shutdown.md) §1–§3. This
+> runbook is the client half, tracked in
 > [issue #116](https://github.com/jaroslaw-bagnicki/Homelab/issues/116) under
-> [ADR 30](../decisions/30-ups-nut-graceful-shutdown.md). Workload facts (roles, values, vars,
-> idempotency) live in the [workload README](../../ansible/workloads/nut/README.md).
+> [ADR 30](../decisions/30-ups-nut-graceful-shutdown.md). Role facts live in the
+> [ansible README](../../ansible/README.md#nut_client).
 >
 > ⚠ **Depends on the server.** The role is only useful once LXC 213 answers `upsc ups@192.168.2.213`
 > (runbook 29 §3, verified). It does **not** depend on the shutdown drill ([#117](https://github.com/jaroslaw-bagnicki/Homelab/issues/117)).
@@ -54,25 +55,31 @@ If the secrets are missing, provision them once (they already exist if §3 of ru
 
 ## 2. Deploy
 
-From the control machine (LAN workstation), in the repo root:
+The role runs at the end of each physical node's base playbook — there is no separate workload
+command:
 
 ```powershell
-ansible-playbook ansible/workloads/nut/nut-playbook.yml --diff
+ansible-playbook ansible/playbooks/playbook-ha.yml    # ha  — upsmon primary
+ansible-playbook ansible/playbooks/playbook-lab.yml   # lab — secondary
+ansible-playbook ansible/playbooks/playbook-edge.yml  # edge — secondary
 ```
 
-Two plays run the shared `nut_client` role:
+`ha` is the sole `primary` (`host_vars/ha.yml`: `FINALDELAY 30`, `HOSTSYNC 30`, account
+`upsmon-host`); `lab`/`edge` are `secondary` on the role defaults (`HOSTSYNC 15`, `FINALDELAY 0`,
+account `upsmon-fleet`).
 
-- **`ha`** — the sole `primary`: `FINALDELAY 30`, `HOSTSYNC 30`, account `upsmon-host`.
-- **`lab` + `edge`** — `secondary`: `HOSTSYNC 15`, `FINALDELAY 0` (the role defaults), account
-  `upsmon-fleet`.
+Each node installs `nut-client`, fetches its password from Key Vault at run time, and writes
+`/etc/nut/nut.conf` (`MODE=netclient`) and `/etc/nut/upsmon.conf` (`0640 root:nut`). The `upsmon.conf`
+template task runs with `no_log: true`, so `--diff` never prints the password.
 
-Each node installs `nut-client`, fetches its password from Key Vault at run time, writes
-`/etc/nut/nut.conf` (`MODE=netclient`) and `/etc/nut/upsmon.conf` (`0640 root:nut`), and enables +
-starts `nut-monitor`. The `upsmon.conf` template task runs with `no_log: true`, so `--diff` never
-prints the password.
+**Reachability guard.** Before starting `nut-monitor`, the role probes the server with
+`upsc ups@192.168.2.213` (5 retries, 2 s apart). If it answers, the service is enabled and started;
+if not, the config is written but the service is left stopped and the play prints a warning — re-run
+the base playbook once LXC 213 is up. This keeps a from-scratch `ha` rebuild (server LXC not yet
+built) from starting a fail-safe monitor with no server to reach.
 
-The workload is decoupled from the base playbooks — run it on its own, after base provisioning
-(`playbook-ha.yml` / `playbook-lab.yml` / `playbook-edge.yml`) has been applied.
+> Because the role fetches from Key Vault, `playbook-ha.yml`/`playbook-edge.yml` now need `AZURE_*`
+> on the controller — `playbook-lab.yml` already did.
 
 ## 3. Verify
 
@@ -83,8 +90,9 @@ The workload is decoupled from the base playbooks — run it on its own, after b
    systemctl status nut-monitor --no-pager
    ```
 
-   `active (running)` — the unit enables and starts from the package once `upsmon.conf` has a valid
-   `MONITOR` line.
+   `active (running)` — enabled and started by the role once the server answered the guard probe.
+   If the server was unreachable the unit is `inactive` and the play warned; fix the server, then
+   re-run the base playbook.
 
 2. **The client reads the UPS** — from each node, through the server:
 
@@ -111,10 +119,10 @@ The workload is decoupled from the base playbooks — run it on its own, after b
    Expect **no output** between the two secondaries (identical), and only the `MONITOR` account/role
    and `HOSTSYNC`/`FINALDELAY` lines differing against `ha`.
 
-5. **Idempotency** — re-run the playbook; it must report `changed=0`:
+5. **Idempotency** — re-run the base playbook; it must report `changed=0` for the role:
 
    ```powershell
-   ansible-playbook ansible/workloads/nut/nut-playbook.yml
+   ansible-playbook ansible/playbooks/playbook-lab.yml
    ```
 
 ## 4. Operational notes
@@ -139,22 +147,22 @@ The workload is decoupled from the base playbooks — run it on its own, after b
 ssh fleetadm@<node> 'sudo systemctl disable --now nut-monitor'
 ```
 
-Re-running the playbook re-arms it. To remove the config entirely, purge `nut-client` and delete
-`/etc/nut/upsmon.conf` — but the node then no longer reacts to the UPS state.
+Re-running the node's base playbook re-arms it. To remove the config entirely, purge `nut-client` and
+delete `/etc/nut/upsmon.conf` — but the node then no longer reacts to the UPS state.
 
 ## Verification Checklist
 
 - [ ] §1 both monitor passwords present in `homelab-bysxdb-kv`; accounts match LXC 213 `upsd.users`
-- [ ] §2 `ansible-playbook ansible/workloads/nut/nut-playbook.yml --diff` applies cleanly to `ha`, `lab`, `edge`
+- [ ] §2 `playbook-ha.yml` / `playbook-lab.yml` / `playbook-edge.yml` apply cleanly (role reports the guard probe passing)
 - [ ] §3 `nut-monitor` `active (running)` on all three nodes
 - [ ] §3 `upsc ups@192.168.2.213` returns the same values from all three nodes; no `Login failed`
 - [ ] §3 the two secondaries' `upsmon.conf` are identical; only per-role values differ from `ha`
-- [ ] §3 re-run reports `changed=0`
+- [ ] §3 re-running a base playbook reports `changed=0` for the role
 - [ ] §4 host monitor paused and restored across a LXC 213 restart
 
 ## Related
 
-- [Workload README — NUT clients](../../ansible/workloads/nut/README.md)
+- [Ansible README — `nut_client` role](../../ansible/README.md#nut_client)
 - [Runbook 29 — UPS graceful shutdown (NUT on the HA node)](29-nut-ups-shutdown.md) — server §1–§3, choreography §6, drill §7
 - [ADR 30 — UPS graceful shutdown](../decisions/30-ups-nut-graceful-shutdown.md) · [ADR 31 — static address scheme](../decisions/31-static-address-scheme.md) · [ADR 28 — fleet admin account and key](../decisions/28-fleet-admin-account-and-key.md)
 - [Issue #116](https://github.com/jaroslaw-bagnicki/Homelab/issues/116) · parent [#111](https://github.com/jaroslaw-bagnicki/Homelab/issues/111) · drill [#117](https://github.com/jaroslaw-bagnicki/Homelab/issues/117)

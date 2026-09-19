@@ -334,7 +334,7 @@ this file in Git:
 >
 > Put both values into `upsd.users` in the container
 > (`pct exec 213 -- nano /etc/nut/upsd.users`). Neither value goes into Git. The client side — the
-> host's `upsmon.conf` and each fleet node's `MONITOR` line — is written by the `nut` workload
+> host's `upsmon.conf` and each fleet node's `MONITOR` line — is written by the `nut_client` role
 > straight from Key Vault ([runbook 30](30-deploy-nut-clients.md)), so those values are never
 > printed or hand-edited.
 >
@@ -433,12 +433,10 @@ The trigger is therefore **`LB`**; do not build a countdown on a variable that d
 
 ## 4. Proxmox host — NUT client
 
-> **Superseded — delivered by the `nut` workload.** The host is the **one and only `upsmon`
+> **Superseded — delivered by the `nut_client` role.** The host is the **one and only `upsmon`
 > `primary`**: account `upsmon-host`, `FINALDELAY 30`, `HOSTSYNC 30`. It is installed and kept
-> converged by `ansible/workloads/nut/nut-playbook.yml` — see
-> [runbook 30](30-deploy-nut-clients.md) and the
-> [workload README](../../ansible/workloads/nut/README.md). The hand-edited `upsmon.conf` this
-> section used to carry is gone; the role is the reference.
+> converged by the base `playbook-ha.yml` — see [runbook 30](30-deploy-nut-clients.md). The
+> hand-edited `upsmon.conf` this section used to carry is gone; the role is the reference.
 
 `/sbin/shutdown -h +0` is all that is needed to stop the VMs/LXCs in order — Proxmox handles the
 guest shutdown, NUT only has to stop the host.
@@ -450,9 +448,9 @@ the fleet — the drill in §7 is what proves it.
 
 ## 5. Fleet clients
 
-> **Superseded — delivered by the `nut` workload.** `lab` (M910q) and `edge` (Wyse 3040) are
+> **Superseded — delivered by the `nut_client` role.** `lab` (M910q) and `edge` (Wyse 3040) are
 > `upsmon` `secondary` nodes: account `upsmon-fleet`, `HOSTSYNC 15`, `FINALDELAY 0`. Installed and
-> kept converged by the same workload — [runbook 30](30-deploy-nut-clients.md).
+> kept converged by the same role — [runbook 30](30-deploy-nut-clients.md).
 
 Node-specific notes:
 
