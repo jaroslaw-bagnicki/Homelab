@@ -24,6 +24,9 @@ ansible-playbook ansible/playbooks/playbook-ha.yml
 
 # OpenCode per-project workload (decoupled recipe)
 ansible-playbook ansible/workloads/opencode/opencode-playbook.yml
+
+# NUT fleet clients workload (decoupled recipe; run from a LAN workstation)
+ansible-playbook ansible/workloads/nut/nut-playbook.yml
 ```
 
 ## Structure
@@ -40,13 +43,14 @@ ansible-playbook ansible/workloads/opencode/opencode-playbook.yml
 | `playbooks/playbook-ha.yml` | Wyse 5070 HA node base provision: common → security (Proxmox host; UFW LAN allow for SSH + Proxmox UI 8006) |
 | `workloads/` | Self-contained workload recipes — playbook entrypoint, role recipes, ansible-side README, all co-located per workload |
 | `workloads/opencode/` | OpenCode per-project server workload (see [README](workloads/opencode/README.md)) |
+| `workloads/nut/` | NUT fleet-client workload — `ha` primary, `lab`/`edge` secondaries (see [README](workloads/nut/README.md)) |
 | `roles/` | Base shared roles: `common`, `security`, `azure_arc`, `docker_host`, `docker_services`, `edge_host` |
 
 ## Workloads
 
 Each workload in `ansible/workloads/<workload>/` is a self-contained recipe that can run independently of the base playbook (after base setup has been applied). See [`docs/workloads.md`](../docs/workloads.md) for the index and convention rules.
 
-Currently: [OpenCode](workloads/opencode/README.md) — per-project OpenCode server instances on cloudlab.
+Currently: [OpenCode](workloads/opencode/README.md) — per-project OpenCode server instances on cloudlab; [NUT](workloads/nut/README.md) — `nut-client` + `upsmon` across the fleet.
 
 ## Roles
 
@@ -86,6 +90,7 @@ Bare-metal base provisioning for the **Edge Wyse 3040** ingress appliance (ADR 2
 | `playbook-edge.yml` | common → security → edge_host | Wyse 3040 edge base provision (see [runbook 24](../docs/runbooks/24-edge-appliance.md)) |
 | `playbook-ha.yml` | common → security | Wyse 5070 HA node base provision (see [runbook 28](../docs/runbooks/28-ha-proxmox-node.md)) |
 | `workloads/opencode/opencode-playbook.yml` | docker_opencode_ingress → docker_opencode_instances | Deploy the OpenCode per-project server workload (see [runbook 17](../docs/runbooks/17-deploy-opencode-on-cloudlab.md)) |
+| `workloads/nut/nut-playbook.yml` | nut_client | Install the NUT fleet clients — `ha` primary, `lab`/`edge` secondaries (see [runbook 30](../docs/runbooks/30-deploy-nut-clients.md)) |
 
 ## Inventory
 
