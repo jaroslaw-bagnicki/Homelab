@@ -32,7 +32,7 @@ Edge nodes stream to the Parent on the `pve` node; the NAS joins when it joins t
 ## What changes
 
 - **Shared `netdata` Ansible role** — parent + child modes, parameterized per host (`netdata_role`,
-  `netdata_stream_target`, `netdata_storage`, `netdata_retention`, `netdata_dbengine_disk_space`,
+  `netdata_stream_target`, `netdata_storage`, `netdata_retention_time`, `netdata_retention_size`,
   `netdata_bind`, `netdata_upgrade`).
 - **Parent** — `pve` Proxmox host, host-native systemd, `dbengine`, web bind `0.0.0.0:19999`
   (LAN-reachable via UFW); `netdata_proxmox_host: true` grants the `netdata` user read access to
@@ -40,9 +40,12 @@ Edge nodes stream to the Parent on the `pve` node; the NAS joins when it joins t
 - **Children** — Lab (M910q, `dbengine`) and Edge (Wyse 3040, `ram` — eMMC-safe) stream to
   `192.168.2.201:19999`.
 - **Stream key** — a shared `netdata-stream-api-key` in `homelab-bysxdb-kv`, fetched at deploy time.
-- **History** — `[db] retention = 604800` (**7 days**) on the parent and on Lab, with
-  **`dbengine multihost disk space`** as the hard ceiling (512 MiB per child, 2048 MiB on the parent,
-  which also stores the children's metrics). Retention is a target; the disk cap bounds growth.
+- **History** — per-tier `dbengine tier N retention time = 7d` on the parent and on Lab, bounded by
+  `dbengine tier N retention size` (256 MiB per tier on a child, 1 GiB on the parent — its tier quota
+  is shared by every streaming child). Time and size are **combined** limits: data is dropped when
+  either one is reached, so the DB ceiling is ~3 × the size (one quota each for tiers 0/1/2).
+- **Secret hygiene** — `stream.conf` is written with `no_log`, so the shared key never appears in
+  `--diff` output, and the §4 validation commands print the destination, never the key.
 - **Updates** — the install is guarded by `stat /usr/sbin/netdata`, so a converged node stays
   `changed=0`. Updating an existing agent is **opt-in** — `-e netdata_upgrade=true` (§5).
 
@@ -52,6 +55,9 @@ Edge nodes stream to the Parent on the `pve` node; the NAS joins when it joins t
 - [ ] `lab` and `edge` reachable and base-provisioned (runbooks 25 / 24).
 - [ ] Ansible collections installed: `azure.azcollection`, `community.general`
       (`ansible-galaxy collection install -r ansible/requirements.yml`).
+- [ ] Controller Python packages for the Key Vault lookup — `azure-identity`, `azure-keyvault-secrets`
+      (`pip3 install --break-system-packages azure-identity azure-keyvault-secrets`, see
+      [runbook 16](16-docker-services-ansible-role.md)).
 - [ ] Azure Key Vault `homelab-bysxdb-kv` accessible from the controller identity.
 - [ ] Fleet key loaded in `ssh-agent` (`ssh-add -l` shows `fleetadm@homelab`).
 
@@ -75,8 +81,9 @@ The role fetches `homelab-bysxdb-kv/netdata-stream-api-key` at deploy time and w
 From the repo root on the LAN workstation (fleet key loaded):
 
 ```powershell
-chmod 755 /workspaces/Homelab /workspaces/Homelab/ansible   # world-writable fix
-ansible-playbook ansible/playbooks/playbook-pve.yml --diff
+# Dev container only — world-writable /workspaces breaks ansible.cfg; skip this line on a LAN workstation:
+chmod 755 /workspaces/Homelab /workspaces/Homelab/ansible
+ansible-playbook ansible/playbooks/playbook-pve.yml --diff   # run from the repo root
 ```
 
 `playbook-pve.yml` runs `common → security → nut_client → netdata`. The `netdata` role installs via the
@@ -93,7 +100,7 @@ ansible-playbook ansible/playbooks/playbook-edge.yml --diff
 
 Each child installs Netdata and streams to the Parent. Edge uses `netdata_storage: ram`
 (no `dbengine` on the eMMC, ADR 24/27); Lab keeps `dbengine` locally as a fallback history
-(7 days, capped at 512 MiB).
+(7 days, 256 MiB per tier).
 
 > **Standalone-first (ADR 27).** Deploy the Parent (§2) before the children (§3) so children
 > stream on first run. A child deployed earlier is still useful standalone; re-running its
@@ -110,19 +117,29 @@ curl -s http://192.168.2.201:19999/api/v1/info | head   # from the LAN workstati
 ```
 
 Open **`http://192.168.2.201:19999`** — the dashboard should show the `pve` node and, once §3 runs,
-the `lab` and `edge` nodes in the Nodes view. Per child, `grep -A4 '\[stream\]' /etc/netdata/stream.conf`
-should show the destination and key.
+the `lab` and `edge` nodes in the Nodes view.
+
+**Never print the shared key.** `stream.conf` carries it (on the parent the section header *is* the
+key), so check the shape, not the file:
+
+```sh
+# Parent — count sections; the header itself is the secret, so never cat the file
+sudo awk '/^\[/ { n++ } END { print "stream sections: " (n > 0 ? "present" : "MISSING") }' /etc/netdata/stream.conf
+
+# Child — destination only, no key
+sudo sed -n 's/^[[:space:]]*destination[[:space:]]*=[[:space:]]*//p' /etc/netdata/stream.conf
+```
 
 Check the history budget on `pve` and on `lab`:
 
 ```sh
-grep -A4 '^\[db\]' /etc/netdata/netdata.conf      # retention + dbengine multihost disk space
-du -sh /var/cache/netdata/dbengine                # actual DB size — must stay under the cap
+sudo grep -E 'tier [0-2] retention' /etc/netdata/netdata.conf   # 7d time + size cap, per tier
+du -sh /var/cache/netdata/dbengine                              # actual DB size vs the cap
 ```
 
-Retention is a **target**; the disk cap is what makes it safe. If 7 days does not fit under the cap,
-the cap wins and the effective retention is shorter — raise `netdata_dbengine_disk_space` rather than
-uncapping it.
+Retention is a **combined** limit — data is dropped when either the time or the size limit is
+reached — and the size quota applies **per tier**, so the DB ceiling is ~3 × the size value. If a node
+binds on size before 7 days, raise `netdata_retention_size` rather than dropping the cap.
 
 ## 5. Updating the installed agents
 
@@ -145,7 +162,8 @@ without the flag to confirm `changed=0`.
 - [ ] §2 UFW allows `19999` from the LAN; `netdata` user in `www-data` (VM/CT names resolve)
 - [ ] §3 Lab child streams to the Parent (visible in the Nodes view)
 - [ ] §3 Edge child streams to the Parent; `netdata.conf` `[db] mode = ram`
-- [ ] §4 `[db] retention = 604800` and `dbengine multihost disk space` set (512 MiB child / 2048 MiB parent); `du -sh /var/cache/netdata/dbengine` under the cap
+- [ ] §4 `dbengine tier 0/1/2 retention time = 7d` and `retention size` set (256 MiB child / 1 GiB parent); `du -sh /var/cache/netdata/dbengine` under the cap
+- [ ] §4 no validation command printed the shared key
 - [ ] Idempotent — a second playbook run reports `changed=0`
 - [ ] §5 `-e netdata_upgrade=true` updates an agent, and a following run reports `changed=0`
 - [ ] Not in scope: alarm notifications (deferred to the HA VM, [#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68)); `cloudlab` untouched

@@ -7,8 +7,8 @@
 > [#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68)). The hardware diagnostic is
 > already done ([research 29](../research/29-wyse5070-hardware-diagnostic.md), [issue #82](https://github.com/jaroslaw-bagnicki/Homelab/issues/82)).
 >
-> ⚠ **Netdata is out of scope here** — it is provisioned by the shared `netdata` role via
-> `playbook-pve.yml` in [runbook 31](31-deploy-netdata.md).
+> ⚠ **Netdata is applied by this runbook's own playbook** — `playbook-pve.yml` ends with the shared
+> `netdata` role (§4). The stream key, deployment and validation are in [runbook 31](31-deploy-netdata.md).
 
 ## Why
 
@@ -177,7 +177,8 @@ ansible-playbook ansible/playbooks/playbook-pve.yml --diff
 > runtime state**, not what's installed — so a host running `chrony` (e.g. Proxmox VE) is handled
 > correctly, while Debian/Ubuntu hosts stay on `systemd-timesyncd`.
 
-> **Netdata** is provisioned separately by the shared `netdata` role — see [runbook 31](31-deploy-netdata.md).
+> **Netdata** is applied by the `netdata` role at the end of this playbook — stream key and
+> validation are in [runbook 31](31-deploy-netdata.md).
 
 ## 5. Storage — reclaim the free VG space (optional)
 

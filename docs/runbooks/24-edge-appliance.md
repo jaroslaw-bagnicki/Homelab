@@ -182,7 +182,8 @@ The role provisions everything beyond the §2 bootstrap, idempotently, via
 - **UFW** (SSH from `192.168.2.0/24`, deny inbound otherwise) + **fail2ban** +
   `unattended-upgrades`
 - **eMMC longevity** — journald `Storage=volatile`, logrotate; Netdata is RAM-only (see §6)
-- **services §4–§6** — cloudflared, Caddy, Netdata (install + config + systemd units)
+- **services §4–§6** — cloudflared, Caddy, Netdata (install + config + systemd units; Netdata is
+  applied by the shared `netdata` role, not `edge_host`)
 
 **Base provisioning is written and committed 2026-08-26** (the `edge_host` role + `common`/`security`
 reuse — see §3a). Services §4–§6 are a follow-up once the base is verified live on the box.
@@ -240,8 +241,8 @@ repo, rendered to `/etc/caddy/Caddyfile`, `Caddyfile reload` on change (ADR 10).
 
 ## 6. Monitoring — Netdata Child Node
 
-**Target state (services follow-up, §4–§6)** — to be installed/configured by the `edge_host` role; this documents the
-resulting state:
+**Target state (services follow-up, §4–§6)** — cloudflared/Caddy by `edge_host`, **Netdata by the shared
+`netdata` role** (`playbook-edge.yml`); this documents the resulting state:
 
 - **RAM-only buffering** — `/etc/netdata/netdata.conf`:
   ```ini
@@ -250,8 +251,11 @@ resulting state:
   ```
   No `dbengine` disk store — per ADR 24 (eMMC endurance) and ADR 27 (lightweight Edge
   child node).
-- **Standalone-first, parent-later (ADR 27):** run as a standalone child with local
-  alarms now; re-point to the M910q Netdata Parent (k3s workload) when it lands.
+- **Standalone-first, parent-later (ADR 27):** the child role deploys it standalone-capable, but the
+  fleet re-points it at the **Netdata Parent on the `pve` node** (`192.168.2.201:19999`) — the
+  M910q/k3s placement is obsolete. Netdata is provisioned by the shared `netdata` role via
+  `playbook-edge.yml`, not by `edge_host`; stream key, deployment and validation are in
+  [runbook 31](31-deploy-netdata.md).
 - Resource check: expect ~60–100 MB RSS with the minimal profile — fits the 2 GB budget
   alongside cloudflared + Caddy.
 
