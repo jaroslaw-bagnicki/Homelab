@@ -2,8 +2,7 @@
 
 > Roll the **NUT client** (`nut-client` + `upsmon`) out to `pve`, `lab`, and `edge` with the
 > `nut_client` base role, so every node stops itself in order when the shared UPS battery runs down.
-> The role is applied by the base playbooks (`playbook-pve.yml`, `playbook-lab.yml`,
-> `playbook-edge.yml`); the NUT **server**
+> The role is applied by the base playbooks (`playbook-pve.yml`, `playbook-lab.yml`, `playbook-edge.yml`); the NUT **server**
 > (LXC 213, `.213`, `nutdrv_qx`) is built by [runbook 29](29-nut-ups-shutdown.md) §1–§3. This
 > runbook is the client half, tracked in
 > [issue #116](https://github.com/jaroslaw-bagnicki/Homelab/issues/116) under
@@ -19,7 +18,7 @@
 
 ## Why
 
-Runbook 29 §4/§5 were hand-edits: write `upsmon.conf` on the Proxmox VE host, then hand-repeat it on `lab` and
+Runbook 29 §4/§5 were hand-edits: write `upsmon.conf` on `pve`, then hand-repeat it on `lab` and
 `edge` — three chances to mistype a Key Vault password, three files free to drift. The fleet is
 Ansible-managed ([ADR 28](../decisions/28-fleet-admin-account-and-key.md)), so the client belongs in a
 role. The role renders one `upsmon.conf` template; the files differ only in the per-role values below.
@@ -68,7 +67,7 @@ ansible-playbook ansible/playbooks/playbook-lab.yml   # lab — secondary
 ansible-playbook ansible/playbooks/playbook-edge.yml  # edge — secondary
 ```
 
-The Proxmox VE host is the sole `primary` (`host_vars/pve.yml`: `FINALDELAY 30`, `HOSTSYNC 30`, account
+`pve` is the sole `primary` (`host_vars/pve.yml`: `FINALDELAY 30`, `HOSTSYNC 30`, account
 `upsmon-host`); `lab`/`edge` are `secondary` on the role defaults (`HOSTSYNC 15`, `FINALDELAY 0`,
 account `upsmon-fleet`).
 
@@ -79,7 +78,7 @@ template task runs with `no_log: true`, so `--diff` never prints the password.
 **Reachability guard.** Before starting `nut-monitor`, the role probes the server with
 `upsc ups@192.168.2.213` (5 retries, 2 s apart). If it answers, the service is enabled and started;
 if not, the config is written but the service is left stopped and the play prints a warning — re-run
-the base playbook once LXC 213 is up. This keeps a from-scratch Proxmox VE rebuild (server LXC not yet
+the base playbook once LXC 213 is up. This keeps a from-scratch `pve` rebuild (server LXC not yet
 built) from starting a fail-safe monitor with no server to reach.
 
 > Because the role fetches from Key Vault, `playbook-pve.yml`/`playbook-edge.yml` now need `AZURE_*`
@@ -127,7 +126,7 @@ built) from starting a fail-safe monitor with no server to reach.
    `MONITOR` password so it never reaches the terminal.
 
    Expect **no output** between the two secondaries (identical), and only the `MONITOR` account/role
-   and `HOSTSYNC`/`FINALDELAY` lines differing on the primary.
+   and `HOSTSYNC`/`FINALDELAY` lines differing from `pve`.
 
 5. **Idempotency** — re-run the base playbook; it must report `changed=0` for the role:
 
@@ -170,7 +169,7 @@ Executed against the live fleet 2026-09-19 (role from
 - [x] §2 `playbook-pve.yml` / `playbook-lab.yml` / `playbook-edge.yml` apply cleanly (role reports the guard probe passing) — `failed=0` on all three; guard warn task skipped
 - [x] §3 `nut-monitor` `active (running)` on all three nodes — enabled + active
 - [x] §3 `upsc ups@192.168.2.213` returns the same values from all three nodes; no `Login failed` — `OL` / `100%` everywhere; full-journal `Login failed` count 0
-- [x] §3 the two secondaries' `upsmon.conf` are identical; only per-role values differ from the primary — `lab` vs `edge` byte-identical (password masked)
+- [x] §3 the two secondaries' `upsmon.conf` are identical; only per-role values differ from `pve` — `lab` vs `edge` byte-identical (password masked)
 - [x] §3 re-running a base playbook reports `changed=0` for the role — `pve`/`edge` 0; `lab` 1, that one being `azure_arc`
 - [x] §4 host monitor paused and restored across a LXC 213 restart — `pve` paused → LXC 213 restarted → `pve` active; secondaries never paused (`ActiveEnterTimestamp` unchanged)
 
@@ -180,6 +179,6 @@ Executed against the live fleet 2026-09-19 (role from
 ## Related
 
 - [`nut_client` role README](../../ansible/roles/nut_client/README.md)
-- [Runbook 29 — UPS graceful shutdown (NUT on the Proxmox VE node)](29-nut-ups-shutdown.md) — server §1–§3, choreography §6, drill §7
+- [Runbook 29 — UPS graceful shutdown (NUT on the pve node)](29-nut-ups-shutdown.md) — server §1–§3, choreography §6, drill §7
 - [ADR 30 — UPS graceful shutdown](../decisions/30-ups-nut-graceful-shutdown.md) · [ADR 31 — static address scheme](../decisions/31-static-address-scheme.md) · [ADR 28 — fleet admin account and key](../decisions/28-fleet-admin-account-and-key.md)
 - [Issue #116](https://github.com/jaroslaw-bagnicki/Homelab/issues/116) · parent [#111](https://github.com/jaroslaw-bagnicki/Homelab/issues/111) · drill [#117](https://github.com/jaroslaw-bagnicki/Homelab/issues/117)

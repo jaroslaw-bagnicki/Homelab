@@ -1,7 +1,7 @@
-# UPS Graceful Shutdown — NUT on the Proxmox VE Node
+# UPS Graceful Shutdown — NUT on the pve Node
 
 > Put the lab's shared power rail under **NUT (Network UPS Tools)**: the Green Cell **UPSLM600**
-> stays plugged into the Proxmox VE host, a dedicated **LXC 213** runs the NUT
+> stays plugged into the `pve` node, a dedicated **LXC 213** runs the NUT
 > server (`upsd` + `nutdrv_qx`), and the hypervisor plus the fleet each run a NUT client that stops
 > the node in order once the battery runs down. The decision is recorded in
 > [ADR 30](../decisions/30-ups-nut-graceful-shutdown.md); implementation is tracked in
@@ -28,7 +28,7 @@ defined order.
 
 ## What changes
 
-- **UPS stays on the Proxmox VE host** — Green Cell `UPSLM600`, USB **`0665:5161`**
+- **UPS stays on the `pve` node** — Green Cell `UPSLM600`, USB **`0665:5161`**
   (Cypress/INNO TECH bridge). The unit has **no serial number**, so NUT finds it by
   `vendorid`/`productid` rather than by a port path — which port it occupies is irrelevant, and the
   cable can be moved without touching any config.
@@ -53,7 +53,7 @@ defined order.
 
 ## Prerequisites
 
-- UPS on the Proxmox VE host's USB and mains connected. The HID interface is **single-owner** — nothing else
+- UPS on the `pve` node's USB and mains connected. The HID interface is **single-owner** — nothing else
   may be holding the device, or the container stays blind to it.
 - `fleetadm` SSH + `sudo -n` on `pve`, `lab`, `edge`.
 - Azure Key Vault access to `homelab-bysxdb-kv` for the monitor password.
@@ -78,7 +78,7 @@ Two strips, both UPS-fed:
 
 | Strip | Load | Note |
 |---|---|---|
-| **1 — servers** | Dell Wyse 5070 (Proxmox VE node) | hosts the NUT server's USB, `0665:5161` |
+| **1 — servers** | Dell Wyse 5070 (pve node) | hosts the NUT server's USB, `0665:5161` |
 | | Lenovo M910q (lab) | 65/90 W external brick · k3s |
 | | Dell Wyse 3040 (edge) | external brick |
 | | Wincor Beetle M-III | the OMV NAS ([#98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98), [ADR 29](../decisions/29-nas-backup-target-beetle-m3-omv.md)) |
@@ -615,7 +615,7 @@ runbook completes on its own; the client rollout (§4/§5) is verified by
 
 - [Idea 09 — UPS with NUT + Home Assistant](../ideas/09-ups-nut-home-assistant.md) — load profile, model comparison, NUT architecture
 - [ADR 25 — Home Assistant on a thin client](../decisions/25-home-assistant-thin-client.md) · [ADR 27 — monitoring strategy](../decisions/27-monitoring-strategy.md) · [ADR 28 — fleet admin account and key](../decisions/28-fleet-admin-account-and-key.md)
-- [Runbook 28 — Proxmox VE node install](28-pve-proxmox-node.md) · [Runbook 24 — edge appliance](24-edge-appliance.md) · [Runbook 21 — TL-SG108E switch](21-tl-sg108e-switch.md)
+- [Runbook 28 — pve node install](28-pve-proxmox-node.md) · [Runbook 24 — edge appliance](24-edge-appliance.md) · [Runbook 21 — TL-SG108E switch](21-tl-sg108e-switch.md)
 - [ADR 29 — NAS backup target on the Beetle M-III](../decisions/29-nas-backup-target-beetle-m3-omv.md) · [idea 07 — OPNsense on the Futro S930](../ideas/07-opnsense-futro-s930.md) · [idea 08 — LTE WAN failover](../ideas/08-lte-wan-failover.md)
 - [research 24 — network topology](../research/24-network-topology-design.md) (IP scheme) · [research 29 — Wyse 5070 diagnostic](../research/29-wyse5070-hardware-diagnostic.md) (USB hub topology)
 - [Network UPS Tools](https://networkupstools.org/) — `nutdrv_qx` driver, `upsd` / `upsmon`

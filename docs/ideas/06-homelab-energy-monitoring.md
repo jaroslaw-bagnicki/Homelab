@@ -45,7 +45,7 @@ New hardware + metrics architecture — decision recorded in [ADR 26](../decisio
 ## References
 
 - [Research 27 — Zigbee energy monitoring](../research/27-zigbee-energy-monitoring.md) — the full research output
-- [Idea 05 — Home Assistant on a Thin Client](05-home-assistant-thin-client.md) — the Proxmox VE host this rides alongside
+- [Idea 05 — Home Assistant on a Thin Client](05-home-assistant-thin-client.md) — the `pve` node this rides alongside
 - [ADR 25 — Home Assistant on a dedicated thin-client node](../decisions/25-home-assistant-thin-client.md) — Proposed
 - [ADR 22 — k3s + Azure Arc](../decisions/22-k3s-arc-homelab.md)
 - [ADR 23 — NAS on the ML110 (OMV)](../decisions/23-nas-on-ml110.md)

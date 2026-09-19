@@ -16,7 +16,7 @@ Significant architectural and technology choices recorded in
 | 33 | 2026-09-19 | [Fleet Node Hostnames Name the Host Role](33-fleet-node-hostnames.md) | Accepted |
 | 32 | 2026-09-16 | [No Hosted CI — Verification Stays Local](32-no-hosted-ci.md) | Accepted |
 | 31 | 2026-09-13 | [Static Address Scheme — Server and Guest Blocks](31-static-address-scheme.md) | Accepted |
-| 30 | 2026-09-12 | [UPS Graceful Shutdown — NUT on the Proxmox VE Node](30-ups-nut-graceful-shutdown.md) | Accepted |
+| 30 | 2026-09-12 | [UPS Graceful Shutdown — NUT on the pve Node](30-ups-nut-graceful-shutdown.md) | Accepted |
 | 29 | 2026‑09‑12 | [NAS Backup Target — Wincor Beetle M-III (OpenMediaVault)](29-nas-backup-target-beetle-m3-omv.md) | Accepted |
 | 28 | 2026‑08‑30 | [Dedicated Fleet-Wide SSH Admin Account & Key](28-fleet-admin-account-and-key.md) | Accepted |
 | 27 | 2026‑08‑15 | [Homelab Monitoring & Observability Strategy — Two-Tier Model (Azure Monitor via Arc + Local Monitoring Stack)](27-monitoring-strategy.md) | Accepted |
