@@ -88,11 +88,11 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Network | Realtek RTL8111/8168 GbE (`enp1s0`, MAC `c0:25:a5:65:02:67`) · Intel CNVi WiFi + BT (`wlp0s12f0`, MAC `d0:3c:1f:cb:76:9a`) |
 | Zigbee | Sonoff Zigbee 3.0 USB Dongle Plus (ZBDongle-P / CC2652P) — USB coordinator for LXC 212 passthrough (by-id pattern, research 26 §4) |
 | Firmware | BIOS 1.34.0 (2024-11-08) · board 060J9C · SKU `080C` · SN `16474B3` |
-| Role | Fleet virtualisation host — Home Assistant OS VM + Mosquitto/Zigbee2MQTT/NUT LXCs, Netdata Parent to follow (ADR 25, ADR 27, ADR 30) |
+| Role | Fleet virtualisation host — Home Assistant OS VM + Mosquitto/Zigbee2MQTT/NUT LXCs, with the Netdata Parent on the host (ADR 25, ADR 27, ADR 30) |
 | Guests | VM 210 HA OS `192.168.2.210` · LXC 211 Mosquitto `192.168.2.211` · LXC 212 Zigbee2MQTT `192.168.2.212` · LXC 213 NUT `192.168.2.213` — VMID = last octet, [ADR 31](decisions/31-static-address-scheme.md) |
-| Status | Proxmox VE **9.2.2** installed at `192.168.2.201` + base provisioned (runbook 28, 2026-09-06); **LXC 213 (NUT) delivered** (ADR 30, runbook 29 §1–§3, [#115](https://github.com/jaroslaw-bagnicki/Homelab/issues/115)); HA OS VM + LXC 211/212 still pending ([#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68) / [#85](https://github.com/jaroslaw-bagnicki/Homelab/issues/85)) |
+| Status | Proxmox VE **9.2.2** installed at `192.168.2.201` + base provisioned (runbook 28, 2026-09-06); Netdata **Parent** configured host-native with an **HTTPS-only dashboard** (Tier B, runbook 31 — **live deploy pending**); **LXC 213 (NUT) delivered** (ADR 30, runbook 29 §1–§3, [#115](https://github.com/jaroslaw-bagnicki/Homelab/issues/115)); HA OS VM + LXC 211/212 still pending ([#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68) / [#85](https://github.com/jaroslaw-bagnicki/Homelab/issues/85)) |
 | Acquisition | 2026-08-19 — hardware diagnostic done ([research 29](research/29-wyse5070-hardware-diagnostic.md)); SK hynix SSD + Sonoff ZBDongle-P acquired |
-| Docs | [idea 05](ideas/05-home-assistant-thin-client.md) · [ADR 25](decisions/25-home-assistant-thin-client.md) · [ADR 33](decisions/33-fleet-node-hostnames.md) · [research 26](research/26-home-assistant-thin-client.md) · [research 29](research/29-wyse5070-hardware-diagnostic.md) · [runbook 28](runbooks/28-pve-proxmox-node.md) |
+| Docs | [idea 05](ideas/05-home-assistant-thin-client.md) · [ADR 25](decisions/25-home-assistant-thin-client.md) · [ADR 33](decisions/33-fleet-node-hostnames.md) · [research 26](research/26-home-assistant-thin-client.md) · [research 29](research/29-wyse5070-hardware-diagnostic.md) · [runbook 28](runbooks/28-pve-proxmox-node.md) · [runbook 31](runbooks/31-deploy-netdata.md) |
 
 ### OPNsense Router — Fujitsu Futro S930 (planned)
 

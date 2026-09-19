@@ -7,15 +7,15 @@
 > [#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68)). The hardware diagnostic is
 > already done ([research 29](../research/29-wyse5070-hardware-diagnostic.md), [issue #82](https://github.com/jaroslaw-bagnicki/Homelab/issues/82)).
 >
-> ⚠ **Netdata is out of scope here.** The Netdata **Parent** (which will also run on this host) is
-> tracked under [#104](https://github.com/jaroslaw-bagnicki/Homelab/issues/104).
+> ⚠ **Netdata is applied by this runbook's own playbook** — `playbook-pve.yml` ends with the shared
+> `netdata` role (§4). The stream key, deployment and validation are in [runbook 31](31-deploy-netdata.md).
 
 ## Why
 
 ADR 25 needs Home Assistant on a **dedicated thin-client node** (good Zigbee mesh location, and
 MQTT/Zigbee2MQTT as LXCs so HA restarts don't drop the mesh). Proxmox VE is that hypervisor. It is
-also the future home of the **Netdata Parent** ([ADR 27](../decisions/27-monitoring-strategy.md) / [#104](https://github.com/jaroslaw-bagnicki/Homelab/issues/104)) — a central Tier B monitoring plane
-independent of the M910q.
+also the home of the **Netdata Parent** ([ADR 27](../decisions/27-monitoring-strategy.md) / [#104](https://github.com/jaroslaw-bagnicki/Homelab/issues/104)) — a central Tier B monitoring plane
+independent of the M910q, deployed by [runbook 31](31-deploy-netdata.md).
 
 ## What changes
 
@@ -23,7 +23,7 @@ independent of the M910q.
   block of [research 24](../research/24-network-topology-design.md) (this is a compute/virtualisation
   host, not an edge/ingress device).
 - **`pve`** added to the Ansible inventory; base provisioned via `ansible/playbooks/playbook-pve.yml`
-  (`common` → `security`).
+  (`common` → `security` → `nut_client` → `netdata`).
 - **Agent account — `fleetadm`** — key-only SSH ([ADR 28](../decisions/28-fleet-admin-account-and-key.md)), installed at bootstrap (full pattern in the
   [ansible README](../../ansible/README.md)).
 - **Breaking-glass account — `root`** — the Proxmox admin (web UI `:8006` + console), password stored
@@ -158,7 +158,9 @@ chmod 755 /workspaces/Homelab /workspaces/Homelab/ansible   # world-writable fix
 ansible-playbook ansible/playbooks/playbook-pve.yml --diff
 ```
 
-`playbook-pve.yml` runs `common → security`:
+`playbook-pve.yml` runs `common → security → nut_client → netdata` — the last two read Azure Key
+Vault, so the controller needs `AZURE_CLIENT_ID` / `AZURE_CLIENT_SECRET` / `AZURE_TENANT_ID` (see the
+[runbook 31](31-deploy-netdata.md) prerequisites).
 - **`common`** — hostname `pve`, `Etc/UTC`, Avahi (`pve.local`, `common_enable_avahi: true`), and re-arms
   the fleet key on `fleetadm` ([ADR 28](../decisions/28-fleet-admin-account-and-key.md)). Time sync is left to Proxmox's **`chrony`**.
 - **`security`** — UFW default-deny + allow from `192.168.2.0/24`: SSH `22` and Proxmox UI **`8006`**
@@ -177,7 +179,8 @@ ansible-playbook ansible/playbooks/playbook-pve.yml --diff
 > runtime state**, not what's installed — so a host running `chrony` (e.g. Proxmox VE) is handled
 > correctly, while Debian/Ubuntu hosts stay on `systemd-timesyncd`.
 
-> **Netdata** is not part of this runbook/playbook — it is [#104](https://github.com/jaroslaw-bagnicki/Homelab/issues/104).
+> **Netdata** is applied by the `netdata` role at the end of this playbook — stream key and
+> validation are in [runbook 31](31-deploy-netdata.md).
 
 ## 5. Storage — reclaim the free VG space (optional)
 

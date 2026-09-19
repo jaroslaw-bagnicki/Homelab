@@ -1,0 +1,31 @@
+---
+# Shared Netdata role — parent + child modes (ADR 27). Parent vs child is data,
+# not code: the same task list runs fleet-wide, parameterized per host.
+netdata_role: child
+# Parent "host:port" for streaming children; empty = standalone (no streaming).
+netdata_stream_target: ""
+netdata_storage: dbengine
+# Per-tier retention target (rendered as `dbengine tier N retention time`) — 7 days.
+netdata_retention_time: "7d"
+# Per-tier retention size cap (`dbengine tier N retention size`) — the hard bound.
+# Rendered for tiers 0-2, so the DB ceiling is ~3x this value; the parent sets 1GiB.
+netdata_retention_size: "256MiB"
+netdata_bind: "127.0.0.1"
+netdata_port: 19999
+# Serve listeners over TLS. The parent sets this, plus a per-listener `bind to` spec
+# (e.g. `192.168.2.201:19999=dashboard^SSL=force`) so the dashboard is HTTPS-only.
+netdata_tls: false
+netdata_tls_cert: /etc/netdata/ssl/cert.pem
+netdata_tls_key: /etc/netdata/ssl/key.pem
+netdata_tls_days: 3650
+# Child only: append `:SSL` to the stream destination (required when the parent forces TLS).
+netdata_stream_ssl: false
+# Parent runs on a Proxmox host — grants the netdata user read access to /etc/pve.
+netdata_proxmox_host: false
+# Re-run the kickstart installer to update an existing agent. Opt-in: set true, run, set false.
+netdata_upgrade: false
+# Override to skip the Key Vault lookup (tests); normally left empty.
+netdata_stream_api_key: ""
+netdata_stream_api_key_secret_name: netdata-stream-api-key
+netdata_keyvault_name: homelab-bysxdb-kv
+netdata_kickstart_url: https://get.netdata.cloud/kickstart.sh
