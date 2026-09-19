@@ -72,7 +72,7 @@ Keep the single `192.168.2.0/24` broadcast domain. Reserve a dedicated static bl
 | Address | Device |
 |---|---|
 | `192.168.2.200` | Lenovo M910q Homelab (existing) |
-| `192.168.2.201` | Wyse 5070 `pve` — Proxmox VE host (runbook 28) |
+| `192.168.2.201` | Wyse 5070 — Proxmox VE host (runbook 28) |
 | `192.168.2.202` | Beetle NAS — the ML110's successor (planned) |
 | `192.168.2.210` | VM 210 — Home Assistant OS |
 | `192.168.2.211` | LXC 211 — Mosquitto |

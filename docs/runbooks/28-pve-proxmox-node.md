@@ -1,6 +1,6 @@
-# pve Node — Proxmox VE Install
+# Proxmox VE Node — Install
 
-> Install **Proxmox VE** on the Dell Wyse 5070 (`pve`, `192.168.2.201`)
+> Install **Proxmox VE** on the Dell Wyse 5070 (hostname `pve`, `192.168.2.201`)
 > — the fleet's virtualisation host and the dedicated smart-home hypervisor
 > ([ADR 25](../decisions/25-home-assistant-thin-client.md), [ADR 33](../decisions/33-fleet-node-hostnames.md)).
 > Tracked in [issue #103](https://github.com/jaroslaw-bagnicki/Homelab/issues/103) (child of
@@ -34,7 +34,7 @@ independent of the M910q.
 
 > **Execution note.** Run this runbook **interactively from the repo's dev container** (any
 > interactive session — e.g. VSCode with the GitHub Copilot extension), like runbooks 24/25. This is a
-> **physical/console install** — it cannot be delegated to a headless agent. The `pve` node is LAN-only;
+> **physical/console install** — it cannot be delegated to a headless agent. The Proxmox VE node is LAN-only;
 > run its playbook from a machine on `192.168.2.0/24` per the `fleet-connect` skill.
 
 ## Prerequisites
@@ -165,11 +165,13 @@ ansible-playbook ansible/playbooks/playbook-pve.yml --diff
   (`security_ufw_allow_tcp_ports`), fail2ban, sshd key-only hardening (LAN password auth applies to
   **non-root** accounts only — `root` SSH stays key-only via `PermitRootLogin prohibit-password`).
 
-> **Proxmox node name.** The `common` role manages the **OS** hostname (`/etc/hostname`, `/etc/hosts`).
-> The **Proxmox node name** shown in the UI is fixed at install and stored under `/etc/pve/nodes/` —
-> the role does not change it. A host renamed after install ([ADR 33](../decisions/33-fleet-node-hostnames.md))
-> keeps the old name there until it is renamed on the host itself; a from-scratch install (this
-> runbook) picks up `pve` directly.
+> **Proxmox node name.** The `common` role manages the **OS** hostname (`/etc/hostname`, `/etc/hosts`) —
+> a host renamed after install ([ADR 33](../decisions/33-fleet-node-hostnames.md)) converges to `pve` on
+> the next playbook run. The **Proxmox node name** is a different thing: the installer fixes it at
+> install time and stores it under `/etc/pve/nodes/`, Proxmox offers **no supported rename**, and no role
+> touches it — so an installed node keeps reporting `ha` in the web UI until the host is rebuilt, while
+> a from-scratch install (this runbook) picks up `pve` directly. Accepted in
+> [ADR 33](../decisions/33-fleet-node-hostnames.md).
 
 > **Time sync.** The `common` role gathers `service_facts` and, if `chrony.service` is **running**,
 > manages `chrony`; otherwise it manages the standard `systemd-timesyncd`. This reads the **actual

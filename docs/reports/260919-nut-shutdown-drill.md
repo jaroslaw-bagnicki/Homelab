@@ -5,7 +5,7 @@
 **Baseline:** point-in-time at 2026-09-19, `main` @ `8cd4524` — the `nut_client` role merged in PR #119, so the fleet runs the role, not a hand-edit
 **Trigger:** the operator pulled the **UPS mains input**; the house supply stayed live, so the UPS ran on battery exactly as it would in an outage
 
-> **Naming.** This drill ran before the Wyse 5070 was renamed `ha` → `pve` ([ADR 33](../decisions/33-fleet-node-hostnames.md)). The `ha` labels below are the hostname in force at the time — the same host is `pve` in current docs.
+> **Naming.** This drill ran before the Wyse 5070 was renamed `ha` → `pve` ([ADR 33](../decisions/33-fleet-node-hostnames.md)). The `ha` labels below are the hostname in force at the time — the same host is the **Proxmox VE** node in current docs.
 
 ---
 
