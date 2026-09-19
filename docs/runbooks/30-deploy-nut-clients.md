@@ -1,8 +1,8 @@
 # NUT Clients on the Fleet
 
-> Roll the **NUT client** (`nut-client` + `upsmon`) out to `ha`, `lab`, and `edge` with the
+> Roll the **NUT client** (`nut-client` + `upsmon`) out to `pve`, `lab`, and `edge` with the
 > `nut_client` base role, so every node stops itself in order when the shared UPS battery runs down.
-> The role is applied by the base playbooks (`playbook-ha/lab/edge.yml`); the NUT **server**
+> The role is applied by the base playbooks (`playbook-pve.yml`, `playbook-lab.yml`, `playbook-edge.yml`); the NUT **server**
 > (LXC 213, `.213`, `nutdrv_qx`) is built by [runbook 29](29-nut-ups-shutdown.md) §1–§3. This
 > runbook is the client half, tracked in
 > [issue #116](https://github.com/jaroslaw-bagnicki/Homelab/issues/116) under
@@ -18,7 +18,7 @@
 
 ## Why
 
-Runbook 29 §4/§5 were hand-edits: write `upsmon.conf` on `ha`, then hand-repeat it on `lab` and
+Runbook 29 §4/§5 were hand-edits: write `upsmon.conf` on `pve`, then hand-repeat it on `lab` and
 `edge` — three chances to mistype a Key Vault password, three files free to drift. The fleet is
 Ansible-managed ([ADR 28](../decisions/28-fleet-admin-account-and-key.md)), so the client belongs in a
 role. The role renders one `upsmon.conf` template; the files differ only in the per-role values below.
@@ -34,7 +34,7 @@ role. The role renders one `upsmon.conf` template; the files differ only in the 
   `AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID` — **in the same shell that runs `ansible-playbook`**.
   The role asserts them, and a new terminal session does not inherit another session's `$env:…`
   values, so the play aborts at the assert with the node's config left unrendered.
-- [ ] `fleetadm` SSH + `sudo -n` on `ha`, `lab`, `edge`; fleet key loaded.
+- [ ] `fleetadm` SSH + `sudo -n` on `pve`, `lab`, `edge`; fleet key loaded.
 - [ ] `ansible-galaxy collection install -r ansible/requirements.yml` (needs `azure.azcollection`).
 - [ ] Controller Python packages for the Key Vault lookup — `pip3 install --break-system-packages azure-identity azure-keyvault-secrets` (see [runbook 16](16-docker-services-ansible-role.md)).
 
@@ -44,7 +44,7 @@ The role expects the two `upsmon` accounts to match `upsd.users` in LXC 213:
 
 | Node(s) | `upsmon` role | Account | Key Vault secret |
 |---|---|---|---|
-| `ha` | `primary` | `upsmon-host` | `nut-upsmon-primary-password` |
+| `pve` | `primary` | `upsmon-host` | `nut-upsmon-primary-password` |
 | `lab`, `edge` | `secondary` | `upsmon-fleet` | `nut-upsmon-secondary-password` |
 
 If the secrets are missing, provision them once (they already exist if §3 of runbook 29 was done):
@@ -62,12 +62,12 @@ The role runs at the end of each physical node's base playbook — there is no s
 command:
 
 ```powershell
-ansible-playbook ansible/playbooks/playbook-ha.yml    # ha  — upsmon primary
+ansible-playbook ansible/playbooks/playbook-pve.yml    # pve — upsmon primary
 ansible-playbook ansible/playbooks/playbook-lab.yml   # lab — secondary
 ansible-playbook ansible/playbooks/playbook-edge.yml  # edge — secondary
 ```
 
-`ha` is the sole `primary` (`host_vars/ha.yml`: `FINALDELAY 30`, `HOSTSYNC 30`, account
+`pve` is the sole `primary` (`host_vars/pve.yml`: `FINALDELAY 30`, `HOSTSYNC 30`, account
 `upsmon-host`); `lab`/`edge` are `secondary` on the role defaults (`HOSTSYNC 15`, `FINALDELAY 0`,
 account `upsmon-fleet`).
 
@@ -78,19 +78,19 @@ template task runs with `no_log: true`, so `--diff` never prints the password.
 **Reachability guard.** Before starting `nut-monitor`, the role probes the server with
 `upsc ups@192.168.2.213` (5 retries, 2 s apart). If it answers, the service is enabled and started;
 if not, the config is written but the service is left stopped and the play prints a warning — re-run
-the base playbook once LXC 213 is up. This keeps a from-scratch `ha` rebuild (server LXC not yet
+the base playbook once LXC 213 is up. This keeps a from-scratch `pve` rebuild (server LXC not yet
 built) from starting a fail-safe monitor with no server to reach.
 
-> Because the role fetches from Key Vault, `playbook-ha.yml`/`playbook-edge.yml` now need `AZURE_*`
+> Because the role fetches from Key Vault, `playbook-pve.yml`/`playbook-edge.yml` now need `AZURE_*`
 > and the Key Vault Python packages (`azure-identity`, `azure-keyvault-secrets`) — `playbook-lab.yml`
 > already did.
 
 ## 3. Verify
 
-1. **Service up on each node** (repeat for `ha`, `lab`, `edge`):
+1. **Service up on each node** (repeat for `pve`, `lab`, `edge`):
 
    ```sh
-   ssh fleetadm@192.168.2.201   # .201 ha · .200 lab · .240 edge
+   ssh fleetadm@192.168.2.201   # .201 pve · .200 lab · .240 edge
    systemctl status nut-monitor --no-pager
    ```
 
@@ -126,7 +126,7 @@ built) from starting a fail-safe monitor with no server to reach.
    `MONITOR` password so it never reaches the terminal.
 
    Expect **no output** between the two secondaries (identical), and only the `MONITOR` account/role
-   and `HOSTSYNC`/`FINALDELAY` lines differing against `ha`.
+   and `HOSTSYNC`/`FINALDELAY` lines differing from `pve`.
 
 5. **Idempotency** — re-run the base playbook; it must report `changed=0` for the role:
 
@@ -166,12 +166,12 @@ Executed against the live fleet 2026-09-19 (role from
 [issue #116](https://github.com/jaroslaw-bagnicki/Homelab/issues/116#issuecomment-5740654644)):
 
 - [x] §1 both monitor passwords present in `homelab-bysxdb-kv`; accounts match LXC 213 `upsd.users` — `[upsmon-host] upsmon primary`, `[upsmon-fleet] upsmon secondary`
-- [x] §2 `playbook-ha.yml` / `playbook-lab.yml` / `playbook-edge.yml` apply cleanly (role reports the guard probe passing) — `failed=0` on all three; guard warn task skipped
+- [x] §2 `playbook-pve.yml` / `playbook-lab.yml` / `playbook-edge.yml` apply cleanly (role reports the guard probe passing) — `failed=0` on all three; guard warn task skipped
 - [x] §3 `nut-monitor` `active (running)` on all three nodes — enabled + active
 - [x] §3 `upsc ups@192.168.2.213` returns the same values from all three nodes; no `Login failed` — `OL` / `100%` everywhere; full-journal `Login failed` count 0
-- [x] §3 the two secondaries' `upsmon.conf` are identical; only per-role values differ from `ha` — `lab` vs `edge` byte-identical (password masked)
-- [x] §3 re-running a base playbook reports `changed=0` for the role — `ha`/`edge` 0; `lab` 1, that one being `azure_arc`
-- [x] §4 host monitor paused and restored across a LXC 213 restart — `ha` paused → LXC 213 restarted → `ha` active; secondaries never paused (`ActiveEnterTimestamp` unchanged)
+- [x] §3 the two secondaries' `upsmon.conf` are identical; only per-role values differ from `pve` — `lab` vs `edge` byte-identical (password masked)
+- [x] §3 re-running a base playbook reports `changed=0` for the role — `pve`/`edge` 0; `lab` 1, that one being `azure_arc`
+- [x] §4 host monitor paused and restored across a LXC 213 restart — `pve` paused → LXC 213 restarted → `pve` active; secondaries never paused (`ActiveEnterTimestamp` unchanged)
 
 > §4 caveat: the container was unreachable ~12 s against `DEADTIME` 15 s, so the clients never
 > marked the UPS *dead*. A normal restart is proven benign; the >15 s blackout case is not.
@@ -179,6 +179,6 @@ Executed against the live fleet 2026-09-19 (role from
 ## Related
 
 - [`nut_client` role README](../../ansible/roles/nut_client/README.md)
-- [Runbook 29 — UPS graceful shutdown (NUT on the HA node)](29-nut-ups-shutdown.md) — server §1–§3, choreography §6, drill §7
+- [Runbook 29 — UPS graceful shutdown (NUT on the pve node)](29-nut-ups-shutdown.md) — server §1–§3, choreography §6, drill §7
 - [ADR 30 — UPS graceful shutdown](../decisions/30-ups-nut-graceful-shutdown.md) · [ADR 31 — static address scheme](../decisions/31-static-address-scheme.md) · [ADR 28 — fleet admin account and key](../decisions/28-fleet-admin-account-and-key.md)
 - [Issue #116](https://github.com/jaroslaw-bagnicki/Homelab/issues/116) · parent [#111](https://github.com/jaroslaw-bagnicki/Homelab/issues/111) · drill [#117](https://github.com/jaroslaw-bagnicki/Homelab/issues/117)

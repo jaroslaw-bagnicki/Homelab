@@ -14,8 +14,8 @@ Its tens-blocks were introduced as `20x` server / `21x` NAS / `22x` LLM / `23x` 
 
 Two things have moved since:
 
-- **The HA node grew a hypervisor.** The Wyse 5070 runs Proxmox VE
-  ([ADR 25](25-home-assistant-thin-client.md), [runbook 28](../runbooks/28-ha-proxmox-node.md)) with
+- **The smart-home node grew a hypervisor.** The Wyse 5070 runs Proxmox VE
+  ([ADR 25](25-home-assistant-thin-client.md), [runbook 28](../runbooks/28-pve-proxmox-node.md)) with
   a VM and three LXCs planned, none of which had a home in the scheme.
 - **The NAS role left the `21x` block.** The ML110 was the block's only member
   ([ADR 23](23-nas-on-ml110.md)) and is retiring ([ADR 29](29-nas-backup-target-beetle-m3-omv.md)),
@@ -30,8 +30,8 @@ guest's VMID its address's last octet.**
 
 | Block | Class | Members |
 |---|---|---|
-| `200–209` | physical servers | `lab` M910q `.200` · HA node `.201` · Beetle NAS `.202` |
-| `210–219` | Proxmox guests on the HA node | **VM 210** `.210` · **LXC 211** `.211` · **LXC 212** `.212` · **LXC 213** `.213` |
+| `200–209` | physical servers | `lab` M910q `.200` · `pve` Wyse 5070 `.201` · Beetle NAS `.202` |
+| `210–219` | Proxmox guests on the `pve` node | **VM 210** `.210` · **LXC 211** `.211` · **LXC 212** `.212` · **LXC 213** `.213` |
 | `220–229` | LLM server (Phase 2) | — |
 | `230–239` | switch management | TL-SG108E `.230` |
 | `240–249` | edge/ingress appliances | Wyse 3040 `.240` |
@@ -87,5 +87,5 @@ is a restore, not an edit.
 ## References
 
 - [Research 24 — Homelab Network Topology & Design](../research/24-network-topology-design.md) — allocation table and block rationale
-- [Runbook 29 — UPS graceful shutdown (NUT on the HA node)](../runbooks/29-nut-ups-shutdown.md) — first consumer of the guest numbering (LXC 213 `.213`)
-- [ADR 23](23-nas-on-ml110.md) — the ML110's `.210` · [ADR 25](25-home-assistant-thin-client.md) — the HA node · [ADR 29](29-nas-backup-target-beetle-m3-omv.md) — Beetle NAS · [ADR 30](30-ups-nut-graceful-shutdown.md) — NUT
+- [Runbook 29 — UPS graceful shutdown (NUT on the pve node)](../runbooks/29-nut-ups-shutdown.md) — first consumer of the guest numbering (LXC 213 `.213`)
+- [ADR 23](23-nas-on-ml110.md) — the ML110's `.210` · [ADR 25](25-home-assistant-thin-client.md) — the `pve` node · [ADR 29](29-nas-backup-target-beetle-m3-omv.md) — Beetle NAS · [ADR 30](30-ups-nut-graceful-shutdown.md) — NUT
