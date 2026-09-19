@@ -72,7 +72,7 @@ The headline measurement is the runtime: **52 min 53 s on battery to `LB`** at t
 
 ## Evidence
 
-Raw captures live on the nodes: `ha:/var/log/nut-drill-observer.log` (664 samples), `edge:/var/log/nut-drill.log`, plus `journalctl -b -1` on `ha`, `lab` and inside LXC 213. The temporary instrumentation (`nut-drill-observer.sh` + its log on `ha`; `nut-drill-mirror.service` + its log on `edge`) is not part of the fleet configuration and is removed after transcription — `ansible/playbooks/playbook-ha.yml` and `playbook-edge.yml` would not recreate it.
+Raw captures: `ha:/var/log/nut-drill-observer.log` (664 samples, 51 KB) and `edge:/var/log/nut-drill.log` (87 KB) are retained on the nodes as the underlying evidence, alongside `journalctl -b -1` on `ha`, `lab` and inside LXC 213. The **mechanisms** are gone — `nut-drill-observer.sh` deleted from `ha`, `nut-drill-mirror.service` disabled and removed from `edge` — so every node is back to the state its role defines; `playbook-ha.yml` / `playbook-edge.yml` would not recreate either.
 
 ## References
 
