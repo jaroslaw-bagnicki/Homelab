@@ -39,7 +39,7 @@ The headline measurement is the runtime: **52 min 53 s on battery to `LB`** at t
 | 10:48–11:00 | plateau 24.71 → 24.24 V (23 min in) | observer |
 | **11:29:41** | **`LB` at 21.53 V / 14 %** — after **52 min 53 s** on battery | observer |
 | 11:29:41 | `lab`: `UPS ups@192.168.2.213 battery is low` | `lab` journal |
-| 11:29:42 | `edge`: `UPS ups@192.168.2.213 battery is low` (**+1 s**) | `edge` mirror (line 424) |
+| 11:29:42 | `edge`: `UPS ups@192.168.2.213 battery is low` (**+1 s**) | `edge` mirror (`/var/log/nut-drill.log`) |
 | 11:29:43 | `ha`: `UPS ups@192.168.2.213 battery is low` (**+2 s**) | `ha` journal |
 | **11:29:43** | **primary sets FSD**: `Client upsmon-host@192.168.2.201 set FSD on UPS [ups]` | `upsd` in LXC 213 |
 | 11:29:46 | `lab`: `forced shutdown in progress` → `Executing automatic power-fail shutdown` | `lab` journal |
