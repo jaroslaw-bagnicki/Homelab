@@ -30,24 +30,24 @@ The headline measurement is the runtime: **52 min 53 s on battery to `LB`** at t
 
 ## Timeline (UTC)
 
-Sources named per row: **`ha`/`lab` journal** and **LXC 213 journal** are the node's own journal for the drill boot (`journalctl -b -1`); **`edge` drill log** is `edge`'s own `nut-monitor` output, written to `/var/log/nut-drill.log` during the drill by a throwaway unit, because `edge`'s journal is volatile and does not survive power loss; **observer** is the 5 s `upsc` poller on `ha`. Every quotation below is verbatim from the named capture.
+Sources named per row: **`ha`/`lab` journal** and **LXC 213 journal** are the node's own journal for the drill boot (`journalctl -b -1`); **`edge` log file** is a line-by-line copy of `edge`'s journal — its `nut-monitor` and boot output — written to `/var/log/nut-drill.log` by a throwaway unit, because `edge`'s journal is volatile and does not survive power loss; **`ha` `upsc` poller** is a script on `ha` that read the UPS state every 5 s. Every quotation below is verbatim from the named capture.
 
 | Time | Event | Source |
 |---|---|---|
-| 10:36:43 | last sample on mains (`OL`, 27.29 V float) | observer |
-| **10:36:48** | **first `OB` sample — mains loss** | observer |
+| 10:36:43 | last sample on mains (`OL`, 27.29 V float) | `ha` `upsc` poller |
+| **10:36:48** | **first `OB` sample — mains loss** | `ha` `upsc` poller |
 | 10:36:50 | `lab`: `UPS ups@192.168.2.213 on battery` — 2 s after the `OB` sample | `lab` journal |
-| 10:36:50 | `edge`: `UPS ups@192.168.2.213 on battery` — 2 s after the `OB` sample | `edge` drill log |
-| 10:37:13 | 24.82 V / 77 % — the float→load sag, not a capacity reading | observer |
-| 10:48–11:00 | plateau 24.71 → 24.24 V (23 min in) | observer |
-| **11:29:41** | **`LB` at 21.53 V / 14 %** — after **52 min 53 s** on battery | observer |
+| 10:36:50 | `edge`: `UPS ups@192.168.2.213 on battery` — 2 s after the `OB` sample | `edge` log file |
+| 10:37:13 | 24.82 V / 77 % — the float→load sag, not a capacity reading | `ha` `upsc` poller |
+| 10:48–11:00 | plateau 24.71 → 24.24 V (23 min in) | `ha` `upsc` poller |
+| **11:29:41** | **`LB` at 21.53 V / 14 %** — after **52 min 53 s** on battery | `ha` `upsc` poller |
 | 11:29:41 | `lab`: `UPS ups@192.168.2.213 battery is low` | `lab` journal |
-| 11:29:42 | `edge`: `UPS ups@192.168.2.213 battery is low` (**+1 s**) | `edge` drill log |
+| 11:29:42 | `edge`: `UPS ups@192.168.2.213 battery is low` (**+1 s**) | `edge` log file |
 | 11:29:43 | `ha`: `UPS ups@192.168.2.213 battery is low` (**+2 s**) | `ha` journal |
 | **11:29:43** | **primary sets FSD**: `Client upsmon-host@192.168.2.201 set FSD on UPS [ups]` | `upsd` in LXC 213 |
 | 11:29:46 | `lab`: `forced shutdown in progress` → `Executing automatic power-fail shutdown` | `lab` journal |
 | 11:29:48 | `lab` reaches `poweroff.target` — **≈5 s after FSD** | `lab` journal |
-| 11:30:16 | last observer sample (21.18 V / 7 %) | observer |
+| 11:30:16 | last `upsc` sample (21.18 V / 7 %) | `ha` `upsc` poller |
 | **11:30:17** | **primary schedules its own shutdown** — 30 s after its 11:29:47 decision (`FINALDELAY 30`) | `ha` journal |
 | 11:30:20 | `Stopping pve-guests.service` | `ha` journal |
 | 11:30:24 | `Stopping CT 213 (timeout = 180 seconds)`; `upsd` gets `Signal 15`, driver logs a broken pipe | `ha` + container journals |
@@ -56,7 +56,7 @@ Sources named per row: **`ha`/`lab` journal** and **LXC 213 journal** are the no
 | 11:30:28 | `all VMs and CTs stopped`; `pve-guests.service` deactivated | `ha` journal |
 | ~11:30:30+ | `ha` off; the UPS kept strip 2 alive until the pack was exhausted | inferred |
 | ~12:00 | AC restored; `ha` + `edge` auto-start, `lab` started **manually** | wtmp, uptime |
-| 12:02:35 | `edge` reaches `multi-user.target` (`Startup finished … = 1 min 12.97 s`) and its `nut-monitor` reconnects as `(secondary)` | `edge` drill log |
+| 12:02:35 | `edge` reaches `multi-user.target` (`Startup finished … = 1 min 12.97 s`) and its `nut-monitor` reconnects as `(secondary)` | `edge` log file |
 | 12:04:07 | `lab`'s `nut-monitor` active again after the manual start; all three read `OL` | nodes |
 
 ## Findings
@@ -81,7 +81,7 @@ Sources named per row: **`ha`/`lab` journal** and **LXC 213 journal** are the no
 
 Raw captures: `ha:/var/log/nut-drill-observer.log` (664 samples, 51 KB) and `edge:/var/log/nut-drill.log` (87 KB) are retained on the nodes as the underlying evidence, alongside `journalctl -b -1` on `ha`, `lab` and inside LXC 213. The **mechanisms** are gone — `nut-drill-observer.sh` deleted from `ha`, `nut-drill-mirror.service` disabled and removed from `edge` — so every node is back to the state its role defines; `playbook-ha.yml` / `playbook-edge.yml` would not recreate either.
 
-The `edge` drill log is the only record of that node's own view, and the timeline above uses it: `on battery` at 10:36:50, `battery is low` at 11:29:42, and the post-boot `multi-user.target` plus `nut-monitor` reconnect at 12:02:35. It does **not** cover the shutdown window — the file jumps from 11:29:42 to 12:02:35. That is a limitation of the capture method (edge's journal is volatile), not a finding about the shutdown: the ordering is established from `ha`, `upsd` and `lab`, and does not depend on edge. A future drill on edge should set `Storage=persistent` for the window.
+The `edge` log file is the only record of that node's own view, and the timeline above uses it: `on battery` at 10:36:50, `battery is low` at 11:29:42, and the post-boot `multi-user.target` plus `nut-monitor` reconnect at 12:02:35. It does **not** cover the shutdown window — the file jumps from 11:29:42 to 12:02:35. That is a limitation of the capture method (edge's journal is volatile), not a finding about the shutdown: the ordering is established from `ha`, `upsd` and `lab`, and does not depend on edge. A future drill on edge should set `Storage=persistent` for the window.
 
 `edge` raw capture (verbatim excerpt, `/var/log/nut-drill.log`):
 
