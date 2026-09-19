@@ -1,6 +1,6 @@
 # NUT Shutdown Drill — 2026-09-19
 
-**Scope:** acceptance test for [issue #117](https://github.com/jaroslaw-bagnicki/Homelab/issues/117) — a **real** mains loss with the fleet loaded, exercising the shutdown choreography in [runbook 29](../runbooks/29-nut-ups-shutdown.md) §6–§7 under [ADR 30](../decisions/30-ups-graceful-shutdown.md)
+**Scope:** acceptance test for [issue #117](https://github.com/jaroslaw-bagnicki/Homelab/issues/117) — a **real** mains loss with the fleet loaded, exercising the shutdown choreography in [runbook 29](../runbooks/29-nut-ups-shutdown.md) §6–§7 under [ADR 30](../decisions/30-ups-nut-graceful-shutdown.md)
 **Method:** live observation (a 5 s `upsc` poller on `ha`), the `upsd` log inside LXC 213, node journals (`ha`, `lab`), and a throwaway unit on `edge` that copied that node's journal into a file; all instrumentation removed afterwards
 **Baseline:** point-in-time at 2026-09-19, `main` @ `8cd4524` — the `nut_client` role merged in PR #119, so the fleet runs the role, not a hand-edit
 **Trigger:** the operator pulled the **UPS mains input**; the house supply stayed live, so the UPS ran on battery exactly as it would in an outage
@@ -113,4 +113,4 @@ The `nut-monitor[3591]` line is `upsmon` re-executing itself to run the forced s
 
 - [Runbook 29 — UPS graceful shutdown](../runbooks/29-nut-ups-shutdown.md) §6 choreography, §7 validation
 - [Runbook 30 — NUT clients on the fleet](../runbooks/30-deploy-nut-clients.md) — the role this drill exercised
-- [ADR 30 — UPS graceful shutdown](../decisions/30-ups-graceful-shutdown.md) · [issue #117](https://github.com/jaroslaw-bagnicki/Homelab/issues/117) · parent [#111](https://github.com/jaroslaw-bagnicki/Homelab/issues/111)
+- [ADR 30 — UPS graceful shutdown](../decisions/30-ups-nut-graceful-shutdown.md) · [issue #117](https://github.com/jaroslaw-bagnicki/Homelab/issues/117) · parent [#111](https://github.com/jaroslaw-bagnicki/Homelab/issues/111)
