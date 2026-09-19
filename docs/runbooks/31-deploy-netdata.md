@@ -17,6 +17,12 @@
 >
 > **Alarms are dashboard-only for now.** The notification path is deferred until the Home Assistant
 > VM exists ([#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68)) — don't wire a mailer here.
+>
+> **The transport is encrypted.** The Parent serves the dashboard **only over HTTPS** (`^SSL=force`
+> on its `19999` listener — plain HTTP is refused) and accepts streams only over TLS (dedicated
+> `19996` listener, also `^SSL=force`). The certificate is **self-signed and generated on the node**,
+> so the browser warns, and children encrypt without verifying the Parent's identity — pinning the
+> certificate is the tracked follow-up ([ADR 27](../decisions/27-monitoring-strategy.md)).
 
 ## Why
 
@@ -32,14 +38,17 @@ Edge nodes stream to the Parent on the `pve` node; the NAS joins when it joins t
 ## What changes
 
 - **Shared `netdata` Ansible role** — parent + child modes, parameterized per host (`netdata_role`,
-  `netdata_stream_target`, `netdata_storage`, `netdata_retention_time`, `netdata_retention_size`,
-  `netdata_bind`, `netdata_upgrade`).
-- **Parent** — `pve` Proxmox host, host-native systemd, `dbengine`, web bind `0.0.0.0:19999`
-  (LAN-reachable via UFW); `netdata_proxmox_host: true` grants the `netdata` user read access to
-  `/etc/pve`.
+  `netdata_stream_target`, `netdata_stream_ssl`, `netdata_storage`, `netdata_retention_time`,
+  `netdata_retention_size`, `netdata_bind`, `netdata_tls`, `netdata_upgrade`).
+- **Parent** — `pve` Proxmox host, host-native systemd, `dbengine`, two LAN-bound listeners both
+  forced to TLS: `<ip>:19999=dashboard^SSL=force` and `<ip>:19996=streaming^SSL=force`
+  (`netdata_bind` accepts Netdata's per-listener syntax). `netdata_tls: true` writes the `[web] ssl`
+  paths and generates a self-signed certificate when one is missing; `netdata_proxmox_host: true`
+  grants the `netdata` user read access to `/etc/pve`.
 - **Children** — Lab (M910q, `dbengine`) and Edge (Wyse 3040, `ram` — eMMC-safe) stream to
-  `192.168.2.201:19999`.
-- **Stream key** — a shared `netdata-stream-api-key` in `homelab-bysxdb-kv`, fetched at deploy time.
+  `192.168.2.201:19996:SSL` (`netdata_stream_ssl: true` — the Parent refuses plaintext streams).
+- **Stream key** — a shared `netdata-stream-api-key` in `homelab-bysxdb-kv`, fetched at deploy time,
+  sent only inside the TLS stream (§1).
 - **History** — per-tier `dbengine tier N retention time = 7d` on the parent and on Lab, bounded by
   `dbengine tier N retention size` (256 MiB per tier on a child, 1 GiB on the parent — its tier quota
   is shared by every streaming child). Time and size are **combined** limits: data is dropped when
@@ -73,8 +82,8 @@ The Parent authenticates children with a single shared **API key** (a UUID), sto
 
 The role fetches `homelab-bysxdb-kv/netdata-stream-api-key` at deploy time and writes
 `/etc/netdata/stream.conf` on the parent (`[<key>] enabled = yes`) and on each streaming child
-(`[stream] destination = 192.168.2.201:19999`, `api key = <key>`). **Rotation**: re-run with
-`-Force`, then re-run the playbooks.
+(`[stream] destination = 192.168.2.201:19996:SSL`, `api key = <key>`). **Rotation**: re-run with
+`-Force`, then re-run the playbooks. The key is only ever sent inside the TLS stream.
 
 ## 2. Parent — deploy on `pve`
 
@@ -87,9 +96,11 @@ ansible-playbook ansible/playbooks/playbook-pve.yml --diff   # run from the repo
 ```
 
 `playbook-pve.yml` runs `common → security → nut_client → netdata`. The `netdata` role installs via the
-official kickstart script (`get.netdata.cloud/kickstart.sh`), configures `dbengine` + web bind,
-writes the parent `stream.conf`, and adds the `netdata` user to `www-data` (Proxmox `/etc/pve`
-read for friendly VM/CT names). UFW already allows `19999` from `192.168.2.0/24` (`host_vars/pve.yml`).
+official kickstart script (`get.netdata.cloud/kickstart.sh`), configures `dbengine`, generates the
+self-signed certificate, writes the TLS-only listeners and the parent `stream.conf`, and adds the
+`netdata` user to `www-data` (Proxmox `/etc/pve` read for friendly VM/CT names). UFW already allows
+`19999` (dashboard) and `19996` (streaming) from `192.168.2.0/24` (`host_vars/pve.yml`) — neither is
+reachable as plain HTTP.
 
 ## 3. Children — Lab and Edge
 
@@ -112,12 +123,14 @@ On `pve`:
 
 ```sh
 systemctl status netdata
-curl -s http://127.0.0.1:19999/api/v1/info | head
-curl -s http://192.168.2.201:19999/api/v1/info | head   # from the LAN workstation
+curl -sk https://127.0.0.1:19999/api/v1/info | head              # TLS on loopback
+curl -sk https://192.168.2.201:19999/api/v1/info | head         # from the LAN workstation
+openssl s_client -connect 192.168.2.201:19996 -brief </dev/null 2>&1 | head -5   # streaming listener speaks TLS
+curl -s -o /dev/null -w '%{http_code}\n' http://192.168.2.201:19999             # MUST fail — plain HTTP refused
 ```
 
-Open **`http://192.168.2.201:19999`** — the dashboard should show the `pve` node and, once §3 runs,
-the `lab` and `edge` nodes in the Nodes view.
+Open **`https://192.168.2.201:19999`** (expect a self-signed certificate warning) — the dashboard
+should show the `pve` node and, once §3 runs, the `lab` and `edge` nodes in the Nodes view.
 
 **Never print the shared key.** `stream.conf` carries it (on the parent the section header *is* the
 key), so check the shape, not the file:
@@ -158,8 +171,10 @@ without the flag to confirm `changed=0`.
 ## Verification Checklist
 
 - [ ] §1 `netdata-stream-api-key` present in `homelab-bysxdb-kv`
-- [ ] §2 Parent active on `pve`; dashboard reachable at `http://192.168.2.201:19999`
-- [ ] §2 UFW allows `19999` from the LAN; `netdata` user in `www-data` (VM/CT names resolve)
+- [ ] §2 Parent active on `pve`; dashboard reachable at **`https://192.168.2.201:19999`** (self-signed warning expected)
+- [ ] §2 plain HTTP on `19999` is **refused**; the `19996` listener answers a TLS handshake
+- [ ] §2 UFW allows `19999` + `19996` from the LAN; `netdata` user in `www-data` (VM/CT names resolve)
+- [ ] §3 both children stream over TLS (`destination` ends in `:SSL`)
 - [ ] §3 Lab child streams to the Parent (visible in the Nodes view)
 - [ ] §3 Edge child streams to the Parent; `netdata.conf` `[db] mode = ram`
 - [ ] §4 `dbengine tier 0/1/2 retention time = 7d` and `retention size` set (256 MiB child / 1 GiB parent); `du -sh /var/cache/netdata/dbengine` under the cap

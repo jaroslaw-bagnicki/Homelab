@@ -23,7 +23,7 @@ independent of the M910q, deployed by [runbook 31](31-deploy-netdata.md).
   block of [research 24](../research/24-network-topology-design.md) (this is a compute/virtualisation
   host, not an edge/ingress device).
 - **`pve`** added to the Ansible inventory; base provisioned via `ansible/playbooks/playbook-pve.yml`
-  (`common` → `security`).
+  (`common` → `security` → `nut_client` → `netdata`).
 - **Agent account — `fleetadm`** — key-only SSH ([ADR 28](../decisions/28-fleet-admin-account-and-key.md)), installed at bootstrap (full pattern in the
   [ansible README](../../ansible/README.md)).
 - **Breaking-glass account — `root`** — the Proxmox admin (web UI `:8006` + console), password stored
@@ -158,7 +158,9 @@ chmod 755 /workspaces/Homelab /workspaces/Homelab/ansible   # world-writable fix
 ansible-playbook ansible/playbooks/playbook-pve.yml --diff
 ```
 
-`playbook-pve.yml` runs `common → security`:
+`playbook-pve.yml` runs `common → security → nut_client → netdata` — the last two read Azure Key
+Vault, so the controller needs `AZURE_CLIENT_ID` / `AZURE_CLIENT_SECRET` / `AZURE_TENANT_ID` (see the
+[runbook 31](31-deploy-netdata.md) prerequisites).
 - **`common`** — hostname `pve`, `Etc/UTC`, Avahi (`pve.local`, `common_enable_avahi: true`), and re-arms
   the fleet key on `fleetadm` ([ADR 28](../decisions/28-fleet-admin-account-and-key.md)). Time sync is left to Proxmox's **`chrony`**.
 - **`security`** — UFW default-deny + allow from `192.168.2.0/24`: SSH `22` and Proxmox UI **`8006`**
