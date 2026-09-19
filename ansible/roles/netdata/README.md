@@ -61,8 +61,9 @@ every streaming child — so the controller needs `AZURE_CLIENT_ID` / `AZURE_CLI
 
 ## Transport security
 
-- **Dashboard — HTTPS only.** The parent's `19999` listener carries `^SSL=force`, so plain HTTP is
-  refused. The certificate is self-signed and generated on the node, so browsers warn.
+- **Dashboard — HTTPS only.** The parent's `19999` listener carries `^SSL=force`, so plain HTTP gets
+  Netdata's `399` redirect to `https://` and never serves content in cleartext. The certificate is
+  self-signed and generated on the node, so browsers warn.
 - **Streaming — TLS only.** A dedicated `19996` listener also forces TLS; children append `:SSL` to
   the destination. The parent refuses plaintext streams.
 - **Accepted residual (ADR 27):** the certificate is self-signed and children do **not** verify it
