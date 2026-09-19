@@ -186,7 +186,7 @@ Executed on 2026-09-19 — `playbook-pve.yml --diff` `ok=48 changed=16 failed=0`
 - [x] §3 Edge child streams to the Parent; `netdata.conf` `mode = ram`
 - [x] §4 `dbengine tier 0/1/2 retention time = 7d` + `retention size` present (1 GiB per tier on the parent); `du -sh /var/cache/netdata/dbengine` → `512K` on a fresh install
 - [x] §4 no validation command printed the shared key
-- [ ] Idempotent — a second playbook run reports `changed=0`
+- [x] Idempotent — a re-run reports **`changed=0`** for this role on all three nodes (`pve` `ok=38 changed=0`, `edge` `ok=40 changed=0`; `lab` `changed=1`, that one being `azure_arc`'s Arc-connect task, unrelated)
 - [ ] §5 `-e netdata_upgrade=true` updates an agent, and a following run reports `changed=0`
 - [ ] Not in scope: alarm notifications (deferred to the HA VM, [#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68)); `cloudlab` untouched
 
