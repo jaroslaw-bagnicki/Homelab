@@ -8,7 +8,8 @@
 ## Context
 
 > **Revised 2026-09-06:** Tier B Netdata parent placement moved to an always-on LXC on the `pve` node; the Lab (M910q) child is host-native (systemd, not a k8s workload); the `netdata` Ansible role is shared and parameterized (see §Decision → Tier B).  
-> **Revised 2026-09-12:** the Netdata Parent runs **host-native (systemd) on the `pve` node's Proxmox host, not an LXC** — Netdata must run directly on the Proxmox host (not a VM/container) to read VM/CT cgroups and `/etc/pve` names; one agent per node.
+> **Revised 2026-09-12:** the Netdata Parent runs **host-native (systemd) on the `pve` node's Proxmox host, not an LXC** — Netdata must run directly on the Proxmox host (not a VM/container) to read VM/CT cgroups and `/etc/pve` names; one agent per node.  
+> **Revised 2026-09-19:** Tier B is **LAN-fleet scoped** — `cloudlab` is never a Netdata target (Tier A already covers it); **7-day retention** bounded by an explicit `dbengine` disk cap; agent updates are **opt-in** (`netdata_upgrade`); alarm *delivery* waits for the Home Assistant VM ([#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68)).
 
 The homelab monitoring posture drifted as the node fleet grew. The record holds several overlapping and partly contradictory decisions:
 
@@ -31,13 +32,13 @@ AMA → Log Analytics (`homelab-law`) on **Arc-enrolled nodes only**: the M910q 
 
 ### Tier B — Local monitoring stack (local real-time plane)
 
-**Tier B is the local monitoring stack on the homelab; Netdata is its first component.** A Netdata agent on every node → **Netdata Parent** (host-native systemd on the `pve` node's Proxmox) → **Netdata dashboard + alarms** — covering the full fleet, Arc or not.
+**Tier B is the local monitoring stack on the homelab; Netdata is its first component.** A Netdata agent on **every LAN node** → **Netdata Parent** (host-native systemd on the `pve` node's Proxmox) → **Netdata dashboard + alarms** — covering the fleet, Arc or not.
 
-- **Unified monitoring agent across all nodes** — one Netdata agent runs on every node in the fleet: a uniform agent across Ubuntu, Debian, OMV, Proxmox, and (trial pending) Alpine.
+- **Unified monitoring agent across the LAN fleet** — one Netdata agent runs on every local node: a uniform agent across Ubuntu, Debian, Proxmox and OMV. **`cloudlab` is never a target** (outside the LAN, already covered by Tier A), and Alpine is out — it was rejected as the Edge OS ([ADR 24](24-edge-ingress-appliance.md)).
 - **Parent placement (revised 2026-09-12)** — Netdata Parent runs as a **host-native systemd service on the `pve` node (Wyse 5070 / Proxmox)** — installed on the Proxmox host itself, not in a container or VM, so it reads VM/CT cgroups and `/etc/pve` names (the [Netdata Proxmox VE integration](https://www.netdata.cloud/integrations/data-collection/containers-and-vms/proxmox-ve-monitoring/) requires Netdata on the Proxmox host). It is independent of the HA VM (ADR 26) and of the M910q (ADR 24's churn-independence rationale), and supersedes the earlier "k3s workload on the M910q" placement. Children run **standalone** (local `dbengine` + alarms) until the parent is live, then re-point to it.
 - **Lab (M910q) child is host-native** — a **systemd host process**, not a container/k8s workload: it monitors the host itself, auto-discovers the Docker stack now and the k3s node/kubelet later, and survives cluster churn.
-- **Edge Wyse 3040 — lightweight components only.** A **Netdata child node** (minimal footprint, **RAM-only buffering** — no eMMC `dbengine`, per [ADR 24](24-edge-ingress-appliance.md)) and Fluent Bit if adopted as a Tier B component; Alpine compatibility validated during the Debian-vs-Alpine on-device trial.
-- **Metrics-only scope.** Provisioned via a **shared Ansible `netdata` role** (the ADR 10 approach) parameterized per node: `netdata_role: parent|child` · `netdata_stream_target` · `netdata_storage: dbengine|ram` (Edge → `ram`) · `netdata_retention` · `netdata_bind`. Applies to the Debian-family fleet (Edge, Lab, Proxmox, OMV, and the Beetle NAS — OMV per [ADR 29](29-nas-backup-target-beetle-m3-omv.md)); **OPNsense (FreeBSD) is a per-OS exception** and needs its own path.
+- **Edge Wyse 3040 — lightweight components only.** A **Netdata child node** (minimal footprint, **RAM-only buffering** — no eMMC `dbengine`, per [ADR 24](24-edge-ingress-appliance.md)) and Fluent Bit if adopted as a Tier B component. The box runs Debian 13; **Alpine was rejected as the Edge OS** ([ADR 24](24-edge-ingress-appliance.md)).
+- **Metrics-only scope.** Provisioned via a **shared Ansible `netdata` role** (the ADR 10 approach) parameterized per node: `netdata_role: parent|child` · `netdata_stream_target` · `netdata_storage: dbengine|ram` (Edge → `ram`) · `netdata_retention` · `netdata_dbengine_disk_space` · `netdata_bind` · `netdata_upgrade`. **Retention is 7 days**, bounded by the `dbengine` disk cap (512 MiB per child, 2048 MiB on the parent, which also stores the children's metrics); updates are **opt-in** rather than a silent re-install on every run. Applies to the LAN fleet (Edge, Lab, Proxmox, and the NAS **once it joins the fleet** — OMV per [ADR 29](29-nas-backup-target-beetle-m3-omv.md)); **OPNsense (FreeBSD) is a per-OS exception** that likewise waits for the router to join.
 - **Future components of Tier B (extensions — not adopted, no ADR yet):** **Grafana, Prometheus, Fluent Bit, Loki.** Netdata's Prometheus-compatible export is the future integration point for a dashboard/analytics (and log) component; **ADR 26's power path** (Z2M → `mqtt2prometheus` → Prometheus → Grafana) is the only committed Prometheus/Grafana usage today. Components are added incrementally via their own future ADRs.
 
 ### Boundary rule
@@ -52,6 +53,7 @@ AMA → Log Analytics (`homelab-law`) on **Arc-enrolled nodes only**: the M910q 
 - **Single Netdata Parent pane** for every node's real-time metrics; **non-Arc nodes fully covered** (Edge, `pve`, NAS) where Azure could never reach.
 - **One agent everywhere** — a uniform monitoring tool across heterogeneous nodes; auto-discovers containers, VMs/LXC (Proxmox), and services with rich out-of-the-box metrics.
 - **Standalone-first, parent-later** — every child is useful immediately (local dashboard + alarms) before the central plane exists; re-pointing to the parent is a config change, not a reinstall.
+- **Alarm delivery is deferred** — alarms stay dashboard-only until the Home Assistant VM lands ([#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68)); the notify path is decided there, not here.
 - **ADR 09 is amended in place** — scoped to Tier A (management plane); its "no separate monitoring stack" framing is superseded by this strategy.
 - **Container Insights (ADR 22)** is now defined as the Tier A cluster extension, not a replacement for the local plane.
 - **ADR 26's independence requirement** (monitoring survives Home Assistant restarts) is satisfied: the Tier B plane lives on the **`pve` node**, not the HA VM.

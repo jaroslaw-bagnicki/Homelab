@@ -10,12 +10,19 @@
 > Netdata must run **directly on the Proxmox host** (not in a VM or container) to read VM/CT
 > cgroups and `/etc/pve` names — so the `pve` node runs a single **host-native** instance that
 > acts as the Parent. No parent LXC.
+>
+> **Scope — the LAN fleet only.** Netdata goes on the local nodes (`pve`, `lab`, `edge`; the NAS once
+> it joins the fleet). **`cloudlab` is never a target** — it sits outside the LAN and Tier A
+> (Arc/AMA) already covers it. The OPNsense router (FreeBSD) also waits until it joins the fleet.
+>
+> **Alarms are dashboard-only for now.** The notification path is deferred until the Home Assistant
+> VM exists ([#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68)) — don't wire a mailer here.
 
 ## Why
 
-ADR 27 makes Netdata the first component of the local (Tier B) monitoring plane: one agent on
-every node → a central **Parent** → one dashboard covering the whole fleet, Arc or not. The
-M910q (Lab), Edge, OMV and Beetle nodes stream to the Parent on the `pve` node.
+ADR 27 makes Netdata the first component of the local (Tier B) monitoring plane: one agent on every
+LAN node → a central **Parent** → one dashboard covering the fleet, Arc or not. The Lab (M910q) and
+Edge nodes stream to the Parent on the `pve` node; the NAS joins when it joins the fleet.
 
 > **Execution note.** Run this runbook **from a LAN workstation** (`192.168.2.0/24`) with the
 > fleet key loaded in `ssh-agent` (see the [`fleet-connect` skill](../../.opencode/skills/fleet-connect/SKILL.md)) —
@@ -25,13 +32,19 @@ M910q (Lab), Edge, OMV and Beetle nodes stream to the Parent on the `pve` node.
 ## What changes
 
 - **Shared `netdata` Ansible role** — parent + child modes, parameterized per host (`netdata_role`,
-  `netdata_stream_target`, `netdata_storage`, `netdata_retention`, `netdata_bind`).
+  `netdata_stream_target`, `netdata_storage`, `netdata_retention`, `netdata_dbengine_disk_space`,
+  `netdata_bind`, `netdata_upgrade`).
 - **Parent** — `pve` Proxmox host, host-native systemd, `dbengine`, web bind `0.0.0.0:19999`
   (LAN-reachable via UFW); `netdata_proxmox_host: true` grants the `netdata` user read access to
   `/etc/pve`.
 - **Children** — Lab (M910q, `dbengine`) and Edge (Wyse 3040, `ram` — eMMC-safe) stream to
   `192.168.2.201:19999`.
 - **Stream key** — a shared `netdata-stream-api-key` in `homelab-bysxdb-kv`, fetched at deploy time.
+- **History** — `[db] retention = 604800` (**7 days**) on the parent and on Lab, with
+  **`dbengine multihost disk space`** as the hard ceiling (512 MiB per child, 2048 MiB on the parent,
+  which also stores the children's metrics). Retention is a target; the disk cap bounds growth.
+- **Updates** — the install is guarded by `stat /usr/sbin/netdata`, so a converged node stays
+  `changed=0`. Updating an existing agent is **opt-in** — `-e netdata_upgrade=true` (§5).
 
 ## Prerequisites
 
@@ -79,7 +92,8 @@ ansible-playbook ansible/playbooks/playbook-edge.yml --diff
 ```
 
 Each child installs Netdata and streams to the Parent. Edge uses `netdata_storage: ram`
-(no `dbengine` on the eMMC, ADR 24/27); Lab keeps `dbengine` locally as a fallback history.
+(no `dbengine` on the eMMC, ADR 24/27); Lab keeps `dbengine` locally as a fallback history
+(7 days, capped at 512 MiB).
 
 > **Standalone-first (ADR 27).** Deploy the Parent (§2) before the children (§3) so children
 > stream on first run. A child deployed earlier is still useful standalone; re-running its
@@ -99,6 +113,31 @@ Open **`http://192.168.2.201:19999`** — the dashboard should show the `pve` no
 the `lab` and `edge` nodes in the Nodes view. Per child, `grep -A4 '\[stream\]' /etc/netdata/stream.conf`
 should show the destination and key.
 
+Check the history budget on `pve` and on `lab`:
+
+```sh
+grep -A4 '^\[db\]' /etc/netdata/netdata.conf      # retention + dbengine multihost disk space
+du -sh /var/cache/netdata/dbengine                # actual DB size — must stay under the cap
+```
+
+Retention is a **target**; the disk cap is what makes it safe. If 7 days does not fit under the cap,
+the cap wins and the effective retention is shorter — raise `netdata_dbengine_disk_space` rather than
+uncapping it.
+
+## 5. Updating the installed agents
+
+The role installs once and never re-installs silently, so a converged fleet stays `changed=0`. To
+update an agent, opt in for that run:
+
+```powershell
+ansible-playbook ansible/playbooks/playbook-pve.yml -e netdata_upgrade=true
+```
+
+`netdata_upgrade: true` re-runs the official kickstart script with `--reinstall` (stable channel,
+telemetry off). Existing config is preserved — the script does not overwrite `netdata.conf` — and that
+task reports `changed` by design. Roll the **Parent first**, then the children, and finish with a run
+without the flag to confirm `changed=0`.
+
 ## Verification Checklist
 
 - [ ] §1 `netdata-stream-api-key` present in `homelab-bysxdb-kv`
@@ -106,7 +145,10 @@ should show the destination and key.
 - [ ] §2 UFW allows `19999` from the LAN; `netdata` user in `www-data` (VM/CT names resolve)
 - [ ] §3 Lab child streams to the Parent (visible in the Nodes view)
 - [ ] §3 Edge child streams to the Parent; `netdata.conf` `[db] mode = ram`
+- [ ] §4 `[db] retention = 604800` and `dbengine multihost disk space` set (512 MiB child / 2048 MiB parent); `du -sh /var/cache/netdata/dbengine` under the cap
 - [ ] Idempotent — a second playbook run reports `changed=0`
+- [ ] §5 `-e netdata_upgrade=true` updates an agent, and a following run reports `changed=0`
+- [ ] Not in scope: alarm notifications (deferred to the HA VM, [#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68)); `cloudlab` untouched
 
 ## References
 
