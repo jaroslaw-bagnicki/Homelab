@@ -165,11 +165,12 @@ ansible-playbook ansible/playbooks/playbook-pve.yml --diff
   (`security_ufw_allow_tcp_ports`), fail2ban, sshd key-only hardening (LAN password auth applies to
   **non-root** accounts only — `root` SSH stays key-only via `PermitRootLogin prohibit-password`).
 
-> **Proxmox node name.** The `common` role manages the **OS** hostname (`/etc/hostname`, `/etc/hosts`).
-> The **Proxmox node name** shown in the UI is fixed at install and stored under `/etc/pve/nodes/` —
-> the role does not change it. A host renamed after install ([ADR 33](../decisions/33-fleet-node-hostnames.md))
-> keeps the old name there until the host is rebuilt; a from-scratch install (this
-> runbook) picks up `pve` directly.
+> **Proxmox node name.** The `common` role manages the **OS** hostname (`/etc/hostname`, `/etc/hosts`),
+> and Proxmox derives its **node name** from that hostname — so a renamed host must also move
+> `/etc/pve/nodes/<old>` to `<new>`, then run `pvecm updatecerts -f` and restart
+> `pvedaemon`/`pveproxy`/`pvestatd`. Skip that and `pct`/`qm` look for guest configs under the old
+> name (`pct status` → *"nodes/\<name\>/lxc/… does not exist"*) and the API/UI have no node
+> certificate. A from-scratch install (this runbook) picks up `pve` directly.
 
 > **Time sync.** The `common` role gathers `service_facts` and, if `chrony.service` is **running**,
 > manages `chrony`; otherwise it manages the standard `systemd-timesyncd`. This reads the **actual
