@@ -332,12 +332,11 @@ this file in Git:
 > Do the substitution in the same session, and if that terminal's output is ever captured or shared,
 > rotate with `-Force` and substitute again.
 >
-> Put the primary value into `upsd.users` and the host's `upsmon.conf` (§4) and the secondary value
-> into each client's `MONITOR` line (§5), editing the files in place inside the container
-> (`pct exec 213 -- nano /etc/nut/upsd.users`). Neither value goes into Git. Once §4/§5 ship as the
-> Ansible role ([#116](https://github.com/jaroslaw-bagnicki/Homelab/issues/116)) the client files need
-> no hand-editing at all — that role injects the password straight from Key Vault, so it is never
-> printed.
+> Put both values into `upsd.users` in the container
+> (`pct exec 213 -- nano /etc/nut/upsd.users`). Neither value goes into Git. The client side — the
+> host's `upsmon.conf` and each fleet node's `MONITOR` line — is written by the `nut_client` role
+> straight from Key Vault ([runbook 30](30-deploy-nut-clients.md)), so those values are never
+> printed or hand-edited.
 >
 > Recent NUT (2.8+) spells the role `primary` / `secondary`; older 2.7.x uses `master` / `slave`.
 > Check `upsd -V` and use that spelling — a wrong role surfaces as
@@ -434,44 +433,10 @@ The trigger is therefore **`LB`**; do not build a countdown on a variable that d
 
 ## 4. Proxmox host — NUT client
 
-> **Delivery note — §4 and §5 ship as an Ansible role, not by hand.** The fleet is Ansible-managed
-> ([ADR 28](../decisions/28-fleet-admin-account-and-key.md)), so hand-writing `upsmon.conf` on three
-> nodes is three chances to mistype a Key Vault password and three files free to drift apart. Tracked
-> in [#116](https://github.com/jaroslaw-bagnicki/Homelab/issues/116), which carries its own runbook —
-> the client rollout is a separate procedure from building the server. **The content below stays as
-> the reference the role has to encode** — role per node, the `FINALDELAY`/`HOSTSYNC` values, the
-> account names — and as the record of *why* they are set that way.
-
-On the host (`192.168.2.201`), which is the **one and only `primary`** for this UPS:
-
-```sh
-apt install -y nut-client
-```
-
-**`/etc/nut/nut.conf`** → `MODE=netclient`
-
-**`/etc/nut/upsmon.conf`**
-
-```
-MONITOR ups@192.168.2.213 1 upsmon-host <AKV: nut-upsmon-primary-password> primary
-MINSUPPLIES 1
-SHUTDOWNCMD "/sbin/shutdown -h +0"
-POLLFREQ 5
-POLLFREQALERT 5
-FINALDELAY 30
-HOSTSYNC 30
-DEADTIME 15
-POWERDOWNFLAG /etc/killpower
-NOTIFYFLAG ONBATT SYSLOG+WALL
-NOTIFYFLAG LOWBATT SYSLOG+WALL
-NOTIFYFLAG ONLINE SYSLOG+WALL
-```
-
-```sh
-chown root:nut /etc/nut/upsmon.conf && chmod 640 /etc/nut/upsmon.conf
-systemctl enable --now nut-monitor
-upsc ups@192.168.2.213     # must return the same variables as §3
-```
+> **Superseded — delivered by the `nut_client` role.** The host is the **one and only `upsmon`
+> `primary`**: account `upsmon-host`, `FINALDELAY 30`, `HOSTSYNC 30`. It is installed and kept
+> converged by the base `playbook-ha.yml` — see [runbook 30](30-deploy-nut-clients.md). The
+> hand-edited `upsmon.conf` this section used to carry is gone; the role is the reference.
 
 `/sbin/shutdown -h +0` is all that is needed to stop the VMs/LXCs in order — Proxmox handles the
 guest shutdown, NUT only has to stop the host.
@@ -483,36 +448,9 @@ the fleet — the drill in §7 is what proves it.
 
 ## 5. Fleet clients
 
-> Same delivery note as §4: this section becomes part of the Ansible role
-> ([#116](https://github.com/jaroslaw-bagnicki/Homelab/issues/116)). The text below is the reference
-> the role implements and stays as documentation.
-
-On `lab` (M910q) and `edge` (Wyse 3040) — same package, same file, but **`secondary`**:
-
-```sh
-apt install -y nut-client
-```
-
-`/etc/nut/nut.conf` → `MODE=netclient`
-
-`/etc/nut/upsmon.conf` — identical to §4 except the role and `SHUTDOWNCMD`:
-
-```
-MONITOR ups@192.168.2.213 1 upsmon-fleet <AKV: nut-upsmon-secondary-password> secondary
-MINSUPPLIES 1
-SHUTDOWNCMD "/sbin/shutdown -h +0"
-POLLFREQ 5
-POLLFREQALERT 5
-HOSTSYNC 15
-DEADTIME 15
-POWERDOWNFLAG /etc/killpower
-```
-
-```sh
-chown root:nut /etc/nut/upsmon.conf && chmod 640 /etc/nut/upsmon.conf
-systemctl enable --now nut-monitor
-upsc ups@192.168.2.213
-```
+> **Superseded — delivered by the `nut_client` role.** `lab` (M910q) and `edge` (Wyse 3040) are
+> `upsmon` `secondary` nodes: account `upsmon-fleet`, `HOSTSYNC 15`, `FINALDELAY 0`. Installed and
+> kept converged by the same role — [runbook 30](30-deploy-nut-clients.md).
 
 Node-specific notes:
 
@@ -521,8 +459,8 @@ Node-specific notes:
 - **`edge`** — 2 GB, RAM-only Netdata; `nut-client` is a rounding error next to that.
 - **The NAS (Beetle M-III), once it is up** — it runs **OMV**, which ships its **own UPS service
   that also writes `/etc/nut`**. Pick one writer: either drive it from the OMV panel or disable that
-  service and use the files above. Two writers will fight and the config drifts. OMV is not
-  Ansible-managed, so this one is manual.
+  service and configure NUT **by hand** — the `nut_client` role does not cover the NAS. Two writers
+  will fight and the config drifts. OMV is not Ansible-managed, so this one is manual.
 
 ## 6. Shutdown choreography
 
@@ -610,9 +548,10 @@ never traverses the host's UFW chains — UFW here is host-management-plane only
 
 ## Verification Checklist
 
-Items tagged **[#116]**/**[#117]** depend on the client rollout and the DR drill — sub-issues of
+Items tagged **[#117]** depend on the DR drill — a sub-issue of
 [#111](https://github.com/jaroslaw-bagnicki/Homelab/issues/111). The server side (§1–§3) is what this
-runbook completes on its own.
+runbook completes on its own; the client rollout (§4/§5) is verified by
+[runbook 30](30-deploy-nut-clients.md).
 
 - [ ] §0 UPS input on the wall socket; **both strips** on battery-backed outlets; monitors/dock/charger off the UPS
 - [x] §1 LXC 213 created unprivileged, `192.168.2.213`, `nesting=1`, `onboot 1`, starts cleanly and `systemctl --failed` is empty inside
@@ -620,11 +559,8 @@ runbook completes on its own.
 - [x] §3 `/lib/nut/nutdrv_qx` attaches (as root **and** as `nut`), `upsc ups@192.168.2.213` returns real values, `battery.runtime` presence recorded
 - [x] §3 both monitor passwords in AKV (`nut-upsmon-primary-password`, `nut-upsmon-secondary-password`) and substituted into the files; `/etc/nut` files `640 root:nut`
 - [x] §3 `upsd` reloaded after the accounts were written (`systemctl reload nut-server`) — a daemon that predates the edit still serves the old user list
-- [ ] §4 host `nut-monitor` active, reads the UPS through the container — **[#116]**
-- [ ] §5 `lab` + `edge` clients active and reading the UPS — **[#116]**
 - [x] §7 on-battery ride performed from the dev container (2026-09-13, 5.5 min, fleet attached) — `OB`/`OL` propagate promptly; runtime **not** derivable by extrapolation
 - [ ] §7 on-battery propagation confirmed on all three nodes (host, `lab`, `edge`); `upsmon -c fsd` drill done — **[#117]**
-- [ ] §6 host monitor paused across an LXC 213 restart, then restored after `upsc` answered — **[#116]**
 - [ ] §7 Beetle tested on battery at **idle and under spin-up** (or moved off battery outlets) — **[#117]**
 
 ## Follow-ups
