@@ -2,12 +2,12 @@
 
 > **Implementation runbook for [issue #98 — NAS build (Wincor Beetle M-III)](https://github.com/jaroslaw-bagnicki/Homelab/issues/98)**
 > (successor phase to [issue #54](https://github.com/jaroslaw-bagnicki/Homelab/issues/54) / [#61](https://github.com/jaroslaw-bagnicki/Homelab/issues/61)).
-> Covers the AMI/D3460 BIOS walk, OMV 8.x install to the SanDisk SSD, the single mdadm RAID1
+> Covers the Phase 0 BIOS walk, OMV 8.x install to the SanDisk SSD, the single mdadm RAID1
 > array, the static IP, and the node's **Ansible fleet enrollment** (`netdata` child +
 > `nut_client`). Adapted from [runbook 23 — ML110 OMV setup](23-ml110-omv-setup.md); the NAS
-> design is [ADR 29](../decisions/29-nas-backup-target-beetle-m3-omv.md) and the hardware audit
-> is [research 32](../research/32-wincor-beetle-m3-hardware-diagnostic.md). Runs at the **direct
-> console** — the Beetle has no out-of-band management.
+> design is [ADR 29](../decisions/29-nas-backup-target-beetle-m3-omv.md) and the exact
+> board/BIOS is in [research 32](../research/32-wincor-beetle-m3-hardware-diagnostic.md). Runs at
+> the **direct console** — the Beetle has no out-of-band management.
 >
 > **Hostname `nas`** — the node is named for its **role in the fleet** ([ADR 33](../decisions/33-fleet-node-hostnames.md));
 > `omv` is the ML110's name and names a workload, so it is not reused. It carries the static
@@ -19,7 +19,7 @@
   Loss), Memtest86+, and the physical SATA-port count.
 - Install **OMV 8.x** on the **SanDisk X600 128 GB SSD** (the Seagates disconnected during install).
 - Create the **mdadm RAID1** array `md0` = 2× Seagate 1 TB → **XFS** = **1 TB usable**.
-- Set static IP **`192.168.2.202`** on `enp0s31f6` and hostname **`nas`**.
+- Set static IP **`192.168.2.202`** on the LAN interface (confirm its name — §4c) and hostname **`nas`**.
 - Create `fleetadm` ([ADR 28](../decisions/28-fleet-admin-account-and-key.md)) and enroll the node
   with `playbook-nas.yml`: `common → security → nut_client → netdata`.
 - Verify the node appears in the Netdata Parent on `pve` and joins the NUT rail as an `upsmon`
@@ -53,6 +53,9 @@ No out-of-band management — all steps run from a **keyboard + monitor** attach
 | `sda` | SanDisk X600 `SD9SB8W-128G` 128 GB SSD | `191702804011` | **OMV OS** (SMART PASSED) |
 | `sdb` | Seagate ST1000VT001-1RE172 1 TB 2.5" | `WDES3KB7` | `md0` member (0 reallocated) |
 | `sdc` | Seagate ST1000VT001-1RE172 1 TB 2.5" | `WDEPBVR3` | `md0` mirror (1,056 reallocated — **kept + SMART-monitored**) |
+
+> **Confirm on the unit** — the values below are research 32's audit; verify the board/BIOS and
+> the LAN interface name at the console before the walk.
 
 - NIC — Intel I219-V `enp0s31f6`, MAC `00:01:2e:8e:14:0d`.
 - Board — `M2.0-H110-uATX` (Fujitsu **D3460**), Intel H110; BIOS AMI `V5.0.0.12 R1.8.0` (2021-11-22), **UEFI supported**.
@@ -129,7 +132,9 @@ With **only the SanDisk SSD attached** (Seagates disconnected):
 Per [ADR 31](../decisions/31-static-address-scheme.md), the NAS owns `192.168.2.202` (physical-server
 block):
 
-- `Network | Interfaces` → edit **`enp0s31f6`** (Intel I219-V, MAC `00:01:2e:8e:14:0d`).
+- **Confirm the interface name first:** `ip -br addr` (research 32 records `enp0s31f6`; the kernel
+  name can differ across boots/enumeration). Then `Network | Interfaces` → edit that interface
+  (Intel I219-V, MAC `00:01:2e:8e:14:0d`).
 - Method: **Static** — IP `192.168.2.202`, netmask `255.255.255.0`, gateway `192.168.2.1`, DNS `192.168.2.1`.
 - Apply. Verify from `lab`: `ping 192.168.2.202`.
 - **Hostname** — `System | Network | General` → hostname **`nas`**, so mDNS is `nas.local` (Avahi,
@@ -232,9 +237,13 @@ sudo install -d -m 700 -o fleetadm -g fleetadm /home/fleetadm/.ssh
 > CLI-created users must be added manually. Missing it = `Permission denied (publickey)` despite a
 > correct key.
 
-SSH hardening via `Services | SSH` (or the `security` role in §8): **key-only**, **LAN-only**
-(`Match Address !192.168.2.0/24 → DenyUsers *`), **root console-only**. Verify `ssh fleetadm@nas`
-then `sudo -n whoami` → `root`.
+SSH hardening is applied by the **`security` role** in §8: **UFW** restricts SSH to
+`192.168.2.0/24`, and the role's `sshd_config.d` drop-in sets `PasswordAuthentication no`
+outside the LAN and **allows password auth from the LAN**, with `PermitRootLogin
+prohibit-password` (root by key, not password). That is the fleet policy — it differs from the
+ML110's manual key-only root-console-only stance (runbook 23). The OMV `Services | SSH` UI can be
+left at defaults; the drop-in takes precedence. Verify `ssh fleetadm@nas` then `sudo -n whoami`
+→ `root`.
 
 ## 8. Fleet enrollment — Ansible
 
