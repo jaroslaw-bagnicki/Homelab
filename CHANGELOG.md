@@ -13,6 +13,7 @@ Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month 
 
 ## 2026‑09
 
+- **(feat)** Netdata Tier B — `netdata` role (parent/child), Parent host-native on `pve` behind an **HTTPS-only dashboard** with TLS-only streaming — [runbook 31](docs/runbooks/31-deploy-netdata.md)
 - **(docs)** Rename the Wyse 5070 node `ha` → `pve` — hostnames name the host role, not a guest — [ADR 33](docs/decisions/33-fleet-node-hostnames.md)
 - **(docs)** Add ADR 32 — no hosted CI — [ADR 32](docs/decisions/32-no-hosted-ci.md)
 - **(docs)** Add the `quality-assessment` prompt and the first repo assessment — [report](docs/reports/260913-quality-assessment.md)

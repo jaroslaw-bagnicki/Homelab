@@ -5,6 +5,16 @@ security_ufw_allow_ssh_from: "192.168.2.0/24"
 security_ufw_allow_tcp_from: "192.168.2.0/24"
 security_ufw_allow_tcp_ports:
   - 8006
+  - 19996
+  - 19999
+
+netdata_role: parent
+netdata_proxmox_host: true
+# HTTPS-only dashboard (19999) and TLS-only streaming listener (19996), LAN-bound — no plain HTTP.
+netdata_bind: "{{ ansible_host }}:19999=dashboard^SSL=force {{ ansible_host }}:19996=streaming^SSL=force"
+netdata_tls: true
+netdata_storage: dbengine
+netdata_retention_size: "1GiB"
 
 nut_client_role: primary
 nut_client_account: upsmon-host
