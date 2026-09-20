@@ -45,14 +45,14 @@ once it is ready to start — a row leaves the table with the PR that completes 
 | Item | Effort | Next step | Refs |
 |---|---|---|---|
 | **Edge Ingress — service migration** | ⭐⭐ | Move `cloudflared` + Caddy off the M910q onto the Wyse 3040 (base OS + `edge_host` role already shipped); `.home` DNS is owned by the OPNsense router, not the edge | [#65](https://github.com/jaroslaw-bagnicki/Homelab/issues/65) · [#81](https://github.com/jaroslaw-bagnicki/Homelab/issues/81) · [ADR 24](decisions/24-edge-ingress-appliance.md) |
-| **Beetle NAS** | ⭐⭐⭐ | Platform confirmed (Skylake/H110/DDR4, G4400) — finish Phase 0 (BIOS walk / SATA ports / Memtest), then OMV install → array + cache online → NFS/SMB exports → retire the ML110 (the Longhorn backup target follows k3s) | [#98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98) · [ADR 29](decisions/29-nas-backup-target-beetle-m3-omv.md) |
+| **Beetle NAS** | ⭐⭐⭐ | Platform confirmed (Skylake/H110/DDR4, G4400) — Phase 0 close-out (BIOS walk / SATA ports / Memtest) + OMV install on host `nas` → `md0` RAID1 + exports → retire the ML110 (the Longhorn backup target follows k3s); [runbook 32](runbooks/32-beetle-m3-omv-setup.md) ships the install + `playbook-nas.yml` enrollment | [#98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98) · [ADR 29](decisions/29-nas-backup-target-beetle-m3-omv.md) · [runbook 32](runbooks/32-beetle-m3-omv-setup.md) |
 | **Home Assistant VM + LXCs** | ⭐⭐⭐ | VM 210 (HA OS) + LXC 211/212 (Mosquitto, Zigbee2MQTT) on the `pve` node (the base from runbook 28), then point HA's NUT integration at `192.168.2.213` for UPS status + power-loss notifications | [#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68) · [#85](https://github.com/jaroslaw-bagnicki/Homelab/issues/85) · [ADR 25](decisions/25-home-assistant-thin-client.md) · [#111](https://github.com/jaroslaw-bagnicki/Homelab/issues/111) |
 
 ### Planned
 
 | Item | Effort | Next step | Refs |
 |---|---|---|---|
-| **Netdata children — OMV, Beetle** | ⭐ | Re-point onto the Parent once those nodes are Ansible-enrolled (Lab + Edge children shipped with the Parent) | [#104](https://github.com/jaroslaw-bagnicki/Homelab/issues/104) |
+| **Netdata children — OMV, Beetle** | ⭐ | The Beetle child ships with its enrollment (`playbook-nas.yml`, [runbook 32](runbooks/32-beetle-m3-omv-setup.md) §8); re-point it onto the Parent once OMV is installed | [#104](https://github.com/jaroslaw-bagnicki/Homelab/issues/104) · [#98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98) |
 | **Power monitoring (Zigbee/Z2M)** | ⭐⭐ | Zigbee energy plugs → Prometheus, bootstrapped standalone on the M910q (ADR 26 — independent of Home Assistant) — sequenced **before** k3s | [#73](https://github.com/jaroslaw-bagnicki/Homelab/issues/73) · [ADR 26](decisions/26-zigbee-energy-monitoring.md) |
 | **YUMI multiboot USB standard** | ⭐ | ADR 29 + manage-YUMI runbook; de-conflate the Ventoy references | [#107](https://github.com/jaroslaw-bagnicki/Homelab/issues/107) · [research 12](research/12-first-boot-setup.md) |
 

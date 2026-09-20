@@ -14,6 +14,7 @@ Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month 
 ## 2026‑09
 
 - **(docs)** Add ADR 34 — LAN services are TLS-only, no plaintext HTTP — [ADR 34](docs/decisions/34-lan-tls-only.md)
+- **(feat)** Beetle M-III NAS Phase 1 — OMV install runbook + `nas` fleet enrollment (Netdata child, NUT secondary) — [runbook 32](docs/runbooks/32-beetle-m3-omv-setup.md)
 - **(feat)** Netdata Tier B — `netdata` role (parent/child), Parent host-native on `pve` behind an **HTTPS-only dashboard** with TLS-only streaming — [runbook 31](docs/runbooks/31-deploy-netdata.md)
 - **(docs)** Rename the Wyse 5070 node `ha` → `pve` — hostnames name the host role, not a guest — [ADR 33](docs/decisions/33-fleet-node-hostnames.md)
 - **(docs)** Add ADR 32 — no hosted CI — [ADR 32](docs/decisions/32-no-hosted-ci.md)
