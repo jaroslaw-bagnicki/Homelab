@@ -172,10 +172,25 @@ telemetry off). Existing config is preserved — the script does not overwrite `
 task reports `changed` by design. Roll the **Parent first**, then the children, and finish with a run
 without the flag to confirm `changed=0`.
 
+> **Validated 2026-09-20 across the fleet.** With the flag set, the install task skips (`creates:`) and
+> the update task runs on `pve`, `lab` and `edge`; the follow-up run without the flag returned
+> `changed=0` on `pve` and `edge` (`lab`'s single change is `azure_arc`'s Arc-connect task, unrelated
+> to Netdata). Every role-owned setting stayed `ok` through the re-install — `bind to`, the `ssl`
+> paths, the tier retention keys, `stream.conf`, the certificate and the `www-data` grant — and no
+> service was restarted: all three nodes were already on the current stable (**v2.11.1**), so the
+> installer did not replace `/usr/sbin/netdata`.
+
+> **`changed` on the update task does not mean the version changed.** It reports changed by design,
+> and on an already-current node the installer is a no-op. The task also does **not** notify the
+> role's restart handler, so confirm the *running* build after an upgrade — `netdata -v` against
+> `systemctl show netdata -p ActiveEnterTimestamp` — and restart `netdata` if the old process is
+> still up.
+
 ## Verification Checklist
 
-Executed on 2026-09-19 — `playbook-pve.yml --diff` `ok=48 changed=16 failed=0`, then
-`playbook-lab.yml` `ok=56 changed=10 failed=0` and `playbook-edge.yml` `ok=44 changed=8 failed=0`:
+Executed 2026-09-19 (install and configuration) and 2026-09-20 (§5 updates) — `playbook-pve.yml
+--diff` `ok=48 changed=16 failed=0`, then `playbook-lab.yml` `ok=56 changed=10 failed=0` and
+`playbook-edge.yml` `ok=44 changed=8 failed=0`:
 
 - [x] §1 `netdata-stream-api-key` present in `homelab-bysxdb-kv` (created 2026-09-19, no expiry)
 - [x] §2 Parent active on `pve` (Netdata **v2.11.1**); dashboard reachable at **`https://192.168.2.201:19999`** (self-signed warning expected)
@@ -187,7 +202,7 @@ Executed on 2026-09-19 — `playbook-pve.yml --diff` `ok=48 changed=16 failed=0`
 - [x] §4 `dbengine tier 0/1/2 retention time = 7d` + `retention size` present (1 GiB per tier on the parent); `du -sh /var/cache/netdata/dbengine` → `512K` on a fresh install
 - [x] §4 no validation command printed the shared key
 - [x] Idempotent — a re-run reports **`changed=0`** for this role on all three nodes (`pve` `ok=38 changed=0`, `edge` `ok=40 changed=0`; `lab` `changed=1`, that one being `azure_arc`'s Arc-connect task, unrelated)
-- [ ] §5 `-e netdata_upgrade=true` updates an agent, and a following run reports `changed=0`
+- [x] §5 validated 2026-09-20 on all three nodes — with the flag: install skipped, `--reinstall` ran (`pve` `ok=40 changed=1`, `lab` `ok=52 changed=2`, `edge` `ok=42 changed=1`); without it: `changed=0` on `pve`/`edge` (`lab` `changed=1` = `azure_arc`); all three were already at the current stable, so no version change was observable
 - [ ] Not in scope: alarm notifications (deferred to the HA VM, [#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68)); `cloudlab` untouched
 
 ## References
