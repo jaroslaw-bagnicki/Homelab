@@ -19,20 +19,31 @@ An inventory of LAN listeners (2026-09-20) shows the fleet is currently complian
 
 A plaintext listener is permitted only when all three hold:
 
-1. the protocol has no TLS-capable alternative *in our deployment*;
-2. it is listed in the exception table below with a rationale; and
-3. it stays firewall-restricted to `192.168.2.0/24`.
+1. **the protocol has no TLS-capable alternative at all** — TLS that merely is not configured is **not** an exception, it is non-compliance (second table below);
+2. it is listed below with a rationale; and
+3. it is restricted to `192.168.2.0/24` by a **verified** rule — asserting a port is "LAN-only" does not satisfy this.
 
-### Exception table
+### Exception table — inherent, no TLS alternative exists
 
 | Protocol | Port | Why plaintext is accepted |
 |---|---|---|
 | mDNS / Avahi | 5353/udp | Service discovery; no TLS variant |
 | DNS (resolver / forwarder) | 53 | Inherently plaintext; DoT/DoH only if adopted |
 | NTP / chrony | 123/udp | The protocol has no TLS |
-| NUT | 3493 | `upsd`/`upsc` are plaintext ([ADR 30](30-ups-nut-graceful-shutdown.md)); NUT can do TLS but ours is unconfigured, and the port is LAN-only |
-| ICMP | — | Reachability |
-| NFS / SMB | 2049 / 445 | Decided when the NAS joins ([ADR 29](29-nas-backup-target-beetle-m3-omv.md)) — NFSv4 with Kerberos, or SMB signing plus encryption |
+
+ICMP is not a service listener and is therefore not listed; it remains permitted for reachability.
+
+### Exception table — temporary non-compliance
+
+TLS-capable protocols that are not yet configured for it. Each carries an owner and a removal condition, and this table must not grow by default.
+
+| Protocol | Port | Why it is currently plaintext | Owner | Removal condition |
+|---|---|---|---|---|
+| NUT | 3493 | `upsd`/`upsc` **do support TLS** — ours is unconfigured, so this is a deployment choice, not an inherent limitation. Anonymous reads are enabled, and nothing restricts the source: LXC 213 is bridged, so client traffic never traverses the host's UFW chains ([runbook 29 §6](https://github.com/jaroslaw-bagnicki/Homelab/blob/main/docs/runbooks/29-nut-ups-shutdown.md)); the container runs no firewall of its own (`ufw` inactive, nftables `policy accept`) and the Proxmox firewall is inert. Verified 2026-09-20: `3493` was reachable from a non-LAN host (`172.17.0.x`). | fleet maintainer | Configure NUT TLS (`upsd` + `upsmon` certificates) **and** filter the source at the container or Proxmox firewall — or record an explicit accepted-risk waiver in [ADR 30](30-ups-nut-graceful-shutdown.md) |
+
+**NAS storage is a requirement, not an exception.** NFS and SMB are encryption-capable, so when the NAS joins ([ADR 29](29-nas-backup-target-beetle-m3-omv.md)) the choice must be NFSv4 with `krb5p` or SMB with encryption enabled — plaintext NFS/SMB is not admitted by this ADR.
+
+**Host UFW does not filter container traffic.** A service inside an LXC sits outside the host's UFW chains entirely — true of LXC 213 today, and true of any container-hosted workload, including the planned log store should it land in an LXC on `pve`. Container-hosted services need their own filtering; "the host firewall covers it" is never true for them.
 
 This ADR governs the **transport** only. Authenticating *users* stays per-service: Netdata's dashboard is unauthenticated on a trusted LAN (the residual accepted in ADR 27), while the planned log store takes HTTP basic auth from day one.
 
