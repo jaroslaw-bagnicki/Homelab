@@ -168,11 +168,37 @@ Vault, so the controller needs `AZURE_CLIENT_ID` / `AZURE_CLIENT_SECRET` / `AZUR
   **non-root** accounts only — `root` SSH stays key-only via `PermitRootLogin prohibit-password`).
 
 > **Proxmox node name.** The `common` role manages the **OS** hostname (`/etc/hostname`, `/etc/hosts`),
-> and Proxmox derives its **node name** from that hostname — so a renamed host must also move
-> `/etc/pve/nodes/<old>` to `<new>`, then run `pvecm updatecerts -f` and restart
-> `pvedaemon`/`pveproxy`/`pvestatd`. Skip that and `pct`/`qm` look for guest configs under the old
-> name (`pct status` → *"nodes/\<name\>/lxc/… does not exist"*) and the API/UI have no node
-> certificate. A from-scratch install (this runbook) picks up `pve` directly.
+> and Proxmox derives its **node name** from that hostname. The rename is **not** complete until pmxcfs
+> (`pve-cluster`) restarts — it caches the node name at start-up and derives the per-node symlinks
+> (`local`, `lxc`, `openvz`, `qemu-server` → `nodes/<name>`) from it, so after an OS rename
+> `/etc/pve/.members` and those symlinks keep pointing at `nodes/<old>`:
+>
+> ```sh
+> mv /etc/pve/nodes/<old> /etc/pve/nodes/<new>      # if it still exists — preserves guest configs
+> systemctl stop pve-cluster && systemctl start pve-cluster   # pmxcfs re-reads the hostname
+> systemctl restart pveproxy pvedaemon pvestatd
+> ```
+>
+> **The failure is latent, and it bites the UI — not `pct`/`qm`.** Nothing looks wrong until
+> `pveproxy` next restarts (package upgrade or reboot); the `ha` → `pve` rename (2026-09-19) surfaced a
+> day later as a dead **`:8006`** UI/API — `pveproxy` workers exit with
+> `failed to load local private key (/etc/pve/local/pve-ssl.key)` (the dangling `local` symlink) and TLS
+> handshakes hang. `pct`/`qm`/`pvesh` keep working throughout — pmxcfs resolves guests by hostname, so
+> they are **not** a valid health check here. `pvecm updatecerts -f` is likewise not the repair: it is
+> only needed if the node certificate itself is wrong — check with
+> `openssl x509 -noout -subject -ext subjectAltName -in /etc/pve/local/pve-ssl.pem` (expected
+> `CN=<name>.local`, SANs `DNS:<name>`, `DNS:<name>.local` and the node IP).
+>
+> **Verify** the rename took effect:
+>
+> ```sh
+> grep nodename /etc/pve/.members                      # → "nodename": "pve"
+> ls -l /etc/pve/local /etc/pve/lxc                    # → nodes/pve, not nodes/<old>
+> pct list && qm list
+> curl -sk -o /dev/null -w '%{http_code}\n' https://192.168.2.201:8006/   # → 200
+> ```
+>
+> A from-scratch install (this runbook) picks up `pve` directly.
 
 > **Time sync.** The `common` role gathers `service_facts` and, if `chrony.service` is **running**,
 > manages `chrony`; otherwise it manages the standard `systemd-timesyncd`. This reads the **actual
