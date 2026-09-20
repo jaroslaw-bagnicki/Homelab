@@ -35,11 +35,11 @@ ICMP is not a service listener and is therefore not listed; it remains permitted
 
 ### Exception table — temporary non-compliance
 
-TLS-capable protocols that are not yet configured for it. Each carries an owner and a removal condition, and this table must not grow by default.
+TLS-capable protocols that are not yet configured for it. Each row carries a removal condition, and this table must not grow by default.
 
-| Protocol | Port | Why it is currently plaintext | Owner | Removal condition |
-|---|---|---|---|---|
-| NUT | 3493 | `upsd`/`upsc` **do support TLS** — ours is unconfigured, so this is a deployment choice, not an inherent limitation. Anonymous reads are enabled, and nothing restricts the source: LXC 213 is bridged, so client traffic never traverses the host's UFW chains ([runbook 29 §6](https://github.com/jaroslaw-bagnicki/Homelab/blob/main/docs/runbooks/29-nut-ups-shutdown.md)); the container runs no firewall of its own (`ufw` inactive, nftables `policy accept`) and the Proxmox firewall is inert. Verified 2026-09-20: `3493` was reachable from a non-LAN host (`172.17.0.x`). | fleet maintainer | Configure NUT TLS (`upsd` + `upsmon` certificates) **and** filter the source at the container or Proxmox firewall — or record an explicit accepted-risk waiver in [ADR 30](30-ups-nut-graceful-shutdown.md) |
+| Protocol | Port | Why it is currently plaintext | Removal condition |
+|---|---|---|---|
+| NUT | 3493 | `upsd`/`upsc` **do support TLS** — ours is unconfigured, so this is a deployment choice, not an inherent limitation. Anonymous reads are enabled, and nothing restricts the source: LXC 213 is bridged, so client traffic never traverses the host's UFW chains ([runbook 29 §6](https://github.com/jaroslaw-bagnicki/Homelab/blob/main/docs/runbooks/29-nut-ups-shutdown.md)); the container runs no firewall of its own (`ufw` inactive, nftables `policy accept`) and the Proxmox firewall is inert. Verified 2026-09-20: `3493` was reachable from a non-LAN host (`172.17.0.x`). | Configure NUT TLS (`upsd` + `upsmon` certificates) **and** filter the source at the container or Proxmox firewall — or record an explicit accepted-risk waiver in [ADR 30](30-ups-nut-graceful-shutdown.md) |
 
 **NAS storage is a requirement, not an exception.** NFS and SMB are encryption-capable, so when the NAS joins ([ADR 29](29-nas-backup-target-beetle-m3-omv.md)) the choice must be NFSv4 with `krb5p` or SMB with encryption enabled — plaintext NFS/SMB is not admitted by this ADR.
 
