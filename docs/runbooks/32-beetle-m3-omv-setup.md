@@ -152,6 +152,10 @@ block):
 | Force SSL/TLS | ✅ — HTTP `80` only 301-redirects to HTTPS |
 
 - Access the UI at **`https://192.168.2.202`**; accept the self-signed cert once per browser.
+- **Plaintext HTTP is prohibited on the LAN ([ADR 34](../decisions/34-lan-tls-only.md)).** OMV 8
+  rejects an HTTP port of `0`, so the listener cannot be removed in the UI — the TLS-only stance is
+  enforced by **UFW denying `80/tcp`** (the `security` role in §8), with the `Force SSL/TLS`
+  redirect covering clients that reach for `http://`. No plaintext content is served.
 
 ## 5. Create the mdadm RAID1 array
 
@@ -186,7 +190,7 @@ portable to any Linux box, with per-disk SMART intact.
 > and refcount B-trees, so an empty array reports ~2% used. That is filesystem metadata, not data —
 > it does not grow with writes and is harmless. Verify with `du -sh /srv/dev-disk-by-uuid-*` (≈0).
 
-Shared folders / exports are **Phase 2** (successor to [#62](https://github.com/jaroslaw-bagnicki/Homelab/issues/62)) — not created here.
+Shared folders / exports are **Phase 2** (successor to [#62](https://github.com/jaroslaw-bagnicki/Homelab/issues/62)) — not created here. Per [ADR 34](../decisions/34-lan-tls-only.md) the NAS storage must be **encrypted**: **NFSv4 with `krb5p`** or **SMB with encryption enabled** — plaintext NFS/SMB is not admitted.
 
 ## 6. Verify & post-install tuning
 
@@ -251,7 +255,8 @@ The node joins the fleet through the shared base playbooks. Two files land in th
 
 - `ansible/inventory.ini` — `nas ansible_host=192.168.2.202 ansible_user=fleetadm`
 - `ansible/playbooks/playbook-nas.yml` — `common → security → nut_client → netdata`
-- `ansible/host_vars/nas.yml` — Avahi on; UFW allows SSH + OMV web (80/443) from the LAN;
+- `ansible/host_vars/nas.yml` — Avahi on; UFW allows SSH + OMV web (`443`) from the LAN and denies
+  `80` ([ADR 34](../decisions/34-lan-tls-only.md));
   `netdata` as a **child** of `pve`; `nut_client` rides the **secondary** defaults.
 
 Run from a **LAN workstation** with the fleet key loaded
@@ -314,13 +319,13 @@ ssh fleetadm@nas 'systemctl is-active nut-monitor; upsc ups@192.168.2.213 | grep
   `192.168.2.202`.
 - **`Permission denied (publickey)` for `fleetadm`** — the account is missing the **`_ssh`** group
   (§7), or the fleet key was not installed.
-- **UFW blocked the OMV UI** — `security_ufw_allow_tcp_ports` must include `80` and `443`
-  ([`host_vars/nas.yml`](../../ansible/host_vars/nas.yml)).
+- **UFW blocked the OMV UI** — `security_ufw_allow_tcp_ports` must include `443` (`80` is
+  deliberately denied per [ADR 34](../decisions/34-lan-tls-only.md), not an omission).
 
 ## References
 
 - [Research 32 — Wincor Beetle M-III hardware diagnostic](../research/32-wincor-beetle-m3-hardware-diagnostic.md) — Phase 0 audit
-- [ADR 29 — NAS backup target on the Beetle M-III (OMV)](../decisions/29-nas-backup-target-beetle-m3-omv.md) · [ADR 31 — static address scheme](../decisions/31-static-address-scheme.md) · [ADR 33 — fleet node hostnames](../decisions/33-fleet-node-hostnames.md)
+- [ADR 29 — NAS backup target on the Beetle M-III (OMV)](../decisions/29-nas-backup-target-beetle-m3-omv.md) · [ADR 31 — static address scheme](../decisions/31-static-address-scheme.md) · [ADR 33 — fleet node hostnames](../decisions/33-fleet-node-hostnames.md) · [ADR 34 — LAN services are TLS-only](../decisions/34-lan-tls-only.md)
 - [ADR 27 — monitoring strategy](../decisions/27-monitoring-strategy.md) · [runbook 31 — Netdata Parent + children](31-deploy-netdata.md)
 - [ADR 30 — UPS graceful shutdown](../decisions/30-ups-nut-graceful-shutdown.md) · [runbook 30 — NUT clients](30-deploy-nut-clients.md)
 - [ADR 28 — fleet admin account](../decisions/28-fleet-admin-account-and-key.md) · [runbook 23 — ML110 OMV setup](23-ml110-omv-setup.md) (the adapted base)

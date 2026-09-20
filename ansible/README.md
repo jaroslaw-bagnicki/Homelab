@@ -41,7 +41,7 @@ ansible-playbook ansible/workloads/opencode/opencode-playbook.yml
 | `playbooks/playbook-lab.yml` | M910q base provision: common → security → docker_host → azure_arc → nut_client → netdata (no `docker_services` — see below) |
 | `playbooks/playbook-edge.yml` | Wyse 3040 edge base provision: common → security → edge_host → nut_client → netdata (bare-metal, no Docker/Arc — ADR 24) |
 | `playbooks/playbook-pve.yml` | Wyse 5070 Proxmox host base provision: common → security → nut_client → netdata (UFW LAN allow for SSH + Proxmox UI 8006 + Netdata dashboard 19999 / streaming 19996, both TLS-only) |
-| `playbooks/playbook-nas.yml` | Beetle M-III OMV NAS base provision: common → security → nut_client → netdata (UFW LAN allow for SSH + OMV web 80/443; Netdata child streaming to `pve`) |
+| `playbooks/playbook-nas.yml` | Beetle M-III OMV NAS base provision: common → security → nut_client → netdata (UFW LAN allow for SSH + OMV web `443`, `80` denied per ADR 34; Netdata child streaming to `pve`) |
 | `workloads/` | Self-contained workload recipes — playbook entrypoint, role recipes, ansible-side README, all co-located per workload |
 | `workloads/opencode/` | OpenCode per-project server workload (see [README](workloads/opencode/README.md)) |
 | `roles/` | Base shared roles — see the [roles index](roles/README.md) |
