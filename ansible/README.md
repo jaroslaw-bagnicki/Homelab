@@ -35,9 +35,9 @@ ansible-playbook ansible/workloads/opencode/opencode-playbook.yml
 | `requirements.yml` | Required Ansible Galaxy collections (`ansible.posix`, `community.docker`, `community.general`, `azure.azcollection`) |
 | `playbooks/playbook.yml` | Base provision: common → security → azure_arc → docker_host → docker_services; pre_tasks declares `opencode_net` |
 | `playbooks/playbook-arc.yml` | Arc enrolment only (for already-configured hosts) |
-| `playbooks/playbook-lab.yml` | M910q base provision: common → security → docker_host → azure_arc → nut_client (no `docker_services` — see below) |
-| `playbooks/playbook-edge.yml` | Wyse 3040 edge base provision: common → security → edge_host → nut_client (bare-metal, no Docker/Arc — ADR 24) |
-| `playbooks/playbook-pve.yml` | Wyse 5070 Proxmox host base provision: common → security → nut_client (UFW LAN allow for SSH + Proxmox UI 8006) |
+| `playbooks/playbook-lab.yml` | M910q base provision: common → security → docker_host → azure_arc → nut_client → netdata (no `docker_services` — see below) |
+| `playbooks/playbook-edge.yml` | Wyse 3040 edge base provision: common → security → edge_host → nut_client → netdata (bare-metal, no Docker/Arc — ADR 24) |
+| `playbooks/playbook-pve.yml` | Wyse 5070 Proxmox host base provision: common → security → nut_client → netdata (UFW LAN allow for SSH + Proxmox UI 8006 + Netdata dashboard 19999 / streaming 19996, both TLS-only) |
 | `workloads/` | Self-contained workload recipes — playbook entrypoint, role recipes, ansible-side README, all co-located per workload |
 | `workloads/opencode/` | OpenCode per-project server workload (see [README](workloads/opencode/README.md)) |
 | `roles/` | Base shared roles — see the [roles index](roles/README.md) |
@@ -58,9 +58,9 @@ Base shared roles live in [`roles/`](roles/README.md). The [roles index](roles/R
 |---|---|---|
 | `playbook.yml` | common → security → azure_arc → docker_host → docker_services | First-time VPS provision after initial SSH hardening (see [runbook 10](../docs/runbooks/10-vps-playground.md)) |
 | `playbook-arc.yml` | azure_arc | Adding Arc to an already-configured host |
-| `playbook-lab.yml` | common → security → docker_host → azure_arc → nut_client | M910q base provision after the 24.04 reinstall (see [runbook 25](../docs/runbooks/25-m910q-os-refresh.md)) |
-| `playbook-edge.yml` | common → security → edge_host → nut_client | Wyse 3040 edge base provision (see [runbook 24](../docs/runbooks/24-edge-appliance.md)) |
-| `playbook-pve.yml` | common → security → nut_client | Wyse 5070 Proxmox host base provision (see [runbook 28](../docs/runbooks/28-pve-proxmox-node.md)) |
+| `playbook-lab.yml` | common → security → docker_host → azure_arc → nut_client → netdata | M910q base provision after the 24.04 reinstall (see [runbook 25](../docs/runbooks/25-m910q-os-refresh.md)) |
+| `playbook-edge.yml` | common → security → edge_host → nut_client → netdata | Wyse 3040 edge base provision (see [runbook 24](../docs/runbooks/24-edge-appliance.md)) |
+| `playbook-pve.yml` | common → security → nut_client → netdata | Wyse 5070 Proxmox host base provision + Netdata Parent (see [runbook 28](../docs/runbooks/28-pve-proxmox-node.md) / [runbook 31](../docs/runbooks/31-deploy-netdata.md)) |
 | `workloads/opencode/opencode-playbook.yml` | docker_opencode_ingress → docker_opencode_instances | Deploy the OpenCode per-project server workload (see [runbook 17](../docs/runbooks/17-deploy-opencode-on-cloudlab.md)) |
 
 ## Inventory

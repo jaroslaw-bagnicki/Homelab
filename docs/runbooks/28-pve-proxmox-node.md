@@ -7,15 +7,15 @@
 > [#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68)). The hardware diagnostic is
 > already done ([research 29](../research/29-wyse5070-hardware-diagnostic.md), [issue #82](https://github.com/jaroslaw-bagnicki/Homelab/issues/82)).
 >
-> ⚠ **Netdata is out of scope here.** The Netdata **Parent** (which will also run on this host) is
-> tracked under [#104](https://github.com/jaroslaw-bagnicki/Homelab/issues/104).
+> ⚠ **Netdata is applied by this runbook's own playbook** — `playbook-pve.yml` ends with the shared
+> `netdata` role (§4). The stream key, deployment and validation are in [runbook 31](31-deploy-netdata.md).
 
 ## Why
 
 ADR 25 needs Home Assistant on a **dedicated thin-client node** (good Zigbee mesh location, and
 MQTT/Zigbee2MQTT as LXCs so HA restarts don't drop the mesh). Proxmox VE is that hypervisor. It is
-also the future home of the **Netdata Parent** ([ADR 27](../decisions/27-monitoring-strategy.md) / [#104](https://github.com/jaroslaw-bagnicki/Homelab/issues/104)) — a central Tier B monitoring plane
-independent of the M910q.
+also the home of the **Netdata Parent** ([ADR 27](../decisions/27-monitoring-strategy.md) / [#104](https://github.com/jaroslaw-bagnicki/Homelab/issues/104)) — a central Tier B monitoring plane
+independent of the M910q, deployed by [runbook 31](31-deploy-netdata.md).
 
 ## What changes
 
@@ -23,7 +23,7 @@ independent of the M910q.
   block of [research 24](../research/24-network-topology-design.md) (this is a compute/virtualisation
   host, not an edge/ingress device).
 - **`pve`** added to the Ansible inventory; base provisioned via `ansible/playbooks/playbook-pve.yml`
-  (`common` → `security`).
+  (`common` → `security` → `nut_client` → `netdata`).
 - **Agent account — `fleetadm`** — key-only SSH ([ADR 28](../decisions/28-fleet-admin-account-and-key.md)), installed at bootstrap (full pattern in the
   [ansible README](../../ansible/README.md)).
 - **Breaking-glass account — `root`** — the Proxmox admin (web UI `:8006` + console), password stored
@@ -158,7 +158,9 @@ chmod 755 /workspaces/Homelab /workspaces/Homelab/ansible   # world-writable fix
 ansible-playbook ansible/playbooks/playbook-pve.yml --diff
 ```
 
-`playbook-pve.yml` runs `common → security`:
+`playbook-pve.yml` runs `common → security → nut_client → netdata` — the last two read Azure Key
+Vault, so the controller needs `AZURE_CLIENT_ID` / `AZURE_CLIENT_SECRET` / `AZURE_TENANT_ID` (see the
+[runbook 31](31-deploy-netdata.md) prerequisites).
 - **`common`** — hostname `pve`, `Etc/UTC`, Avahi (`pve.local`, `common_enable_avahi: true`), and re-arms
   the fleet key on `fleetadm` ([ADR 28](../decisions/28-fleet-admin-account-and-key.md)). Time sync is left to Proxmox's **`chrony`**.
 - **`security`** — UFW default-deny + allow from `192.168.2.0/24`: SSH `22` and Proxmox UI **`8006`**
@@ -166,18 +168,45 @@ ansible-playbook ansible/playbooks/playbook-pve.yml --diff
   **non-root** accounts only — `root` SSH stays key-only via `PermitRootLogin prohibit-password`).
 
 > **Proxmox node name.** The `common` role manages the **OS** hostname (`/etc/hostname`, `/etc/hosts`),
-> and Proxmox derives its **node name** from that hostname — so a renamed host must also move
-> `/etc/pve/nodes/<old>` to `<new>`, then run `pvecm updatecerts -f` and restart
-> `pvedaemon`/`pveproxy`/`pvestatd`. Skip that and `pct`/`qm` look for guest configs under the old
-> name (`pct status` → *"nodes/\<name\>/lxc/… does not exist"*) and the API/UI have no node
-> certificate. A from-scratch install (this runbook) picks up `pve` directly.
+> and Proxmox derives its **node name** from that hostname. The rename is **not** complete until pmxcfs
+> (`pve-cluster`) restarts — it caches the node name at start-up and derives the per-node symlinks
+> (`local`, `lxc`, `openvz`, `qemu-server` → `nodes/<name>`) from it, so after an OS rename
+> `/etc/pve/.members` and those symlinks keep pointing at `nodes/<old>`:
+>
+> ```sh
+> mv /etc/pve/nodes/<old> /etc/pve/nodes/<new>      # if it still exists — preserves guest configs
+> systemctl stop pve-cluster && systemctl start pve-cluster   # pmxcfs re-reads the hostname
+> systemctl restart pveproxy pvedaemon pvestatd
+> ```
+>
+> **The failure is latent, and it bites the UI — not `pct`/`qm`.** Nothing looks wrong until
+> `pveproxy` next restarts (package upgrade or reboot); the `ha` → `pve` rename (2026-09-19) surfaced a
+> day later as a dead **`:8006`** UI/API — `pveproxy` workers exit with
+> `failed to load local private key (/etc/pve/local/pve-ssl.key)` (the dangling `local` symlink) and TLS
+> handshakes hang. `pct`/`qm`/`pvesh` keep working throughout — pmxcfs resolves guests by hostname, so
+> they are **not** a valid health check here. `pvecm updatecerts -f` is likewise not the repair: it is
+> only needed if the node certificate itself is wrong — check with
+> `openssl x509 -noout -subject -ext subjectAltName -in /etc/pve/local/pve-ssl.pem` (expected
+> `CN=<name>.local`, SANs `DNS:<name>`, `DNS:<name>.local` and the node IP).
+>
+> **Verify** the rename took effect:
+>
+> ```sh
+> grep nodename /etc/pve/.members                      # → "nodename": "pve"
+> ls -l /etc/pve/local /etc/pve/lxc                    # → nodes/pve, not nodes/<old>
+> pct list && qm list
+> curl -sk -o /dev/null -w '%{http_code}\n' https://192.168.2.201:8006/   # → 200
+> ```
+>
+> A from-scratch install (this runbook) picks up `pve` directly.
 
 > **Time sync.** The `common` role gathers `service_facts` and, if `chrony.service` is **running**,
 > manages `chrony`; otherwise it manages the standard `systemd-timesyncd`. This reads the **actual
 > runtime state**, not what's installed — so a host running `chrony` (e.g. Proxmox VE) is handled
 > correctly, while Debian/Ubuntu hosts stay on `systemd-timesyncd`.
 
-> **Netdata** is not part of this runbook/playbook — it is [#104](https://github.com/jaroslaw-bagnicki/Homelab/issues/104).
+> **Netdata** is applied by the `netdata` role at the end of this playbook — stream key and
+> validation are in [runbook 31](31-deploy-netdata.md).
 
 ## 5. Storage — reclaim the free VG space (optional)
 
