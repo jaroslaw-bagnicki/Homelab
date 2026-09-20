@@ -8,6 +8,7 @@ Each workload in this repository is a self-contained recipe, runnable independen
 - Standalone playbook entrypoint declared in the workload folder.
 - Workloads do not import each other.
 - Workloads do not declare shared `pre_tasks` in other workloads. The base `playbook.yml` may declare `pre_tasks` for shared resources (e.g. the `opencode_net` Docker network) that multiple workloads depend on — this is a base-setup concern, not a workload concern.
+- Expose **HTTPS only** — plaintext HTTP is prohibited on the LAN ([ADR 34](decisions/34-lan-tls-only.md)); a plaintext listener needs an entry in that ADR's exception table.
 - Adding a new workload:
   1. Create the workload folder under `ansible/workloads/<workload>/`.
   2. Add the playbook entrypoint (`<workload>-playbook.yml`), role recipes, and an ansible-side README inside it.
