@@ -32,7 +32,7 @@ LAN node → a central **Parent** → one dashboard covering the fleet, Arc or n
 Edge nodes stream to the Parent on the `pve` node; the NAS joins when it joins the fleet.
 
 > **Execution note.** Run this runbook **from a LAN workstation** (`192.168.2.0/24`) with the
-> fleet key loaded in `ssh-agent` (see the [`fleet-connect` skill](../../.opencode/skills/fleet-connect/SKILL.md)) —
+> fleet key loaded in `ssh-agent` (see the [`fleet-connect` skill](../../.github/skills/fleet-connect/SKILL.md)) —
 > `lab`, `edge` and `pve` are LAN-only. The Parent also reads the stream key from Azure Key Vault,
 > so the controller needs `AZURE_CLIENT_ID` / `AZURE_CLIENT_SECRET` / `AZURE_TENANT_ID` set.
 

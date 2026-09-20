@@ -13,7 +13,7 @@
 > (runbook 29 §3, verified). It does **not** depend on the shutdown drill ([#117](https://github.com/jaroslaw-bagnicki/Homelab/issues/117)).
 >
 > ⚠ **Execution note.** Manual step, run interactively from a machine on `192.168.2.0/24` with the
-> fleet key loaded (all three nodes are LAN-only — see the [fleet-connect skill](../../.opencode/skills/fleet-connect)).
+> fleet key loaded (all three nodes are LAN-only — see the [fleet-connect skill](../../.github/skills/fleet-connect)).
 > This runbook supersedes runbook 29 §4/§5; those sections now point here.
 
 ## Why
