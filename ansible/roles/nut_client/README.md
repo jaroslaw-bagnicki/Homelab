@@ -15,10 +15,10 @@ Installs **NUT clients** (`nut-client` + `upsmon`) on the physical fleet nodes, 
 | Hosts | `upsmon` role | Account | Password secret | `HOSTSYNC` | `FINALDELAY` |
 |---|---|---|---|---|---|
 | `pve` | `primary` | `upsmon-host` | `nut-upsmon-primary-password` | 30 | 30 |
-| `lab`, `edge` | `secondary` | `upsmon-fleet` | `nut-upsmon-secondary-password` | 15 | 0 |
+| `lab`, `edge`, `nas` | `secondary` | `upsmon-fleet` | `nut-upsmon-secondary-password` | 15 | 0 |
 
 - **`pve` is the sole `primary`.** It waits `FINALDELAY 30` after the shutdown signal before stopping the Proxmox host, giving the secondaries time to finish; Proxmox then stops its own VMs/LXCs in order. Its overrides live in [`host_vars/pve.yml`](../../host_vars/pve.yml).
-- **`lab`/`edge` are `secondary`.** They act on the FSD signal the primary raises; `FINALDELAY 0` is NUT's default and is inert on a secondary. They ride the role defaults.
+- **`lab`/`edge`/`nas` are `secondary`.** They act on the FSD signal the primary raises; `FINALDELAY 0` is NUT's default and is inert on a secondary. They ride the role defaults.
 - Both render the **same `upsmon.conf` template**, so the files differ only in the per-role values above.
 
 ## Services and files written
@@ -35,7 +35,7 @@ Installs **NUT clients** (`nut-client` + `upsmon`) on the physical fleet nodes, 
 The monitor passwords already exist in `homelab-bysxdb-kv` (provisioned by `scripts/New-HomelabNutUpsmonPasswords.ps1`):
 
 - `nut-upsmon-primary-password` — `pve`, account `upsmon-host`
-- `nut-upsmon-secondary-password` — `lab`/`edge`, account `upsmon-fleet`
+- `nut-upsmon-secondary-password` — `lab`/`edge`/`nas`, account `upsmon-fleet`
 
 The role fetches the password for its role at run time via `azure.azcollection.azure_keyvault_secret` (`delegate_to: localhost`, `no_log`) and writes it straight into `/etc/nut/upsmon.conf`. **No password is a role default or is committed.** Rotation = re-run the script with `-Force`, then re-run the base playbook.
 
@@ -76,7 +76,7 @@ The guard is **provisioning-only**: it governs whether the service is (re)starte
 
 ## Hosts
 
-Applied by the base playbooks `playbook-pve.yml` (primary) and `playbook-lab.yml` / `playbook-edge.yml` (secondaries). The Beetle NAS joins once OMV is up ([#98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98)); the Futro S930 runs FreeBSD ([#96](https://github.com/jaroslaw-bagnicki/Homelab/issues/96)), and the ML110 is not enrolled. `cloudlab` is never targeted.
+Applied by the base playbooks `playbook-pve.yml` (primary) and `playbook-lab.yml` / `playbook-edge.yml` / `playbook-nas.yml` (secondaries). The `nas` node (Wincor Beetle M-III OMV NAS) joins when OMV is installed ([#98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98), [runbook 32](../../../docs/runbooks/32-beetle-m3-omv-setup.md) §8); the Futro S930 runs FreeBSD ([#96](https://github.com/jaroslaw-bagnicki/Homelab/issues/96)), and the ML110 is not enrolled. `cloudlab` is never targeted.
 
 ## Operational runbook
 
