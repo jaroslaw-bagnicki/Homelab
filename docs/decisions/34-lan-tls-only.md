@@ -27,7 +27,7 @@ A plaintext listener is permitted only when all three hold:
 
 | Protocol | Port | Why plaintext is accepted |
 |---|---|---|
-| mDNS / Avahi | 5353/udp | Service discovery; no TLS variant |
+| mDNS / Avahi | 5353/udp | Service discovery; no TLS variant. Permitted by UFW's stock `before.rules` (accept to `224.0.0.251:5353`), and LAN-scoped because link-local multicast does not cross routers — verified 2026-09-20 by resolving a peer from `pve` |
 | DNS (resolver / forwarder) | 53 | Inherently plaintext; DoT/DoH only if adopted |
 | NTP / chrony | 123/udp | The protocol has no TLS |
 
@@ -64,9 +64,9 @@ This ADR governs the **transport** only. Authenticating *users* stays per-servic
 ### Alternatives Considered
 
 - **No rule — per-service hardening** (status quo). Rejected: it works until someone deploys in a hurry, and compliance cannot be distinguished from luck.
-- **"No plaintext anything."** Rejected as unimplementable: DNS, mDNS, NTP and NUT offer no TLS alternative in our deployment, so an absolute rule would be broken by the fleet's own baseline services — which teaches people to ignore rules.
+- **"No plaintext anything."** Rejected as unimplementable: DNS, mDNS and NTP offer no TLS alternative at all, so an absolute rule would be broken by the fleet's own baseline services — which teaches people to ignore rules. NUT is **not** in this category: it is TLS-capable and sits in the non-compliance table above.
 - **Central TLS termination** (one HTTPS entry point, services plaintext on loopback). Rejected for now: it concentrates the trust decision and the failure domain, and the services concerned already speak native TLS. Revisit if LAN-facing UIs multiply.
-- **Private CA (`step-ca`) issuing fleet certificates** — deferred, not rejected. It is the only way to make certificates *authenticated* rather than merely encrypted, but its real cost is distributing the root to every client device for browser-facing services. Tracked as a follow-up ADR; until then ADR 27's self-signed residual stands.
+- **Private CA (`step-ca`) issuing fleet certificates** — deferred, not rejected, and now tracked as [#126](https://github.com/jaroslaw-bagnicki/Homelab/issues/126). It is the only way to make certificates *authenticated* rather than merely encrypted, but its real cost is distributing the root to every client device for browser-facing services. Until it lands, ADR 27's self-signed residual stands.
 
 ---
 
