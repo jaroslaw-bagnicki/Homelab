@@ -175,6 +175,11 @@ block):
   enforced by **UFW denying `80/tcp`** (the `security` role in §8), with the `Force SSL/TLS`
   redirect covering clients that reach for `http://`. No plaintext content is served.
 
+> ⚠ **Do this *before* §8 — it is a prerequisite, not a neighbour.** Until TLS is enabled OMV
+> listens on **port 80 only** (`<enablessl>0</enablessl>`, no certificate), and the `security`
+> role denies `80/tcp`. Apply §8 first and you firewall off your own management UI, leaving SSH as
+> the only way back in. Recovery is in [Troubleshooting](#troubleshooting).
+
 ## 5. Create the mdadm RAID1 array
 
 Reconnect the **2 Seagates** to the onboard SATA ports.
@@ -338,8 +343,21 @@ ssh fleetadm@nas 'systemctl is-active nut-monitor; upsc ups@192.168.2.213 | grep
   `192.168.2.202`.
 - **`Permission denied (publickey)` for `fleetadm`** — the account is missing the **`_ssh`** group
   (§7), or the fleet key was not installed.
-- **UFW blocked the OMV UI** — `security_ufw_allow_tcp_ports` must include `443` (`80` is
-  deliberately denied per [ADR 34](../decisions/34-lan-tls-only.md), not an omission).
+- **UFW blocked the OMV UI** — two different causes, check which:
+  - *Before §4d:* `security_ufw_allow_tcp_ports` must include `443` (`80` is deliberately denied
+    per [ADR 34](../decisions/34-lan-tls-only.md), not an omission).
+  - *After §8 with §4d skipped:* the UI is HTTP-only on port 80 and UFW now denies it. Recover over
+    SSH — **UFW's default incoming policy is `deny`, so deleting the rule alone is not enough**, an
+    explicit allow is needed:
+    ```sh
+    sudo ufw status numbered                      # confirm which rules are 80/tcp DENY
+    sudo ufw --force delete <n>                   # the IPv4 80/tcp DENY (do the v6 one too)
+    sudo ufw allow from 192.168.2.0/24 to any port 80 proto tcp
+    # now finish §4d in the UI, then:
+    sudo ufw delete allow from 192.168.2.0/24 to any port 80 proto tcp
+    ```
+    The next `playbook-nas.yml` run re-applies both denies. Verify with `ss -ltnp | grep 443`
+    (**nothing listens on 443 until §4d is done**) and `grep -A6 '<webadmin>' /etc/openmediavault/config.xml`.
 
 ## References
 
