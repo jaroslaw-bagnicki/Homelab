@@ -231,24 +231,27 @@ portable to any Linux box, with per-disk SMART intact.
 2. `Storage | Multiple Device` → **Create** — **Level 1 (Mirror)**, the two Seagate devices
    (`WDES3KB7` + `WDEPBVR3`) → **`md0`**.
 
-> ⚠ **Never trust `/dev/sdX` in this step — the letters do not follow the ports.** Measured
-> 2026‑09‑21 (`by-path` for the port, `by-id` for the serial):
+> ⚠ **Never trust `/dev/sdX` in this step.** The letters are assigned in **probe-completion order**,
+> not port order, and they demonstrably change between boots on **unchanged** hardware — measured
+> 2026‑09‑21 across two reboots with identical cabling:
 >
-> | Port (BIOS / `by-path`) | Connector | Serial | Disk |
-> |---|---|---|---|
-> | 0 / `ata-1` | *white* | `191702804011` | SanDisk SSD — **the OS disk** |
-> | 1 / `ata-2` | *blue* | `WDES3KB7` | Seagate — 0 reallocated |
-> | 2 / `ata-3` | *black* | `WDEPBVR3` | Seagate — **1,056 reallocated, the one to monitor** |
+> | Port (`by-path` / BIOS) | Connector | Serial | Disk | Boot A | Boot B |
+> |---|---|---|---|---|---|
+> | `ata-1` / 0 | *white* | `191702804011` | SanDisk SSD — **the OS disk** | `sdb` | `sdc` |
+> | `ata-2` / 1 | *blue* | `WDES3KB7` | Seagate — 0 reallocated | `sda` | `sda` |
+> | `ata-3` / 2 | *black* | `WDEPBVR3` | Seagate — **1,056 reallocated — monitor this one** | `sdc` | `sdb` |
 >
-> The SanDisk sits on the **lowest** port yet enumerates as **`sdb`**, while the Seagate on port 1 is
-> **`sda`** — the kernel assigns letters in **probe-completion order**, not port order (libata probes
-> ports in parallel). So a literal "`sdb` + `sdc`" would put the **OS disk into the array**. Pick
-> `md0`'s members by **serial** in `Storage | Disks`.
+> The OS disk and the degraded disk **swapped letters** between those two boots. **`scsi_mod.scan=sync`
+> was tried and does not fix it** — that parameter governs the SCSI *host* scan, while libata
+> discovers ATA links asynchronously; the letters still moved, so the setting was reverted.
 >
-> Not that the letters matter elsewhere: GRUB and `/etc/fstab` use UUIDs, OMV addresses disks
-> `by-id`, and mdadm records members by UUID — so the array assembles identically whichever letters
-> the kernel hands out. **Physical anchor:** the degraded drive is the one on the **black**
-> connector — the one to pull when it eventually needs replacing.
+> So the "`sdb` + `sdc`" in an earlier draft of this step could have put the **OS disk into the
+> array**. Pick `md0`'s members by **serial** in `Storage | Disks`.
+>
+> Nothing else depends on the letters: GRUB and `/etc/fstab` use UUIDs, OMV addresses disks `by-id`,
+> and mdadm records members by UUID — the array assembles identically whichever letters the kernel
+> hands out. **Physical anchor:** the degraded drive is the one on the **black** connector — the one
+> to pull when it eventually needs replacing.
 3. Wait for the initial resync. Optionally speed it up:
    ```sh
    echo 50000 > /proc/sys/dev/raid/speed_limit_min
