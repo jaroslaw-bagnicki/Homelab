@@ -231,11 +231,24 @@ portable to any Linux box, with per-disk SMART intact.
 2. `Storage | Multiple Device` → **Create** — **Level 1 (Mirror)**, the two Seagate devices
    (`WDES3KB7` + `WDEPBVR3`) → **`md0`**.
 
-> ⚠ **Never trust `/dev/sdX` in this step — the letters move when drives are added.** Measured
-> 2026‑09‑21 with both Seagates connected: the SanDisk OS disk is **`sdb`**, the Seagates are
-> **`sda`** and **`sdc`** (reconnecting the Seagates after §3 shifted the SanDisk from `sda` to
-> `sdb`). A literal "`sdb` + `sdc`" would therefore put the **OS disk into the array**. Pick the two
-> devices by **serial** in `Storage | Disks`, and re-check after any cabling change.
+> ⚠ **Never trust `/dev/sdX` in this step — the letters do not follow the ports.** Measured
+> 2026‑09‑21 (`by-path` for the port, `by-id` for the serial):
+>
+> | Port (BIOS / `by-path`) | Connector | Serial | Disk |
+> |---|---|---|---|
+> | 0 / `ata-1` | *white* | `191702804011` | SanDisk SSD — **the OS disk** |
+> | 1 / `ata-2` | *blue* | `WDES3KB7` | Seagate — 0 reallocated |
+> | 2 / `ata-3` | *black* | `WDEPBVR3` | Seagate — **1,056 reallocated, the one to monitor** |
+>
+> The SanDisk sits on the **lowest** port yet enumerates as **`sdb`**, while the Seagate on port 1 is
+> **`sda`** — the kernel assigns letters in **probe-completion order**, not port order (libata probes
+> ports in parallel). So a literal "`sdb` + `sdc`" would put the **OS disk into the array**. Pick
+> `md0`'s members by **serial** in `Storage | Disks`.
+>
+> Not that the letters matter elsewhere: GRUB and `/etc/fstab` use UUIDs, OMV addresses disks
+> `by-id`, and mdadm records members by UUID — so the array assembles identically whichever letters
+> the kernel hands out. **Physical anchor:** the degraded drive is the one on the **black**
+> connector — the one to pull when it eventually needs replacing.
 3. Wait for the initial resync. Optionally speed it up:
    ```sh
    echo 50000 > /proc/sys/dev/raid/speed_limit_min
