@@ -199,11 +199,21 @@ Configuration` reports *no offboard controller present*. The x16 takes a 2.5/10 
 an NVMe cache adapter.
 
 > **Correction (BIOS walk, 2026‑09‑21).** `dmidecode` reported no mini-PCIe/mSATA slot and this doc
-> originally repeated that — but `Advanced → Drive Configuration` enumerates **5 SATA ports**: 0
+> originally repeated that — but `Advanced → Drive Configuration` enumerates **5 SATA channels**: 0
 > *white* (SanDisk SSD), 1 *blue* / 2 *black* (the two Seagates), plus **SATA 3 (mSATA)** and
-> **SATA 4 (M.2)**, both *Not Installed*. The board therefore has **two free storage ports** the
-> audit missed — worth a visual check that the connectors are physically fitted. Both hang off the
-> SATA controller, so the M.2 port is **SATA-class, not NVMe**.
+> **SATA 4 (M.2)**, both *Not Installed*. Three caveats before treating that as two spare ports:
+>
+> - **`Not Installed` means *empty*, not *present*.** AMI builds that page from the PCH's port table,
+>   so it can list a channel whose connector the OEM never fitted. **Confirm the sockets visually.**
+> - **The M.2 entry is probably M.2 *SATA*, not NVMe** — it is listed under the SATA controller's own
+>   configuration page beside the cabled ports, whereas an NVMe slot would be a PCIe device. Check
+>   the keying (B / B+M vs M) before buying a module.
+> - **All five usable at once is unproven.** H110 is the budget member of the 100-series family (the
+>   6× SATA parts are B150/H170/Q170/Z170), so a muxed or shared lane is plausible — populating
+>   mSATA could disable a cabled port. Settle it by testing, not by theory.
+>
+> None of this changes the build: the array stays on the two cabled Seagate ports and the OS on the
+> SanDisk. The extra channels are a *possible* growth path, not a plan.
 
 ### Power / thermals
 
