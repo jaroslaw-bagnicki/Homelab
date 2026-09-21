@@ -15,8 +15,8 @@ SMART health before committing the OS. Same Phase 0 pattern as the
 
 **Status**: 🔨 In progress — platform, CPU, RAM, SSD, NIC, expansion, **all three drives** and the
 **PSU/UPS** examined (2026-09-12); the unit is a **Skylake / H110 / DDR4 platform**. **BIOS walked
-2026‑09‑21** ([runbook 32 §1](../runbooks/32-beetle-m3-omv-setup.md)) — VT-d, the 5-port SATA map and
-the firmware/boot-mode picture are settled. Pending: Memtest86+ ([Pending checks](#pending-checks)).
+2026‑09‑21** ([BIOS walk](#bios-walk)) — VT-d, the 5-port SATA map and the firmware/boot-mode picture
+are settled. Pending: Memtest86+ ([Pending checks](#pending-checks)).
 
 ---
 
@@ -26,8 +26,8 @@ the firmware/boot-mode picture are settled. Pending: Memtest86+ ([Pending checks
 > Beetle M-III is the homelab NAS backup target running OpenMediaVault, succeeding the ML110.
 > This research doc is the Phase 0 hardware audit output that grounds that decision. It confirms
 > the platform — **Skylake / H110 / LGA1151 / DDR4, Pentium G4400, AES-NI, QuickSync H.264+HEVC
-> decode**, 8 GiB DDR4; the **BIOS configuration walk** remains, and the `sdc` reallocated-sector
-> finding is resolved — **keep + monitor** (long self-test clean, count frozen).
+> decode**, 8 GiB DDR4; the **BIOS walk is done** ([BIOS walk](#bios-walk)), and the `sdc`
+> reallocated-sector finding is resolved — **keep + monitor** (long self-test clean, count frozen).
 
 | Decision | Outcome (as of 2026-09-12) |
 |---|---|
@@ -71,7 +71,7 @@ check for surprises **before** committing the OS.
 | Product | WINCOR NIXDORF **BEETLE /MIII** — `POS system - B/MIII(M2) UPS IKEA BK` |
 | Serial | `000000001750341761 59HYP23878` |
 | Board | Product **`M2.0-H110-uATX`**, board rev **`D3460-D22`** — WINCOR NIXDORF `Motherboard_M2.0-H110-uATX_D3460` (Fujitsu **D3460**), SN `000000001750340018 DA56P16387` · UUID `da743815-ba0e-11ec-8813-5d5362566515` |
-| BIOS | AMI **core `5.0.0.12`**, rev **`R1.8.0`** — `D3460-D22`, dated **2021-11-22** (Aptio `2.18.1263`, Platform `Retail`, **UEFI 2.5 / PI 1.4** compliant). **Boot mode `LEGACY`**; all four CSM OpROM policies `Legacy only` and `IGFX GOP = N/A`, so the video path is legacy — see [runbook 32 §1](../runbooks/32-beetle-m3-omv-setup.md) |
+| BIOS | AMI **core `5.0.0.12`**, rev **`R1.8.0`** — `D3460-D22`, dated **2021-11-22** (Aptio `2.18.1263`, Platform `Retail`, **UEFI 2.5 / PI 1.4** compliant). **Boot mode `LEGACY`**; all four CSM OpROM policies `Legacy only` and `IGFX GOP = N/A`, so the video path is legacy — see [BIOS walk](#bios-walk) |
 | CPU | Intel **Pentium G4400** (Skylake, 6th gen, model 94) — 1 package, **2 cores / 2 threads**, 3300 MHz, **3 MB L3**, patch ID `506E3` / `000000EA` — see [CPU](#cpu--security-notes) |
 | RAM | **8 GiB** (1× 8 GiB DDR4 SODIMM @ 2133 MT/s) — **CHB2 populated, CHA1 free** — see [RAM](#ram) |
 | GPU | Intel Skylake-S GT1 **HD Graphics 510** (`00:02.0`, `i915`) — 350–1000 MHz |
@@ -218,6 +218,104 @@ an NVMe cache adapter.
 
 ---
 
+## BIOS walk
+
+Walked **2026‑09‑21** at the console (Aptio `2.18.1263`) — the Phase 0 firmware audit output. The
+runbook that executes the install only needs the two settings that actually changed
+([runbook 32 §1](../runbooks/32-beetle-m3-omv-setup.md)).
+
+> **The menu paths are this board's own, not the generic AMI ones.** There is no `Advanced → SATA
+> Configuration`; power settings live on the top-level **`Power`** tab and boot mode on the
+> **`Boot`** tab. **No supervisor password is set**, and **Secure Boot does not exist** on this
+> board — every CSM OpROM policy is `Legacy only`.
+
+### Settings
+
+| Screen | Setting | Value | Note |
+|---|---|---|---|
+| `Power` | Restore AC Power Loss | **`Last State`** | **changed** — was `Switch Off` |
+| `Power → Wake-Up Resources` | LAN (Wake-on-LAN) | **`Enabled`** | **changed** — was `Disabled` |
+| `Power → Wake-Up Resources` | Wake On LAN boot | `Boot Sequence` | already correct; `Force LAN Boot` would attempt PXE |
+| `Power → Wake-Up Resources` | USB / PS/2 Keyboard, Wake On Time | `Disabled` | already correct |
+| `Advanced → CPU Configuration` | Intel Virtualization Technology | `Enabled` | already correct |
+| `Advanced → CPU Configuration` | **VT-d** | `Enabled` | **present here**, contrary to H110's reputation |
+| `Advanced → CPU Configuration` | **CPU AES** | `Enabled` | the AES-NI toggle does exist on this platform |
+| `Advanced → SMART Settings` | SMART Self Test | `Disabled` | a **POST-time self-test**, not SMART monitoring — leave off |
+| `Advanced → Trusted Computing` | TPM Support | `Disabled` | Intel **PTT** (firmware TPM) is available if ever needed |
+| `Boot` | Boot mode select | `LEGACY` | already the default — see below |
+| `Boot` | Boot order | USB Key, then the SSD | already the default |
+
+**There is no SATA-mode setting.** `Advanced → Drive Configuration` lists the five ports and nothing
+else — no IDE/RAID/AHCI selector — yet the controller enumerates as AHCI and the `ahci` driver binds
+(see [Storage](#storage-sata--smart)), so mdadm always sees raw disks.
+
+**Left at their shipped values:** `Advanced → OEM Settings` (`RTC Lock`, `BIOS Lock`, `Max TOLUD
+[Dynamic]`, `CPU Power Limit [Auto]`), `Security → Intrusion Switch [Disabled]` and `System Firmware
+Update [Enabled]`, `Power → USB Power [Always Off]`, the `Power Control` buttons.
+
+> ⚠ **Never set an HDD password.** `Security → HDD Security Configuration` offers one for the
+> SanDisk SSD (ATA Security). On a disk that will carry the OS or join an mdadm array it is an
+> unrecoverable foot-gun — leave it alone.
+
+### Boot mode — `LEGACY`
+
+Boot mode stays **`LEGACY`**, revised from the runbook's original UEFI target. The firmware *is*
+UEFI capable (`Info` → Compliancy `UEFI 2.5; PI 1.4`), so this is a preference rather than a
+limitation — what decides it is the **video path**: all four CSM OpROM policies are `Legacy only`
+and `IGFX GOP Version` reads `N/A`, so a UEFI install risks an installer console with no framebuffer
+and gains nothing, because OMV and mdadm are indifferent to boot mode. The choice has to be settled
+**before** the install — changing it afterwards needs a bootloader repair or a reinstall.
+
+### Wake-on-LAN is the recovery path
+
+The board's AC input is fed by the **integrated Acbel UPS**, which rides through a mains loss on
+battery. `Restore AC Power Loss` may therefore never observe an AC-loss event at all, and a
+NUT-initiated shutdown could leave the NAS in soft-off with **no way back**. With `LAN = Enabled` it
+can be woken over the network; validate against the battery re-test in
+[issue #117](https://github.com/jaroslaw-bagnicki/Homelab/issues/117).
+
+### RTC coin cell — replace it
+
+The event log holds five entries, **all stamped `01/01/16 00:00:0x`** — the firmware's 2016 epoch,
+i.e. the clock was invalid when they were written:
+
+| Code | Severity | Description |
+|---|---|---|
+| `FJ 002E0001` | INFORMATIONAL | *Log Area Reset* |
+| `FJ 0310B002` | CRITICAL | *POST — BIOS Settings reset occurred* |
+| `FJ 0006000B` | CRITICAL | *POST — Bad RTC Battery* |
+| `FJ 00090071` | CRITICAL | *POST — Invalid date/time* |
+| `FJ 0006000B` | CRITICAL | *POST — Bad RTC Battery* |
+
+Read together they are the five consequences of **one** CMOS/RTC reset (log cleared → settings lost
+→ cell flagged → clock invalid) — not four independent critical POST failures.
+
+The reset does not look ongoing: `Main → System Date & Time` reads **`Mon 09/21/2026 17:46`**
+(weekday correct) and `VBAT` is **3.116 V**. That said, a correct clock is **not conclusive** on its
+own — standby power sustains the RTC while the unit is plugged in, so the real test is an
+*unplugged* power cycle.
+
+**Replace the CR2032 anyway**, while the case is open: `Restore AC Power Loss` and `LAN` are exactly
+what an RTC reset silently discards, and a flat cell would leave a headless NAS unable to
+auto-recover. Check socketed vs soldered, then re-apply the two changed settings and clear the event
+log so future events are unambiguous.
+
+### Recorded
+
+| Observation | Value |
+|---|---|
+| Board | `D3460-D22` — pins the audit's `D3460-D2x` |
+| BIOS | core `5.0.0.12`, rev `R1.8.0`, built 2021‑11‑22 18:02:57, Aptio `2.18.1263`, Platform `Retail`, **UEFI 2.5 / PI 1.4** compliant; `Access Level: Administrator` |
+| SATA ports | **5** — 0 *white* = SanDisk, 1 *blue* / 2 *black* = the two Seagates, plus **mSATA (3) and M.2 (4)**, both empty. `Offboard Controller Configuration` = *no controller present* |
+| ME firmware | `11.8.83.3874`; `Advanced → AMT Configuration` shows the version **only** — no provisioned AMT, so the "no out-of-band management" assumption holds |
+| TPM | Intel **PTT** selected, `Disabled`, no security device found |
+| Fans | **CPU `0 rpm`**, PSU `1760 rpm` — the front-right fan is not on the CPU header. `HW-Monitor` is **read-only — no fan control**, so the Gelid controller stays the only noise lever |
+| Temps | graphics 23 °C, PECI CPU0 31 °C (idle) |
+| VBAT | 3.116 V — healthy for a coin cell |
+| Memtest86+ | **pending** — one full pass on the 8 GB stick |
+
+---
+
 ## Implications for issue #98
 
 | Item | Finding |
@@ -251,7 +349,7 @@ Phase 1 (OMV install + array) is the working direction
    CMR confirmed (Seagate Video 2.5 = Perpendicular); both at 6.0 Gb/s.
 3. **PSU label** — ✅ **done 2026-09-12**: **AcBel `POF001-280G`** (UPS-integrated), 250 W
    (225 W @50 °C), 80 Plus Gold, DN P/N `01750279900`, S/N `5421CP10JW`; rails recorded.
-4. **BIOS walk** — ✅ **done 2026‑09‑21** ([runbook 32 §1](../runbooks/32-beetle-m3-omv-setup.md)):
+4. **BIOS walk** — ✅ **done 2026‑09‑21** ([BIOS walk](#bios-walk)):
    **no SATA-mode setting exists** (AHCI-only); `CPU AES`, `VT-x` and **`VT-d`** all `Enabled`;
    **`Restore AC Power Loss = Last State`** and **Wake-on-LAN `Enabled`**; boot mode stays
    **`LEGACY`** (video OpROMs are legacy-only, `IGFX GOP = N/A`); no Secure Boot, no AMT provisioning.
@@ -317,6 +415,6 @@ QuickSync, SATA III, ~14–16 W).
 - [ADR 29 — NAS Backup Target — Wincor Beetle M-III (OpenMediaVault)](../decisions/29-nas-backup-target-beetle-m3-omv.md)
 - [Idea 01c — Homelab NAS: Wincor Beetle M-III](../ideas/01c-nas-backup-target-wincor-beetle.md)
 - [Idea 03 — NAS backup target ML110](../ideas/03-nas-backup-target-ml110.md) · [research 23](23-ml110-nas-omv.md) — the OMV baseline
-- [Runbook 32 — Beetle M-III Phase 1: OMV setup, RAID, fleet enrollment](../runbooks/32-beetle-m3-omv-setup.md) — §1 carries the 2026‑09‑21 BIOS walk
+- [Runbook 32 — Beetle M-III Phase 1: OMV setup, RAID, fleet enrollment](../runbooks/32-beetle-m3-omv-setup.md) — the install / RAID / enrollment procedure
 - [Research 31 — Futro S930](31-futro-s930-hardware-diagnostic.md) · [29 — Wyse 5070](29-wyse5070-hardware-diagnostic.md) · [28 — Wyse 3040](28-wyse3040-hardware-diagnostic.md) — the audit pattern used here
 - `docs/hardware.md` — node inventory

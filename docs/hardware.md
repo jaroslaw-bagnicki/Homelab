@@ -61,7 +61,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Cooling | **3 fans** — front-right (CPU+PSU), PSU back, internal UPS module; **43.7 dB(A)** (UNI-T UT353); BIOS `HW-Monitor` is read-only — **no fan control** — so the Gelid controller is the only lever; internal **TOTEX NiMH 15.6 V 3000 mAh** UPS battery (`first use 12/2022`) — not OS-exposed |
 | Idle power | **14–16 W** measured (VRONE plug meter; ~23–24 W start transient) |
 | Role | OMV NAS backup-target successor to the ML110 — [issue #98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98) |
-| Acquired | 2026-09-01 · diagnostic 2026-09-12 ([research 32](research/32-wincor-beetle-m3-hardware-diagnostic.md)) — platform, drives, PSU/UPS examined · **BIOS walk 2026-09-21** ([runbook 32](runbooks/32-beetle-m3-omv-setup.md) §1) — Memtest86+ pending; `sdc` kept + monitored |
+| Acquired | 2026-09-01 · diagnostic 2026-09-12 ([research 32](research/32-wincor-beetle-m3-hardware-diagnostic.md)) — platform, drives, PSU/UPS examined · **BIOS walk 2026-09-21** ([research 32](research/32-wincor-beetle-m3-hardware-diagnostic.md#bios-walk)) — Memtest86+ pending; `sdc` kept + monitored |
 | Docs | [idea 01c](ideas/01c-nas-backup-target-wincor-beetle.md) · [research 32](research/32-wincor-beetle-m3-hardware-diagnostic.md) · [runbook 32](runbooks/32-beetle-m3-omv-setup.md) · [issue #98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98) |
 
 ### Edge Ingress — Dell Wyse 3040
