@@ -271,13 +271,25 @@ wear for marginal saving) and **Spindown** (a slow-to-wake drive can be marked f
 
 ### System update
 
-Routine Debian patching via the UI/SSH — **stable/security only**. **Do not** install the
-trixie-backports kernel; then disable the backports repo so OMV's Updates page stops offering it:
+Routine Debian patching via the UI/SSH — **stable/security only**. Then disable the
+`trixie-backports` repo so OMV's Updates page stops offering the backports kernel:
 
 ```sh
 sudo sed -i 's/^deb /#deb /' /etc/apt/sources.list.d/openmediavault-kernel-backports.list
 sudo apt update
 ```
+
+> **Why not the backports kernel** — the reasoning is [runbook 23](23-ml110-omv-setup.md)'s
+> (applied 2026‑08‑15): the stock Debian **6.12** kernel is what **OMV 8 is built and tested
+> against**; Debian's own stance on backports is *"newer, not necessarily more stable"*, and OMV's
+> Updates page lists whatever the enabled repos offer without recommending per-package. On
+> fully-supported hardware (**Skylake/H110**) the backports kernel plus ~230 MiB of firmware for
+> absent devices is **risk and noise with zero upside** — on a box whose job is holding backups.
+>
+> ❗ **The trap:** *"install all pending updates" pulls it in while the repo is enabled* — and that
+> leaves `linux-image-amd64` **tracking backports**, so every later `apt upgrade` moves the kernel
+> forward automatically. That is the real cost, not the kernel version itself. Disable the repo
+> **before** patching, or expect to deal with it afterwards.
 
 ## 7. Fleet access — `fleetadm` and SSH hardening
 
