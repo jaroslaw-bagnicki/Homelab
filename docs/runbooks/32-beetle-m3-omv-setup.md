@@ -32,11 +32,13 @@ Authored 2026-09-20, before execution — the checklist fills in as the install 
 
 - [x] Phase 0 BIOS walk — 2026‑09‑21, recorded in [research 32](../research/32-wincor-beetle-m3-hardware-diagnostic.md#bios-walk)
 - [ ] Phase 0 close-out — Memtest86+; RTC coin cell replacement
-- [ ] OMV 8.x installed on the SanDisk SSD; hostname `nas`
-- [ ] Static IP `192.168.2.202` set and verified from `lab`
-- [ ] `md0` (2× Seagate 1 TB → XFS) online; array survives reboot
-- [ ] Web UI reachable at `https://192.168.2.202` (HTTPS-only)
-- [ ] `fleetadm` created; SSH hardened (key-only, LAN-only, root console-only)
+- [x] OMV 8.x installed on the SanDisk SSD; hostname `nas` — 2026‑09‑21
+- [x] Static IP `192.168.2.202` set and verified from `lab` — 2026‑09‑21
+- [~] `md0` (2× Seagate 1 TB → XFS) online and mounted — 2026‑09‑21; **reboot-survival test
+      still pending**, and the initial resync must finish first (§6)
+- [x] Web UI reachable at `https://192.168.2.202` (HTTPS-only) — 2026‑09‑21
+- [~] `fleetadm` created at the CLI (key-only, password locked) — 2026‑09‑21; SSH *hardening* lands
+      with the `security` role in §8
 - [ ] `playbook-nas.yml` applied — Netdata child streaming + `nut-monitor` active
 - [ ] ML110 retired (after the array is verified); `192.168.2.210` released
 
@@ -228,8 +230,27 @@ portable to any Linux box, with per-disk SMART intact.
 
 1. `Storage | Disks` — **wipe** both Seagates (quick wipe clears old signatures; the drives carry
    prior surveillance-recorder data). Match by **serial**, not `/dev/sdX`.
+
+   > **Gotcha — the wipe dialog screams on healthy disks.** Both Seagates still carried a remnant
+   > GPT, so OMV's wipe (`sgdisk --zap-all`) printed *"invalid main GPT header, but valid backup"*,
+   > *"Invalid CRC on main header data"*, *"Invalid partition data!"* and *"** CONNECTION LOST **"*,
+   > then exited **2** — because `sgdisk` writes its warnings to stderr, OMV treats any stderr output
+   > as failure, and the progress console loses its stream. **The wipe had in fact succeeded.**
+   > Judge the result by the disk, not the dialog:
+   > ```sh
+   > sudo blkid /dev/sdX; sudo wipefs -n /dev/sdX; sudo sgdisk -p /dev/sdX
+   > # all three come back empty; "Creating new GPT entries in memory" is the empty-GPT case
+   > ```
+
 2. `Storage | Multiple Device` → **Create** — **Level 1 (Mirror)**, the two Seagate devices
    (`WDES3KB7` + `WDEPBVR3`) → **`md0`**.
+
+   > **Gotcha — this dropdown shows no serials.** Its entries read
+   > `ST1000VT001-1RE172 [/dev/sda, 931.51 GiB]` — and *both* Seagates carry that identical model
+   > string, so the two rows are indistinguishable here. Cross-check the `/dev/sdX` letters against
+   > **`Storage | Disks` in the same session** (they shift across boots). It is harmless in this
+   > step — the tier is a 2-disk mirror so both members are selected anyway, and the SSD holding the
+   > OS never appears because its filesystem is mounted.
 
 > ⚠ **Never trust `/dev/sdX` in this step.** The letters are assigned in **probe-completion order**,
 > not port order, and they demonstrably change between boots on **unchanged** hardware — measured
@@ -259,15 +280,32 @@ portable to any Linux box, with per-disk SMART intact.
 
 ### Filesystem
 
-`Storage | File Systems` → **Create**:
+`Storage | File Systems` → **Create and mount a file system** → **XFS** → device `md0`.
+OMV derives the mount point itself: `/srv/dev-disk-by-uuid-<fs-uuid>`.
 
-| Device | Filesystem | Mount point (OMV auto) |
-|---|---|---|
-| `md0` (1 TB usable) | **XFS** | `/srv/dev-disk-by-uuid-*` (auto) |
+> **⚠ In OMV 8 the create step only runs `mkfs` — it does not register or mount the filesystem.**
+> When `mkfs.xfs` finishes, the File Systems list is **still empty**, because `FileSystemMgmt.getList`
+> returns only *registered* mount points from `conf.system.filesystem.mountpoint` — never
+> detected-but-unconfigured filesystems. Mounting is a **second, separate action**:
+>
+> 1. `Storage | File Systems` → **Mount an existing file system** → `/dev/md0 [XFS, …]` → **Save**
+> 2. **Apply** the pending configuration changes
+>
+> Only the Apply writes `/etc/fstab` and performs the first mount — confirm:
+> ```sh
+> grep md0 /etc/fstab   # … xfs defaults,nofail,usrquota,grpquota,inode64 0 2
+> mount | grep md0      # /srv/dev-disk-by-uuid-<fs-uuid>
+> ```
 
-> **Gotcha — a fresh XFS shows ~9 GB used immediately.** `mkfs.xfs` pre-builds its reverse-mapping
-> and refcount B-trees, so an empty array reports ~2% used. That is filesystem metadata, not data —
-> it does not grow with writes and is harmless. Verify with `du -sh /srv/dev-disk-by-uuid-*` (≈0).
+> **Gotcha — a fresh XFS reports ~2% used (≈18 GiB here), and it is not data.** On disk the array is
+> **99.95 % free** — `xfs_db -r -c "freesp -s" /dev/md0` reports 244 038 349 of 244 157 616 blocks
+> free — and `du -sh /srv/dev-disk-by-uuid-*` is **≈0**. The figure `df` prints is free-space
+> *accounting*, reported net of the space XFS reserves internally, not allocated data; it does not
+> indicate a problem.
+>
+> Quota accounting was **ruled out** as the cause (2026‑09‑21): remounting the empty array without
+> `usrquota,grpquota` left the reported figure unchanged. Expect a smaller absolute figure on a
+> smaller array — runbook 23 saw ~9 GB.
 
 Shared folders / exports are **Phase 2** (successor to [#62](https://github.com/jaroslaw-bagnicki/Homelab/issues/62)) — not created here. Per [ADR 34](../decisions/34-lan-tls-only.md) the NAS storage must be **encrypted**: **NFSv4 with `krb5p`** or **SMB with encryption enabled** — plaintext NFS/SMB is not admitted.
 
@@ -279,8 +317,41 @@ mdadm --detail /dev/md0
 mount | grep md0
 ```
 
+> **Expected failure before §8:** `nut-monitor.service` is already installed but has no UPS
+> configured, so `systemctl --failed` lists it as failed. §8's `nut_client` role resolves it — not
+> something to chase at this point.
+
+### Reboot persistence
+
+Two things must be in place before `md0` survives a reboot.
+
+**1. `/etc/mdadm/mdadm.conf` carries an `ARRAY` line.** OMV 8 generates this file from Salt
+(`/srv/salt/omv/deploy/mdadm/20mdadm.sls`): the template writes a fresh header, then a `cmd.run`
+**appends** `mdadm --detail --scan`. The stock Debian file ships **no** `ARRAY` entry, so until that
+state runs the array is unregistered. Creating the array marks OMV *"Pending configuration
+changes"* — **Apply**, then refresh the initramfs:
+
+```sh
+grep ^ARRAY /etc/mdadm/mdadm.conf      # ARRAY /dev/md0 metadata=1.2 UUID=…
+sudo update-initramfs -u
+```
+
+> ⚠ **Verify the initramfs with `unmkinitramfs`, never with `zstd | cpio`.** Debian's initramfs is
+> **multi-part** (an uncompressed early archive followed by a compressed main one), so piping the
+> image through `zstd -dc | cpio -idm <path>` silently extracts **nothing** — which reads as *"the
+> ARRAY entry is missing"* even when it is present. Check it properly:
+> ```sh
+> t=$(mktemp -d); sudo unmkinitramfs /boot/initrd.img-$(uname -r) $t
+> sudo grep -r ^ARRAY $t/etc/mdadm/mdadm.conf; sudo rm -rf $t
+> ```
+
+**2. `/etc/fstab` has the mount point** — written by the Apply in §5, carrying `nofail` so a missing
+or degraded array never blocks boot.
+
 **Reboot persistence check:** `sudo reboot`, then confirm `md0` auto-assembles and mounts — the key
-resilience test for a backup target.
+resilience test for a backup target. **Never reboot mid-resync:** the initial resync of these 1 TB
+mirrors runs **~2 h** (`finish=…min` in `/proc/mdstat`, `Resync Status` in `mdadm --detail`); wait
+for `[UU]` with no progress line before rebooting.
 
 ### Disk acoustics
 
