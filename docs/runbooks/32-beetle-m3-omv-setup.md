@@ -117,8 +117,15 @@ other BIOS setting at its shipped value: in particular **never set an HDD passwo
 
 With **only the SanDisk SSD attached** (Seagates disconnected):
 
-1. Boot the ISO → the installer prompts for **location**, **language**, and **root password**.
-2. It deploys to the **first disk found** — the SanDisk SSD. Record the root password.
+1. Boot the ISO → the installer prompts for **location**, **language**, **keyboard**, then
+   **hostname** and **domain name**, then a **root password**.
+   - **Hostname `nas`** — the installer's default is not `nas`; set it.
+   - **Domain `home`** — the internal fleet domain ([ADR 06](../decisions/06-local-dns-dnsmasq.md),
+     moved to the OPNsense router by [ADR 24](../decisions/24-edge-ingress-appliance.md)). The field
+     **prefills `Internal`**, so replace it. `.local` is independent — Avahi publishes `nas.local`
+     from the short hostname (§8).
+   - Record the root password.
+2. It deploys to the **first disk found** — the SanDisk SSD.
 3. On completion the machine reboots — **remove the USB stick**.
 4. The console login screen shows the **DHCP-assigned IP** for the web UI. Note it.
 
@@ -146,8 +153,10 @@ block):
   (Intel I219-V, MAC `00:01:2e:8e:14:0d`).
 - Method: **Static** — IP `192.168.2.202`, netmask `255.255.255.0`, gateway `192.168.2.1`, DNS `192.168.2.1`.
 - Apply. Verify from `lab`: `ping 192.168.2.202`.
-- **Hostname** — `System | Network | General` → hostname **`nas`**, so mDNS is `nas.local` (Avahi,
-  runbook 23 §8 pattern). The `common` role also enforces the inventory name `nas` ([§8](#8-fleet-enrollment--ansible)).
+- **Hostname** — `Network → General` (a **top-level** `Network` item, not `System → Network`):
+  confirm **`nas`** and domain **`home`** (both set at §3, so the FQDN is `nas.home`), giving mDNS
+  `nas.local` via Avahi (runbook 23 §8 pattern). The `common` role also enforces the inventory name
+  `nas` ([§8](#8-fleet-enrollment--ansible)).
 
 ### 4d. HTTPS-only web UI
 
