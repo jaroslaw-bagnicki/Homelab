@@ -160,20 +160,50 @@ block):
 
 ### 4d. HTTPS-only web UI
 
-`System | Workbench | Settings`:
+> **Mandated by [ADR 34 — LAN services are TLS-only](../decisions/34-lan-tls-only.md):** the OMV UI
+> must not be reachable over plaintext HTTP. This step exists to satisfy that — issue the
+> certificate, turn on `Force SSL/TLS`, and let §8's `security` role deny `80/tcp`.
+
+**1. Issue the certificate** — `System → Certificates → SSL` → **Create**:
+
+| Field | Value |
+|---|---|
+| Key size | `4096b` |
+| Period of validity | `1 year` |
+| **Common Name** | **`nas.local`** — the name Avahi advertises |
+| Country | your own |
+| Organization / Unit / City / State / Email, Tags | leave blank (Tags auto-fills from the subject) |
+
+> **Why `nas.local` and not `nas.home`.** `.home` belongs to the OPNsense router
+> ([ADR 06](../decisions/06-local-dns-dnsmasq.md), amended by
+> [ADR 24](../decisions/24-edge-ingress-appliance.md)), and
+> [ADR 07](../decisions/07-reverse-proxy-caddy.md) fronts `.home` services with Caddy's internal CA —
+> OMV's own certificate is not the right home for it. `nas.local` is also the only name resolving
+> today. OMV adds **`subjectAltName=DNS:<Common Name>`**, so `https://nas.local` matches on name and
+> only the untrusted-issuer warning remains, which is inherent to a self-signed certificate. A
+> certificate can never match a bare IP, so `https://192.168.2.202` always warns on the name — use
+> the `.local` name.
+
+**2. Enforce TLS** — `System | Workbench | Settings`:
 
 | Setting | Value |
-|---|---|---|
+|---|---|
 | SSL/TLS enabled | ✅ |
-| Certificate | self-signed (created under **System → Certificates → SSL**) |
+| Certificate | the one issued above |
 | HTTPS port | `443` |
 | Force SSL/TLS | ✅ — HTTP `80` only 301-redirects to HTTPS |
 
-- Access the UI at **`https://192.168.2.202`**; accept the self-signed cert once per browser.
-- **Plaintext HTTP is prohibited on the LAN ([ADR 34](../decisions/34-lan-tls-only.md)).** OMV 8
-  rejects an HTTP port of `0`, so the listener cannot be removed in the UI — the TLS-only stance is
-  enforced by **UFW denying `80/tcp`** (the `security` role in §8), with the `Force SSL/TLS`
-  redirect covering clients that reach for `http://`. No plaintext content is served.
+**3. Verify** — nginx must listen on 443 (`ss -ltnp | grep 443`), and the served certificate should
+carry the SAN:
+
+```sh
+echo | openssl s_client -connect 127.0.0.1:443 -servername nas.local 2>/dev/null \
+  | openssl x509 -noout -subject -dates -ext subjectAltName
+```
+- **Why the listener stays.** OMV 8 rejects an HTTP port of `0`, so port 80 cannot be removed in
+  the UI — the TLS-only stance is enforced instead by **UFW denying `80/tcp`** (the `security` role
+  in §8), with `Force SSL/TLS` redirecting clients that reach for `http://`. No plaintext content
+  is served.
 
 > ⚠ **Do this *before* §8 — it is a prerequisite, not a neighbour.** Until TLS is enabled OMV
 > listens on **port 80 only** (`<enablessl>0</enablessl>`, no certificate), and the `security`
