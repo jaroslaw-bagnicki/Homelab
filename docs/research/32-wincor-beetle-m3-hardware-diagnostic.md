@@ -175,6 +175,14 @@ previously completed an **extended self-test without error**; the 2026-09-12 re-
 [issue #98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98). **Array plan (ADR 29):**
 **mdadm RAID1** across 2× 1 TB = **1 TB usable**; **`sdc` is kept and monitored** (long self-test clean).
 
+**No acoustic lever (measured 2026-09-21).** These drives do not advertise the ATA automatic
+acoustic management feature — `hdparm -M` reports `acoustic = not supported` on both, and `hdparm -I`
+lists only a *Recommended acoustic management value: 128* that the drive cannot accept. AAM is
+therefore **unsettable**, and runbook 32 §6 drops that step. **APM is supported but left off**
+(`APM_level = off`, RAID head-cycle-wear reasoning); **Spindown** stays unset. Noise mitigation on
+this node is physical — placement and vibration isolation, not firmware. Note `hdparm` is **not**
+installed by a stock OMV 8, so the capability is undetectable until it is.
+
 ### Network
 
 | Field | Value |

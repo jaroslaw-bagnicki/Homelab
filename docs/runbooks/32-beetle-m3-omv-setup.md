@@ -357,14 +357,28 @@ resilience test for a backup target. **Never reboot mid-resync:** the initial re
 mirrors runs **~2 h** (`finish=…min` in `/proc/mdstat`, `Resync Status` in `mdadm --detail`); wait
 for `[UU]` with no progress line before rebooting.
 
-### Disk acoustics
+### Disk acoustics — **not applicable to this drive model**
 
-Noise is a concern (43.7 dB(A) measured). Set **AAM = quietest** on both Seagates via
-`Storage | Disks → Edit → Advanced Acoustic Management` → *Minimum performance, minimum acoustic
-output*, then **Apply**. Match by **serial**.
+Noise is a concern (43.7 dB(A) measured), but the Seagate **ST1000VT001** exposes **no acoustic
+lever**: it does not set the ATA automatic acoustic management feature bit, so **AAM cannot be set**
+(measured 2026‑09‑21):
 
-**Deliberately not set** (same reasoning as runbook 23): **APM** (RAID-safe value adds head-cycle
-wear for marginal saving) and **Spindown** (a slow-to-wake drive can be marked failed by mdadm).
+```sh
+sudo apt-get install -y hdparm     # not present on a stock OMV 8 — without it AAM is undetectable
+sudo hdparm -M /dev/sda            # WDES3KB7 → acoustic = not supported
+sudo hdparm -M /dev/sdb            # WDEPBVR3 → acoustic = not supported
+```
+
+`hdparm -I` lists a *Recommended acoustic management value: 128*, but never the
+**`Advanced acoustic management feature`** capability line — a recommendation the drive cannot
+accept. `Storage | Disks → Edit → Advanced Acoustic Management` therefore has nothing to write and
+the field is absent. **Skip this step**; runbook 23's ML110 drives did support it, which is where it
+came from.
+
+No acoustic setting is applied at all: **APM is supported but deliberately left off**
+(`APM_level = off` — the RAID head-cycle-wear reasoning from runbook 23), and **Spindown** stays
+unset (a slow-to-wake drive can be marked failed by mdadm). Noise mitigation for this node is
+**physical** — enclosure placement and vibration isolation, not firmware.
 
 ### System update
 
