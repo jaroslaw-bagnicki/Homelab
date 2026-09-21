@@ -29,7 +29,8 @@
 
 Authored 2026-09-20, before execution — the checklist fills in as the install runs.
 
-- [ ] Phase 0 close-out — BIOS walk, Memtest86+, SATA-port count
+- [x] Phase 0 BIOS walk — 2026‑09‑21, recorded in §1 (SATA ports: 3 standard + mSATA + M.2)
+- [ ] Phase 0 close-out — Memtest86+; RTC coin cell replacement
 - [ ] OMV 8.x installed on the SanDisk SSD; hostname `nas`
 - [ ] Static IP `192.168.2.202` set and verified from `lab`
 - [ ] `md0` (2× Seagate 1 TB → XFS) online; array survives reboot
@@ -58,9 +59,11 @@ No out-of-band management — all steps run from a **keyboard + monitor** attach
 > the LAN interface name at the console before the walk.
 
 - NIC — Intel I219-V `enp0s31f6`, MAC `00:01:2e:8e:14:0d`.
-- Board — `M2.0-H110-uATX` (Fujitsu **D3460**), Intel H110; BIOS AMI `V5.0.0.12 R1.8.0` (2021-11-22), **UEFI supported**.
-- CPU — Pentium G4400 (AES-NI present); RAM — 8 GB DDR4.
-- PCIe — 1× 3.0 x16 + 2× 2.0 x1; **no mSATA**.
+- Board — `M2.0-H110-uATX`, board rev **`D3460-D22`**, Intel H110; BIOS **`R1.8.0`** (Aptio `2.18.1263`, built 2021-11-22).
+- CPU — Pentium G4400 — **VT-d and CPU AES both `Enabled`** in the BIOS; RAM — 8 GB DDR4 (the free slot is **CHA1**).
+- SATA — **5 ports**: 0 *white* = SanDisk SSD, 1 *blue* / 2 *black* = the two Seagates, plus **mSATA (3) and M.2 (4), both empty** — research 32's "no mSATA" was wrong.
+- PCIe — 1× 3.0 x16 + 2× 2.0 x1, all free.
+- Boot — **`LEGACY`** (`Boot → Boot mode select`); Secure Boot does not exist on this board.
 
 ### Media & tools
 
@@ -76,22 +79,75 @@ No out-of-band management — all steps run from a **keyboard + monitor** attach
 
 ## 1. Phase 0 close-out — BIOS walk, Memtest, SATA ports
 
-Enter the AMI BIOS at POST (`Del`/`F2`) and apply:
+> **Walked 2026‑09‑21. These are the D3460-D22's own Aptio `2.18.1263` paths, not the generic AMI
+> ones.** There is no `Advanced → SATA Configuration`; power settings live on the top-level
+> **`Power`** tab and boot mode on the **`Boot`** tab. No supervisor password is set, and **Secure
+> Boot does not exist** on this board (every CSM OpROM policy is `Legacy only`).
 
-| Setting | Target |
+Enter the AMI BIOS at POST (`Del`/`F2`) and apply — nothing else needs changing:
+
+| Screen | Setting | Target |
+|---|---|---|
+| `Power` | Restore AC Power Loss | **`Last State`** |
+| `Power → Wake-Up Resources` | LAN | **`Enabled`** — Wake-on-LAN |
+| `Power → Wake-Up Resources` | Wake On LAN boot | **`Boot Sequence`** (`Force LAN Boot` would attempt PXE) |
+| `Power → Wake-Up Resources` | USB / PS/2 Keyboard, Wake On Time | `Disabled` |
+| `Advanced → CPU Configuration` | Intel Virtualization Technology | `Enabled` |
+| `Advanced → CPU Configuration` | **VT-d** | `Enabled` — present here, contrary to H110's reputation |
+| `Advanced → CPU Configuration` | **CPU AES** | `Enabled` — the toggle does exist on this platform |
+| `Advanced → SMART Settings` | SMART Self Test | `Disabled` — a **POST-time self-test**, not SMART monitoring |
+| `Advanced → Trusted Computing` | TPM Support | `Disabled` — Intel **PTT** (firmware TPM) is available if ever needed |
+| `Boot` | Boot mode select | **`LEGACY`** — read before changing, see below |
+| `Boot` | Boot order | USB Key, then the SSD — already the default |
+
+**There is no SATA-mode setting.** `Advanced → Drive Configuration` lists the ports and nothing
+else; the controller runs AHCI (research 32 saw the `ahci` driver bind), so mdadm sees raw disks —
+the generic "SATA mode = AHCI" step is a no-op on this board.
+
+**Leave alone:** `Advanced → OEM Settings` (`RTC Lock`, `BIOS Lock`, `Max TOLUD [Dynamic]`, `CPU
+Power Limit [Auto]`), `Security → Intrusion Switch [Disabled]` and `System Firmware Update
+[Enabled]`, `Power → USB Power [Always Off]`, the `Power Control` buttons — and **never set an HDD
+password** (`Security → HDD Security Configuration` offers one for the SanDisk SSD): ATA Security on
+a member disk is an unrecoverable foot-gun.
+
+### 1a. Two decisions not to revisit after the install
+
+- **Boot mode stays `LEGACY`** — revised from the original UEFI target. The firmware *is* UEFI
+  capable (`Info` → Compliancy `UEFI 2.5; PI 1.4`), so this is a preference rather than a
+  limitation; what decides it is the **video path** — all four CSM OpROM policies are `Legacy only`
+  and `IGFX GOP Version` reads `N/A`, so a UEFI install risks an installer console with no
+  framebuffer and gains nothing, because OMV and mdadm are indifferent to boot mode. Changing it
+  afterwards needs a bootloader repair or a reinstall, so settle it now. If UEFI is wanted for
+  consistency, that 5-minute Ventoy test (§2) is the only reason to deviate.
+- **Wake-on-LAN is the recovery path.** The board's AC input is fed by the **integrated Acbel UPS**,
+  which rides through a mains loss on battery — so `Restore AC Power Loss` may never observe an
+  AC-loss event, and a NUT-initiated shutdown could leave the NAS in soft-off with no way back.
+  With `LAN = Enabled` it can be woken over the network; validate against the battery re-test in
+  [issue #117](https://github.com/jaroslaw-bagnicki/Homelab/issues/117).
+
+### 1b. Recorded
+
+| Observation | Value |
 |---|---|
-| SATA mode | **AHCI** (`Advanced → SATA Configuration`) — mdadm needs raw disks |
-| Boot mode | **UEFI** (the D3460 BIOS supports it; the OMV 8.x ISO boots UEFI) |
-| Secure Boot | **Disabled** (OMV's kernel is unsigned) |
-| CPU — **VT-x** | **Enabled** |
-| CPU — AES-NI | present/auto (no toggle expected on this platform) |
-| **Restore AC Power Loss** | **Last State** (the NAS must come back after mains returns) |
-| Boot order | USB first for the install, then the SanDisk SSD |
+| Board | `D3460-D22` — pins the audit's `D3460-D2x` |
+| BIOS | core `5.0.0.12`, rev `R1.8.0`, built 2021‑11‑22 18:02:57, Aptio `2.18.1263`, Platform `Retail`, **UEFI 2.5 / PI 1.4** compliant |
+| SATA ports | **5** — 0 *white* = SanDisk, 1 *blue* / 2 *black* = the two Seagates, plus **mSATA (3) and M.2 (4), both empty** |
+| ME firmware | `11.8.83.3874`; `Advanced → AMT Configuration` shows the version **only** — no AMT provisioning, so the "no out-of-band management" assumption holds |
+| TPM | Intel **PTT** selected, `Disabled`, no security device found |
+| Fans | **CPU `0 rpm`**, PSU `1760 rpm` — the front-right fan is not on the CPU header; `HW-Monitor` is read-only with **no fan control**, so the Gelid controller stays the only noise lever |
+| Temps / VBAT | graphics 23 °C, PECI CPU0 31 °C, **VBAT 3.116 V** |
+| Event Logs | 5 entries, all stamped `01/01/16 00:00:0x` — *Log Area Reset* · *BIOS Settings reset occurred* · *Bad RTC Battery* ×2 · *Invalid date/time*. Together: **one** CMOS/RTC reset episode, not a record of ongoing faults |
+| RTC | `Main → System Date & Time` = **`Mon 09/21/2026 17:46`** — correct, weekday included |
 
-Record:
-- **Physical SATA port count** on the board (research 32 lists it as pending) and which ports
-  `sdb`/`sdc` use — note one free port for later array growth.
-- Photos of the SATA / boot / power-loss screens.
+> **Replace the RTC coin cell — cheap insurance, not a diagnosed fault.** Every entry in the log is a
+> consequence of one CMOS/RTC reset (log reset → settings reset → bad cell → invalid date), and the
+> clock now reads correctly with `VBAT` at 3.116 V, so there is no sign of ongoing degradation. Swap
+> the **CR2032** anyway while the case is open: `Restore AC Power Loss` and `LAN` are exactly the
+> settings an RTC reset silently discards, and a flat cell would leave the NAS unable to auto-recover.
+> The correct date is **not** conclusive on its own — standby power sustains the RTC while the unit
+> is plugged in, so the real test is the first *unplugged* power cycle. Check socketed vs soldered,
+> then **re-apply the table above** — a swap clears BIOS settings. Clear the log afterwards so
+> future events are unambiguous.
 
 **Memtest86+** — run **one full pass** on the 8 GB stick (Ventoy menu), then reboot.
 
@@ -99,7 +155,8 @@ Record:
 
 1. Download the latest **OMV 8.x** ISO (Debian 13 base).
 2. Copy the ISO onto the **Ventoy** stick (Ventoy boots ISOs directly).
-3. Boot the Beetle from the USB stick (UEFI).
+3. Boot the Beetle from the USB stick — the board is in **`LEGACY`** boot mode (§1a), which the
+   Ventoy stick handles. If it fails to boot, retry with Ventoy's *normal* mode for that ISO.
 
 > If the OMV ISO fails to boot under Ventoy's default mode, use Ventoy's *normal* (safe) mode for
 > that ISO, or write a dedicated stick with `dd`.
@@ -313,8 +370,9 @@ ssh fleetadm@nas 'systemctl is-active nut-monitor; upsc ups@192.168.2.213 | grep
   the SanDisk connected.
 - **Ventoy won't boot the OMV ISO** — retry with Ventoy's *normal* mode for that ISO, or `dd` a
   dedicated stick.
-- **Drives not visible after reconnect** — confirm they sit on the onboard H110 SATA ports and that
-  BIOS SATA mode is **AHCI**, not RAID/IDE (mdadm needs raw disks).
+- **Drives not visible after reconnect** — confirm they sit on the onboard H110 SATA ports, matching
+  the port map in §1b (0 *white* / 1 *blue* / 2 *black*). The board exposes no SATA-mode setting;
+  it is AHCI-only, so mdadm always sees raw disks.
 - **Web UI unavailable after the static IP** — use the console; `ip a show enp0s31f6` should show
   `192.168.2.202`.
 - **`Permission denied (publickey)` for `fleetadm`** — the account is missing the **`_ssh`** group
