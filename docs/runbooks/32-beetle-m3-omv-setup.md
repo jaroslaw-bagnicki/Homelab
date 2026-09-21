@@ -136,12 +136,16 @@ With **only the SanDisk SSD attached** (Seagates disconnected):
 - Browse to the DHCP IP; login `admin` / `openmediavault` (default). Change the admin password
   immediately (`System | Settings | Web Administration`).
 
-### 4b. NTP + timezone
+### 4b. Timezone + NTP
 
-- `System | Date & Time` — set **timezone** and enable **NTP**.
-
-> **Ansible override.** The `common` role enforces **`Etc/UTC`** ([§8](#8-fleet-enrollment--ansible)).
-> OMV's UI value is overwritten on each playbook run — accept UTC, or the runbook's model diverges.
+- **NTP needs nothing done.** OMV ships **chrony** `active` and `enabled`, with `systemd-timesyncd`
+  and `ntp` **masked** so they cannot fight it. `System | Date & Time` is only worth opening to
+  change the timezone or add servers.
+- The `common` role (§8) starts and enables **whichever service it finds running — `chrony` if
+  present, otherwise `systemd-timesyncd`** — so it defers to OMV's choice rather than replacing it.
+- **Timezone** — confirm it, but the role enforces **`Etc/UTC`** on every run
+  ([§8](#8-fleet-enrollment--ansible)), so a value set in the OMV UI here is overwritten. Verify with
+  `timedatectl` — expect `Time zone: Etc/UTC` and `System clock synchronized: yes`.
 
 ### 4c. Static IP `192.168.2.202` and hostname `nas`
 
