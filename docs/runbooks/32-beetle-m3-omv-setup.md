@@ -228,8 +228,14 @@ portable to any Linux box, with per-disk SMART intact.
 
 1. `Storage | Disks` — **wipe** both Seagates (quick wipe clears old signatures; the drives carry
    prior surveillance-recorder data). Match by **serial**, not `/dev/sdX`.
-2. `Storage | Multiple Device` → **Create** — **Level 1 (Mirror)**, devices `sdb` + `sdc`
+2. `Storage | Multiple Device` → **Create** — **Level 1 (Mirror)**, the two Seagate devices
    (`WDES3KB7` + `WDEPBVR3`) → **`md0`**.
+
+> ⚠ **Never trust `/dev/sdX` in this step — the letters move when drives are added.** Measured
+> 2026‑09‑21 with both Seagates connected: the SanDisk OS disk is **`sdb`**, the Seagates are
+> **`sda`** and **`sdc`** (reconnecting the Seagates after §3 shifted the SanDisk from `sda` to
+> `sdb`). A literal "`sdb` + `sdc`" would therefore put the **OS disk into the array**. Pick the two
+> devices by **serial** in `Storage | Disks`, and re-check after any cabling change.
 3. Wait for the initial resync. Optionally speed it up:
    ```sh
    echo 50000 > /proc/sys/dev/raid/speed_limit_min
