@@ -16,8 +16,9 @@
 
 ## Goals
 
-- Close out the last **Phase 0** check: **Memtest86+**. The BIOS walk itself was completed
-  2026‑09‑21 and is recorded in [research 32](../research/32-wincor-beetle-m3-hardware-diagnostic.md#bios-walk).
+- Phase 0: the BIOS walk was completed 2026‑09‑21 and is recorded in
+  [research 32](../research/32-wincor-beetle-m3-hardware-diagnostic.md#bios-walk). **Memtest86+ did
+  not run** — deliberately deferred (see Status).
 - Install **OMV 8.x** on the **SanDisk X600 128 GB SSD** (the Seagates disconnected during install).
 - Create the **mdadm RAID1** array `md0` = 2× Seagate 1 TB → **XFS** = **1 TB usable**.
 - Set static IP **`192.168.2.202`** on the LAN interface (confirm its name — §4c) and hostname **`nas`**.
@@ -31,15 +32,18 @@
 Authored 2026-09-20, before execution — the checklist fills in as the install runs.
 
 - [x] Phase 0 BIOS walk — 2026‑09‑21, recorded in [research 32](../research/32-wincor-beetle-m3-hardware-diagnostic.md#bios-walk)
-- [ ] Phase 0 close-out — Memtest86+; RTC coin cell replacement
+- [ ] Phase 0 close-out — **Memtest86+ and the RTC coin cell are deliberately deferred**
+      (2026‑09‑21): both need a powered-off, case-open trip, which the install never required.
+      Still open in [research 32](../research/32-wincor-beetle-m3-hardware-diagnostic.md).
 - [x] OMV 8.x installed on the SanDisk SSD; hostname `nas` — 2026‑09‑21
 - [x] Static IP `192.168.2.202` set and verified from `lab` — 2026‑09‑21
 - [~] `md0` (2× Seagate 1 TB → XFS) online and mounted — 2026‑09‑21; **reboot-survival test
       still pending**, and the initial resync must finish first (§6)
 - [x] Web UI reachable at `https://192.168.2.202` (HTTPS-only) — 2026‑09‑21
-- [~] `fleetadm` created at the CLI (key-only, password locked) — 2026‑09‑21; SSH *hardening* lands
+- [x] `fleetadm` created at the CLI (key-only, password locked) — 2026‑09‑21; SSH hardening landed
       with the `security` role in §8
-- [ ] `playbook-nas.yml` applied — Netdata child streaming + `nut-monitor` active
+- [x] `playbook-nas.yml` applied — `nut-monitor` active, Netdata child streaming and **visible on
+      the `pve` dashboard** — 2026‑09‑21
 - [ ] ML110 retired (after the array is verified); `192.168.2.210` released
 
 ---
@@ -455,6 +459,11 @@ ssh fleetadm@nas 'systemctl is-active nut-monitor; upsc ups@192.168.2.213 | grep
   **`pve, lab, edge, nas`**, with `nas` at `hops=1`. Agent footprint is ~130–170 MB RSS.
 - Idempotency: re-run `playbook-nas.yml`; the role tasks report `changed=0`.
 
+> **Verified 2026‑09‑21.** First run `nas : ok=39 changed=11 unreachable=0 failed=0 skipped=6`; an
+> immediate re-run reports `ok=35 changed=0 unreachable=0 failed=0 skipped=8` — idempotent. The
+> **`nas` node was confirmed visible in the `pve` Netdata dashboard**, `nut-monitor` is `active`,
+> and `upsc ups@192.168.2.213` returns `ups.status: OL`, `battery.charge: 100`.
+
 ## 9. Wrap-up
 
 - Confirm issue #98 acceptance criteria:
@@ -497,6 +506,9 @@ ssh fleetadm@nas 'systemctl is-active nut-monitor; upsc ups@192.168.2.213 | grep
     ```
     The next `playbook-nas.yml` run re-applies both denies. Verify with `ss -ltnp | grep 443`
     (**nothing listens on 443 until §4d is done**) and `grep -A6 '<webadmin>' /etc/openmediavault/config.xml`.
+- **No playbook output visible** — `ansible-playbook` must run in a **visible foreground terminal**
+  so the operator follows every task live. A detached/background run finishes silently and reads as
+  a hung task; if the operator cannot see it, it is not running visibly.
 
 ## References
 
