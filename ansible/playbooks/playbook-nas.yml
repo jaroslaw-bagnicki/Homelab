@@ -1,0 +1,9 @@
+---
+- name: Configure nas (Wincor Beetle M-III OMV) base
+  hosts: nas
+  become: true
+  roles:
+    - common
+    - security
+    - nut_client
+    - netdata

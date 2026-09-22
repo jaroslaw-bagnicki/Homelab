@@ -45,7 +45,7 @@ The role expects the two `upsmon` accounts to match `upsd.users` in LXC 213:
 | Node(s) | `upsmon` role | Account | Key Vault secret |
 |---|---|---|---|
 | `pve` | `primary` | `upsmon-host` | `nut-upsmon-primary-password` |
-| `lab`, `edge` | `secondary` | `upsmon-fleet` | `nut-upsmon-secondary-password` |
+| `lab`, `edge`, `nas` | `secondary` | `upsmon-fleet` | `nut-upsmon-secondary-password` |
 
 If the secrets are missing, provision them once (they already exist if §3 of runbook 29 was done):
 
@@ -65,10 +65,11 @@ command:
 ansible-playbook ansible/playbooks/playbook-pve.yml    # pve — upsmon primary
 ansible-playbook ansible/playbooks/playbook-lab.yml   # lab — secondary
 ansible-playbook ansible/playbooks/playbook-edge.yml  # edge — secondary
+ansible-playbook ansible/playbooks/playbook-nas.yml   # nas — secondary (Beetle NAS, once OMV is up)
 ```
 
 `pve` is the sole `primary` (`host_vars/pve.yml`: `FINALDELAY 30`, `HOSTSYNC 30`, account
-`upsmon-host`); `lab`/`edge` are `secondary` on the role defaults (`HOSTSYNC 15`, `FINALDELAY 0`,
+`upsmon-host`); `lab`/`edge`/`nas` are `secondary` on the role defaults (`HOSTSYNC 15`, `FINALDELAY 0`,
 account `upsmon-fleet`).
 
 Each node installs `nut-client`, fetches its password from Key Vault at run time, and writes

@@ -73,10 +73,11 @@ every streaming child — so the controller needs `AZURE_CLIENT_ID` / `AZURE_CLI
 
 ## Hosts
 
-Applied by `playbook-pve.yml` (parent), `playbook-lab.yml` and `playbook-edge.yml` (children).
-**The LAN fleet only** — `cloudlab` is never targeted (it sits outside the LAN and Tier A already
-covers it, [ADR 27](../../../docs/decisions/27-monitoring-strategy.md)). The NAS joins once it joins
-the fleet; the OPNsense router runs FreeBSD and needs its own path.
+Applied by `playbook-pve.yml` (parent), `playbook-lab.yml` / `playbook-edge.yml` / `playbook-nas.yml`
+(children). **The LAN fleet only** — `cloudlab` is never targeted (it sits outside the LAN and Tier A
+already covers it, [ADR 27](../../../docs/decisions/27-monitoring-strategy.md)). The `nas` node (Beetle
+M-III OMV) joins as a child when OMV is installed ([runbook 32](../../../docs/runbooks/32-beetle-m3-omv-setup.md)
+§8); the OPNsense router runs FreeBSD and needs its own path.
 
 ## Updating
 
