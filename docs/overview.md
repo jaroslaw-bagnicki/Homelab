@@ -12,7 +12,7 @@ hardware detail see [Hardware Inventory](hardware.md); for change history see
 |---|---|---|---|---|
 | **Lab** | main workload host (Docker → k3s) | Lenovo M910q Tiny · Ubuntu 24.04 LTS · Azure Arc | `192.168.2.200` | ✅ |
 | **OMV NAS** | backup target (retiring) | HP ProLiant ML110 G5 · OMV 8.3 | `192.168.2.210` | ✅ |
-| **Beetle NAS** | backup target (successor to ML110) | Wincor Beetle M-III · OMV | `192.168.2.202` | 🔨 |
+| **Beetle NAS** | backup target (successor to ML110) | Wincor Beetle M-III · OMV 8.5 | `192.168.2.202` | 🔨 |
 | **Edge Ingress** | public ingress (cloudflared + Caddy) | Dell Wyse 3040 · Debian 13 minimal | `192.168.2.240` | 🔨 |
 | **Proxmox VE** | virtualisation host — smart-home + always-on services | Dell Wyse 5070 | `192.168.2.201` · guests `.210`–`.213` | 🔨 |
 | **LLM server** | local LLM inference | Minisforum X1 Lite | TBD | 🧠 |
@@ -30,7 +30,7 @@ Current state — what's running or in progress. Planned work is under [What's N
 | **OpenCode instances** (`homelab`, `prospera`) | Cloudlab VPS | per-project agentic dev servers | ✅ |
 | **Zot** | Cloudlab VPS | self-hosted OCI registry + pull-through cache | ✅ |
 | **OpenMediaVault** | OMV NAS | network shares (SMB) + backup target | ✅ |
-| **Netdata Parent** | Proxmox VE host (`pve`) | Tier B central monitoring pane — aggregates per-node metrics from Lab + Edge children | ✅ |
+| **Netdata Parent** | Proxmox VE host (`pve`) | Tier B central monitoring pane — aggregates per-node metrics from Lab + Edge + **NAS** children | ✅ |
 
 ## What's Next
 
@@ -45,14 +45,13 @@ once it is ready to start — a row leaves the table with the PR that completes 
 | Item | Effort | Next step | Refs |
 |---|---|---|---|
 | **Edge Ingress — service migration** | ⭐⭐ | Move `cloudflared` + Caddy off the M910q onto the Wyse 3040 (base OS + `edge_host` role already shipped); `.home` DNS is owned by the OPNsense router, not the edge | [#65](https://github.com/jaroslaw-bagnicki/Homelab/issues/65) · [#81](https://github.com/jaroslaw-bagnicki/Homelab/issues/81) · [ADR 24](decisions/24-edge-ingress-appliance.md) |
-| **Beetle NAS** | ⭐⭐⭐ | Platform and **BIOS** verified ([research 32](research/32-wincor-beetle-m3-hardware-diagnostic.md)) — Memtest86+ is the last Phase 0 item, then OMV install on host `nas` → `md0` RAID1 + exports → retire the ML110 (the Longhorn backup target follows k3s); [runbook 32](runbooks/32-beetle-m3-omv-setup.md) ships the install + `playbook-nas.yml` enrollment | [#98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98) · [ADR 29](decisions/29-nas-backup-target-beetle-m3-omv.md) · [runbook 32](runbooks/32-beetle-m3-omv-setup.md) |
+| **Beetle NAS** | ⭐⭐⭐ | **Phase 1 done** — OMV 8.5 on `nas`, `md0` RAID1 clean + reboot-verified, fleet-enrolled with the Netdata child and NUT secondary; next: create the share and move the backup target, then retire the ML110 and release `.210` (Memtest86+ and the RTC coin cell stay deferred — [research 32](research/32-wincor-beetle-m3-hardware-diagnostic.md)) | [#98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98) · [ADR 29](decisions/29-nas-backup-target-beetle-m3-omv.md) · [runbook 32](runbooks/32-beetle-m3-omv-setup.md) |
 | **Home Assistant VM + LXCs** | ⭐⭐⭐ | VM 210 (HA OS) + LXC 211/212 (Mosquitto, Zigbee2MQTT) on the `pve` node (the base from runbook 28), then point HA's NUT integration at `192.168.2.213` for UPS status + power-loss notifications | [#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68) · [#85](https://github.com/jaroslaw-bagnicki/Homelab/issues/85) · [ADR 25](decisions/25-home-assistant-thin-client.md) · [#111](https://github.com/jaroslaw-bagnicki/Homelab/issues/111) |
 
 ### Planned
 
 | Item | Effort | Next step | Refs |
 |---|---|---|---|
-| **Netdata children — OMV, Beetle** | ⭐ | The Beetle child ships with its enrollment (`playbook-nas.yml`, [runbook 32](runbooks/32-beetle-m3-omv-setup.md) §8); re-point it onto the Parent once OMV is installed | [#104](https://github.com/jaroslaw-bagnicki/Homelab/issues/104) · [#98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98) |
 | **Power monitoring (Zigbee/Z2M)** | ⭐⭐ | Zigbee energy plugs → Prometheus, bootstrapped standalone on the M910q (ADR 26 — independent of Home Assistant) — sequenced **before** k3s | [#73](https://github.com/jaroslaw-bagnicki/Homelab/issues/73) · [ADR 26](decisions/26-zigbee-energy-monitoring.md) |
 | **YUMI multiboot USB standard** | ⭐ | ADR 29 + manage-YUMI runbook; de-conflate the Ventoy references | [#107](https://github.com/jaroslaw-bagnicki/Homelab/issues/107) · [research 12](research/12-first-boot-setup.md) |
 
@@ -62,7 +61,7 @@ once it is ready to start — a row leaves the table with the PR that completes 
 |---|---|---|
 | **OPNsense router (Futro S930)** | power cable for the replacement SSD — order it, then install (the fitted 7.99 GB mSATA is undersized) | [#96](https://github.com/jaroslaw-bagnicki/Homelab/issues/96) · [research 31](research/31-futro-s930-hardware-diagnostic.md) |
 | **k3s migration** | deliberate sequencing — largest item, gates the Longhorn backup target and #48 | [#44](https://github.com/jaroslaw-bagnicki/Homelab/issues/44) · [ADR 22](decisions/22-k3s-arc-homelab.md) |
-| **Beetle on battery — modified-sine re-test** | replacement UPS unit, and OMV running on the Beetle ([#98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98)) — the shutdown drill proved the choreography but could not test the Beetle's active-PFC supply (no OS yet) | [#117](https://github.com/jaroslaw-bagnicki/Homelab/issues/117) · [runbook 29](runbooks/29-nut-ups-shutdown.md) §7 · [report](reports/260919-nut-shutdown-drill.md) |
+| **Beetle on battery — modified-sine re-test** | replacement UPS unit — OMV now runs on the Beetle ([#98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98)) and its `nut_client` secondary is live (runbook 32 §8), so the active-PFC supply can finally be tested on a real load | [#117](https://github.com/jaroslaw-bagnicki/Homelab/issues/117) · [runbook 29](runbooks/29-nut-ups-shutdown.md) §7 · [report](reports/260919-nut-shutdown-drill.md) |
 
 ## Not Scheduled
 
@@ -86,9 +85,10 @@ Tenda Nova mesh — 192.168.2.0/24, gateway 192.168.2.1 (single broadcast domain
         │
         └── TL-SG108E switch (192.168.2.230)
                  ├── Lab M910q        — 192.168.2.200
-                 ├── Proxmox VE      — 192.168.2.201
-                 ├── OMV NAS         — 192.168.2.210
-                 ├── Edge Ingress      — 192.168.2.240
+                 ├── Proxmox VE       — 192.168.2.201
+                 ├── OMV NAS          — 192.168.2.210
+                 ├── Beetle NAS       — 192.168.2.202
+                 ├── Edge Ingress     — 192.168.2.240
                  └── work laptop dock — DHCP (corporate)
 ```
 
