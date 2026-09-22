@@ -37,8 +37,8 @@ Authored 2026-09-20, before execution — the checklist fills in as the install 
       Still open in [research 32](../research/32-wincor-beetle-m3-hardware-diagnostic.md).
 - [x] OMV 8.x installed on the SanDisk SSD; hostname `nas` — 2026‑09‑21
 - [x] Static IP `192.168.2.202` set and verified from `lab` — 2026‑09‑21
-- [~] `md0` (2× Seagate 1 TB → XFS) online and mounted — 2026‑09‑21; **reboot-survival test
-      still pending**, and the initial resync must finish first (§6)
+- [x] `md0` (2× Seagate 1 TB → XFS) online and mounted — 2026‑09‑21; **reboot-survival test
+      passed** 2026‑09‑22 (§6)
 - [x] Web UI reachable at `https://192.168.2.202` (HTTPS-only) — 2026‑09‑21
 - [x] `fleetadm` created at the CLI (key-only, password locked) — 2026‑09‑21; SSH hardening landed
       with the `security` role in §8
@@ -260,13 +260,15 @@ portable to any Linux box, with per-disk SMART intact.
 > not port order, and they demonstrably change between boots on **unchanged** hardware — measured
 > 2026‑09‑21 across two reboots with identical cabling:
 >
-> | Port (`by-path` / BIOS) | Connector | Serial | Disk | Boot A | Boot B |
-> |---|---|---|---|---|---|
-> | `ata-1` / 0 | *white* | `191702804011` | SanDisk SSD — **the OS disk** | `sdb` | `sdc` |
-> | `ata-2` / 1 | *blue* | `WDES3KB7` | Seagate — 0 reallocated | `sda` | `sda` |
-> | `ata-3` / 2 | *black* | `WDEPBVR3` | Seagate — **1,056 reallocated — monitor this one** | `sdc` | `sdb` |
+> | Port (`by-path` / BIOS) | Connector | Serial | Disk | Boot A | Boot B | Boot C |
+> |---|---|---|---|---|---|---|
+> | `ata-1` / 0 | *white* | `191702804011` | SanDisk SSD — **the OS disk** | `sdb` | `sdc` | `sda` |
+> | `ata-2` / 1 | *blue* | `WDES3KB7` | Seagate — 0 reallocated | `sda` | `sda` | `sdc` |
+> | `ata-3` / 2 | *black* | `WDEPBVR3` | Seagate — **1,056 reallocated — monitor this one** | `sdc` | `sdb` | `sdb` |
 >
-> The OS disk and the degraded disk **swapped letters** between those two boots. **`scsi_mod.scan=sync`
+> Boot A/B (2026‑09‑21) saw the OS disk and the degraded disk **swap letters**; Boot C (2026‑09‑22)
+> rotated them **again** — the SSD has now been `sdb`, `sdc` *and* `sda` on hardware that was never
+> touched. **`scsi_mod.scan=sync`
 > was tried and does not fix it** — that parameter governs the SCSI *host* scan, while libata
 > discovers ATA links asynchronously; the letters still moved, so the setting was reverted.
 >
@@ -275,7 +277,9 @@ portable to any Linux box, with per-disk SMART intact.
 >
 > Nothing else depends on the letters: GRUB and `/etc/fstab` use UUIDs, OMV addresses disks `by-id`,
 > and mdadm records members by UUID — the array assembles identically whichever letters the kernel
-> hands out. **Physical anchor:** the degraded drive is the one on the **black** connector — the one
+> hands out. **Measured:** Boot C came up fully rotated and `md0` still assembled as
+> `sdb[1] sdc[0]` → `[2/2] [UU]`, i.e. slot 0 (`WDES3KB7`) moved `sda → sdc` with no effect at all.
+> **Physical anchor:** the degraded drive is the one on the **black** connector — the one
 > to pull when it eventually needs replacing.
 3. Wait for the initial resync. Optionally speed it up:
    ```sh
@@ -297,9 +301,14 @@ OMV derives the mount point itself: `/srv/dev-disk-by-uuid-<fs-uuid>`.
 >
 > Only the Apply writes `/etc/fstab` and performs the first mount — confirm:
 > ```sh
-> grep md0 /etc/fstab   # … xfs defaults,nofail,usrquota,grpquota,inode64 0 2
-> mount | grep md0      # /srv/dev-disk-by-uuid-<fs-uuid>
+> grep dev-disk-by-uuid /etc/fstab   # … xfs defaults,nofail,usrquota,grpquota,inode64 0 2
+> mount | grep md0                   # /srv/dev-disk-by-uuid-<fs-uuid>
 > ```
+>
+> ⚠ **`grep md0 /etc/fstab` returns nothing — and that is correct.** OMV registers the
+> *filesystem*, not the array: the entry names the **XFS UUID**
+> (`/dev/disk/by-uuid/f9481a22-…`), so the string `md0` never appears in `fstab`. Grepping for the
+> array name there reads as *"the mount was never registered"* when the mount is in fact fine.
 
 > **Gotcha — a fresh XFS reports ~2% used (≈18 GiB here), and it is not data.** On disk the array is
 > **99.95 % free** — `xfs_db -r -c "freesp -s" /dev/md0` reports 244 038 349 of 244 157 616 blocks
@@ -356,6 +365,20 @@ or degraded array never blocks boot.
 resilience test for a backup target. **Never reboot mid-resync:** the initial resync of these 1 TB
 mirrors runs **~2 h** (`finish=…min` in `/proc/mdstat`, `Resync Status` in `mdadm --detail`); wait
 for `[UU]` with no progress line before rebooting.
+
+> **Verified 2026‑09‑22 — passed.** Rebooted once the resync had finished (`State : clean`, `[UU]`,
+> no progress line). Every boot-time dependency held:
+>
+> | Check | Result after reboot |
+> |---|---|
+> | `md0` assembled from the initramfs | `md0 : active raid1 sdb[1] sdc[0]` → `[2/2] [UU]`, `State : clean` |
+> | Mount restored from `fstab` | `/dev/md0 on /srv/dev-disk-by-uuid-f9481a22-… type xfs` |
+> | GRUB still on the intended kernel | `6.12.107+deb13-amd64` — the backports revert held |
+> | `security` + `nut_client` survive a boot | `systemctl --failed` **empty**; `nut-monitor` `active`; `upsc` → `OL`, `100 %` |
+> | Avahi | `avahi-daemon` `active` → `nas.local` resolves |
+>
+> The **device letters rotated again** on this boot (`sda ↔ sdc`, see §5) and the array was
+> completely unaffected — by-UUID assembly working exactly as designed.
 
 ### Disk acoustics — **not applicable to this drive model**
 
