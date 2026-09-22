@@ -1,7 +1,7 @@
 # LAN Services Are TLS-Only — No Plaintext HTTP
 
 **Date:** 2026-09-20
-**Status:** Proposed
+**Status:** Accepted
 
 ---
 

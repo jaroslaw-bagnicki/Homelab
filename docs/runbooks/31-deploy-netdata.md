@@ -11,9 +11,10 @@
 > cgroups and `/etc/pve` names — so the `pve` node runs a single **host-native** instance that
 > acts as the Parent. No parent LXC.
 >
-> **Scope — the LAN fleet only.** Netdata goes on the local nodes (`pve`, `lab`, `edge`; the NAS once
-> it joins the fleet). **`cloudlab` is never a target** — it sits outside the LAN and Tier A
-> (Arc/AMA) already covers it. The OPNsense router (FreeBSD) also waits until it joins the fleet.
+> **Scope — the LAN fleet only.** Netdata goes on the local nodes (`pve`, `lab`, `edge`; the NAS
+> child is added by [runbook 32](32-beetle-m3-omv-setup.md) §8 once OMV is installed). **`cloudlab`
+> is never a target** — it sits outside the LAN and Tier A (Arc/AMA) already covers it. The OPNsense
+> router (FreeBSD) also waits until it joins the fleet.
 >
 > **Alarms are dashboard-only for now.** The notification path is deferred until the Home Assistant
 > VM exists ([#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68)) — don't wire a mailer here.

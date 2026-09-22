@@ -10,7 +10,8 @@
 
 > ⚠️ **Historical / offer note.** This idea captures the **pre-purchase (Allegro offer)** plan. The
 > delivered unit is confirmed **Skylake / H110 / DDR4**, but several offer assumptions differ —
-> **2 SODIMM slots** (not 4× DIMM), **no mSATA** (mini-PCIe absent), an **AcBel `POF001-280G`**
+> **2 SODIMM slots** (not 4× DIMM), **mSATA and M.2 ports present** (the offer listed neither), an
+> **AcBel `POF001-280G`**
 > UPS-integrated PSU (not FSP/Fortron), **2× Seagate 1 TB** (not 4 drives), and a **3-fan** layout
 > (front-right CPU+PSU, PSU back, internal UPS module) instead of a single tunnel turbine. The
 > **Unraid** sections below are superseded by the **OMV + mdadm RAID1** decision. See

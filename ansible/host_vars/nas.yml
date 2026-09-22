@@ -1,0 +1,14 @@
+---
+common_enable_avahi: true
+
+security_ufw_deny_inbound_tcp_80: true
+security_ufw_allow_ssh_from: "192.168.2.0/24"
+security_ufw_allow_tcp_from: "192.168.2.0/24"
+security_ufw_allow_tcp_ports:
+  - 443
+
+netdata_role: child
+netdata_stream_target: "192.168.2.201:19996"
+netdata_stream_ssl: true
+netdata_bind: "127.0.0.1"
+netdata_storage: dbengine

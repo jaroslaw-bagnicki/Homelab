@@ -13,7 +13,7 @@ Significant architectural and technology choices recorded in
 
 | # | Date | ADR | Status |
 |---|------|-----|--------|
-| 34 | 2026-09-20 | [LAN Services Are TLS-Only — No Plaintext HTTP](34-lan-tls-only.md) | Proposed |
+| 34 | 2026-09-20 | [LAN Services Are TLS-Only — No Plaintext HTTP](34-lan-tls-only.md) | Accepted |
 | 33 | 2026-09-19 | [Fleet Node Hostnames Name the Host Role](33-fleet-node-hostnames.md) | Accepted |
 | 32 | 2026-09-16 | [No Hosted CI — Verification Stays Local](32-no-hosted-ci.md) | Accepted |
 | 31 | 2026-09-13 | [Static Address Scheme — Server and Guest Blocks](31-static-address-scheme.md) | Accepted |
