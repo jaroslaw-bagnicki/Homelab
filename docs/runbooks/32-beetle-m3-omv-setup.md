@@ -44,7 +44,8 @@ Authored 2026-09-20, before execution — the checklist fills in as the install 
       with the `security` role in §8
 - [x] `playbook-nas.yml` applied — `nut-monitor` active, Netdata child streaming and **visible on
       the `pve` dashboard** — 2026‑09‑21
-- [ ] ML110 retired (after the array is verified); `192.168.2.210` released
+- [ ] ML110 retired; `192.168.2.210` released — **deferred to Phase 2** (2026‑09‑22): the role must
+match a target that can serve shares, so the array being verified is necessary but not sufficient
 
 ---
 
@@ -506,7 +507,10 @@ ssh fleetadm@nas 'systemctl is-active nut-monitor; upsc ups@192.168.2.213 | grep
 - Confirm issue #98 acceptance criteria:
   - OMV installed and bootable; array (`md0`) online; SSD cache/OS configured; share exposed (exports = Phase 2).
   - NAS replaces the ML110 as the backup target, then the ML110 retires.
-- **ML110 retirement ordering** — the backup target only moves once the Beetle array is verified.
+- **ML110 retirement ordering** — the backup target only moves once the Beetle array is verified
+  **and can serve shares** (Phase 2, successor to #62): the array was verified 2026‑09‑22, so the
+  remaining gate is the export. Retiring the ML110 before then would leave the role unheld, which is
+  why retirement is **sequenced after Phase 2** rather than shipped with this runbook.
   Before the ML110 boots again, change its `192.168.2.210` or set it to DHCP: `.210` is now the HA
   VM's address ([ADR 31](../decisions/31-static-address-scheme.md)).
 - Roll the **Netdata child** and **NUT client** out as part of §8 — this closes the corresponding
