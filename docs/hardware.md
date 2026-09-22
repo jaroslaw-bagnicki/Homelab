@@ -50,18 +50,15 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 
 | Item | Spec |
 |---|---|
-| CPU | Intel **Pentium G4400** (Skylake, 2C/2T, 3.3 GHz, 3 MB L3) — **AES-NI, VT-x and VT-d all `Enabled`** in BIOS (VT-d present, contrary to H110's reputation); QuickSync H.264 + HEVC 8-bit decode |
-| RAM | **8 GB DDR4** (1× 8 GiB SODIMM @ 2133 MT/s — 2 slots, 1 free → 32 GB max) |
-| Storage | **SanDisk X600 `SD9SB8W-128G` 128 GB SSD** (SMART PASSED — **carries the OS**) + **2× Seagate ST1000VT001-1RE172 1 TB 2.5"** (`WDES3KB7` clean; `WDEPBVR3` *1,056 reallocated — long self-test clean, kept + monitored*) → **`md0` mdadm RAID1** = 1 TB usable, **XFS**, clean and **reboot-persistence verified 2026‑09‑22** — ⚠ device letters rotate between boots, match disks by serial |
-| SATA | H110 / Intel 100-C230 **AHCI-only** (no BIOS mode setting) — **5 ports**: 0 *white* (SanDisk SSD), 1 *blue* / 2 *black* (the two Seagates), plus **mSATA + M.2, both empty**; PCIe 3.0 x16 + 2× PCIe 2.0 x1 |
-| PSU | **AcBel `POF001-280G`** (UPS-integrated `PSU UPS BEETLE/M-III`, DN P/N `01750279900`) — 250 W (225 W @50 °C), **80 Plus Gold** |
-| Network | 1× GbE Intel I219-V (`enp0s31f6`, MAC `00:01:2e:8e:14:0d`) · hostname **`nas`** · static **`192.168.2.202`** ([ADR 31](decisions/31-static-address-scheme.md)) · SSH + web UI restricted to `192.168.2.0/24`, `80` denied |
-| Firmware | BIOS AMI core **`5.0.0.12`**, rev **`R1.8.0`** (2021-11-22, Aptio `2.18.1263`, UEFI 2.5 / PI 1.4) · board `M2.0-H110-uATX` **`D3460-D22`** · SN `000000001750341761` · **boot mode `LEGACY`** (video OpROMs legacy-only), no Secure Boot; ME `11.8.83.3874`, no AMT provisioning |
-| OS | **OMV 8.5.9-1** (Debian 13 *trixie*) on the SanDisk — kernel **`6.12.107+deb13-amd64`** (backports deliberately disabled), web UI **HTTPS-only** ([ADR 34](decisions/34-lan-tls-only.md)) · [ADR 29](decisions/29-nas-backup-target-beetle-m3-omv.md); Unraid deferred |
-| Cooling | **3 fans** — front-right (CPU+PSU), PSU back, internal UPS module; **43.7 dB(A)** (UNI-T UT353); BIOS `HW-Monitor` is read-only — **no fan control** — so the Gelid controller is the only lever; internal **TOTEX NiMH 15.6 V 3000 mAh** UPS battery (`first use 12/2022`) — not OS-exposed |
-| Idle power | **14–16 W** measured (VRONE plug meter; ~23–24 W start transient) |
+| CPU | Intel Pentium G4400 (2C/2T, 3.3 GHz) · AES-NI, VT-x, VT-d, QuickSync |
+| RAM | 8 GB DDR4 (1× 8 GiB SODIMM @ 2133 MT/s; 1 slot free, 32 GB max) |
+| Storage | SanDisk X600 128 GB SSD (OS) + 2× Seagate 1 TB 2.5" → `md0` RAID1, 1 TB usable, XFS; one disk has 1,056 reallocated sectors but passed a long self-test |
+| Firmware | AMI BIOS `R1.8.0` (2021-11-22) · board `D3460-D22` · legacy boot, no Secure Boot |
+| Network | 1× GbE Intel I219-V (`enp0s31f6`) · hostname `nas` · static `192.168.2.202` ([ADR 31](decisions/31-static-address-scheme.md)) · LAN-only SSH/web UI |
+| OS | OMV 8.5.9-1 (Debian 13) · kernel `6.12.107+deb13-amd64` · HTTPS-only web UI ([ADR 34](decisions/34-lan-tls-only.md)) |
+| Cooling | 3 fans · 43.7 dB(A) · no software fan control · internal UPS battery not OS-exposed |
+| Power | 14–16 W idle · AcBel 250 W 80 Plus Gold UPS-integrated PSU |
 | Role | OMV NAS backup-target successor to the ML110 — [issue #98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98) |
-| Acquired | 2026-09-01 · diagnostic 2026-09-12 ([research 32](research/32-wincor-beetle-m3-hardware-diagnostic.md)) — platform, drives, PSU/UPS examined · **BIOS walk 2026-09-21** ([research 32](research/32-wincor-beetle-m3-hardware-diagnostic.md#bios-walk)) · **OMV installed 2026-09-21** ([runbook 32](runbooks/32-beetle-m3-omv-setup.md)) — Memtest86+ and the RTC coin cell still pending; the degraded `WDEPBVR3` kept + monitored |
 | Docs | [idea 01c](ideas/01c-nas-backup-target-wincor-beetle.md) · [research 32](research/32-wincor-beetle-m3-hardware-diagnostic.md) · [runbook 32](runbooks/32-beetle-m3-omv-setup.md) · [issue #98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98) |
 
 ### Edge Ingress — Dell Wyse 3040
@@ -82,16 +79,15 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 
 | Item | Spec |
 |---|---|
-| CPU | Intel Celeron J4105 (Gemini Lake, 4C/4T, 2.5 GHz, 10 W TDP) — fanless, idle ~35 °C |
-| RAM | **8 GB DDR4 (2× 4 GiB Micron `4ATF51264HZ-3G2J1`)** — both SODIMM slots populated (DDR4-3200 rated, 2400 MT/s); 16 GB = replace both with 2× 8 GB |
-| Storage | M.2 **SATA** 2280 — **SK hynix SC311 SATA 128 GB** (used, SMART PASSED, ~97% NAND life left, SN `MS8BN03201230BC10`); eMMC 14.7 GiB present, unused |
-| Network | Realtek RTL8111/8168 GbE (`enp1s0`, MAC `c0:25:a5:65:02:67`) · Intel CNVi WiFi + BT (`wlp0s12f0`, MAC `d0:3c:1f:cb:76:9a`) |
-| Zigbee | Sonoff Zigbee 3.0 USB Dongle Plus (ZBDongle-P / CC2652P) — USB coordinator for LXC 212 passthrough (by-id pattern, research 26 §4) |
-| Firmware | BIOS 1.34.0 (2024-11-08) · board 060J9C · SKU `080C` · SN `16474B3` |
-| Role | Fleet virtualisation host — Home Assistant OS VM + Mosquitto/Zigbee2MQTT/NUT LXCs, with the Netdata Parent on the host (ADR 25, ADR 27, ADR 30) |
-| Guests | VM 210 HA OS `192.168.2.210` · LXC 211 Mosquitto `192.168.2.211` · LXC 212 Zigbee2MQTT `192.168.2.212` · LXC 213 NUT `192.168.2.213` — VMID = last octet, [ADR 31](decisions/31-static-address-scheme.md) |
-| Status | Proxmox VE **9.2.2** installed at `192.168.2.201` + base provisioned (runbook 28, 2026-09-06); Netdata **Parent** host-native with an **HTTPS-only dashboard** deployed 2026-09-19, aggregating the Lab + Edge children (Tier B, runbook 31); **LXC 213 (NUT) delivered** (ADR 30, runbook 29 §1–§3, [#115](https://github.com/jaroslaw-bagnicki/Homelab/issues/115)); HA OS VM + LXC 211/212 still pending ([#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68) / [#85](https://github.com/jaroslaw-bagnicki/Homelab/issues/85)) |
-| Acquisition | 2026-08-19 — hardware diagnostic done ([research 29](research/29-wyse5070-hardware-diagnostic.md)); SK hynix SSD + Sonoff ZBDongle-P acquired |
+| CPU | Intel Celeron J4105 (4C/4T, 2.5 GHz, 10 W TDP) · fanless, ~35 °C idle |
+| RAM | 8 GB DDR4 (2× 4 GiB; both slots populated, 16 GB max with replacement) |
+| Storage | M.2 SATA 2280 SK hynix SC311 128 GB SSD (SMART PASSED, ~97% life remaining) · unused 14.7 GiB eMMC |
+| Firmware | BIOS 1.34.0 (2024-11-08) · board `060J9C` |
+| Network | Realtek GbE (`enp1s0`) · Intel CNVi WiFi/BT (`wlp0s12f0`) |
+| Zigbee | Sonoff ZBDongle-P (CC2652P) · USB coordinator for LXC 212 |
+| OS | Proxmox VE 9.2.2 installed at `192.168.2.201` · base provisioned ([runbook 28](runbooks/28-pve-proxmox-node.md)) |
+| Guests | VM 210 HA OS · LXC 211 Mosquitto · LXC 212 Zigbee2MQTT · LXC 213 NUT ([ADR 31](decisions/31-static-address-scheme.md)) |
+| Role | Fleet virtualisation host with Netdata Parent; NUT delivered, HA OS/Mosquitto/Zigbee2MQTT pending (ADR 25, ADR 27, ADR 30) |
 | Docs | [idea 05](ideas/05-home-assistant-thin-client.md) · [ADR 25](decisions/25-home-assistant-thin-client.md) · [ADR 33](decisions/33-fleet-node-hostnames.md) · [research 26](research/26-home-assistant-thin-client.md) · [research 29](research/29-wyse5070-hardware-diagnostic.md) · [runbook 28](runbooks/28-pve-proxmox-node.md) · [runbook 31](runbooks/31-deploy-netdata.md) |
 
 ### OPNsense Router — Fujitsu Futro S930 (planned)
