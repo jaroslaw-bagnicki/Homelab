@@ -191,8 +191,9 @@ block):
 > [ADR 07](../decisions/07-reverse-proxy-caddy.md) fronts `.home` services with Caddy's internal CA —
 > OMV's own certificate is not the right home for it. `nas.local` is also the only name resolving
 > today. OMV adds **`subjectAltName=DNS:<Common Name>`**, so `https://nas.local` matches on name and
-> only the untrusted-issuer warning remains, which is inherent to a self-signed certificate. A
-> certificate can never match a bare IP, so `https://192.168.2.202` always warns on the name — use
+> only the untrusted-issuer warning remains, which is inherent to a self-signed certificate. An
+> X.509 certificate can match an IP when that address is included as an `iPAddress` SAN, but this
+> OMV-generated certificate has only a DNS SAN, so `https://192.168.2.202` warns on the name — use
 > the `.local` name.
 
 **2. Enforce TLS** — `System | Workbench | Settings`:

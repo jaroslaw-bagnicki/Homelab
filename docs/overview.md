@@ -30,7 +30,7 @@ Current state — what's running or in progress. Planned work is under [What's N
 | **OpenCode instances** (`homelab`, `prospera`) | Cloudlab VPS | per-project agentic dev servers | ✅ |
 | **Zot** | Cloudlab VPS | self-hosted OCI registry + pull-through cache | ✅ |
 | **OpenMediaVault** | OMV NAS | network shares (SMB) + backup target | ✅ |
-| **Netdata Parent** | Proxmox VE host (`pve`) | Tier B central monitoring pane — aggregates per-node metrics from Lab + Edge + **NAS** children | ✅ |
+| **Netdata Parent** | Proxmox VE host (`pve`) | Tier B central monitoring pane — aggregates per-node metrics from Lab + Edge + Beetle NAS (`nas`) children | ✅ |
 
 ## What's Next
 
