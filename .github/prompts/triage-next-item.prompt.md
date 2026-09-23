@@ -49,11 +49,17 @@ Effort is the board's scale: ⭐ one session · ⭐⭐ a few · ⭐⭐⭐ multi-
 
 ## Triage pass — capped
 
-Note hygiene defects worth one line each, reusing the `docs/reports/*-quality-assessment.md`
-findings rather than re-deriving an audit: unlabelled issue or `(type)`-prefixed title ·
-superseded by a settled ADR but still open · stale (6+ weeks) or duplicate · a board row whose
-**Next step** the issues have moved past, or a ready-to-start issue absent from the board ·
-`overview.md` and `hardware.md` disagreeing on a node's status.
+**1. Board ↔ tracker reconciliation.** Compare every "What's Next" row against the tracker;
+report by row name with `#NNN`: refs **closed** while the row remains (the completing PR should
+have removed it) · a **Next step** already delivered (check CHANGELOG and merged PRs) · state
+drift — In progress with no issue, **Planned** already underway, a **Held** gate that has
+cleared, **Not Scheduled** with recent activity. Then the reverse: ready-to-start issues with
+no row.
+
+**2. Hygiene.** One line each, reusing the `docs/reports/*-quality-assessment.md` findings
+rather than re-deriving an audit: unlabelled issue or `(type)`-prefixed title · superseded by a
+settled ADR but still open · stale (6+ weeks) or duplicate · `overview.md` and `hardware.md`
+disagreeing on a node's status.
 
 ## Output — chat only, tight
 
@@ -62,7 +68,8 @@ Open with the run date and any constraint applied.
 1. **Pick** — one item, ≤3 bullets: *why now* (deciding rule + evidence), **first concrete
    step**, refs (`#NNN` + governing ADR/runbook), effort, what it unblocks.
 2. **Runners-up** — ≤2, one line each, naming the rule that disqualified them.
-3. **Triage findings** — `# | Finding | Suggested fix`, ≤5 rows, each with `#NNN` or a path.
+3. **Triage findings** — `# | Finding | Suggested fix`, ≤5 rows, reconciliation first; each
+   with `#NNN` or a path.
 4. **Left alone** — one line on the strongest candidate not picked, and why.
 
 No praise, no framework theory, no option menu — one recommendation, one first step. If a
