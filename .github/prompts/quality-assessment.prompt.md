@@ -17,6 +17,10 @@ time, that happens to be engineered like a small platform team's estate (Ansible
 Bicep, PowerShell, ADRs, runbooks, a GitHub Issues backlog, a PR workflow). Grade
 it against its own stated goals, not against an enterprise delivery programme.
 
+**Scope.** A focus area supplied with the invocation narrows the assessment to that area —
+still evidence-cited, with the other sections summarised in a line rather than assessed in
+full. With no argument, run the full assessment.
+
 ## Grounding rules
 
 1. **Read before asserting.** Never infer a document's contents from its filename,
