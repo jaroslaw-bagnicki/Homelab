@@ -22,11 +22,15 @@ rules, with excluded candidates named.
 - **Open issues** (GitHub MCP, `jaroslaw-bagnicki/Homelab`) — the live candidate universe:
   every title, label, age, last activity, body. **This set runs ahead of the board**, which
   carries only what is ready to start, so absence from the board says nothing about priority.
+  Query `state: OPEN` and page through `pageInfo.endCursor` to exhaustion — an unfiltered list
+  returns closed issues too, and a single page omits candidates.
 - `docs/overview.md` — the state and sequencing layer *over* those issues: **What's Next**
   (In progress → Planned → Held) and **Not Scheduled**. Each **Next step** is the intended
   continuation; each "Waiting on" / "Parked because" is a gate.
-- `CHANGELOG.md` (current + previous month) and ~15 recently merged PRs — which workstreams
-  are alive.
+- `CHANGELOG.md` and merged PRs — which workstreams are alive. Filter to merged records
+  (`merged_at` set) and order by merge time; a plain PR list includes closed-but-unmerged ones.
+  Current + previous month and ~15 PRs are a floor, not a limit — go back as far as the oldest
+  live candidate requires, dormant work included.
 - Shortlisted candidates only: governing ADR/runbook/research; `docs/hardware.md` if gated.
 
 **Issues win on existence, recency and scope; the board wins on intent** — execution order,
@@ -42,7 +46,7 @@ exists. Rules 1 and 7 need merged-PR history and issue ages, not just the board 
 | 3 | **Prefer what unblocks others** | Name it; freeing two board rows beats freeing none |
 | 4 | **Cheap wins when close** | ⭐ over ⭐⭐ — a merged PR sustains momentum better than a long-lived branch |
 | 5 | **Respect the WIP cap** | One operator; with ~3 rows already In progress, recommend finishing or parking one, naming **Held** (gated, known start) vs **Not Scheduled** (no start date) |
-| 6 | **Never pick gated work** | **Held** / **Not Scheduled** rows are out until their "Waiting on" / "Parked because" clears; say whether the gate is open. An issue with no board row is not gated — judge it on its own body |
+| 6 | **Never pick gated work** | Test the **prerequisite itself** — hardware in hand, decision settled, dependency merged — not the presence of a "Waiting on" line, which may be stale. Say whether the gate is still live; an issue with no board row is not gated, so judge it on its own body |
 | 7 | **Dormant work needs a reason to wake** | 6+ weeks untouched qualifies only if it now unblocks something, its gate cleared, or it is superseded and should be closed |
 
 Effort is the board's scale: ⭐ one session · ⭐⭐ a few · ⭐⭐⭐ multi-week or hardware-gated.
@@ -56,10 +60,12 @@ drift — In progress with no issue, **Planned** already underway, a **Held** ga
 cleared, **Not Scheduled** with recent activity. Then the reverse: ready-to-start issues with
 no row.
 
-**2. Hygiene.** One line each, reusing the `docs/reports/*-quality-assessment.md` findings
-rather than re-deriving an audit: unlabelled issue or `(type)`-prefixed title · superseded by a
-settled ADR but still open · stale (6+ weeks) or duplicate · `overview.md` and `hardware.md`
-disagreeing on a node's status.
+**2. Hygiene.** One line each, seeded by the `docs/reports/*-quality-assessment.md` report —
+a point-in-time snapshot, so take it as a **shortlist only** and re-check every entry against
+current issue, board and doc state, dropping anything already fixed or no longer true. Then:
+unlabelled issue or `(type)`-prefixed title · superseded by a settled ADR but still open ·
+stale (6+ weeks) or duplicate · `overview.md` and `hardware.md` disagreeing on **any** node's
+status, checked node by node rather than only for the shortlist.
 
 ## Output — chat only, tight
 
