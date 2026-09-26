@@ -174,7 +174,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Battery | 2× 12 V 7 Ah (24 V, ~168 Wh) · no runtime estimate — end of discharge is the hardware `LB` flag |
 | Outlets | 4 (2× Schuko + 2× IEC) over two strips — servers (`pve`, `lab`, `edge`, `nas`) and network appliances; monitors, dock and laptop charger stay on the wall |
 | USB | `0665:5161` · HID page `0xFF00`, **no serial number** — driven by NUT `nutdrv_qx`, not `usbhid-ups` |
-| Measured | **17 W** self-consumption · **55 min** to `LB` at the ~80 W fleet (inline meter, drill 2026-09-19); NUT reports no power — `ups.load` % only |
+| Measured | **17 W** self-consumption · **~55 min** to `LB` at the ~80 W fleet (inline meter, drill 2026-09-19); NUT reports no power — `ups.load` % only |
 | NUT | USB on the `pve` node; server in **LXC 213** (`.213`); `upsmon` on `pve` (primary) and `lab`/`edge`/`nas` (secondaries) |
 | Docs | [ADR 30](decisions/30-ups-nut-graceful-shutdown.md) · [runbook 29](runbooks/29-nut-ups-shutdown.md) · [runbook 30](runbooks/30-deploy-nut-clients.md) · [drill report](reports/260919-nut-shutdown-drill.md) |
 
