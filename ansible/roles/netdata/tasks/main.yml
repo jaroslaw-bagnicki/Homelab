@@ -152,6 +152,11 @@
     state: absent
   notify: Restart netdata
 
+# UPS telemetry + power-state alarms — the whole NUT/upsd feature lives in tasks/upsd.yml.
+- name: Manage the UPS (NUT) collector and alarms
+  ansible.builtin.import_tasks: upsd.yml
+  tags: [upsd]
+
 - name: Let Netdata resolve Proxmox VM/CT names
   when: netdata_role == 'parent' and netdata_proxmox_host | bool
   ansible.builtin.user:

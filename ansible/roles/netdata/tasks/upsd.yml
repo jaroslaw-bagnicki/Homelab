@@ -1,0 +1,60 @@
+---
+# UPS (NUT) support — one self-contained feature: the go.d `upsd` collector job and the
+# power-state alarms. Both halves are gated by `netdata_upsd_address` (empty = no job, no
+# alarms). Imported from tasks/main.yml; iterate on this feature alone with `--tags upsd`.
+
+# Telemetry — the go.d `upsd` module talks NUT's network protocol to the server, so the
+# parent sees battery/load/voltage without a NUT account of its own.
+- name: Ensure the Netdata go.d config directory exists
+  when: netdata_upsd_address | length > 0
+  ansible.builtin.file:
+    path: /etc/netdata/go.d
+    state: directory
+    owner: root
+    group: netdata
+    mode: "0755"
+
+- name: Configure the Netdata UPS (NUT) collector
+  when: netdata_upsd_address | length > 0
+  ansible.builtin.template:
+    src: upsd.conf.j2
+    dest: /etc/netdata/go.d/upsd.conf
+    owner: root
+    group: netdata
+    mode: "0644"
+  notify: Restart netdata
+
+- name: Remove the UPS (NUT) collector job when no NUT server is configured
+  when: netdata_upsd_address | length == 0
+  ansible.builtin.file:
+    path: /etc/netdata/go.d/upsd.conf
+    state: absent
+  notify: Restart netdata
+
+# Power-state alarms — the stock upsd alarms watch charge/load/staleness, so losing mains
+# raises nothing. These two evaluate locally on the status dimensions.
+- name: Ensure the Netdata health config directory exists
+  when: netdata_upsd_address | length > 0
+  ansible.builtin.file:
+    path: /etc/netdata/health.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Install the UPS power-state alarms
+  when: netdata_upsd_address | length > 0
+  ansible.builtin.copy:
+    src: health-upsd-power.conf
+    dest: /etc/netdata/health.d/upsd-power.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart netdata
+
+- name: Remove the UPS power-state alarms when no NUT server is configured
+  when: netdata_upsd_address | length == 0
+  ansible.builtin.file:
+    path: /etc/netdata/health.d/upsd-power.conf
+    state: absent
+  notify: Restart netdata

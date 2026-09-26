@@ -29,3 +29,8 @@ netdata_stream_api_key: ""
 netdata_stream_api_key_secret_name: netdata-stream-api-key
 netdata_keyvault_name: homelab-bysxdb-kv
 netdata_kickstart_url: https://get.netdata.cloud/kickstart.sh
+# Optional go.d `upsd` job — chart UPS telemetry (battery charge, load, voltages,
+# on-battery state) from a NUT daemon. Empty = no job. The parent points it at the
+# NUT server on the HA node (LXC 213); anonymous `upsc` needs no credentials or secret.
+netdata_upsd_address: ""
+netdata_upsd_name: nut

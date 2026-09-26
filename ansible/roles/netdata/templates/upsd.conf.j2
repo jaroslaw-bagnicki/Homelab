@@ -1,0 +1,5 @@
+# Managed by Ansible (netdata role) — poll the NUT daemon for UPS telemetry
+# (battery charge, load, voltages, on-battery state) — ADR 27 / ADR 30.
+jobs:
+  - name: {{ netdata_upsd_name }}
+    address: {{ netdata_upsd_address }}
