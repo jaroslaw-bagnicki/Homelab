@@ -135,7 +135,7 @@ OMV works as a native NFS backup target for Longhorn — just enable NFS, export
 |---|---|---|
 | Dell OptiPlex 3040 SFF (G4400) | ❌ Rejected | Only 2 SATA, no M.2, weakest CPU (2C/2T, no AVX2) |
 | Lenovo M900 SFF (i5-6400) | ❌ Rejected | Best SATA count (4 + M.2) but SFF size, overkill for 2-disk NAS |
-| Lenovo M710s SFF (i3-6100, 8GB+256GB NVMe incl.) | ⏸️ Alternative | Cheaper (199 zł all-in), more expansion room (3 SATA + M.2 + PCIe slots, ~8.4L), but larger and 2C/4T vs Q956's 4C/4T |
+| Lenovo M710s SFF (i3-6100, 8GB+256GB NVMe incl.) | ⏸️ Alternative | Cheaper (199 PLN all-in), more expansion room (3 SATA + M.2 + PCIe slots, ~8.4L), but larger and 2C/4T vs Q956's 4C/4T |
 | Lenovo M900 Tiny | ❌ Rejected | Only 1× SATA + 1× M.2, can't fit 2 HDDs |
 | USFF with M.2→SATA adapter | ❌ Rejected | Adds cost/complexity; Q956 has native 2× SATA |
 
@@ -167,7 +167,7 @@ OMV works as a native NFS backup target for Longhorn — just enable NFS, export
 | Storage slots | 1× M.2 NVMe (2280) + 1× SATA 2.5" bay + 1× Slim ODD (SATA via Caddy) |
 | Rear I/O | 2× DisplayPort, DVI, COM (serial), RJ-45 LAN, USB 3.0 |
 | Included | Green SSD caddy + metal bracket + internal SATA adapter |
-| Not included | RAM, storage disk, power cable (C5 "ósemka"), OS |
+| Not included | RAM, storage disk, power cable (C5, figure-eight), OS |
 | Condition | Used, no OS |
 
 ### WD Black WD5000LPLX
@@ -181,7 +181,7 @@ OMV works as a native NFS backup target for Longhorn — just enable NFS, export
 | Interface | SATA III (6 Gbps) |
 | Cache | 32 MB |
 | Recording | CMR (Conventional Magnetic Recording) |
-| Condition | **New** (seller: "Nowy") |
+| Condition | **New** |
 
 ### RAM
 

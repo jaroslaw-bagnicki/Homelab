@@ -17,7 +17,7 @@
 The homelab's primary WAN is the ISP fiber; a **backup WAN** keeps the edge reachable
 (tunnels, notifications, ssh) when fiber drops. The lab already owns an **old ZTE WF830**
 LTE set, and the data plan can come from a free **additional Orange Flex SIM** — so the
-failover costs ~0 zł/month plus a ~20–40 zł PoE injector. The backup link terminates on the
+failover costs ~0 PLN/month plus a ~20–40 PLN PoE injector. The backup link terminates on the
 router's spare WAN port ([idea 07](07-opnsense-futro-s930.md) — the S930's onboard Realtek
 `re0`). This idea is **dependent on idea 07**; idea 07 is not dependent on it.
 
@@ -37,7 +37,7 @@ a great backup WAN for OPNsense:
 ## Wiring — skip the IDU, connect the ODU straight to the router
 
 - The ODU is an autonomous IP65 LTE modem that only needs **Passive PoE 24V** (24 V/1 A) +
-  Ethernet. Replace the IDU with a **Passive PoE 24V injector** (~20–40 zł) — do **not** use
+  Ethernet. Replace the IDU with a **Passive PoE 24V injector** (~20–40 PLN) — do **not** use
   802.3af/at (48 V), it would damage the ODU.
 - Cable ODU ↔ injector: standard **Cat 5e/6, RJ45 (T568B)**, up to 50–80 m; for an outdoor
   run use **gel-filled outdoor cable** (black PE sheath; indoor PVC cracks under UV).
@@ -53,7 +53,7 @@ Use an **additional SIM from the existing Orange Flex subscription** (no additio
 the LTE modem — sufficient for a backup link. [FAQ-verified](https://flex.orange.pl/pomoc?category=dodatkowa-karta-sim)
 (2026-08-24): order it as **internet-only** for router use; it shares the plan's data pool
 and does **not** work in roaming. Cheaper no-contract standby strategies (Virgin/Play or
-Orange "na kartę" with account-validity promos, Plush/Play auto-top-up) and the full PL
+Orange prepaid with account-validity promos, Plush/Play auto-top-up) and the full Polish
 comparison are in [research 30](../research/30-mobile-internet-failover-offers.md).
 Check the shared data-pool limit on exhaustion and Orange coverage at the router.
 
@@ -106,7 +106,7 @@ owned, needs a Passive PoE 24V injector + outdoor cable.
 ## References
 
 - [Gemini discussion — Homelab LTE failover (reused ZTE WF830, OPNsense multi-WAN)](https://share.gemini.google/gc2ZIcPHbVue) (published 2026-08-24)
-- [Orange Flex — pomoc: dodatkowa karta SIM](https://flex.orange.pl/pomoc?category=dodatkowa-karta-sim) (FAQ, 2026-08-24)
+- [Orange Flex — help: additional SIM](https://flex.orange.pl/pomoc?category=dodatkowa-karta-sim) (FAQ, 2026-08-24)
 - [Research 30 — Mobile internet offers for router failover](../research/30-mobile-internet-failover-offers.md) — PL data plans
 - [Idea 07 — OPNsense router](07-opnsense-futro-s930.md) — the host router this depends on
 - [Research 24 — Network topology design](../research/24-network-topology-design.md) · [ADR 24 — Edge ingress appliance](../decisions/24-edge-ingress-appliance.md)
