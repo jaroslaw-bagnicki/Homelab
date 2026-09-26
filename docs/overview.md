@@ -31,6 +31,25 @@ Current state — what's running or in progress. Planned work is under [What's N
 | **Zot** | Cloudlab VPS | self-hosted OCI registry + pull-through cache | ✅ |
 | **OpenMediaVault** | OMV NAS | network shares (SMB) + backup target | ✅ |
 | **Netdata Parent** | Proxmox VE host (`pve`) | Tier B central monitoring pane — aggregates per-node metrics from Lab + Edge + Beetle NAS (`nas`) children | ✅ |
+| **UPS + NUT** | `pve` (LXC 213) + `lab`/`edge`/`nas` clients | shared-rail power protection — `upsmon` stops each node in order on low battery | ✅ |
+
+## Observability
+
+Two tiers, split by plane rather than by tool ([ADR 27](decisions/27-monitoring-strategy.md)) — the
+Azure **management plane** and the local **real-time plane**.
+
+| Signal | Path | Status |
+|---|---|---|
+| **Per-node metrics** | Netdata — Parent host-native on the `pve` node, children on `lab`/`edge`/`nas`; HTTPS-only dashboard, TLS-only streaming, 7-day retention; LAN-only and unauthenticated, alarm delivery waits on the HA VM ([#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68)) | ✅ |
+| **Cloud telemetry** | Azure Monitor via Arc — AMA → Log Analytics `homelab-law` (`VmInsights\DetailedMetrics` DCR) on Arc-enrolled nodes; Container Insights joins with k3s ([ADR 09](decisions/09-azure-monitor-via-arc.md)) | ✅ |
+| **Power state** | NUT in LXC 213 — `upsmon` events drive the ordered fleet shutdown, `upsc` for ad-hoc reads ([ADR 30](decisions/30-ups-nut-graceful-shutdown.md)) | ✅ |
+| **Disk health** | SMART plus long self-tests on the NAS arrays (OMV SMART page), findings recorded per drive | ✅ |
+| **Per-device energy** | Zigbee plugs → Zigbee2MQTT → MQTT → `mqtt2prometheus` → Prometheus → Grafana ([#73](https://github.com/jaroslaw-bagnicki/Homelab/issues/73) · [ADR 26](decisions/26-zigbee-energy-monitoring.md)) | 📋 |
+| **Logs** | Tier B log store — **VictoriaLogs** leading candidate over Loki, HTTPS + HTTP basic auth from day one, **30-day retention**; host placement and the collector still open ([#123](https://github.com/jaroslaw-bagnicki/Homelab/issues/123) · [#84](https://github.com/jaroslaw-bagnicki/Homelab/issues/84) · [ADR 34](decisions/34-lan-tls-only.md)) | 🔨 |
+
+**Boundary rule**: Arc is the management plane (policy, compliance, portal, heartbeat) and covers
+only Arc-enrolled nodes, while per-node real-time metrics come from Netdata on **every** LAN node —
+the Edge appliance and `pve` are never Arc-enrolled, so Azure alone can never see the whole fleet.
 
 ## What's Next
 
@@ -47,6 +66,7 @@ once it is ready to start — a row leaves the table with the PR that completes 
 | **Edge Ingress — service migration** | ⭐⭐ | Move `cloudflared` + Caddy off the M910q onto the Wyse 3040 (base OS + `edge_host` role already shipped); `.home` DNS is owned by the OPNsense router, not the edge | [#65](https://github.com/jaroslaw-bagnicki/Homelab/issues/65) · [#81](https://github.com/jaroslaw-bagnicki/Homelab/issues/81) · [ADR 24](decisions/24-edge-ingress-appliance.md) |
 | **Beetle NAS** | ⭐⭐⭐ | **Phase 1 done** — OMV 8.5 on `nas`, `md0` RAID1 clean + reboot-verified, fleet-enrolled with the Netdata child and NUT secondary; next: create the share and move the backup target, then retire the ML110 and release `.210` (Memtest86+ and the RTC coin cell stay deferred — [research 32](research/32-wincor-beetle-m3-hardware-diagnostic.md)) | [#98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98) · [ADR 29](decisions/29-nas-backup-target-beetle-m3-omv.md) · [runbook 32](runbooks/32-beetle-m3-omv-setup.md) |
 | **Home Assistant VM + LXCs** | ⭐⭐⭐ | VM 210 (HA OS) + LXC 211/212 (Mosquitto, Zigbee2MQTT) on the `pve` node (the base from runbook 28), then point HA's NUT integration at `192.168.2.213` for UPS status + power-loss notifications | [#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68) · [#85](https://github.com/jaroslaw-bagnicki/Homelab/issues/85) · [ADR 25](decisions/25-home-assistant-thin-client.md) · [#111](https://github.com/jaroslaw-bagnicki/Homelab/issues/111) |
+| **Log store (VictoriaLogs)** | ⭐⭐ | Stand up the Tier B log store — **VictoriaLogs leading candidate** over Loki (single binary, LogsQL, RAM-light), retention **30 days**, HTTPS + HTTP basic auth from day one; pre-ADR research settles the **host placement** (`pve` LXC vs `lab` Docker vs the NAS), then the ADR, then deploy | [#123](https://github.com/jaroslaw-bagnicki/Homelab/issues/123) · [ADR 27](decisions/27-monitoring-strategy.md) · [ADR 34](decisions/34-lan-tls-only.md) |
 
 ### Planned
 
@@ -91,6 +111,10 @@ Tenda Nova mesh — 192.168.2.0/24, gateway 192.168.2.1 (single broadcast domain
                  ├── Edge Ingress     — 192.168.2.240
                  └── work laptop dock — DHCP (corporate)
 ```
+
+**Power**: both strips sit behind the shared-rail **Green Cell UPSLM600** — USB on the `pve` node,
+NUT server in LXC 213, `upsmon` on `pve`/`lab`/`edge`/`nas`
+([ADR 30](decisions/30-ups-nut-graceful-shutdown.md)).
 
 Cloudlab VPS (Contabo) sits outside the LAN with its own Cloudflare Tunnel + Caddy (ADR 19).
 

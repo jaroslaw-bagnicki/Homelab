@@ -27,7 +27,8 @@ are settled. Pending: Memtest86+ ([Pending checks](#pending-checks)).
 > This research doc is the Phase 0 hardware audit output that grounds that decision. It confirms
 > the platform — **Skylake / H110 / LGA1151 / DDR4, Pentium G4400, AES-NI, QuickSync H.264+HEVC
 > decode**, 8 GiB DDR4; the **BIOS walk is done** ([BIOS walk](#bios-walk)), and the `sdc`
-> reallocated-sector finding is resolved — **keep + monitor** (long self-test clean, count frozen).
+> reallocated-sector finding is resolved — **keep + monitor** (long self-test clean; the 1,056
+> reallocated count has since been **released to 0** by the RAID1 resync — [re-read](#sdc-re-read-2026-09-26)).
 
 | Decision | Outcome (as of 2026-09-12) |
 |---|---|
@@ -39,7 +40,7 @@ are settled. Pending: Memtest86+ ([Pending checks](#pending-checks)).
 | SATA | Intel 100/C230 **SATA Controller [AHCI]** (`00:17.0`) — H110; **5 ports** (3 standard + mSATA + M.2), and **no BIOS SATA-mode setting** (AHCI-only) |
 | Disk 0 | **SanDisk X600** `SD9SB8W-128G` 128 GB 2.5" SATA SSD (`sda`) — **SMART PASSED** (41,802 POH) — cache |
 | Disk 1 | **Seagate ST1000VT001-1RE172** 1 TB 2.5" (`sdb`, `WDES3KB7`) — **PASSED**, 0 reallocated, 65,545 POH |
-| Disk 2 | **Seagate ST1000VT001-1RE172** 1 TB 2.5" (`sdc`, `WDEPBVR3`) — **PASSED** but **1,056 reallocated** (past media event; long self-test clean, count frozen at 1,056 — **keep + monitor**) — see [Storage](#storage-sata--smart) |
+| Disk 2 | **Seagate ST1000VT001-1RE172** 1 TB 2.5" (`sdc`, `WDEPBVR3`) — **PASSED**, **0 reallocated** (1,056 after the audit's 09-12 long test, released by the RAID1 resync — see [Storage](#storage-sata--smart)) |
 | USB | Kingston DataTraveler 3.0 64 GB (`sdd`) = Ventoy live USB, **not** a data drive |
 | PSU | **AcBel `POF001-280G`** (UPS-integrated `PSU UPS BEETLE/M-III`, DN P/N `01750279900`, S/N `5421CP10JW`) — **250 W** (225 W @50 °C), **80 Plus Gold** |
 | Dynamic IP | `192.168.2.158` (DHCP via mesh `192.168.2.1`) |
@@ -131,7 +132,7 @@ Inventoried **3 SATA devices + 1 USB boot stick** on 2026-09-12, occupying **SAT
 |---|---|---|---|---|---|---|
 | `sda` | SanDisk **X600** (`SD9SB8W-128G`) | `191702804011` | 128 GB (119.2 GiB) | 6.0 Gb/s | ✅ **PASSED** | 2.5" SSD, FW `X6107000` — **cache / boot** |
 | `sdb` | Seagate **ST1000VT001-1RE172** | `WDES3KB7` | 1.00 TB | 6.0 Gb/s | ✅ **PASSED** | FW `SDC2`, 5400 rpm, 512e, **0 reallocated** — clean |
-| `sdc` | Seagate **ST1000VT001-1RE172** | `WDEPBVR3` | 1.00 TB | 6.0 Gb/s | ⚠️ **PASSED** | FW `SDC1`, 5400 rpm, 512e, **1,056 reallocated** — see below |
+| `sdc` | Seagate **ST1000VT001-1RE172** | `WDEPBVR3` | 1.00 TB | 6.0 Gb/s | ⚠️ **PASSED** | FW `SDC1`, 5400 rpm, 512e, **0 reallocated** (1,056 released 2026-09-26) — see below |
 | `sdd` | Kingston DataTraveler 3.0 | `E0D55EA573F0E791494E0C5F` | 57.8 GiB | USB | n/a | Ventoy live medium — not a data drive |
 
 SMART detail:
@@ -143,9 +144,10 @@ SMART detail:
 - **Seagate `sdb`** — overall **PASSED**; **0** reallocated / 0 pending / 0 uncorrectable;
   **65,545 POH** (~7.5 yr continuous); Start_Stop / Load_Cycle **9** each (always-on recorder
   signature); temp 28 °C; short self-test passed. **Clean — keep as a mirror member.**
-- **Seagate `sdc` — ⚠️ anomaly (past media event, currently stable)** — overall **PASSED**;
-  `Reallocated_Sector_Ct` = **1,056** (normalised **98** / threshold 10), **0** pending,
-  **0** reallocation candidates, **65,545 POH**, temp 26–33 °C, short self-test passed.
+- **Seagate `sdc` — ⚠️ past media event, count since released** — overall **PASSED**;
+  `Reallocated_Sector_Ct` was **1,056** on 2026-09-12 (normalised **98** / threshold 10), **0** pending,
+  **0** reallocation candidates, **65,545 POH**, temp 26–33 °C, short self-test passed. On
+  2026-09-26 the count is back to **0** — see the [re-read](#sdc-re-read-2026-09-26).
   `smartctl -l error` + `smartctl -x` (2026-09-12):
   - **SMART error log: empty** (comprehensive + extended); Device Statistics show
     **1 historical `Reported Uncorrectable Error`** and **3 read-recovery attempts**;
@@ -162,16 +164,62 @@ SMART detail:
     `LBA_of_first_error = -`; **count frozen at 1,056**, 0 pending, error log still empty.
   - **Read / decision:** a **past, one-time media event** (one uncorrectable read → 1,056
     sectors remapped), **not ongoing degradation** — 0 pending / 0 candidates and a clean
-    full-surface test. Reallocations never reverse. **Decision: keep `sdc` as the RAID1 mirror
-    member with `sdb` and monitor via SMART** (replace was the conservative alternative).
+    full-surface test. **Decision: keep `sdc` as the RAID1 mirror member with `sdb` and monitor
+    via SMART** (replace was the conservative alternative). ⚠ The audit's "reallocations never
+    reverse" was too strong — the count has since been **released to 0**
+    ([re-read](#sdc-re-read-2026-09-26)).
+
+#### `sdc` re-read (2026-09-26)
+
+Live read on the running NAS (`smartctl -x`, 2026-09-26 07:50 UTC — same serial `WDEPBVR3`, FW
+`SDC1`, WWN `5 000c50 0abc7646f`): **`Reallocated_Sector_Ct` raw is back to 0** (normalised **100**,
+WORST **098** retained).
+
+| Metric | 2026-09-12 audit | 2026-09-26 |
+|---|---|---|
+| `Reallocated_Sector_Ct` (attr 5) | **1,056** · norm 98 | **0** · norm **100**, WORST 098 |
+| `Current_Pending_Sector` · `Offline_Uncorrectable` | 0 · 0 | 0 · 0 |
+| DevStat *Reported Uncorrectable Errors* | **1** | **1** — unchanged |
+| DevStat *Read Recovery Attempts* | **3** | **0** |
+| DevStat *Reallocated Logical Sectors* | *(not recorded)* | **0** |
+| Logical **Sectors Written** | 8,758,141 (~4.5 GB) | **1,963,007,357 (~1.005 TB)** |
+| Logical **Sectors Read** | *(not recorded)* | 346,716 (~178 MB) |
+| Power-On Hours | 65,545 | 65,565 |
+| Self-test / error log | short pass · empty | extended + 3 shorts **all pass** · empty |
+
+**Why it went back to 0.** The 1,056 were *tentative* remaps: Seagate keeps reallocation
+candidates in a media cache because one slow read is not proof of a dead sector, and the 09-12 long
+self-test only **read** the surface. Since then the `md0` RAID1 was initialised and the write volume
+shows a **full-surface pass** (~4.5 GB lifetime written → ~1.005 TB). Seagate firmware **releases a
+candidate remap when a write to that LBA succeeds**, so the pool emptied and attr 5 returned to 0.
+Reads are still ~178 MB, so the clearing came from the **resync write**, not a scrub — the drive's
+own background scan remains off (`Offline data collection: never started`).
+
+**A release, not a reset** — the history survived: *Reported Uncorrectable Errors* is still **1**
+(a SMART/ATA erase would zero it), WORST **098** remembers the dip, **POH is continuous**
+(65,545 → 65,565), and serial / WWN / firmware are identical.
+
+> ⚠ **Correct the earlier reading.** "Reallocations never reverse" holds for sectors that genuinely
+> failed, not for the media-cache / candidate pool — which is exactly what the audit's own long test
+> had populated. A falling count means *pool released*, never *disk healed*.
+
+**Standing check** — watch attr 5 **raw together with WORST**, `197`/`198`, and the
+`Reallocated Candidate` / `Reported Uncorrectable` device-statistics fields. Raw rising *with*
+pending sectors, or a rising uncorrectable count, is real degradation; a raw of 0 alone is not
+proof of health.
+
+Incidental: the self-test log's `Lifetime(hours)` column is a **16-bit wrap** (entries at 5 / 9 /
+12 h = POH 65,541 / 65,545 / 65,548), so the #1 `Extended offline` ran ~3 POH after the audit; and
+only ~20 POH have been logged since 09-12 — the NAS has barely been powered.
 
 ### Drive provenance & recording type (2× Seagate)
 
 The 2× **ST1000VT001-1RE172** are Seagate **Video 2.5** (surveillance) drives — **CMR /
 Perpendicular** (Seagate manual §2.3), **512e AF** (4096-byte physical), 5400 rpm. Both
-previously completed an **extended self-test without error**; the 2026-09-12 re-check finds
-**`sdb` still clean** while **`sdc` carries 1,056 reallocated sectors from a past media event**
-([Storage](#storage-sata--smart)). That verification history is recorded on
+previously completed an **extended self-test without error**; the 2026-09-12 re-check found
+**`sdb` clean** while **`sdc` carried 1,056 reallocated sectors from a past media event** —
+released back to **0** on 2026-09-26 ([Storage](#storage-sata--smart) ·
+[re-read](#sdc-re-read-2026-09-26)). That verification history is recorded on
 [issue #98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98). **Array plan (ADR 29):**
 **mdadm RAID1** across 2× 1 TB = **1 TB usable**; **`sdc` is kept and monitored** (long self-test clean).
 
@@ -343,7 +391,7 @@ log so future events are unambiguous.
 | RAM | **8 GiB DDR4** (1×8, 1 slot free, ≤32 GiB) |
 | QuickSync | H.264 + HEVC 8-bit decode |
 | SATA | Intel 100/C230 AHCI-only; **5 ports** — 3 standard (all occupied) + mSATA + M.2 free |
-| Array | **2× Seagate 1 TB** → mdadm RAID1 = 1 TB usable; `sdc` kept + monitored (long-test clean) |
+| Array | **2× Seagate 1 TB** → mdadm RAID1 = 1 TB usable; `sdc` kept + monitored (reallocated count released to 0) |
 | Cache | SanDisk X600 `SD9SB8W-128G` 128 GB SSD, PASSED |
 | NIC | **Intel I219-V** GbE |
 | Expansion | PCIe 3.0 x16 + 2× PCIe 2.0 x1 |
@@ -359,9 +407,11 @@ Phase 1 (OMV install + array) is the working direction
 ## Pending Checks
 
 1. **`sdc` verdict** — ✅ **resolved 2026-09-12**: error log empty; the **long self-test
-   (`Extended offline`) completed without error** and the count is **frozen at 1,056** (0
-   pending, 0 realloc candidates) — see [Storage](#storage-sata--smart). **Decision: keep `sdc`
-   in the RAID1 mirror with `sdb` and monitor via SMART** (replace was the conservative
+   (`Extended offline`) completed without error** and the count sat at 1,056 (0 pending, 0
+   realloc candidates) — **and ✅ re-read 2026-09-26**: the count is back to **0**, those remaps
+   having been tentative candidates released by the RAID1 resync. See
+   [Storage](#storage-sata--smart) and the [re-read](#sdc-re-read-2026-09-26). **Decision: keep
+   `sdc` in the RAID1 mirror with `sdb` and monitor via SMART** (replace was the conservative
    alternative).
 2. **HDD SMART** — ✅ **done 2026-09-12**: `sdb` clean (0 reallocated); `sdc` anomaly as above;
    CMR confirmed (Seagate Video 2.5 = Perpendicular); both at 6.0 Gb/s.
