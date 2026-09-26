@@ -149,4 +149,4 @@ reverse_proxy gitea:3000 (inside Docker bridge network)
 
 ## Source
 
-https://gemini.google.com/share/8c642753d61b — "Lokalne DNS dla Homelaba w Dockerze", Created May 24, 2026 with Gemini 3.5 Flash
+https://gemini.google.com/share/8c642753d61b — "Local DNS for the homelab in Docker", Created May 24, 2026 with Gemini 3.5 Flash
