@@ -52,7 +52,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 |---|---|
 | CPU | Intel Pentium G4400 (2C/2T, 3.3 GHz) · AES-NI, VT-x, VT-d, QuickSync |
 | RAM | 8 GB DDR4 (1× 8 GiB SODIMM @ 2133 MT/s; 1 slot free, 32 GB max) |
-| Storage | SanDisk X600 128 GB SSD (OS) + 2× Seagate 1 TB 2.5" → `md0` RAID1, 1 TB usable, XFS; one disk has 1,056 reallocated sectors but passed a long self-test |
+| Storage | SanDisk X600 128 GB SSD (OS) + 2× Seagate 1 TB 2.5" → `md0` RAID1, 1 TB usable, XFS; one disk's 1,056 reallocated sectors were released back to 0 by the RAID1 resync (monitor) |
 | Firmware | AMI BIOS `R1.8.0` (2021-11-22) · board `D3460-D22` · legacy boot, no Secure Boot |
 | Network | 1× GbE Intel I219-V (`enp0s31f6`) · hostname `nas` · static `192.168.2.202` ([ADR 31](decisions/31-static-address-scheme.md)) · LAN-only SSH/web UI |
 | OS | OMV 8.5.9-1 (Debian 13) · kernel `6.12.107+deb13-amd64` · HTTPS-only web UI ([ADR 34](decisions/34-lan-tls-only.md)) |
