@@ -26,9 +26,21 @@ behind a **Caddy** reverse proxy, LAN services are **TLS-only**, a shared-rail *
 shuts the fleet down in order when the battery runs low, and **Netdata** aggregates the fleet's
 metrics. A disposable **Contabo VPS** hosts the staging workloads.
 
-The nodes — workload host, Proxmox VE smart-home node, OMV backup NAS, dedicated ingress
-appliance, router — are listed with their current status, workloads and roadmap on
-[Overview](docs/overview.md); per-node specs are in [Hardware](docs/hardware.md).
+## The fleet
+
+| Node | Role |
+|---|---|
+| **Lab** — Lenovo M910q Tiny (`lab`) | main workload host — Ubuntu 24.04 LTS + Azure Arc, Docker → k3s |
+| **Proxmox VE** — Dell Wyse 5070 (`pve`) | virtualisation host — smart-home + always-on services |
+| **Beetle NAS** — Wincor Beetle M-III (`nas`) | OMV backup target on `md0` RAID1 |
+| **OMV NAS** — HP ProLiant ML110 | incumbent backup target |
+| **Edge Ingress** — Dell Wyse 3040 (`edge`) | dedicated public ingress — `cloudflared` + Caddy |
+| **OPNsense Router** — Fujitsu Futro S930 | LAN edge router / firewall |
+| **LLM server** — Minisforum AI X1 | local LLM inference (Phase 2) |
+| **Cloudlab VPS** — Contabo | staging for Ansible + hosted workloads |
+
+Hardware roster only — statuses, workloads and sequencing live on the
+[Overview](docs/overview.md) board, and per-node specs in [Hardware](docs/hardware.md).
 
 ## Explore
 
