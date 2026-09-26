@@ -24,7 +24,7 @@ deployed by [runbook 31](../../../docs/runbooks/31-deploy-netdata.md); tracked i
 
 - **The Parent runs host-native on the `pve` Proxmox host** — not an LXC/VM — so it can read VM/CT cgroups and `/etc/pve` names; the overrides live in [`host_vars/pve.yml`](../../host_vars/pve.yml).
 - **Edge uses `netdata_storage: ram`** — no `dbengine` on the eMMC (ADR 24/27).
-- **History is 7 days, disk-capped** — per-tier `dbengine tier N retention time = 7d` with `dbengine tier N retention size` (256 MiB per tier on a child, 1 GiB on the parent — its tier quota is shared by the streaming children). Time and size are combined limits, so the DB ceiling is ~3 × the size.
+- **History is per-tier, disk-capped** — `netdata_retention_tiers` sets a `time` target and a `size` cap for each dbengine tier (0 = 1s, 1 = 1m, 2 = 1h). Time and size are **combined** limits, so whichever binds first wins and the DB ceiling is the **sum** of the caps. Children keep 7 d / 256 MiB per tier; the Parent keeps 21 d at 1s (3 GiB), 30 d at 1m (2 GiB) and 365 d at 1h (2 GiB) — ≈7 GiB, sized from measured growth and held on its own root LV, which the guests do not share ([`host_vars/pve.yml`](../../host_vars/pve.yml)).
 - **Standalone-first** — a child with no reachable parent is still useful locally; re-pointing it is a config change, not a reinstall.
 
 ## UPS (NUT) telemetry
@@ -56,8 +56,7 @@ Alerts view and the API ([ADR 27](../../../docs/decisions/27-monitoring-strategy
 | `netdata_role` | `child` | `parent` accepts streams; `child` streams to `netdata_stream_target`. |
 | `netdata_stream_target` | `""` | Parent `host:port`; empty on a `child` = standalone (no streaming). |
 | `netdata_storage` | `dbengine` | `ram` on eMMC-only nodes. |
-| `netdata_retention_time` | `7d` | Per-tier retention target (`dbengine tier N retention time`); `dbengine` only. |
-| `netdata_retention_size` | `256MiB` | Per-tier size cap (`dbengine tier N retention size`); the parent sets `1GiB`. |
+| `netdata_retention_tiers` | `7d` / `256MiB` per tier | Per-tier retention, one entry per dbengine tier (`time` + `size`, combined limits — the ceiling is the sum of the caps); `dbengine` only. The parent overrides it with 21d/3GiB, 30d/2GiB and 365d/2GiB. |
 | `netdata_bind` | `127.0.0.1` | `[web] bind to` — a plain address, or Netdata's per-listener spec (`<ip>:<port>=<service>^SSL=force`); the parent lists two TLS-only listeners. |
 | `netdata_port` | `19999` | Default web port. |
 | `netdata_tls` | `false` | Serve listeners over TLS and write the `[web] ssl` paths; the parent sets `true`. |

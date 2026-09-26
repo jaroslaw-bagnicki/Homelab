@@ -5,11 +5,14 @@ netdata_role: child
 # Parent "host:port" for streaming children; empty = standalone (no streaming).
 netdata_stream_target: ""
 netdata_storage: dbengine
-# Per-tier retention target (rendered as `dbengine tier N retention time`) — 7 days.
-netdata_retention_time: "7d"
-# Per-tier retention size cap (`dbengine tier N retention size`) — the hard bound.
-# Rendered for tiers 0-2, so the DB ceiling is ~3x this value; the parent sets 1GiB.
-netdata_retention_size: "256MiB"
+# Per-tier retention, one entry per dbengine tier (0 = 1s, 1 = 1m, 2 = 1h). `time` is the
+# history target, `size` the hard disk cap — combined limits, so whichever binds first wins
+# and a long `time` only holds if `size` can carry it. Children keep this default; the parent
+# overrides it with its own tiers.
+netdata_retention_tiers:
+  - { time: "7d", size: "256MiB" }    # tier 0 — 1s
+  - { time: "7d", size: "256MiB" }    # tier 1 — 1m
+  - { time: "7d", size: "256MiB" }    # tier 2 — 1h
 netdata_bind: "127.0.0.1"
 netdata_port: 19999
 # Serve listeners over TLS. The parent sets this, plus a per-listener `bind to` spec
