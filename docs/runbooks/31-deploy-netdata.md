@@ -120,8 +120,17 @@ netdata_upsd_address: "192.168.2.213:3493"   # NUT server in LXC 213
 and the role renders `/etc/netdata/go.d/upsd.conf` (one job named `nut` at that address) and restarts
 `netdata`. The NUT server allows **anonymous** reads, so there is no NUT account and no Key Vault
 secret; `pve` reaches `.213:3493` outbound (UFW allows outgoing traffic by default). A node with the
-variable empty converges with no `upsd.conf`. Charts land under the dashboard's `upsd` section —
-battery charge, runtime, load, input/output voltage and the `OL`/`OB`/`LB` status (§4).
+variable empty converges with no `upsd.conf`.
+
+The module is documented for **remote instances** ([integration page](https://www.netdata.cloud/integrations/data-collection/hardware-and-sensors/ups-nut/)) and
+does not support auto-detection, so the explicit job is what activates it — and no Netdata agent is
+needed inside LXC 213. Charts land under the dashboard's `upsd` section: `upsd.ups_battery_charge`,
+`upsd.ups_battery_voltage`, `upsd.ups_load` / `upsd.ups_load_usage` (W — the whole fleet's draw),
+`upsd.ups_input_voltage` / `upsd.ups_output_voltage` and `upsd.ups_status`. Two caveats: the agent's
+**stock UPS alarms** activate with the job (battery charge <75 % warn / <40 % crit, 10-minute load,
+collection staleness) but remain **dashboard-only** — no delivery path is added here ([#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68));
+and `upsd.ups_battery_estimated_runtime` stays **empty**, because `nutdrv_qx` reports no
+`battery.runtime` on this unit (and the shutdown trigger is `LB`, not a runtime countdown, [ADR 30](../decisions/30-ups-nut-graceful-shutdown.md)).
 
 ## 3. Children — Lab and Edge
 
@@ -160,6 +169,7 @@ sudo grep -A2 '^jobs:' /etc/netdata/go.d/upsd.conf
 # go.d.plugin lives in the plugins.d dir (upstream docs: /usr/libexec/netdata/plugins.d/)
 sudo -u netdata /usr/libexec/netdata/plugins.d/go.d.plugin -d -m upsd | head -30   # one-shot debug run
 curl -sk https://127.0.0.1:19999/api/v1/charts | grep -o '"upsd[^"]*"' | head     # chart ids
+curl -sk 'https://127.0.0.1:19999/api/v1/alarms?all' | grep -o '"upsd[^"]*"' | sort -u   # stock UPS alarms
 ```
 
 Open **`https://192.168.2.201:19999`** (expect a self-signed certificate warning) — the dashboard

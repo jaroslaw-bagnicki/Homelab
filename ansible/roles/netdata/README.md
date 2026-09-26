@@ -27,12 +27,18 @@ deployed by [runbook 31](../../../docs/runbooks/31-deploy-netdata.md); tracked i
 
 ## UPS (NUT) telemetry
 
-The Parent charts UPS state straight from NUT's network protocol: the bundled go.d `upsd` module polls
-`netdata_upsd_address` — the NUT server in LXC 213 on the `pve` node — and publishes battery charge,
-load, voltages, runtime and the `OL`/`OB`/`LB` status. Reads are **anonymous** (`upsd` is open on the
-LAN, [ADR 30](../../../docs/decisions/30-ups-nut-graceful-shutdown.md)), so there is **no NUT account
-and no Key Vault secret** — only [`host_vars/pve.yml`](../../host_vars/pve.yml) sets an address. A node
-with the variable empty converges with **no job** (`/etc/netdata/go.d/upsd.conf` is removed).
+The parent charts UPS state straight from NUT's network protocol: the bundled go.d `upsd` module
+(no auto-detection — a job has to be declared) polls `netdata_upsd_address` and publishes the upstream
+charts `upsd.ups_battery_charge`, `upsd.ups_battery_voltage`, `upsd.ups_load` / `upsd.ups_load_usage`
+(W), `upsd.ups_input_voltage` / `upsd.ups_output_voltage` and `upsd.ups_status` (`on_line` /
+`on_battery` / `low_battery` dimensions).
+
+Reads are **anonymous** (`upsd` is open on the LAN, [ADR 30](../../../docs/decisions/30-ups-nut-graceful-shutdown.md)),
+so there is **no NUT account and no Key Vault secret** — only [`host_vars/pve.yml`](../../host_vars/pve.yml)
+sets an address. A node with the variable empty converges with **no job** (`/etc/netdata/go.d/upsd.conf`
+is removed). The module polls a **remote** `upsd`, so no agent goes inside LXC 213 — one agent per node
+(ADR 27) still holds. `upsd.ups_battery_estimated_runtime` stays empty on this unit: `nutdrv_qx` reports
+no `battery.runtime` (issue #115).
 
 ## Parameters
 
@@ -106,4 +112,6 @@ children.
 ## Alarms
 
 Alarms are **dashboard-only** for now — the notification path is deferred until the Home Assistant VM
-exists ([#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68)).
+exists ([#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68)). The stock `upsd` alarms
+(battery charge, load, collection staleness) ship with the agent and go live with the UPS job; their
+`to: sitemgr` target is not a delivery path, so they surface in the dashboard only.
