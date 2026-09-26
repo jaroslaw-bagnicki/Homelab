@@ -1,10 +1,11 @@
 # Netdata — Tier B Parent (pve node) + streaming children
 
-> Deploy the **Netdata Parent** on the `pve` node's Proxmox host (`192.168.2.201`) and
-> re-point the Lab and Edge children to it, via the shared `netdata` Ansible role.
-> Tracked in [issue #104](https://github.com/jaroslaw-bagnicki/Homelab/issues/104) (child of
-> [#75](https://github.com/jaroslaw-bagnicki/Homelab/issues/75)). Parent placement is
-> [ADR 27](../decisions/27-monitoring-strategy.md).
+> Deploy the **Netdata Parent** on the `pve` node's Proxmox host (`192.168.2.201`), re-point the Lab
+> and Edge children to it, and point the Parent's go.d `upsd` job at the NUT server for **UPS
+> telemetry** (§2) — all via the shared `netdata` Ansible role. Tracked in
+> [issue #104](https://github.com/jaroslaw-bagnicki/Homelab/issues/104) (child of
+> [#75](https://github.com/jaroslaw-bagnicki/Homelab/issues/75), whose checklist carries the UPS
+> collector). Parent placement is [ADR 27](../decisions/27-monitoring-strategy.md).
 >
 > **One agent per node.** Per the [Netdata Proxmox VE integration](https://www.netdata.cloud/integrations/data-collection/containers-and-vms/proxmox-ve-monitoring/),
 > Netdata must run **directly on the Proxmox host** (not in a VM or container) to read VM/CT
@@ -18,6 +19,8 @@
 >
 > **Alarms are dashboard-only for now.** The notification path is deferred until the Home Assistant
 > VM exists ([#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68)) — don't wire a mailer here.
+> The agent's stock alarms go live with each collector — for UPS: battery charge, load and collection
+> staleness — so expect them in the dashboard, not in an inbox.
 >
 > **The transport is encrypted.** The Parent serves the dashboard **only over HTTPS** (`^SSL=force`
 > on its `19999` listener — plain HTTP gets Netdata's `399` redirect to `https://`, so no content is
