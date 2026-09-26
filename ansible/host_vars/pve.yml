@@ -14,7 +14,8 @@ netdata_proxmox_host: true
 netdata_bind: "{{ ansible_host }}:19999=dashboard^SSL=force {{ ansible_host }}:19996=streaming^SSL=force"
 netdata_tls: true
 netdata_storage: dbengine
-netdata_retention_size: "1GiB"
+# Retention is role-owned — see `netdata_retention_tiers_by_role` in the netdata role's defaults
+# (parent → 14 d / 3 GiB at 1s, 30 d / 2 GiB at 1m, 365 d / 2 GiB at 1h).
 # UPS telemetry — poll the NUT server (LXC 213 on this host); anonymous reads.
 netdata_upsd_address: "192.168.2.213:3493"
 

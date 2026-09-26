@@ -24,8 +24,28 @@ deployed by [runbook 31](../../../docs/runbooks/31-deploy-netdata.md); tracked i
 
 - **The Parent runs host-native on the `pve` Proxmox host** — not an LXC/VM — so it can read VM/CT cgroups and `/etc/pve` names; the overrides live in [`host_vars/pve.yml`](../../host_vars/pve.yml).
 - **Edge uses `netdata_storage: ram`** — no `dbengine` on the eMMC (ADR 24/27).
-- **History is 7 days, disk-capped** — per-tier `dbengine tier N retention time = 7d` with `dbengine tier N retention size` (256 MiB per tier on a child, 1 GiB on the parent — its tier quota is shared by the streaming children). Time and size are combined limits, so the DB ceiling is ~3 × the size.
+- **History is per-tier and disk-capped** — the policy is **role-owned, not host-owned**: `netdata_retention_tiers_by_role` keys it by `netdata_role` and `netdata_retention_tiers` is the effective list ([Retention](#retention)).
 - **Standalone-first** — a child with no reachable parent is still useful locally; re-pointing it is a config change, not a reinstall.
+
+## Retention
+
+`netdata_retention_tiers_by_role` in [`defaults/main.yml`](defaults/main.yml) holds the policy for each
+role; `netdata_retention_tiers` is the effective list for the node. `time` and `size` are **combined**
+limits — data is dropped when either is reached — so a `size` must be able to carry its `time`, and the
+DB ceiling is the **sum** of the caps.
+
+| Tier | Granularity | Parent | Child |
+|---|---|---|---|
+| 0 | 1 s | 14 d / 3 GiB | 7 d / 256 MiB |
+| 1 | 1 m | 30 d / 2 GiB | 7 d / 256 MiB |
+| 2 | 1 h | 365 d / 2 GiB | 7 d / 256 MiB |
+| **DB ceiling** | | **≈7 GiB** | **≈768 MiB** |
+
+- Sizes come from measured growth (~145 MB/day tier 0, ~59 MB/day tier 1, ~5 MB/day tier 2 at 18.8k
+  metrics, 2026-09-26): 14 d uses ≈2 GB of tier 0's 3 GiB, so the remainder is headroom for growth
+  (k3s). The Parent's DB sits on its own root LV, which the guests do not share.
+- A `ram` node (Edge) keeps no `dbengine` history, so the retention tasks are skipped there.
+- Override `netdata_retention_tiers` on a host only if its disk cannot carry its role's caps.
 
 ## UPS (NUT) telemetry
 
@@ -56,8 +76,8 @@ Alerts view and the API ([ADR 27](../../../docs/decisions/27-monitoring-strategy
 | `netdata_role` | `child` | `parent` accepts streams; `child` streams to `netdata_stream_target`. |
 | `netdata_stream_target` | `""` | Parent `host:port`; empty on a `child` = standalone (no streaming). |
 | `netdata_storage` | `dbengine` | `ram` on eMMC-only nodes. |
-| `netdata_retention_time` | `7d` | Per-tier retention target (`dbengine tier N retention time`); `dbengine` only. |
-| `netdata_retention_size` | `256MiB` | Per-tier size cap (`dbengine tier N retention size`); the parent sets `1GiB`. |
+| `netdata_retention_tiers` | selected from `netdata_role` | The effective per-tier list (`time` + `size`, combined limits — the ceiling is the sum of the caps); `dbengine` only. Defaults to `netdata_retention_tiers_by_role[netdata_role]`; override only if a host's disk cannot carry its role's caps. |
+| `netdata_retention_tiers_by_role` | `parent` → 14d/3GiB, 30d/2GiB, 365d/2GiB · `child` → 7d/256MiB per tier | The retention **policy**, keyed by role — the parent is the long-term store, a child a short-term forwarder. |
 | `netdata_bind` | `127.0.0.1` | `[web] bind to` — a plain address, or Netdata's per-listener spec (`<ip>:<port>=<service>^SSL=force`); the parent lists two TLS-only listeners. |
 | `netdata_port` | `19999` | Default web port. |
 | `netdata_tls` | `false` | Serve listeners over TLS and write the `[web] ssl` paths; the parent sets `true`. |
