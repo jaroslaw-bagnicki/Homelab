@@ -33,6 +33,24 @@ Current state — what's running or in progress. Planned work is under [What's N
 | **Netdata Parent** | Proxmox VE host (`pve`) | Tier B central monitoring pane — aggregates per-node metrics from Lab + Edge + Beetle NAS (`nas`) children | ✅ |
 | **UPS + NUT** | `pve` (LXC 213) + `lab`/`edge`/`nas` clients | shared-rail power protection — `upsmon` stops each node in order on low battery | ✅ |
 
+## Observability
+
+Two tiers, split by plane rather than by tool ([ADR 27](decisions/27-monitoring-strategy.md)) — the
+Azure **management plane** and the local **real-time plane**.
+
+| Signal | Path | Status |
+|---|---|---|
+| **Per-node metrics** | Netdata — Parent host-native on the `pve` node, children on `lab`/`edge`/`nas`; HTTPS-only dashboard, TLS-only streaming, 7-day retention; LAN-only and unauthenticated, alarm delivery waits on the HA VM ([#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68)) | ✅ |
+| **Cloud telemetry** | Azure Monitor via Arc — AMA → Log Analytics `homelab-law` (`VmInsights\DetailedMetrics` DCR) on Arc-enrolled nodes; Container Insights joins with k3s ([ADR 09](decisions/09-azure-monitor-via-arc.md)) | ✅ |
+| **Power state** | NUT in LXC 213 — `upsmon` events drive the ordered fleet shutdown, `upsc` for ad-hoc reads ([ADR 30](decisions/30-ups-nut-graceful-shutdown.md)) | ✅ |
+| **Disk health** | SMART plus long self-tests on the NAS arrays (OMV SMART page), findings recorded per drive | ✅ |
+| **Per-device energy** | Zigbee plugs → Zigbee2MQTT → MQTT → `mqtt2prometheus` → Prometheus → Grafana ([#73](https://github.com/jaroslaw-bagnicki/Homelab/issues/73) · [ADR 26](decisions/26-zigbee-energy-monitoring.md)) | 📋 |
+| **Logs** | open — Fluent Bit / Loki are Tier B candidates, each needing its own ADR | 🧠 |
+
+**Boundary rule**: Arc is the management plane (policy, compliance, portal, heartbeat) and covers
+only Arc-enrolled nodes, while per-node real-time metrics come from Netdata on **every** LAN node —
+the Edge appliance and `pve` are never Arc-enrolled, so Azure alone can never see the whole fleet.
+
 ## What's Next
 
 Planned and in-progress work only, listed in execution order. The backlog lives in

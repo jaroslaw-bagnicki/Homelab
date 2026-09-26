@@ -6,7 +6,7 @@
 
 | Area | Description |
 |---|---|
-| [Overview](overview.md) | Homelab at a glance — nodes, workloads, topology |
+| [Overview](overview.md) | Homelab at a glance — nodes, workloads, observability, topology |
 | [Hardware](hardware.md) | Per-node hardware inventory + network appliances |
 | [Decisions](decisions/README.md) | Architecture Decision Records (ADRs) — settled design rationale in MADR format |
 | [Ideas](ideas/README.md) | Pre-decision brainstorming — ideas, possibilities, and early-stage exploration |
