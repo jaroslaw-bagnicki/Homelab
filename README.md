@@ -36,7 +36,6 @@ metrics. A disposable **Contabo VPS** hosts the staging workloads.
 | **OMV NAS** — HP ProLiant ML110 | incumbent backup target |
 | **Edge Ingress** — Dell Wyse 3040 (`edge`) | dedicated public ingress — `cloudflared` + Caddy |
 | **OPNsense Router** — Fujitsu Futro S930 | LAN edge router / firewall |
-| **LLM server** — Minisforum AI X1 | local LLM inference (Phase 2) |
 | **Cloudlab VPS** — Contabo | staging for Ansible + hosted workloads |
 
 Hardware roster only — statuses, workloads and sequencing live on the
