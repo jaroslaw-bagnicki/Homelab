@@ -8,9 +8,10 @@ deployed by [runbook 31](../../../docs/runbooks/31-deploy-netdata.md); tracked i
 ## Files
 
 - `defaults/main.yml` — role parameters (child defaults).
-- `tasks/main.yml` — install, Key Vault stream-key fetch, storage/retention/web config, `stream.conf`, Proxmox name resolution, service.
+- `tasks/main.yml` — install, Key Vault stream-key fetch, storage/retention/web config, `stream.conf`, UPS collector, Proxmox name resolution, service.
 - `handlers/main.yml` — restart `netdata`.
 - `templates/stream.conf.j2` — parent (`[<key>] enabled = yes`) or child (`[stream]` destination + key).
+- `templates/upsd.conf.j2` — optional go.d `upsd` job (NUT daemon address + job name).
 
 ## Roles
 
@@ -23,6 +24,15 @@ deployed by [runbook 31](../../../docs/runbooks/31-deploy-netdata.md); tracked i
 - **Edge uses `netdata_storage: ram`** — no `dbengine` on the eMMC (ADR 24/27).
 - **History is 7 days, disk-capped** — per-tier `dbengine tier N retention time = 7d` with `dbengine tier N retention size` (256 MiB per tier on a child, 1 GiB on the parent — its tier quota is shared by the streaming children). Time and size are combined limits, so the DB ceiling is ~3 × the size.
 - **Standalone-first** — a child with no reachable parent is still useful locally; re-pointing it is a config change, not a reinstall.
+
+## UPS (NUT) telemetry
+
+The Parent charts UPS state straight from NUT's network protocol: the bundled go.d `upsd` module polls
+`netdata_upsd_address` — the NUT server in LXC 213 on the `pve` node — and publishes battery charge,
+load, voltages, runtime and the `OL`/`OB`/`LB` status. Reads are **anonymous** (`upsd` is open on the
+LAN, [ADR 30](../../../docs/decisions/30-ups-nut-graceful-shutdown.md)), so there is **no NUT account
+and no Key Vault secret** — only [`host_vars/pve.yml`](../../host_vars/pve.yml) sets an address. A node
+with the variable empty converges with **no job** (`/etc/netdata/go.d/upsd.conf` is removed).
 
 ## Parameters
 
@@ -40,6 +50,8 @@ deployed by [runbook 31](../../../docs/runbooks/31-deploy-netdata.md); tracked i
 | `netdata_stream_ssl` | `false` | Child only: append `:SSL` to the stream destination. |
 | `netdata_proxmox_host` | `false` | Grants the `netdata` user `/etc/pve` read (parent on Proxmox). |
 | `netdata_upgrade` | `false` | `true` re-runs the kickstart installer (`--reinstall`) for one run. |
+| `netdata_upsd_address` | `""` | NUT daemon `host:port` to poll for UPS telemetry (`go.d/upsd.conf`); empty = no job. The parent sets `192.168.2.213:3493`. |
+| `netdata_upsd_name` | `nut` | Job name in the rendered `go.d/upsd.conf`. |
 
 ## Secrets
 

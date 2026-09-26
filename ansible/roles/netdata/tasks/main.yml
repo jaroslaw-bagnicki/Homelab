@@ -152,6 +152,34 @@
     state: absent
   notify: Restart netdata
 
+# UPS telemetry — the go.d `upsd` module talks NUT's network protocol to the server,
+# so the parent sees battery/load/voltage without a NUT account of its own.
+- name: Ensure the Netdata go.d config directory exists
+  when: netdata_upsd_address | length > 0
+  ansible.builtin.file:
+    path: /etc/netdata/go.d
+    state: directory
+    owner: root
+    group: netdata
+    mode: "0755"
+
+- name: Configure the Netdata UPS (NUT) collector
+  when: netdata_upsd_address | length > 0
+  ansible.builtin.template:
+    src: upsd.conf.j2
+    dest: /etc/netdata/go.d/upsd.conf
+    owner: root
+    group: netdata
+    mode: "0644"
+  notify: Restart netdata
+
+- name: Remove the UPS (NUT) collector job when no NUT server is configured
+  when: netdata_upsd_address | length == 0
+  ansible.builtin.file:
+    path: /etc/netdata/go.d/upsd.conf
+    state: absent
+  notify: Restart netdata
+
 - name: Let Netdata resolve Proxmox VM/CT names
   when: netdata_role == 'parent' and netdata_proxmox_host | bool
   ansible.builtin.user:

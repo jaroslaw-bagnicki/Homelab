@@ -49,6 +49,10 @@ Edge nodes stream to the Parent on the `pve` node; the NAS joins when it joins t
   grants the `netdata` user read access to `/etc/pve`.
 - **Children** — Lab (M910q, `dbengine`) and Edge (Wyse 3040, `ram` — eMMC-safe) stream to
   `192.168.2.201:19996:SSL` (`netdata_stream_ssl: true` — the Parent refuses plaintext streams).
+- **UPS telemetry** — the Parent's bundled go.d `upsd` module polls the NUT server
+  (`netdata_upsd_address: 192.168.2.213:3493`, set in `host_vars/pve.yml`) and charts battery
+  charge, load, voltages, runtime and the `OL`/`OB`/`LB` state. Reads are **anonymous**, so no NUT
+  account and no Key Vault secret (§2).
 - **Stream key** — a shared `netdata-stream-api-key` in `homelab-bysxdb-kv`, fetched at deploy time,
   sent only inside the TLS stream (§1).
 - **History** — per-tier `dbengine tier N retention time = 7d` on the parent and on Lab, bounded by
@@ -104,6 +108,21 @@ self-signed certificate, writes the TLS-only listeners and the parent `stream.co
 `19999` (dashboard) and `19996` (streaming) from `192.168.2.0/24` (`host_vars/pve.yml`) — neither
 serves content over cleartext (plain HTTP gets a `399` redirect to `https://`).
 
+### UPS telemetry (NUT collector)
+
+The same run enables the Parent's **UPS charts**. The go.d `upsd` module ships with the installed
+agent, so this is configuration only — `host_vars/pve.yml` sets
+
+```yaml
+netdata_upsd_address: "192.168.2.213:3493"   # NUT server in LXC 213
+```
+
+and the role renders `/etc/netdata/go.d/upsd.conf` (one job named `nut` at that address) and restarts
+`netdata`. The NUT server allows **anonymous** reads, so there is no NUT account and no Key Vault
+secret; `pve` reaches `.213:3493` outbound (UFW allows outgoing traffic by default). A node with the
+variable empty converges with no `upsd.conf`. Charts land under the dashboard's `upsd` section —
+battery charge, runtime, load, input/output voltage and the `OL`/`OB`/`LB` status (§4).
+
 ## 3. Children — Lab and Edge
 
 ```powershell
@@ -132,6 +151,15 @@ curl -sk https://127.0.0.1:19999/api/v1/info | head              # TLS on loopba
 curl -sk https://192.168.2.201:19999/api/v1/info | head         # from the LAN workstation
 openssl s_client -connect 192.168.2.201:19996 -brief </dev/null 2>&1 | head -5   # streaming listener speaks TLS
 curl -s -o /dev/null -w '%{http_code}\n' http://192.168.2.201:19999             # 399 = redirect to https, no cleartext content
+```
+
+The UPS collector on the Parent — job configured, module collecting, charts published:
+
+```sh
+sudo grep -A2 '^jobs:' /etc/netdata/go.d/upsd.conf
+# go.d.plugin lives in the plugins.d dir (upstream docs: /usr/libexec/netdata/plugins.d/)
+sudo -u netdata /usr/libexec/netdata/plugins.d/go.d.plugin -d -m upsd | head -30   # one-shot debug run
+curl -sk https://127.0.0.1:19999/api/v1/charts | grep -o '"upsd[^"]*"' | head     # chart ids
 ```
 
 Open **`https://192.168.2.201:19999`** (expect a self-signed certificate warning) — the dashboard
@@ -204,6 +232,7 @@ Executed 2026-09-19 (install and configuration) and 2026-09-20 (§5 updates) —
 - [x] §4 no validation command printed the shared key
 - [x] Idempotent — a re-run reports **`changed=0`** for this role on all three nodes (`pve` `ok=38 changed=0`, `edge` `ok=40 changed=0`; `lab` `changed=1`, that one being `azure_arc`'s Arc-connect task, unrelated)
 - [x] §5 validated 2026-09-20 on all three nodes — with the flag: install skipped, `--reinstall` ran (`pve` `ok=40 changed=1`, `lab` `ok=52 changed=2`, `edge` `ok=42 changed=1`); without it: `changed=0` on `pve`/`edge` (`lab` `changed=1` = `azure_arc`); all three were already at the current stable, so no version change was observable
+- [ ] §2 UPS collector live on the Parent — `upsd` job in `go.d/upsd.conf`, charts for battery/load/voltage/status (pending the post-review playbook run)
 - [ ] Not in scope: alarm notifications (deferred to the HA VM, [#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68)); `cloudlab` untouched
 
 ## References
