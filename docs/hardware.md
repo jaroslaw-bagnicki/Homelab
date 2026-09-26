@@ -215,6 +215,6 @@ Bench instruments behind the figures quoted in the node audits and in
 
 | Instrument | Device | Used for |
 |---|---|---|
-| Power meter (watomierz) | **VIRONE EM-1/B** | inline plug meter — per-node idle/load draws and the UPS rail measurements ([runbook 29](runbooks/29-nut-ups-shutdown.md) · [research 32](research/32-wincor-beetle-m3-hardware-diagnostic.md)) |
-| Sound level meter (sonometr) | **UNI-T UT353** | cooling noise in dB(A) — Beetle M-III 43.7 dB(A) ([research 32](research/32-wincor-beetle-m3-hardware-diagnostic.md)) |
-| Multimeter (multimetr) | **Xtreme DT9205L** | bench voltage/continuity checks — PSU, cabling and board headers during node bring-up |
+| Power meter | **VIRONE EM-1/B** | inline plug meter — per-node idle/load draws and the UPS rail measurements ([runbook 29](runbooks/29-nut-ups-shutdown.md) · [research 32](research/32-wincor-beetle-m3-hardware-diagnostic.md)) |
+| Sound level meter | **UNI-T UT353** | cooling noise in dB(A) — Beetle M-III 43.7 dB(A) ([research 32](research/32-wincor-beetle-m3-hardware-diagnostic.md)) |
+| Multimeter | **Xtreme DT9205L** | bench voltage/continuity checks — PSU, cabling and board headers during node bring-up |
