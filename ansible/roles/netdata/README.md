@@ -124,6 +124,6 @@ Alarm **evaluation** is local; alarm **delivery** is not configured — every al
 `to: sitemgr`, which has no destination on an unclaimed, LAN-only Parent, so results appear in the
 console's Alerts view and through the API only. The notification path is deferred until the Home
 Assistant VM exists ([#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68)) — don't wire a
-mailer here. Four families apply to the UPS job: the agent's stock `upsd` alarms (battery charge,
+mailer here. Six alarm templates apply to the UPS job: the agent's stock `upsd` set (battery charge,
 10-minute load, collection staleness), the go.d collection-status alarm, and the role's two
 power-state alarms (`upsd_ups_on_battery`, `upsd_ups_low_battery`).
