@@ -56,7 +56,7 @@ Alerts view and the API ([ADR 27](../../../docs/decisions/27-monitoring-strategy
 | `netdata_role` | `child` | `parent` accepts streams; `child` streams to `netdata_stream_target`. |
 | `netdata_stream_target` | `""` | Parent `host:port`; empty on a `child` = standalone (no streaming). |
 | `netdata_storage` | `dbengine` | `ram` on eMMC-only nodes. |
-| `netdata_retention_tiers` | `7d` / `256MiB` per tier | Per-tier retention, one entry per dbengine tier (`time` + `size`, combined limits — the ceiling is the sum of the caps); `dbengine` only. The parent overrides it with 21d/3GiB, 30d/2GiB and 365d/2GiB. |
+| `netdata_retention_tiers` | `7d` / `256MiB` per tier | Per-tier retention, one entry per dbengine tier (`time` + `size`, combined limits — the ceiling is the sum of the caps); `dbengine` only. The parent overrides it with 14d/3GiB, 30d/2GiB and 365d/2GiB. |
 | `netdata_bind` | `127.0.0.1` | `[web] bind to` — a plain address, or Netdata's per-listener spec (`<ip>:<port>=<service>^SSL=force`); the parent lists two TLS-only listeners. |
 | `netdata_port` | `19999` | Default web port. |
 | `netdata_tls` | `false` | Serve listeners over TLS and write the `[web] ssl` paths; the parent sets `true`. |
