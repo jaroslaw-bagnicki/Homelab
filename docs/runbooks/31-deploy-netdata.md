@@ -61,9 +61,10 @@ Edge nodes stream to the Parent on the `pve` node; the NAS joins when it joins t
 - **Stream key** — a shared `netdata-stream-api-key` in `homelab-bysxdb-kv`, fetched at deploy time,
   sent only inside the TLS stream (§1).
 - **History** — per-tier, from `netdata_retention_tiers` (a `time` target and a `size` cap per tier).
-  Children stay at 7 d / 256 MiB; the **Parent** holds **21 d at 1s (3 GiB)**, **30 d at 1m (2 GiB)** and
-  **365 d at 1h (2 GiB)** — sized from measured growth (~145 MB/day tier 0, ~59 MB/day tier 1, ~5 MB/day
-  tier 2 at 18.8k metrics, 2026-09-26) and capped at ≈7 GiB on the `pve` root LV, which the guests do not
+  Children stay at 7 d / 256 MiB; the **Parent** holds **14 d at 1s (3 GiB)**, **30 d at 1m (2 GiB)** and
+  **365 d at 1h (2 GiB)** — sized from measured growth (~145 MB/day tier 0, so 14 d uses ≈2 GB of that
+  3 GiB cap and the rest is headroom for growth; ~59 MB/day tier 1, ~5 MB/day tier 2 at 18.8k metrics,
+  2026-09-26) and capped at ≈7 GiB on the `pve` root LV, which the guests do not
   share. Time and size are **combined** limits: data is dropped when either is reached, so the ceiling is
   the **sum** of the three caps.
 - **Secret hygiene** — `stream.conf` is written with `no_log`, so the shared key never appears in
@@ -271,7 +272,7 @@ Executed 2026-09-19 (install and configuration) and 2026-09-20 (§5 updates) —
 - [x] §3 Lab child streams to the Parent (parent mirrors `pve, lab, edge`; both children `hops=1`)
 - [x] §3 Edge child streams to the Parent; `netdata.conf` `mode = ram`
 - [x] §4 `dbengine tier 0/1/2 retention time = 7d` + `retention size` present (1 GiB per tier on the parent); `du -sh /var/cache/netdata/dbengine` → `512K` on a fresh install — *superseded 2026-09-26 by the per-tier row below*
-- [x] §4 retention is now **per-tier** — `netdata_retention_tiers` renders **`21d`/`3GiB`**, **`30d`/`2GiB`**, **`365d`/`2GiB`** on the Parent (verified live in `netdata.conf` 2026-09-26 — `ok=45 changed=3 failed=0`, `netdata` active, DB 993 MB); children stay at 7 d / 256 MiB
+- [x] §4 retention is now **per-tier** — `netdata_retention_tiers` renders **`14d`/`3GiB`**, **`30d`/`2GiB`**, **`365d`/`2GiB`** on the Parent (verified live in `netdata.conf` 2026-09-26 — `ok=45 changed=3 failed=0`, `netdata` active, DB 993 MB); children stay at 7 d / 256 MiB
 - [ ] §4 per-tier retention **effective** values confirmed as the tiers fill — the console storage view should show `effective` = `configured` for tiers 1 and 2 once 30 d / 365 d of data exist (weeks out)
 - [x] §4 no validation command printed the shared key
 - [x] Idempotent — a re-run reports **`changed=0`** for this role on all three nodes (`pve` `ok=38 changed=0`, `edge` `ok=40 changed=0`; `lab` `changed=1`, that one being `azure_arc`'s Arc-connect task, unrelated)

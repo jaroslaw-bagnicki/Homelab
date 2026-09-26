@@ -24,7 +24,7 @@ deployed by [runbook 31](../../../docs/runbooks/31-deploy-netdata.md); tracked i
 
 - **The Parent runs host-native on the `pve` Proxmox host** — not an LXC/VM — so it can read VM/CT cgroups and `/etc/pve` names; the overrides live in [`host_vars/pve.yml`](../../host_vars/pve.yml).
 - **Edge uses `netdata_storage: ram`** — no `dbengine` on the eMMC (ADR 24/27).
-- **History is per-tier, disk-capped** — `netdata_retention_tiers` sets a `time` target and a `size` cap for each dbengine tier (0 = 1s, 1 = 1m, 2 = 1h). Time and size are **combined** limits, so whichever binds first wins and the DB ceiling is the **sum** of the caps. Children keep 7 d / 256 MiB per tier; the Parent keeps 21 d at 1s (3 GiB), 30 d at 1m (2 GiB) and 365 d at 1h (2 GiB) — ≈7 GiB, sized from measured growth and held on its own root LV, which the guests do not share ([`host_vars/pve.yml`](../../host_vars/pve.yml)).
+- **History is per-tier, disk-capped** — `netdata_retention_tiers` sets a `time` target and a `size` cap for each dbengine tier (0 = 1s, 1 = 1m, 2 = 1h). Time and size are **combined** limits, so whichever binds first wins and the DB ceiling is the **sum** of the caps. Children keep 7 d / 256 MiB per tier; the Parent keeps 14 d at 1s (3 GiB), 30 d at 1m (2 GiB) and 365 d at 1h (2 GiB) — ≈7 GiB, sized from measured growth and held on its own root LV, which the guests do not share ([`host_vars/pve.yml`](../../host_vars/pve.yml)).
 - **Standalone-first** — a child with no reachable parent is still useful locally; re-pointing it is a config change, not a reinstall.
 
 ## UPS (NUT) telemetry
