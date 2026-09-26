@@ -24,8 +24,28 @@ deployed by [runbook 31](../../../docs/runbooks/31-deploy-netdata.md); tracked i
 
 - **The Parent runs host-native on the `pve` Proxmox host** — not an LXC/VM — so it can read VM/CT cgroups and `/etc/pve` names; the overrides live in [`host_vars/pve.yml`](../../host_vars/pve.yml).
 - **Edge uses `netdata_storage: ram`** — no `dbengine` on the eMMC (ADR 24/27).
-- **History is per-tier, disk-capped** — `netdata_retention_tiers` sets a `time` target and a `size` cap for each dbengine tier (0 = 1s, 1 = 1m, 2 = 1h). Time and size are **combined** limits, so whichever binds first wins and the DB ceiling is the **sum** of the caps. Children keep 7 d / 256 MiB per tier; the Parent keeps 14 d at 1s (3 GiB), 30 d at 1m (2 GiB) and 365 d at 1h (2 GiB) — ≈7 GiB, sized from measured growth and held on its own root LV, which the guests do not share. Retention is **role-owned, not host-owned** — `netdata_retention_tiers_by_role` in this role's defaults holds the parent's and the child's policy, and `netdata_retention_tiers` selects from it by `netdata_role` ([`defaults/main.yml`](defaults/main.yml)).
+- **History is per-tier and disk-capped** — the policy is **role-owned, not host-owned**: `netdata_retention_tiers_by_role` keys it by `netdata_role` and `netdata_retention_tiers` is the effective list ([Retention](#retention)).
 - **Standalone-first** — a child with no reachable parent is still useful locally; re-pointing it is a config change, not a reinstall.
+
+## Retention
+
+`netdata_retention_tiers_by_role` in [`defaults/main.yml`](defaults/main.yml) holds the policy for each
+role; `netdata_retention_tiers` is the effective list for the node. `time` and `size` are **combined**
+limits — data is dropped when either is reached — so a `size` must be able to carry its `time`, and the
+DB ceiling is the **sum** of the caps.
+
+| Tier | Granularity | Parent | Child |
+|---|---|---|---|
+| 0 | 1 s | 14 d / 3 GiB | 7 d / 256 MiB |
+| 1 | 1 m | 30 d / 2 GiB | 7 d / 256 MiB |
+| 2 | 1 h | 365 d / 2 GiB | 7 d / 256 MiB |
+| **DB ceiling** | | **≈7 GiB** | **≈768 MiB** |
+
+- Sizes come from measured growth (~145 MB/day tier 0, ~59 MB/day tier 1, ~5 MB/day tier 2 at 18.8k
+  metrics, 2026-09-26): 14 d uses ≈2 GB of tier 0's 3 GiB, so the remainder is headroom for growth
+  (k3s). The Parent's DB sits on its own root LV, which the guests do not share.
+- A `ram` node (Edge) keeps no `dbengine` history, so the retention tasks are skipped there.
+- Override `netdata_retention_tiers` on a host only if its disk cannot carry its role's caps.
 
 ## UPS (NUT) telemetry
 
