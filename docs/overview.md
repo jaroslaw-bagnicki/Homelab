@@ -31,6 +31,7 @@ Current state — what's running or in progress. Planned work is under [What's N
 | **Zot** | Cloudlab VPS | self-hosted OCI registry + pull-through cache | ✅ |
 | **OpenMediaVault** | OMV NAS | network shares (SMB) + backup target | ✅ |
 | **Netdata Parent** | Proxmox VE host (`pve`) | Tier B central monitoring pane — aggregates per-node metrics from Lab + Edge + Beetle NAS (`nas`) children | ✅ |
+| **UPS + NUT** | `pve` (LXC 213) + `lab`/`edge`/`nas` clients | shared-rail power protection — `upsmon` stops each node in order on low battery | ✅ |
 
 ## What's Next
 
@@ -91,6 +92,10 @@ Tenda Nova mesh — 192.168.2.0/24, gateway 192.168.2.1 (single broadcast domain
                  ├── Edge Ingress     — 192.168.2.240
                  └── work laptop dock — DHCP (corporate)
 ```
+
+**Power**: both strips sit behind the shared-rail **Green Cell UPSLM600** — USB on the `pve` node,
+NUT server in LXC 213, `upsmon` on `pve`/`lab`/`edge`/`nas`
+([ADR 30](decisions/30-ups-nut-graceful-shutdown.md)).
 
 Cloudlab VPS (Contabo) sits outside the LAN with its own Cloudflare Tunnel + Caddy (ADR 19).
 

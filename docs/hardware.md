@@ -163,3 +163,34 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Data plan | Orange Flex additional SIM (free) — internet-only, shares the plan data pool |
 | Role | Backup WAN (LTE failover) for the homelab edge — fallback until the ZTE WF830 ODU is found (idea 08) |
 | Docs | [idea 08](ideas/08-lte-wan-failover.md) · [research 30](research/30-mobile-internet-failover-offers.md) |
+
+## Power
+
+### Shared-rail UPS — Green Cell UPSLM600
+
+| Item | Spec |
+|---|---|
+| Model | Green Cell **UPSLM600** — line-interactive with AVR, **modified sine**, 1000 VA / 600 W · acquired 2026-09-12 |
+| Battery | 2× 12 V 7 Ah on a 24 V train (~168 Wh) · no `battery.runtime` published — `battery.charge` is a voltage transform, so end of discharge is the hardware's own `LB` flag |
+| Outlets | 4 — 2× Schuko + 2× IEC, split over two strips: **servers** (`pve`, `lab`, edge, `nas`) and **network appliances** (switch, mesh node, LTE modem — no NUT client) |
+| USB | `0665:5161` (Cypress/INNO TECH bridge) · HID usage page `0xFF00` (vendor-defined) and **no serial number** — driven by NUT `nutdrv_qx`, not `usbhid-ups` |
+| Self-consumption | **17 W** measured at the socket — the largest single consumer at light load |
+| Runtime | **52 min 53 s** to `LB` at the ~80 W full fleet (drill 2026-09-19) |
+| Placement | USB on the `pve` node; NUT server in **LXC 213** (`192.168.2.213`), `upsmon` clients on `pve` (primary) and `lab`/`edge`/`nas` (secondaries) |
+| Coverage | fleet servers + network appliances; monitors, Dell dock and laptop charger stay on wall sockets |
+| Docs | [ADR 30](decisions/30-ups-nut-graceful-shutdown.md) · [runbook 29](runbooks/29-nut-ups-shutdown.md) · [runbook 30](runbooks/30-deploy-nut-clients.md) · [drill report](reports/260919-nut-shutdown-drill.md) · [idea 09](ideas/09-ups-nut-home-assistant.md) |
+
+> Modified sine is the one constraint: harmless for the external DC bricks, but the Beetle NAS's
+> active-PFC supply must clear a pull-the-plug test before it is trusted on battery
+> ([ADR 29](decisions/29-nas-backup-target-beetle-m3-omv.md) · [#117](https://github.com/jaroslaw-bagnicki/Homelab/issues/117)).
+
+## Test & Measurement
+
+Bench instruments behind the figures quoted in the node audits and in
+[runbook 29](runbooks/29-nut-ups-shutdown.md).
+
+| Instrument | Device | Used for |
+|---|---|---|
+| Power meter (watomierz) | **VIRONE EM-1/B** | inline plug meter — per-node idle/load draws and the UPS rail measurements ([runbook 29](runbooks/29-nut-ups-shutdown.md) · [research 32](research/32-wincor-beetle-m3-hardware-diagnostic.md)) |
+| Sound level meter (sonometr) | **UNI-T UT353** | cooling noise in dB(A) — Beetle M-III 43.7 dB(A) ([research 32](research/32-wincor-beetle-m3-hardware-diagnostic.md)) |
+| Multimeter (multimetr) | **Xtreme DT9205L** | bench voltage/continuity checks — PSU, cabling and board headers during node bring-up |
