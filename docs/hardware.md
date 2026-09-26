@@ -184,6 +184,30 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 > active-PFC supply must clear a pull-the-plug test before it is trusted on battery
 > ([ADR 29](decisions/29-nas-backup-target-beetle-m3-omv.md) · [#117](https://github.com/jaroslaw-bagnicki/Homelab/issues/117)).
 
+## Smart Home
+
+One Zigbee mesh serves two consumers — the Home Assistant OS VM (VM 210) and the
+HA-independent Zigbee2MQTT → Prometheus monitoring path — with the coordinator USB on the `pve`
+node ([ADR 25](decisions/25-home-assistant-thin-client.md) · [ADR 26](decisions/26-zigbee-energy-monitoring.md)).
+
+### Zigbee coordinator — Sonoff ZBDongle-P
+
+| Item | Spec |
+|---|---|
+| Type | Zigbee 3.0 USB coordinator — Sonoff **ZBDongle-P**, Silicon Labs **CC2652P** (Z-Stack) |
+| USB | Silicon Labs CP210x bridge `10c4:ea60` · by-id `usb-ITead_Sonoff_Zigbee_3.0_USB_Dongle_Plus_c8f3975dd19aef1197dbb89061ce3355-if00-port0` |
+| Placement | USB on the `pve` node — the smart-home node sits centrally for Zigbee coverage; passthrough to **LXC 212** (Zigbee2MQTT) still to be wired ([#85](https://github.com/jaroslaw-bagnicki/Homelab/issues/85)) |
+| Docs | [ADR 26](decisions/26-zigbee-energy-monitoring.md) · [research 27](research/27-zigbee-energy-monitoring.md) · [research 29](research/29-wyse5070-hardware-diagnostic.md) |
+
+### Smart plugs — 4× Nous A1Z
+
+| Item | Spec |
+|---|---|
+| Type | Zigbee 3.0 smart plug, 16 A / 3680 W — metering **W / A / V / kWh** |
+| Mesh | mains-powered, act as **Zigbee routers** — extend coverage for battery sensors |
+| Role | per-node energy monitoring ([#73](https://github.com/jaroslaw-bagnicki/Homelab/issues/73)) and Home Assistant sockets |
+| Docs | [ADR 26](decisions/26-zigbee-energy-monitoring.md) · [research 27](research/27-zigbee-energy-monitoring.md) |
+
 ## Test & Measurement
 
 Bench instruments behind the figures quoted in the node audits and in
