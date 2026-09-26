@@ -69,28 +69,46 @@
   delegate_to: localhost
   no_log: true
 
-# The [db] schema: a storage mode for every node, plus a time target and a size cap per
-# tier (0/1/2) when the node keeps a disk-backed DB.
-- name: Configure the Netdata database section
-  vars:
-    netdata_db_settings: >-
-      {{ [('mode', netdata_storage)]
-         + ([('dbengine tier 0 retention time', netdata_retention_time),
-             ('dbengine tier 1 retention time', netdata_retention_time),
-             ('dbengine tier 2 retention time', netdata_retention_time),
-             ('dbengine tier 0 retention size', netdata_retention_size),
-             ('dbengine tier 1 retention size', netdata_retention_size),
-             ('dbengine tier 2 retention size', netdata_retention_size)]
-            if netdata_storage == 'dbengine' else []) }}
+# The [db] schema: a storage mode for every node, plus a time target and a size cap per tier
+# (0 = 1s, 1 = 1m, 2 = 1h) when the node keeps a disk-backed DB. Time and size are combined
+# limits — data is dropped when either is reached — so the DB ceiling is the sum of the sizes.
+- name: Configure the Netdata storage mode
   community.general.ini_file:
     path: /etc/netdata/netdata.conf
     section: db
-    option: "{{ item.0 }}"
-    value: "{{ item.1 }}"
+    option: mode
+    value: "{{ netdata_storage }}"
     mode: "0644"
-  loop: "{{ netdata_db_settings }}"
+  notify: Restart netdata
+
+- name: Configure Netdata per-tier retention time
+  when: netdata_storage == 'dbengine'
+  community.general.ini_file:
+    path: /etc/netdata/netdata.conf
+    section: db
+    option: "dbengine tier {{ tier_index }} retention time"
+    value: "{{ tier.time }}"
+    mode: "0644"
+  loop: "{{ netdata_retention_tiers }}"
   loop_control:
-    label: "{{ item.0 }}"
+    loop_var: tier
+    index_var: tier_index
+    label: "tier {{ tier_index }} time = {{ tier.time }}"
+  notify: Restart netdata
+
+- name: Configure Netdata per-tier retention size
+  when: netdata_storage == 'dbengine'
+  community.general.ini_file:
+    path: /etc/netdata/netdata.conf
+    section: db
+    option: "dbengine tier {{ tier_index }} retention size"
+    value: "{{ tier.size }}"
+    mode: "0644"
+  loop: "{{ netdata_retention_tiers }}"
+  loop_control:
+    loop_var: tier
+    index_var: tier_index
+    label: "tier {{ tier_index }} size = {{ tier.size }}"
   notify: Restart netdata
 
 # The kickstart install already creates /etc/netdata/ssl; only the certificate is ours.
