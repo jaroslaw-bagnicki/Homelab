@@ -611,8 +611,10 @@ runbook completes on its own; the client rollout (§4/§5) is verified by
   OMV-panel-vs-files decision.
 - **Router client** — the Futro S930 is on strip 1 from day one too, but OPNsense is FreeBSD, so its
   client path differs ([#96](https://github.com/jaroslaw-bagnicki/Homelab/issues/96)).
-- **Telemetry** — `upsc` only for now; UPS metrics into the Netdata/Prometheus plane next to
-  [#73](https://github.com/jaroslaw-bagnicki/Homelab/issues/73) is the natural upgrade.
+- **Telemetry** — **Netdata configured** (2026-09-26): the Parent's go.d `upsd` job ships in the
+  `netdata` role — [runbook 31](31-deploy-netdata.md) §2; its status follows the post-review `--diff`
+  run. Prometheus/Grafana remains open with
+  [#73](https://github.com/jaroslaw-bagnicki/Homelab/issues/73).
 
 ## References
 

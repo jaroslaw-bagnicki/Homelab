@@ -15,6 +15,8 @@ netdata_bind: "{{ ansible_host }}:19999=dashboard^SSL=force {{ ansible_host }}:1
 netdata_tls: true
 netdata_storage: dbengine
 netdata_retention_size: "1GiB"
+# UPS telemetry — poll the NUT server (LXC 213 on this host); anonymous reads.
+netdata_upsd_address: "192.168.2.213:3493"
 
 nut_client_role: primary
 nut_client_account: upsmon-host

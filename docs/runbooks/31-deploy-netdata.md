@@ -1,10 +1,11 @@
 # Netdata — Tier B Parent (pve node) + streaming children
 
-> Deploy the **Netdata Parent** on the `pve` node's Proxmox host (`192.168.2.201`) and
-> re-point the Lab and Edge children to it, via the shared `netdata` Ansible role.
-> Tracked in [issue #104](https://github.com/jaroslaw-bagnicki/Homelab/issues/104) (child of
-> [#75](https://github.com/jaroslaw-bagnicki/Homelab/issues/75)). Parent placement is
-> [ADR 27](../decisions/27-monitoring-strategy.md).
+> Deploy the **Netdata Parent** on the `pve` node's Proxmox host (`192.168.2.201`), re-point the Lab
+> and Edge children to it, and point the Parent's go.d `upsd` job at the NUT server for **UPS
+> telemetry** (§2) — all via the shared `netdata` Ansible role. Tracked in
+> [issue #104](https://github.com/jaroslaw-bagnicki/Homelab/issues/104) (child of
+> [#75](https://github.com/jaroslaw-bagnicki/Homelab/issues/75), whose checklist carries the UPS
+> collector). Parent placement is [ADR 27](../decisions/27-monitoring-strategy.md).
 >
 > **One agent per node.** Per the [Netdata Proxmox VE integration](https://www.netdata.cloud/integrations/data-collection/containers-and-vms/proxmox-ve-monitoring/),
 > Netdata must run **directly on the Proxmox host** (not in a VM or container) to read VM/CT
@@ -18,6 +19,8 @@
 >
 > **Alarms are dashboard-only for now.** The notification path is deferred until the Home Assistant
 > VM exists ([#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68)) — don't wire a mailer here.
+> The agent's stock alarms go live with each collector — for UPS: battery charge, load and collection
+> staleness — so expect them in the dashboard, not in an inbox.
 >
 > **The transport is encrypted.** The Parent serves the dashboard **only over HTTPS** (`^SSL=force`
 > on its `19999` listener — plain HTTP gets Netdata's `399` redirect to `https://`, so no content is
@@ -49,6 +52,12 @@ Edge nodes stream to the Parent on the `pve` node; the NAS joins when it joins t
   grants the `netdata` user read access to `/etc/pve`.
 - **Children** — Lab (M910q, `dbengine`) and Edge (Wyse 3040, `ram` — eMMC-safe) stream to
   `192.168.2.201:19996:SSL` (`netdata_stream_ssl: true` — the Parent refuses plaintext streams).
+- **UPS telemetry** — the Parent's bundled go.d `upsd` module polls the NUT server
+  (`netdata_upsd_address: 192.168.2.213:3493`, set in `host_vars/pve.yml`) and charts battery
+  charge, load, voltages and the `OL`/`OB`/`LB` status (runtime too, though this unit reports none).
+  Reads are **anonymous**, so no NUT account and no Key Vault secret — and the same run installs two
+  **power-state alarms** (`on_battery` → warning, `low_battery` → critical), because the stock UPS
+  alarms never flag a mains loss (§2).
 - **Stream key** — a shared `netdata-stream-api-key` in `homelab-bysxdb-kv`, fetched at deploy time,
   sent only inside the TLS stream (§1).
 - **History** — per-tier `dbengine tier N retention time = 7d` on the parent and on Lab, bounded by
@@ -104,6 +113,39 @@ self-signed certificate, writes the TLS-only listeners and the parent `stream.co
 `19999` (dashboard) and `19996` (streaming) from `192.168.2.0/24` (`host_vars/pve.yml`) — neither
 serves content over cleartext (plain HTTP gets a `399` redirect to `https://`).
 
+### UPS telemetry (NUT collector)
+
+The same run enables the Parent's **UPS charts**. The go.d `upsd` module ships with the installed
+agent, so this is configuration only — `host_vars/pve.yml` sets
+
+```yaml
+netdata_upsd_address: "192.168.2.213:3493"   # NUT server in LXC 213
+```
+
+and the role renders `/etc/netdata/go.d/upsd.conf` (one job named `nut` at that address) and restarts
+`netdata`. The NUT server allows **anonymous** reads, so there is no NUT account and no Key Vault
+secret; `pve` reaches `.213:3493` outbound (UFW allows outgoing traffic by default). A node with the
+variable empty converges with no `upsd.conf`.
+
+The module is documented for **remote instances** ([integration page](https://www.netdata.cloud/integrations/data-collection/hardware-and-sensors/ups-nut/)) and
+does not support auto-detection, so the explicit job is what activates it — and no Netdata agent is
+needed inside LXC 213. Each metric carries two names: the **context** (`upsd.ups_battery_charge`,
+`upsd.ups_status`, …) and the job-scoped **chart id** the API answers to (`upsd_<job>_<ups>.<metric>` —
+here `upsd_nut_ups.battery_charge_percentage`, `upsd_nut_ups.status`, `upsd_nut_ups.input_voltage`,
+`upsd_nut_ups.load_percentage`, `upsd_nut_ups.load_usage`). Populated on this unit: charge, battery
+voltage, load (%) and status. **Empty by nature of the UPS:** `load_usage` (W) and
+`battery_estimated_runtime` — `nutdrv_qx` reports neither, which is also why the shutdown trigger is
+`LB`, not a runtime countdown ([ADR 30](../decisions/30-ups-nut-graceful-shutdown.md)).
+
+Three caveats. **(1) The console cannot show these charts** without a Netdata Cloud SSO session — its
+chart explorer is Cloud-backed and this Parent is unclaimed and LAN-only, so validate through the API
+(§4). **(2)** The agent's **stock UPS alarms** (battery charge <75 % warn / <40 % crit, 10-minute load,
+collection staleness) evaluate on their own thresholds and, like everything here, have **no delivery
+path** ([#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68)). **(3)** That stock set never
+flags a **mains loss**, so the role adds `/etc/netdata/health.d/upsd-power.conf`:
+`upsd_ups_on_battery` → warning while `on_battery` is set, and `upsd_ups_low_battery` → critical on
+`low_battery` — local evaluation only, visible in the Alerts view and through the API.
+
 ## 3. Children — Lab and Edge
 
 ```powershell
@@ -128,11 +170,34 @@ On `pve`:
 
 ```sh
 systemctl status netdata
-curl -sk https://127.0.0.1:19999/api/v1/info | head              # TLS on loopback
-curl -sk https://192.168.2.201:19999/api/v1/info | head         # from the LAN workstation
+# The Parent binds ONLY to 192.168.2.201 — there is no loopback listener, so 127.0.0.1:19999
+# answers nothing (curl exit 7). Query the LAN address, on the node or from a workstation.
+curl -sk https://192.168.2.201:19999/api/v2/contexts -o /dev/null -w '%{http_code} %{size_download} bytes\n'   # 200, ~135 KB
 openssl s_client -connect 192.168.2.201:19996 -brief </dev/null 2>&1 | head -5   # streaming listener speaks TLS
 curl -s -o /dev/null -w '%{http_code}\n' http://192.168.2.201:19999             # 399 = redirect to https, no cleartext content
 ```
+
+The UPS collector on the Parent — job configured, contexts published, values flowing, alarms registered:
+
+```sh
+# Job on disk, then the contexts the agent publishes (12 of them — no Cloud needed)
+sudo grep -A2 '^jobs:' /etc/netdata/go.d/upsd.conf
+curl -sk https://192.168.2.201:19999/api/v2/contexts | grep -o upsd[._a-z]* | sort -u
+
+# Live values — the API answers to the job-scoped chart id, not the context:
+# upsd_<job>_<ups>.<metric>
+curl -sk "https://192.168.2.201:19999/api/v1/data?chart=upsd_nut_ups.battery_charge_percentage&after=-60&format=json" | tail -c 120   # 100
+curl -sk "https://192.168.2.201:19999/api/v1/data?chart=upsd_nut_ups.status&after=-60&format=json" | tail -c 200                     # 1 on the on_line dimension
+
+# Alarms — the three stock upsd templates, the job's collection status, and the two power-state
+# alarms this role installs
+curl -sk "https://192.168.2.201:19999/api/v1/alarms?all" | grep -o upsd[._a-z]* | sort -u
+curl -sk https://192.168.2.201:19999/api/v2/alerts | grep -o upsd[._a-z]*         # empty = nothing firing
+```
+
+> **Skip the standalone collector debug run.** `go.d.plugin -d -m upsd` invoked by hand did not pick up
+> this job (it printed only its internal metrics), so it is not a useful check here — the agent's own
+> contexts, values and alarms above are authoritative.
 
 Open **`https://192.168.2.201:19999`** (expect a self-signed certificate warning) — the dashboard
 should show the `pve` node and, once §3 runs, the `lab` and `edge` nodes in the Nodes view.
@@ -204,7 +269,9 @@ Executed 2026-09-19 (install and configuration) and 2026-09-20 (§5 updates) —
 - [x] §4 no validation command printed the shared key
 - [x] Idempotent — a re-run reports **`changed=0`** for this role on all three nodes (`pve` `ok=38 changed=0`, `edge` `ok=40 changed=0`; `lab` `changed=1`, that one being `azure_arc`'s Arc-connect task, unrelated)
 - [x] §5 validated 2026-09-20 on all three nodes — with the flag: install skipped, `--reinstall` ran (`pve` `ok=40 changed=1`, `lab` `ok=52 changed=2`, `edge` `ok=42 changed=1`); without it: `changed=0` on `pve`/`edge` (`lab` `changed=1` = `azure_arc`); all three were already at the current stable, so no version change was observable
-- [ ] Not in scope: alarm notifications (deferred to the HA VM, [#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68)); `cloudlab` untouched
+- [x] §2 UPS collector live on the Parent — `upsd` job in `go.d/upsd.conf`; 12 `upsd.*` contexts, battery charge **100**, status `on_line`, collection alarm **CLEAR** (2026-09-26 — `playbook-pve.yml` `ok=41 changed=3 failed=0`)
+- [x] §2 power-state alarms registered — `upsd_nut_ups.status.upsd_ups_on_battery` + `…upsd_ups_low_battery` (2026-09-26 — `ok=43 changed=2 failed=0`), and **both raise/clear paths validated on a real mains loss the same day**: wall plug pulled 11:54:05 → *warning* within ~10 s ("UPS ups is on battery", value `1 status`); mains restored → **cleared** (verified 09:56 UTC)
+- [ ] Not in scope: alarm delivery (deferred to the HA VM, [#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68)); `cloudlab` untouched
 
 ## References
 

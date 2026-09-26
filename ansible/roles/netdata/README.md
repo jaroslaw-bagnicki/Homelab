@@ -8,9 +8,12 @@ deployed by [runbook 31](../../../docs/runbooks/31-deploy-netdata.md); tracked i
 ## Files
 
 - `defaults/main.yml` — role parameters (child defaults).
-- `tasks/main.yml` — install, Key Vault stream-key fetch, storage/retention/web config, `stream.conf`, Proxmox name resolution, service.
+- `tasks/main.yml` — install, Key Vault stream-key fetch, storage/retention/web config, `stream.conf`, Proxmox name resolution, service (imports `upsd.yml`).
+- `tasks/upsd.yml` — the UPS (NUT) feature: collector job + power-state alarms, gated by `netdata_upsd_address`; run it alone with `--tags upsd`.
 - `handlers/main.yml` — restart `netdata`.
 - `templates/stream.conf.j2` — parent (`[<key>] enabled = yes`) or child (`[stream]` destination + key).
+- `templates/upsd.conf.j2` — optional go.d `upsd` job (NUT daemon address + job name).
+- `files/health-upsd-power.conf` — optional `upsd` power-state alarms (on battery / low battery).
 
 ## Roles
 
@@ -23,6 +26,28 @@ deployed by [runbook 31](../../../docs/runbooks/31-deploy-netdata.md); tracked i
 - **Edge uses `netdata_storage: ram`** — no `dbengine` on the eMMC (ADR 24/27).
 - **History is 7 days, disk-capped** — per-tier `dbengine tier N retention time = 7d` with `dbengine tier N retention size` (256 MiB per tier on a child, 1 GiB on the parent — its tier quota is shared by the streaming children). Time and size are combined limits, so the DB ceiling is ~3 × the size.
 - **Standalone-first** — a child with no reachable parent is still useful locally; re-pointing it is a config change, not a reinstall.
+
+## UPS (NUT) telemetry
+
+The parent charts UPS state straight from NUT's network protocol: the bundled go.d `upsd` module
+(no auto-detection — a job has to be declared) polls `netdata_upsd_address` and publishes the upstream
+charts `upsd.ups_battery_charge`, `upsd.ups_battery_voltage`, `upsd.ups_load` (%),
+`upsd.ups_load_usage` (W), `upsd.ups_input_voltage` / `upsd.ups_output_voltage` and `upsd.ups_status`
+(`on_line` / `on_battery` / `low_battery` dimensions).
+
+Reads are **anonymous** (`upsd` is open on the LAN, [ADR 30](../../../docs/decisions/30-ups-nut-graceful-shutdown.md)),
+so there is **no NUT account and no Key Vault secret** — only [`host_vars/pve.yml`](../../host_vars/pve.yml)
+sets an address. A node with the variable empty converges with **no job** (`/etc/netdata/go.d/upsd.conf`
+is removed). The module polls a **remote** `upsd`, so no agent goes inside LXC 213 — one agent per node
+(ADR 27) still holds. `upsd.ups_battery_estimated_runtime` stays empty on this unit: `nutdrv_qx` reports
+no `battery.runtime` (issue #115).
+
+**Power-state alarms.** The stock `upsd` alarms watch charge, load and collection staleness only, so
+losing mains raises nothing. The role therefore installs `/etc/netdata/health.d/upsd-power.conf`:
+`upsd_ups_on_battery` (warning while the `on_battery` dimension is set) and `upsd_ups_low_battery`
+(critical on `low_battery` — the same signal that drives the fleet shutdown). Both are **evaluation
+only**: `to: sitemgr` has no delivery path on an unclaimed, LAN-only Parent, so they surface in the
+Alerts view and the API ([ADR 27](../../../docs/decisions/27-monitoring-strategy.md)).
 
 ## Parameters
 
@@ -40,6 +65,8 @@ deployed by [runbook 31](../../../docs/runbooks/31-deploy-netdata.md); tracked i
 | `netdata_stream_ssl` | `false` | Child only: append `:SSL` to the stream destination. |
 | `netdata_proxmox_host` | `false` | Grants the `netdata` user `/etc/pve` read (parent on Proxmox). |
 | `netdata_upgrade` | `false` | `true` re-runs the kickstart installer (`--reinstall`) for one run. |
+| `netdata_upsd_address` | `""` | NUT daemon `host:port` to poll for UPS telemetry (`go.d/upsd.conf`); empty = no job. The parent sets `192.168.2.213:3493`. |
+| `netdata_upsd_name` | `nut` | Job name in the rendered `go.d/upsd.conf`. |
 
 ## Secrets
 
@@ -93,5 +120,10 @@ children.
 
 ## Alarms
 
-Alarms are **dashboard-only** for now — the notification path is deferred until the Home Assistant VM
-exists ([#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68)).
+Alarm **evaluation** is local; alarm **delivery** is not configured — every alarm carries
+`to: sitemgr`, which has no destination on an unclaimed, LAN-only Parent, so results appear in the
+console's Alerts view and through the API only. The notification path is deferred until the Home
+Assistant VM exists ([#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68)) — don't wire a
+mailer here. Six alarm templates apply to the UPS job: the agent's stock `upsd` set (battery charge,
+10-minute load, collection staleness), the go.d collection-status alarm, and the role's two
+power-state alarms (`upsd_ups_on_battery`, `upsd_ups_low_battery`).
