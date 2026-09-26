@@ -272,7 +272,7 @@ Executed 2026-09-19 (install and configuration) and 2026-09-20 (§5 updates) —
 - [x] §3 Lab child streams to the Parent (parent mirrors `pve, lab, edge`; both children `hops=1`)
 - [x] §3 Edge child streams to the Parent; `netdata.conf` `mode = ram`
 - [x] §4 `dbengine tier 0/1/2 retention time = 7d` + `retention size` present (1 GiB per tier on the parent); `du -sh /var/cache/netdata/dbengine` → `512K` on a fresh install — *superseded 2026-09-26 by the per-tier row below*
-- [x] §4 retention is now **per-tier** (role-owned) — `netdata_retention_tiers` renders **`14d`/`3GiB`**, **`30d`/`2GiB`**, **`365d`/`2GiB`** on the Parent (verified live in `netdata.conf` 2026-09-26 — `ok=45 changed=3 failed=0`, `netdata` active, DB 993 MB); children stay at 7 d / 256 MiB
+- [x] §4 retention is now **per-tier** (role-owned) — `netdata_retention_tiers` renders **`14d`/`3GiB`**, **`30d`/`2GiB`**, **`365d`/`2GiB`** on the Parent (verified live in `netdata.conf` 2026-09-26 — the 21 d first cut ran `ok=45 changed=3 failed=0`, the trim to 14 d ran `ok=45 changed=2 failed=0`; `netdata` active, DB 993 MB); children stay at 7 d / 256 MiB
 - [ ] §4 per-tier retention **effective** values confirmed as the tiers fill — the console storage view should show `effective` = `configured` for tiers 1 and 2 once 30 d / 365 d of data exist (weeks out)
 - [x] §4 no validation command printed the shared key
 - [x] Idempotent — a re-run reports **`changed=0`** for this role on all three nodes (`pve` `ok=38 changed=0`, `edge` `ok=40 changed=0`; `lab` `changed=1`, that one being `azure_arc`'s Arc-connect task, unrelated)
