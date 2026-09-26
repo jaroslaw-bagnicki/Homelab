@@ -42,7 +42,7 @@ Azure **management plane** and the local **real-time plane**.
 |---|---|---|
 | **Per-node metrics** | Netdata — Parent host-native on the `pve` node, children on `lab`/`edge`/`nas`; HTTPS-only dashboard, TLS-only streaming, 7-day retention; LAN-only and unauthenticated, alarm delivery waits on the HA VM ([#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68)) | ✅ |
 | **Cloud telemetry** | Azure Monitor via Arc — AMA → Log Analytics `homelab-law` (`VmInsights\DetailedMetrics` DCR) on Arc-enrolled nodes; Container Insights joins with k3s ([ADR 09](decisions/09-azure-monitor-via-arc.md)) | ✅ |
-| **Power state** | NUT in LXC 213 — `upsmon` events drive the ordered fleet shutdown; battery, load and voltage charted in Netdata by the `upsd` collector ([ADR 30](decisions/30-ups-nut-graceful-shutdown.md) · [runbook 31](runbooks/31-deploy-netdata.md)) | ✅ |
+| **Power state** | NUT in LXC 213 — `upsmon` events drive the ordered fleet shutdown, `upsc` for ad-hoc reads ([ADR 30](decisions/30-ups-nut-graceful-shutdown.md)) | ✅ |
 | **Disk health** | SMART plus long self-tests on the NAS arrays (OMV SMART page), findings recorded per drive | ✅ |
 | **Per-device energy** | Zigbee plugs → Zigbee2MQTT → MQTT → `mqtt2prometheus` → Prometheus → Grafana ([#73](https://github.com/jaroslaw-bagnicki/Homelab/issues/73) · [ADR 26](decisions/26-zigbee-energy-monitoring.md)) | 📋 |
 | **Logs** | Tier B log store — **VictoriaLogs** leading candidate over Loki, HTTPS + HTTP basic auth from day one, **30-day retention**; host placement and the collector still open ([#123](https://github.com/jaroslaw-bagnicki/Homelab/issues/123) · [#84](https://github.com/jaroslaw-bagnicki/Homelab/issues/84) · [ADR 34](decisions/34-lan-tls-only.md)) | 🔨 |

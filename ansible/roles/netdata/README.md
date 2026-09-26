@@ -29,9 +29,9 @@ deployed by [runbook 31](../../../docs/runbooks/31-deploy-netdata.md); tracked i
 
 The parent charts UPS state straight from NUT's network protocol: the bundled go.d `upsd` module
 (no auto-detection — a job has to be declared) polls `netdata_upsd_address` and publishes the upstream
-charts `upsd.ups_battery_charge`, `upsd.ups_battery_voltage`, `upsd.ups_load` / `upsd.ups_load_usage`
-(W), `upsd.ups_input_voltage` / `upsd.ups_output_voltage` and `upsd.ups_status` (`on_line` /
-`on_battery` / `low_battery` dimensions).
+charts `upsd.ups_battery_charge`, `upsd.ups_battery_voltage`, `upsd.ups_load` (%),
+`upsd.ups_load_usage` (W), `upsd.ups_input_voltage` / `upsd.ups_output_voltage` and `upsd.ups_status`
+(`on_line` / `on_battery` / `low_battery` dimensions).
 
 Reads are **anonymous** (`upsd` is open on the LAN, [ADR 30](../../../docs/decisions/30-ups-nut-graceful-shutdown.md)),
 so there is **no NUT account and no Key Vault secret** — only [`host_vars/pve.yml`](../../host_vars/pve.yml)

@@ -54,8 +54,8 @@ Edge nodes stream to the Parent on the `pve` node; the NAS joins when it joins t
   `192.168.2.201:19996:SSL` (`netdata_stream_ssl: true` — the Parent refuses plaintext streams).
 - **UPS telemetry** — the Parent's bundled go.d `upsd` module polls the NUT server
   (`netdata_upsd_address: 192.168.2.213:3493`, set in `host_vars/pve.yml`) and charts battery
-  charge, load, voltages, runtime and the `OL`/`OB`/`LB` state. Reads are **anonymous**, so no NUT
-  account and no Key Vault secret (§2).
+  charge, load, voltages and the `OL`/`OB`/`LB` status (runtime too, though this unit reports none).
+  Reads are **anonymous**, so no NUT account and no Key Vault secret (§2).
 - **Stream key** — a shared `netdata-stream-api-key` in `homelab-bysxdb-kv`, fetched at deploy time,
   sent only inside the TLS stream (§1).
 - **History** — per-tier `dbengine tier N retention time = 7d` on the parent and on Lab, bounded by
@@ -128,7 +128,7 @@ variable empty converges with no `upsd.conf`.
 The module is documented for **remote instances** ([integration page](https://www.netdata.cloud/integrations/data-collection/hardware-and-sensors/ups-nut/)) and
 does not support auto-detection, so the explicit job is what activates it — and no Netdata agent is
 needed inside LXC 213. Charts land under the dashboard's `upsd` section: `upsd.ups_battery_charge`,
-`upsd.ups_battery_voltage`, `upsd.ups_load` / `upsd.ups_load_usage` (W — the whole fleet's draw),
+`upsd.ups_battery_voltage`, `upsd.ups_load` (%) and `upsd.ups_load_usage` (W — the whole fleet's draw),
 `upsd.ups_input_voltage` / `upsd.ups_output_voltage` and `upsd.ups_status`. Two caveats: the agent's
 **stock UPS alarms** activate with the job (battery charge <75 % warn / <40 % crit, 10-minute load,
 collection staleness) but remain **dashboard-only** — no delivery path is added here ([#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68));
