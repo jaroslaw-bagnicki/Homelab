@@ -13,7 +13,7 @@ Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month 
 
 ## 2026‑09
 
-- **(feat)** UPS telemetry in Netdata — the Parent charts battery, load, voltage and on-battery state from the NUT server — [runbook 31](docs/runbooks/31-deploy-netdata.md)
+- **(feat)** UPS telemetry in Netdata — the Parent charts battery, load and voltage from the NUT server and raises on-battery events as local alarms — [runbook 31](docs/runbooks/31-deploy-netdata.md)
 - **(docs)** Add ADR 34 — LAN services are TLS-only, no plaintext HTTP — [ADR 34](docs/decisions/34-lan-tls-only.md)
 - **(feat)** Beetle M-III NAS Phase 1 — OMV 8.5 on `nas`, `md0` RAID1 reboot-verified, fleet-enrolled with the Netdata child + NUT secondary — [runbook 32](docs/runbooks/32-beetle-m3-omv-setup.md)
 - **(feat)** Netdata Tier B — `netdata` role (parent/child), Parent host-native on `pve` behind an **HTTPS-only dashboard** with TLS-only streaming — [runbook 31](docs/runbooks/31-deploy-netdata.md)

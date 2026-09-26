@@ -12,6 +12,7 @@ deployed by [runbook 31](../../../docs/runbooks/31-deploy-netdata.md); tracked i
 - `handlers/main.yml` — restart `netdata`.
 - `templates/stream.conf.j2` — parent (`[<key>] enabled = yes`) or child (`[stream]` destination + key).
 - `templates/upsd.conf.j2` — optional go.d `upsd` job (NUT daemon address + job name).
+- `files/health-upsd-power.conf` — optional `upsd` power-state alarms (on battery / low battery).
 
 ## Roles
 
@@ -39,6 +40,13 @@ sets an address. A node with the variable empty converges with **no job** (`/etc
 is removed). The module polls a **remote** `upsd`, so no agent goes inside LXC 213 — one agent per node
 (ADR 27) still holds. `upsd.ups_battery_estimated_runtime` stays empty on this unit: `nutdrv_qx` reports
 no `battery.runtime` (issue #115).
+
+**Power-state alarms.** The stock `upsd` alarms watch charge, load and collection staleness only, so
+losing mains raises nothing. The role therefore installs `/etc/netdata/health.d/upsd-power.conf`:
+`upsd_ups_on_battery` (warning while the `on_battery` dimension is set) and `upsd_ups_low_battery`
+(critical on `low_battery` — the same signal that drives the fleet shutdown). Both are **evaluation
+only**: `to: sitemgr` has no delivery path on an unclaimed, LAN-only Parent, so they surface in the
+Alerts view and the API ([ADR 27](../../../docs/decisions/27-monitoring-strategy.md)).
 
 ## Parameters
 
@@ -111,7 +119,10 @@ children.
 
 ## Alarms
 
-Alarms are **dashboard-only** for now — the notification path is deferred until the Home Assistant VM
-exists ([#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68)). The stock `upsd` alarms
-(battery charge, load, collection staleness) ship with the agent and go live with the UPS job; their
-`to: sitemgr` target is not a delivery path, so they surface in the dashboard only.
+Alarm **evaluation** is local; alarm **delivery** is not configured — every alarm carries
+`to: sitemgr`, which has no destination on an unclaimed, LAN-only Parent, so results appear in the
+console's Alerts view and through the API only. The notification path is deferred until the Home
+Assistant VM exists ([#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68)) — don't wire a
+mailer here. Four families apply to the UPS job: the agent's stock `upsd` alarms (battery charge,
+10-minute load, collection staleness), the go.d collection-status alarm, and the role's two
+power-state alarms (`upsd_ups_on_battery`, `upsd_ups_low_battery`).
