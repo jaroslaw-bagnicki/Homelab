@@ -8,7 +8,8 @@ deployed by [runbook 31](../../../docs/runbooks/31-deploy-netdata.md); tracked i
 ## Files
 
 - `defaults/main.yml` — role parameters (child defaults).
-- `tasks/main.yml` — install, Key Vault stream-key fetch, storage/retention/web config, `stream.conf`, UPS collector, Proxmox name resolution, service.
+- `tasks/main.yml` — install, Key Vault stream-key fetch, storage/retention/web config, `stream.conf`, Proxmox name resolution, service (imports `upsd.yml`).
+- `tasks/upsd.yml` — the UPS (NUT) feature: collector job + power-state alarms, gated by `netdata_upsd_address`; run it alone with `--tags upsd`.
 - `handlers/main.yml` — restart `netdata`.
 - `templates/stream.conf.j2` — parent (`[<key>] enabled = yes`) or child (`[stream]` destination + key).
 - `templates/upsd.conf.j2` — optional go.d `upsd` job (NUT daemon address + job name).
