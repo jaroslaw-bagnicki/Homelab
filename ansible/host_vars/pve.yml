@@ -14,14 +14,8 @@ netdata_proxmox_host: true
 netdata_bind: "{{ ansible_host }}:19999=dashboard^SSL=force {{ ansible_host }}:19996=streaming^SSL=force"
 netdata_tls: true
 netdata_storage: dbengine
-# Per-tier retention: raw 1s 14 d, 1m 30 d, 1h 365 d. Sizes come from measured growth
-# (~145 MB/day tier 0, ~59 MB/day tier 1, ~5 MB/day tier 2 at 18.8k metrics, 2026-09-26) —
-# 14 d uses ~2 GB of tier 0's 3 GiB, the rest is headroom for growth (k3s). The sum of the
-# caps is the DB ceiling (~7 GiB), on a filesystem the guests don't share.
-netdata_retention_tiers:
-  - { time: "14d", size: "3GiB" }     # tier 0 — 1s
-  - { time: "30d", size: "2GiB" }     # tier 1 — 1m
-  - { time: "365d", size: "2GiB" }    # tier 2 — 1h
+# Retention is role-owned — see `netdata_retention_tiers_by_role` in the netdata role's defaults
+# (parent → 14 d / 3 GiB at 1s, 30 d / 2 GiB at 1m, 365 d / 2 GiB at 1h).
 # UPS telemetry — poll the NUT server (LXC 213 on this host); anonymous reads.
 netdata_upsd_address: "192.168.2.213:3493"
 

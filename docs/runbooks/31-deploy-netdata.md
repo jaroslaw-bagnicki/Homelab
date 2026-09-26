@@ -60,7 +60,7 @@ Edge nodes stream to the Parent on the `pve` node; the NAS joins when it joins t
   alarms never flag a mains loss (§2).
 - **Stream key** — a shared `netdata-stream-api-key` in `homelab-bysxdb-kv`, fetched at deploy time,
   sent only inside the TLS stream (§1).
-- **History** — per-tier, from `netdata_retention_tiers` (a `time` target and a `size` cap per tier).
+- **History** — per-tier, from `netdata_retention_tiers`, which the role selects by `netdata_role` from `netdata_retention_tiers_by_role` (a `time` target and a `size` cap per tier).
   Children stay at 7 d / 256 MiB; the **Parent** holds **14 d at 1s (3 GiB)**, **30 d at 1m (2 GiB)** and
   **365 d at 1h (2 GiB)** — sized from measured growth (~145 MB/day tier 0, so 14 d uses ≈2 GB of that
   3 GiB cap and the rest is headroom for growth; ~59 MB/day tier 1, ~5 MB/day tier 2 at 18.8k metrics,
@@ -226,7 +226,7 @@ du -sh /var/cache/netdata/dbengine                              # actual DB size
 Retention is a **combined** limit — data is dropped when either the time or the size limit is
 reached — and both apply **per tier**, so the DB ceiling is the **sum** of the three caps (≈7 GiB on
 the Parent). If a tier binds on size before its time target, raise that tier's `size` in
-[`host_vars/pve.yml`](../../ansible/host_vars/pve.yml) rather than lowering the target. The console's
+[`netdata_retention_tiers_by_role`](../../ansible/roles/netdata/defaults/main.yml) rather than lowering the target. The console's
 storage view lists each tier's `current` / `effective` / `configured` retention, which is how you see
 whether the time target is really being met.
 
@@ -272,7 +272,7 @@ Executed 2026-09-19 (install and configuration) and 2026-09-20 (§5 updates) —
 - [x] §3 Lab child streams to the Parent (parent mirrors `pve, lab, edge`; both children `hops=1`)
 - [x] §3 Edge child streams to the Parent; `netdata.conf` `mode = ram`
 - [x] §4 `dbengine tier 0/1/2 retention time = 7d` + `retention size` present (1 GiB per tier on the parent); `du -sh /var/cache/netdata/dbengine` → `512K` on a fresh install — *superseded 2026-09-26 by the per-tier row below*
-- [x] §4 retention is now **per-tier** — `netdata_retention_tiers` renders **`14d`/`3GiB`**, **`30d`/`2GiB`**, **`365d`/`2GiB`** on the Parent (verified live in `netdata.conf` 2026-09-26 — `ok=45 changed=3 failed=0`, `netdata` active, DB 993 MB); children stay at 7 d / 256 MiB
+- [x] §4 retention is now **per-tier** (role-owned) — `netdata_retention_tiers` renders **`14d`/`3GiB`**, **`30d`/`2GiB`**, **`365d`/`2GiB`** on the Parent (verified live in `netdata.conf` 2026-09-26 — `ok=45 changed=3 failed=0`, `netdata` active, DB 993 MB); children stay at 7 d / 256 MiB
 - [ ] §4 per-tier retention **effective** values confirmed as the tiers fill — the console storage view should show `effective` = `configured` for tiers 1 and 2 once 30 d / 365 d of data exist (weeks out)
 - [x] §4 no validation command printed the shared key
 - [x] Idempotent — a re-run reports **`changed=0`** for this role on all three nodes (`pve` `ok=38 changed=0`, `edge` `ok=40 changed=0`; `lab` `changed=1`, that one being `azure_arc`'s Arc-connect task, unrelated)
