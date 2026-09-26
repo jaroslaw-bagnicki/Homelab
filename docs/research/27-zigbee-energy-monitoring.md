@@ -266,4 +266,4 @@ Five Docker containers on the M910q host: **Mosquitto**, **Zigbee2MQTT** (dongle
 
 ## Source
 
-https://gemini.google.com/share/daf15799b559 — "Produkty Nous Zigbee do pomiaru prądu", Gemini 3.6 Flash, Aug 13 2026 (published Aug 15 2026)
+https://gemini.google.com/share/daf15799b559 — "Nous Zigbee products for current measurement", Gemini 3.6 Flash, Aug 13 2026 (published Aug 15 2026)

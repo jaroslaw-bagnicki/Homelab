@@ -417,9 +417,12 @@ Record from the `upsc` dump:
 | `battery.voltage` | sanity-check against the unit's own LCD (27.3 V visible while charging) |
 | **`battery.runtime`** | **if absent → shut down on `LB` only**; do not build a countdown on it |
 
-> **`ups.load` is not usable here.** The first dump reports `ups.load: 0` with the fleet attached —
-> either unsupported or below the unit's resolution. Sizing comes from the measured draws in §0 and
-> from the unit's own LCD, not from this variable (2026-09-13).
+> **`ups.load` carries no usable figure.** The first dump (2026-09-13) reported `ups.load: 0` with the
+> fleet attached — unsupported or below the unit's resolution — while the drill on 2026-09-19 read
+> **9 %** on mains and **14 %** on battery at a measured ~80 W draw
+> ([drill report](../reports/260919-nut-shutdown-drill.md)). It is a **percentage of capacity, never
+> watts**, and it does not track the meter: sizing comes from the measured draws in §0 and from the
+> unit's own LCD, not from this variable.
 
 ⚠ If the driver cannot claim the device, the cause is almost always the kernel's `usbhid` holding
 the interface. Fallbacks, in order: (1) confirm the node really is visible inside the container

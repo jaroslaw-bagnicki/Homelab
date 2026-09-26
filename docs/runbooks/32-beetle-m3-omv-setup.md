@@ -61,7 +61,7 @@ No out-of-band management — all steps run from a **keyboard + monitor** attach
 |---|---|---|---|
 | `sda` | SanDisk X600 `SD9SB8W-128G` 128 GB SSD | `191702804011` | **OMV OS** (SMART PASSED) |
 | `sdb` | Seagate ST1000VT001-1RE172 1 TB 2.5" | `WDES3KB7` | `md0` member (0 reallocated) |
-| `sdc` | Seagate ST1000VT001-1RE172 1 TB 2.5" | `WDEPBVR3` | `md0` mirror (1,056 reallocated — **kept + SMART-monitored**) |
+| `sdc` | Seagate ST1000VT001-1RE172 1 TB 2.5" | `WDEPBVR3` | `md0` mirror (1,056 reallocated, **released to 0** by the resync — **kept + SMART-monitored**) |
 
 > **Confirm on the unit** — the values below are research 32's audit; verify the LAN interface name
 > at the console.
@@ -266,7 +266,7 @@ portable to any Linux box, with per-disk SMART intact.
 > |---|---|---|---|---|---|---|
 > | `ata-1` / 0 | *white* | `191702804011` | SanDisk SSD — **the OS disk** | `sdb` | `sdc` | `sda` |
 > | `ata-2` / 1 | *blue* | `WDES3KB7` | Seagate — 0 reallocated | `sda` | `sda` | `sdc` |
-> | `ata-3` / 2 | *black* | `WDEPBVR3` | Seagate — **1,056 reallocated — monitor this one** | `sdc` | `sdb` | `sdb` |
+> | `ata-3` / 2 | *black* | `WDEPBVR3` | Seagate — reallocated count now **0** (1,056 released) — **monitor** | `sdc` | `sdb` | `sdb` |
 >
 > Boot A/B (2026‑09‑21) saw the OS disk and the degraded disk **swap letters**; Boot C (2026‑09‑22)
 > rotated them **again** — the SSD has now been `sdb`, `sdc` *and* `sda` on hardware that was never

@@ -26,7 +26,7 @@ The headline measurement is the runtime: **52 min 53 s on battery to `LB`** at t
 | ML110 (`omv`) | unplugged, out of scope |
 | Strip 2: TL-SG108E, mesh node, LTE modem | no NUT client; keeps the LAN alive until the pack dies |
 
-- **~80 W** at the socket with the full planned fleet (operator's inline meter); the UPS's own meter read `ups.load` 9 % before the cut and 14 % on battery.
+- **~80 W** at the socket with the full planned fleet (operator's inline meter); the UPS's own `ups.load` read 9 % before the cut and 14 % on battery — a percentage of capacity, not a watt figure, and it does not track the meter ([runbook 29](../runbooks/29-nut-ups-shutdown.md) §3).
 - The unit publishes **no `battery.runtime`**, and `battery.charge` is a linear transform of voltage — confirmed again below — so the only usable end-of-discharge signal is the hardware's own `LB`.
 - Pre-drill baseline: `nut.conf` hash identical on all three nodes; `upsmon.conf` identical between `lab` and `edge` and distinct on `ha`, i.e. exactly the intended per-role split.
 

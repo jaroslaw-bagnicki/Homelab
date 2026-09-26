@@ -52,7 +52,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 |---|---|
 | CPU | Intel Pentium G4400 (2C/2T, 3.3 GHz) · AES-NI, VT-x, VT-d, QuickSync |
 | RAM | 8 GB DDR4 (1× 8 GiB SODIMM @ 2133 MT/s; 1 slot free, 32 GB max) |
-| Storage | SanDisk X600 128 GB SSD (OS) + 2× Seagate 1 TB 2.5" → `md0` RAID1, 1 TB usable, XFS; one disk has 1,056 reallocated sectors but passed a long self-test |
+| Storage | SanDisk X600 128 GB SSD (OS) + 2× Seagate 1 TB 2.5" → `md0` RAID1, 1 TB usable, XFS |
 | Firmware | AMI BIOS `R1.8.0` (2021-11-22) · board `D3460-D22` · legacy boot, no Secure Boot |
 | Network | 1× GbE Intel I219-V (`enp0s31f6`) · hostname `nas` · static `192.168.2.202` ([ADR 31](decisions/31-static-address-scheme.md)) · LAN-only SSH/web UI |
 | OS | OMV 8.5.9-1 (Debian 13) · kernel `6.12.107+deb13-amd64` · HTTPS-only web UI ([ADR 34](decisions/34-lan-tls-only.md)) |
@@ -163,3 +163,52 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Data plan | Orange Flex additional SIM (free) — internet-only, shares the plan data pool |
 | Role | Backup WAN (LTE failover) for the homelab edge — fallback until the ZTE WF830 ODU is found (idea 08) |
 | Docs | [idea 08](ideas/08-lte-wan-failover.md) · [research 30](research/30-mobile-internet-failover-offers.md) |
+
+## Power
+
+### Shared-rail UPS — Green Cell UPSLM600
+
+| Item | Spec |
+|---|---|
+| Model | Green Cell **UPSLM600** — line-interactive, AVR, **modified sine**, 1000 VA / 600 W |
+| Battery | 2× 12 V 7 Ah (24 V, ~168 Wh) · no runtime estimate — end of discharge is the hardware `LB` flag |
+| Outlets | 4 (2× Schuko + 2× IEC) over two strips — servers (`pve`, `lab`, `edge`, `nas`) and network appliances; monitors, dock and laptop charger stay on the wall |
+| USB | `0665:5161` · HID page `0xFF00`, **no serial number** — driven by NUT `nutdrv_qx`, not `usbhid-ups` |
+| Measured | **17 W** self-consumption · **~55 min** to `LB` at the ~80 W fleet (inline meter, drill 2026-09-19); NUT reports no power — `ups.load` % only |
+| NUT | USB on the `pve` node; server in **LXC 213** (`.213`); `upsmon` on `pve` (primary) and `lab`/`edge`/`nas` (secondaries) |
+| Docs | [ADR 30](decisions/30-ups-nut-graceful-shutdown.md) · [runbook 29](runbooks/29-nut-ups-shutdown.md) · [runbook 30](runbooks/30-deploy-nut-clients.md) · [drill report](reports/260919-nut-shutdown-drill.md) |
+
+## Smart Home
+
+One Zigbee mesh serves two consumers — the Home Assistant OS VM (VM 210) and the
+HA-independent Zigbee2MQTT → Prometheus monitoring path — with the coordinator USB on the `pve`
+node ([ADR 25](decisions/25-home-assistant-thin-client.md) · [ADR 26](decisions/26-zigbee-energy-monitoring.md)).
+
+### Zigbee coordinator — Sonoff ZBDongle-P
+
+| Item | Spec |
+|---|---|
+| Type | Zigbee 3.0 USB coordinator — Sonoff **ZBDongle-P**, Silicon Labs **CC2652P** (Z-Stack) |
+| USB | Silicon Labs CP210x bridge `10c4:ea60` · by-id `usb-ITead_Sonoff_Zigbee_3.0_USB_Dongle_Plus_c8f3975dd19aef1197dbb89061ce3355-if00-port0` |
+| Placement | USB on the `pve` node — the smart-home node sits centrally for Zigbee coverage; passthrough to **LXC 212** (Zigbee2MQTT) still to be wired ([#85](https://github.com/jaroslaw-bagnicki/Homelab/issues/85)) |
+| Docs | [ADR 26](decisions/26-zigbee-energy-monitoring.md) · [research 27](research/27-zigbee-energy-monitoring.md) · [research 29](research/29-wyse5070-hardware-diagnostic.md) |
+
+### Smart plugs — 4× Nous A1Z
+
+| Item | Spec |
+|---|---|
+| Type | Zigbee 3.0 smart plug, 16 A / 3680 W — metering **W / A / V / kWh** |
+| Mesh | mains-powered, act as **Zigbee routers** — extend coverage for battery sensors |
+| Role | per-node energy monitoring ([#73](https://github.com/jaroslaw-bagnicki/Homelab/issues/73)) and Home Assistant sockets |
+| Docs | [ADR 26](decisions/26-zigbee-energy-monitoring.md) · [research 27](research/27-zigbee-energy-monitoring.md) |
+
+## Test & Measurement
+
+Bench instruments behind the figures quoted in the node audits and in
+[runbook 29](runbooks/29-nut-ups-shutdown.md).
+
+| Instrument | Device | Used for |
+|---|---|---|
+| Power meter | **VIRONE EM-1/B** | inline plug meter — per-node idle/load draws and the UPS rail measurements ([runbook 29](runbooks/29-nut-ups-shutdown.md) · [research 32](research/32-wincor-beetle-m3-hardware-diagnostic.md)) |
+| Sound level meter | **UNI-T UT353** | cooling noise in dB(A) — Beetle M-III 43.7 dB(A) ([research 32](research/32-wincor-beetle-m3-hardware-diagnostic.md)) |
+| Multimeter | **Xtreme DT9205L** | bench voltage/continuity checks — PSU, cabling and board headers during node bring-up |
