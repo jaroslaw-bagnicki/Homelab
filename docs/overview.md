@@ -53,7 +53,7 @@ watches the **management plane**, the LAN watches the **real-time plane**. Where
 
 | Signal | Where you see it | Refs | Status |
 |---|---|---|---|
-| **Node metrics** | Netdata — one pane on the `pve` node covering CPU, memory, disk and network for every LAN node; LAN-only, and alerting waits on the HA VM ([#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68)) | [ADR 27](decisions/27-monitoring-strategy.md) · [runbook 31](runbooks/31-deploy-netdata.md) | ✅ |
+| **Node metrics** | Netdata — one pane on the `pve` node covering CPU, memory, disk and network for every LAN node | [ADR 27](decisions/27-monitoring-strategy.md) · [runbook 31](runbooks/31-deploy-netdata.md) | ✅ |
 | **Cloud telemetry** | Azure Monitor — the Arc-enrolled nodes' metrics and inventory, beside the rest of Azure | [ADR 09](decisions/09-azure-monitor-via-arc.md) | ✅ |
 | **Power state** | UPS charge, voltage, load and on-battery events charted in Netdata (`Remote Devices → UPS`) | [ADR 30](decisions/30-ups-nut-graceful-shutdown.md) · [runbook 31](runbooks/31-deploy-netdata.md) | ✅ |
 | **Disk health** | Drive health and long self-test results for the NAS arrays, per drive | [research 32](research/32-wincor-beetle-m3-hardware-diagnostic.md) | ✅ |
