@@ -258,13 +258,32 @@ ansible-playbook ansible/playbooks/playbook-logs.yml --diff
 `vtstack` teams the collector with `docker_host`, so the store's own container output becomes
 searchable in the store — after the three LAN nodes, as ADR 36 orders it.
 
-> **Verification pending** — record the `PLAY RECAP` and a queryable `victorialogs` container record.
+> **Verified 2026-09-27** — `PLAY RECAP` `vtstack ok=48 changed=14 failed=0`; the `victorialogs` container
+> came back after the daemon restart; 2 `[INPUT]`/2 `[OUTPUT]` with `Retry_Limit False`; journald shipping
+> (**184** records, **182 with a `level`**, 5 units). The store's own container output is queryable in the
+> store — `{hostname="vtstack"}` returns its log with the full 64-hex `container_id`, including its own
+> shutdown (`received signal terminated`, `gracefully shutting down webservice at "[:9428]"`,
+> `the VictoriaLogs has been stopped in 0.067 seconds`).
+>
+> **The store restart cost nobody else anything.** With `Retry_Limit False` in place on all four
+> already-deployed nodes, the `docker_host` restart of the store produced **0 discarded chunks** on
+> `pve`, `edge`, `lab` and `nas` — the behaviour §2 could not yet provide before the fix.
 
 ## 6. Idempotency
 
 A second `ansible-playbook … --diff` run on a converged node must report **`changed=0`** (the config
 template writes only on change; the APT key/repo/package are guarded by the package manager). Note
 that the `docker_host` daemon.json write reports `changed` only on first apply or a value change.
+
+> **Verified 2026-09-27** — the §6 re-run on the converged `pve` reported `ok=59 changed=0 failed=0`:
+> the config template, the APT key/repo/package, the parsers, the Lua script and the daemon.json merge
+> all re-apply cleanly, so a repeat run neither touches the service nor restarts Docker.
+>
+> The same re-run on `vtstack` reported `ok=47 changed=1 failed=0`, and the one task is not the
+> collector's: `common : Ensure NTP service is running` cannot converge inside an unprivileged LXC —
+> there is no `CAP_SYS_TIME`, so `systemd-timesyncd` stays `inactive dead` and `state: started`
+> re-fires every run. That is pre-existing `common`-role behaviour on containers, unrelated to this
+> change. Read the bar as **`changed=0` among the collector's own tasks**.
 
 ---
 
@@ -288,15 +307,15 @@ stops receiving.
 
 ## Verification Checklist
 
-Executed on: **in progress** — `pve`, `edge`, `lab` and `nas` verified 2026-09-27; remaining `vtstack`.
-Record the `ansible-playbook --diff` summary and each result.
+Executed on: **complete** — all five nodes (`pve`, `edge`, `lab`, `nas`, `vtstack`) verified
+2026-09-27. Record the `ansible-playbook --diff` summary and each result.
 
 - [x] §1 `pve` — service active; config has one `[INPUT]`/`[OUTPUT]`; `_msg`/`_time`/streams confirmed from the stored records; `level` derived from `PRIORITY`; records queryable; RSS 7.2 MB; `debug` off; with `Retry_Limit False` an outage loses nothing (**192** records spanning the whole window, 0 discards)
 - [x] §2 `edge` — cursor on tmpfs; `write_bytes` stayed **0** and no `*.flb` on disk across two store outages; does not pause; delivered the whole outage window (**155** records, 0 discards — was 12 pre-fix)
 - [x] §3 `lab` — Docker logs queryable with a 64-hex `container_id` stream (via a throwaway probe — `lab` runs no containers); `docker_host` rotation adopted (`max-size: 10m` / `max-file: 3`); journald and `level` shipping
 - [x] §4 `nas` — records queryable and levelled (**128**, 127 with a `level`) on RSS 21.9 MB; the `python3-debian` prerequisite installed cleanly on the OMV host that does not ship it
-- [ ] §5 `vtstack` — the store's own container logs queryable
-- [ ] §6 idempotent — a re-run reports `changed=0`
+- [x] §5 `vtstack` — `ok=48 changed=14 failed=0`; the store's own container log queryable (including its own shutdown line); 184 records, 182 with a `level`; the store restart cost the other four nodes **0 discarded chunks**
+- [x] §6 idempotent — the `pve` re-run reports **`changed=0`** (`ok=59`); on `vtstack` the only `changed` is `common`'s NTP task, which cannot converge in an unprivileged LXC
 
 ## Follow-ups
 
