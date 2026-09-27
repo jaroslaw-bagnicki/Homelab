@@ -29,8 +29,8 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Storage | 256 GB NVMe — SK hynix BC501 HFM256GDJTNG-8310A · serial `FS85N582310805D30` · FW `80000C00` · SMART **PASSED** (1% used, 16,355 POH — §0 audit 2026-08-16); free 2.5" SATA bay for a secondary/backup disk |
 | Firmware | BIOS LENOVO M1AKT2CA (2017-11-22) · board 310B |
 | Network | 1× Gigabit Ethernet Intel I219-LM (`enp0s31f6`, MAC `6c:4b:90:40:c5:e2`) |
-| Role | Main workload host — OS refresh to Ubuntu 24.04 LTS + Arc enrolment in progress (runbook 25), then k3s (ADR 22) |
-| Docs | [ADR 01](decisions/01-hardware-selection-m910q.md) · [runbook 25](runbooks/25-m910q-os-refresh.md) · [overview](overview.md) |
+| Role | Main workload host |
+| Docs | [ADR 01](decisions/01-hardware-selection-m910q.md) · [ADR 22](decisions/22-k3s-arc-homelab.md) · [runbook 25](runbooks/25-m910q-os-refresh.md) · [overview](overview.md) |
 
 ### OMV NAS — HP ProLiant ML110 G5
 
@@ -58,7 +58,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | OS | OMV 8.5.9-1 (Debian 13) · kernel `6.12.107+deb13-amd64` · HTTPS-only web UI ([ADR 34](decisions/34-lan-tls-only.md)) |
 | Cooling | 3 fans · 43.7 dB(A) · no software fan control · internal UPS battery not OS-exposed |
 | Power | 14–16 W idle · AcBel 250 W 80 Plus Gold UPS-integrated PSU |
-| Role | OMV NAS backup-target successor to the ML110 — [issue #98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98) |
+| Role | NAS — backup target |
 | Docs | [idea 01c](ideas/01c-nas-backup-target-wincor-beetle.md) · [research 32](research/32-wincor-beetle-m3-hardware-diagnostic.md) · [runbook 32](runbooks/32-beetle-m3-omv-setup.md) · [issue #98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98) |
 
 ### Edge Ingress — Dell Wyse 3040
@@ -72,7 +72,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Network | 1× GbE Realtek RTL8111/8168 (`enp1s0`, MAC `8c:ec:4b:6d:6f:4f`) · static `192.168.2.240/24` |
 | OS | Debian 13 minimal (netinst on eMMC, no desktop) |
 | Cooling | Fanless · ~2–3 W idle |
-| Role | Dedicated public ingress — bare-metal `cloudflared` + Caddy (ADR 24) |
+| Role | Public ingress appliance |
 | Docs | [runbook 24](runbooks/24-edge-appliance.md) · [ADR 24](decisions/24-edge-ingress-appliance.md) · [research 25](research/25-edge-ingress-sbc.md) · [idea 04](ideas/04-edge-device-tunnel-caddy.md) |
 
 ### Proxmox VE — Dell Wyse 5070
@@ -86,9 +86,8 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Network | Realtek GbE (`enp1s0`) · Intel CNVi WiFi/BT (`wlp0s12f0`) |
 | Zigbee | Sonoff ZBDongle-P (CC2652P) · USB coordinator for LXC 212 |
 | OS | Proxmox VE 9.2.2 installed at `192.168.2.201` · base provisioned ([runbook 28](runbooks/28-pve-proxmox-node.md)) |
-| Guests | VM 210 HA OS · LXC 211 Mosquitto · LXC 212 Zigbee2MQTT · LXC 213 NUT · LXC 214 Victoria stack (`vtstack`, VictoriaLogs) ([ADR 31](decisions/31-static-address-scheme.md)) |
-| Role | Fleet virtualisation host with Netdata Parent; NUT delivered; VictoriaLogs store delivered on the Victoria stack (`vtstack`), VictoriaMetrics/VictoriaTraces pending; HA OS/Mosquitto/Zigbee2MQTT pending (ADR 25, ADR 27, ADR 30, ADR 35) |
-| Docs | [idea 05](ideas/05-home-assistant-thin-client.md) · [ADR 25](decisions/25-home-assistant-thin-client.md) · [ADR 33](decisions/33-fleet-node-hostnames.md) · [ADR 35](decisions/35-log-store-victorialogs.md) · [research 26](research/26-home-assistant-thin-client.md) · [research 29](research/29-wyse5070-hardware-diagnostic.md) · [runbook 28](runbooks/28-pve-proxmox-node.md) · [runbook 31](runbooks/31-deploy-netdata.md) · [runbook 33](runbooks/33-deploy-victorialogs.md) |
+| Role | Fleet virtualisation host (Proxmox VE) |
+| Docs | [idea 05](ideas/05-home-assistant-thin-client.md) · [ADR 25](decisions/25-home-assistant-thin-client.md) · [ADR 27](decisions/27-monitoring-strategy.md) · [ADR 30](decisions/30-ups-nut-graceful-shutdown.md) · [ADR 31](decisions/31-static-address-scheme.md) · [ADR 33](decisions/33-fleet-node-hostnames.md) · [ADR 35](decisions/35-log-store-victorialogs.md) · [research 26](research/26-home-assistant-thin-client.md) · [research 29](research/29-wyse5070-hardware-diagnostic.md) · [runbook 28](runbooks/28-pve-proxmox-node.md) · [runbook 31](runbooks/31-deploy-netdata.md) · [runbook 33](runbooks/33-deploy-victorialogs.md) |
 
 ### OPNsense Router — Fujitsu Futro S930 (planned)
 
@@ -120,7 +119,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Compute | 4 vCPU, 8 GB RAM |
 | Storage | 75 GB NVMe |
 | OS | Ubuntu 24.04 LTS (pre-installed by Contabo) |
-| Role | Ansible staging/playground + hosted workloads (Portainer, Caddy, cloudflared, OpenCode, Zot) |
+| Role | Staging / playground VPS |
 | Docs | [runbook 10](runbooks/10-vps-playground.md) · [ADR 13](decisions/13-cloudlab-staging.md) |
 
 ## Network Appliances

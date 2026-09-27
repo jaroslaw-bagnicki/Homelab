@@ -18,6 +18,16 @@ hardware detail see [Hardware Inventory](hardware.md); for change history see
 | **LLM server** | local LLM inference | Minisforum X1 Lite | TBD | 🧠 |
 | **Cloudlab VPS** | staging for Lab (Ansible + Docker/k3s workloads) | Contabo VPS 10 · Ubuntu 24.04 | `173.249.27.13` | ✅ |
 
+### Guests on the Proxmox VE node
+
+| Guest | Workload | Address | Status |
+|---|---|---|---|
+| VM 210 | Home Assistant OS | `.210` | 📋 |
+| LXC 211 | Mosquitto | `.211` | 📋 |
+| LXC 212 | Zigbee2MQTT | `.212` | 📋 |
+| LXC 213 | NUT server | `.213` | ✅ |
+| LXC 214 | VictoriaLogs log store (`vtstack`) | `.214` | ✅ |
+
 ## Workloads
 
 Current state — what's running or in progress. Planned work is under [What's Next](#whats-next).
