@@ -4,6 +4,10 @@
 [Gemini chat 19](https://share.gemini.google/Z8QXKHmDHOFe) (deciding the store) ·
 [Gemini chat 20](https://share.gemini.google/orS2jFh9H1IU) (running containers on the `pve` node)
 
+**Official docs**: [docs.victoriametrics.com/victorialogs](https://docs.victoriametrics.com/victorialogs/) —
+read 2026-09-27; the store's mechanics in [§7](#7-official-documentation--verified-facts-2026-09-27) are
+**verified upstream**, not taken from the thread
+
 **Scope**: Pre-ADR research for [#123](https://github.com/jaroslaw-bagnicki/Homelab/issues/123) — settle
 the **Tier B log store's** engine and **host placement**, and confirm the deployment mechanics for a
 container host on the `pve` node (Proxmox VE, Wyse 5070). The collector that feeds the store is
@@ -16,12 +20,13 @@ compression and LogsQL scans on the `pve` node's Celeron, are **unverified** and
 work for the deploy phase. Decision authoritatively recorded in
 [ADR 35](../decisions/35-log-store-victorialogs.md).
 
-> ⚠️ **Verification needed**: this thread is advisory and its numbers are unverified. The
-> "up to 4–5× less RAM" and "30–40% less disk than Loki" comparisons, the VictoriaTraces
-> "3.7× less RAM / 2.7× less CPU than Tempo" claim, and the Proxmox VE 9.1 **native OCI image**
-> behaviour are vendor/community claims from the thread, not measurements on this hardware.
-> VictoriaLogs flag names and the Proxmox 9.1 feature state must be re-checked against upstream
-> docs before execution.
+> ⚠️ **Verification status**: the store's **mechanics are now verified** against the official
+> VictoriaLogs documentation (§7) — flags, ingest endpoints, retention and disk-space caps, the
+> security posture and the backup mechanism. What remains unverified is (a) every **performance
+> comparison** (the thread's "4–5× less RAM", "30–40% less disk than Loki", and the VictoriaTraces
+> "3.7× less RAM / 2.7× less CPU than Tempo" figures are vendor benchmarks, not measurements on this
+> hardware), and (b) the **Proxmox VE 9.1 native-OCI** behaviour, which is a Proxmox Tech Preview and
+> not covered by VictoriaMetrics docs at all.
 
 ---
 
@@ -44,6 +49,7 @@ work for the deploy phase. Decision authoritatively recorded in
 | LAN scope | Listener restricted to `192.168.2.0/24` **inside the LXC**, not by host UFW ([ADR 34](../decisions/34-lan-tls-only.md)) |
 | Ingest | Elasticsearch-compatible `_bulk` (Fluent Bit `es` output needs no bespoke plugin); JSON-lines also available |
 | Backup | **No** — a rolling 30-day window stays outside [ADR 02](../decisions/02-backup-strategy-restic-blob.md)'s scope |
+| Resource caps | **Memory** (`-memory.allowed*` inside an LXC ceiling) and **disk** (`-retention.maxDiskUsagePercent` + `-storage.minFreeDiskSpaceBytes`) — uncapped, a full disk puts the store into read-only mode |
 
 ---
 
@@ -202,15 +208,89 @@ There is no official `pveam` Docker template; the community helper script
 (`ct/docker.sh`) is the fast path, and building a container once and converting it to a template is
 the reproducible one.
 
-### 7. VictoriaLogs deployment facts confirmed
+### 7. Official documentation — verified facts (2026-09-27)
 
-- Images: `victoriametrics/victoria-logs` (Docker Hub) and `quay.io/victoriametrics/victoria-logs`.
-- Default HTTP port: **9428** — web UI, ingest endpoints (Syslog, JSON, Elasticsearch-compatible
-  `_bulk`, Loki/Promtail protocol) and the Grafana datasource.
-- Storage: `-storageDataPath=/victoria-logs-data` on a volume.
-- Retention: `-retentionPeriod` (e.g. `30d`; months/years suffixes supported).
-- Configuration is **flags only** — no YAML config file, which suits a Compose `command:` list.
-- Auth: `-httpAuth.username` / `-httpAuth.password`. TLS: `-tls`, `-tlsCertFile`, `-tlsKeyFile`.
+Taken from the official VictoriaLogs docs, read 2026-09-27 —
+[overview](https://docs.victoriametrics.com/victorialogs/) ·
+[quickstart](https://docs.victoriametrics.com/victorialogs/quickstart/) ·
+[data ingestion](https://docs.victoriametrics.com/victorialogs/data-ingestion/) ·
+[querying](https://docs.victoriametrics.com/victorialogs/querying/) ·
+[security and load balancing](https://docs.victoriametrics.com/victorialogs/security-and-lb/) ·
+[env-flag rules](https://docs.victoriametrics.com/victoriametrics/single-server-victoriametrics/#environment-variables).
+These supersede the thread's vendor-summary where the two differ.
+
+**7.1 Retention, and the disk-space safety valve.** Default retention is **7 d**; `-retentionPeriod`
+accepts **1d … 100y**. Data lives in **per-day partition directories** and partitions outside the
+window are dropped automatically. Entries timestamped outside retention are dropped at ingest and
+counted by `vl_rows_dropped_total` (the docs suggest alerting on `rate(vl_rows_dropped_total[5m]) > 0`);
+timestamps beyond `now+2d` are rejected unless `-futureRetention` is raised. Retention can also be
+capped **by disk space**:
+
+| Flag | Behaviour |
+|---|---|
+| `-retention.maxDiskSpaceUsageBytes=100GiB` | Drops the oldest per-day partitions once `-storageDataPath` exceeds a fixed size |
+| `-retention.maxDiskUsagePercent=80` | Drops partitions once the **filesystem** holding `-storageDataPath` passes a usage percentage |
+
+The two are **mutually exclusive** — VictoriaLogs refuses to start if both are set. `-retentionPeriod`
+applies **independently** of them, so both bounds take effect (the docs pair a huge byte cap with
+`-retentionPeriod=100y` to get disk-only behaviour). It always keeps the **last two days** regardless
+of the cap, and usage is only checked **periodically** — so it can overshoot between checks. If the
+disk does fill, VictoriaLogs **switches to read-only mode** and can then no longer drop partitions,
+which is why the docs warn against a small disk with fast ingest and why
+`-storage.minFreeDiskSpaceBytes` exists as the free-space floor.
+
+**7.2 Capacity planning.** The docs recommend leaving **50% of RAM**, **50% of CPU** and **at least
+20% of free storage space** at `-storageDataPath` — too little free space prevents part merges and
+slows both ingest and query. `-memory.allowedBytes` / `-memory.allowedPercent` bound the process's
+cache memory. Compression is described as **10× or more**.
+
+**7.3 Ingest endpoints (verified).** All on port **9428**:
+
+| Endpoint | Purpose |
+|---|---|
+| `/insert/elasticsearch/_bulk` | Elasticsearch / OpenSearch **bulk API** — where Fluent Bit's `es` output lands |
+| `/insert/jsonline` | JSON-lines / ndjson, with `_stream_fields`, `_time_field`, `_msg_field` |
+| `/insert/loki/api/v1/push` | **Loki JSON API** — Promtail / Grafana Alloy push directly |
+| `/insert/opentelemetry/v1/logs` | OpenTelemetry log records (OTLP) |
+| `-syslog.listenAddr.{tcp,udp,unix}` | VictoriaLogs can **listen for syslog itself**, with per-listener TLS (`-syslog.tls*`) |
+
+Documented collectors: syslog/rsyslog/syslog-ng, **Fluent Bit**, **Vector**, Promtail/Grafana Alloy and
+the OpenTelemetry Collector. The `-journald.*` flags mean journald can be read **directly**, without a
+separate shipper. Request tuning (`_stream_fields`, `_msg_field`, `_time_field`, …) is shared across
+the HTTP APIs as query args or headers, with query args winning.
+
+**7.4 Security posture (official).** The docs state all VictoriaLogs components **must run inside a
+protected trusted network**, that Internet requests must be authorized **before** being proxied, and
+that **vmauth** is the recommended authorization and load-balancing front end. In-product protection
+is `-tls` + `-tlsCertFile` + `-tlsKeyFile` (with `-tlsMinVersion` / `-tlsCipherSuites`) for transport
+and `-httpAuth.username` / `-httpAuth.password` for authentication, with per-endpoint `*AuthKey`
+overrides for `/delete/*`, `/metrics`, `/flags` and `/internal/force_merge`. There is **no built-in IP
+allowlist** — the docs delegate that to the network, which is why the LAN-only rule has to be a
+firewall rule rather than a VictoriaLogs flag.
+
+**7.5 Secret handling.** Flags can be fed from the environment: either by referencing `%{ENV_VAR}`
+inside a flag value, or by setting flags through env vars with **`-envflag.enable`** — each `.` in the
+flag name becomes `_` (`-insert.maxQueueDuration` → `insert_maxQueueDuration`), optionally with an
+`-envflag.prefix`. The basic-auth password can therefore be injected as an env var from Key Vault
+rather than appearing in the container's argument list.
+
+**7.6 Backup, multitenancy and HA — what is deliberately not adopted.** Per-day partitions make
+selective backup straightforward if it is ever wanted: snapshot with
+`/internal/partition/snapshot/create?partition_prefix=YYYYMMDD`, copy with `rsync`, restore via
+`detach`/`attach` — so "logs are not backed up" is a choice, not a limitation. Multitenancy is an
+`(AccountID, ProjectID)` pair with **no per-tenant authorization** (vmauth provides that); a
+single-tenant lab stays on the default tenant `0`. HA expects collector-side replication plus several
+instances behind vmauth, which is **not adopted** — a store outage drops or queues logs depending on
+the collector, acceptable at 30-day retention.
+
+**7.7 Quickstart facts (verified).** The built-in Web UI is at
+**`http://localhost:9428/select/vmui`**; data lands in `victoria-logs-data`, relative to
+`-storageDataPath`; the documented container invocation is
+`docker run -p 9428:9428 -v ./victoria-logs-data:/victoria-logs-data victoriametrics/victoria-logs:<tag>`,
+with the image pinned by tag (the docs' example is `v1.52.0`). VictoriaLogs "automatically adapts to
+the available CPU and RAM resources", and the journald recipe maps
+`_msg_field=MESSAGE&_time_field=__REALTIME_TIMESTAMP&_stream_fields=_SYSTEMD_UNIT` — one stream per
+systemd unit.
 
 ---
 
@@ -242,8 +322,10 @@ the reproducible one.
   host UFW does not filter container traffic, so the rule must live inside the LXC or at the Proxmox
   firewall — and be verified from off-LAN, not asserted.
 - **Collectors** ([#84](https://github.com/jaroslaw-bagnicki/Homelab/issues/84)) — Fluent Bit's `es`
-  output is the assumed path; which nodes run a collector, and whether the Edge's RAM-only footprint
-  tolerates one, is undecided. The store is inert until at least one ships.
+  output is the assumed path, but the store also accepts the Loki push API, JSON-lines and OTLP, and can
+  **listen for syslog and read journald itself** ([§7.3](#7-official-documentation--verified-facts-2026-09-27)),
+  so some nodes may need no shipper at all — the Edge's RAM-only budget is the constraint on the ones
+  that do. Which nodes run a collector is undecided; the store is inert until at least one ships.
 - **Certificate trust** — clients skip verification initially (ADR 27/34's residual). Pinning depends
   on the private CA tracked as [#126](https://github.com/jaroslaw-bagnicki/Homelab/issues/126).
 - **Monitoring the store** — ADR 34's `httpcheck`/`x509check` control should be pointed at the store's

@@ -55,17 +55,31 @@ LXC on the `pve` node.**
 - **Transport: HTTPS only** — native TLS (`-tls`, `-tlsCertFile`, `-tlsKeyFile`) with a self-signed
   certificate generated in the container. Plaintext HTTP is prohibited (ADR 34).
 - **Auth: HTTP basic auth from day one** — `-httpAuth.username` / `-httpAuth.password`, the password
-  sourced from Azure Key Vault.
+  injected from Azure Key Vault as an **environment variable** (`-envflag.enable`), so the secret never
+  appears in the container's argument list.
 - **LAN-only, enforced at the container** — the listener is restricted to `192.168.2.0/24` by a
   **verified** rule **inside the LXC** (or at the Proxmox firewall), not by the host's UFW, which
-  never sees container traffic (ADR 34). Verification means an off-LAN request is refused.
-- **Retention: 30 days** (`-retentionPeriod`).
-- **Ingest: the Elasticsearch-compatible `_bulk` API**, so Fluent Bit's `es` output needs no bespoke
-  plugin; the JSON-lines endpoint stays available for other collectors.
+  never sees container traffic (ADR 34). Verification means an off-LAN request is refused. The store has
+  **no IP allowlist of its own** — the upstream docs delegate that to the network — so this rule is the
+  whole boundary.
+- **Retention: 30 days** (`-retentionPeriod`), **capped by disk space** —
+  `-retention.maxDiskUsagePercent` drops the oldest per-day partitions past a threshold and
+  `-storage.minFreeDiskSpaceBytes` keeps a floor. The disk cap applies *in addition to* the time window,
+  so 30 days is a ceiling, not a promise. It is not optional on a shared 128 GB SSD: the docs warn that
+  a filled disk puts VictoriaLogs into **read-only mode**, where it can no longer drop partitions at all.
+- **Both resource axes are bounded** — the LXC gets an explicit `memory` ceiling with VictoriaLogs'
+  `-memory.allowed*` set inside it, so its caches are bounded instead of competing with Home Assistant.
+  The docs' sizing guidance (50% of RAM, 50% of CPU and ≥20% of disk free) is the target, and the two
+  disk-cap flags are mutually exclusive.
+- **Ingest: the Elasticsearch-compatible `/insert/elasticsearch/_bulk` API**, so Fluent Bit's `es`
+  output needs no bespoke plugin. The Loki push API, JSON-lines and OTLP endpoints stay available for
+  other collectors, and the store can listen for syslog and read journald itself. Which collectors run,
+  and on which nodes, is [#84](https://github.com/jaroslaw-bagnicki/Homelab/issues/84).
 - **Never on `edge`** — the appliance's eMMC is the reason the store exists (ADR 24).
 - **Not backed up** — logs are a rolling 30-day window, not an archive, and stay outside
-  [ADR 02](02-backup-strategy-restic-blob.md)'s scope. Nothing is lost that retention would not have
-  expired anyway.
+  [ADR 02](02-backup-strategy-restic-blob.md)'s scope. A choice rather than a limitation: per-day
+  partitions make selective snapshot-and-`rsync` backups straightforward should retention ever need
+  archiving.
 
 ## Consequences
 
@@ -76,20 +90,21 @@ LXC on the `pve` node.**
   most likely be deployed only to be migrated later.
 - **Grafana is not a prerequisite** — the built-in UI over HTTPS is enough to query logs. A dashboard
   component remains a separate future ADR (ADR 27).
-- **Risk accepted — resource contention on a Celeron with 8 GB.** `pve` carries the NUT server
-  (LXC 213) and the host-native Netdata Parent today, and is slated to take the Home Assistant VM plus
-  the Mosquitto and Zigbee2MQTT LXCs (ADR 25, [#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68)).
-  VictoriaLogs' compression and LogsQL scans are CPU-bound and its memory can spike under wide
-  queries, so the store is placed **around** smart-home services rather than isolated from them.
-  Gemini recommended the opposite host for exactly this reason
-  ([research 33](../research/33-centralized-logging-victorialogs.md)); container memory limits and a
-  sized disk budget mitigate but do not remove it. If the store proves disruptive, ADR 22's k3s node is
-  the documented fallback and this ADR is updated or superseded.
+- **Risk bounded, not removed — resource contention on a Celeron with 8 GB.** `pve` carries the NUT
+  server (LXC 213) and the host-native Netdata Parent today, and is slated to take the Home Assistant VM
+  plus the Mosquitto and Zigbee2MQTT LXCs (ADR 25, [#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68)).
+  VictoriaLogs' compression and LogsQL scans are CPU-bound and its memory can spike under wide queries,
+  so the store is placed **around** smart-home services rather than isolated from them. Gemini
+  recommended the opposite host for exactly this reason
+  ([research 33](../research/33-centralized-logging-victorialogs.md)); the memory and disk caps above
+  bound the damage but do not remove the competition for a weak CPU. If the store proves disruptive,
+  ADR 22's k3s node is the documented fallback and this ADR is updated or superseded.
 - **Disk is shared on one 128 GB M.2 SATA.** The `pve` node has a single SSD: `local` is a ~39 GiB
   root LV already holding the Netdata Parent's ≈7 GiB per-tier database, and `local-lvm` is a ~68 GiB
-  thin pool backing the guests' disks. The store's 30-day budget comes out of that one device — and a
-  thin pool is overcommittable, so growth must be measured, not assumed. Research 33 took no
-  measurements.
+  thin pool backing the guests' disks. The store's volume and its retention cap are sized against that
+  one device — the docs' guidance is ≥20% free space at the store's data directory, and a thin pool is
+  overcommittable, so the numbers are fixed at deploy from the measured ingest rate rather than assumed.
+  Research 33 took no measurements.
 - **Encryption without authentication** — the certificate is self-signed and clients skip
   verification, the same residual ADR 27 and ADR 34 accept. Pinning arrives with the private CA tracked
   as [#126](https://github.com/jaroslaw-bagnicki/Homelab/issues/126).
@@ -98,6 +113,10 @@ LXC on the `pve` node.**
   re-verified whenever the container's networking changes.
 - **The store is inert until a collector ships** ([#84](https://github.com/jaroslaw-bagnicki/Homelab/issues/84));
   this ADR buys the destination, not the pipeline.
+- **A deliberately minimal security posture** — TLS plus built-in basic auth on a trusted LAN, not the
+  upstream vmauth front end, and **no HA**: a single instance with no replication means an outage drops
+  or queues logs depending on the collector. Acceptable at 30-day retention, and revisited if the store
+  ever leaves the LAN.
 
 ### Alternatives Considered
 
@@ -123,6 +142,10 @@ LXC on the `pve` node.**
 - **Packaging: Proxmox 9.1 native OCI image as the LXC** — no daemon, no VM, GUI-driven. Rejected as
   too immature for a store: Technology Preview, no `docker-compose`, layers squash-merged at creation
   so updates mean recreating the container, and no shell in the Proxmox console.
+- **`vmauth` in front of the store (the upstream recommendation)** — the official posture is a trusted
+  network plus vmauth for authorization and load balancing. Rejected for a single-tenant LAN store:
+  built-in basic auth over TLS behind a firewall is proportionate, and vmauth is one more service to run
+  on an 8 GB node. Revisit if the store faces anything beyond the LAN or gains a second tenant.
 
 ---
 
