@@ -70,8 +70,12 @@ source** — its only log *input* sources are Kubernetes pod logs and files, and
   loses nothing that journald did not already lose.
 - **Rollout order `pve` → `edge` → `lab`**, then `nas` and finally `vtstack` (so the store's own container
   logs are searchable in the store). Each node is validated before the next. **`cloudlab` is never a target**
-  — outside the LAN and already covered by Tier A ([ADR 27](27-monitoring-strategy.md)).
-- **The agent stays store-agnostic, and OTLP stays open** — Fluent Bit's output is configuration, not a fork:
+  — outside the LAN and already covered by Tier A ([ADR 27](27-monitoring-strategy.md)).- **The OPNsense router is deliberately out of scope** — it is a FreeBSD appliance with **no journald** and no
+  Docker, which [ADR 27](27-monitoring-strategy.md) already treats as a **per-OS exception**. Fluent Bit does
+  build on FreeBSD (`sysutils/fluent-bit`), but OPNsense has **no plugin for it**, making it an out-of-band
+  package outside the configuration backup; the router's own path — syslog-ng into the store's syslog
+  listener, the Telegraf plugin, or the port — is decided with the router, in its own runbook/ADR
+  ([research 34 §8](../research/34-log-collector-options.md)).- **The agent stays store-agnostic, and OTLP stays open** — Fluent Bit's output is configuration, not a fork:
   the fleet keeps a working collector even if the store is ever replaced, and its `opentelemetry` output
   already speaks **OTLP logs, metrics and traces**, so it can feed VictoriaLogs' OTLP endpoint or
   VictoriaTraces later without replacing the agent ([research 34 §5](../research/34-log-collector-options.md)).
@@ -155,6 +159,7 @@ source** — its only log *input* sources are Kubernetes pod logs and files, and
 - [ADR 27](27-monitoring-strategy.md) — Tier B strategy; components adopted via their own ADRs
 - [ADR 34](34-lan-tls-only.md) — LAN services are TLS-only
 - [ADR 35](35-log-store-victorialogs.md) — the log store, its endpoint, auth and retention
-- [Research 34](../research/34-log-collector-options.md) — the analysis behind this decision; [research 33](../research/33-centralized-logging-victorialogs.md) — the store
+- [Research 34](../research/34-log-collector-options.md) — the analysis behind this decision (§8 the router); [research 33](../research/33-centralized-logging-victorialogs.md) — the store
+- [Research 31](../research/31-futro-s930-hardware-diagnostic.md) — Futro S930 (the router; the per-OS exception)
 - [Runbook 24](../runbooks/24-edge-appliance.md) — Edge services are systemd-native; [runbook 33](../runbooks/33-deploy-victorialogs.md) — the deployed store
 - [Issue #84](https://github.com/jaroslaw-bagnicki/Homelab/issues/84) · [#75](https://github.com/jaroslaw-bagnicki/Homelab/issues/75) (umbrella) · [#123](https://github.com/jaroslaw-bagnicki/Homelab/issues/123) (store) · [#132](https://github.com/jaroslaw-bagnicki/Homelab/issues/132) (store monitoring)
