@@ -166,4 +166,4 @@ LXC on the `pve` node.**
 - [ADR 31](31-static-address-scheme.md) — Static address scheme (guest block, ID = last octet)
 - [ADR 34](34-lan-tls-only.md) — LAN services are TLS-only; host UFW does not filter LXC traffic
 - [Research 33](../research/33-centralized-logging-victorialogs.md) — the research this decision rests on
-- [Issue #123](https://github.com/jaroslaw-bagnicki/Homelab/issues/123) · [#84](https://github.com/jaroslaw-bagnicki/Homelab/issues/84) (collector) · [#75](https://github.com/jaroslaw-bagnicki/Homelab/issues/75) (umbrella) · [#126](https://github.com/jaroslaw-bagnicki/Homelab/issues/126) (private CA)
+- [Issue #123](https://github.com/jaroslaw-bagnicki/Homelab/issues/123) · [#84](https://github.com/jaroslaw-bagnicki/Homelab/issues/84) (collector) · [#132](https://github.com/jaroslaw-bagnicki/Homelab/issues/132) (resource monitoring) · [#75](https://github.com/jaroslaw-bagnicki/Homelab/issues/75) (umbrella) · [#126](https://github.com/jaroslaw-bagnicki/Homelab/issues/126) (private CA)

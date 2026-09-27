@@ -382,7 +382,8 @@ assumed away (see [Open Questions](#open-questions)).
   on the private CA tracked as [#126](https://github.com/jaroslaw-bagnicki/Homelab/issues/126).
 - **Monitoring the store** — how we watch what VictoriaLogs costs the `pve` node, plus the automatic
   check that its HTTPS address and certificate stay healthy (ADR 34's `httpcheck`/`x509check`). Three
-  parts, and the first costs nothing:
+  parts, and the first costs nothing — tracked as
+  [#132](https://github.com/jaroslaw-bagnicki/Homelab/issues/132):
   - **The node already shows most of it.** Netdata runs on the `pve` host itself
     ([ADR 27](../decisions/27-monitoring-strategy.md)), so the new container appears as a Proxmox guest
     with its CPU, memory and disk — no new software, and no agent inside the container. Netdata keeps
