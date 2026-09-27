@@ -13,6 +13,7 @@ Significant architectural and technology choices recorded in
 
 | # | Date | ADR | Status |
 |---|------|-----|--------|
+| 36 | 2026-09-27 | [Log Collector — Fluent Bit, Fleet-Wide, into VictoriaLogs](36-log-collector-fluentbit.md) | Accepted |
 | 35 | 2026-09-27 | [Log Store — VictoriaLogs in an LXC on the pve Node](35-log-store-victorialogs.md) | Accepted |
 | 34 | 2026-09-20 | [LAN Services Are TLS-Only — No Plaintext HTTP](34-lan-tls-only.md) | Accepted |
 | 33 | 2026-09-19 | [Fleet Node Hostnames Name the Host Role](33-fleet-node-hostnames.md) | Accepted |
