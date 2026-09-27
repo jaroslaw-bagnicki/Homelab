@@ -245,11 +245,22 @@ templates the Compose file, and brings the `victorialogs` container up with:
 
 ## 6. Validate
 
-Replace `<password>` with the Key Vault value.
+**Never put the password on a command line** — it would land in shell history and in `curl`'s process
+arguments, which is exactly what the role's `file://` password file exists to avoid. Prime a transient
+netrc instead (prompts once, unrecorded) and shred it when §6 is done. Retrieve the value on a
+workstation with Az PowerShell (`Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name victorialogs-basic-auth-password -AsPlainText`)
+and paste it at the prompt:
+
+```sh
+read -rsp 'vlogs password: ' VL_PW; echo
+VL_NETRC=$(mktemp /dev/shm/vl-netrc.XXXXXX)
+printf 'machine 192.168.2.214 login vlogs password %s\n' "$VL_PW" > "$VL_NETRC"
+chmod 600 "$VL_NETRC"; unset VL_PW
+```
 
 ```sh
 # HTTPS UI answers (self-signed → -k); /select/vmui 302-redirects to its trailing-slash form
-curl -sk -o /dev/null -w '%{http_code}\n' -u "vlogs:<password>" https://192.168.2.214:9428/select/vmui
+curl -sk --netrc-file "$VL_NETRC" -o /dev/null -w '%{http_code}\n' https://192.168.2.214:9428/select/vmui
 # → 302 (add -L, or request /select/vmui/, for 200)
 
 # unauthenticated request is refused
@@ -268,18 +279,21 @@ pct exec 214 -- docker inspect victorialogs --format '{{join .Config.Cmd " "}}'
 
 # ingest smoke test — jsonline, then query it back
 echo '{"_msg":"hello from runbook 33","level":"info","stream":"vtstack"}' \
-  | curl -sk -u "vlogs:<password>" -X POST -H 'Content-Type: application/stream+json' \
+  | curl -sk --netrc-file "$VL_NETRC" -X POST -H 'Content-Type: application/stream+json' \
       --data-binary @- \
       'https://192.168.2.214:9428/insert/jsonline?_stream_fields=stream'
-curl -sk -u "vlogs:<password>" \
+curl -sk --netrc-file "$VL_NETRC" \
   'https://192.168.2.214:9428/select/logsql/query' -d 'query=hello'
 # → the ingested entry
 
 # Elasticsearch-compatible bulk endpoint (the Fluent Bit `es` output path, #84)
 printf '%s\n%s\n' '{"create":{}}' '{"_msg":"bulk hello","level":"info"}' \
-  | curl -sk -u "vlogs:<password>" -X POST \
+  | curl -sk --netrc-file "$VL_NETRC" -X POST \
       -H 'Content-Type: application/x-ndjson' --data-binary @- \
       'https://192.168.2.214:9428/insert/elasticsearch/_bulk?refresh=true'
+
+# done — take the credential back out of /dev/shm
+shred -u "$VL_NETRC"
 ```
 
 **Off-LAN refusal — the ADR 34 acceptance criterion — ⏸ deferred 2026-09-27.** The store must be
