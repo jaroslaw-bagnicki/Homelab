@@ -1,0 +1,17 @@
+---
+victorialogs_dir: /opt/vtstack/victorialogs
+victorialogs_data_dir: "{{ victorialogs_dir }}/data"
+victorialogs_ssl_dir: "{{ victorialogs_dir }}/ssl"
+victorialogs_password_file: "{{ victorialogs_dir }}/password"
+victorialogs_image: victoriametrics/victoria-logs:v1.52.0
+victorialogs_port: 9428
+victorialogs_username: victorialogs
+victorialogs_retention_period: 30d
+victorialogs_max_disk_usage_percent: 80
+victorialogs_min_free_disk_space: 2GiB
+victorialogs_memory_allowed_percent: 60
+victorialogs_tls_days: 3650
+victorialogs_keyvault_name: homelab-bysxdb-kv
+victorialogs_password_secret_name: victorialogs-basic-auth-password
+# Override to skip the Key Vault lookup (tests); normally left empty.
+victorialogs_password: ""

@@ -1,0 +1,22 @@
+---
+# VictoriaLogs log store workload — self-contained recipe.
+#
+# Deploys the Tier B log store (VictoriaLogs) on the `vtstack` guest (LXC 214 on the `pve`
+# node) per issue #123. One role recipe co-located under ansible/workloads/victorialogs/:
+#   - role: victorialogs_store   (TLS cert + file:// basic-auth password + Compose deploy)
+#
+# The base guest (common/security/docker_host) is applied by playbook-logs.yml — this workload
+# assumes a Docker-capable Debian host with UFW already restricting 9428 to the LAN.
+#
+# Run standalone (from a LAN workstation, after CR):
+#   ansible-playbook ansible/workloads/victorialogs/victorialogs-playbook.yml
+#
+# See:
+#   ansible/workloads/victorialogs/README.md        ansible-side facts
+#   docs/workloads.md                               general rules + index
+#   docs/runbooks/33-deploy-victorialogs.md         operational steps
+- name: Deploy the VictoriaLogs log store on the Victoria stack
+  hosts: vtstack
+  become: true
+  roles:
+    - role: victorialogs_store

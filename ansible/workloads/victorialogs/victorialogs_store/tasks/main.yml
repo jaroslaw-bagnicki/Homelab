@@ -1,0 +1,88 @@
+---
+- name: Assert Azure controller credentials are set
+  when: victorialogs_password | length == 0
+  ansible.builtin.assert:
+    that:
+      - lookup('ansible.builtin.env', 'AZURE_CLIENT_ID', default='') | length > 0
+      - lookup('ansible.builtin.env', 'AZURE_CLIENT_SECRET', default='') | length > 0
+      - lookup('ansible.builtin.env', 'AZURE_TENANT_ID', default='') | length > 0
+    fail_msg: "AZURE_CLIENT_ID, AZURE_CLIENT_SECRET and AZURE_TENANT_ID must be set on the Ansible controller for the Key Vault lookup."
+  delegate_to: localhost
+
+- name: Fetch the VictoriaLogs basic-auth password from Key Vault
+  when: victorialogs_password | length == 0
+  vars:
+    victorialogs_vault_url: "https://{{ victorialogs_keyvault_name }}.vault.azure.net"
+    victorialogs_azure_client_id: "{{ lookup('ansible.builtin.env', 'AZURE_CLIENT_ID') }}"
+    victorialogs_azure_secret: "{{ lookup('ansible.builtin.env', 'AZURE_CLIENT_SECRET') }}"
+    victorialogs_azure_tenant_id: "{{ lookup('ansible.builtin.env', 'AZURE_TENANT_ID') }}"
+  ansible.builtin.set_fact:
+    victorialogs_password: >-
+      {{ lookup('azure.azcollection.azure_keyvault_secret',
+      victorialogs_password_secret_name, vault_url=victorialogs_vault_url,
+      client_id=victorialogs_azure_client_id, secret=victorialogs_azure_secret,
+      tenant=victorialogs_azure_tenant_id) }}
+  delegate_to: localhost
+  no_log: true
+
+- name: Ensure the VictoriaLogs directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  loop:
+    - "{{ victorialogs_dir }}"
+    - "{{ victorialogs_data_dir }}"
+    - "{{ victorialogs_ssl_dir }}"
+
+- name: Write the VictoriaLogs basic-auth password file
+  ansible.builtin.copy:
+    content: "{{ victorialogs_password }}"
+    dest: "{{ victorialogs_password_file }}"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+  notify: Restart VictoriaLogs
+
+# Self-signed and clients skip verification — the residual ADR 27 / ADR 34 accept; pinning
+# arrives with the private CA (#126). The certificate is only ever read by the container.
+- name: Generate a self-signed certificate for the VictoriaLogs listener
+  ansible.builtin.command:
+    cmd: >-
+      openssl req -newkey rsa:2048 -nodes -sha512 -x509 -days {{ victorialogs_tls_days }}
+      -keyout {{ victorialogs_ssl_dir }}/key.pem
+      -out {{ victorialogs_ssl_dir }}/cert.pem
+      -subj /CN={{ inventory_hostname }}
+      -addext subjectAltName=DNS:{{ inventory_hostname }},IP:{{ ansible_host | default(inventory_hostname) }}
+    creates: "{{ victorialogs_ssl_dir }}/cert.pem"
+  notify: Restart VictoriaLogs
+
+- name: Set the VictoriaLogs TLS file permissions
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    owner: root
+    group: root
+    mode: "{{ item.mode }}"
+  loop:
+    - { path: "{{ victorialogs_ssl_dir }}/key.pem", mode: "0600" }
+    - { path: "{{ victorialogs_ssl_dir }}/cert.pem", mode: "0644" }
+  loop_control:
+    label: "{{ item.path }}"
+
+- name: Template the VictoriaLogs Compose file
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ victorialogs_dir }}/docker-compose.yml"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart VictoriaLogs
+
+- name: Deploy VictoriaLogs
+  community.docker.docker_compose_v2:
+    project_src: "{{ victorialogs_dir }}"
+    state: present
+    pull: always

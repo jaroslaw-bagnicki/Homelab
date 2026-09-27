@@ -1,0 +1,22 @@
+services:
+  victorialogs:
+    image: {{ victorialogs_image }}
+    container_name: victorialogs
+    restart: unless-stopped
+    ports:
+      - "{{ victorialogs_port }}:{{ victorialogs_port }}"
+    volumes:
+      - "{{ victorialogs_data_dir }}:/victoria-logs-data"
+      - "{{ victorialogs_ssl_dir }}:/etc/victorialogs/ssl:ro"
+      - "{{ victorialogs_password_file }}:/etc/victorialogs/password:ro"
+    command:
+      - -storageDataPath=/victoria-logs-data
+      - -retentionPeriod={{ victorialogs_retention_period }}
+      - -retention.maxDiskUsagePercent={{ victorialogs_max_disk_usage_percent }}
+      - -storage.minFreeDiskSpaceBytes={{ victorialogs_min_free_disk_space }}
+      - -memory.allowedPercent={{ victorialogs_memory_allowed_percent }}
+      - -tls
+      - -tlsCertFile=/etc/victorialogs/ssl/cert.pem
+      - -tlsKeyFile=/etc/victorialogs/ssl/key.pem
+      - -httpAuth.username={{ victorialogs_username }}
+      - -httpAuth.password=file:///etc/victorialogs/password

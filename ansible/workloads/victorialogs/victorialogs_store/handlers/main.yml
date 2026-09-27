@@ -1,0 +1,6 @@
+---
+- name: Restart VictoriaLogs
+  community.docker.docker_container:
+    name: victorialogs
+    state: started
+    restart: true
