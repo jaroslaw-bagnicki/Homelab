@@ -38,10 +38,11 @@ Host placement was the open question, researched in
 **Adopt VictoriaLogs as the Tier B log store, running as a Docker Compose workload in an unprivileged
 LXC on the `pve` node.**
 
-- **Store: VictoriaLogs** over Loki — a single static Go binary with no chunk store and no object
-  storage, a columnar engine that keeps `trace_id`/`user_id`-style fields out of memory instead of
-  forcing cardinality discipline, and a built-in LogsQL web UI at `/select/vmui` so **Grafana is not a
-  prerequisite** (ADR 27's future dashboard component stays optional).
+- **Store: VictoriaLogs** over Loki — a single static Go binary with no chunk store or object storage,
+  no label-cardinality discipline to maintain, and a built-in LogsQL web UI at `/select/vmui` so
+  **Grafana is not a prerequisite** (ADR 27's future dashboard component stays optional). The engine
+  comparison behind this is in
+  [research 33 §8](../research/33-centralized-logging-victorialogs.md#8-how-the-three-engines-store-and-query-logs--the-mechanism-behind-the-store-choice).
 - **Host: the `pve` node (Proxmox VE, Wyse 5070)** — the store lands beside the pane it serves, on
   the node that is always on regardless of maintenance on `lab`, where the fleet's firewall policy is
   already managed, and whose guests' backup route (`vzdump` → the NAS share) is the natural path once
@@ -57,11 +58,11 @@ LXC on the `pve` node.**
 - **Auth: HTTP basic auth from day one** — `-httpAuth.username` / `-httpAuth.password`, the password
   injected from Azure Key Vault as an **environment variable** (`-envflag.enable`), so the secret never
   appears in the container's argument list.
-- **LAN-only, enforced at the container** — the listener is restricted to `192.168.2.0/24` by a
-  **verified** rule **inside the LXC** (or at the Proxmox firewall), not by the host's UFW, which
-  never sees container traffic (ADR 34). Verification means an off-LAN request is refused. The store has
-  **no IP allowlist of its own** — the upstream docs delegate that to the network — so this rule is the
-  whole boundary.
+- **LAN-only, enforced at the container** — the listener is restricted to `192.168.2.0/24` by a rule
+  **inside the LXC** (or at the Proxmox firewall), not by the host's UFW, which never sees container
+  traffic (ADR 34). The store has **no IP allowlist of its own** — the upstream docs delegate that to the
+  network — so this rule is the whole boundary. **Not yet verified:** nothing is deployed, so this is a
+  deploy-phase acceptance criterion, met only when an off-LAN request is refused.
 - **Retention: 30 days** (`-retentionPeriod`), **capped by disk space** —
   `-retention.maxDiskUsagePercent` drops the oldest per-day partitions past a threshold and
   `-storage.minFreeDiskSpaceBytes` keeps a floor. The disk cap applies *in addition to* the time window,
@@ -90,13 +91,11 @@ LXC on the `pve` node.**
   most likely be deployed only to be migrated later.
 - **Grafana is not a prerequisite** — the built-in UI over HTTPS is enough to query logs. A dashboard
   component remains a separate future ADR (ADR 27).
-- **Selective full-text search is the store's weak case.** VictoriaLogs keeps no inverted index — it
-  tokenises and stores bloom filters that skip data blocks, which is what makes high-cardinality fields
-  safe and heavy multi-field queries fast, but a simple query returning a few entries reads more than
-  Elasticsearch would, as its own author documents
-  ([research 33](../research/33-centralized-logging-victorialogs.md)). Accepted because fleet queries are
-  stream- and field-filtered sweeps, and because holding an inverted index is what an 8 GB node cannot
-  afford.
+- **Selective full-text search is the store's weak case** — VictoriaLogs is documented as slower than
+  Elasticsearch for simple queries returning few entries
+  ([research 33 §8](../research/33-centralized-logging-victorialogs.md#8-how-the-three-engines-store-and-query-logs--the-mechanism-behind-the-store-choice)).
+  Accepted: fleet queries are stream- and field-filtered sweeps, and an inverted index is what an 8 GB
+  node cannot afford.
 - **Risk bounded, not removed — resource contention on a Celeron with 8 GB.** `pve` carries the NUT
   server (LXC 213) and the host-native Netdata Parent today, and is slated to take the Home Assistant VM
   plus the Mosquitto and Zigbee2MQTT LXCs (ADR 25, [#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68)).
