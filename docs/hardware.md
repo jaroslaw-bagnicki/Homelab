@@ -99,7 +99,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Network | **Broadcom NetXtreme BCM5720 2× 1 GbE** (FreeBSD `bge`) in the PCIe slot = WAN + LAN · onboard **Realtek RTL8111/8168** (`re`) = MGMT/OPT · **slot trains Gen1 ×1** (no BIOS option — platform limit) |
 | Firmware | BIOS AMI **R1.14.0** (2017-09-21) · board `D3313-E1` · SN `YMFH014511` |
 | Cooling | Fanless · ~59 °C idle · ~8–15 W idle (Jaguar 25 W) |
-| Role | LAN edge router — **OPNsense** (DHCP + NAT + firewall), routing-first, VLANs later — [issue #96](https://github.com/jaroslaw-bagnicki/Homelab/issues/96) |
+| Role | LAN edge router (OPNsense) |
 | Acquisition | 2026-09-02 — hardware diagnostic complete ([research 31](research/31-futro-s930-hardware-diagnostic.md)); OPNsense install pending |
 | Docs | [idea 07](ideas/07-opnsense-futro-s930.md) · [research 31](research/31-futro-s930-hardware-diagnostic.md) |
 
@@ -109,7 +109,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 |---|---|
 | CPU | Ryzen 7 255 (Hawk Point / Zen 4, Radeon 780M 12 CU, 45 W cTDP) |
 | RAM | 64–96 GB DDR5 (planned) |
-| Role | Local LLM inference (Bielik, Llama-3 8B etc.) via UMA frame buffer; OCuLink future eGPU |
+| Role | Local LLM inference server |
 | Docs | [research 08](research/08-llm-server-hardware.md) |
 
 ### Cloudlab VPS — Contabo Cloud VPS 10
