@@ -26,8 +26,12 @@ if ($exists) {
     }
 }
 
+# Alphanumeric generator, matching New-HomelabNutUpsmonPasswords.ps1 — no +/ or = punctuation.
+$alphabet = [char[]]((48..57) + (65..90) + (97..122))
+[string]$pw = -join (1..32 | ForEach-Object { $alphabet[[Security.Cryptography.RandomNumberGenerator]::GetInt32(0, $alphabet.Length)] })
+
 Set-AzKeyVaultSecret -VaultName $vault -Name $secretName `
-    -SecretValue (ConvertTo-SecureString -AsPlainText ([guid]::NewGuid().ToString()) -Force) `
+    -SecretValue (ConvertTo-SecureString $pw -AsPlainText -Force) `
     -ErrorAction Stop |
     Out-Null
 
