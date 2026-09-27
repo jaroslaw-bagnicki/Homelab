@@ -4,7 +4,8 @@
 **Status:** Accepted
 **Amended:** 2026-09-27 (implementation) — the journald inclusion list and priority floor were
 dropped for **collect-all**; buffering is **filesystem** on `pve`/`lab`/`nas` with **`memrb`** on
-`edge`; the output uses the ISO8601 event time as `_time_field` for every source shape.
+`edge`; the output uses the ISO8601 event time as `_time_field` for every source shape; and journald's
+numeric **`PRIORITY`** is mapped to the readable **`level`** field the store displays and filters on.
 
 > **This ADR records the decision and why.** Flags, parsers, per-node paths, tuning and the full
 > comparison live in [research 34](../research/34-log-collector-options.md); how to deploy it will live in
@@ -74,6 +75,11 @@ at all (§7).
   output assumed in [#84](https://github.com/jaroslaw-bagnicki/Homelab/issues/84)**. The mapping itself is the
   design, not a measurement — it is confirmed with `debug=1` on the first node
   ([research 34 §5](../research/34-log-collector-options.md)).
+- **Severity is derived in the collector, not by the store** — VictoriaLogs builds `level` from `PRIORITY`
+  only on its journald ingest endpoint, which this build does not serve, and it exposes no `level_field`
+  ingest arg, so a small Lua filter maps journald's `PRIORITY` to the readable `level` the store displays
+  and filters on. `level` is a regular field, never a stream field: it varies per line, and a non-constant
+  stream field is the high-cardinality trap.
 - **Buffering: filesystem on `pve`/`lab`/`nas`, `memrb` on `edge`** — bounded filesystem chunks carry logs
   across a store outage, the cursor on disk and the output queue capped. On `edge` the input uses Fluent
   Bit's **memory ring buffer** (`memrb`), which drops the oldest chunks and never writes to disk, with the

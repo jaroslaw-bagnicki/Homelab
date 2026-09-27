@@ -36,6 +36,9 @@ the collector chosen in [ADR 36](../decisions/36-log-collector-fluentbit.md).
   `_stream_fields` / `_msg_field` / `_time_field`, `Format json_lines`, ISO8601 event time, `tls On` +
   `tls.verify Off` (self-signed, [ADR 34](../decisions/34-lan-tls-only.md)), basic auth `vlogs` with
   the password from Key Vault, gzip.
+- **Severity** — a Lua filter maps journald's numeric `PRIORITY` to the readable `level` field the store
+  displays and filters on (`0`-`7` → `emerg`, `alert`, `crit`, `error`, `warn`, `notice`, `info`, `debug`).
+  `level` is a regular field, never a stream field — it changes per line.
 - **Buffering** — **filesystem** on `pve`/`lab`/`nas` (chunks survive a store outage, cursor on disk);
   **`memrb`** (bounded memory ring buffer that drops the oldest chunks) on `edge` with a **tmpfs
   cursor**, so an unreachable store never writes to the eMMC.
@@ -89,7 +92,9 @@ Open `https://192.168.2.214:9428/select/vmui` (basic auth) and confirm entries f
 > one `[INPUT]`/`[OUTPUT]`; RSS **7.2 MB** (`MemoryCurrent=7245824`, below research 34's estimated range).
 > The store holds `pve` records with `_msg` populated, `_time` ISO8601 and `_stream`
 > `{_HOSTNAME="pve",_SYSTEMD_UNIT="..."}` — the field mapping was confirmed by querying the store
-> directly instead of via `debug=1`.
+> directly instead of via `debug=1`. `level` is derived from `PRIORITY` by the Lua filter and verified
+> complete — in a window strictly after the restart `count(PRIORITY)` = `count(level)` = 113, and
+> `level:error` returns exactly the `PRIORITY="3"` records.
 >
 > **The first live run caught a role bug (now fixed).** The `URI` line ended with a `{% if %}` block tag;
 > Ansible's `trim_blocks` strips the newline after `{% endif %}`, which glued `Format json_lines` onto the
