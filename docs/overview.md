@@ -55,7 +55,7 @@ watches the **management plane**, the LAN watches the **real-time plane**. Where
 |---|---|---|---|
 | **Node metrics** | Netdata — one pane on the `pve` node covering CPU, memory, disk and network for every LAN node; LAN-only, and alerting waits on the HA VM ([#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68)) | [ADR 27](decisions/27-monitoring-strategy.md) · [runbook 31](runbooks/31-deploy-netdata.md) | ✅ |
 | **Cloud telemetry** | Azure Monitor — the Arc-enrolled nodes' metrics and inventory, beside the rest of Azure | [ADR 09](decisions/09-azure-monitor-via-arc.md) | ✅ |
-| **Power state** | UPS charge, voltage, load and on-battery events charted in Netdata; the same events drive the ordered fleet shutdown | [ADR 30](decisions/30-ups-nut-graceful-shutdown.md) · [runbook 31](runbooks/31-deploy-netdata.md) | ✅ |
+| **Power state** | UPS charge, voltage, load and on-battery events charted in Netdata (`Remote Devices → UPS`); the same events drive the ordered fleet shutdown | [ADR 30](decisions/30-ups-nut-graceful-shutdown.md) · [runbook 31](runbooks/31-deploy-netdata.md) | ✅ |
 | **Disk health** | Drive health and long self-test results for the NAS arrays, per drive | [research 32](research/32-wincor-beetle-m3-hardware-diagnostic.md) | ✅ |
 | **Per-device energy** | Power draw per wall plug, charted in Grafana | [#73](https://github.com/jaroslaw-bagnicki/Homelab/issues/73) · [ADR 26](decisions/26-zigbee-energy-monitoring.md) | 📋 |
 | **Logs** | VictoriaLogs — the fleet's logs searchable in one place on the `pve` node, kept 30 days; deployed, but nothing feeds it yet | [#84](https://github.com/jaroslaw-bagnicki/Homelab/issues/84) · [ADR 35](decisions/35-log-store-victorialogs.md) · [runbook 33](runbooks/33-deploy-victorialogs.md) | 🔨 |
