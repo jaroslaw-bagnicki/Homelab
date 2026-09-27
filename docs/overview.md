@@ -48,21 +48,21 @@ Current state — what's running or in progress. Planned work is under [What's N
 
 ## Observability
 
-Two tiers, split by plane rather than by tool ([ADR 27](decisions/27-monitoring-strategy.md)) — the
-Azure **management plane** and the local **real-time plane**.
+Two tiers, split by plane rather than by tool ([ADR 27](decisions/27-monitoring-strategy.md)) — Azure
+watches the **management plane**, the LAN watches the **real-time plane**. Where each signal is seen:
 
-| Signal | Path | Status |
-|---|---|---|
-| **Per-node metrics** | Netdata — Parent host-native on the `pve` node, children on `lab`/`edge`/`nas`; HTTPS-only dashboard, TLS-only streaming, per-tier retention (1s 14 d · 1m 30 d · 1h 365 d on the Parent, ≈7 GiB); LAN-only and unauthenticated, alarm delivery waits on the HA VM ([#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68)) | ✅ |
-| **Cloud telemetry** | Azure Monitor via Arc — AMA → Log Analytics `homelab-law` (`VmInsights\DetailedMetrics` DCR) on Arc-enrolled nodes; Container Insights joins with k3s ([ADR 09](decisions/09-azure-monitor-via-arc.md)) | ✅ |
-| **Power state** | NUT in LXC 213 — `upsmon` events drive the ordered fleet shutdown; UPS charts (charge/voltage/status) plus on-battery alarms in Netdata, evaluation only ([ADR 30](decisions/30-ups-nut-graceful-shutdown.md) · [runbook 31](runbooks/31-deploy-netdata.md)) | ✅ |
-| **Disk health** | SMART plus long self-tests on the NAS arrays (OMV SMART page), findings recorded per drive | ✅ |
-| **Per-device energy** | Zigbee plugs → Zigbee2MQTT → MQTT → `mqtt2prometheus` → Prometheus → Grafana ([#73](https://github.com/jaroslaw-bagnicki/Homelab/issues/73) · [ADR 26](decisions/26-zigbee-energy-monitoring.md)) | 📋 |
-| **Logs** | Tier B log store — **VictoriaLogs** on the `vtstack` guest (LXC 214 `.214` on the `pve` node, Docker Compose): HTTPS, HTTP basic auth from day one, **30-day retention**, LAN-only — **store deployed**, collector still open ([#84](https://github.com/jaroslaw-bagnicki/Homelab/issues/84) · [ADR 35](decisions/35-log-store-victorialogs.md) · [runbook 33](runbooks/33-deploy-victorialogs.md)) | 🔨 |
+| Signal | Where you see it | Refs | Status |
+|---|---|---|---|
+| **Node metrics** | Netdata — one pane on the `pve` node covering CPU, memory, disk and network for every LAN node; LAN-only, and alerting waits on the HA VM ([#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68)) | [ADR 27](decisions/27-monitoring-strategy.md) · [runbook 31](runbooks/31-deploy-netdata.md) | ✅ |
+| **Cloud telemetry** | Azure Monitor — the Arc-enrolled nodes' metrics and inventory, beside the rest of Azure | [ADR 09](decisions/09-azure-monitor-via-arc.md) | ✅ |
+| **Power state** | UPS charge, voltage, load and on-battery events charted in Netdata; the same events drive the ordered fleet shutdown | [ADR 30](decisions/30-ups-nut-graceful-shutdown.md) · [runbook 31](runbooks/31-deploy-netdata.md) | ✅ |
+| **Disk health** | Drive health and long self-test results for the NAS arrays, per drive | [research 32](research/32-wincor-beetle-m3-hardware-diagnostic.md) | ✅ |
+| **Per-device energy** | Power draw per wall plug, charted in Grafana | [#73](https://github.com/jaroslaw-bagnicki/Homelab/issues/73) · [ADR 26](decisions/26-zigbee-energy-monitoring.md) | 📋 |
+| **Logs** | The fleet's logs — searchable in one place, kept 30 days; the store is up, nothing feeds it yet | [#84](https://github.com/jaroslaw-bagnicki/Homelab/issues/84) · [ADR 35](decisions/35-log-store-victorialogs.md) · [runbook 33](runbooks/33-deploy-victorialogs.md) | 🔨 |
 
-**Boundary rule**: Arc is the management plane (policy, compliance, portal, heartbeat) and covers
-only Arc-enrolled nodes, while per-node real-time metrics come from Netdata on **every** LAN node —
-the Edge appliance and `pve` are never Arc-enrolled, so Azure alone can never see the whole fleet.
+**Why two tiers**: Arc sees only the nodes enrolled in it, and the Edge appliance and `pve` are never
+enrolled — so the management plane (policy, compliance, portal, heartbeat) can never show the whole
+fleet. Real-time metrics come from Netdata on **every** LAN node instead.
 
 ## What's Next
 
