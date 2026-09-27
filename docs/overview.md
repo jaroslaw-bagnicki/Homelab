@@ -4,14 +4,14 @@ High-level view of the current homelab: nodes and workloads. For the full per-no
 hardware detail see [Hardware Inventory](hardware.md); for change history see
 [CHANGELOG](../CHANGELOG.md); for step-by-step setup see the [Runbooks](runbooks/README.md).
 
-**Status legend**: ✅ running · 🔨 in progress · 📋 planned · 🧠 idea
+**Status legend**: ✅ running · 🔨 in progress · 📋 planned · 🧠 idea · ⏹ retired
 
 ## Nodes
 
 | Node | Role | Hardware / OS | IP | Status |
 |---|---|---|---|---|
 | **Lab** | main workload host (Docker → k3s) | Lenovo M910q Tiny · Ubuntu 24.04 LTS · Azure Arc | `192.168.2.200` | 🔨 |
-| **OMV NAS** | backup target (retiring) | HP ProLiant ML110 G5 · OMV 8.3 | `192.168.2.210` | ✅ |
+| **OMV NAS** | backup target | HP ProLiant ML110 G5 · OMV 8.3 | `192.168.2.210` | ⏹ retired |
 | **Beetle NAS** | backup target (successor to ML110) | Wincor Beetle M-III · OMV 8.5 | `192.168.2.202` | 🔨 |
 | **Edge Ingress** | public ingress (cloudflared + Caddy) | Dell Wyse 3040 · Debian 13 minimal | `192.168.2.240` | 🔨 |
 | **Proxmox VE** | virtualisation host — smart-home + always-on services | Dell Wyse 5070 | `192.168.2.201` · guests `.210`–`.214` | ✅ |
@@ -41,7 +41,7 @@ Current state — what's running or in progress. Planned work is under [What's N
 | **cloudflared** | Cloudlab VPS | Cloudflare Tunnel public HTTPS | [ADR 19](decisions/19-cloudflare-tunnel-http-origin.md) · [runbook 16](runbooks/16-docker-services-ansible-role.md) | ✅ |
 | **OpenCode instances** (`homelab`, `prospera`) | Cloudlab VPS | per-project agentic dev servers | [ADR 17](decisions/17-adopt-opencode.md) · [runbook 17](runbooks/17-deploy-opencode-on-cloudlab.md) | ✅ |
 | **Zot** | Cloudlab VPS | self-hosted OCI registry + pull-through cache | [runbook 20](runbooks/20-deploy-zot.md) | ✅ |
-| **OpenMediaVault** | OMV NAS | network shares (SMB) + backup target | [ADR 23](decisions/23-nas-on-ml110.md) | ✅ |
+| **OpenMediaVault** | OMV NAS | network shares (SMB) + backup target | [ADR 23](decisions/23-nas-on-ml110.md) | ⏹ retired |
 | **Netdata Parent** | Proxmox VE host (`pve`) | Tier B central monitoring pane — aggregates per-node metrics from Lab + Edge + Beetle NAS (`nas`) children | [ADR 27](decisions/27-monitoring-strategy.md) · [runbook 31](runbooks/31-deploy-netdata.md) | ✅ |
 | **UPS + NUT** | `pve` (LXC 213) + `lab`/`edge`/`nas` clients | shared-rail power protection — `upsmon` stops each node in order on low battery | [ADR 30](decisions/30-ups-nut-graceful-shutdown.md) · [runbook 29](runbooks/29-nut-ups-shutdown.md) · [runbook 30](runbooks/30-deploy-nut-clients.md) | ✅ |
 | **VictoriaLogs** | `pve` (LXC 214 `vtstack`) | Tier B log store — HTTPS + basic auth, 30-day retention, LAN-only | [ADR 35](decisions/35-log-store-victorialogs.md) · [runbook 33](runbooks/33-deploy-victorialogs.md) | ✅ |
