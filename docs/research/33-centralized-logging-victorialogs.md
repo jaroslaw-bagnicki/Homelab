@@ -380,23 +380,25 @@ assumed away (see [Open Questions](#open-questions)).
   that do. Which nodes run a collector is undecided; the store is inert until at least one ships.
 - **Certificate trust** — clients skip verification initially (ADR 27/34's residual). Pinning depends
   on the private CA tracked as [#126](https://github.com/jaroslaw-bagnicki/Homelab/issues/126).
-- **Monitoring the store** — two halves, both cheap because the pane already lives on the target node.
-  ADR 34's `httpcheck`/`x509check` control should be pointed at the store's HTTPS listener and
-  certificate; and the workload's **resource usage on `pve` needs ongoing measurement, not just a
-  deploy-time reading**:
-  - the Netdata Parent is **host-native on `pve`** (ADR 27), so LXC 214 appears as a Proxmox guest whose
-    CPU, memory and disk are charted automatically, and the Parent's per-tier retention (1s/14 d,
-    1m/30 d, 1h/365 d) shows growth over a year against the caps ADR 35 sets. **No new component and no
-    agent inside the container** — ADR 27's one-agent-per-node rule still holds.
-  - the store's own `/metrics` (`vl_*` — ingest rate, `vl_rows_dropped_total`, data size, disk state) is
-    what the container cannot see from outside. Scrape it with the role's existing go.d pattern: a
-    self-contained feature alongside `tasks/upsd.yml`, gated by its own variable and tag. The job needs
-    the store's basic-auth credential (Key Vault) and certificate verification skipped — the same accepted
-    residual as everywhere else. `/metrics` sits behind `-httpAuth.*` unless `-metricsAuthKey` is used
-    instead, so that choice should be made deliberately rather than by default.
-  - **alarms, not just charts** — disk growth on the store's volume, container memory approaching the LXC
-    ceiling, `vl_rows_dropped_total` increasing (the docs' own suggested rule) and a read-only/disk-full
-    signal. The `upsd` feature's `files/health-*.conf` is the precedent for shipping those in the role.
+- **Monitoring the store** — how we watch what VictoriaLogs costs the `pve` node, plus the automatic
+  check that its HTTPS address and certificate stay healthy (ADR 34's `httpcheck`/`x509check`). Three
+  parts, and the first costs nothing:
+  - **The node already shows most of it.** Netdata runs on the `pve` host itself
+    ([ADR 27](../decisions/27-monitoring-strategy.md)), so the new container appears as a Proxmox guest
+    with its CPU, memory and disk — no new software, and no agent inside the container. Netdata keeps
+    1-second history for 14 days, 1-minute for 30 and 1-hour for a year, which is enough to watch growth
+    against the limits ADR 35 sets.
+  - **The store's own numbers.** Netdata can also read VictoriaLogs' `/metrics` page, which reports what
+    cannot be seen from outside the container: logs arriving per second, logs dropped for old timestamps
+    (`vl_rows_dropped_total`), disk used, and whether the store has gone read-only. That would be added to
+    the `netdata` role the same way the UPS job is added today — one optional job file, switched on by a
+    variable, with an alarm file beside it. It needs the basic-auth password from Key Vault and must skip
+    the self-signed certificate, the same exception already accepted elsewhere. One choice to make:
+    `/metrics` is protected by `-httpAuth.*` unless it gets its own `-metricsAuthKey`.
+  - **Alarms, not just charts** — on disk growth, on container memory approaching its limit, on dropped
+    logs (the VictoriaLogs docs suggest that alarm themselves), and on read-only/disk-full. The existing
+    `upsd` alarm file is the model. This is how the risk ADR 35 accepts — a Celeron and 8 GB shared with
+    Home Assistant — gets noticed early instead of being discovered as an outage.
 - **Whether Grafana, VictoriaMetrics or VictoriaTraces ever land** — all natural extensions, all
   separate future ADRs. Metrics/traces host placement was discussed in the thread but is **not**
   settled here.
