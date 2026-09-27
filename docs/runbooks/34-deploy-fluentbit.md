@@ -48,6 +48,25 @@ the collector chosen in [ADR 36](../decisions/36-log-collector-fluentbit.md).
   (`log-driver: json-file`, `max-size: 10m`, `max-file: 3`) and restarts Docker. Research 34 §9's
   unbounded-rotation prerequisite.
 
+## Warnings
+
+**A rejected request is discarded instantly, fleet-wide.** `Retry_Limit False` covers transient failures
+only — connection errors, timeouts, 5xx. Fluent Bit **never retries a 4xx**, because re-sending a request
+the server has already rejected is pointless. While a 4xx persists every node drops everything at full
+rate and the store logs nothing, since the store is the one refusing: that is exactly how the
+malformed-URI `400` behaved during the rollout (`chunk will not be retried` once a second, with
+`vl_http_errors_total` at **0** the whole time). The realistic trigger is **password rotation** —
+`scripts/New-HomelabVictoriaLogsPassword.ps1 -Force` changes the store's password, the collectors keep
+sending the old one and get **401** until each playbook is re-run. **Rotate, then immediately re-run
+`playbook-pve.yml`, `playbook-edge.yml`, `playbook-lab.yml`, `playbook-nas.yml` and `playbook-logs.yml`** —
+the window between the two is permanent, silent log loss.
+
+**On `edge`, that loss is unobservable.** `memrb` overwrites the oldest chunks when its 16 MB ring fills
+and writes **no** journal line, so a long outage is indistinguishable from a quiet node — which is what
+[#132](https://github.com/jaroslaw-bagnicki/Homelab/issues/132) is for. DLQ is not an option there:
+`storage.keep.rejected` needs filesystem storage, which
+[ADR 24](../decisions/24-edge-ingress-appliance.md) forbids on the eMMC.
+
 ## Prerequisites
 
 - [ ] Store live and answering ([runbook 33](33-deploy-victorialogs.md)).
@@ -159,8 +178,7 @@ sudo pct exec 214 -- docker start victorialogs
 > 20:02:36.650 → 20:03:00.655.
 >
 > **Caveat:** `memrb` is still a 16 MB ring, so an outage long enough to fill it drops the oldest chunks —
-> and those drops are **silent** in the journal, so counting them needs the collector's metrics endpoint,
-> which this role does not expose ([#132](https://github.com/jaroslaw-bagnicki/Homelab/issues/132)).
+> silently. See [Warnings](#warnings).
 
 ## 3. Deploy `lab` (Docker json-file logs)
 
