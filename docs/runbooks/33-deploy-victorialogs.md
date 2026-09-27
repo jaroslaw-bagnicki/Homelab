@@ -214,7 +214,7 @@ templates the Compose file, and brings the `victorialogs` container up with:
   a full disk cannot put the store into read-only mode
 - `-memory.allowedPercent=60` inside the LXC's 2 GiB ceiling
 - `-tls -tlsCertFile=… -tlsKeyFile=…` (HTTPS only)
-- `-httpAuth.username=victorialogs -httpAuth.password=file:///etc/victorialogs/password` (the
+- `-httpAuth.username=vlogs -httpAuth.password=file:///etc/victorialogs/password` (the
   **container** path; the host file is `/opt/vtstack/victorialogs/password`, mounted read-only)
 - image pinned to an explicit tag, `restart: unless-stopped`, and **`network_mode: host`** so the
   in-LXC UFW filters `:9428` — a Docker *published* port would bypass UFW (see §6 / [ADR 35](../decisions/35-log-store-victorialogs.md))
@@ -249,7 +249,7 @@ Replace `<password>` with the Key Vault value.
 
 ```sh
 # HTTPS UI answers (self-signed → -k); /select/vmui 302-redirects to its trailing-slash form
-curl -sk -o /dev/null -w '%{http_code}\n' -u "victorialogs:<password>" https://192.168.2.214:9428/select/vmui
+curl -sk -o /dev/null -w '%{http_code}\n' -u "vlogs:<password>" https://192.168.2.214:9428/select/vmui
 # → 302 (add -L, or request /select/vmui/, for 200)
 
 # unauthenticated request is refused
@@ -268,16 +268,16 @@ pct exec 214 -- docker inspect victorialogs --format '{{join .Config.Cmd " "}}'
 
 # ingest smoke test — jsonline, then query it back
 echo '{"_msg":"hello from runbook 33","level":"info","stream":"vtstack"}' \
-  | curl -sk -u "victorialogs:<password>" -X POST -H 'Content-Type: application/stream+json' \
+  | curl -sk -u "vlogs:<password>" -X POST -H 'Content-Type: application/stream+json' \
       --data-binary @- \
       'https://192.168.2.214:9428/insert/jsonline?_stream_fields=stream'
-curl -sk -u "victorialogs:<password>" \
+curl -sk -u "vlogs:<password>" \
   'https://192.168.2.214:9428/select/logsql/query' -d 'query=hello'
 # → the ingested entry
 
 # Elasticsearch-compatible bulk endpoint (the Fluent Bit `es` output path, #84)
 printf '%s\n%s\n' '{"create":{}}' '{"_msg":"bulk hello","level":"info"}' \
-  | curl -sk -u "victorialogs:<password>" -X POST \
+  | curl -sk -u "vlogs:<password>" -X POST \
       -H 'Content-Type: application/x-ndjson' --data-binary @- \
       'https://192.168.2.214:9428/insert/elasticsearch/_bulk?refresh=true'
 ```
@@ -328,7 +328,7 @@ latency (VictoriaLogs' documented weak case — [research 33 §8](../research/33
 > | Unauthenticated | **401** |
 > | Plaintext HTTP | **400** — `Client sent an HTTP request to an HTTPS server.` (no cleartext service) |
 > | In-LXC UFW | **active** — `22` + `9428` ALLOW IN `192.168.2.0/24`, `80` DENY, default deny incoming |
-> | Effective container flags | `-storageDataPath=/victoria-logs-data -retentionPeriod=30d -retention.maxDiskUsagePercent=80 -storage.minFreeDiskSpaceBytes=2GiB -memory.allowedPercent=60 -tls -tlsCertFile=… -tlsKeyFile=… -httpAuth.username=victorialogs -httpAuth.password=file://…`; `restart=unless-stopped`, `net=host` |
+> | Effective container flags | `-storageDataPath=/victoria-logs-data -retentionPeriod=30d -retention.maxDiskUsagePercent=80 -storage.minFreeDiskSpaceBytes=2GiB -memory.allowedPercent=60 -tls -tlsCertFile=… -tlsKeyFile=… -httpAuth.username=vlogs -httpAuth.password=file://…`; `restart=unless-stopped`, `net=host` |
 > | Ingest — jsonline | **200**; `_msg:"hello from runbook 33"` with `_stream:{stream="vtstack"}` (via `_stream_fields=stream`) queryable |
 > | Ingest — ES `_bulk` | `{"took":0,"errors":false,…"status":201}`; `_msg:"bulk hello from runbook 33"` queryable |
 > | Idempotency | container unrecreated (`Restarts=0`, same ID); deploy task reports `changed` from `pull: always` (§5) |

@@ -77,7 +77,7 @@ One secret must exist in the vault declared by `victorialogs_keyvault_name` (def
 
 The role fetches it at runtime via `azure.azcollection.azure_keyvault_secret` and writes it to
 `victorialogs_password_file` (mode `0600`). Rotation = run the script with `-Force`, then re-run the
-playbook. The username is a role default (`victorialogs`), not a secret.
+playbook. The username is a role default (`vlogs`), not a secret.
 
 ## Role Idempotency
 

@@ -5,7 +5,7 @@ victorialogs_ssl_dir: "{{ victorialogs_dir }}/ssl"
 victorialogs_password_file: "{{ victorialogs_dir }}/password"
 victorialogs_image: victoriametrics/victoria-logs:v1.52.0
 victorialogs_port: 9428
-victorialogs_username: victorialogs
+victorialogs_username: vlogs
 victorialogs_retention_period: 30d
 victorialogs_max_disk_usage_percent: 80
 victorialogs_min_free_disk_space: 2GiB
