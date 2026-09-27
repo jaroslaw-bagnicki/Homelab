@@ -9,3 +9,10 @@ netdata_stream_target: "192.168.2.201:19996"
 netdata_stream_ssl: true
 netdata_bind: "127.0.0.1"
 netdata_storage: ram
+
+# Fluent Bit collector (ADR 36) — journald only; memory-only buffer and a tmpfs cursor so an
+# unreachable store drops logs instead of writing to the eMMC (ADR 24).
+fluentbit_buffer_type: memory
+fluentbit_buffer_limit: 16M
+fluentbit_cursor_tmpfs: true
+fluentbit_pause_on_overlimit: true

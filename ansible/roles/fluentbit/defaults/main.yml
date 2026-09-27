@@ -1,0 +1,50 @@
+---
+# Shared Fluent Bit role — one collector shape fleet-wide, per-node sources in host_vars.
+# Decision: ADR 36. The role owns the store output contract, buffering and cursor placement;
+# a node only declares which source shapes it has (journald always, Docker where present,
+# native files where a system keeps its own).
+fluentbit_package: fluent-bit
+fluentbit_service: fluent-bit
+fluentbit_user: fluent-bit
+fluentbit_group: fluent-bit
+fluentbit_conf_dir: /etc/fluent-bit
+fluentbit_conf: "{{ fluentbit_conf_dir }}/fluent-bit.conf"
+fluentbit_parsers_file: "{{ fluentbit_conf_dir }}/parsers.conf"
+
+# Official Fluent Bit APT repository — Debian/Ubuntu only (asserted in tasks/main.yml).
+fluentbit_keyring: /etc/apt/keyrings/fluentbit.asc
+fluentbit_apt_key_url: https://packages.fluentbit.io/fluentbit.key
+fluentbit_apt_base_url: "https://packages.fluentbit.io/{{ ansible_facts['distribution'] | lower }}"
+fluentbit_apt_suite: "{{ ansible_facts['distribution_release'] }}"
+
+fluentbit_flush: 1
+fluentbit_log_level: info
+
+# VictoriaLogs output contract (ADR 35 / ADR 36) — the store runs on the vtstack guest.
+fluentbit_store_host: "192.168.2.214"
+fluentbit_store_port: 9428
+fluentbit_store_username: vlogs
+fluentbit_store_uri: /insert/jsonline
+fluentbit_store_keyvault_name: homelab-bysxdb-kv
+fluentbit_store_password_secret_name: victorialogs-basic-auth-password
+# Override to skip the Key Vault lookup (tests); normally left empty.
+fluentbit_store_password: ""
+# Appends debug=1 to the ingest URI so VictoriaLogs logs how it parsed each record.
+fluentbit_store_debug: false
+
+# On eMMC nodes (edge) the buffer is memory-only, so an unreachable store drops logs rather
+# than writing them to the eMMC (ADR 24 / ADR 36). Elsewhere filesystem buffering carries
+# chunks across a store outage. The cursor lives on tmpfs where `fluentbit_cursor_tmpfs` is set.
+fluentbit_buffer_type: filesystem
+fluentbit_buffer_limit: 256M
+fluentbit_cursor_tmpfs: false
+fluentbit_pause_on_overlimit: false
+fluentbit_runtime_dir: "{{ '/run/fluent-bit' if fluentbit_cursor_tmpfs | bool else '/var/lib/fluent-bit' }}"
+
+# Sources — host_vars only toggles these.
+fluentbit_collect_journald: true
+fluentbit_read_from_tail: true
+fluentbit_journald_max_entries: 5000
+fluentbit_collect_docker: false
+fluentbit_docker_glob: /var/lib/docker/containers/*/*-json.log
+fluentbit_file_paths: []

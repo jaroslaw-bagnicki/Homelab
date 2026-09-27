@@ -1,0 +1,108 @@
+[SERVICE]
+    Flush                    {{ fluentbit_flush }}
+    Daemon                   Off
+    Log_Level                {{ fluentbit_log_level }}
+    Parsers_File             {{ fluentbit_parsers_file }}
+    storage.path             {{ fluentbit_runtime_dir }}
+    storage.sync             normal
+    storage.checksum         off
+{% if fluentbit_collect_journald %}
+
+# journald — the whole journal, no inclusion list and no priority filter (ADR 36).
+[INPUT]
+    Name                     systemd
+    Tag                      journal.*
+    DB                       {{ fluentbit_runtime_dir }}/journal.db
+    Read_From_Tail           {{ 'On' if fluentbit_read_from_tail | bool else 'Off' }}
+    Max_Entries              {{ fluentbit_journald_max_entries }}
+
+[OUTPUT]
+    Name                     http
+    Match                    journal.*
+    Host                     {{ fluentbit_store_host }}
+    Port                     {{ fluentbit_store_port }}
+    URI                      {{ fluentbit_store_uri }}?_stream_fields=_HOSTNAME,_SYSTEMD_UNIT&_msg_field=MESSAGE&_time_field=date{% if fluentbit_store_debug | bool %}&debug=1{% endif %}
+    Format                   json_lines
+    Json_date_format         iso8601
+    tls                      On
+    tls.verify               Off
+    http_user                {{ fluentbit_store_username }}
+    http_passwd              {{ fluentbit_store_password }}
+    compress                 gzip
+    storage.type             {{ fluentbit_buffer_type }}
+    storage.total_limit_size {{ fluentbit_buffer_limit }}
+{% if fluentbit_pause_on_overlimit | bool %}
+    storage.pause_on_chunks_overlimit On
+{% endif %}
+{% endif %}
+{% if fluentbit_collect_docker %}
+
+# Docker json-file logs — the built-in `docker` parser unwraps the JSON envelope (ADR 36 §9).
+[INPUT]
+    Name                     tail
+    Tag                      docker.*
+    Path                     {{ fluentbit_docker_glob }}
+    Parser                   docker
+    DB                       {{ fluentbit_runtime_dir }}/docker.db
+    Read_from_Head           false
+    Docker_Mode              On
+    Docker_Mode_Flush        5
+
+[FILTER]
+    Name                     record_modifier
+    Match                    docker.*
+    Record                   hostname {{ inventory_hostname }}
+
+[OUTPUT]
+    Name                     http
+    Match                    docker.*
+    Host                     {{ fluentbit_store_host }}
+    Port                     {{ fluentbit_store_port }}
+    URI                      {{ fluentbit_store_uri }}?_stream_fields=hostname,container_name&_msg_field=log&_time_field=date{% if fluentbit_store_debug | bool %}&debug=1{% endif %}
+    Format                   json_lines
+    Json_date_format         iso8601
+    tls                      On
+    tls.verify               Off
+    http_user                {{ fluentbit_store_username }}
+    http_passwd              {{ fluentbit_store_password }}
+    compress                 gzip
+    storage.type             {{ fluentbit_buffer_type }}
+    storage.total_limit_size {{ fluentbit_buffer_limit }}
+{% if fluentbit_pause_on_overlimit | bool %}
+    storage.pause_on_chunks_overlimit On
+{% endif %}
+{% endif %}
+{% for path in fluentbit_file_paths %}
+
+# Native file logs — raw lines, source-specific paths (ADR 36 §9).
+[INPUT]
+    Name                     tail
+    Tag                      file.{{ loop.index }}.*
+    Path                     {{ path }}
+    DB                       {{ fluentbit_runtime_dir }}/file-{{ loop.index }}.db
+    Read_from_Head           false
+
+[FILTER]
+    Name                     record_modifier
+    Match                    file.{{ loop.index }}.*
+    Record                   hostname {{ inventory_hostname }}
+
+[OUTPUT]
+    Name                     http
+    Match                    file.{{ loop.index }}.*
+    Host                     {{ fluentbit_store_host }}
+    Port                     {{ fluentbit_store_port }}
+    URI                      {{ fluentbit_store_uri }}?_stream_fields=hostname&_msg_field=log&_time_field=date{% if fluentbit_store_debug | bool %}&debug=1{% endif %}
+    Format                   json_lines
+    Json_date_format         iso8601
+    tls                      On
+    tls.verify               Off
+    http_user                {{ fluentbit_store_username }}
+    http_passwd              {{ fluentbit_store_password }}
+    compress                 gzip
+    storage.type             {{ fluentbit_buffer_type }}
+    storage.total_limit_size {{ fluentbit_buffer_limit }}
+{% if fluentbit_pause_on_overlimit | bool %}
+    storage.pause_on_chunks_overlimit On
+{% endif %}
+{% endfor %}
