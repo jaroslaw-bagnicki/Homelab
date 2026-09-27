@@ -12,6 +12,11 @@ Decision: [ADR 36](../../../docs/decisions/36-log-collector-fluentbit.md); deplo
 - `tasks/main.yml` — APT repo + install, Key Vault password fetch, runtime directory, config template, service.
 - `handlers/main.yml` — restart `fluent-bit`.
 - `templates/fluent-bit.conf.j2` — `[SERVICE]` plus one `[INPUT]`/`[OUTPUT]` pair per source shape.
+  Build each `URI` query string with an inline expression (`{{ '&debug=1' if ... else '' }}`), **never** a
+  `{% if %}` block tag: Ansible's `trim_blocks` strips the newline after `{% endif %}`, gluing the next
+  line (`Format json_lines`) onto the URI. Fluent Bit then sends a malformed request line, which
+  VictoriaLogs rejects with a bare `400 Bad Request` before its handler runs — the store logs nothing,
+  so it looks healthy while ingesting zero bytes.
 - `files/homelab-parsers.conf` — the `docker_path` regex parser that derives `container_id` from the Docker log path.
 
 ## Source shapes

@@ -85,7 +85,17 @@ Open `https://192.168.2.214:9428/select/vmui` (basic auth) and confirm entries f
 `_msg` populated and a sane timestamp — `_stream:{_HOSTNAME="pve"}` should be non-empty. **Then turn
 `fluentbit_store_debug` back off** (`-e fluentbit_store_debug=false`).
 
-> **Verification pending** — record the `PLAY RECAP`, the `debug=1` field-mapping result, and the RSS.
+> **Verified 2026-09-27** — `PLAY RECAP` `pve ok=59 changed=10 failed=0`; service `active`; config renders
+> one `[INPUT]`/`[OUTPUT]`; RSS **7.2 MB** (`MemoryCurrent=7245824`, below research 34's estimated range).
+> The store holds `pve` records with `_msg` populated, `_time` ISO8601 and `_stream`
+> `{_HOSTNAME="pve",_SYSTEMD_UNIT="..."}` — the field mapping was confirmed by querying the store
+> directly instead of via `debug=1`.
+>
+> **The first live run caught a role bug (now fixed).** The `URI` line ended with a `{% if %}` block tag;
+> Ansible's `trim_blocks` strips the newline after `{% endif %}`, which glued `Format json_lines` onto the
+> URI. Fluent Bit then sent a malformed request line, so VictoriaLogs answered a bare `400 Bad Request`
+> *before* its handler — the store logged nothing and looked healthy. Fixed by building the query string
+> with an inline expression.
 
 ## 2. Deploy `edge` (the node that justifies the pipeline)
 
@@ -201,10 +211,10 @@ stops receiving.
 
 ## Verification Checklist
 
-Executed on: **⏳ pending** — run after CR, in order `pve` → `edge` → `lab` → `nas` → `vtstack`.
+Executed on: **in progress** — `pve` verified 2026-09-27; remaining `edge` → `lab` → `nas` → `vtstack`.
 Record the `ansible-playbook --diff` summary and each result.
 
-- [ ] §1 `pve` — service active; config has one `[OUTPUT]`; `debug=1` confirms `_msg`/`_time`/streams; records queryable in vmui; RSS recorded; `debug` back off
+- [x] §1 `pve` — service active; config has one `[INPUT]`/`[OUTPUT]`; `_msg`/`_time`/streams confirmed from the stored records; records queryable; RSS 7.2 MB; `debug` off
 - [ ] §2 `edge` — cursor on tmpfs; store-down test shows **no eMMC writes**; logs dropped, not spooled
 - [ ] §3 `lab` — Docker logs queryable with `container_id` stream; `docker_host` rotation applied (container recreated)
 - [ ] §4 `nas` — records queryable
