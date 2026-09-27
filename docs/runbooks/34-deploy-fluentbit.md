@@ -192,18 +192,38 @@ setting. **Rotation only applies to containers created after the change** — re
 ```sh
 # on lab
 sudo docker info --format '{{.LoggingDriver}}'
-sudo docker inspect --format '{{.HostConfig.LogConfig}}' portainer   # after recreate: max-size/max-file
+sudo docker inspect --format '{{.HostConfig.LogConfig}}' <container>  # {json-file map[max-file:3 max-size:10m]}
 ```
 
 Expect a brief interruption earlier in this same run: the `docker_host` `daemon.json` write
 **restarts the Docker daemon** on `lab`, so every running container stops and comes back with its
 previous log config.
 
-Confirm container logs reach the store with `container_id` as a stream field
-(`_stream:{container_id="..."}` in vmui).
+**Note: `lab` currently runs no containers at all.** It is a bare Docker host waiting on the k3s
+migration ([ADR 22](../decisions/22-k3s-arc-homelab.md)), so there is nothing to bounce, nothing to adopt
+rotation, and no Docker log files to read. Exercise the shape with a throwaway container and remove it:
 
-> **Verification pending** — record the `PLAY RECAP`, a queryable Docker record, and the rotation
-> config on a recreated container.
+```sh
+sudo docker run -d --name fluentbit-docker-probe --log-driver json-file alpine sh -c 'echo probe; sleep 120'
+# verify the record below, then
+sudo docker rm -f fluentbit-docker-probe && sudo docker rmi alpine:latest
+```
+
+**Filter Docker records by `container_id` or `hostname`, never `_HOSTNAME`** — the Docker shape's stream
+fields are `hostname` and `container_id` (ADR 36), so `{_HOSTNAME="lab"}` silently matches none of them:
+
+```sh
+curl -u "vlogs:$PASSWORD" -X POST --data-urlencode 'query={container_id:*}' https://192.168.2.214:9428/select/logsql/query
+```
+
+> **Verified 2026-09-27** — `PLAY RECAP` `lab ok=74 changed=14 failed=0`. `docker info` reports the
+> `json-file` driver and `/etc/docker/daemon.json` holds `max-size: 10m` / `max-file: 3`; dockerd
+> restarted at 20:11:02, with no containers in existence to bounce. Journald is shipping — **282**
+> records in 5 minutes, **280 with a `level`**, across 9 units. The Docker shape was exercised with a
+> throwaway `alpine` container: its line arrived as
+> `_stream={container_id="c111b7940e24...",hostname="lab"}` carrying the full 64-hex `container_id`
+> derived by `docker_path`, and the probe — created *after* the `daemon.json` change — reported
+> `{json-file map[max-file:3 max-size:10m]}`, so rotation is adopted. Probe container and image removed.
 
 ## 4. Deploy `nas`
 
@@ -260,12 +280,12 @@ stops receiving.
 
 ## Verification Checklist
 
-Executed on: **in progress** — `pve` and `edge` verified 2026-09-27, each including a store-outage test;
-remaining `lab` → `nas` → `vtstack`. Record the `ansible-playbook --diff` summary and each result.
+Executed on: **in progress** — `pve`, `edge` and `lab` verified 2026-09-27; remaining `nas` → `vtstack`.
+Record the `ansible-playbook --diff` summary and each result.
 
 - [x] §1 `pve` — service active; config has one `[INPUT]`/`[OUTPUT]`; `_msg`/`_time`/streams confirmed from the stored records; `level` derived from `PRIORITY`; records queryable; RSS 7.2 MB; `debug` off; with `Retry_Limit False` an outage loses nothing (**192** records spanning the whole window, 0 discards)
 - [x] §2 `edge` — cursor on tmpfs; `write_bytes` stayed **0** and no `*.flb` on disk across two store outages; does not pause; delivered the whole outage window (**155** records, 0 discards — was 12 pre-fix)
-- [ ] §3 `lab` — Docker logs queryable with `container_id` stream; `docker_host` rotation applied (container recreated)
+- [x] §3 `lab` — Docker logs queryable with a 64-hex `container_id` stream (via a throwaway probe — `lab` runs no containers); `docker_host` rotation adopted (`max-size: 10m` / `max-file: 3`); journald and `level` shipping
 - [ ] §4 `nas` — records queryable
 - [ ] §5 `vtstack` — the store's own container logs queryable
 - [ ] §6 idempotent — a re-run reports `changed=0`
