@@ -86,8 +86,8 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Network | Realtek GbE (`enp1s0`) · Intel CNVi WiFi/BT (`wlp0s12f0`) |
 | Zigbee | Sonoff ZBDongle-P (CC2652P) · USB coordinator for LXC 212 |
 | OS | Proxmox VE 9.2.2 installed at `192.168.2.201` · base provisioned ([runbook 28](runbooks/28-pve-proxmox-node.md)) |
-| Guests | VM 210 HA OS · LXC 211 Mosquitto · LXC 212 Zigbee2MQTT · LXC 213 NUT · LXC 214 Victoria stack (`vtstack`, VictoriaLogs) ([ADR 31](decisions/31-static-address-scheme.md)) |
-| Role | Fleet virtualisation host with Netdata Parent; NUT + the VictoriaLogs log store delivered, HA OS/Mosquitto/Zigbee2MQTT pending (ADR 25, ADR 27, ADR 30, ADR 35) |
+| Guests | VM 210 HA OS · LXC 211 Mosquitto · LXC 212 Zigbee2MQTT · LXC 213 NUT · LXC 214 Victoria stack (`vtstack`, VictoriaLogs — pending deploy) ([ADR 31](decisions/31-static-address-scheme.md)) |
+| Role | Fleet virtualisation host with Netdata Parent; NUT delivered; the Victoria stack (`vtstack`) and HA OS/Mosquitto/Zigbee2MQTT pending (ADR 25, ADR 27, ADR 30, ADR 35) |
 | Docs | [idea 05](ideas/05-home-assistant-thin-client.md) · [ADR 25](decisions/25-home-assistant-thin-client.md) · [ADR 33](decisions/33-fleet-node-hostnames.md) · [ADR 35](decisions/35-log-store-victorialogs.md) · [research 26](research/26-home-assistant-thin-client.md) · [research 29](research/29-wyse5070-hardware-diagnostic.md) · [runbook 28](runbooks/28-pve-proxmox-node.md) · [runbook 31](runbooks/31-deploy-netdata.md) · [runbook 33](runbooks/33-deploy-victorialogs.md) |
 
 ### OPNsense Router — Fujitsu Futro S930 (planned)

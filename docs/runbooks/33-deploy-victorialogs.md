@@ -50,6 +50,10 @@ built-in `/select/vmui` UI ([ADR 35](../decisions/35-log-store-victorialogs.md))
 - [ ] Ansible collections installed (`ansible-galaxy collection install -r ansible/requirements.yml`).
 - [ ] Azure Key Vault `homelab-bysxdb-kv` reachable from the controller; `Az` module signed in
       (for the password secret, §4).
+- [ ] Controller Python packages for the Key Vault lookup — `azure-identity`, `azure-keyvault-secrets`
+      (`pip3 install --break-system-packages azure-identity azure-keyvault-secrets`).
+- [ ] `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET` and `AZURE_TENANT_ID` exported on the controller —
+      the workload role reads the Key Vault secret through them.
 - [ ] Fleet key in `ssh-agent` (`ssh-add -l` shows `fleetadm@homelab`).
 
 ---
@@ -161,8 +165,10 @@ templates the Compose file, and brings the `victorialogs` container up with:
   a full disk cannot put the store into read-only mode
 - `-memory.allowedPercent=60` inside the LXC's 2 GiB ceiling
 - `-tls -tlsCertFile=… -tlsKeyFile=…` (HTTPS only)
-- `-httpAuth.username=victorialogs -httpAuth.password=file:///opt/vtstack/victorialogs/password`
-- image pinned to an explicit tag, `restart: unless-stopped`, port `9428:9428`
+- `-httpAuth.username=victorialogs -httpAuth.password=file:///etc/victorialogs/password` (the
+  **container** path; the host file is `/opt/vtstack/victorialogs/password`, mounted read-only)
+- image pinned to an explicit tag, `restart: unless-stopped`, and **`network_mode: host`** so the
+  in-LXC UFW filters `:9428` — a Docker *published* port would bypass UFW (see §6 / [ADR 35](../decisions/35-log-store-victorialogs.md))
 
 ## 6. Validate
 
@@ -181,11 +187,11 @@ curl -sk -o /dev/null -w '%{http_code}\n' https://192.168.2.214:9428/select/vmui
 curl -s --connect-timeout 5 -o /dev/null -w '%{http_code}\n' http://192.168.2.214:9428/select/vmui
 # → connection refused / reset (no cleartext)
 
-# UFW inside the container — 22 + 9428 allowed from 192.168.2.0/24 only
+# UFW inside the container is the LAN boundary (host networking) — 22 + 9428 from 192.168.2.0/24 only
 pct exec 214 -- ufw status verbose
 
 # retention / memory / auth flags actually in effect
-pct exec 214 -- docker inspect victorialogs --format '{{join .Args " "}}'
+pct exec 214 -- docker inspect victorialogs --format '{{join .Config.Cmd " "}}'
 
 # ingest smoke test — jsonline, then query it back
 echo '{"_msg":"hello from runbook 33","level":"info","stream":"vtstack"}' \
@@ -203,12 +209,17 @@ printf '%s\n%s\n' '{"create":{}}' '{"_msg":"bulk hello","level":"info"}' \
       'https://192.168.2.214:9428/insert/elasticsearch/_bulk?refresh=true'
 ```
 
-**Off-LAN refusal — the ADR 34 acceptance criterion.** From a host outside `192.168.2.0/24`
-(the `cloudlab` VPS or a non-LAN network), the store must be unreachable:
+**Off-LAN refusal — the ADR 34 acceptance criterion.** The store must be unreachable from outside
+`192.168.2.0/24`. Test from a source that can **route** to the LXC but sits on another subnet (e.g. a
+host on the upstream `192.168.1.0/24`). A request from `cloudlab` only proves there is no NAT/route to
+the LAN — not that the firewall refused it — so record which source was used:
 
 ```sh
+# from a routable non-LAN source — expect connection refused / timeout
 curl -sk --connect-timeout 5 -o /dev/null -w '%{http_code}\n' https://192.168.2.214:9428/select/vmui
-# → timeout / refused — the LAN-only rule holds
+
+# and confirm the rule that does the work (host networking → UFW INPUT):
+pct exec 214 -- ufw status verbose    # 9428 ALLOW IN 192.168.2.0/24
 ```
 
 **Reboot survival** — `onboot 1` plus `restart: unless-stopped`:

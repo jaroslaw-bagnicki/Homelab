@@ -45,7 +45,7 @@ Azure **management plane** and the local **real-time plane**.
 | **Power state** | NUT in LXC 213 — `upsmon` events drive the ordered fleet shutdown; UPS charts (charge/voltage/status) plus on-battery alarms in Netdata, evaluation only ([ADR 30](decisions/30-ups-nut-graceful-shutdown.md) · [runbook 31](runbooks/31-deploy-netdata.md)) | ✅ |
 | **Disk health** | SMART plus long self-tests on the NAS arrays (OMV SMART page), findings recorded per drive | ✅ |
 | **Per-device energy** | Zigbee plugs → Zigbee2MQTT → MQTT → `mqtt2prometheus` → Prometheus → Grafana ([#73](https://github.com/jaroslaw-bagnicki/Homelab/issues/73) · [ADR 26](decisions/26-zigbee-energy-monitoring.md)) | 📋 |
-| **Logs** | Tier B log store — **VictoriaLogs** on the `vtstack` guest (LXC 214 `.214` on the `pve` node, Docker Compose), HTTPS + HTTP basic auth from day one, **30-day retention**, LAN-bound at the container — store ✅, the collector is still open ([#123](https://github.com/jaroslaw-bagnicki/Homelab/issues/123) · [#84](https://github.com/jaroslaw-bagnicki/Homelab/issues/84) · [ADR 35](decisions/35-log-store-victorialogs.md)) | 🔨 |
+| **Logs** | Tier B log store — **VictoriaLogs** on the `vtstack` guest (LXC 214 `.214` on the `pve` node, Docker Compose): HTTPS, HTTP basic auth from day one, **30-day retention**, LAN-only — **workload authored, deploy pending**; collector still open ([#123](https://github.com/jaroslaw-bagnicki/Homelab/issues/123) · [#84](https://github.com/jaroslaw-bagnicki/Homelab/issues/84) · [ADR 35](decisions/35-log-store-victorialogs.md)) | 🔨 |
 
 **Boundary rule**: Arc is the management plane (policy, compliance, portal, heartbeat) and covers
 only Arc-enrolled nodes, while per-node real-time metrics come from Netdata on **every** LAN node —
