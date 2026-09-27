@@ -47,17 +47,21 @@ LXC on the `pve` node.**
   the node that is always on regardless of maintenance on `lab`, where the fleet's firewall policy is
   already managed, and whose guests' backup route (`vzdump` → the NAS share) is the natural path once
   the Beetle's share lands. **LXC 214 / `192.168.2.214`** — the next free guest ID, per ADR 31's
-  ID-is-the-address rule. A log store has no cgroup requirement, unlike the Netdata Parent, which must
-  be host-native (ADR 27).
+  ID-is-the-address rule. The guest is **Debian 13** (LXC 213's precedent) and is provisioned as the
+  **Victoria stack** host (`vtstack`) — framed to carry VictoriaMetrics and VictoriaTraces as later
+  services (research 33 §4), though this ADR deploys only the log store. A log store has no cgroup
+  requirement, unlike the Netdata Parent, which must be host-native (ADR 27).
 - **Packaging: Docker Compose in an unprivileged LXC** with **Nesting + FUSE** enabled, the image
-  pinned to an explicit tag. This is the fleet's normal workload pattern and keeps a conventional
+  pinned to an explicit tag. Docker comes from the fleet's `docker_host` role, **now distro-aware**
+  (Debian as well as Ubuntu). This is the fleet's normal workload pattern and keeps a conventional
   image-update path, unlike the single binary on the host or Proxmox 9.1's OCI-as-LXC technology
   preview.
 - **Transport: HTTPS only** — native TLS (`-tls`, `-tlsCertFile`, `-tlsKeyFile`) with a self-signed
   certificate generated in the container. Plaintext HTTP is prohibited (ADR 34).
 - **Auth: HTTP basic auth from day one** — `-httpAuth.username` / `-httpAuth.password`, the password
-  injected from Azure Key Vault as an **environment variable** (`-envflag.enable`), so the secret never
-  appears in the container's argument list.
+  written by Ansible from Azure Key Vault to a **root-only file** and read via
+  `-httpAuth.password=file://…`, so the secret never appears in the container's argument list or
+  environment — upstream's recommended route over `-envflag.enable`.
 - **LAN-only, enforced at the container** — the listener is restricted to `192.168.2.0/24` by a rule
   **inside the LXC** (or at the Proxmox firewall), not by the host's UFW, which never sees container
   traffic (ADR 34). The store has **no IP allowlist of its own** — the upstream docs delegate that to the
@@ -91,6 +95,10 @@ LXC on the `pve` node.**
   most likely be deployed only to be migrated later.
 - **Grafana is not a prerequisite** — the built-in UI over HTTPS is enough to query logs. A dashboard
   component remains a separate future ADR (ADR 27).
+- **One host and one Compose project, one service for now** — `vtstack` is framed as the Victoria
+  stack, so VictoriaMetrics and VictoriaTraces later join the same LXC and Compose project instead of
+  needing a host of their own. Both are **separate future ADRs** (research 33 §4); adding them
+  compounds the Celeron/8 GB risk below, which those ADRs must weigh.
 - **Selective full-text search is the store's weak case** — VictoriaLogs is documented as slower than
   Elasticsearch for simple queries returning few entries
   ([research 33 §8](../research/33-centralized-logging-victorialogs.md#8-how-the-three-engines-store-and-query-logs--the-mechanism-behind-the-store-choice)).
