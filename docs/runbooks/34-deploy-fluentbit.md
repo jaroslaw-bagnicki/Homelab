@@ -231,7 +231,15 @@ curl -u "vlogs:$PASSWORD" -X POST --data-urlencode 'query={container_id:*}' http
 ansible-playbook ansible/playbooks/playbook-nas.yml --diff
 ```
 
-> **Verification pending** — record the `PLAY RECAP` and a queryable `nas` record.
+The OMV node does **not** ship `python3-debian`, which `deb822_repository` requires — the role installs it
+as a repository prerequisite, so this play doubles as the check that the fix holds on a minimal Debian
+host (confirm afterwards with `dpkg -s python3-debian`).
+
+> **Verified 2026-09-27** — `PLAY RECAP` `nas ok=55 changed=12 failed=0`; `python3-debian` installed;
+> service `active`; the config renders one `[INPUT]`/`[OUTPUT]` with `Retry_Limit False`; RSS **21.9 MB**
+> (`MemoryCurrent=21884928` — the busier OMV host, and the first node inside research 34's estimated
+> 10-30 MB range, where `pve` came in well under it). The store holds **128** `nas` records, **127 with a
+> `level`** (`info`, `warn`, `notice`), across `ssh`, `fluent-bit` and `init.scope`.
 
 ## 5. Deploy `vtstack` (the store's own logs)
 
@@ -280,13 +288,13 @@ stops receiving.
 
 ## Verification Checklist
 
-Executed on: **in progress** — `pve`, `edge` and `lab` verified 2026-09-27; remaining `nas` → `vtstack`.
+Executed on: **in progress** — `pve`, `edge`, `lab` and `nas` verified 2026-09-27; remaining `vtstack`.
 Record the `ansible-playbook --diff` summary and each result.
 
 - [x] §1 `pve` — service active; config has one `[INPUT]`/`[OUTPUT]`; `_msg`/`_time`/streams confirmed from the stored records; `level` derived from `PRIORITY`; records queryable; RSS 7.2 MB; `debug` off; with `Retry_Limit False` an outage loses nothing (**192** records spanning the whole window, 0 discards)
 - [x] §2 `edge` — cursor on tmpfs; `write_bytes` stayed **0** and no `*.flb` on disk across two store outages; does not pause; delivered the whole outage window (**155** records, 0 discards — was 12 pre-fix)
 - [x] §3 `lab` — Docker logs queryable with a 64-hex `container_id` stream (via a throwaway probe — `lab` runs no containers); `docker_host` rotation adopted (`max-size: 10m` / `max-file: 3`); journald and `level` shipping
-- [ ] §4 `nas` — records queryable
+- [x] §4 `nas` — records queryable and levelled (**128**, 127 with a `level`) on RSS 21.9 MB; the `python3-debian` prerequisite installed cleanly on the OMV host that does not ship it
 - [ ] §5 `vtstack` — the store's own container logs queryable
 - [ ] §6 idempotent — a re-run reports `changed=0`
 
