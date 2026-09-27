@@ -3,8 +3,11 @@ services:
     image: {{ victorialogs_image }}
     container_name: victorialogs
     restart: unless-stopped
-    ports:
-      - "{{ victorialogs_port }}:{{ victorialogs_port }}"
+    # Host networking — the store binds directly in the LXC's network namespace, so the
+    # in-LXC UFW (INPUT chain) filters :9428 for the LAN. A bridge + `ports:` publishes the
+    # port through Docker's own iptables path, which BYPASSES UFW and would leave the
+    # write endpoint reachable beyond 192.168.2.0/24 (ADR 34 / ADR 35 / research 12).
+    network_mode: host
     volumes:
       - "{{ victorialogs_data_dir }}:/victoria-logs-data"
       - "{{ victorialogs_ssl_dir }}:/etc/victorialogs/ssl:ro"

@@ -25,6 +25,13 @@
   delegate_to: localhost
   no_log: true
 
+- name: Install the certificate tooling
+  ansible.builtin.apt:
+    name:
+      - openssl
+    state: present
+    update_cache: true
+
 - name: Ensure the VictoriaLogs directories exist
   ansible.builtin.file:
     path: "{{ item }}"

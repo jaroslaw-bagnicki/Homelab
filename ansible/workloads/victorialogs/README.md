@@ -28,8 +28,10 @@ The store is:
   `-storage.minFreeDiskSpaceBytes`, so a full disk cannot put the store into read-only mode.
 - **Memory-bounded** — `-memory.allowedPercent` inside the LXC's ceiling, so its caches cannot
   starve the neighbouring smart-home services on the 8 GB node.
-- **LAN-only** — enforced by the host's UFW (the `security` base role, `9428` from `192.168.2.0/24`),
-  not the host's Proxmox UFW, which never sees container traffic ([ADR 34](../../../docs/decisions/34-lan-tls-only.md)).
+- **LAN-only** — enforced by UFW **inside the LXC** (the `security` base role, `9428` from
+  `192.168.2.0/24`). The container runs `network_mode: host` so UFW's INPUT chain filters the port — a
+  Docker-*published* port is forwarded through Docker's iptables path and would **bypass UFW**
+  ([ADR 34](../../../docs/decisions/34-lan-tls-only.md)).
 - **Not backed up** — a rolling 30-day window stays outside [ADR 02](../../../docs/decisions/02-backup-strategy-restic-blob.md)'s scope.
 - Idempotent — a re-run with no template/image/KV change reports `changed=0`.
 
@@ -37,7 +39,7 @@ The store is:
 
 | Service | Image | Port binding | Owned by |
 |---|---|---|---|
-| `victorialogs` | `victoriametrics/victoria-logs:v1.52.0` | `9428:9428` | `victorialogs_store` role |
+| `victorialogs` | `victoriametrics/victoria-logs:v1.52.0` | host network (`:9428`) | `victorialogs_store` role |
 
 ## Host on-disk layout
 

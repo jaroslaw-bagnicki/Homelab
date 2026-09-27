@@ -57,16 +57,20 @@ LXC on the `pve` node.**
   image-update path, unlike the single binary on the host or Proxmox 9.1's OCI-as-LXC technology
   preview.
 - **Transport: HTTPS only** — native TLS (`-tls`, `-tlsCertFile`, `-tlsKeyFile`) with a self-signed
-  certificate generated in the container. Plaintext HTTP is prohibited (ADR 34).
+  certificate generated on the host by Ansible and mounted read-only. Plaintext HTTP is prohibited
+  (ADR 34).
 - **Auth: HTTP basic auth from day one** — `-httpAuth.username` / `-httpAuth.password`, the password
   written by Ansible from Azure Key Vault to a **root-only file** and read via
   `-httpAuth.password=file://…`, so the secret never appears in the container's argument list or
   environment — upstream's recommended route over `-envflag.enable`.
 - **LAN-only, enforced at the container** — the listener is restricted to `192.168.2.0/24` by a rule
   **inside the LXC** (or at the Proxmox firewall), not by the host's UFW, which never sees container
-  traffic (ADR 34). The store has **no IP allowlist of its own** — the upstream docs delegate that to the
-  network — so this rule is the whole boundary. **Not yet verified:** nothing is deployed, so this is a
-  deploy-phase acceptance criterion, met only when an off-LAN request is refused.
+  traffic (ADR 34). The container therefore runs with **`network_mode: host`** so the in-LXC UFW
+  (INPUT chain) actually filters the port — a Docker *published* port is forwarded through Docker's own
+  iptables path and would **bypass UFW**. The store has **no IP allowlist of its own** — the upstream
+  docs delegate that to the network — so this rule is the whole boundary. **Not yet verified:** nothing
+  is deployed, so this is a deploy-phase acceptance criterion, met only when an off-LAN request is
+  refused.
 - **Retention: 30 days** (`-retentionPeriod`), **capped by disk space** —
   `-retention.maxDiskUsagePercent` drops the oldest per-day partitions past a threshold and
   `-storage.minFreeDiskSpaceBytes` keeps a floor. The disk cap applies *in addition to* the time window,
