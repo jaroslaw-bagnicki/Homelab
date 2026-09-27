@@ -114,6 +114,15 @@
     cmd: systemd-tmpfiles --create /etc/tmpfiles.d/fluent-bit.conf
   changed_when: false
 
+- name: Install the Fluent Bit parsers
+  ansible.builtin.copy:
+    src: homelab-parsers.conf
+    dest: "{{ fluentbit_custom_parsers_file }}"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart fluent-bit
+
 - name: Template the Fluent Bit configuration
   ansible.builtin.template:
     src: fluent-bit.conf.j2

@@ -73,16 +73,34 @@
     append: true
   loop: "{{ docker_users }}"
 
+- name: Check for an existing Docker daemon configuration
+  ansible.builtin.stat:
+    path: /etc/docker/daemon.json
+  register: docker_host_daemon_file
+
+- name: Read the existing Docker daemon configuration
+  when: docker_host_daemon_file.stat.exists
+  ansible.builtin.slurp:
+    src: /etc/docker/daemon.json
+  register: docker_host_daemon_json
+
+# Merge only the logging keys so unrelated daemon settings (data-root, registry, proxy,
+# iptables, …) survive an apply. Existing log-opts keys are preserved too.
 - name: Configure the Docker log driver and rotation
+  vars:
+    docker_host_daemon_existing: >-
+      {{ (docker_host_daemon_json.content | b64decode | trim | from_json)
+         if (docker_host_daemon_file.stat.exists and
+             (docker_host_daemon_json.content | b64decode | trim | length) > 0)
+         else {} }}
+    docker_host_daemon_merged: >-
+      {{ docker_host_daemon_existing
+         | combine({'log-driver': docker_host_log_driver,
+                    'log-opts': docker_host_daemon_existing.get('log-opts', {})
+                      | combine({'max-size': docker_host_log_max_size,
+                                 'max-file': docker_host_log_max_file})}) }}
   ansible.builtin.copy:
-    content: |
-      {
-        "log-driver": "{{ docker_host_log_driver }}",
-        "log-opts": {
-          "max-size": "{{ docker_host_log_max_size }}",
-          "max-file": "{{ docker_host_log_max_file }}"
-        }
-      }
+    content: "{{ docker_host_daemon_merged | to_nice_json }}\n"
     dest: /etc/docker/daemon.json
     owner: root
     group: root

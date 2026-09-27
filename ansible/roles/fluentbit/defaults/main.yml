@@ -10,11 +10,14 @@ fluentbit_group: fluent-bit
 fluentbit_conf_dir: /etc/fluent-bit
 fluentbit_conf: "{{ fluentbit_conf_dir }}/fluent-bit.conf"
 fluentbit_parsers_file: "{{ fluentbit_conf_dir }}/parsers.conf"
+fluentbit_custom_parsers_file: "{{ fluentbit_conf_dir }}/homelab-parsers.conf"
 
 # Official Fluent Bit APT repository — Debian/Ubuntu only (asserted in tasks/main.yml).
+# The codename is part of the URI, matching the upstream `deb … /{os}/$codename $codename main`
+# line: APT resolves the release under <uri>/dists/<suite>.
 fluentbit_keyring: /etc/apt/keyrings/fluentbit.asc
 fluentbit_apt_key_url: https://packages.fluentbit.io/fluentbit.key
-fluentbit_apt_base_url: "https://packages.fluentbit.io/{{ ansible_facts['distribution'] | lower }}"
+fluentbit_apt_base_url: "https://packages.fluentbit.io/{{ ansible_facts['distribution'] | lower }}/{{ ansible_facts['distribution_release'] }}"
 fluentbit_apt_suite: "{{ ansible_facts['distribution_release'] }}"
 
 fluentbit_flush: 1
@@ -32,13 +35,14 @@ fluentbit_store_password: ""
 # Appends debug=1 to the ingest URI so VictoriaLogs logs how it parsed each record.
 fluentbit_store_debug: false
 
-# On eMMC nodes (edge) the buffer is memory-only, so an unreachable store drops logs rather
-# than writing them to the eMMC (ADR 24 / ADR 36). Elsewhere filesystem buffering carries
-# chunks across a store outage. The cursor lives on tmpfs where `fluentbit_cursor_tmpfs` is set.
+# Buffering is a per-INPUT setting. `filesystem` stores an extra chunk copy on disk, so it
+# carries logs across a store outage; `memrb` (eMMC nodes) is a bounded memory ring buffer that
+# drops the oldest chunks and never writes to the eMMC (ADR 24 / ADR 36). `fluentbit_buffer_limit`
+# caps the output's filesystem queue on `filesystem` nodes, and the input memory (`mem_buf_limit`)
+# on memory nodes. The cursor lives on tmpfs where `fluentbit_cursor_tmpfs` is set.
 fluentbit_buffer_type: filesystem
 fluentbit_buffer_limit: 256M
 fluentbit_cursor_tmpfs: false
-fluentbit_pause_on_overlimit: false
 fluentbit_runtime_dir: "{{ '/run/fluent-bit' if fluentbit_cursor_tmpfs | bool else '/var/lib/fluent-bit' }}"
 
 # Sources — host_vars only toggles these.

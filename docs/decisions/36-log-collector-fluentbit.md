@@ -3,7 +3,7 @@
 **Date:** 2026-09-27
 **Status:** Accepted
 **Amended:** 2026-09-27 (implementation) — the journald inclusion list and priority floor were
-dropped for **collect-all**; buffering is **filesystem** on `pve`/`lab`/`nas` with memory-only on
+dropped for **collect-all**; buffering is **filesystem** on `pve`/`lab`/`nas` with **`memrb`** on
 `edge`; the output uses the ISO8601 event time as `_time_field` for every source shape.
 
 > **This ADR records the decision and why.** Flags, parsers, per-node paths, tuning and the full
@@ -68,16 +68,17 @@ at all (§7).
 - **Output: the store's JSON-lines API over TLS with basic auth** — `https://192.168.2.214:9428/insert/jsonline`
   with `_stream_fields` / `_msg_field` / `_time_field`; **one output block per source shape, because a single
   `_msg_field` cannot serve two schemas** (`lab` carries both journald and Docker logs); `_HOSTNAME` +
-  `_SYSTEMD_UNIT` as streams for journald, hostname + container for Docker; `_msg_field` per shape and the
+  `_SYSTEMD_UNIT` as streams for journald, hostname + container id for Docker; `_msg_field` per shape and the
   **ISO8601 event time (`date`) as `_time_field` everywhere** — one conversion for all shapes; gzip; password
   from Key Vault. This is the route VictoriaMetrics **documents** for Fluent Bit and it **supersedes the `es`
   output assumed in [#84](https://github.com/jaroslaw-bagnicki/Homelab/issues/84)**. The mapping itself is the
   design, not a measurement — it is confirmed with `debug=1` on the first node
   ([research 34 §5](../research/34-log-collector-options.md)).
-- **Buffering: filesystem on `pve`/`lab`/`nas`, memory-only on `edge`** — bounded filesystem chunks carry logs
-  across a store outage, with the cursor on disk. On `edge` the buffer is memory-only with pause-on-overlimit
-  and the cursor on **tmpfs**, so an unreachable store **drops** logs instead of spooling them to the eMMC,
-  where a reboot loses nothing journald had not already lost ([research 34 §6](../research/34-log-collector-options.md)).
+- **Buffering: filesystem on `pve`/`lab`/`nas`, `memrb` on `edge`** — bounded filesystem chunks carry logs
+  across a store outage, the cursor on disk and the output queue capped. On `edge` the input uses Fluent
+  Bit's **memory ring buffer** (`memrb`), which drops the oldest chunks and never writes to disk, with the
+  cursor on **tmpfs** — where a reboot loses nothing journald had not already lost
+  ([research 34 §6](../research/34-log-collector-options.md)).
 - **The whole journal per node — no inclusion list, no priority floor.** Fluent Bit's journald filter is exact
   key/value, so a severity threshold cannot be expressed without inventing one; the simplest correct config is
   to ship everything and filter at query time. The store's volume and cardinality are the accepted costs.
@@ -104,8 +105,8 @@ at all (§7).
 
 **Costs accepted**
 
-- **Logs are lossy on `edge`, deliberately.** Its memory-only buffer means a store outage longer than the
-  buffer — or a reboot — drops logs; the rest of the fleet buffers to disk and rides out an outage. The same
+- **Logs are lossy on `edge`, deliberately.** Its `memrb` buffer drops the oldest chunks when the store is
+  unreachable — or a reboot happens; the rest of the fleet buffers to disk and rides out an outage. The same
   availability trade ADR 35 made when it declined HA.
 - **`edge` trades completeness for the eMMC**: with the store down its logs are dropped by design.
 - **No filtering.** Every journald record is shipped, so the store carries the fleet's full log volume and the

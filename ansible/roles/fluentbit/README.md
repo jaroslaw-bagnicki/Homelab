@@ -12,6 +12,7 @@ Decision: [ADR 36](../../../docs/decisions/36-log-collector-fluentbit.md); deplo
 - `tasks/main.yml` — APT repo + install, Key Vault password fetch, runtime directory, config template, service.
 - `handlers/main.yml` — restart `fluent-bit`.
 - `templates/fluent-bit.conf.j2` — `[SERVICE]` plus one `[INPUT]`/`[OUTPUT]` pair per source shape.
+- `files/homelab-parsers.conf` — the `docker_path` regex parser that derives `container_id` from the Docker log path.
 
 ## Source shapes
 
@@ -21,7 +22,7 @@ The role renders three shapes, each with its own `[OUTPUT]` because a single
 | Shape | Input | `_msg_field` | Stream fields | Enabled by |
 |---|---|---|---|---|
 | journald | `systemd` (whole journal) | `MESSAGE` | `_HOSTNAME`, `_SYSTEMD_UNIT` | `fluentbit_collect_journald` (default) |
-| Docker json-file | `tail` + `docker` parser + `Docker_Mode` | `log` | `hostname`, `container_name` | `fluentbit_collect_docker` |
+| Docker json-file | `tail` + `docker` parser + `Docker_Mode`, container id from the path | `log` | `hostname`, `container_id` | `fluentbit_collect_docker` |
 | Native files | `tail` (raw line) | `log` | `hostname` | `fluentbit_file_paths` |
 
 Every output writes to the store's JSON-lines API over TLS with basic auth, gzip, and the
@@ -30,11 +31,14 @@ Key Vault at run time and never stored in the repo.
 
 ## Buffering
 
-- **Default — filesystem**: chunks survive a store outage; the cursor lives under
-  `fluentbit_runtime_dir` (`/var/lib/fluent-bit`).
-- **eMMC nodes (`edge`) — memory only**: `fluentbit_buffer_type: memory`,
-  `fluentbit_cursor_tmpfs: true` (cursor on `/run`, recreated by a `tmpfiles.d` entry) and
-  `fluentbit_pause_on_overlimit: true`, so an unreachable store never writes to the eMMC
+Buffering is a **per-input** setting (`Storage.Type`), bounded per node:
+
+- **Default — filesystem**: chunks are stored on disk, so they survive a store outage; the cursor
+  lives under `fluentbit_runtime_dir` (`/var/lib/fluent-bit`) and the output queue is capped by
+  `storage.total_limit_size`.
+- **eMMC nodes (`edge`) — `memrb`**: a bounded memory ring buffer that **drops the oldest chunks**
+  (never writing to disk) plus a `mem_buf_limit`, with the cursor on `/run` recreated by a
+  `tmpfiles.d` entry — so an unreachable store never writes to the eMMC
   ([ADR 24](../../../docs/decisions/24-edge-ingress-appliance.md)).
 
 ## Parameters
@@ -51,10 +55,9 @@ Key Vault at run time and never stored in the repo.
 | `fluentbit_store_username` | `vlogs` | Basic-auth user; the password is a secret. |
 | `fluentbit_store_password_secret_name` | `victorialogs-basic-auth-password` | Key Vault secret name. |
 | `fluentbit_store_debug` | `false` | Appends `debug=1` so the store logs how it parsed each record. |
-| `fluentbit_buffer_type` | `filesystem` | `memory` on `edge`. |
-| `fluentbit_buffer_limit` | `256M` | Per-output cap (`storage.total_limit_size`). |
+| `fluentbit_buffer_type` | `filesystem` | Per-input storage: `filesystem`, `memory` or `memrb`; `memrb` on `edge`. |
+| `fluentbit_buffer_limit` | `256M` | Filesystem output queue cap, or the input `mem_buf_limit` on memory nodes. |
 | `fluentbit_cursor_tmpfs` | `false` | Cursor on `/run` instead of `/var/lib/fluent-bit`. |
-| `fluentbit_pause_on_overlimit` | `false` | Pause input when the buffer cap is hit (`edge`). |
 
 ## Secrets
 

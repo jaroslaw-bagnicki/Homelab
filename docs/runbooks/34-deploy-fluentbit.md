@@ -37,8 +37,8 @@ the collector chosen in [ADR 36](../decisions/36-log-collector-fluentbit.md).
   `tls.verify Off` (self-signed, [ADR 34](../decisions/34-lan-tls-only.md)), basic auth `vlogs` with
   the password from Key Vault, gzip.
 - **Buffering** — **filesystem** on `pve`/`lab`/`nas` (chunks survive a store outage, cursor on disk);
-  **memory-only** on `edge` with a **tmpfs cursor** and pause-on-overlimit, so an unreachable store
-  never writes to the eMMC.
+  **`memrb`** (bounded memory ring buffer that drops the oldest chunks) on `edge` with a **tmpfs
+  cursor**, so an unreachable store never writes to the eMMC.
 - **Docker log rotation** — the `docker_host` role now writes `/etc/docker/daemon.json`
   (`log-driver: json-file`, `max-size: 10m`, `max-file: 3`) and restarts Docker. Research 34 §9's
   unbounded-rotation prerequisite.
@@ -78,7 +78,7 @@ grep -c '^\[OUTPUT\]' /etc/fluent-bit/fluent-bit.conf
 Then check the store accepted the records and how it parsed them (from `pve`):
 
 ```sh
-pct exec 214 -- docker logs victorialogs --since 3m 2>&1 | grep -iE 'debug|error'
+sudo pct exec 214 -- docker logs victorialogs --since 3m 2>&1 | grep -iE 'debug|error'
 ```
 
 Open `https://192.168.2.214:9428/select/vmui` (basic auth) and confirm entries from `pve` appear with
@@ -93,9 +93,9 @@ Open `https://192.168.2.214:9428/select/vmui` (basic auth) and confirm entries f
 ansible-playbook ansible/playbooks/playbook-edge.yml --diff
 ```
 
-Edge overrides are data: `fluentbit_buffer_type: memory`, `fluentbit_cursor_tmpfs: true`,
-`fluentbit_pause_on_overlimit: true`. Confirm the cursor is on tmpfs and that a store outage
-**drops** logs instead of writing them to the eMMC:
+Edge overrides are data: `fluentbit_buffer_type: memrb` and `fluentbit_cursor_tmpfs: true`.
+Confirm the cursor is on tmpfs and that a store outage **drops** logs instead of writing them to
+the eMMC:
 
 ```sh
 # on edge
@@ -109,12 +109,12 @@ With the store stopped, wait, and confirm no eMMC writes and no spooling to disk
 
 ```sh
 # from pve
-pct exec 214 -- docker stop victorialogs
+sudo pct exec 214 -- docker stop victorialogs
 # on edge — after ~60 s
 cat /sys/block/mmcblk0/stat                           # unchanged write-sectors
 journalctl -u fluent-bit --since -2m --no-pager | tail
 # from pve
-pct exec 214 -- docker start victorialogs
+sudo pct exec 214 -- docker start victorialogs
 ```
 
 > **Verification pending** — record the tmpfs mount, the eMMC write counters before/after, and the
@@ -135,8 +135,8 @@ sudo docker info --format '{{.LoggingDriver}}'
 sudo docker inspect --format '{{.HostConfig.LogConfig}}' portainer   # after recreate: max-size/max-file
 ```
 
-Confirm container logs reach the store with `container_name` as a stream field
-(`_stream:{container_name="..."}` in vmui).
+Confirm container logs reach the store with `container_id` as a stream field
+(`_stream:{container_id="..."}` in vmui).
 
 > **Verification pending** — record the `PLAY RECAP`, a queryable Docker record, and the rotation
 > config on a recreated container.
@@ -175,7 +175,7 @@ Record the `ansible-playbook --diff` summary and each result.
 
 - [ ] §1 `pve` — service active; config has one `[OUTPUT]`; `debug=1` confirms `_msg`/`_time`/streams; records queryable in vmui; RSS recorded; `debug` back off
 - [ ] §2 `edge` — cursor on tmpfs; store-down test shows **no eMMC writes**; logs dropped, not spooled
-- [ ] §3 `lab` — Docker logs queryable with `container_name` stream; `docker_host` rotation applied (container recreated)
+- [ ] §3 `lab` — Docker logs queryable with `container_id` stream; `docker_host` rotation applied (container recreated)
 - [ ] §4 `nas` — records queryable
 - [ ] §5 `vtstack` — the store's own container logs queryable
 - [ ] §6 idempotent — a re-run reports `changed=0`
