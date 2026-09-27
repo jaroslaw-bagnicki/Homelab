@@ -2,6 +2,7 @@
 
 | # | Date | Document | Topic | Source |
 |---|------|----------|-------|--------|
+| 33 | 2026‑09‑27 | [33-centralized-logging-victorialogs.md](33-centralized-logging-victorialogs.md) | Log store for the fleet — **VictoriaLogs** over Loki (columnar engine, cardinality-safe, single binary, built-in `/select/vmui` UI), why high cardinality decides it, VictoriaLogs vs ClickHouse, VictoriaTraces as the future trace component, running containers on the `pve` node (VM vs LXC+Docker vs Proxmox 9.1 OCI-as-LXC Tech Preview), and the host-placement debate (`pve` LXC vs `lab`/k3s vs the NAS) with Gemini's counter-recommendation recorded | Gemini chats 19–20 |
 | 32 | 2026‑09‑12 | [32-wincor-beetle-m3-hardware-diagnostic.md](32-wincor-beetle-m3-hardware-diagnostic.md) | Wincor Beetle M-III pre-boot audit for the OMV NAS backup target — Skylake/H110, Pentium G4400 (AES-NI, QuickSync HEVC decode), 8 GiB DDR4 (1 free slot), Intel I219-V GbE, SanDisk X600 128 GB SSD + 2× Seagate 1 TB, PCIe 3.0 x16 + 2× x1, 14–16 W idle, 43.7 dB(A); BIOS walked 2026‑09‑21 (VT-d, `Last State` + WoL, LEGACY, 5 SATA ports) | SystemRescue 13.02 + hardinfo2 + smartctl + issue #98 |
 | 31 | 2026‑09‑02 | [31-futro-s930-hardware-diagnostic.md](31-futro-s930-hardware-diagnostic.md) | Futro S930 pre-boot hardware audit for the OPNsense router — GX-424CC 4C/4T, 4 GB (1×, free slot), Broadcom BCM5720 dual NIC (`bge`, Idea 07's pick) + onboard Realtek (`re`), internal Innodisk 8 GB mSATA (SMART PASSED, tight for OPNsense), AES-NI present, PCIe slot trains Gen1 ×1 (no BIOS option — platform limit) | SystemRescue 13.02 + hardinfo2 + smartctl + issue #96 |
 | 30 | 2026‑08‑24 | [30-mobile-internet-failover-offers.md](30-mobile-internet-failover-offers.md) | Mobile internet (5G/LTE data SIM) for the OPNsense router's failover WAN — Orange Flex additional SIM (free) as primary; Fonia 31 GB/17 PLN baseline vs a2mobile/aero2/Orange/Play/T-Mobile data plans | Web research: operator sites + Antyweb + RankingOperatorzy |
@@ -57,3 +58,5 @@
 | 16 | [Gemini chat 16](https://share.gemini.google/H4KW01K8tTUZ) | 30 |
 | 17 | [Gemini chat 17](https://share.gemini.google/lyviXlDkXm7Y) | 30 |
 | 18 | [Gemini chat 18 — Homelab LTE failover](https://share.gemini.google/gc2ZIcPHbVue) | 30 |
+| 19 | [Gemini chat 19](https://share.gemini.google/Z8QXKHmDHOFe) | 33 |
+| 20 | [Gemini chat 20](https://share.gemini.google/orS2jFh9H1IU) | 33 |
