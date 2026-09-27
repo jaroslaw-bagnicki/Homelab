@@ -132,6 +132,21 @@ passwd -l fleetadm
 ssh fleetadm@192.168.2.214 'sudo -n whoami'   # → root
 ```
 
+> **Verified 2026-09-27 — passed.** Bootstrapped over `pct exec 214` from `pve`:
+>
+> | Check | Result |
+> |---|---|
+> | `sudo` installed | `sudo 1.9.16p2-3+deb13u2` |
+> | Account | `uid=1000(fleetadm) gid=1000(fleetadm) groups=…,27(sudo)` |
+> | Sudoers | `/etc/sudoers.d/fleetadm` mode `440`; `visudo -cf` → **parsed OK** |
+> | `authorized_keys` | mode `0600`, owned `fleetadm:fleetadm`, fleet key installed |
+> | Password | locked (`passwd -l`) — key-only |
+> | `sshd` | `active`; `pubkeyauthentication yes`, `kbdinteractiveauthentication no` |
+> | `ssh fleetadm@192.168.2.214 'sudo -n whoami'` | **`root`** — key-only (`BatchMode=yes`, no password fallback) |
+>
+> `sshd -T` still reported `passwordauthentication yes` at this point — the fleet-wide hardening is the
+> `security` role's job in §3, and `fleetadm`'s password is already locked.
+
 ## 3. Ansible base provision
 
 The guest is enrolled in `ansible/inventory.ini` (`[proxmox_guests]`, host `vtstack`) and
@@ -270,11 +285,11 @@ which must also revisit the `pve` resource budget and the `vmauth` question
 
 ## Verification Checklist
 
-Executed on: **2026-09-27** (in progress — §1 done; §2–§6 pending) — record the
+Executed on: **2026-09-27** (in progress — §1–§2 done; §3–§6 pending) — record the
 `ansible-playbook --diff` summary and each result.
 
 - [x] §1 LXC 214 created — unprivileged, `vtstack`, `192.168.2.214`, `nesting=1,fuse=1`, `onboot 1`, `systemctl --failed` empty inside
-- [ ] §2 `fleetadm` key-only SSH works; `sudo -n whoami` → root
+- [x] §2 `fleetadm` key-only SSH works; `sudo -n whoami` → root
 - [ ] §3 `playbook-logs.yml` applied cleanly; UFW active; `22` + `9428` allowed from `192.168.2.0/24`; Docker installed
 - [ ] §4 `victorialogs-basic-auth-password` present in `homelab-bysxdb-kv`
 - [ ] §5 store up; HTTPS `/select/vmui` → **200**; unauthenticated → **401**; plaintext refused
