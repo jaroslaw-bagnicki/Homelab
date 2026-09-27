@@ -41,7 +41,9 @@ the collector chosen in [ADR 36](../decisions/36-log-collector-fluentbit.md).
   `level` is a regular field, never a stream field — it changes per line.
 - **Buffering** — **filesystem** on `pve`/`lab`/`nas` (chunks survive a store outage, cursor on disk);
   **`memrb`** (bounded memory ring buffer that drops the oldest chunks) on `edge` with a **tmpfs
-  cursor**, so an unreachable store never writes to the eMMC.
+  cursor**, so an unreachable store never writes to the eMMC. Every output retries **without limit**
+  (`Retry_Limit False`) — Fluent Bit's default of a single retry discards the chunk once retries are
+  exhausted and filesystem buffering does not prevent that, so without it an outage drops a whole window.
 - **Docker log rotation** — the `docker_host` role now writes `/etc/docker/daemon.json`
   (`log-driver: json-file`, `max-size: 10m`, `max-file: 3`) and restarts Docker. Research 34 §9's
   unbounded-rotation prerequisite.
@@ -101,6 +103,13 @@ Open `https://192.168.2.214:9428/select/vmui` (basic auth) and confirm entries f
 > URI. Fluent Bit then sent a malformed request line, so VictoriaLogs answered a bare `400 Bad Request`
 > *before* its handler — the store logged nothing and looked healthy. Fixed by building the query string
 > with an inline expression.
+>
+> **Store-outage test, re-run after the retry fix (2026-09-27).** With the store stopped the collector
+> discarded **0** chunks and kept retrying with growing backoff (`retry in 21 seconds`), against **57**
+> discarded during the earlier 49 s outage under Fluent Bit's default `Retry_Limit`. Once the store
+> returned, the whole outage window was present —
+> `_time:[2026-09-27T19:58:03Z, 2026-09-27T19:58:30Z] {_HOSTNAME="pve"}` held **192** records spanning
+> 19:58:03.212 → 19:58:30.228, i.e. no gap.
 
 ## 2. Deploy `edge` (the node that justifies the pipeline)
 

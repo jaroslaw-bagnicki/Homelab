@@ -5,7 +5,9 @@
 **Amended:** 2026-09-27 (implementation) — the journald inclusion list and priority floor were
 dropped for **collect-all**; buffering is **filesystem** on `pve`/`lab`/`nas` with **`memrb`** on
 `edge`; the output uses the ISO8601 event time as `_time_field` for every source shape; and journald's
-numeric **`PRIORITY`** is mapped to the readable **`level`** field the store displays and filters on.
+numeric **`PRIORITY`** is mapped to the readable **`level`** field the store displays and filters on; and
+the outputs retry **without limit** (`Retry_Limit False`), without which the filesystem buffers did not
+actually ride out an outage.
 
 > **This ADR records the decision and why.** Flags, parsers, per-node paths, tuning and the full
 > comparison live in [research 34](../research/34-log-collector-options.md); how to deploy it will live in
@@ -85,6 +87,11 @@ at all (§7).
   Bit's **memory ring buffer** (`memrb`), which drops the oldest chunks and never writes to disk, with the
   cursor on **tmpfs** — where a reboot loses nothing journald had not already lost
   ([research 34 §6](../research/34-log-collector-options.md)).
+  Both are retried **without limit** (`Retry_Limit False`), because Fluent Bit's default of a single retry
+  discards the chunk once retries are exhausted — and **filesystem buffering does not prevent that**, so
+  without it the filesystem nodes lose an outage's worth of logs (measured: 57 chunks in 49 s). Bounding is
+  unchanged: `storage.total_limit_size` drops the oldest chunk on the filesystem nodes, and the memory ring
+  drops the oldest on `edge`.
 - **The whole journal per node — no inclusion list, no priority floor.** Fluent Bit's journald filter is exact
   key/value, so a severity threshold cannot be expressed without inventing one; the simplest correct config is
   to ship everything and filter at query time. The store's volume and cardinality are the accepted costs.
