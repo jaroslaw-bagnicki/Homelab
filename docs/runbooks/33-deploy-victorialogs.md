@@ -282,10 +282,14 @@ printf '%s\n%s\n' '{"create":{}}' '{"_msg":"bulk hello","level":"info"}' \
       'https://192.168.2.214:9428/insert/elasticsearch/_bulk?refresh=true'
 ```
 
-**Off-LAN refusal — the ADR 34 acceptance criterion.** The store must be unreachable from outside
-`192.168.2.0/24`. Test from a source that can **route** to the LXC but sits on another subnet (e.g. a
-host on the upstream `192.168.1.0/24`). A request from `cloudlab` only proves there is no NAT/route to
-the LAN — not that the firewall refused it — so record which source was used:
+**Off-LAN refusal — the ADR 34 acceptance criterion — ⏸ deferred 2026-09-27.** The store must be
+unreachable from outside `192.168.2.0/24`. **No usable source existed for this run** — the dev
+container's traffic is NAT'd to a LAN address, `cloudlab` has no route to the LAN at all, and the
+Tenda mesh does not forward inbound from the upstream `192.168.1.0/24`. Confirm by **configuration**
+instead: a `network_mode: host` container has no Docker DNAT path, so the in-container UFW rule
+(`9428 ALLOW IN 192.168.2.0/24`, default-deny) is the boundary. When a source that can **route** to
+the LXC while sitting on another subnet is available, re-run the check below — a request from
+`cloudlab` only proves there is no NAT/route to the LAN, not that the firewall refused it:
 
 ```sh
 # from a routable non-LAN source — expect connection refused / timeout
@@ -330,13 +334,9 @@ latency (VictoriaLogs' documented weak case — [research 33 §8](../research/33
 > | Idempotency | container unrecreated (`Restarts=0`, same ID); deploy task reports `changed` from `pull: always` (§5) |
 > | Reboot survival | `pct reboot 214` → guest back in ~5 s, `victorialogs Up`, vmui still **401**; `onboot: 1` confirmed |
 > | Baseline | container **7.1 MiB** / 2 GiB, 0.18 % CPU, 17 PIDs; data dir **84 K**; guest rootfs 1.3 G / 16 G (9 %) |
-> | **Off-LAN refusal** | **not verified** — needs a host on another routable subnet (below) |
+> | **Off-LAN refusal** | ⏸ **deferred** — no routable non-LAN source in this topology (see below) |
 >
-> **Off-LAN test cannot run from the dev container.** Its LAN traffic is NAT'd to the Docker host's
-> address (`192.168.2.227`) — a **LAN source** — so a request from here is legitimately allowed and
-> proves nothing about the boundary; a request from `cloudlab` proves even less (no route to the LAN
-> at all). This criterion needs a host that *routes* to `192.168.2.214` while sitting on a different
-> subnet (e.g. the upstream `192.168.1.0/24`).
+> **Off-LAN test deferred (2026-09-27)** — no usable source in this topology (see §6 above).
 
 ## 7. Future extension (metrics / traces)
 
@@ -351,7 +351,7 @@ which must also revisit the `pve` resource budget and the `vmauth` question
 
 ## Verification Checklist
 
-Executed on: **2026-09-27** (in progress — §1–§6 executed; off-LAN refusal outstanding) — record the
+Executed on: **2026-09-27** — §1–§6 executed, off-LAN refusal **deferred** (§6) — record the
 `ansible-playbook --diff` summary and each result.
 
 - [x] §1 LXC 214 created — unprivileged, `vtstack`, `192.168.2.214`, `nesting=1,fuse=1`, `onboot 1`, `systemctl --failed` empty inside
@@ -361,13 +361,14 @@ Executed on: **2026-09-27** (in progress — §1–§6 executed; off-LAN refusal
 - [x] §5 store up; HTTPS `/select/vmui` → **302** (add `-L` for **200**); unauthenticated → **401**; plaintext refused (**400**)
 - [x] §5 `docker inspect` shows the retention/disk/memory flags
 - [x] §5 ingest smoke test (jsonline **and** ES `_bulk`) visible in a query
-- [ ] §6 **off-LAN request refused** (ADR 34 acceptance criterion — verified, not asserted) — **blocked: needs a host on another routable subnet**
+- [ ] §6 **off-LAN request refused** (ADR 34 acceptance criterion) — ⏸ **deferred 2026-09-27**, no routable non-LAN source (see §6)
 - [x] §6 survives `pct reboot 214`; `onboot 1` confirmed
 - [x] §6 idempotent — re-run leaves the container unrecreated (`Restarts=0`, same ID); the `pull: always` deploy task reports `changed` by design
 - [x] §6 baseline RAM/disk recorded (and growth/latency once a collector ships)
 
 ## Follow-ups
 
+- **Off-LAN refusal check** — ⏸ deferred 2026-09-27; needs a source that routes to `192.168.2.214` from another subnet, which the current Tenda-NAT topology does not offer (§6).
 - **Collector** — [#84](https://github.com/jaroslaw-bagnicki/Homelab/issues/84); the store is inert until one ships.
 - **Store monitoring** — [#132](https://github.com/jaroslaw-bagnicki/Homelab/issues/132); the Netdata Parent already charts the container as a Proxmox guest, and the `/metrics` job + alarms follow.
 - **Certificate pinning** — the private CA is [#126](https://github.com/jaroslaw-bagnicki/Homelab/issues/126); clients skip verification for now ([ADR 27](../decisions/27-monitoring-strategy.md)'s accepted residual).
