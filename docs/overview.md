@@ -20,13 +20,13 @@ hardware detail see [Hardware Inventory](hardware.md); for change history see
 
 ### Guests on the Proxmox VE node
 
-| Guest | Hostname | Workload | Address | Status |
+| Guest | Workload | Hostname | Address | Status |
 |---|---|---|---|---|
-| VM 210 | — | Home Assistant OS | `.210` | 📋 |
-| LXC 211 | — | Mosquitto | `.211` | 📋 |
-| LXC 212 | — | Zigbee2MQTT | `.212` | 📋 |
-| LXC 213 | `nut` | NUT server | `.213` | ✅ |
-| LXC 214 | `vtstack` | VictoriaLogs log store | `.214` | ✅ |
+| VM 210 | Home Assistant OS | — | `.210` | 📋 |
+| LXC 211 | Mosquitto | — | `.211` | 📋 |
+| LXC 212 | Zigbee2MQTT | — | `.212` | 📋 |
+| LXC 213 | NUT server | `nut` | `.213` | ✅ |
+| LXC 214 | VictoriaLogs log store | `vtstack` | `.214` | ✅ |
 
 Addresses follow the static scheme ([ADR 31](decisions/31-static-address-scheme.md)); node hostnames name the host role ([ADR 33](decisions/33-fleet-node-hostnames.md)); the workload platform is migrating to k3s ([ADR 22](decisions/22-k3s-arc-homelab.md)).
 
