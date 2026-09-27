@@ -67,6 +67,14 @@ and writes **no** journal line, so a long outage is indistinguishable from a qui
 `storage.keep.rejected` needs filesystem storage, which
 [ADR 24](../decisions/24-edge-ingress-appliance.md) forbids on the eMMC.
 
+**The `docker_host` rotation is role-wide, so `cloudlab` gets it too.** The cap was added for the
+collector's benefit but lives in a shared role, and `ansible/playbooks/playbook.yml` runs `docker_host`
+against the VPS: its next run **creates `/etc/docker/daemon.json` and restarts Docker**, bouncing every
+container there (Caddy, `cloudflared`, Zot, three OpenCode instances, Portainer). `cloudlab` has **no
+collector** — [ADR 36](../decisions/36-log-collector-fluentbit.md) keeps it off-LAN — and its existing
+containers keep unbounded logs until they are recreated, so the only immediate effect is the restart.
+Apply that playbook deliberately, not as a side effect of this rollout.
+
 ## Prerequisites
 
 - [ ] Store live and answering ([runbook 33](33-deploy-victorialogs.md)).
@@ -96,7 +104,7 @@ ansible-playbook ansible/playbooks/playbook-pve.yml -e fluentbit_store_debug=tru
 # on pve
 systemctl status fluent-bit --no-pager
 systemctl show fluent-bit -p MemoryCurrent       # RSS baseline (research 34 flagged ~10–30 MB unverified)
-grep -c '^\[OUTPUT\]' /etc/fluent-bit/fluent-bit.conf
+sudo grep -c '^\[OUTPUT\]' /etc/fluent-bit/fluent-bit.conf   # 0640 root:fluent-bit — sudo required
 ```
 
 Then check the store accepted the records and how it parsed them (from `pve`):
@@ -213,7 +221,10 @@ sudo docker rm -f fluentbit-docker-probe && sudo docker rmi alpine:latest
 fields are `hostname` and `container_id` (ADR 36), so `{_HOSTNAME="lab"}` silently matches none of them:
 
 ```sh
-curl -u "vlogs:$PASSWORD" -X POST --data-urlencode 'query={container_id:*}' https://192.168.2.214:9428/select/logsql/query
+# supply the store password first (dev container):
+#   export VL_PASSWORD=$(pwsh -c "Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name victorialogs-basic-auth-password -AsPlainText")
+: "${VL_PASSWORD:?export VL_PASSWORD from Key Vault first}"
+curl -u "vlogs:$VL_PASSWORD" -X POST --data-urlencode 'query={container_id:*}' https://192.168.2.214:9428/select/logsql/query
 ```
 
 > **Verified 2026-09-27** — `PLAY RECAP` `lab ok=74 changed=14 failed=0`. `docker info` reports the
@@ -296,6 +307,7 @@ The collector keeps no state that matters, so it can be withdrawn per node, in r
 sudo systemctl disable --now fluent-bit
 sudo apt-get purge -y fluent-bit
 sudo rm -rf /etc/fluent-bit /var/lib/fluent-bit /run/fluent-bit
+sudo rm -f /etc/tmpfiles.d/fluent-bit.conf   # else the tmpfs runtime dir is recreated at every boot
 ```
 
 Then remove the role from that node's playbook (or revert the playbook commit) and re-run it. The

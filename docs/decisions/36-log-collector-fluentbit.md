@@ -10,7 +10,7 @@ the outputs retry **without limit** (`Retry_Limit False`), without which the fil
 actually ride out an outage.
 
 > **This ADR records the decision and why.** Flags, parsers, per-node paths, tuning and the full
-> comparison live in [research 34](../research/34-log-collector-options.md); how to deploy it will live in
+> comparison live in [research 34](../research/34-log-collector-options.md); how to deploy it lives in
 > the role and its runbook. Nothing is repeated here.
 
 ---
@@ -22,7 +22,7 @@ actually ride out an outage.
 | **Adopted** | **Fluent Bit** — one systemd service per node, shipping logs to VictoriaLogs |
 | **Why** | It is the only small, store-agnostic collector with a **stable journald input** — and every targeted node in the Linux fleet logs through journald |
 | **Not adopted** | `vlagent` (no journald source, buffers to disk), OTel Collector (alpha journald, heaviest), Vector, Alloy/Promtail, Filebeat, Fluentd, Telegraf (no journald input), `systemd-journal-upload` alone |
-| **Next** | Build the `fluentbit` role → deploy to `pve` → confirm entries in the store's UI → `edge` → `lab` → `nas` → `vtstack` |
+| **Rollout** | Deployed fleet-wide by the `fluentbit` role — [runbook 34](../runbooks/34-deploy-fluentbit.md) |
 
 ---
 
@@ -126,7 +126,11 @@ at all (§7).
   stream cardinality of templated units; narrowing it later is a role/`host_vars` edit, not a new decision.
 - **The input side is more than "install a shipper"** — four source shapes, two of them needing a parser, plus
   a host prerequisite the `docker_host` role now satisfies: Docker's json-file logs rotate **nothing** by
-  default, so the daemon caps them ([research 34 §9](../research/34-log-collector-options.md)).
+  default, so the daemon caps them ([research 34 §9](../research/34-log-collector-options.md)). **The cap is
+  role-wide, so it also reaches `cloudlab`** — off-LAN and never a collector target, but the VPS runs
+  `docker_host` ([playbook.yml](../../ansible/playbooks/playbook.yml)), so its next run creates
+  `/etc/docker/daemon.json` and restarts Docker: a one-time public-service bounce that buys no rotation
+  until each container is recreated.
 - **One more fleet-wide service to update**, alongside Netdata ([ADR 27](27-monitoring-strategy.md)).
 
 **To watch**
