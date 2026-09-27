@@ -47,22 +47,31 @@ LXC on the `pve` node.**
   the node that is always on regardless of maintenance on `lab`, where the fleet's firewall policy is
   already managed, and whose guests' backup route (`vzdump` → the NAS share) is the natural path once
   the Beetle's share lands. **LXC 214 / `192.168.2.214`** — the next free guest ID, per ADR 31's
-  ID-is-the-address rule. A log store has no cgroup requirement, unlike the Netdata Parent, which must
-  be host-native (ADR 27).
+  ID-is-the-address rule. The guest is **Debian 13** (LXC 213's precedent) and is provisioned as the
+  **Victoria stack** host (`vtstack`) — framed to carry VictoriaMetrics and VictoriaTraces as later
+  services (research 33 §4), though this ADR deploys only the log store. A log store has no cgroup
+  requirement, unlike the Netdata Parent, which must be host-native (ADR 27).
 - **Packaging: Docker Compose in an unprivileged LXC** with **Nesting + FUSE** enabled, the image
-  pinned to an explicit tag. This is the fleet's normal workload pattern and keeps a conventional
+  pinned to an explicit tag. Docker comes from the fleet's `docker_host` role, **now distro-aware**
+  (Debian as well as Ubuntu). This is the fleet's normal workload pattern and keeps a conventional
   image-update path, unlike the single binary on the host or Proxmox 9.1's OCI-as-LXC technology
   preview.
 - **Transport: HTTPS only** — native TLS (`-tls`, `-tlsCertFile`, `-tlsKeyFile`) with a self-signed
-  certificate generated in the container. Plaintext HTTP is prohibited (ADR 34).
+  certificate generated on the host by Ansible and mounted read-only. Plaintext HTTP is prohibited
+  (ADR 34).
 - **Auth: HTTP basic auth from day one** — `-httpAuth.username` / `-httpAuth.password`, the password
-  injected from Azure Key Vault as an **environment variable** (`-envflag.enable`), so the secret never
-  appears in the container's argument list.
+  written by Ansible from Azure Key Vault to a **root-only file** and read via
+  `-httpAuth.password=file://…`, so the secret never appears in the container's argument list or
+  environment — upstream's recommended route over `-envflag.enable`.
 - **LAN-only, enforced at the container** — the listener is restricted to `192.168.2.0/24` by a rule
   **inside the LXC** (or at the Proxmox firewall), not by the host's UFW, which never sees container
-  traffic (ADR 34). The store has **no IP allowlist of its own** — the upstream docs delegate that to the
-  network — so this rule is the whole boundary. **Not yet verified:** nothing is deployed, so this is a
-  deploy-phase acceptance criterion, met only when an off-LAN request is refused.
+  traffic (ADR 34). The container therefore runs with **`network_mode: host`** so the in-LXC UFW
+  (INPUT chain) actually filters the port — a Docker *published* port is forwarded through Docker's own
+  iptables path and would **bypass UFW**. The store has **no IP allowlist of its own** — the upstream
+  docs delegate that to the network — so this rule is the whole boundary. **Deployed 2026-09-27:** the
+  in-LXC UFW carries `22` + `9428` from `192.168.2.0/24`, with `80` denied and default-deny inbound
+  ([runbook 33](../runbooks/33-deploy-victorialogs.md) §6). **Still unverified — deferred:** the
+  off-LAN refusal itself, because no source in this topology routes to the guest from another subnet.
 - **Retention: 30 days** (`-retentionPeriod`), **capped by disk space** —
   `-retention.maxDiskUsagePercent` drops the oldest per-day partitions past a threshold and
   `-storage.minFreeDiskSpaceBytes` keeps a floor. The disk cap applies *in addition to* the time window,
@@ -91,6 +100,10 @@ LXC on the `pve` node.**
   most likely be deployed only to be migrated later.
 - **Grafana is not a prerequisite** — the built-in UI over HTTPS is enough to query logs. A dashboard
   component remains a separate future ADR (ADR 27).
+- **One host, one service for now** — `vtstack` is framed as the Victoria stack, so VictoriaMetrics
+  and VictoriaTraces later land on the same host instead of needing one of their own. Both are
+  **separate future ADRs** (research 33 §4); adding them compounds the Celeron/8 GB risk below, which
+  those ADRs must weigh.
 - **Selective full-text search is the store's weak case** — VictoriaLogs is documented as slower than
   Elasticsearch for simple queries returning few entries
   ([research 33 §8](../research/33-centralized-logging-victorialogs.md#8-how-the-three-engines-store-and-query-logs--the-mechanism-behind-the-store-choice)).
@@ -109,8 +122,10 @@ LXC on the `pve` node.**
   root LV already holding the Netdata Parent's ≈7 GiB per-tier database, and `local-lvm` is a ~68 GiB
   thin pool backing the guests' disks. The store's volume and its retention cap are sized against that
   one device — the docs' guidance is ≥20% free space at the store's data directory, and a thin pool is
-  overcommittable, so the numbers are fixed at deploy from the measured ingest rate rather than assumed.
-  Research 33 took no measurements.
+  overcommittable, so the numbers were fixed at deploy rather than assumed — a 16 GiB root volume
+  inside a 2048 MiB LXC, with `-retention.maxDiskUsagePercent=80` and
+  `-storage.minFreeDiskSpaceBytes=2GiB` ([runbook 33](../runbooks/33-deploy-victorialogs.md) §6).
+  Research 33 took no measurements; the runbook carries the deployed baseline.
 - **Encryption without authentication** — the certificate is self-signed and clients skip
   verification, the same residual ADR 27 and ADR 34 accept. Pinning arrives with the private CA tracked
   as [#126](https://github.com/jaroslaw-bagnicki/Homelab/issues/126).

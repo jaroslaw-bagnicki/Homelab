@@ -140,12 +140,16 @@ voltage, load (%) and status. **Empty by nature of the UPS:** `load_usage` (W) a
 `battery_estimated_runtime` — `nutdrv_qx` reports neither, which is also why the shutdown trigger is
 `LB`, not a runtime countdown ([ADR 30](../decisions/30-ups-nut-graceful-shutdown.md)).
 
-Three caveats. **(1) The console cannot show these charts** without a Netdata Cloud SSO session — its
-chart explorer is Cloud-backed and this Parent is unclaimed and LAN-only, so validate through the API
-(§4). **(2)** The agent's **stock UPS alarms** (battery charge <75 % warn / <40 % crit, 10-minute load,
-collection staleness) evaluate on their own thresholds and, like everything here, have **no delivery
-path** ([#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68)). **(3)** That stock set never
-flags a **mains loss**, so the role adds `/etc/netdata/health.d/upsd-power.conf`:
+Three caveats. **(1) The charts appear under `Remote Devices → UPS → NUT`** on the Parent's dashboard —
+grouped as a remote device beside *Containers & VMs* and *Applications*, with **no Netdata Cloud
+session involved**, so the earlier "the console cannot show these charts" reading was wrong. They were
+absent from the UI immediately after the 2026-09-26 integration even though the API published contexts
+and values from the first run, and were visible by **2026-09-27** — cause not established (the agent
+version was not compared before and after). Validate through the API (§4), which is version- and
+UI-independent. **(2)** The agent's **stock UPS alarms** (battery charge <75 % warn / <40 % crit,
+10-minute load, collection staleness) evaluate on their own thresholds and, like everything here, have
+**no delivery path** ([#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68)). **(3)** That
+stock set never flags a **mains loss**, so the role adds `/etc/netdata/health.d/upsd-power.conf`:
 `upsd_ups_on_battery` → warning while `on_battery` is set, and `upsd_ups_low_battery` → critical on
 `low_battery` — local evaluation only, visible in the Alerts view and through the API.
 
@@ -279,6 +283,7 @@ Executed 2026-09-19 (install and configuration) and 2026-09-20 (§5 updates) —
 - [x] §5 validated 2026-09-20 on all three nodes — with the flag: install skipped, `--reinstall` ran (`pve` `ok=40 changed=1`, `lab` `ok=52 changed=2`, `edge` `ok=42 changed=1`); without it: `changed=0` on `pve`/`edge` (`lab` `changed=1` = `azure_arc`); all three were already at the current stable, so no version change was observable
 - [x] §2 UPS collector live on the Parent — `upsd` job in `go.d/upsd.conf`; 12 `upsd.*` contexts, battery charge **100**, status `on_line`, collection alarm **CLEAR** (2026-09-26 — `playbook-pve.yml` `ok=41 changed=3 failed=0`)
 - [x] §2 power-state alarms registered — `upsd_nut_ups.status.upsd_ups_on_battery` + `…upsd_ups_low_battery` (2026-09-26 — `ok=43 changed=2 failed=0`), and **both raise/clear paths validated on a real mains loss the same day**: wall plug pulled 11:54:05 → *warning* within ~10 s ("UPS ups is on battery", value `1 status`); mains restored → **cleared** (verified 09:56 UTC)
+- [x] §2 UPS charts visible in the Parent's dashboard — **`Remote Devices → UPS → NUT`** (observed **2026-09-27**); they were **absent from the UI** immediately after the 2026-09-26 integration although the API published the contexts and values from the first run (§2 caveat 1)
 - [ ] Not in scope: alarm delivery (deferred to the HA VM, [#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68)); `cloudlab` untouched
 
 ## References

@@ -1,2 +1,9 @@
 ---
 docker_users: []
+# Docker's official APT repository is per-distro — pick the `linux/<distro>` path from the
+# Ansible distribution fact. Supported: Debian, Ubuntu (anything else fails fast in tasks/main.yml).
+docker_host_apt_distro_map:
+  Debian: debian
+  Ubuntu: ubuntu
+docker_host_apt_distro: "{{ docker_host_apt_distro_map.get(ansible_facts['distribution'], '') }}"
+docker_host_apt_base_url: "https://download.docker.com/linux/{{ docker_host_apt_distro }}"

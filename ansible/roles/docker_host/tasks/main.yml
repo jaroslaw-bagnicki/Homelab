@@ -1,5 +1,13 @@
 ---
-- name: Remove old Docker packages (Ubuntu repo)
+- name: Assert the distribution is served by the Docker repository
+  ansible.builtin.assert:
+    that:
+      - docker_host_apt_distro | length > 0
+    fail_msg: >-
+      docker_host supports Debian and Ubuntu only — got
+      '{{ ansible_facts['distribution'] }}'.
+
+- name: Remove distro Docker packages
   ansible.builtin.apt:
     name:
       - docker.io
@@ -27,13 +35,13 @@
 
 - name: Download Docker GPG key
   ansible.builtin.get_url:
-    url: https://download.docker.com/linux/ubuntu/gpg
+    url: "{{ docker_host_apt_base_url }}/gpg"
     dest: /etc/apt/keyrings/docker.asc
     mode: "0644"
 
 - name: Remove legacy Docker repo file (apt_repository format)
   ansible.builtin.file:
-    path: /etc/apt/sources.list.d/download_docker_com_linux_ubuntu.list
+    path: "/etc/apt/sources.list.d/download_docker_com_linux_{{ docker_host_apt_distro }}.list"
     state: absent
 
 - name: Add Docker apt repository
@@ -42,7 +50,7 @@
     types: [deb]
     architectures: [amd64]
     signed_by: /etc/apt/keyrings/docker.asc
-    uris: [https://download.docker.com/linux/ubuntu]
+    uris: ["{{ docker_host_apt_base_url }}"]
     suites: ["{{ ansible_facts['distribution_release'] }}"]
     components: [stable]
     state: present

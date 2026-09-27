@@ -1,0 +1,8 @@
+---
+- name: Configure vtstack (Victoria stack guest on pve) base
+  hosts: vtstack
+  become: true
+  roles:
+    - common
+    - security
+    - docker_host

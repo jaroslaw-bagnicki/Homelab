@@ -1,6 +1,6 @@
 # docker_host
 
-Installs Docker Engine from Docker's official repository and optionally adds users to the `docker` group.
+Installs Docker Engine from Docker's official repository (Debian and Ubuntu) and optionally adds users to the `docker` group.
 
 ## Files
 
@@ -17,6 +17,7 @@ Installs Docker Engine from Docker's official repository and optionally adds use
 ## Notes
 
 - `docker_users` defaults to `[]` on purpose: `docker`-group membership is passwordless root-equivalent, and Ansible reaches Docker via `become` rather than the socket.
+- **Distro-aware** — the repo base (`linux/debian` or `linux/ubuntu`), the GPG URL and the legacy-source cleanup path are derived from `ansible_facts['distribution']` (`docker_host_apt_distro`); any other distro fails fast.
 - Removes any distro Docker packages and the legacy `apt_repository` source before adding the official `deb822` repo pinned to the host's codename.
 - Installs `docker-ce`, `docker-ce-cli`, `containerd.io`, `docker-buildx-plugin`, `docker-compose-plugin`.
 
