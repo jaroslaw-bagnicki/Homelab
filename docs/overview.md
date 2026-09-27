@@ -42,9 +42,9 @@ Current state — what's running or in progress. Planned work is under [What's N
 | **OpenCode instances** (`homelab`, `prospera`) | `cloudlab` | per-project agentic dev servers | [ADR 17](decisions/17-adopt-opencode.md) · [runbook 17](runbooks/17-deploy-opencode-on-cloudlab.md) | ✅ |
 | **Zot** | `cloudlab` | self-hosted OCI registry + pull-through cache | [runbook 20](runbooks/20-deploy-zot.md) | ✅ |
 | **OpenMediaVault** | `omv` | network shares (SMB) + backup target | [ADR 23](decisions/23-nas-on-ml110.md) | 🗄️ |
-| **Netdata Parent** | `pve` | Tier B central monitoring pane — aggregates per-node metrics from the `lab` + `edge` + `nas` children | [ADR 27](decisions/27-monitoring-strategy.md) · [runbook 31](runbooks/31-deploy-netdata.md) | ✅ |
-| **UPS + NUT** | `pve` (LXC 213) + `lab`/`edge`/`nas` clients | shared-rail power protection — `upsmon` stops each node in order on low battery | [ADR 30](decisions/30-ups-nut-graceful-shutdown.md) · [runbook 29](runbooks/29-nut-ups-shutdown.md) · [runbook 30](runbooks/30-deploy-nut-clients.md) | ✅ |
-| **VictoriaLogs** | `pve` (LXC 214 `vtstack`) | Tier B log store — HTTPS + basic auth, 30-day retention, LAN-only | [ADR 35](decisions/35-log-store-victorialogs.md) · [runbook 33](runbooks/33-deploy-victorialogs.md) | ✅ |
+| **Netdata Parent** | `pve` | Tier B central monitoring pane | [ADR 27](decisions/27-monitoring-strategy.md) · [runbook 31](runbooks/31-deploy-netdata.md) | ✅ |
+| **UPS + NUT** | `pve` (LXC 213) + `lab`/`edge`/`nas` clients | shared-rail power protection | [ADR 30](decisions/30-ups-nut-graceful-shutdown.md) · [runbook 29](runbooks/29-nut-ups-shutdown.md) · [runbook 30](runbooks/30-deploy-nut-clients.md) | ✅ |
+| **VictoriaLogs** | `pve` (LXC 214 `vtstack`) | Tier B log store | [ADR 35](decisions/35-log-store-victorialogs.md) · [runbook 33](runbooks/33-deploy-victorialogs.md) | ✅ |
 
 ## Observability
 
