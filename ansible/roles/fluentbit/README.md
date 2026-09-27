@@ -18,6 +18,8 @@ Decision: [ADR 36](../../../docs/decisions/36-log-collector-fluentbit.md); deplo
   VictoriaLogs rejects with a bare `400 Bad Request` before its handler runs — the store logs nothing,
   so it looks healthy while ingesting zero bytes.
 - `files/homelab-parsers.conf` — the `docker_path` regex parser that derives `container_id` from the Docker log path.
+- `files/priority-level.lua` — the `map_level` Lua function that turns journald's numeric `PRIORITY` into
+  the readable `level` field VictoriaLogs displays and filters on.
 
 ## Source shapes
 
@@ -33,6 +35,12 @@ The role renders three shapes, each with its own `[OUTPUT]` because a single
 Every output writes to the store's JSON-lines API over TLS with basic auth, gzip, and the
 Fluent Bit event time rendered ISO8601 as `_time_field date`. The password is fetched from
 Key Vault at run time and never stored in the repo.
+
+journald's numeric `PRIORITY` is mapped to a readable `level` by the `map_level` Lua filter
+(`0` to `7` → `emerg`, `alert`, `crit`, `error`, `warn`, `notice`, `info`, `debug`), because the store only
+derives `level` from `PRIORITY` on its journald ingest endpoint, which this build does not serve, and it has
+no `level_field` ingest arg. `level` is a regular field — it changes per line, so it is never part of
+`_stream_fields`. Records with no `PRIORITY` get no `level` rather than an invented one.
 
 ## Buffering
 

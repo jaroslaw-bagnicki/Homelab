@@ -21,6 +21,14 @@
     Mem_Buf_Limit            {{ fluentbit_buffer_limit }}
 {% endif %}
 
+# PRIORITY is a bare syslog number; derive the readable `level` VictoriaLogs displays and filters
+# on. `level` stays a regular field — it varies per line and must never join `_stream_fields`.
+[FILTER]
+    Name                     lua
+    Match                    journal.*
+    Script                   {{ fluentbit_lua_level_script }}
+    Call                     map_level
+
 [OUTPUT]
     Name                     http
     Match                    journal.*

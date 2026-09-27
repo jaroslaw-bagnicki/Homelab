@@ -11,6 +11,8 @@ fluentbit_conf_dir: /etc/fluent-bit
 fluentbit_conf: "{{ fluentbit_conf_dir }}/fluent-bit.conf"
 fluentbit_parsers_file: "{{ fluentbit_conf_dir }}/parsers.conf"
 fluentbit_custom_parsers_file: "{{ fluentbit_conf_dir }}/homelab-parsers.conf"
+# Maps journald PRIORITY to the `level` field VictoriaLogs displays and filters on (ADR 36).
+fluentbit_lua_level_script: "{{ fluentbit_conf_dir }}/priority-level.lua"
 
 # Official Fluent Bit APT repository — Debian/Ubuntu only (asserted in tasks/main.yml).
 # The codename is part of the URI, matching the upstream `deb … /{os}/$codename $codename main`

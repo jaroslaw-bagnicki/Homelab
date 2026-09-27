@@ -126,6 +126,15 @@
     mode: "0644"
   notify: Restart fluent-bit
 
+- name: Install the journald PRIORITY to level Lua script
+  ansible.builtin.copy:
+    src: priority-level.lua
+    dest: "{{ fluentbit_lua_level_script }}"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart fluent-bit
+
 - name: Template the Fluent Bit configuration
   ansible.builtin.template:
     src: fluent-bit.conf.j2
