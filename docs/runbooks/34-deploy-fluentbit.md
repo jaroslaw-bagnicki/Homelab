@@ -94,8 +94,9 @@ ansible-playbook ansible/playbooks/playbook-edge.yml --diff
 ```
 
 Edge overrides are data: `fluentbit_buffer_type: memrb` and `fluentbit_cursor_tmpfs: true`.
-Confirm the cursor is on tmpfs and that a store outage **drops** logs instead of writing them to
-the eMMC:
+`memrb` is a **memory ring buffer**: when it fills it drops the **oldest chunks**, it does not pause
+the input, and it never writes to disk. Confirm the cursor is on tmpfs and that a store outage
+drops logs instead of writing them to the eMMC:
 
 ```sh
 # on edge
@@ -135,6 +136,10 @@ sudo docker info --format '{{.LoggingDriver}}'
 sudo docker inspect --format '{{.HostConfig.LogConfig}}' portainer   # after recreate: max-size/max-file
 ```
 
+Expect a brief interruption earlier in this same run: the `docker_host` `daemon.json` write
+**restarts the Docker daemon** on `lab`, so every running container stops and comes back with its
+previous log config.
+
 Confirm container logs reach the store with `container_id` as a stream field
 (`_stream:{container_id="..."}` in vmui).
 
@@ -151,6 +156,14 @@ ansible-playbook ansible/playbooks/playbook-nas.yml --diff
 
 ## 5. Deploy `vtstack` (the store's own logs)
 
+`docker_host` runs before the collector here, and its `daemon.json` write **restarts the Docker
+daemon**, so the **VictoriaLogs container itself restarts mid-run**. Wait for the store to answer
+again before trusting the collector:
+
+```sh
+curl -sk -o /dev/null -w '%{http_code}\n' https://192.168.2.214:9428/    # expect 401 (auth required)
+```
+
 ```powershell
 ansible-playbook ansible/playbooks/playbook-logs.yml --diff
 ```
@@ -165,6 +178,24 @@ searchable in the store — after the three LAN nodes, as ADR 36 orders it.
 A second `ansible-playbook … --diff` run on a converged node must report **`changed=0`** (the config
 template writes only on change; the APT key/repo/package are guarded by the package manager). Note
 that the `docker_host` daemon.json write reports `changed` only on first apply or a value change.
+
+---
+
+## Rollback
+
+The collector keeps no state that matters, so it can be withdrawn per node, in reverse order
+(`vtstack`, `nas`, `lab`, `edge`, `pve`):
+
+```sh
+sudo systemctl disable --now fluent-bit
+sudo apt-get purge -y fluent-bit
+sudo rm -rf /etc/fluent-bit /var/lib/fluent-bit /run/fluent-bit
+```
+
+Then remove the role from that node's playbook (or revert the playbook commit) and re-run it. The
+`docker_host` sibling change reverts the same way: drop `log-driver` and `log-opts` from
+`/etc/docker/daemon.json` and restart Docker. Nothing on the store side needs undoing — it simply
+stops receiving.
 
 ---
 
