@@ -10,7 +10,7 @@ hardware detail see [Hardware Inventory](hardware.md); for change history see
 
 | Node | Role | Hardware / OS | IP | Status |
 |---|---|---|---|---|
-| **Lab** | main workload host (Docker → k3s) | Lenovo M910q Tiny · Ubuntu 24.04 LTS · Azure Arc | `192.168.2.200` | ✅ |
+| **Lab** | main workload host (Docker → k3s) | Lenovo M910q Tiny · Ubuntu 24.04 LTS · Azure Arc | `192.168.2.200` | 🔨 |
 | **OMV NAS** | backup target (retiring) | HP ProLiant ML110 G5 · OMV 8.3 | `192.168.2.210` | ✅ |
 | **Beetle NAS** | backup target (successor to ML110) | Wincor Beetle M-III · OMV 8.5 | `192.168.2.202` | 🔨 |
 | **Edge Ingress** | public ingress (cloudflared + Caddy) | Dell Wyse 3040 · Debian 13 minimal | `192.168.2.240` | 🔨 |
