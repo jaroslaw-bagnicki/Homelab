@@ -13,10 +13,12 @@
 > VictoriaTraces are **future ADRs** (§7).
 >
 > ⚠ **Execution note.** Author on the `feat/victorialogs-log-store` branch; **run only after CR**.
-> LXC creation (§1–§2) is a manual/console procedure on the `pve` host; the Ansible steps (§3–§6)
-> run from a workstation on `192.168.2.0/24` with the fleet key loaded
-> ([`fleet-connect` skill](../../.opencode/skills/fleet-connect/SKILL.md)). The dev container cannot
-> reach the LAN nodes.
+> LXC creation (§1–§2) is a manual/console procedure on the `pve` host, reached as
+> `ssh fleetadm@192.168.2.201`; the Ansible steps (§3–§6) run with the fleet key loaded
+> ([`fleet-connect` skill](../../.opencode/skills/fleet-connect/SKILL.md)). The dev container
+> **can** drive the whole run — the Docker host routes it to the LAN — but that traffic arrives
+> **NAT'd to the host's LAN address** (`192.168.2.227`, observed 2026-09-27), so it is **not** a
+> valid off-LAN source for the §6 acceptance check; use a host on another subnet.
 
 ## Why
 
@@ -89,6 +91,20 @@ pct create 214 local:vztmpl/<template> \
   resolvers, so it keeps following the LAN (`pve.local` / the planned `.home` domain).
 - Keep the Proxmox network **Firewall** flag at `0` (`pct create` does). The LAN-only rule is a
   UFW rule inside the container (§5), not the Proxmox firewall.
+
+> **Verified 2026-09-27 — passed.** Built from the Debian 13 template already on `local`
+> (`debian-13-standard_13.6-1_amd64.tar.zst`) — no `pveam download` was needed:
+>
+> | Check | Result |
+> |---|---|
+> | `pct status 214` | `running` |
+> | `pct config 214` | `hostname: vtstack`, `ostype: debian`, `unprivileged: 1`, `features: nesting=1,fuse=1`, `cores: 2`, `memory: 2048`, `swap: 2048`, `rootfs: local-lvm:vm-214-disk-0,size=16G`, `onboot: 1` |
+> | Guest network | `eth0` `192.168.2.214/24`, `default via 192.168.2.1` (MAC `BC:24:11:02:D6:DE`) |
+> | `systemctl --failed` inside | **0 loaded units listed** |
+> | DNS | `deb.debian.org` resolves — resolvers inherited, not pinned |
+> | Reachable from the controller | `192.168.2.214:22` open |
+>
+> Proxmox network **Firewall** left at `0`; the LAN-only rule is the in-container UFW (§3/§5).
 
 ## 2. `fleetadm` bootstrap (unblock Ansible)
 
@@ -254,9 +270,10 @@ which must also revisit the `pve` resource budget and the `vmauth` question
 
 ## Verification Checklist
 
-Executed on: _(date)_ — record the `ansible-playbook --diff` summary and each result.
+Executed on: **2026-09-27** (in progress — §1 done; §2–§6 pending) — record the
+`ansible-playbook --diff` summary and each result.
 
-- [ ] §1 LXC 214 created — unprivileged, `vtstack`, `192.168.2.214`, `nesting=1,fuse=1`, `onboot 1`, `systemctl --failed` empty inside
+- [x] §1 LXC 214 created — unprivileged, `vtstack`, `192.168.2.214`, `nesting=1,fuse=1`, `onboot 1`, `systemctl --failed` empty inside
 - [ ] §2 `fleetadm` key-only SSH works; `sudo -n whoami` → root
 - [ ] §3 `playbook-logs.yml` applied cleanly; UFW active; `22` + `9428` allowed from `192.168.2.0/24`; Docker installed
 - [ ] §4 `victorialogs-basic-auth-password` present in `homelab-bysxdb-kv`
