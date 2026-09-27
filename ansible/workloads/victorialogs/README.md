@@ -33,7 +33,8 @@ The store is:
   Docker-*published* port is forwarded through Docker's iptables path and would **bypass UFW**
   ([ADR 34](../../../docs/decisions/34-lan-tls-only.md)).
 - **Not backed up** — a rolling 30-day window stays outside [ADR 02](../../../docs/decisions/02-backup-strategy-restic-blob.md)'s scope.
-- Idempotent — a re-run with no template/image/KV change reports `changed=0`.
+- **Never recreates the container** on a re-run — the deploy task still reports `changed`, because
+  `pull: always` re-checks the pinned tag (measured — [runbook 33](../../../docs/runbooks/33-deploy-victorialogs.md)).
 
 ## Services
 
@@ -89,8 +90,10 @@ playbook. The username is a role default (`vlogs`), not a secret.
 3. The self-signed certificate is generated (guarded by `creates:`).
 4. `docker-compose.yml` is templated and the container is deployed.
 
-Password/cert/template changes notify a `victorialogs` restart. Subsequent runs with no change
-report `changed=0`.
+Password/cert/template changes notify a `victorialogs` restart. Subsequent runs with no change do not
+recreate the container, but the deploy task still reports `changed` — `pull: always` re-checks the
+pinned tag on every run, so a literal `changed=0` recap is not achievable while it is set (measured —
+[runbook 33](../../../docs/runbooks/33-deploy-victorialogs.md)).
 
 ## What's in this folder
 
@@ -115,7 +118,7 @@ per runbook 33 §1–§3.
 ## Vars consumed
 
 - `victorialogs_dir`, `victorialogs_data_dir`, `victorialogs_ssl_dir`, `victorialogs_password_file`,
-  `victorialogs_image`, `victorialogs_port`, `victorialogs_username`, `victorialogs_retention_period`,
+  `victorialogs_image`, `victorialogs_username`, `victorialogs_retention_period`,
   `victorialogs_max_disk_usage_percent`, `victorialogs_min_free_disk_space`,
   `victorialogs_memory_allowed_percent`, `victorialogs_tls_days`, `victorialogs_keyvault_name`,
   `victorialogs_password_secret_name` — role defaults.
