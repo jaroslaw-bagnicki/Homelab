@@ -15,7 +15,7 @@
 |---|---|
 | **Adopted** | **Fluent Bit** — one systemd service per node, shipping logs to VictoriaLogs |
 | **Why** | It is the only small, store-agnostic collector with a **stable journald input** — and every node in this fleet logs through journald |
-| **Not adopted** | `vlagent` (no journald source, buffers to disk), OTel Collector (alpha journald, heaviest), Vector, Alloy/Promtail, Filebeat, Fluentd, `systemd-journal-upload` alone |
+| **Not adopted** | `vlagent` (no journald source, buffers to disk), OTel Collector (alpha journald, heaviest), Vector, Alloy/Promtail, Filebeat, Fluentd, Telegraf (no journald input), `systemd-journal-upload` alone |
 | **Next** | Build the `fluentbit` role → deploy to `pve` → confirm entries in the store's UI → `edge` → `lab` |
 
 ---
@@ -124,12 +124,16 @@ at all (§7).
   container, a chroot plus capabilities), a restart without a `file_storage` extension silently skips the
   downtime window, and it is the heaviest collector benchmarked. Revisit if the fleet ever collects traces at
   the node.
-- **Vector** — the near-miss: capable, but heavier than Fluent Bit in memory and configuration for a job that
-  is "journald → one HTTP endpoint".
+- **Vector** — the near-miss, and a real, actively maintained project (Datadog-maintained). Rejected as heavier
+  than Fluent Bit in memory and configuration for a job that is "journald → one HTTP endpoint"; its journald
+  source also **pipes `journalctl`** rather than reading the journal.
 - **Grafana Alloy (with Promtail / Grafana Agent)** — Loki-shaped, pulling the fleet toward the backend ADR 35
   rejected; the vendor's own benchmark lists both predecessors, i.e. two generations of churn in one option.
 - **Filebeat / Fluentd** — the lowest throughput benchmarked, and Filebeat couples the collector to Elastic's
   ecosystem.
+- **Telegraf** — popular, and VictoriaMetrics documents it for VictoriaLogs, but it has **no journald input**
+  (`tail`, `syslog` and `docker_log` only), so it is disqualified on every journald host for the same reason as
+  `vlagent`. It stays the router's candidate ([research 34 §8](../research/34-log-collector-options.md)).
 - **`systemd-journal-upload` alone** — the zero-extra-software path. Rejected: it cannot authenticate to a
   basic-auth store (no credential option before systemd v258), ships journald only, and offers no unit or
   priority filtering. **Kept as the fallback for a future journald-only appliance.**

@@ -49,7 +49,7 @@ decision is recorded authoritatively in [ADR 36](../decisions/36-log-collector-f
 | Decision | Outcome |
 |---|---|
 | Collector | **Fluent Bit** — `systemd` (journald) plus `tail` with the built-in `docker` / `cri` parsers for container logs, HTTP JSON-lines output to the store |
-| Collector — rejected | **vlagent** (the Victoria stack's own agent — **no journald source**, disk-buffered by default), **OTel Collector** (alpha journald receiver, `journalctl` shell-out, heaviest), Vector, Grafana Alloy/Promtail, Filebeat, Fluentd, `systemd-journal-upload` |
+| Collector — rejected | **vlagent** (the Victoria stack's own agent — **no journald source**, disk-buffered by default), **OTel Collector** (alpha journald receiver, `journalctl` shell-out, heaviest), Vector, Grafana Alloy/Promtail, Filebeat, Fluentd, **Telegraf** (no journald input), `systemd-journal-upload` |
 | Deployment | **systemd-native service per node**, not a container — the `netdata` pattern; one shared role (`fluentbit`), per-node behaviour in `host_vars` |
 | Output contract | `https://192.168.2.214:9428/insert/jsonline` — HTTP JSON-lines with `_stream_fields`, `_msg_field`, `_time_field`; TLS on, verification off; HTTP basic auth; gzip |
 | Stream fields | journald: `_HOSTNAME` + `_SYSTEMD_UNIT` (mirroring the store's own journald defaults); Docker logs: hostname + container name |
@@ -232,6 +232,10 @@ The store's shared HTTP parameters are what make this a small config rather than
 | `_stream_fields` | Which fields identify a stream — `_HOSTNAME` + `_SYSTEMD_UNIT` |
 | `ignore_fields` | Drop noisy fields before they ever reach the store |
 
+**Two of the rejected collectors also read the journal — but by spawning `journalctl`.** The OTel receiver and
+Vector's `journald` source both require the binary to be present and the reader to have suitable permissions;
+Fluent Bit links `libsystemd` and reads the journal natively, which is what makes it fit a 2 GB appliance.
+
 Fluent Bit's **`systemd` input** exposes the journal verbatim: `_SYSTEMD_UNIT`, `_HOSTNAME`, `MESSAGE`,
 `PRIORITY`, `__REALTIME_TIMESTAMP`. Its documented options that matter here:
 
@@ -359,9 +363,10 @@ OMV paths from their own source repositories (`proxmox/pve-manager`, `openmediav
 | **Fluent Bit** | ✅ chosen | Stable `systemd` (journald) input + `tail` for container files; memory-only buffering; TLS + basic auth; ~1/4 the memory of OTel Collector; `opentelemetry` output keeps OTLP open for later |
 | `vlagent` (Victoria stack's own agent) | ❌ rejected | **No journald source** — needs `systemd-journal-upload` in front of it, two daemons for one job; on-disk buffer by default conflicts with [ADR 24](../decisions/24-edge-ingress-appliance.md); no multiline/format parsing yet; upstream's own guidance is to send directly for a single store on a stable network |
 | OpenTelemetry Collector (contrib) | ❌ rejected | `journald` receiver is **alpha**, **shells out to the `journalctl` binary**, and needs root / `systemd-journal` group (in a container: host-rootfs chroot + `CAP_DAC_READ_SEARCH` + `CAP_SYS_PTRACE`); cursors need a `file_storage` extension or restarts silently skip the downtime window; heaviest of the tested collectors; its multi-signal advantage buys nothing here (§7) |
-| Vector | ❌ rejected | Capable and well-documented (journald + Docker sources), but heavier than Fluent Bit with more config surface than a five-node fleet needs; recorded as the near-miss |
+| Vector | ❌ rejected | A real, actively maintained project (Datadog-maintained; `sources-journald` + Docker sources), but heavier than Fluent Bit with more config surface than a five-node fleet needs — and its journald source **pipes `journalctl`** rather than reading the journal; recorded as the near-miss |
 | Grafana Alloy (and its predecessors Promtail / Grafana Agent) | ❌ rejected | Loki-shaped: it pulls the fleet toward the backend [ADR 35](../decisions/35-log-store-victorialogs.md) rejected, and the vendor's own benchmark lists Promtail and Grafana Agent as Alloy's predecessors — i.e. two generations of churn inside the option |
 | Filebeat / Fluentd | ❌ rejected | Both lose logs below 10k logs/s in the vendor benchmark (the lowest throughput of the set), and Filebeat couples the collector to Elasticsearch's ecosystem |
+| **Telegraf** | ❌ rejected | Popular, and VictoriaMetrics **documents** it for VictoriaLogs — but it has **no journald input**: its log sources are `tail` (files), `syslog` (listen) and `docker_log` (the Docker API), so it is disqualified on every journald host for the same reason as `vlagent`. Its log path also wraps each line in Telegraf's metric envelope (the documented `VL-Msg-Field` is `tail.value`). Viable on a file/syslog-only appliance, which is why it is the **router's** candidate ([§8](#8-opnsense-futro-s930--the-per-os-exception-and-why-the-fleet-rule-does-not-transfer)) |
 | `systemd-journal-upload` alone | ❌ rejected | No credential path to a basic-auth store before systemd v258 (and none documented beyond client certs); journald only, so it cannot ship `lab`'s Docker logs; no unit/priority filtering |
 | **No collector** | ❌ rejected | The store stays inert and the Edge keeps losing its logs on every reboot — the reason the store exists |
 | Collector on `lab` only, forwarding for the fleet | ❌ rejected | The Edge's logs would still die locally, and it introduces a `lab` dependency for every node's logs |
