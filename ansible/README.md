@@ -54,7 +54,7 @@ ansible-playbook ansible/workloads/opencode/opencode-playbook.yml
 
 Each workload in `ansible/workloads/<workload>/` is a self-contained recipe that can run independently of the base playbook (after base setup has been applied). See [`docs/workloads.md`](../docs/workloads.md) for the index and convention rules.
 
-Currently: [OpenCode](workloads/opencode/README.md) — per-project OpenCode server instances on cloudlab.
+Currently: [OpenCode](workloads/opencode/README.md) — per-project OpenCode server instances on cloudlab; [VictoriaLogs](workloads/victorialogs/README.md) — the Tier B log store on the `vtstack` guest.
 
 ## Roles
 

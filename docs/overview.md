@@ -14,7 +14,7 @@ hardware detail see [Hardware Inventory](hardware.md); for change history see
 | **OMV NAS** | backup target (retiring) | HP ProLiant ML110 G5 · OMV 8.3 | `192.168.2.210` | ✅ |
 | **Beetle NAS** | backup target (successor to ML110) | Wincor Beetle M-III · OMV 8.5 | `192.168.2.202` | 🔨 |
 | **Edge Ingress** | public ingress (cloudflared + Caddy) | Dell Wyse 3040 · Debian 13 minimal | `192.168.2.240` | 🔨 |
-| **Proxmox VE** | virtualisation host — smart-home + always-on services | Dell Wyse 5070 | `192.168.2.201` · guests `.210`–`.213` | 🔨 |
+| **Proxmox VE** | virtualisation host — smart-home + always-on services | Dell Wyse 5070 | `192.168.2.201` · guests `.210`–`.214` | 🔨 |
 | **LLM server** | local LLM inference | Minisforum X1 Lite | TBD | 🧠 |
 | **Cloudlab VPS** | staging for Lab (Ansible + Docker/k3s workloads) | Contabo VPS 10 · Ubuntu 24.04 | `173.249.27.13` | ✅ |
 
@@ -45,7 +45,7 @@ Azure **management plane** and the local **real-time plane**.
 | **Power state** | NUT in LXC 213 — `upsmon` events drive the ordered fleet shutdown; UPS charts (charge/voltage/status) plus on-battery alarms in Netdata, evaluation only ([ADR 30](decisions/30-ups-nut-graceful-shutdown.md) · [runbook 31](runbooks/31-deploy-netdata.md)) | ✅ |
 | **Disk health** | SMART plus long self-tests on the NAS arrays (OMV SMART page), findings recorded per drive | ✅ |
 | **Per-device energy** | Zigbee plugs → Zigbee2MQTT → MQTT → `mqtt2prometheus` → Prometheus → Grafana ([#73](https://github.com/jaroslaw-bagnicki/Homelab/issues/73) · [ADR 26](decisions/26-zigbee-energy-monitoring.md)) | 📋 |
-| **Logs** | Tier B log store — **VictoriaLogs** in a Docker Compose LXC on the `pve` node (LXC 214 `.214`), HTTPS + HTTP basic auth from day one, **30-day retention**, LAN-bound at the container; the collector is still open ([#123](https://github.com/jaroslaw-bagnicki/Homelab/issues/123) · [#84](https://github.com/jaroslaw-bagnicki/Homelab/issues/84) · [ADR 35](decisions/35-log-store-victorialogs.md)) | 🔨 |
+| **Logs** | Tier B log store — **VictoriaLogs** on the `vtstack` guest (LXC 214 `.214` on the `pve` node, Docker Compose), HTTPS + HTTP basic auth from day one, **30-day retention**, LAN-bound at the container — store ✅, the collector is still open ([#123](https://github.com/jaroslaw-bagnicki/Homelab/issues/123) · [#84](https://github.com/jaroslaw-bagnicki/Homelab/issues/84) · [ADR 35](decisions/35-log-store-victorialogs.md)) | 🔨 |
 
 **Boundary rule**: Arc is the management plane (policy, compliance, portal, heartbeat) and covers
 only Arc-enrolled nodes, while per-node real-time metrics come from Netdata on **every** LAN node —
@@ -66,7 +66,6 @@ once it is ready to start — a row leaves the table with the PR that completes 
 | **Edge Ingress — service migration** | ⭐⭐ | Move `cloudflared` + Caddy off the M910q onto the Wyse 3040 (base OS + `edge_host` role already shipped); `.home` DNS is owned by the OPNsense router, not the edge | [#65](https://github.com/jaroslaw-bagnicki/Homelab/issues/65) · [#81](https://github.com/jaroslaw-bagnicki/Homelab/issues/81) · [ADR 24](decisions/24-edge-ingress-appliance.md) |
 | **Beetle NAS** | ⭐⭐⭐ | **Phase 1 done** — OMV 8.5 on `nas`, `md0` RAID1 clean + reboot-verified, fleet-enrolled with the Netdata child and NUT secondary; next: create the share and move the backup target, then retire the ML110 and release `.210` (Memtest86+ and the RTC coin cell stay deferred — [research 32](research/32-wincor-beetle-m3-hardware-diagnostic.md)) | [#98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98) · [ADR 29](decisions/29-nas-backup-target-beetle-m3-omv.md) · [runbook 32](runbooks/32-beetle-m3-omv-setup.md) |
 | **Home Assistant VM + LXCs** | ⭐⭐⭐ | VM 210 (HA OS) + LXC 211/212 (Mosquitto, Zigbee2MQTT) on the `pve` node (the base from runbook 28), then point HA's NUT integration at `192.168.2.213` for UPS status + power-loss notifications | [#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68) · [#85](https://github.com/jaroslaw-bagnicki/Homelab/issues/85) · [ADR 25](decisions/25-home-assistant-thin-client.md) · [#111](https://github.com/jaroslaw-bagnicki/Homelab/issues/111) |
-| **Log store (VictoriaLogs)** | ⭐⭐ | Deploy the store per ADR 35 — VictoriaLogs in a Docker Compose LXC on `pve` (LXC 214), HTTPS + basic auth, 30-day retention; **host placement is settled** ([research 33](research/33-centralized-logging-victorialogs.md)), the collector follows in #84 | [#123](https://github.com/jaroslaw-bagnicki/Homelab/issues/123) · [ADR 35](decisions/35-log-store-victorialogs.md) |
 
 ### Planned
 

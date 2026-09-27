@@ -95,10 +95,10 @@ LXC on the `pve` node.**
   most likely be deployed only to be migrated later.
 - **Grafana is not a prerequisite** — the built-in UI over HTTPS is enough to query logs. A dashboard
   component remains a separate future ADR (ADR 27).
-- **One host and one Compose project, one service for now** — `vtstack` is framed as the Victoria
-  stack, so VictoriaMetrics and VictoriaTraces later join the same LXC and Compose project instead of
-  needing a host of their own. Both are **separate future ADRs** (research 33 §4); adding them
-  compounds the Celeron/8 GB risk below, which those ADRs must weigh.
+- **One host, one service for now** — `vtstack` is framed as the Victoria stack, so VictoriaMetrics
+  and VictoriaTraces later land on the same host instead of needing one of their own. Both are
+  **separate future ADRs** (research 33 §4); adding them compounds the Celeron/8 GB risk below, which
+  those ADRs must weigh.
 - **Selective full-text search is the store's weak case** — VictoriaLogs is documented as slower than
   Elasticsearch for simple queries returning few entries
   ([research 33 §8](../research/33-centralized-logging-victorialogs.md#8-how-the-three-engines-store-and-query-logs--the-mechanism-behind-the-store-choice)).
