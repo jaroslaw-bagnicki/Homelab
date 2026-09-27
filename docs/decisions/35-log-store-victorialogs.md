@@ -90,6 +90,13 @@ LXC on the `pve` node.**
   most likely be deployed only to be migrated later.
 - **Grafana is not a prerequisite** — the built-in UI over HTTPS is enough to query logs. A dashboard
   component remains a separate future ADR (ADR 27).
+- **Selective full-text search is the store's weak case.** VictoriaLogs keeps no inverted index — it
+  tokenises and stores bloom filters that skip data blocks, which is what makes high-cardinality fields
+  safe and heavy multi-field queries fast, but a simple query returning a few entries reads more than
+  Elasticsearch would, as its own author documents
+  ([research 33](../research/33-centralized-logging-victorialogs.md)). Accepted because fleet queries are
+  stream- and field-filtered sweeps, and because holding an inverted index is what an 8 GB node cannot
+  afford.
 - **Risk bounded, not removed — resource contention on a Celeron with 8 GB.** `pve` carries the NUT
   server (LXC 213) and the host-native Netdata Parent today, and is slated to take the Home Assistant VM
   plus the Mosquitto and Zigbee2MQTT LXCs (ADR 25, [#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68)).

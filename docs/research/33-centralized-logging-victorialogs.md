@@ -8,6 +8,10 @@
 read 2026-09-27; the store's mechanics in [§7](#7-official-documentation--verified-facts-2026-09-27) are
 **verified upstream**, not taken from the thread
 
+**Further reading**: [How do open source solutions for logs work — Elasticsearch, Loki and VictoriaLogs](https://itnext.io/how-do-open-source-solutions-for-logs-work-elasticsearch-loki-and-victorialogs-9f7097ecbc2f)
+(ITNEXT, Aliaksandr Valialkin) — the engine-level mechanism summarised in
+[§8](#8-how-the-three-engines-store-and-query-logs--the-mechanism-behind-the-store-choice)
+
 **Scope**: Pre-ADR research for [#123](https://github.com/jaroslaw-bagnicki/Homelab/issues/123) — settle
 the **Tier B log store's** engine and **host placement**, and confirm the deployment mechanics for a
 container host on the `pve` node (Proxmox VE, Wyse 5070). The collector that feeds the store is
@@ -26,7 +30,9 @@ work for the deploy phase. Decision authoritatively recorded in
 > comparison** (the thread's "4–5× less RAM", "30–40% less disk than Loki", and the VictoriaTraces
 > "3.7× less RAM / 2.7× less CPU than Tempo" figures are vendor benchmarks, not measurements on this
 > hardware), and (b) the **Proxmox VE 9.1 native-OCI** behaviour, which is a Proxmox Tech Preview and
-> not covered by VictoriaMetrics docs at all.
+> not covered by VictoriaMetrics docs at all. The docs' own headline "up to 30× less RAM / 15× less disk
+> than Elasticsearch" traces to the same author's analysis as §8, so that number is vendor-authored too —
+> treat every performance figure here as a claim to validate on this hardware, not as a fact.
 
 ---
 
@@ -86,7 +92,7 @@ recommendation, and the comparison table the thread produced is the crux of the 
 
 | Feature | Grafana Loki | VictoriaLogs |
 |---|---|---|
-| Indexing model | Only defined labels | Fully columnar, indexes all fields |
+| Indexing model | Only defined labels | No inverted index — bloom filters over tokens used to **skip data blocks**, plus columnar per-field storage ([§8](#8-how-the-three-engines-store-and-query-logs--the-mechanism-behind-the-store-choice)) |
 | High cardinality | Vulnerable to unique labels (`trace_id`, `container_id`) | Handles it without throughput loss |
 | RAM | Higher, especially when searching | Claimed 4–5× lower than Loki |
 | Compression | Very good | Claimed 30–40% less disk |
@@ -113,9 +119,10 @@ series whose index is held in memory:
 Adding `environment` (2 values) to a metric creates 2 streams; adding `user_id` (100,000 values)
 creates 200,000 — the index explodes in RAM and queries slow down or OOM. Loki's own first rule is
 therefore *never* to use `user_id`, `ip` or `trace_id` as a label, which means the identifiers most
-useful for debugging are exactly the ones that cannot be indexed. Columnar stores
-(VictoriaLogs, ClickHouse, Elasticsearch) compress and index columns on disk instead, so unique IDs
-do not destroy throughput.
+useful for debugging are exactly the ones that cannot be indexed. Engines that don't derive their index
+from the values avoid the blow-up — VictoriaLogs keeps no inverted index over field values at all,
+ClickHouse is columnar, and Elasticsearch tolerates unique values by paying in storage and RAM
+([§8](#8-how-the-three-engines-store-and-query-logs--the-mechanism-behind-the-store-choice)).
 
 For a fleet whose logs will carry container IDs, unit names and eventually trace IDs, that property
 matters more than Loki's maturity.
@@ -292,6 +299,46 @@ the available CPU and RAM resources", and the journald recipe maps
 `_msg_field=MESSAGE&_time_field=__REALTIME_TIMESTAMP&_stream_fields=_SYSTEMD_UNIT` — one stream per
 systemd unit.
 
+### 8. How the three engines store and query logs — the mechanism behind the store choice
+
+The article the operator supplied
+([ITNEXT](https://itnext.io/how-do-open-source-solutions-for-logs-work-elasticsearch-loki-and-victorialogs-9f7097ecbc2f))
+is by **Aliaksandr Valialkin, VictoriaLogs' core developer**, and carries a full-disclosure note to that
+effect. It is therefore **vendor-authored — but it is the clearest explanation of *why* the comparison in
+§1–§2 comes out the way it does**, and it is the origin of the official docs' "up to 30× less RAM / 15×
+less disk than Elasticsearch" headline. Its worked example: **1 billion entries of 1 KiB each** (a typical
+Fluent Bit entry — `@timestamp`, `message` and ~20 source-identifying fields).
+
+| | Elasticsearch | Grafana Loki | VictoriaLogs |
+|---|---|---|---|
+| Unit of indexing | Every **token** in every field | The **labelset** (stream identity) | **Bloom filters** over tokens, per data block |
+| Index structure | Inverted index `(field; token) → log ID` | Inverted index over labelsets | **No inverted index** — filters skip data blocks |
+| Index size, 1 B entries | ~125 tokens per 1 KiB entry ⇒ **~1 TB** of 64-bit postings, +1 TiB of logs ⇒ **~2 TiB** | Labelset stored once per stream; index negligible against the data | **2 bytes per unique token**; ~5 unique tokens per entry ⇒ **~10 GB** — 10×–100× smaller than an inverted index |
+| Log storage | Logs + index; compression helps "a few times" | Grouped by stream, time-sorted, compressed — **5×–10×** ⇒ ~100 GiB | Columnar and per-field, so only requested fields are read |
+| Full-text search | **Outstanding** — binary search over sorted postings | **~1000× slower** — unpacks and scans every message in the stream | Slower than Elasticsearch for **simple, selective** queries; usually **faster** for heavy multi-field ones |
+| High cardinality | Tolerated, paid for in storage and RAM | **Poor** — unique values in labelsets blow up the index and eat RAM | **Safe** — streams are nominated by the shipper, not derived from every field |
+| Documented weakness | Storage/RAM at scale; random reads for large result sets | "Needle in the haystack" queries; structured high-cardinality fields | Simple queries returning few entries read more than Elasticsearch would |
+
+Three things this article corrects or sharpens in the thread's framing:
+
+1. **VictoriaLogs does not "index all fields"** — it creates **no inverted index over field values at
+   all**. It tokenises like Elasticsearch, but stores bloom filters and uses them to skip blocks that
+   cannot contain the query's words; columnar per-field storage then reads only the requested fields.
+2. **Streams still exist, and they are opt-in.** Loki's stream model is kept, but a stream is defined by
+   whatever the shipper nominates via `_stream_fields` (or the `VL-Stream-Fields` header) rather than by
+   every field. That is the mechanism that makes `trace_id`/`user_id` safe, and it is the same knob the
+   collector work in [#84](https://github.com/jaroslaw-bagnicki/Homelab/issues/84) will set.
+3. **The honest downside.** The author states plainly that simple full-text queries returning few entries
+   are **slower than Elasticsearch**, because VictoriaLogs reads more bloom-filter bytes than
+   Elasticsearch reads of inverted-index postings; it wins once a query carries several filters over
+   different fields. He also declines to cover operational complexity, cost, query-language usability and
+   documentation quality — which is precisely the ground ADR 35's decision rests on.
+
+For this fleet the trade lands the same way: the planned queries are stream- and field-filtered sweeps
+across a handful of nodes, and the `pve` node's binding constraint is RAM and disk rather than full-text
+search latency. The store's weak case is still worth **measuring** during deploy validation rather than
+assumed away (see [Open Questions](#open-questions)).
+
 ---
 
 ## Alternatives Considered
@@ -318,6 +365,11 @@ systemd unit.
   ~39 GiB `local` root LV, where the Netdata Parent's ≈7 GiB per-tier DB already lives, or the
   ~68 GiB `local-lvm` thin pool the guests use. Which storage the LXC's volume lands on is not decided
   here.
+- **The store's weak case needs measuring, not assuming.** VictoriaLogs is documented as *slower than
+  Elasticsearch* for simple full-text queries returning few entries
+  ([§8](#8-how-the-three-engines-store-and-query-logs--the-mechanism-behind-the-store-choice)). The plan
+  assumes stream- and field-filtered sweeps, which suits it — deploy validation should include a selective
+  "needle in the haystack" search, not only broad scans.
 - **Where the LAN-only rule is enforced.** [ADR 34](../decisions/34-lan-tls-only.md) established that
   host UFW does not filter container traffic, so the rule must live inside the LXC or at the Proxmox
   firewall — and be verified from off-LAN, not asserted.
@@ -348,5 +400,6 @@ systemd unit.
 - [ADR 31](../decisions/31-static-address-scheme.md) — Static address scheme (`21x` guest block, ID = last octet)
 - [ADR 34](../decisions/34-lan-tls-only.md) — LAN services are TLS-only; host UFW does not filter LXC traffic
 - [ADR 35](../decisions/35-log-store-victorialogs.md) — **the decision this research fed**
+- [How open source solutions for logs work — Elasticsearch, Loki and VictoriaLogs](https://itnext.io/how-do-open-source-solutions-for-logs-work-elasticsearch-loki-and-victorialogs-9f7097ecbc2f) — vendor-authored engine-level comparison (ITNEXT)
 - [Issue #123](https://github.com/jaroslaw-bagnicki/Homelab/issues/123) · [#84](https://github.com/jaroslaw-bagnicki/Homelab/issues/84) (collector) · [#75](https://github.com/jaroslaw-bagnicki/Homelab/issues/75) (umbrella) · [#126](https://github.com/jaroslaw-bagnicki/Homelab/issues/126) (private CA)
 - [Gemini chat 19](https://share.gemini.google/Z8QXKHmDHOFe) · [Gemini chat 20](https://share.gemini.google/orS2jFh9H1IU)
