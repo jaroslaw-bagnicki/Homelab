@@ -68,9 +68,10 @@ LXC on the `pve` node.**
   traffic (ADR 34). The container therefore runs with **`network_mode: host`** so the in-LXC UFW
   (INPUT chain) actually filters the port — a Docker *published* port is forwarded through Docker's own
   iptables path and would **bypass UFW**. The store has **no IP allowlist of its own** — the upstream
-  docs delegate that to the network — so this rule is the whole boundary. **Not yet verified:** nothing
-  is deployed, so this is a deploy-phase acceptance criterion, met only when an off-LAN request is
-  refused.
+  docs delegate that to the network — so this rule is the whole boundary. **Deployed 2026-09-27:** the
+  in-LXC UFW carries `22` + `9428` from `192.168.2.0/24`, with `80` denied and default-deny inbound
+  ([runbook 33](../runbooks/33-deploy-victorialogs.md) §6). **Still unverified — deferred:** the
+  off-LAN refusal itself, because no source in this topology routes to the guest from another subnet.
 - **Retention: 30 days** (`-retentionPeriod`), **capped by disk space** —
   `-retention.maxDiskUsagePercent` drops the oldest per-day partitions past a threshold and
   `-storage.minFreeDiskSpaceBytes` keeps a floor. The disk cap applies *in addition to* the time window,
@@ -121,8 +122,10 @@ LXC on the `pve` node.**
   root LV already holding the Netdata Parent's ≈7 GiB per-tier database, and `local-lvm` is a ~68 GiB
   thin pool backing the guests' disks. The store's volume and its retention cap are sized against that
   one device — the docs' guidance is ≥20% free space at the store's data directory, and a thin pool is
-  overcommittable, so the numbers are fixed at deploy from the measured ingest rate rather than assumed.
-  Research 33 took no measurements.
+  overcommittable, so the numbers were fixed at deploy rather than assumed — a 16 GiB root volume
+  inside a 2048 MiB LXC, with `-retention.maxDiskUsagePercent=80` and
+  `-storage.minFreeDiskSpaceBytes=2GiB` ([runbook 33](../runbooks/33-deploy-victorialogs.md) §6).
+  Research 33 took no measurements; the runbook carries the deployed baseline.
 - **Encryption without authentication** — the certificate is self-signed and clients skip
   verification, the same residual ADR 27 and ADR 34 accept. Pinning arrives with the private CA tracked
   as [#126](https://github.com/jaroslaw-bagnicki/Homelab/issues/126).
