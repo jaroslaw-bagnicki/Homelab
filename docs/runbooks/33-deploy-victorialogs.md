@@ -1,0 +1,274 @@
+# Victoria Stack — VictoriaLogs Log Store (LXC 214)
+
+> Deploy the Tier B **log store** — **VictoriaLogs** as a Docker Compose service on the
+> `vtstack` guest (LXC 214, `192.168.2.214`) on the `pve` node — HTTPS-only, HTTP basic auth
+> from day one, 30-day retention, LAN-bound at the container. Decision:
+> [ADR 35](../decisions/35-log-store-victorialogs.md); host placement and mechanics:
+> [research 33](../research/33-centralized-logging-victorialogs.md).
+>
+> ⚠ **Scope.** This is the **store** only. The collector that feeds it is
+> [#84](https://github.com/jaroslaw-bagnicki/Homelab/issues/84) and stays open — the store is
+> inert until at least one node ships logs. Resource monitoring of the store is
+> [#132](https://github.com/jaroslaw-bagnicki/Homelab/issues/132); VictoriaMetrics and
+> VictoriaTraces are **future ADRs** (§7).
+>
+> ⚠ **Execution note.** Author on the `feat/victorialogs-log-store` branch; **run only after CR**.
+> LXC creation (§1–§2) is a manual/console procedure on the `pve` host; the Ansible steps (§3–§6)
+> run from a workstation on `192.168.2.0/24` with the fleet key loaded
+> ([`fleet-connect` skill](../../.opencode/skills/fleet-connect/SKILL.md)). The dev container cannot
+> reach the LAN nodes.
+
+## Why
+
+Tier B has **no log destination**. Netdata covers per-node metrics, but nothing stores logs across
+the fleet, and the **Edge's journald is volatile by design** ([ADR 24](../decisions/24-edge-ingress-appliance.md),
+eMMC longevity) — its logs are destroyed on every reboot. A central store is the only way to keep
+them. VictoriaLogs was chosen over Loki for its columnar, cardinality-safe engine, single binary and
+built-in `/select/vmui` UI ([ADR 35](../decisions/35-log-store-victorialogs.md)).
+
+## What changes
+
+- **LXC 214 `vtstack`** on `pve` — unprivileged, **Debian 13**, `nesting` + `fuse`, 2 vCPU /
+  2 GiB / 16 GiB rootfs on `local-lvm`, static `192.168.2.214`, `onboot 1`. Framed as the
+  **Victoria stack** host (`vtstack`) — logs today; VictoriaMetrics/VictoriaTraces later join the
+  same guest and Compose project.
+- **`fleetadm`** (key-only SSH, NOPASSWD sudo) + Ansible enrollment — `playbook-logs.yml`
+  (`common` → `security` → `docker_host`).
+- **Docker** from the fleet's `docker_host` role (from Docker's official APT repository, now
+  distro-aware so it covers Debian as well as Ubuntu).
+- **VictoriaLogs** as a Docker Compose service in `/opt/vtstack/victorialogs` — HTTPS (native TLS,
+  self-signed), HTTP basic auth (password from Azure Key Vault via a root-only file), 30-day
+  retention plus disk caps, memory bounded, LAN-only enforced by a UFW rule **inside the LXC**
+  ([ADR 34](../decisions/34-lan-tls-only.md)).
+- **Not backed up** — a rolling 30-day window stays outside [ADR 02](../decisions/02-backup-strategy-restic-blob.md)'s
+  scope.
+
+## Prerequisites
+
+- [ ] `pve` base-provisioned — Proxmox VE + `fleetadm` ([runbook 28](28-pve-proxmox-node.md)).
+- [ ] A Debian 13 LXC template available on the `pve` node (`pveam`).
+- [ ] Ansible collections installed (`ansible-galaxy collection install -r ansible/requirements.yml`).
+- [ ] Azure Key Vault `homelab-bysxdb-kv` reachable from the controller; `Az` module signed in
+      (for the password secret, §4).
+- [ ] Fleet key in `ssh-agent` (`ssh-add -l` shows `fleetadm@homelab`).
+
+---
+
+## 1. Create LXC 214
+
+On the `pve` host (`ssh fleetadm@192.168.2.201`, then `sudo -i`):
+
+```sh
+# template — pick the current Debian build, don't hardcode a point release
+pveam update
+pveam available --section system | grep debian-13
+pveam download local <debian-13-template-from-the-line-above>
+pveam list local
+
+pct create 214 local:vztmpl/<template> \
+  --hostname vtstack --unprivileged 1 --features nesting=1,fuse=1 \
+  --cores 2 --memory 2048 --swap 2048 \
+  --rootfs local-lvm:16 \
+  --net0 name=eth0,bridge=vmbr0,ip=192.168.2.214/24,gw=192.168.2.1 \
+  --onboot 1
+```
+
+- **`--features nesting=1,fuse=1`** — `nesting` lets Docker/systemd run in the unprivileged
+  container; `fuse` provides the fuse-overlayfs fallback if overlay-on-overlay is refused.
+  Whether the default `overlay2` storage driver works is a §5 check.
+- **`--onboot 1`** — the store must return on its own after a host reboot.
+- **`--rootfs local-lvm:16`** — a fixed 16 GiB filesystem gives VictoriaLogs a hard ceiling; the
+  disk caps in §5 are sized against it. **The size is an estimate** — no collector ships yet, so
+  re-check it against the measured ingest rate once [#84](https://github.com/jaroslaw-bagnicki/Homelab/issues/84)
+  lands.
+- DNS is deliberately **not** pinned with `--nameserver` — the container inherits the host's
+  resolvers, so it keeps following the LAN (`pve.local` / the planned `.home` domain).
+- Keep the Proxmox network **Firewall** flag at `0` (`pct create` does). The LAN-only rule is a
+  UFW rule inside the container (§5), not the Proxmox firewall.
+
+## 2. `fleetadm` bootstrap (unblock Ansible)
+
+Mirrors [runbook 28 §3](28-pve-proxmox-node.md). From the `pve` host (the fleet public key lives at
+`ansible/roles/common/files/ssh/fleetadm.pub`, [ADR 28](../decisions/28-fleet-admin-account-and-key.md)):
+
+```sh
+pct exec 214 -- bash -lc '
+apt-get update && apt-get install -y sudo
+id -u fleetadm >/dev/null 2>&1 || useradd -m -s /bin/bash fleetadm
+usermod -aG sudo fleetadm
+echo "fleetadm ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/fleetadm
+chmod 440 /etc/sudoers.d/fleetadm
+mkdir -p /home/fleetadm/.ssh && chmod 700 /home/fleetadm/.ssh
+printf "no-port-forwarding,no-agent-forwarding,no-X11-forwarding ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKAucOXvwvHvSn11uzG49QFvJPxodbOjPEWkvdS9vCVG fleetadm@homelab\n" > /home/fleetadm/.ssh/authorized_keys
+chmod 600 /home/fleetadm/.ssh/authorized_keys
+chown -R fleetadm:fleetadm /home/fleetadm/.ssh
+passwd -l fleetadm
+'
+```
+
+**Verify from the control node** (LAN workstation with the fleet key loaded):
+
+```sh
+ssh fleetadm@192.168.2.214 'sudo -n whoami'   # → root
+```
+
+## 3. Ansible base provision
+
+The guest is enrolled in `ansible/inventory.ini` (`[proxmox_guests]`, host `vtstack`) and
+base-provisioned by `ansible/playbooks/playbook-logs.yml` (`common` → `security` → `docker_host`).
+From the repo root on the LAN workstation:
+
+```powershell
+# Dev container only — world-writable /workspaces breaks ansible.cfg; skip on a LAN workstation:
+chmod 755 /workspaces/Homelab /workspaces/Homelab/ansible
+ansible-playbook ansible/playbooks/playbook-logs.yml --diff
+```
+
+- **`common`** — hostname `vtstack`, `Etc/UTC`, NTP, and the fleet key on `fleetadm`.
+- **`security`** — UFW default-deny with a LAN allow for SSH `22` **and VictoriaLogs `9428`**
+  (`security_ufw_allow_tcp_ports`, `security_ufw_allow_tcp_from: 192.168.2.0/24`), plus fail2ban
+  and sshd hardening. This is the **verified in-container LAN rule** ADR 34 requires — not the host
+  firewall, which never sees container traffic.
+- **`docker_host`** — Docker Engine from Docker's official repository (distro-aware: Debian here).
+
+## 4. Provision the basic-auth password
+
+VictoriaLogs takes HTTP basic auth from day one. The password lives in Azure Key Vault and is
+fetched at deploy time:
+
+```powershell
+.\scripts\New-HomelabVictoriaLogsPassword.ps1
+```
+
+The role writes `homelab-bysxdb-kv/victorialogs-basic-auth-password` to a **root-only file**
+(`/opt/vtstack/victorialogs/password`, mode `0600`) and starts VictoriaLogs with
+`-httpAuth.password=file://…`, so the secret never appears in the container's argument list or
+environment ([ADR 35](../decisions/35-log-store-victorialogs.md)). **Rotation**: re-run with
+`-Force`, then re-run the workload playbook.
+
+## 5. Deploy the store
+
+```powershell
+ansible-playbook ansible/workloads/victorialogs/victorialogs-playbook.yml --diff
+```
+
+The workload recipe (`ansible/workloads/victorialogs/`) generates the self-signed TLS certificate,
+templates the Compose file, and brings the `victorialogs` container up with:
+
+- `-storageDataPath=/victoria-logs-data` (bind-mounted)
+- `-retentionPeriod=30d` **plus** `-retention.maxDiskUsagePercent=80` and
+  `-storage.minFreeDiskSpaceBytes=2GiB` — the disk cap applies *in addition* to the time window, so
+  a full disk cannot put the store into read-only mode
+- `-memory.allowedPercent=60` inside the LXC's 2 GiB ceiling
+- `-tls -tlsCertFile=… -tlsKeyFile=…` (HTTPS only)
+- `-httpAuth.username=victorialogs -httpAuth.password=file:///opt/vtstack/victorialogs/password`
+- image pinned to an explicit tag, `restart: unless-stopped`, port `9428:9428`
+
+## 6. Validate
+
+Replace `<password>` with the Key Vault value.
+
+```sh
+# HTTPS UI answers (self-signed → -k)
+curl -sk -o /dev/null -w '%{http_code}\n' -u "victorialogs:<password>" https://192.168.2.214:9428/select/vmui
+# → 200
+
+# unauthenticated request is refused
+curl -sk -o /dev/null -w '%{http_code}\n' https://192.168.2.214:9428/select/vmui
+# → 401
+
+# plaintext is refused (listener is TLS-only)
+curl -s --connect-timeout 5 -o /dev/null -w '%{http_code}\n' http://192.168.2.214:9428/select/vmui
+# → connection refused / reset (no cleartext)
+
+# UFW inside the container — 22 + 9428 allowed from 192.168.2.0/24 only
+pct exec 214 -- ufw status verbose
+
+# retention / memory / auth flags actually in effect
+pct exec 214 -- docker inspect victorialogs --format '{{join .Args " "}}'
+
+# ingest smoke test — jsonline, then query it back
+echo '{"_msg":"hello from runbook 33","level":"info","stream":"vtstack"}' \
+  | curl -sk -u "victorialogs:<password>" -X POST -H 'Content-Type: application/stream+json' \
+      --data-binary @- \
+      'https://192.168.2.214:9428/insert/jsonline?_stream_fields=stream'
+curl -sk -u "victorialogs:<password>" \
+  'https://192.168.2.214:9428/select/logsql/query' -d 'query=hello'
+# → the ingested entry
+
+# Elasticsearch-compatible bulk endpoint (the Fluent Bit `es` output path, #84)
+printf '%s\n%s\n' '{"create":{}}' '{"_msg":"bulk hello","level":"info"}' \
+  | curl -sk -u "victorialogs:<password>" -X POST \
+      -H 'Content-Type: application/x-ndjson' --data-binary @- \
+      'https://192.168.2.214:9428/insert/elasticsearch/_bulk?refresh=true'
+```
+
+**Off-LAN refusal — the ADR 34 acceptance criterion.** From a host outside `192.168.2.0/24`
+(the `cloudlab` VPS or a non-LAN network), the store must be unreachable:
+
+```sh
+curl -sk --connect-timeout 5 -o /dev/null -w '%{http_code}\n' https://192.168.2.214:9428/select/vmui
+# → timeout / refused — the LAN-only rule holds
+```
+
+**Reboot survival** — `onboot 1` plus `restart: unless-stopped`:
+
+```sh
+pct reboot 214
+ssh fleetadm@192.168.2.214 'cd /opt/vtstack && sudo docker compose ps'   # store back up
+```
+
+**Idempotency** — a second `ansible-playbook … --diff` run reports `changed=0`.
+
+**Measurements (issue #123 deploy phase — no ingest exists yet, so record the baseline):**
+
+```sh
+pct exec 214 -- docker stats --no-stream victorialogs
+pct exec 214 -- du -sh /opt/vtstack/victorialogs/data
+```
+
+Record RAM and disk growth per day once a collector ships, and one **selective** `LogsQL` query's
+latency (VictoriaLogs' documented weak case — [research 33 §8](../research/33-centralized-logging-victorialogs.md)).
+
+## 7. Future extension (metrics / traces)
+
+`vtstack` is deliberately named and laid out for the **Victoria stack** — one LXC, one Compose
+project, **separate containers** (`victorialogs` today; `victoriametrics`, `victoriatraces` later),
+each sharing the host-level TLS, password and UFW patterns. Adding them is **not** part of this
+work: VictoriaMetrics (fed by Netdata's Prometheus remote-write, [ADR 26](../decisions/26-zigbee-energy-monitoring.md) /
+[ADR 27](../decisions/27-monitoring-strategy.md)) and VictoriaTraces each need their **own ADR**,
+which must also revisit the `pve` resource budget and the `vmauth` question
+([ADR 35](../decisions/35-log-store-victorialogs.md)). Data lives in bind mounts under
+`/opt/vtstack/`, so the project can be reorganised without losing the store.
+
+## Verification Checklist
+
+Executed on: _(date)_ — record the `ansible-playbook --diff` summary and each result.
+
+- [ ] §1 LXC 214 created — unprivileged, `vtstack`, `192.168.2.214`, `nesting=1,fuse=1`, `onboot 1`, `systemctl --failed` empty inside
+- [ ] §2 `fleetadm` key-only SSH works; `sudo -n whoami` → root
+- [ ] §3 `playbook-logs.yml` applied cleanly; UFW active; `22` + `9428` allowed from `192.168.2.0/24`; Docker installed
+- [ ] §4 `victorialogs-basic-auth-password` present in `homelab-bysxdb-kv`
+- [ ] §5 store up; HTTPS `/select/vmui` → **200**; unauthenticated → **401**; plaintext refused
+- [ ] §5 `docker inspect` shows the retention/disk/memory flags
+- [ ] §5 ingest smoke test (jsonline **and** ES `_bulk`) visible in a query
+- [ ] §6 **off-LAN request refused** (ADR 34 acceptance criterion — verified, not asserted)
+- [ ] §6 survives `pct reboot 214`; `onboot 1` confirmed
+- [ ] §6 idempotent — re-run reports `changed=0`
+- [ ] §6 baseline RAM/disk recorded (and growth/latency once a collector ships)
+
+## Follow-ups
+
+- **Collector** — [#84](https://github.com/jaroslaw-bagnicki/Homelab/issues/84); the store is inert until one ships.
+- **Store monitoring** — [#132](https://github.com/jaroslaw-bagnicki/Homelab/issues/132); the Netdata Parent already charts the container as a Proxmox guest, and the `/metrics` job + alarms follow.
+- **Certificate pinning** — the private CA is [#126](https://github.com/jaroslaw-bagnicki/Homelab/issues/126); clients skip verification for now ([ADR 27](../decisions/27-monitoring-strategy.md)'s accepted residual).
+- **VictoriaMetrics / VictoriaTraces** — future ADRs (§7); same guest and Compose project.
+- **Re-size the rootfs** from the measured ingest rate once the collector lands.
+
+## References
+
+- [ADR 35](../decisions/35-log-store-victorialogs.md) — VictoriaLogs log store in an LXC on `pve`
+- [Research 33](../research/33-centralized-logging-victorialogs.md) — host placement, engine comparison, verified mechanics
+- [ADR 24](../decisions/24-edge-ingress-appliance.md) (volatile journald) · [ADR 27](../decisions/27-monitoring-strategy.md) (Tier B) · [ADR 31](../decisions/31-static-address-scheme.md) (guest block) · [ADR 34](../decisions/34-lan-tls-only.md) (TLS-only, UFW scope)
+- [Runbook 28](28-pve-proxmox-node.md) (Proxmox base + `fleetadm`) · [Runbook 29](29-nut-ups-shutdown.md) (LXC 213 creation precedent) · [Runbook 31](31-deploy-netdata.md) (AKV/TLS/validation pattern)
+- [Issue #123](https://github.com/jaroslaw-bagnicki/Homelab/issues/123) · [#84](https://github.com/jaroslaw-bagnicki/Homelab/issues/84) (collector) · [#132](https://github.com/jaroslaw-bagnicki/Homelab/issues/132) (monitoring) · [#75](https://github.com/jaroslaw-bagnicki/Homelab/issues/75) (umbrella)
