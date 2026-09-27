@@ -7,3 +7,9 @@ docker_host_apt_distro_map:
   Ubuntu: ubuntu
 docker_host_apt_distro: "{{ docker_host_apt_distro_map.get(ansible_facts['distribution'], '') }}"
 docker_host_apt_base_url: "https://download.docker.com/linux/{{ docker_host_apt_distro }}"
+# json-file logging is unbounded by default — cap it so a runaway container cannot fill the
+# disk the Fluent Bit collector also writes to (research 34 §9). Applies to containers created
+# after the change; existing ones must be recreated to adopt it.
+docker_host_log_driver: json-file
+docker_host_log_max_size: 10m
+docker_host_log_max_file: "3"

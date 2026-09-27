@@ -9,3 +9,9 @@ netdata_stream_target: "192.168.2.201:19996"
 netdata_stream_ssl: true
 netdata_bind: "127.0.0.1"
 netdata_storage: ram
+
+# Fluent Bit collector (ADR 36) — journald only; a bounded memory ring buffer drops the oldest
+# chunks and the cursor sits on tmpfs, so an unreachable store never writes to the eMMC (ADR 24).
+fluentbit_buffer_type: memrb
+fluentbit_buffer_limit: 16M
+fluentbit_cursor_tmpfs: true

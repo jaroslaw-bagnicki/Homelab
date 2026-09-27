@@ -1,0 +1,152 @@
+---
+- name: Assert the distribution is served by the Fluent Bit repository
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['distribution'] in ['Debian', 'Ubuntu']
+    fail_msg: >-
+      fluentbit supports Debian and Ubuntu only — got
+      '{{ ansible_facts['distribution'] }}'.
+
+- name: Install the Fluent Bit repository prerequisites
+  # `deb822_repository` needs the `python3-debian` library on the target, and ansible-core 2.16 has
+  # no `install_python_debian` option — minimal Debian installs (e.g. the OMV `nas`) do not ship it.
+  ansible.builtin.apt:
+    name:
+      - ca-certificates
+      - python3-debian
+    state: present
+    update_cache: true
+
+- name: Ensure the APT keyrings directory exists
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Download the Fluent Bit signing key
+  ansible.builtin.get_url:
+    url: "{{ fluentbit_apt_key_url }}"
+    dest: "{{ fluentbit_keyring }}"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Add the Fluent Bit APT repository
+  ansible.builtin.deb822_repository:
+    name: fluentbit
+    types: [deb]
+    architectures: [amd64]
+    signed_by: "{{ fluentbit_keyring }}"
+    uris: ["{{ fluentbit_apt_base_url }}"]
+    suites: ["{{ fluentbit_apt_suite }}"]
+    components: [main]
+    state: present
+
+- name: Install Fluent Bit
+  ansible.builtin.apt:
+    name: "{{ fluentbit_package }}"
+    state: present
+    update_cache: true
+
+- name: Ensure the Fluent Bit system group exists
+  ansible.builtin.group:
+    name: "{{ fluentbit_group }}"
+    system: true
+
+- name: Ensure the Fluent Bit system user exists
+  ansible.builtin.user:
+    name: "{{ fluentbit_user }}"
+    group: "{{ fluentbit_group }}"
+    groups: [adm, systemd-journal]
+    append: true
+    system: true
+    shell: /usr/sbin/nologin
+    create_home: false
+
+- name: Assert Azure controller credentials are set
+  when: fluentbit_store_password | length == 0
+  ansible.builtin.assert:
+    that:
+      - lookup('ansible.builtin.env', 'AZURE_CLIENT_ID', default='') | length > 0
+      - lookup('ansible.builtin.env', 'AZURE_CLIENT_SECRET', default='') | length > 0
+      - lookup('ansible.builtin.env', 'AZURE_TENANT_ID', default='') | length > 0
+    fail_msg: >-
+      AZURE_CLIENT_ID, AZURE_CLIENT_SECRET and AZURE_TENANT_ID must be set on the
+      Ansible controller for the VictoriaLogs password Key Vault lookup.
+  delegate_to: localhost
+
+- name: Fetch the VictoriaLogs basic-auth password from Key Vault
+  when: fluentbit_store_password | length == 0
+  vars:
+    fluentbit_vault_url: "https://{{ fluentbit_store_keyvault_name }}.vault.azure.net"
+    fluentbit_azure_client_id: "{{ lookup('ansible.builtin.env', 'AZURE_CLIENT_ID') }}"
+    fluentbit_azure_secret: "{{ lookup('ansible.builtin.env', 'AZURE_CLIENT_SECRET') }}"
+    fluentbit_azure_tenant_id: "{{ lookup('ansible.builtin.env', 'AZURE_TENANT_ID') }}"
+  ansible.builtin.set_fact:
+    fluentbit_store_password: >-
+      {{ lookup('azure.azcollection.azure_keyvault_secret',
+      fluentbit_store_password_secret_name, vault_url=fluentbit_vault_url,
+      client_id=fluentbit_azure_client_id, secret=fluentbit_azure_secret,
+      tenant=fluentbit_azure_tenant_id) }}
+  delegate_to: localhost
+  no_log: true
+
+- name: Ensure the Fluent Bit runtime directory exists
+  when: not fluentbit_cursor_tmpfs | bool
+  ansible.builtin.file:
+    path: "{{ fluentbit_runtime_dir }}"
+    state: directory
+    owner: "{{ fluentbit_user }}"
+    group: "{{ fluentbit_group }}"
+    mode: "0750"
+
+- name: Recreate the Fluent Bit runtime directory on tmpfs (eMMC nodes)
+  when: fluentbit_cursor_tmpfs | bool
+  ansible.builtin.copy:
+    content: "d {{ fluentbit_runtime_dir }} 0750 {{ fluentbit_user }} {{ fluentbit_group }} -\n"
+    dest: /etc/tmpfiles.d/fluent-bit.conf
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Create the tmpfs runtime directory now
+  when: fluentbit_cursor_tmpfs | bool
+  ansible.builtin.command:
+    cmd: systemd-tmpfiles --create /etc/tmpfiles.d/fluent-bit.conf
+  changed_when: false
+
+- name: Install the Fluent Bit parsers
+  ansible.builtin.copy:
+    src: homelab-parsers.conf
+    dest: "{{ fluentbit_custom_parsers_file }}"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart fluent-bit
+
+- name: Install the journald PRIORITY to level Lua script
+  ansible.builtin.copy:
+    src: priority-level.lua
+    dest: "{{ fluentbit_lua_level_script }}"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart fluent-bit
+
+- name: Template the Fluent Bit configuration
+  ansible.builtin.template:
+    src: fluent-bit.conf.j2
+    dest: "{{ fluentbit_conf }}"
+    owner: root
+    group: "{{ fluentbit_group }}"
+    mode: "0640"
+  notify: Restart fluent-bit
+  no_log: true
+
+- name: Ensure Fluent Bit is enabled and running
+  ansible.builtin.systemd_service:
+    name: "{{ fluentbit_service }}"
+    state: started
+    enabled: true

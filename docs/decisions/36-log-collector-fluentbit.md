@@ -2,9 +2,15 @@
 
 **Date:** 2026-09-27
 **Status:** Accepted
+**Amended:** 2026-09-27 (implementation) — the journald inclusion list and priority floor were
+dropped for **collect-all**; buffering is **filesystem** on `pve`/`lab`/`nas` with **`memrb`** on
+`edge`; the output uses the ISO8601 event time as `_time_field` for every source shape; and journald's
+numeric **`PRIORITY`** is mapped to the readable **`level`** field the store displays and filters on; and
+the outputs retry **without limit** (`Retry_Limit False`), without which the filesystem buffers did not
+actually ride out an outage.
 
 > **This ADR records the decision and why.** Flags, parsers, per-node paths, tuning and the full
-> comparison live in [research 34](../research/34-log-collector-options.md); how to deploy it will live in
+> comparison live in [research 34](../research/34-log-collector-options.md); how to deploy it lives in
 > the role and its runbook. Nothing is repeated here.
 
 ---
@@ -16,7 +22,7 @@
 | **Adopted** | **Fluent Bit** — one systemd service per node, shipping logs to VictoriaLogs |
 | **Why** | It is the only small, store-agnostic collector with a **stable journald input** — and every targeted node in the Linux fleet logs through journald |
 | **Not adopted** | `vlagent` (no journald source, buffers to disk), OTel Collector (alpha journald, heaviest), Vector, Alloy/Promtail, Filebeat, Fluentd, Telegraf (no journald input), `systemd-journal-upload` alone |
-| **Next** | Build the `fluentbit` role → deploy to `pve` → confirm entries in the store's UI → `edge` → `lab` |
+| **Rollout** | Deployed fleet-wide by the `fluentbit` role — [runbook 34](../runbooks/34-deploy-fluentbit.md) |
 
 ---
 
@@ -53,7 +59,8 @@ at all (§7).
   `edge` runs no Docker by design ([runbook 24](../runbooks/24-edge-appliance.md)), and on `lab` a host-native
   service reads both the host journal and Docker's log files without bind mounts.
 - **One shared role (`fluentbit`), per-node behaviour in `host_vars`** — the role owns the output contract,
-  buffering and cursor placement; each node declares its own source list and stream fields. Same shape as
+  the field mapping, buffering and cursor placement; each node declares only which source shapes it has
+  (journald always, Docker where present, native files where a system keeps its own). Same shape as
   `netdata` ([ADR 10](10-ansible-host-config.md)).
 - **Four source shapes** — journald on every targeted Linux node; Docker's json-file logs on `lab` with the built-in `docker`
   parser; containerd CRI logs when [ADR 22](22-k3s-arc-homelab.md)'s k3s lands, with `cri` + `kube-custom`;
@@ -63,16 +70,31 @@ at all (§7).
   store every line twice. Each node picks one, in `host_vars`; there is no dedup to enable at ingest.
 - **Output: the store's JSON-lines API over TLS with basic auth** — `https://192.168.2.214:9428/insert/jsonline`
   with `_stream_fields` / `_msg_field` / `_time_field`; **one output block per source shape, because a single
-  `_msg_field` / `_time_field` pair cannot serve two schemas** (`lab` carries both journald and Docker logs);
-  `_HOSTNAME` + `_SYSTEMD_UNIT` as streams for journald, hostname + container for Docker; gzip; password from
-  Key Vault. This is the route VictoriaMetrics **documents** for Fluent Bit and it **supersedes the `es` output
-  assumed in [#84](https://github.com/jaroslaw-bagnicki/Homelab/issues/84)**. The mapping itself is the design,
-  not a measurement — it is confirmed with `debug=1` on the first node
+  `_msg_field` cannot serve two schemas** (`lab` carries both journald and Docker logs); `_HOSTNAME` +
+  `_SYSTEMD_UNIT` as streams for journald, hostname + container id for Docker; `_msg_field` per shape and the
+  **ISO8601 event time (`date`) as `_time_field` everywhere** — one conversion for all shapes; gzip; password
+  from Key Vault. This is the route VictoriaMetrics **documents** for Fluent Bit and it **supersedes the `es`
+  output assumed in [#84](https://github.com/jaroslaw-bagnicki/Homelab/issues/84)**. The mapping itself is the
+  design, not a measurement — it is confirmed with `debug=1` on the first node
   ([research 34 §5](../research/34-log-collector-options.md)).
-- **Buffering: memory only, everywhere** — bounded, and on `edge` pause-on-overlimit, so an unreachable store
-  **drops** logs instead of spooling them to the eMMC. The cursor file sits on disk on `pve`/`lab`/`nas` and on
-  **tmpfs** on `edge`, where a reboot loses nothing journald had not already lost ([research 34 §6](../research/34-log-collector-options.md)).
-- **An explicit inclusion list per node** — named units plus a priority floor, never a whole journal.
+- **Severity is derived in the collector, not by the store** — VictoriaLogs builds `level` from `PRIORITY`
+  only on its journald ingest endpoint, which this build does not serve, and it exposes no `level_field`
+  ingest arg, so a small Lua filter maps journald's `PRIORITY` to the readable `level` the store displays
+  and filters on. `level` is a regular field, never a stream field: it varies per line, and a non-constant
+  stream field is the high-cardinality trap.
+- **Buffering: filesystem on `pve`/`lab`/`nas`, `memrb` on `edge`** — bounded filesystem chunks carry logs
+  across a store outage, the cursor on disk and the output queue capped. On `edge` the input uses Fluent
+  Bit's **memory ring buffer** (`memrb`), which drops the oldest chunks and never writes to disk, with the
+  cursor on **tmpfs** — where a reboot loses nothing journald had not already lost
+  ([research 34 §6](../research/34-log-collector-options.md)).
+  Both are retried **without limit** (`Retry_Limit False`), because Fluent Bit's default of a single retry
+  discards the chunk once retries are exhausted — and **filesystem buffering does not prevent that**, so
+  without it the filesystem nodes lose an outage's worth of logs (measured: 57 chunks in 49 s). Bounding is
+  unchanged: `storage.total_limit_size` drops the oldest chunk on the filesystem nodes, and the memory ring
+  drops the oldest on `edge`.
+- **The whole journal per node — no inclusion list, no priority floor.** Fluent Bit's journald filter is exact
+  key/value, so a severity threshold cannot be expressed without inventing one; the simplest correct config is
+  to ship everything and filter at query time. The store's volume and cardinality are the accepted costs.
 - **Rollout `pve` → `edge` → `lab`**, then `nas` and `vtstack`, validating each before the next.
   **`cloudlab` is never a target** — off-LAN, and Tier A already covers it ([ADR 27](27-monitoring-strategy.md)).
 - **The OPNsense router is out of scope** — a FreeBSD appliance with no journald and no Docker, which
@@ -96,14 +118,19 @@ at all (§7).
 
 **Costs accepted**
 
-- **Logs are lossy at the collector, deliberately.** Memory-only buffering means a store outage longer than
-  the buffer — or a reboot — drops logs. The same trade ADR 35 made when it declined HA.
+- **Logs are lossy on `edge`, deliberately.** Its `memrb` buffer drops the oldest chunks when the store is
+  unreachable — or a reboot happens; the rest of the fleet buffers to disk and rides out an outage. The same
+  availability trade ADR 35 made when it declined HA.
 - **`edge` trades completeness for the eMMC**: with the store down its logs are dropped by design.
-- **Filtering is coarse.** An inclusion list plus a priority floor means detail outside the named units is not
-  stored. The list is a `host_vars` edit, so it can grow without a new decision.
+- **No filtering.** Every journald record is shipped, so the store carries the fleet's full log volume and the
+  stream cardinality of templated units; narrowing it later is a role/`host_vars` edit, not a new decision.
 - **The input side is more than "install a shipper"** — four source shapes, two of them needing a parser, plus
-  a prerequisite that is the host's to fix: Docker rotates **nothing** by default on `lab`
-  ([research 34 §9](../research/34-log-collector-options.md)).
+  a host prerequisite the `docker_host` role now satisfies: Docker's json-file logs rotate **nothing** by
+  default, so the daemon caps them ([research 34 §9](../research/34-log-collector-options.md)). **The cap is
+  role-wide, so it also reaches `cloudlab`** — off-LAN and never a collector target, but the VPS runs
+  `docker_host` ([playbook.yml](../../ansible/playbooks/playbook.yml)), so its next run creates
+  `/etc/docker/daemon.json` and restarts Docker: a one-time public-service bounce that buys no rotation
+  until each container is recreated.
 - **One more fleet-wide service to update**, alongside Netdata ([ADR 27](27-monitoring-strategy.md)).
 
 **To watch**
@@ -143,8 +170,10 @@ at all (§7).
 - **No collector** — the store stays inert and the Edge keeps losing its logs.
 - **A collector on `lab` forwarding for the fleet** — the Edge's logs would still die locally, and every
   node's logs would depend on `lab`.
-- **Shipping all of journald** — unbounded ingest into a 16 GiB volume, worse signal-to-noise, and queries
-  worse than the `journalctl` already on the node.
+- **An explicit inclusion list per node** (an earlier revision of this decision) — named units plus a priority
+  floor. Dropped during implementation: Fluent Bit's journald filter is exact key/value, so a severity
+  threshold needs enumerated filters or a filter stage, and the added machinery bought less than it cost. The
+  fleet ships the whole journal instead; the volume and cardinality costs are recorded above.
 
 ---
 
