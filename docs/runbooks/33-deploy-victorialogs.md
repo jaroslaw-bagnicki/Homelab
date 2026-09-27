@@ -194,6 +194,11 @@ The role writes `homelab-bysxdb-kv/victorialogs-basic-auth-password` to a **root
 environment ([ADR 35](../decisions/35-log-store-victorialogs.md)). **Rotation**: re-run with
 `-Force`, then re-run the workload playbook.
 
+> **Verified 2026-09-27 — passed.** The script reported the secret provisioned;
+> `Get-AzKeyVaultSecret` confirms `victorialogs-basic-auth-password` exists in `homelab-bysxdb-kv`,
+> `Enabled: True`, created 2026-09-27. The value was never printed — the role writes it to the
+> `file://` password file at deploy time (§5).
+
 ## 5. Deploy the store
 
 ```powershell
@@ -298,13 +303,13 @@ which must also revisit the `pve` resource budget and the `vmauth` question
 
 ## Verification Checklist
 
-Executed on: **2026-09-27** (in progress — §1–§3 done; §4–§6 pending) — record the
+Executed on: **2026-09-27** (in progress — §1–§4 done; §5–§6 pending) — record the
 `ansible-playbook --diff` summary and each result.
 
 - [x] §1 LXC 214 created — unprivileged, `vtstack`, `192.168.2.214`, `nesting=1,fuse=1`, `onboot 1`, `systemctl --failed` empty inside
 - [x] §2 `fleetadm` key-only SSH works; `sudo -n whoami` → root
 - [x] §3 `playbook-logs.yml` applied cleanly; UFW active; `22` + `9428` allowed from `192.168.2.0/24`; Docker installed
-- [ ] §4 `victorialogs-basic-auth-password` present in `homelab-bysxdb-kv`
+- [x] §4 `victorialogs-basic-auth-password` present in `homelab-bysxdb-kv`
 - [ ] §5 store up; HTTPS `/select/vmui` → **200**; unauthenticated → **401**; plaintext refused
 - [ ] §5 `docker inspect` shows the retention/disk/memory flags
 - [ ] §5 ingest smoke test (jsonline **and** ES `_bulk`) visible in a query
