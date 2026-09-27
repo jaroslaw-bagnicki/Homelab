@@ -26,7 +26,7 @@
     Match                    journal.*
     Host                     {{ fluentbit_store_host }}
     Port                     {{ fluentbit_store_port }}
-    URI                      {{ fluentbit_store_uri }}?_stream_fields=_HOSTNAME,_SYSTEMD_UNIT&_msg_field=MESSAGE&_time_field=date{% if fluentbit_store_debug | bool %}&debug=1{% endif %}
+    URI                      {{ fluentbit_store_uri }}?_stream_fields=_HOSTNAME,_SYSTEMD_UNIT&_msg_field=MESSAGE&_time_field=date{{ '&debug=1' if fluentbit_store_debug | bool else '' }}
     Format                   json_lines
     Json_date_format         iso8601
     tls                      On
@@ -75,7 +75,7 @@
     Match                    docker.*
     Host                     {{ fluentbit_store_host }}
     Port                     {{ fluentbit_store_port }}
-    URI                      {{ fluentbit_store_uri }}?_stream_fields=hostname,container_id&_msg_field=log&_time_field=date{% if fluentbit_store_debug | bool %}&debug=1{% endif %}
+    URI                      {{ fluentbit_store_uri }}?_stream_fields=hostname,container_id&_msg_field=log&_time_field=date{{ '&debug=1' if fluentbit_store_debug | bool else '' }}
     Format                   json_lines
     Json_date_format         iso8601
     tls                      On
@@ -111,7 +111,7 @@
     Match                    file.{{ loop.index }}.*
     Host                     {{ fluentbit_store_host }}
     Port                     {{ fluentbit_store_port }}
-    URI                      {{ fluentbit_store_uri }}?_stream_fields=hostname&_msg_field=log&_time_field=date{% if fluentbit_store_debug | bool %}&debug=1{% endif %}
+    URI                      {{ fluentbit_store_uri }}?_stream_fields=hostname&_msg_field=log&_time_field=date{{ '&debug=1' if fluentbit_store_debug | bool else '' }}
     Format                   json_lines
     Json_date_format         iso8601
     tls                      On
