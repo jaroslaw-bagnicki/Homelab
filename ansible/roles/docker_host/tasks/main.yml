@@ -73,6 +73,22 @@
     append: true
   loop: "{{ docker_users }}"
 
+- name: Configure the Docker log driver and rotation
+  ansible.builtin.copy:
+    content: |
+      {
+        "log-driver": "{{ docker_host_log_driver }}",
+        "log-opts": {
+          "max-size": "{{ docker_host_log_max_size }}",
+          "max-file": "{{ docker_host_log_max_file }}"
+        }
+      }
+    dest: /etc/docker/daemon.json
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart Docker
+
 - name: Ensure Docker is running
   ansible.builtin.service:
     name: docker
