@@ -8,15 +8,15 @@ hardware detail see [Hardware Inventory](hardware.md); for change history see
 
 ## Nodes
 
-| Node | Role | Hardware / OS | IP | Status |
-|---|---|---|---|---|
-| **Lab** | main workload host (Docker → k3s) | Lenovo M910q Tiny · Ubuntu 24.04 LTS · Azure Arc | `192.168.2.200` | 🔨 |
-| **OMV NAS** | backup target | HP ProLiant ML110 G5 · OMV 8.3 | `192.168.2.210` | 🗄️ |
-| **Beetle NAS** | backup target (successor to ML110) | Wincor Beetle M-III · OMV 8.5 | `192.168.2.202` | 🔨 |
-| **Edge Ingress** | public ingress (cloudflared + Caddy) | Dell Wyse 3040 · Debian 13 minimal | `192.168.2.240` | 🔨 |
-| **Proxmox VE** | virtualisation host — smart-home + always-on services | Dell Wyse 5070 | `192.168.2.201` · guests `.210`–`.214` | ✅ |
-| **LLM server** | local LLM inference | Minisforum X1 Lite | TBD | 🧠 |
-| **Cloudlab VPS** | staging for Lab (Ansible + Docker/k3s workloads) | Contabo VPS 10 · Ubuntu 24.04 | `173.249.27.13` | ✅ |
+| Node | Role | Hardware / OS | Hostname | IP | Status |
+|---|---|---|---|---|---|
+| **Lab** | main workload host (Docker → k3s) | Lenovo M910q Tiny · Ubuntu 24.04 LTS · Azure Arc | `lab` | `192.168.2.200` | 🔨 |
+| **OMV NAS** | backup target | HP ProLiant ML110 G5 · OMV 8.3 | `omv` | `192.168.2.210` | 🗄️ |
+| **Beetle NAS** | backup target (successor to ML110) | Wincor Beetle M-III · OMV 8.5 | `nas` | `192.168.2.202` | 🔨 |
+| **Edge Ingress** | public ingress (cloudflared + Caddy) | Dell Wyse 3040 · Debian 13 minimal | `edge` | `192.168.2.240` | 🔨 |
+| **Proxmox VE** | virtualisation host — smart-home + always-on services | Dell Wyse 5070 | `pve` | `192.168.2.201` · guests `.210`–`.214` | ✅ |
+| **LLM server** | local LLM inference | Minisforum X1 Lite | — | TBD | 🧠 |
+| **Cloudlab VPS** | staging for Lab (Ansible + Docker/k3s workloads) | Contabo VPS 10 · Ubuntu 24.04 | `cloudlab` | `173.249.27.13` | ✅ |
 
 ### Guests on the Proxmox VE node
 
