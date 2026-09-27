@@ -166,6 +166,19 @@ ansible-playbook ansible/playbooks/playbook-logs.yml --diff
   firewall, which never sees container traffic.
 - **`docker_host`** — Docker Engine from Docker's official repository (distro-aware: Debian here).
 
+> **Verified 2026-09-27 — passed.** `PLAY RECAP`: `ok=32 changed=18 unreachable=0 failed=0 skipped=1`.
+>
+> | Check | Result |
+> |---|---|
+> | `common` | hostname `vtstack`, `127.0.1.1 vtstack` in `/etc/hosts`, `Etc/UTC`, NTP running, Avahi enabled |
+> | `security` | UFW **active** — `22` + `9428` ALLOW IN `192.168.2.0/24`, `80` DENY; fail2ban running |
+> | `sshd` hardening | `passwordauthentication no`, `kbdinteractiveauthentication no`, `permitrootlogin prohibit-password` (`sshd -T` prints the `without-password` alias); the LAN `Match Address` block re-enables password auth for non-root |
+> | `docker_host` | Debian assert passed; Docker **29.8.1**, Compose **v5.5.1**, `docker` active |
+> | `systemctl --failed` | **0 loaded units listed** |
+>
+> `docker_host` pulled `docker-ce`, `containerd.io`, `docker-buildx-plugin` and `docker-compose-plugin`
+> from Docker's official Debian repository; "Add users to docker group" skipped (no users configured).
+
 ## 4. Provision the basic-auth password
 
 VictoriaLogs takes HTTP basic auth from day one. The password lives in Azure Key Vault and is
@@ -285,12 +298,12 @@ which must also revisit the `pve` resource budget and the `vmauth` question
 
 ## Verification Checklist
 
-Executed on: **2026-09-27** (in progress — §1–§2 done; §3–§6 pending) — record the
+Executed on: **2026-09-27** (in progress — §1–§3 done; §4–§6 pending) — record the
 `ansible-playbook --diff` summary and each result.
 
 - [x] §1 LXC 214 created — unprivileged, `vtstack`, `192.168.2.214`, `nesting=1,fuse=1`, `onboot 1`, `systemctl --failed` empty inside
 - [x] §2 `fleetadm` key-only SSH works; `sudo -n whoami` → root
-- [ ] §3 `playbook-logs.yml` applied cleanly; UFW active; `22` + `9428` allowed from `192.168.2.0/24`; Docker installed
+- [x] §3 `playbook-logs.yml` applied cleanly; UFW active; `22` + `9428` allowed from `192.168.2.0/24`; Docker installed
 - [ ] §4 `victorialogs-basic-auth-password` present in `homelab-bysxdb-kv`
 - [ ] §5 store up; HTTPS `/select/vmui` → **200**; unauthenticated → **401**; plaintext refused
 - [ ] §5 `docker inspect` shows the retention/disk/memory flags
