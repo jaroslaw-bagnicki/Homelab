@@ -147,17 +147,20 @@ sudo pct exec 214 -- docker start victorialogs
 
 > **Verified 2026-09-27** — `PLAY RECAP` `edge ok=59 changed=11 failed=0`. Runtime dir on **tmpfs
 > (`/run`)** holding only `journal.db`; **`/var/lib/fluent-bit` absent**; **no `*.flb` on any disk**.
-> Across a ~49 s outage the collector logged **85** `cannot be retried` / `failed to flush` lines and
-> **zero** `paused (mem buf overlimit)` lines, so it drops rather than pauses — the only `pausing` lines
-> in the journal belong to the previous PID's graceful shutdown during the deploy. Its `/proc/<pid>/io`
-> reported **`write_bytes: 0`** against `wchar: 2000534` (all of it tmpfs and journal writes), so **not
-> one byte reached the eMMC**, and it stayed 0 after recovery. The store came back, the collector
-> reconnected (`HTTP status=200`), and `_time:1m {_HOSTNAME="edge"}` holds **190** records — **190 with a
-> `level`** — across 7 units.
+> Its `/proc/<pid>/io` reported **`write_bytes: 0`** against ~2 MB of `wchar` (all of it tmpfs and journal
+> writes), so **not one byte reached the eMMC** — and it stayed 0 across an outage and recovery. There
+> were **zero** `paused (mem buf overlimit)` lines: the only `pausing` lines belong to the previous PID's
+> graceful shutdown during the deploy, so `memrb` does not pause.
 >
-> **Caveat:** `memrb` drops are **silent** in the journal, so they can only be *counted* with the
-> collector's metrics endpoint, which this role does not expose — that stays
-> [#132](https://github.com/jaroslaw-bagnicki/Homelab/issues/132).
+> **Retry re-test after the `Retry_Limit` fix** — while still on Fluent Bit's default retry limit, edge
+> discarded **12** chunks during a ~20 s store outage. Re-tested with `Retry_Limit False` it discarded
+> **0**, and the whole window arrived once the store returned:
+> `_time:[2026-09-27T20:02:36Z, 2026-09-27T20:03:00Z] {_HOSTNAME="edge"}` → **155** records spanning
+> 20:02:36.650 → 20:03:00.655.
+>
+> **Caveat:** `memrb` is still a 16 MB ring, so an outage long enough to fill it drops the oldest chunks —
+> and those drops are **silent** in the journal, so counting them needs the collector's metrics endpoint,
+> which this role does not expose ([#132](https://github.com/jaroslaw-bagnicki/Homelab/issues/132)).
 
 ## 3. Deploy `lab` (Docker json-file logs)
 
@@ -239,11 +242,11 @@ stops receiving.
 
 ## Verification Checklist
 
-Executed on: **in progress** — `pve` and `edge` verified 2026-09-27; remaining `lab` → `nas` → `vtstack`.
-Record the `ansible-playbook --diff` summary and each result.
+Executed on: **in progress** — `pve` and `edge` verified 2026-09-27, each including a store-outage test;
+remaining `lab` → `nas` → `vtstack`. Record the `ansible-playbook --diff` summary and each result.
 
-- [x] §1 `pve` — service active; config has one `[INPUT]`/`[OUTPUT]`; `_msg`/`_time`/streams confirmed from the stored records; records queryable; RSS 7.2 MB; `debug` off
-- [x] §2 `edge` — cursor on tmpfs; `write_bytes` stayed **0** and no `*.flb` on disk through a ~49 s store outage; drops rather than pauses; reconnected and ingesting after the store returned
+- [x] §1 `pve` — service active; config has one `[INPUT]`/`[OUTPUT]`; `_msg`/`_time`/streams confirmed from the stored records; `level` derived from `PRIORITY`; records queryable; RSS 7.2 MB; `debug` off; with `Retry_Limit False` an outage loses nothing (**192** records spanning the whole window, 0 discards)
+- [x] §2 `edge` — cursor on tmpfs; `write_bytes` stayed **0** and no `*.flb` on disk across two store outages; does not pause; delivered the whole outage window (**155** records, 0 discards — was 12 pre-fix)
 - [ ] §3 `lab` — Docker logs queryable with `container_id` stream; `docker_host` rotation applied (container recreated)
 - [ ] §4 `nas` — records queryable
 - [ ] §5 `vtstack` — the store's own container logs queryable
