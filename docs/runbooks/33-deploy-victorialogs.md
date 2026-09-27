@@ -219,6 +219,30 @@ templates the Compose file, and brings the `victorialogs` container up with:
 - image pinned to an explicit tag, `restart: unless-stopped`, and **`network_mode: host`** so the
   in-LXC UFW filters `:9428` — a Docker *published* port would bypass UFW (see §6 / [ADR 35](../decisions/35-log-store-victorialogs.md))
 
+> **Verified 2026-09-27 — passed.** Second run: `ok=10 changed=1 failed=0`; the container was **not**
+> recreated across runs (`Created 08:59:05Z`, `Restarts=0`, stable container ID).
+>
+> | Check | Result |
+> |---|---|
+> | Directories / password / cert | created; `password` `0600`, `ssl/key.pem` `0600`, `ssl/cert.pem` `0644`, `docker-compose.yml` `0644` |
+> | Container | `victorialogs` up — `victoriametrics/victoria-logs:v1.52.0`, `network_mode: host` |
+> | Listener | `LISTEN 0.0.0.0:9428` |
+> | In-container HTTPS probe | **401** (`curl -k https://127.0.0.1:9428/select/vmui`) — TLS + basic auth live |
+>
+> **The first run failed at the restart handler** — `Error connecting: … Not supported URL scheme
+> http+docker`. Cause: the handler used `community.docker.docker_container` (Python SDK), and the SDK
+> vendored in the pinned `community.docker` 3.7.0 is incompatible with `requests ≥ 2.32` (Debian 13
+> ships Python 3.13.5 / requests 2.32.3 / urllib3 2.3.0 — upstream
+> [#860](https://github.com/ansible-collections/community.docker/issues/860)). The handler now
+> restarts through the Docker CLI (`docker_compose_v2`) — the same path `docker_services` already
+> uses for `cloudflared` — so the role needs no Python SDK on the guest.
+>
+> **Idempotency nuance (measured).** The role does not drift and never recreates the container, but
+> the `Deploy VictoriaLogs` task reports `changed` on **every** run: `pull: always` re-checks the
+> pinned tag each time. Isolated by comparison — `pull=always` → `changed: true` with a `Pulling`
+> image action, `pull=missing` → `changed: false`, `actions: []`. Literal `changed=0` is not
+> achievable while `pull: always` is set (see §6).
+
 ## 6. Validate
 
 Replace `<password>` with the Key Vault value.
@@ -278,7 +302,9 @@ pct reboot 214
 ssh fleetadm@192.168.2.214 'cd /opt/vtstack && sudo docker compose ps'   # store back up
 ```
 
-**Idempotency** — a second `ansible-playbook … --diff` run reports `changed=0`.
+**Idempotency** — a second `ansible-playbook … --diff` run must leave the container **unrecreated**
+(`Restarts=0`, same container ID). It **will** report `changed` on the deploy task: `pull: always`
+re-checks the pinned tag on every run, so literal `changed=0` is not expected here (§5).
 
 **Measurements (issue #123 deploy phase — no ingest exists yet, so record the baseline):**
 
@@ -303,7 +329,7 @@ which must also revisit the `pve` resource budget and the `vmauth` question
 
 ## Verification Checklist
 
-Executed on: **2026-09-27** (in progress — §1–§4 done; §5–§6 pending) — record the
+Executed on: **2026-09-27** (in progress — §1–§5 done; §5 checks and §6 pending) — record the
 `ansible-playbook --diff` summary and each result.
 
 - [x] §1 LXC 214 created — unprivileged, `vtstack`, `192.168.2.214`, `nesting=1,fuse=1`, `onboot 1`, `systemctl --failed` empty inside
@@ -315,7 +341,7 @@ Executed on: **2026-09-27** (in progress — §1–§4 done; §5–§6 pending) 
 - [ ] §5 ingest smoke test (jsonline **and** ES `_bulk`) visible in a query
 - [ ] §6 **off-LAN request refused** (ADR 34 acceptance criterion — verified, not asserted)
 - [ ] §6 survives `pct reboot 214`; `onboot 1` confirmed
-- [ ] §6 idempotent — re-run reports `changed=0`
+- [ ] §6 idempotent — re-run leaves the container unrecreated (`Restarts=0`, same ID); the `pull: always` deploy task reports `changed` by design
 - [ ] §6 baseline RAM/disk recorded (and growth/latency once a collector ships)
 
 ## Follow-ups
