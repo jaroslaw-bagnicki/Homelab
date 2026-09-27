@@ -53,12 +53,12 @@ watches the **management plane**, the LAN watches the **real-time plane**. Where
 
 | Signal | Where you see it | Refs | Status |
 |---|---|---|---|
-| **Node metrics** | Netdata — centralized monitoring and alerting for every LAN node | [ADR 27](decisions/27-monitoring-strategy.md) · [runbook 31](runbooks/31-deploy-netdata.md) | ✅ |
+| **Node metrics** | Netdata — centralized monitoring and alerting for every LAN node; 3-tier retention up to 1y | [ADR 27](decisions/27-monitoring-strategy.md) · [runbook 31](runbooks/31-deploy-netdata.md) | ✅ |
 | **Cloud telemetry** | Azure Monitor — the Arc-enrolled nodes' metrics and inventory, beside the rest of Azure | [ADR 09](decisions/09-azure-monitor-via-arc.md) | ✅ |
 | **Power state** | UPS charge, voltage, load and on-battery events charted in Netdata (`Remote Devices → UPS`) | [ADR 30](decisions/30-ups-nut-graceful-shutdown.md) · [runbook 31](runbooks/31-deploy-netdata.md) | ✅ |
 | **Disk health** | Drive health and long self-test results for the NAS arrays, per drive | [research 32](research/32-wincor-beetle-m3-hardware-diagnostic.md) | ✅ |
 | **Per-device energy** | Power draw per wall plug, charted in Grafana | [#73](https://github.com/jaroslaw-bagnicki/Homelab/issues/73) · [ADR 26](decisions/26-zigbee-energy-monitoring.md) | 📋 |
-| **Logs** | VictoriaLogs — the fleet's logs searchable in one place on the `pve` node, kept 30 days | [#84](https://github.com/jaroslaw-bagnicki/Homelab/issues/84) · [ADR 35](decisions/35-log-store-victorialogs.md) · [runbook 33](runbooks/33-deploy-victorialogs.md) | 🔨 |
+| **Logs** | VictoriaLogs — the fleet's logs searchable in one place on the `pve` node, 30d retention | [#84](https://github.com/jaroslaw-bagnicki/Homelab/issues/84) · [ADR 35](decisions/35-log-store-victorialogs.md) · [runbook 33](runbooks/33-deploy-victorialogs.md) | 🔨 |
 
 **Why two tiers**: Arc sees only the nodes enrolled in it, and the Edge appliance and `pve` are never
 enrolled — so the management plane (policy, compliance, portal, heartbeat) can never show the whole
