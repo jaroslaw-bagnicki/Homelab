@@ -248,17 +248,17 @@ templates the Compose file, and brings the `victorialogs` container up with:
 Replace `<password>` with the Key Vault value.
 
 ```sh
-# HTTPS UI answers (self-signed → -k)
+# HTTPS UI answers (self-signed → -k); /select/vmui 302-redirects to its trailing-slash form
 curl -sk -o /dev/null -w '%{http_code}\n' -u "victorialogs:<password>" https://192.168.2.214:9428/select/vmui
-# → 200
+# → 302 (add -L, or request /select/vmui/, for 200)
 
 # unauthenticated request is refused
 curl -sk -o /dev/null -w '%{http_code}\n' https://192.168.2.214:9428/select/vmui
 # → 401
 
-# plaintext is refused (listener is TLS-only)
+# plaintext is refused (listener is TLS-only) — Go's TLS server answers cleartext with 400
 curl -s --connect-timeout 5 -o /dev/null -w '%{http_code}\n' http://192.168.2.214:9428/select/vmui
-# → connection refused / reset (no cleartext)
+# → 400 ("Client sent an HTTP request to an HTTPS server.") — no cleartext service
 
 # UFW inside the container is the LAN boundary (host networking) — 22 + 9428 from 192.168.2.0/24 only
 pct exec 214 -- ufw status verbose
@@ -316,6 +316,28 @@ pct exec 214 -- du -sh /opt/vtstack/victorialogs/data
 Record RAM and disk growth per day once a collector ships, and one **selective** `LogsQL` query's
 latency (VictoriaLogs' documented weak case — [research 33 §8](../research/33-centralized-logging-victorialogs.md)).
 
+> **Verified 2026-09-27 — measured results.**
+>
+> | Check | Result |
+> |---|---|
+> | Authenticated `/select/vmui` | **302** → `/select/vmui/` **200** (`-k`, self-signed) |
+> | Unauthenticated | **401** |
+> | Plaintext HTTP | **400** — `Client sent an HTTP request to an HTTPS server.` (no cleartext service) |
+> | In-LXC UFW | **active** — `22` + `9428` ALLOW IN `192.168.2.0/24`, `80` DENY, default deny incoming |
+> | Effective container flags | `-storageDataPath=/victoria-logs-data -retentionPeriod=30d -retention.maxDiskUsagePercent=80 -storage.minFreeDiskSpaceBytes=2GiB -memory.allowedPercent=60 -tls -tlsCertFile=… -tlsKeyFile=… -httpAuth.username=victorialogs -httpAuth.password=file://…`; `restart=unless-stopped`, `net=host` |
+> | Ingest — jsonline | **200**; `_msg:"hello from runbook 33"` with `_stream:{stream="vtstack"}` (via `_stream_fields=stream`) queryable |
+> | Ingest — ES `_bulk` | `{"took":0,"errors":false,…"status":201}`; `_msg:"bulk hello from runbook 33"` queryable |
+> | Idempotency | container unrecreated (`Restarts=0`, same ID); deploy task reports `changed` from `pull: always` (§5) |
+> | Reboot survival | `pct reboot 214` → guest back in ~5 s, `victorialogs Up`, vmui still **401**; `onboot: 1` confirmed |
+> | Baseline | container **7.1 MiB** / 2 GiB, 0.18 % CPU, 17 PIDs; data dir **84 K**; guest rootfs 1.3 G / 16 G (9 %) |
+> | **Off-LAN refusal** | **not verified** — needs a host on another routable subnet (below) |
+>
+> **Off-LAN test cannot run from the dev container.** Its LAN traffic is NAT'd to the Docker host's
+> address (`192.168.2.227`) — a **LAN source** — so a request from here is legitimately allowed and
+> proves nothing about the boundary; a request from `cloudlab` proves even less (no route to the LAN
+> at all). This criterion needs a host that *routes* to `192.168.2.214` while sitting on a different
+> subnet (e.g. the upstream `192.168.1.0/24`).
+
 ## 7. Future extension (metrics / traces)
 
 `vtstack` is deliberately named and laid out for the **Victoria stack** — one LXC, one Compose
@@ -329,20 +351,20 @@ which must also revisit the `pve` resource budget and the `vmauth` question
 
 ## Verification Checklist
 
-Executed on: **2026-09-27** (in progress — §1–§5 done; §5 checks and §6 pending) — record the
+Executed on: **2026-09-27** (in progress — §1–§6 executed; off-LAN refusal outstanding) — record the
 `ansible-playbook --diff` summary and each result.
 
 - [x] §1 LXC 214 created — unprivileged, `vtstack`, `192.168.2.214`, `nesting=1,fuse=1`, `onboot 1`, `systemctl --failed` empty inside
 - [x] §2 `fleetadm` key-only SSH works; `sudo -n whoami` → root
 - [x] §3 `playbook-logs.yml` applied cleanly; UFW active; `22` + `9428` allowed from `192.168.2.0/24`; Docker installed
 - [x] §4 `victorialogs-basic-auth-password` present in `homelab-bysxdb-kv`
-- [ ] §5 store up; HTTPS `/select/vmui` → **200**; unauthenticated → **401**; plaintext refused
-- [ ] §5 `docker inspect` shows the retention/disk/memory flags
-- [ ] §5 ingest smoke test (jsonline **and** ES `_bulk`) visible in a query
-- [ ] §6 **off-LAN request refused** (ADR 34 acceptance criterion — verified, not asserted)
-- [ ] §6 survives `pct reboot 214`; `onboot 1` confirmed
-- [ ] §6 idempotent — re-run leaves the container unrecreated (`Restarts=0`, same ID); the `pull: always` deploy task reports `changed` by design
-- [ ] §6 baseline RAM/disk recorded (and growth/latency once a collector ships)
+- [x] §5 store up; HTTPS `/select/vmui` → **302** (add `-L` for **200**); unauthenticated → **401**; plaintext refused (**400**)
+- [x] §5 `docker inspect` shows the retention/disk/memory flags
+- [x] §5 ingest smoke test (jsonline **and** ES `_bulk`) visible in a query
+- [ ] §6 **off-LAN request refused** (ADR 34 acceptance criterion — verified, not asserted) — **blocked: needs a host on another routable subnet**
+- [x] §6 survives `pct reboot 214`; `onboot 1` confirmed
+- [x] §6 idempotent — re-run leaves the container unrecreated (`Restarts=0`, same ID); the `pull: always` deploy task reports `changed` by design
+- [x] §6 baseline RAM/disk recorded (and growth/latency once a collector ships)
 
 ## Follow-ups
 
