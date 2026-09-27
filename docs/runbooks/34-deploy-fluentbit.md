@@ -110,31 +110,45 @@ ansible-playbook ansible/playbooks/playbook-edge.yml --diff
 
 Edge overrides are data: `fluentbit_buffer_type: memrb` and `fluentbit_cursor_tmpfs: true`.
 `memrb` is a **memory ring buffer**: when it fills it drops the **oldest chunks**, it does not pause
-the input, and it never writes to disk. Confirm the cursor is on tmpfs and that a store outage
-drops logs instead of writing them to the eMMC:
+the input, and it never writes to disk. Confirm the cursor is on tmpfs:
 
 ```sh
 # on edge
-findmnt -no FSTYPE,TARGET /run/fluent-bit            # tmpfs /run/fluent-bit
-ls -l /run/fluent-bit/journal.db
-cat /sys/block/mmcblk0/stat                           # note the write-sectors column (7th), or mmcblk1
-logger "fluentbit edge buffer test"                   # generate a record
+findmnt -no FSTYPE,TARGET -T /run/fluent-bit   # tmpfs /run — note -T: without it findmnt looks for a mountpoint of that exact path
+sudo ls -l /run/fluent-bit                     # journal.db only, and it is on RAM
+sudo ls /var/lib/fluent-bit                    # must NOT exist — no filesystem storage on this node
 ```
 
-With the store stopped, wait, and confirm no eMMC writes and no spooling to disk:
+Then take the store down and prove the collector writes nothing to the eMMC. Judge this from the
+collector's **own** I/O counters and from the absence of chunk files — **not** from
+`/sys/block/mmcblk0/stat`, whose write-sector count moves with unrelated background activity (a `find`
+over the root filesystem alone accounts for megabytes):
 
 ```sh
 # from pve
 sudo pct exec 214 -- docker stop victorialogs
-# on edge — after ~60 s
-cat /sys/block/mmcblk0/stat                           # unchanged write-sectors
-journalctl -u fluent-bit --since -2m --no-pager | tail
+# on edge — while the store is down
+sudo grep -E '^write_bytes|^wchar' /proc/$(pgrep -x fluent-bit)/io   # write_bytes must stay 0
+sudo find / -xdev -name '*.flb'                                      # nothing spooled to any disk
+sudo journalctl -u fluent-bit --since -2m --no-pager | grep -cE 'cannot be retried|failed to flush'
+sudo journalctl -u fluent-bit --since -2m --no-pager | grep -iE 'paus|resume'
 # from pve
 sudo pct exec 214 -- docker start victorialogs
 ```
 
-> **Verification pending** — record the tmpfs mount, the eMMC write counters before/after, and the
-> `fluent-bit` journal showing the drop/retry while the store was down.
+> **Verified 2026-09-27** — `PLAY RECAP` `edge ok=59 changed=11 failed=0`. Runtime dir on **tmpfs
+> (`/run`)** holding only `journal.db`; **`/var/lib/fluent-bit` absent**; **no `*.flb` on any disk**.
+> Across a ~49 s outage the collector logged **85** `cannot be retried` / `failed to flush` lines and
+> **zero** `paused (mem buf overlimit)` lines, so it drops rather than pauses — the only `pausing` lines
+> in the journal belong to the previous PID's graceful shutdown during the deploy. Its `/proc/<pid>/io`
+> reported **`write_bytes: 0`** against `wchar: 2000534` (all of it tmpfs and journal writes), so **not
+> one byte reached the eMMC**, and it stayed 0 after recovery. The store came back, the collector
+> reconnected (`HTTP status=200`), and `_time:1m {_HOSTNAME="edge"}` holds **190** records — **190 with a
+> `level`** — across 7 units.
+>
+> **Caveat:** `memrb` drops are **silent** in the journal, so they can only be *counted* with the
+> collector's metrics endpoint, which this role does not expose — that stays
+> [#132](https://github.com/jaroslaw-bagnicki/Homelab/issues/132).
 
 ## 3. Deploy `lab` (Docker json-file logs)
 
@@ -216,11 +230,11 @@ stops receiving.
 
 ## Verification Checklist
 
-Executed on: **in progress** — `pve` verified 2026-09-27; remaining `edge` → `lab` → `nas` → `vtstack`.
+Executed on: **in progress** — `pve` and `edge` verified 2026-09-27; remaining `lab` → `nas` → `vtstack`.
 Record the `ansible-playbook --diff` summary and each result.
 
 - [x] §1 `pve` — service active; config has one `[INPUT]`/`[OUTPUT]`; `_msg`/`_time`/streams confirmed from the stored records; records queryable; RSS 7.2 MB; `debug` off
-- [ ] §2 `edge` — cursor on tmpfs; store-down test shows **no eMMC writes**; logs dropped, not spooled
+- [x] §2 `edge` — cursor on tmpfs; `write_bytes` stayed **0** and no `*.flb` on disk through a ~49 s store outage; drops rather than pauses; reconnected and ingesting after the store returned
 - [ ] §3 `lab` — Docker logs queryable with `container_id` stream; `docker_host` rotation applied (container recreated)
 - [ ] §4 `nas` — records queryable
 - [ ] §5 `vtstack` — the store's own container logs queryable
