@@ -30,7 +30,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Firmware | BIOS LENOVO M1AKT2CA (2017-11-22) · board 310B |
 | Network | 1× Gigabit Ethernet Intel I219-LM (`enp0s31f6`, MAC `6c:4b:90:40:c5:e2`) |
 | Role | Main workload host |
-| Docs | [ADR 01](decisions/01-hardware-selection-m910q.md) · [ADR 22](decisions/22-k3s-arc-homelab.md) · [runbook 25](runbooks/25-m910q-os-refresh.md) · [overview](overview.md) |
+| Docs | [ADR 01](decisions/01-hardware-selection-m910q.md) · [runbook 25](runbooks/25-m910q-os-refresh.md) |
 
 ### OMV NAS — HP ProLiant ML110 G5
 
@@ -59,7 +59,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Cooling | 3 fans · 43.7 dB(A) · no software fan control · internal UPS battery not OS-exposed |
 | Power | 14–16 W idle · AcBel 250 W 80 Plus Gold UPS-integrated PSU |
 | Role | NAS — backup target |
-| Docs | [idea 01c](ideas/01c-nas-backup-target-wincor-beetle.md) · [research 32](research/32-wincor-beetle-m3-hardware-diagnostic.md) · [runbook 32](runbooks/32-beetle-m3-omv-setup.md) · [issue #98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98) |
+| Docs | [idea 01c](ideas/01c-nas-backup-target-wincor-beetle.md) · [research 32](research/32-wincor-beetle-m3-hardware-diagnostic.md) · [runbook 32](runbooks/32-beetle-m3-omv-setup.md) |
 
 ### Edge Ingress — Dell Wyse 3040
 
@@ -87,7 +87,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Zigbee | Sonoff ZBDongle-P (CC2652P) · USB coordinator for LXC 212 |
 | OS | Proxmox VE 9.2.2 installed at `192.168.2.201` · base provisioned ([runbook 28](runbooks/28-pve-proxmox-node.md)) |
 | Role | Fleet virtualisation host (Proxmox VE) |
-| Docs | [idea 05](ideas/05-home-assistant-thin-client.md) · [ADR 25](decisions/25-home-assistant-thin-client.md) · [ADR 27](decisions/27-monitoring-strategy.md) · [ADR 30](decisions/30-ups-nut-graceful-shutdown.md) · [ADR 31](decisions/31-static-address-scheme.md) · [ADR 33](decisions/33-fleet-node-hostnames.md) · [ADR 35](decisions/35-log-store-victorialogs.md) · [research 26](research/26-home-assistant-thin-client.md) · [research 29](research/29-wyse5070-hardware-diagnostic.md) · [runbook 28](runbooks/28-pve-proxmox-node.md) · [runbook 31](runbooks/31-deploy-netdata.md) · [runbook 33](runbooks/33-deploy-victorialogs.md) |
+| Docs | [idea 05](ideas/05-home-assistant-thin-client.md) · [ADR 25](decisions/25-home-assistant-thin-client.md) · [research 26](research/26-home-assistant-thin-client.md) · [research 29](research/29-wyse5070-hardware-diagnostic.md) · [runbook 28](runbooks/28-pve-proxmox-node.md) |
 
 ### OPNsense Router — Fujitsu Futro S930 (planned)
 
@@ -101,7 +101,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Cooling | Fanless · ~59 °C idle · ~8–15 W idle (Jaguar 25 W) |
 | Role | LAN edge router — **OPNsense** (DHCP + NAT + firewall), routing-first, VLANs later — [issue #96](https://github.com/jaroslaw-bagnicki/Homelab/issues/96) |
 | Acquisition | 2026-09-02 — hardware diagnostic complete ([research 31](research/31-futro-s930-hardware-diagnostic.md)); OPNsense install pending |
-| Docs | [idea 07](ideas/07-opnsense-futro-s930.md) · [research 31](research/31-futro-s930-hardware-diagnostic.md) · [issue #96](https://github.com/jaroslaw-bagnicki/Homelab/issues/96) |
+| Docs | [idea 07](ideas/07-opnsense-futro-s930.md) · [research 31](research/31-futro-s930-hardware-diagnostic.md) |
 
 ### LLM server — Minisforum AI X1 (Phase 2, 🧠 idea)
 
