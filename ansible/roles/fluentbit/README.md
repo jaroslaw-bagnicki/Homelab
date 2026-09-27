@@ -54,6 +54,11 @@ Buffering is a **per-input** setting (`Storage.Type`), bounded per node:
   `tmpfiles.d` entry — so an unreachable store never writes to the eMMC
   ([ADR 24](../../../docs/decisions/24-edge-ingress-appliance.md)).
 
+Every output sets `Retry_Limit False`, so a chunk is retried until it is delivered instead of being
+discarded after a single attempt — Fluent Bit's default (`1`) drops the chunk when retries are exhausted,
+and **filesystem buffering does not prevent that**. The bounds are unchanged: `storage.total_limit_size`
+drops the oldest chunk on the filesystem nodes, and the memory ring drops the oldest on `edge`.
+
 ## Parameters
 
 | Var | Default | Notes |

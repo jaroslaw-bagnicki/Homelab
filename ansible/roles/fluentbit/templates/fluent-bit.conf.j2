@@ -42,6 +42,7 @@
     http_user                {{ fluentbit_store_username }}
     http_passwd              {{ fluentbit_store_password }}
     compress                 gzip
+    Retry_Limit              False
 {% if fluentbit_buffer_type == 'filesystem' %}
     storage.total_limit_size {{ fluentbit_buffer_limit }}
 {% endif %}
@@ -91,6 +92,7 @@
     http_user                {{ fluentbit_store_username }}
     http_passwd              {{ fluentbit_store_password }}
     compress                 gzip
+    Retry_Limit              False
 {% if fluentbit_buffer_type == 'filesystem' %}
     storage.total_limit_size {{ fluentbit_buffer_limit }}
 {% endif %}
@@ -127,6 +129,7 @@
     http_user                {{ fluentbit_store_username }}
     http_passwd              {{ fluentbit_store_password }}
     compress                 gzip
+    Retry_Limit              False
 {% if fluentbit_buffer_type == 'filesystem' %}
     storage.total_limit_size {{ fluentbit_buffer_limit }}
 {% endif %}
