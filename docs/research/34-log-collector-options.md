@@ -174,12 +174,15 @@ collector of the set** — a real advantage that does not compensate for having 
 What the table does **not** answer is the only question that matters here: which collector can read this
 fleet's logs, on this hardware, with no eMMC writes. §4–§6 answer that.
 
-### 4. `systemd-journal-upload` — the zero-extra-software path, and why it is blocked
+### 4. `systemd-journal-upload` — no third-party agent, and why it is blocked
 
 VictoriaLogs accepts the **journald export format** at `/insert/journald`, and the documented client is
-`systemd-journal-upload`, already present on every node (`/etc/systemd/journal-upload.conf`, one `URL=` line).
-That is genuinely attractive for a journald-only node: nothing new to install, one config line, cursors kept
-in `/var/lib/systemd/journal-upload/`.
+`systemd-journal-upload` (`/etc/systemd/journal-upload.conf`, one `URL=` line). That is attractive for a
+journald-only node: no third-party agent to introduce, one config line, cursors kept in
+`/var/lib/systemd/journal-upload/`. **It is not zero-extra-software, though** — `systemd-journal-upload`
+ships in the optional **`systemd-journal-remote`** package rather than the base system, so every node using
+it needs that package installed. Whether it is present anywhere in this fleet is **unverified** and is
+role-phase work.
 
 It is nevertheless rejected as *the* collector:
 
@@ -197,40 +200,38 @@ It is nevertheless rejected as *the* collector:
 It remains the best candidate for a *second* node type (a future appliance where nothing else fits) and is
 recorded as such in ADR 36, not as the fleet collector.
 
-### 5. Fluent Bit ↔ VictoriaLogs — the ingest contract, verified
+### 5. Fluent Bit ↔ VictoriaLogs — the verified route, and the mapping it still needs
 
 VictoriaMetrics documents Fluent Bit explicitly, and the documented route is the **HTTP output with JSON
-lines** — not the `es` output assumed in [#84](https://github.com/jaroslaw-bagnicki/Homelab/issues/84):
+lines** — not the `es` output assumed in [#84](https://github.com/jaroslaw-bagnicki/Homelab/issues/84). Its
+example is deliberately generic (`_stream_fields=stream&_msg_field=log&_time_field=date`); **the field names
+are ours to choose, and a single output cannot serve more than one schema.**
 
-```
-[Output]
-     Name http
-     Match *
-     Host 192.168.2.214
-     Port 9428
-     URI /insert/jsonline?_stream_fields=stream&_msg_field=log&_time_field=date
-     Format json_lines
-     json_date_format iso8601
-     Compress gzip
-     tls On
-     tls.verify Off
-     http_user vlogs
-     http_passwd <from Key Vault>
-```
+| Source shape | Message field | Time field | Stream fields |
+|---|---|---|---|
+| **journald** (`systemd` input) | `MESSAGE` | `__REALTIME_TIMESTAMP` (µs) | `_HOSTNAME`, `_SYSTEMD_UNIT` |
+| **Docker json-file** (`tail` + `docker` parser) | `log` | `time` | hostname, container name |
+| **containerd CRI** (`tail` + `cri` parser) | `message` | `time` | hostname, pod/container from the filename |
+| **Native files** (`tail`) | the raw line, or a source-specific parsed key | read time | hostname, file/source |
 
-The `es` output still works — VictoriaLogs serves the Elasticsearch/OpenSearch bulk API at
-`/insert/elasticsearch/_bulk` and accepts the same `_stream_fields` / `_msg_field` / `_time_field` query args
-— but the JSON-lines route is the one upstream documents for Fluent Bit, and it carries the same HTTP
-parameters with less format overhead. **ADR 36 corrects the issue's assumption.**
+So the role carries **one output block per source shape, matched by tag** (or an equivalent normalising
+filter). That is not a stylistic choice: `lab` collects the host journal *and* Docker's container logs, and a
+single `_msg_field` / `_time_field` pair cannot resolve both — journald records would reach the store with no
+message field and no usable timestamp.
 
-The store's shared HTTP parameters are what make this a small config rather than a pipeline:
+Verified from upstream:
 
-| Parameter | Purpose here |
-|---|---|
-| `_msg_field` | Which field holds the message — `MESSAGE` for journald records |
-| `_time_field` | Which field holds the timestamp — `__REALTIME_TIMESTAMP` (microseconds) for journald |
-| `_stream_fields` | Which fields identify a stream — `_HOSTNAME` + `_SYSTEMD_UNIT` |
-| `ignore_fields` | Drop noisy fields before they ever reach the store |
+- The endpoint and the shared HTTP parameters (`_msg_field`, `_time_field`, `_stream_fields`,
+  `ignore_fields`), passed as query args — query args win over headers.
+- TLS (`tls On`, `tls.verify Off` for the self-signed certificate), basic auth (`http_user` / `http_passwd`)
+  and `compress gzip`.
+- The `es` output still works — VictoriaLogs serves the Elasticsearch/OpenSearch bulk API at
+  `/insert/elasticsearch/_bulk` and accepts the same parameters — but JSON-lines is the route upstream
+  documents for Fluent Bit, and **ADR 36 corrects the issue's assumption** accordingly.
+
+**Not verified: our own field mapping.** The table above is the design, not a measurement — it must be
+confirmed against the store with `debug=1` on the first node before the rollout trusts it
+([Open Questions](#open-questions)).
 
 **Two of the rejected collectors also read the journal — but by spawning `journalctl`.** The OTel receiver and
 Vector's `journald` source both require the binary to be present and the reader to have suitable permissions;
@@ -387,8 +388,9 @@ OMV paths from their own source repositories (`proxmox/pve-manager`, `openmediav
 - **Priority filtering.** `systemd_filter` is a key/value match, not a range, so the "named units plus a
   priority floor" rule in ADR 36 needs a filter stage — and confirmation that `PRIORITY` survives the input
   as expected.
-- **Field mapping end to end.** Which Fluent Bit keys land as `_msg` / `_time` / stream fields must be
-  verified against the store with `debug=1` before the first node is trusted; the journald protocol's own
+- **Field mapping end to end.** §5's per-source table is the design, and the role implements it as one output
+  block per source shape; which Fluent Bit keys actually land as `_msg` / `_time` / stream fields must be
+  verified against the store with `debug=1` before the first node is trusted. The journald protocol's own
   defaults (`_MACHINE_ID`, `_HOSTNAME`, `_SYSTEMD_UNIT`; `MESSAGE`; `__REALTIME_TIMESTAMP`) are the precedent
   to mirror.
 - **Store-down behaviour on `edge`.** The in-memory buffer must be observed dropping — not spooling — with

@@ -262,8 +262,11 @@ cache memory. Compression is described as **10× or more**.
 | `-syslog.listenAddr.{tcp,udp,unix}` | VictoriaLogs can **listen for syslog itself**, with per-listener TLS (`-syslog.tls*`) |
 
 Documented collectors: syslog/rsyslog/syslog-ng, **Fluent Bit**, **Vector**, Promtail/Grafana Alloy and
-the OpenTelemetry Collector. The `-journald.*` flags mean journald can be read **directly**, without a
-separate shipper. Request tuning (`_stream_fields`, `_msg_field`, `_time_field`, …) is shared across
+the OpenTelemetry Collector. **Corrected 2026-09-27:** the `-journald.*` flags do **not** mean journald can
+be read directly — they configure an **ingest protocol** (the journald export format at
+`/insert/journald`, and in `vlagent` at `:9429`) whose client is `systemd-journal-upload` **on the node**, so
+a shipper is still required ([ADR 36](../decisions/36-log-collector-fluentbit.md) ·
+[research 34 §2](34-log-collector-options.md)). Request tuning (`_stream_fields`, `_msg_field`, `_time_field`, …) is shared across
 the HTTP APIs as query args or headers, with query args winning.
 
 **7.4 Security posture (official).** The docs state all VictoriaLogs components **must run inside a
@@ -373,11 +376,12 @@ assumed away (see [Open Questions](#open-questions)).
 - **Where the LAN-only rule is enforced.** [ADR 34](../decisions/34-lan-tls-only.md) established that
   host UFW does not filter container traffic, so the rule must live inside the LXC or at the Proxmox
   firewall — and be verified from off-LAN, not asserted.
-- **Collectors** ([#84](https://github.com/jaroslaw-bagnicki/Homelab/issues/84)) — Fluent Bit's `es`
-  output is the assumed path, but the store also accepts the Loki push API, JSON-lines and OTLP, and can
-  **listen for syslog and read journald itself** ([§7.3](#7-official-documentation--verified-facts-2026-09-27)),
-  so some nodes may need no shipper at all — the Edge's RAM-only budget is the constraint on the ones
-  that do. Which nodes run a collector is undecided; the store is inert until at least one ships.
+- **Collectors** ([#84](https://github.com/jaroslaw-bagnicki/Homelab/issues/84)) — **settled 2026-09-27 by
+  [ADR 36](../decisions/36-log-collector-fluentbit.md): Fluent Bit**, fleet-wide, into the store's
+  `/insert/jsonline` endpoint ([research 34](34-log-collector-options.md)). The store's other ingest routes
+  (Loki push API, JSON-lines, OTLP) stay available, and its syslog listener remains an option for the FreeBSD
+  router ([research 34 §8](34-log-collector-options.md)); the `-journald.*` flags are an ingest **format**, not
+  a journald reader ([§7.3](#7-official-documentation--verified-facts-2026-09-27)).
 - **Certificate trust** — clients skip verification initially (ADR 27/34's residual). Pinning depends
   on the private CA tracked as [#126](https://github.com/jaroslaw-bagnicki/Homelab/issues/126).
 - **Monitoring the store** — how we watch what VictoriaLogs costs the `pve` node, plus the automatic

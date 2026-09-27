@@ -14,7 +14,7 @@
 | | |
 |---|---|
 | **Adopted** | **Fluent Bit** — one systemd service per node, shipping logs to VictoriaLogs |
-| **Why** | It is the only small, store-agnostic collector with a **stable journald input** — and every node in this fleet logs through journald |
+| **Why** | It is the only small, store-agnostic collector with a **stable journald input** — and every targeted node in the Linux fleet logs through journald |
 | **Not adopted** | `vlagent` (no journald source, buffers to disk), OTel Collector (alpha journald, heaviest), Vector, Alloy/Promtail, Filebeat, Fluentd, Telegraf (no journald input), `systemd-journal-upload` alone |
 | **Next** | Build the `fluentbit` role → deploy to `pve` → confirm entries in the store's UI → `edge` → `lab` |
 
@@ -55,17 +55,20 @@ at all (§7).
 - **One shared role (`fluentbit`), per-node behaviour in `host_vars`** — the role owns the output contract,
   buffering and cursor placement; each node declares its own source list and stream fields. Same shape as
   `netdata` ([ADR 10](10-ansible-host-config.md)).
-- **Four source shapes** — journald everywhere; Docker's json-file logs on `lab` with the built-in `docker`
+- **Four source shapes** — journald on every targeted Linux node; Docker's json-file logs on `lab` with the built-in `docker`
   parser; containerd CRI logs when [ADR 22](22-k3s-arc-homelab.md)'s k3s lands, with `cri` + `kube-custom`;
   and native file logs where a system keeps its own (Proxmox task logs, OMV's log directory)
   ([research 34 §9](../research/34-log-collector-options.md)).
 - **One transport per line** — `pve` and `nas` keep rsyslog files *and* a journal, so collecting both would
   store every line twice. Each node picks one, in `host_vars`; there is no dedup to enable at ingest.
 - **Output: the store's JSON-lines API over TLS with basic auth** — `https://192.168.2.214:9428/insert/jsonline`
-  with `_stream_fields` / `_msg_field` / `_time_field`; `_HOSTNAME` + `_SYSTEMD_UNIT` as streams for journald
-  (hostname + container for Docker); gzip; password from Key Vault. This is the route VictoriaMetrics
-  **documents** for Fluent Bit and it **supersedes the `es` output assumed in
-  [#84](https://github.com/jaroslaw-bagnicki/Homelab/issues/84)** ([research 34 §5](../research/34-log-collector-options.md)).
+  with `_stream_fields` / `_msg_field` / `_time_field`; **one output block per source shape, because a single
+  `_msg_field` / `_time_field` pair cannot serve two schemas** (`lab` carries both journald and Docker logs);
+  `_HOSTNAME` + `_SYSTEMD_UNIT` as streams for journald, hostname + container for Docker; gzip; password from
+  Key Vault. This is the route VictoriaMetrics **documents** for Fluent Bit and it **supersedes the `es` output
+  assumed in [#84](https://github.com/jaroslaw-bagnicki/Homelab/issues/84)**. The mapping itself is the design,
+  not a measurement — it is confirmed with `debug=1` on the first node
+  ([research 34 §5](../research/34-log-collector-options.md)).
 - **Buffering: memory only, everywhere** — bounded, and on `edge` pause-on-overlimit, so an unreachable store
   **drops** logs instead of spooling them to the eMMC. The cursor file sits on disk on `pve`/`lab`/`nas` and on
   **tmpfs** on `edge`, where a reboot loses nothing journald had not already lost ([research 34 §6](../research/34-log-collector-options.md)).
