@@ -8,9 +8,12 @@
       '{{ ansible_facts['distribution'] }}'.
 
 - name: Install the Fluent Bit repository prerequisites
+  # `deb822_repository` needs the `python3-debian` library on the target, and ansible-core 2.16 has
+  # no `install_python_debian` option — minimal Debian installs (e.g. the OMV `nas`) do not ship it.
   ansible.builtin.apt:
     name:
       - ca-certificates
+      - python3-debian
     state: present
     update_cache: true
 
