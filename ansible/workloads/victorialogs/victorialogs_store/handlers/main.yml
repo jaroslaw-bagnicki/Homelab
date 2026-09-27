@@ -1,0 +1,11 @@
+---
+# Restart through the Docker CLI (docker_compose_v2) rather than the Python SDK
+# (`docker_container`): community.docker 3.7.0's vendored SDK is incompatible with
+# requests >= 2.32 (Debian 13 ships 2.32.3) and fails with
+# "Not supported URL scheme http+docker". The compose path needs no SDK on the guest.
+- name: Restart VictoriaLogs
+  community.docker.docker_compose_v2:
+    project_src: "{{ victorialogs_dir }}"
+    services:
+      - victorialogs
+    state: restarted

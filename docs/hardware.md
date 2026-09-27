@@ -3,20 +3,17 @@
 Per-node hardware detail for the homelab. For the high-level node/workload view see
 [Overview](overview.md); for network design see [research 24](research/24-network-topology-design.md).
 
-**Status legend**: ✅ running · 🔨 in progress · 📋 planned · 🧠 idea
-
 ## Summary
 
-| Node | Role | Device | CPU | RAM | Storage | Network | Status |
-|---|---|---|---|---|---|---|---|
-| **Lab** | main workload host | Lenovo ThinkCentre M910q Tiny | i5-7500T (4C/4T, 35 W) | 16 GB DDR4 | 256 GB NVMe (+ free 2.5" bay) | 1× GbE `enp0s31f6` | ✅ |
-| **OMV NAS** | OpenMediaVault server, backup target | HP ProLiant ML110 G5 | Pentium E2160 (2C/2T, 65 W) | 4 GB DDR2 | Goodram 120 GB SSD + RAID1 arrays | 1× GbE BCM5722 | ✅ |
-| **Beetle NAS** | OMV NAS backup target (successor to ML110) | Wincor Beetle M-III | Pentium G4400 (2C/2T, 3.3 GHz) | 8 GB DDR4 (1×, 1 free slot) | SanDisk 128 GB SSD + 2× Seagate 1 TB 2.5" | 1× GbE Intel I219-V | 🔨 |
-| **Edge Ingress** | public ingress | Dell Wyse 3040 | Atom x5-Z8350 (2 W TDP) | 2 GB DDR3L | 8 GB eMMC | 1× GbE | 🔨 |
-| **Proxmox VE** | virtualisation host — smart-home + always-on services | Dell Wyse 5070 | Celeron J4105 (10 W) | 8 GB DDR4 (2× 4 GB) | M.2 SATA SK hynix 128 GB | 1× GbE + WiFi | 🔨 |
-| **OPNsense Router** | LAN edge router / firewall | Fujitsu Futro S930 | GX-424CC (4C/4T, 25 W TDP) | 4 GB DDR3 (1×, 1 free slot) | Innodisk 7.99 GB mSATA | 3× GbE (BCM5720 2× + Realtek 1×) | 📋 |
-| **LLM server** | local LLM inference | Minisforum AI X1 | Ryzen 7 255 (Hawk Point, 45 W cTDP) | 64–96 GB DDR5 | NVMe | 1× GbE | 🧠 (Phase 2) |
-| **Cloudlab VPS** | staging / playground | Contabo Cloud VPS 10 | 4 vCPU (cloud — no TDP) | 8 GB | 75 GB NVMe | public IP | ✅ |
+| Node | Role | Device | CPU | RAM | Storage | Network |
+|---|---|---|---|---|---|---|
+| **Lab** | main workload host | Lenovo ThinkCentre M910q Tiny | i5-7500T (4C/4T, 35 W) | 16 GB DDR4 | 256 GB NVMe (+ free 2.5" bay) | 1× GbE `enp0s31f6` |
+| **OMV NAS** | OpenMediaVault server, backup target | HP ProLiant ML110 G5 | Pentium E2160 (2C/2T, 65 W) | 4 GB DDR2 | Goodram 120 GB SSD + RAID1 arrays | 1× GbE BCM5722 |
+| **Beetle NAS** | OMV NAS backup target (successor to ML110) | Wincor Beetle M-III | Pentium G4400 (2C/2T, 3.3 GHz) | 8 GB DDR4 (1×, 1 free slot) | SanDisk 128 GB SSD + 2× Seagate 1 TB 2.5" | 1× GbE Intel I219-V |
+| **Edge Ingress** | public ingress | Dell Wyse 3040 | Atom x5-Z8350 (2 W TDP) | 2 GB DDR3L | 8 GB eMMC | 1× GbE |
+| **Proxmox VE** | virtualisation host — smart-home + always-on services | Dell Wyse 5070 | Celeron J4105 (10 W) | 8 GB DDR4 (2× 4 GB) | M.2 SATA SK hynix 128 GB | 1× GbE + WiFi |
+| **OPNsense Router** | LAN edge router / firewall | Fujitsu Futro S930 | GX-424CC (4C/4T, 25 W TDP) | 4 GB DDR3 (1×, 1 free slot) | Innodisk 7.99 GB mSATA | 3× GbE (BCM5720 2× + Realtek 1×) |
+| **Cloudlab VPS** | staging / playground | Contabo Cloud VPS 10 | 4 vCPU (cloud — no TDP) | 8 GB | 75 GB NVMe | public IP |
 
 ## Compute & Storage Nodes
 
@@ -29,8 +26,8 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Storage | 256 GB NVMe — SK hynix BC501 HFM256GDJTNG-8310A · serial `FS85N582310805D30` · FW `80000C00` · SMART **PASSED** (1% used, 16,355 POH — §0 audit 2026-08-16); free 2.5" SATA bay for a secondary/backup disk |
 | Firmware | BIOS LENOVO M1AKT2CA (2017-11-22) · board 310B |
 | Network | 1× Gigabit Ethernet Intel I219-LM (`enp0s31f6`, MAC `6c:4b:90:40:c5:e2`) |
-| Role | Main workload host — OS refresh to Ubuntu 24.04 LTS + Arc enrolment in progress (runbook 25), then k3s (ADR 22) |
-| Docs | [ADR 01](decisions/01-hardware-selection-m910q.md) · [runbook 25](runbooks/25-m910q-os-refresh.md) · [overview](overview.md) |
+| Role | Main workload host |
+| Docs | [ADR 01](decisions/01-hardware-selection-m910q.md) · [runbook 25](runbooks/25-m910q-os-refresh.md) |
 
 ### OMV NAS — HP ProLiant ML110 G5
 
@@ -58,8 +55,8 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | OS | OMV 8.5.9-1 (Debian 13) · kernel `6.12.107+deb13-amd64` · HTTPS-only web UI ([ADR 34](decisions/34-lan-tls-only.md)) |
 | Cooling | 3 fans · 43.7 dB(A) · no software fan control · internal UPS battery not OS-exposed |
 | Power | 14–16 W idle · AcBel 250 W 80 Plus Gold UPS-integrated PSU |
-| Role | OMV NAS backup-target successor to the ML110 — [issue #98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98) |
-| Docs | [idea 01c](ideas/01c-nas-backup-target-wincor-beetle.md) · [research 32](research/32-wincor-beetle-m3-hardware-diagnostic.md) · [runbook 32](runbooks/32-beetle-m3-omv-setup.md) · [issue #98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98) |
+| Role | NAS — backup target |
+| Docs | [idea 01c](ideas/01c-nas-backup-target-wincor-beetle.md) · [research 32](research/32-wincor-beetle-m3-hardware-diagnostic.md) · [runbook 32](runbooks/32-beetle-m3-omv-setup.md) |
 
 ### Edge Ingress — Dell Wyse 3040
 
@@ -72,7 +69,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Network | 1× GbE Realtek RTL8111/8168 (`enp1s0`, MAC `8c:ec:4b:6d:6f:4f`) · static `192.168.2.240/24` |
 | OS | Debian 13 minimal (netinst on eMMC, no desktop) |
 | Cooling | Fanless · ~2–3 W idle |
-| Role | Dedicated public ingress — bare-metal `cloudflared` + Caddy (ADR 24) |
+| Role | Public ingress appliance |
 | Docs | [runbook 24](runbooks/24-edge-appliance.md) · [ADR 24](decisions/24-edge-ingress-appliance.md) · [research 25](research/25-edge-ingress-sbc.md) · [idea 04](ideas/04-edge-device-tunnel-caddy.md) |
 
 ### Proxmox VE — Dell Wyse 5070
@@ -86,9 +83,8 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Network | Realtek GbE (`enp1s0`) · Intel CNVi WiFi/BT (`wlp0s12f0`) |
 | Zigbee | Sonoff ZBDongle-P (CC2652P) · USB coordinator for LXC 212 |
 | OS | Proxmox VE 9.2.2 installed at `192.168.2.201` · base provisioned ([runbook 28](runbooks/28-pve-proxmox-node.md)) |
-| Guests | VM 210 HA OS · LXC 211 Mosquitto · LXC 212 Zigbee2MQTT · LXC 213 NUT ([ADR 31](decisions/31-static-address-scheme.md)) |
-| Role | Fleet virtualisation host with Netdata Parent; NUT delivered, HA OS/Mosquitto/Zigbee2MQTT pending (ADR 25, ADR 27, ADR 30) |
-| Docs | [idea 05](ideas/05-home-assistant-thin-client.md) · [ADR 25](decisions/25-home-assistant-thin-client.md) · [ADR 33](decisions/33-fleet-node-hostnames.md) · [research 26](research/26-home-assistant-thin-client.md) · [research 29](research/29-wyse5070-hardware-diagnostic.md) · [runbook 28](runbooks/28-pve-proxmox-node.md) · [runbook 31](runbooks/31-deploy-netdata.md) |
+| Role | Fleet virtualisation host (Proxmox VE) |
+| Docs | [idea 05](ideas/05-home-assistant-thin-client.md) · [ADR 25](decisions/25-home-assistant-thin-client.md) · [research 26](research/26-home-assistant-thin-client.md) · [research 29](research/29-wyse5070-hardware-diagnostic.md) · [runbook 28](runbooks/28-pve-proxmox-node.md) |
 
 ### OPNsense Router — Fujitsu Futro S930 (planned)
 
@@ -100,18 +96,9 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Network | **Broadcom NetXtreme BCM5720 2× 1 GbE** (FreeBSD `bge`) in the PCIe slot = WAN + LAN · onboard **Realtek RTL8111/8168** (`re`) = MGMT/OPT · **slot trains Gen1 ×1** (no BIOS option — platform limit) |
 | Firmware | BIOS AMI **R1.14.0** (2017-09-21) · board `D3313-E1` · SN `YMFH014511` |
 | Cooling | Fanless · ~59 °C idle · ~8–15 W idle (Jaguar 25 W) |
-| Role | LAN edge router — **OPNsense** (DHCP + NAT + firewall), routing-first, VLANs later — [issue #96](https://github.com/jaroslaw-bagnicki/Homelab/issues/96) |
+| Role | LAN edge router (OPNsense) |
 | Acquisition | 2026-09-02 — hardware diagnostic complete ([research 31](research/31-futro-s930-hardware-diagnostic.md)); OPNsense install pending |
-| Docs | [idea 07](ideas/07-opnsense-futro-s930.md) · [research 31](research/31-futro-s930-hardware-diagnostic.md) · [issue #96](https://github.com/jaroslaw-bagnicki/Homelab/issues/96) |
-
-### LLM server — Minisforum AI X1 (Phase 2, 🧠 idea)
-
-| Item | Spec |
-|---|---|
-| CPU | Ryzen 7 255 (Hawk Point / Zen 4, Radeon 780M 12 CU, 45 W cTDP) |
-| RAM | 64–96 GB DDR5 (planned) |
-| Role | Local LLM inference (Bielik, Llama-3 8B etc.) via UMA frame buffer; OCuLink future eGPU |
-| Docs | [research 08](research/08-llm-server-hardware.md) |
+| Docs | [idea 07](ideas/07-opnsense-futro-s930.md) · [research 31](research/31-futro-s930-hardware-diagnostic.md) |
 
 ### Cloudlab VPS — Contabo Cloud VPS 10
 
@@ -120,7 +107,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Compute | 4 vCPU, 8 GB RAM |
 | Storage | 75 GB NVMe |
 | OS | Ubuntu 24.04 LTS (pre-installed by Contabo) |
-| Role | Ansible staging/playground + hosted workloads (Portainer, Caddy, cloudflared, OpenCode, Zot) |
+| Role | Staging / playground VPS |
 | Docs | [runbook 10](runbooks/10-vps-playground.md) · [ADR 13](decisions/13-cloudlab-staging.md) |
 
 ## Network Appliances
