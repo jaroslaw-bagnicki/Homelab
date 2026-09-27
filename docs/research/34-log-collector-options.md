@@ -7,6 +7,7 @@
 [Fluent Bit → VictoriaLogs](https://docs.victoriametrics.com/victorialogs/data-ingestion/fluentbit/) ·
 [Fluent Bit `systemd` input](https://docs.fluentbit.io/manual/data-pipeline/inputs/systemd.md) ·
 [Fluent Bit `opentelemetry` output](https://docs.fluentbit.io/manual/data-pipeline/outputs/opentelemetry.md) ·
+[Fluent Bit built-in parsers](https://github.com/fluent/fluent-bit/blob/master/conf/parsers.conf) ·
 [OTel Collector `journald` receiver](https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/receiver/journaldreceiver/README.md) ·
 [Telegraf → VictoriaLogs](https://docs.victoriametrics.com/victorialogs/data-ingestion/telegraf/) ·
 [VictoriaTraces](https://docs.victoriametrics.com/victoriatraces/).
@@ -47,7 +48,7 @@ decision is recorded authoritatively in [ADR 36](../decisions/36-log-collector-f
 
 | Decision | Outcome |
 |---|---|
-| Collector | **Fluent Bit** — `systemd` (journald) input + `tail` for container log files, HTTP JSON-lines output to the store |
+| Collector | **Fluent Bit** — `systemd` (journald) plus `tail` with the built-in `docker` / `cri` parsers for container logs, HTTP JSON-lines output to the store |
 | Collector — rejected | **vlagent** (the Victoria stack's own agent — **no journald source**, disk-buffered by default), **OTel Collector** (alpha journald receiver, `journalctl` shell-out, heaviest), Vector, Grafana Alloy/Promtail, Filebeat, Fluentd, `systemd-journal-upload` |
 | Deployment | **systemd-native service per node**, not a container — the `netdata` pattern; one shared role (`fluentbit`), per-node behaviour in `host_vars` |
 | Output contract | `https://192.168.2.214:9428/insert/jsonline` — HTTP JSON-lines with `_stream_fields`, `_msg_field`, `_time_field`; TLS on, verification off; HTTP basic auth; gzip |
@@ -94,17 +95,18 @@ The collector's input list is dictated by the nodes, not by preference:
 
 | Node | OS | Log sources |
 |---|---|---|
-| `pve` (Proxmox VE host) | Debian 13 | **journald** — `pveproxy`, `pvedaemon`, `pvestatd`, `pve-firewall`, `ssh`, kernel, systemd; LXC guest console output lands in the host journal |
+| `pve` (Proxmox VE host) | Debian 13 | **journald** — `pveproxy`, `pvedaemon`, `pvestatd`, `pve-firewall`, `ssh`, kernel, systemd; LXC guest console output lands in the host journal. **Plus PVE's on-disk task logs** (`/var/log/pve/tasks/`) and the web-UI access log — see §9 |
 | `edge` | Debian 13, bare-metal systemd, **no Docker** | **journald** — `cloudflared`, `caddy`, `netdata`, `upsmon`, `fail2ban`, `ssh` |
-| `lab` | Ubuntu 24.04 | **journald** (host) + **Docker json-file logs** under `/var/lib/docker/containers/*/*-json.log` (Portainer, Caddy, cloudflared); containerd files once [ADR 22](../decisions/22-k3s-arc-homelab.md)'s k3s lands |
-| `nas` (Beetle, OMV 8.5) | Debian | **journald** + OMV's own file logs |
+| `lab` | Ubuntu 24.04 | **journald** (host) + **Docker json-file logs** under `/var/lib/docker/containers/*/*-json.log` (Portainer, Caddy, cloudflared) — JSON-wrapped and **unbounded by default**, both of which §9 turns into work; **containerd CRI** logs under `/var/log/pods/` once [ADR 22](../decisions/22-k3s-arc-homelab.md)'s k3s lands |
+| `nas` (Beetle, OMV 8.5) | Debian | **journald** + OMV's own log directory (`OMV_LOG_DIR`, default `/var/log/openmediavault`) — see §9 |
 | `vtstack` (LXC 214) | Debian 13 | Docker container output — useful later so the **store's own logs** are searchable in the store |
 | **OPNsense** (Futro S930) — *joins later* | FreeBSD (OPNsense) | **No journald and no Docker** — syslog-ng writing `/var/log/*.log` (`filter.log`, `system.log`, …). Analysed and deferred in §8 |
 | `cloudlab` | Ubuntu 24.04 | **out of scope** — not a Tier B target ([ADR 27](../decisions/27-monitoring-strategy.md)) |
 
 **journald is the load-bearing input.** Four of the five nodes in today's fleet keep their logs there, and
 `edge` keeps them *only* there. Any collector whose journald support is weak or absent is disqualified regardless of how well it
-does everything else — which is exactly what §2 shows about the Victoria stack's own agent.
+does everything else — which is exactly what §2 shows about the Victoria stack's own agent. It is not the
+*only* shape the collector must handle: §9 inventories all four the fleet presents today or plans for.
 
 ### 2. The Victoria stack has no journald collector — its own agent does not fit its own fleet
 
@@ -321,6 +323,33 @@ destination, whether Telegraf picks up drop-ins, and whether an unauthenticated 
 — so it is recorded for **the router's own runbook/ADR when it joins**, with Fluent Bit documented as the
 fleet-consistency option rather than the default.
 
+### 9. Source shapes — what each of the fleet's systems actually demands
+
+§1 lists nodes; this is the same ground by **system**, because the collector's work is set by the *shape* of
+the source rather than by the distribution's name. The parser names are taken from Fluent Bit's shipped
+[`conf/parsers.conf`](https://github.com/fluent/fluent-bit/blob/master/conf/parsers.conf), and the Proxmox and
+OMV paths from their own source repositories (`proxmox/pve-manager`, `openmediavault/openmediavault`).
+
+| System | Where its logs are | Fluent Bit input (+ parser) | What it demands |
+|---|---|---|---|
+| **Debian** (`pve`, `edge`, `nas`, `vtstack`) | systemd journal; `pve` and `nas` *also* keep rsyslog-style files under `/var/log` | `systemd` — no parser needed | If **both** transports are collected, every line is stored twice (rule 1 below) |
+| **Ubuntu** (`lab`) | systemd journal (host) | `systemd` | Same rule |
+| **Proxmox VE** (on `pve`) | journald (`pveproxy`, `pvedaemon`, `pvestatd`, `pve-firewall`, kernel) **plus PVE's own on-disk task logs** (`/var/log/pve/tasks/`, with an `index`) and the web-UI access log | `systemd` + `tail` on the PVE paths | The task logs are the audit trail of every backup, migration and `vzdump` and exist **only** on disk — a real source, not a duplicate. The access log is high-volume and a candidate for exclusion |
+| **OMV** (`nas`) | Debian journald **plus OMV's own log directory** (`OMV_LOG_DIR`, default `/var/log/openmediavault`) | `systemd` + `tail` | The exact file set is to be enumerated on the node; OMV's GUI log viewer serves a different audience from the store |
+| **Docker** (`lab` now, `vtstack` later) | `/var/lib/docker/containers/*/*-json.log` (driver `json-file`) | `tail` + the built-in **`docker`** parser (`Format json`, `Time_Key time`) | Each line is **wrapped in JSON** (`log`, `stream`, `time`) — unparsed, every record reaches the store as one opaque blob. **Rotation is unbounded by default** (no `max-size`/`max-file`), a host prerequisite rather than a collector setting. The `docker-events` input is the route to container metadata if it is wanted |
+| **k3s / containerd** (`lab`, once [ADR 22](../decisions/22-k3s-arc-homelab.md) lands) | `/var/log/pods/<ns>_<pod>_<uid>/<container>/N.log`, symlinked under `/var/log/containers/` | `tail` + the built-in **`cri`** parser (`time stream logtag message`), with **`kube-custom`** to derive pod/namespace/container from the filename | Staging path and format differ from Docker's; pod **labels and annotations are not in the file**, so metadata enrichment needs the Kubernetes API — a host-level `tail` accepts metadata-free logs, a DaemonSet with the `kubernetes` filter does not |
+| **OPNsense / FreeBSD** (planned) | syslog-ng → `/var/log/*.log` — **no journald, no Docker** | `tail`, or no agent at all | §8 |
+
+**Two rules fall out of this.**
+
+1. **One transport per line.** A host that keeps rsyslog-style files beside the journal (`pve`, `nas`) holds
+   each line twice, and Fluent Bit will happily ship both. Each node declares the single transport it uses per
+   line — almost always the journal — in its `host_vars`. There is no deduplication to switch on at ingest;
+   the fix is to not collect the duplicate in the first place.
+2. **Two shapes need a parser, and one is a prerequisite.** Docker and CRI logs both need their built-in
+   parser or the store receives JSON wrappers instead of messages; and Docker's unbounded default rotation on
+   `lab` must be addressed before the collector is trusted not to fall behind a runaway container log.
+
 ---
 
 ## Alternatives Considered
@@ -365,6 +394,12 @@ fleet-consistency option rather than the default.
   The per-node inclusion list is the mitigation; whether it is needed here is unmeasured.
 - **The store's own logs** — shipping `vtstack`'s container output into the store is desirable but ordered
   after the three LAN nodes; the collector's own logs must not be collected recursively by itself.
+- **Docker's log rotation on `lab`.** The `json-file` driver rotates nothing by default, so `docker info` and
+  any `max-size`/`max-file` daemon settings must be checked — an unbounded container log is a host problem the
+  collector cannot fix (§9).
+- **How k3s logs are collected.** Host-level `tail` over `/var/log/pods/` (metadata-free) versus a DaemonSet
+  with the `kubernetes` filter (pod labels and annotations, the standard k3s shape) is decided with
+  [ADR 22](../decisions/22-k3s-arc-homelab.md)'s migration, not here (§9).
 - **The router's path (OPNsense, §8).** Three options and none decided: syslog-ng → the store's syslog
   listener (nothing installed, but unauthenticated and unparsed), the Telegraf plugin (drop-in support
   unverified), or Fluent Bit from the FreeBSD port (an out-of-band package). Choosing the syslog listener

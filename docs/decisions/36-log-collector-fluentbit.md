@@ -42,6 +42,16 @@ source** — its only log *input* sources are Kubernetes pod logs and files, and
   capability dance), exposes `_SYSTEMD_UNIT` / `MESSAGE` / `PRIORITY` / `__REALTIME_TIMESTAMP` verbatim, and
   filters by unit through `systemd_filter`. It is roughly **a quarter of the OTel Collector's memory** in the
   vendor's own benchmark ([research 34 §3](../research/34-log-collector-options.md#3-the-vendors-own-collector-benchmark--what-it-does-and-does-not-say)).
+- **Inputs: one collector, four source shapes** — **journald** on every systemd node (the `systemd` input;
+  fields arrive structured); **Docker's json-file** container logs on `lab` (`tail` + the built-in `docker`
+  parser, because each line is a JSON wrapper); **containerd CRI** logs when
+  [ADR 22](22-k3s-arc-homelab.md)'s k3s lands (`tail` + the built-in `cri` parser, with `kube-custom` to
+  derive pod/namespace/container from the filename); and **native file logs** where a system keeps its own
+  (Proxmox's `/var/log/pve/tasks/`, OMV's `/var/log/openmediavault`). The per-system inventory is
+  [research 34 §9](../research/34-log-collector-options.md).
+- **One transport per line — never journald *and* rsyslog files** — a host that keeps rsyslog-style files
+  beside the journal (`pve`, `nas`) holds the same line twice and Fluent Bit ships both. Each node declares
+  its single source per line, in `host_vars`; there is no deduplication to enable at ingest.
 - **Deployed as a systemd service per node, not a container** — the fleet's `netdata` pattern
   ([ADR 27](27-monitoring-strategy.md)). `edge` runs no Docker by design
   ([runbook 24](../runbooks/24-edge-appliance.md)), and on `lab` a host-native service can read both the host
@@ -91,6 +101,10 @@ source** — its only log *input* sources are Kubernetes pod logs and files, and
   realised by the first node deployed, not by the whole rollout.
 - **One agent, one config model, five nodes** — Fluent Bit's footprint is small enough for the 2 GB Edge and
   its configuration is a per-node `host_vars` file, so adding a node is data, not code.
+- **The input side is more work than "install a shipper".** Four source shapes, two of them needing a parser,
+  plus one prerequisite that is not the collector's to fix: Docker's `json-file` driver rotates **nothing** by
+  default on `lab`, so a runaway container log can fill the host before the collector is involved. Filed as
+  validation work in [research 34 §9](../research/34-log-collector-options.md).
 - **A silent failure mode is now possible in the pipeline** — a collector that stops or drops looks like a
   quiet fleet rather than an error. Monitoring the pipeline is not covered here: the store's own health stays
   [#132](https://github.com/jaroslaw-bagnicki/Homelab/issues/132), and the collector's metrics are a follow-up.
