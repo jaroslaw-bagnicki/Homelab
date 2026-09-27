@@ -13,7 +13,7 @@ Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month 
 
 ## 2026‑09
 
-- **(docs)** Adopt Fluent Bit as the fleet's log collector into VictoriaLogs — [ADR 36](docs/decisions/36-log-collector-fluentbit.md)
+- **(feat)** Fluent Bit collector — every LAN node ships its journald (and Docker) logs into VictoriaLogs — [ADR 36](docs/decisions/36-log-collector-fluentbit.md) · [runbook 34](docs/runbooks/34-deploy-fluentbit.md)
 - **(feat)** Adopt VictoriaLogs as the log store in an LXC on `pve` — [ADR 35](docs/decisions/35-log-store-victorialogs.md) · [runbook 33](docs/runbooks/33-deploy-victorialogs.md)
 - **(feat)** Netdata retention is now per-tier — the Parent keeps raw 1s for 14 d, 1m for 30 d and 1h for 365 d (≈7 GiB cap) — [ADR 27](docs/decisions/27-monitoring-strategy.md)
 - **(feat)** UPS telemetry in Netdata — the Parent charts battery, load and voltage from the NUT server and raises on-battery events as local alarms — [runbook 31](docs/runbooks/31-deploy-netdata.md)

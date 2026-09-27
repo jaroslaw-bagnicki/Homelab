@@ -9,11 +9,12 @@ Workloads are a separate concern: self-contained recipes run on demand (see [`..
 | `common` | Hostname, `/etc/hosts`, UTC, NTP service selection, optional Avahi, fleet SSH key | all playbooks | [README](common/README.md) |
 | `security` | UFW, fail2ban, sshd hardening | all playbooks | [README](security/README.md) |
 | `azure_arc` | `azcmagent` install + Azure Arc enrolment | `playbook.yml`, `playbook-lab.yml` | [README](azure_arc/README.md) |
-| `docker_host` | Docker Engine from the official repository (Debian/Ubuntu) | `playbook.yml`, `playbook-lab.yml`, `playbook-logs.yml` | [README](docker_host/README.md) |
+| `docker_host` | Docker Engine from the official repository (Debian/Ubuntu) + json-file log rotation | `playbook.yml`, `playbook-lab.yml`, `playbook-logs.yml` | [README](docker_host/README.md) |
 | `docker_services` | Portainer, Caddy, cloudflared, shared Docker networks | `playbook.yml` | [README](docker_services/README.md) |
 | `edge_host` | Edge appliance extras (unattended-upgrades, journald volatile, DNS search) | `playbook-edge.yml` | [README](edge_host/README.md) |
 | `nut_client` | `nut-client` + `upsmon` fleet clients | `playbook-pve.yml`, `playbook-lab.yml`, `playbook-edge.yml` | [README](nut_client/README.md) |
 | `netdata` | Netdata agent — parent (stream aggregator) + child modes | `playbook-pve.yml`, `playbook-lab.yml`, `playbook-edge.yml` | [README](netdata/README.md) |
+| `fluentbit` | Fluent Bit log collector — journald + Docker logs into VictoriaLogs | `playbook-pve.yml`, `playbook-edge.yml`, `playbook-lab.yml`, `playbook-nas.yml`, `playbook-logs.yml` | [README](fluentbit/README.md) |
 
 ---
 

@@ -8,3 +8,4 @@
     - edge_host
     - nut_client
     - netdata
+    - fluentbit
