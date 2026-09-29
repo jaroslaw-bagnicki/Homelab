@@ -269,76 +269,87 @@ short-lived identity-bound certificates instead of long-lived keys.
 
 ## §4 — Wildcards
 
-`step-ca` issues wildcards happily — `*.internal`, `*.dev.internal` — which is the normal homelab
-pattern: **one** wildcard certificate on the reverse proxy covers every subdomain, so adding a service
-does not mean issuing a certificate.
+`step-ca` issues wildcards — `*.internal`, `*.dev.internal` — which is the normal homelab pattern: **one**
+wildcard certificate on the reverse proxy covers every subdomain, so adding a service does not mean
+issuing a certificate. **How** that wildcard is obtained is the part the source thread got wrong.
 
-- **Manually** (CLI): `step ca certificate "*.internal" wildcard.crt wildcard.key --ca-url https://ca.internal:9000 --root /path/to/root_ca.crt`.
-  To cover the apex as well, pass both names: `--san "*.internal"` on a request for `internal`.
-- **Via ACME** (Caddy/Traefik/Certbot): unlike Let's Encrypt — which requires **DNS-01** for wildcards
-  — a private ACME server will issue a wildcard over ordinary **HTTP-01 / TLS-ALPN-01**, *provided*
-  the provisioner imposes no name constraints. If a provisioner's policy restricts names to a
-  pattern, check that the pattern admits `*`.
+- **Via ACME: expect DNS-01, not HTTP-01.** The thread claimed a private ACME server issues wildcards
+  over ordinary HTTP-01/TLS-ALPN-01, unlike Let's Encrypt. That claim does not survive contact with the
+  standards: HTTP-01 proves control of a *concrete* name on a web server and cannot answer for `*`,
+  and TLS-ALPN-01 is bound to a single dNSName in the SNI of a TLS handshake
+  ([RFC 8737](https://www.rfc-editor.org/rfc/rfc8737.html) §3) — neither can prove control of a
+  pattern. Wildcard identifiers are validated by **DNS-01**, which needs the CA to read a
+  `_acme-challenge.<name>` TXT record; for `.internal` that means a TXT-capable **authoritative zone**
+  in front of the resolver — the `local-zone`/`local-data` rewrite below is not enough, because it
+  answers address data, not arbitrary TXT.
+- **Manually, by CLI — the guaranteed path.** This needs no challenge at all, because the operator *is*
+  the authority: `step ca certificate "*.internal" wildcard.crt wildcard.key --ca-url https://ca.internal:9000 --root /path/to/root_ca.crt`,
+  adding `--san "internal"` to cover the apex as well. If DNS-01 cannot be arranged, plan for this: a
+  human re-issues on the certificate's (short) schedule.
 
-Two caveats: a wildcard covers **exactly one label** (`*.internal` covers `grafana.internal` but not
-`app.dev.internal` — that needs `*.dev.internal`), and the `ca.json` name-constraint configuration
-must allow the wildcard for the provisioner in question.
+**Unverified — validation work for the implementation phase.** What `step-ca`'s own ACME provisioner
+*actually permits* (whether it enforces the DNS-01 constraint for wildcards, and which challenge types
+it offers) was **not** confirmed against Smallstep's documentation. The safe design assumption is
+**DNS-01 required, or manual issuance** — do not plan on HTTP-01.
+
+Two further caveats: a wildcard covers **exactly one label** (`*.internal` covers `grafana.internal`
+but not `app.dev.internal` — that needs `*.dev.internal`), and the `ca.json` name-constraint
+configuration must admit `*` for the provisioner in question.
 
 ## §5 — Distributing the root to the fleet (Ansible)
 
-Distributing a root CA and refreshing the system trust store is a classic Ansible case, and the
-thread's pattern is per-OS-family paths with handlers:
+Distributing a root CA and refreshing the system trust store is a classic Ansible case. **Bootstrap it
+from a source Ansible already controls, not across the network it is about to start trusting** — the
+source thread's `get_url … validate_certs: false` fetches the trust anchor with validation off and **no
+integrity check at all**, so a LAN MITM could substitute its own root and defeat the entire exercise.
+
+The primary pattern is therefore a **checked-in copy** (repo or Key Vault), distributed per OS family
+with handlers:
 
 ```yaml
 - name: Install the internal Root CA across all nodes
   hosts: all
   become: true
   vars:
-    ca_cert_url: "https://ca.internal:9000/roots.pem"   # or a local copy via `copy:`
     ca_cert_name: "step-ca-internal-root.crt"
   tasks:
     - name: Root CA (Debian family)
-      ansible.builtin.get_url:
-        url: "{{ ca_cert_url }}"
+      ansible.builtin.copy:
+        src: "files/{{ ca_cert_name }}"          # repo copy, or an AKV-fetched file
         dest: "/usr/local/share/ca-certificates/{{ ca_cert_name }}"
+        owner: root
+        group: root
         mode: '0644'
-        validate_certs: false          # required while the CA itself is not yet trusted
       when: ansible_os_family == 'Debian'
       notify: Update CA trust store (Debian)
 
     - name: Root CA (RedHat family)
-      ansible.builtin.get_url:
-        url: "{{ ca_cert_url }}"
+      ansible.builtin.copy:
+        src: "files/{{ ca_cert_name }}"
         dest: "/etc/pki/ca-trust/source/anchors/{{ ca_cert_name }}"
+        owner: root
+        group: root
         mode: '0644'
-        validate_certs: false
       when: ansible_os_family == 'RedHat'
       notify: Update CA trust store (RedHat)
 
     - name: Root CA (Arch family)
-      ansible.builtin.get_url:
-        url: "{{ ca_cert_url }}"
+      ansible.builtin.copy:
+        src: "files/{{ ca_cert_name }}"
         dest: "/etc/ca-certificates/trust-source/anchors/{{ ca_cert_name }}"
+        owner: root
+        group: root
         mode: '0644'
-        validate_certs: false
       when: ansible_os_family == 'Archlinux'
       notify: Update CA trust store (Arch)
-
-  handlers:
-    - name: Update CA trust store (Debian)
-      ansible.builtin.command: update-ca-certificates
-      listen: "Update CA trust store (Debian)"
-    - name: Update CA trust store (RedHat)
-      ansible.builtin.command: update-ca-trust extract
-      listen: "Update CA trust store (RedHat)"
-    - name: Update CA trust store (Arch)
-      ansible.builtin.command: trust extract-compat
-      listen: "Update CA trust store (Arch)"
 ```
 
-Alternative when the `step` CLI is present on the targets: `step ca bootstrap --ca-url … --fingerprint …`
-followed by `step certificate install /root/.step/certs/root_ca.crt` — no file copying, but it needs
-the fingerprint distributed and treats every target as change-changed (see below).
+If a network fetch is genuinely unavoidable it must carry an **independent integrity check** — a pinned
+`checksum:` on `get_url` (`checksum: sha256:<hash>`), or Smallstep's own
+`step ca bootstrap --ca-url https://ca.internal:9000 --fingerprint <root fingerprint>`, which pins the
+anchor by fingerprint by design. `validate_certs: false` **on its own is not acceptable**: it is a
+transport flag, not a trust decision. The `step` variant needs no file copying but makes every target
+report changed, so it needs explicit `changed_when` handling (see below).
 
 Two notes the thread raises that matter for this repo:
 
@@ -398,6 +409,9 @@ services:
       - "9000:9000"          # exposed on the node so other fleet nodes can enrol too
     volumes:
       - ./step-ca-data:/home/step
+    # ⚠️ DEV / QUICK-START ONLY — DOCKER_STEPCA_INIT_* generates and RETAINS the root private key
+    # inside this online volume, which is incompatible with #126's required hierarchy (root offline,
+    # never on a server). Production runs a pre-provisioned intermediate instead — see the caveat below.
     environment:
       - DOCKER_STEPCA_INIT_NAME=Homelab Internal CA
       - DOCKER_STEPCA_INIT_DNS_NAMES=ca.internal,step-ca
@@ -431,17 +445,29 @@ volumes:
 > **dnsmasq** — the thread treats them as interchangeable here, with the resolver choice leaning
 > Unbound for `local-zone` support and dnsmasq for minimalism.
 
+> ⚠️ **The quick start is not the required hierarchy.** `DOCKER_STEPCA_INIT_*` auto-creates a root CA
+> **and keeps its private key in the online `./step-ca-data` volume** — fine for a first run, but it
+> directly contradicts [#126](https://github.com/jaroslaw-bagnicki/Homelab/issues/126)'s requirement
+> that the root stay **offline**. Treat that block as a development/demo path: the production CA is an
+> offline root plus a pre-provisioned intermediate (Key Vault), with only the intermediate and leaves
+> on the server.
+
 ### The DNS side — one wildcard rule
 
 - **AdGuard Home**: *Filters → DNS rewrites* — domain `*.internal`, IP = the node's address.
-- **Unbound** (`/etc/unbound/unbound.conf.d/homelab.conf`):
+- **Unbound** (`/etc/unbound/unbound.conf.d/homelab.conf`) — a **`redirect`** zone, not a `static` one.
+  `unbound.conf(5)`: "*the query has to match exactly unless you configure the local-zone as
+  redirect*" — and a `static` zone answers "NODATA or NXDOMAIN" when nothing matches exactly, so
+  `local-data: "*.internal. …"` there resolves **nothing** (`*` is not a wildcard in `local-data`).
+  `redirect` answers the zone apex **and all subdomains** from the apex record:
 
 ```conf
 server:
     interface: 0.0.0.0
     access-control: 192.168.2.0/24 allow
-    local-zone: "internal." static
-    local-data: "*.internal. IN A 192.168.2.<node>"
+    # `redirect` answers the apex AND every subdomain with the apex data.
+    local-zone: "internal." redirect
+    local-data: "internal. IN A 192.168.2.<node>"
 
 forward-zone:
     name: "."

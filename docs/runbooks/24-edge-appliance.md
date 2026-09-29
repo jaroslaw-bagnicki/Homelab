@@ -228,9 +228,10 @@ repo, rendered to `/etc/caddy/Caddyfile`, `Caddyfile reload` on change (ADR 10).
 - **Single Caddyfile for both planes** (ADR 20 — one Caddyfile is the source of truth):
   - **External** `*.example.com` sites → backends over the LAN (M910q k3s, ML110 OMV,
     future gear). Served on :80, TLS handled at the CF edge (ADR 19).
-  - **Internal** `*.internal` sites → routed by the same Caddy on
-    :80/:443 with Caddy's local auto-TLS or plain HTTP per service
-    ([ADR 37](../decisions/37-lan-name-space-internal.md)).
+  - **Internal** `*.internal` sites → routed by the same Caddy on **:443, HTTPS only** —
+    [ADR 34](../decisions/34-lan-tls-only.md) prohibits plaintext. What is still *pending* is where the
+    certificates come from, not the transport
+    ([ADR 37](../decisions/37-lan-name-space-internal.md) / [idea 10](../ideas/10-internal-ca-dns-stack.md)).
 - No Cloudflare Origin CA needed on the edge: per ADR 19's revised pattern, cloudflared →
   Caddy is **plain HTTP over loopback** (`127.0.0.1:80`, both on the edge box) — the earlier
   HTTPS-origin attempt failed on SNI mismatch and config-file override limits.

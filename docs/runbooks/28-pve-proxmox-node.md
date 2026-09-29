@@ -85,7 +85,7 @@ DDR4 (both slots full — 16 GB means replacing both), M.2 **SATA** 128 GB (SK h
 7. Proxmox web UI: **https://192.168.2.201:8006** → log in as `root` (Keeper).
 
 > **Future (optional):** once something serves `.internal` ([ADR 37](../decisions/37-lan-name-space-internal.md) — no host serves it yet, [idea 10](../ideas/10-internal-ca-dns-stack.md)), the Edge Caddy can alias
-> `http://pve.internal` → `https://pve:8006` for a portless URL. Not needed here — direct `:8006` access is used.
+> `https://pve.internal` → `https://pve:8006` for a portless URL — HTTPS on both hops, per [ADR 34](../decisions/34-lan-tls-only.md). Not needed here — direct `:8006` access is used.
 
 > **Proxmox reality vs runbook 25:** Proxmox VE has **no "create user" step** — `root` is the only
 > built-in admin (console + web UI). There is no separate personal account like the Ubuntu installer's.
