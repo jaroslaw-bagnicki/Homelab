@@ -1,5 +1,6 @@
 ---
 # DNS search domain for the edge resolver. Empty (default) removes the search
-# domain entirely — clears the installer's `cloud5.ovh` leftover that hijacks
-# bare LAN names to public records. Set to `home` once OPNsense .home DNS lands.
+# domain entirely — clears the installer's `example.com` leftover that hijacks
+# bare LAN names to public records. Set to `internal` once the LAN DNS the
+# internal stack serves is live (ADR 37).
 edge_dns_search: ""

@@ -88,7 +88,8 @@ pct create 214 local:vztmpl/<template> \
   re-check it against the measured ingest rate once [#84](https://github.com/jaroslaw-bagnicki/Homelab/issues/84)
   lands.
 - DNS is deliberately **not** pinned with `--nameserver` — the container inherits the host's
-  resolvers, so it keeps following the LAN (`pve.local` / the planned `.home` domain).
+  resolvers, so it keeps following the LAN (`pve.local` / the planned `.internal` name space,
+  [ADR 37](../decisions/37-lan-name-space-internal.md)).
 - Keep the Proxmox network **Firewall** flag at `0` (`pct create` does). The LAN-only rule is a
   UFW rule inside the container (§5), not the Proxmox firewall.
 

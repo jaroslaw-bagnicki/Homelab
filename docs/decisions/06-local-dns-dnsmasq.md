@@ -1,7 +1,7 @@
 # Local DNS Resolution — DNSMasq with Wildcard `.home` Domains
 
 **Date:** 2026-05-29  
-**Status:** Implemented
+**Status:** Superseded by [ADR 37](37-lan-name-space-internal.md)
 
 ---
 
@@ -36,3 +36,12 @@ Implementation details:
 - Client devices must use the homelab as their DNS server (or a forwarder pointing to it) for `.home` resolution to work
 - Single point of failure — if DNSMasq goes down, local name resolution breaks; client DNS fallback mitigates external access loss
 - `systemd-resolved` must remain disabled on the host — only one DNS resolver can bind port 53
+
+### Superseded — 2026-09-29
+
+DNSMasq was **not reinstalled** after the M910q OS refresh
+([runbook 25](../runbooks/25-m910q-os-refresh.md)), which moved DNS, Caddy and the Cloudflare tunnel off
+that host — so this decision was already dead in practice, though it was never recorded as retired. It is
+formally retired by [ADR 37](37-lan-name-space-internal.md), which sets the LAN name space to `.internal`
+and leaves LAN name resolution to the internal service stack
+([idea 10](../ideas/10-internal-ca-dns-stack.md) / [#126](https://github.com/jaroslaw-bagnicki/Homelab/issues/126)).

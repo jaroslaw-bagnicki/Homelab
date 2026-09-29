@@ -151,8 +151,8 @@ on its own. The container is **not** Ansible-managed in v1.
 
 DNS is deliberately **not** pinned with `--nameserver` — the container inherits the host's
 resolvers, so it keeps following whatever the LAN serves. A hardcoded public resolver would bypass
-that, including the `.home` names the OPNsense router is due to own
-([ADR 06](../decisions/06-local-dns-dnsmasq.md), [idea 07](../ideas/07-opnsense-futro-s930.md)).
+that, including the `.internal` names the internal stack is due to serve
+([ADR 37](../decisions/37-lan-name-space-internal.md), [idea 10](../ideas/10-internal-ca-dns-stack.md)).
 
 ⚠ **Building it in the GUI wizard instead of the snippet above?** Three fields need attention, because
 this is where the GUI and `pct create` diverge:

@@ -127,10 +127,11 @@ With **only the SanDisk SSD attached** (Seagates disconnected):
 1. Boot the ISO → the installer prompts for **location**, **language**, **keyboard**, then
    **hostname** and **domain name**, then a **root password**.
    - **Hostname `nas`** — the installer's default is not `nas`; set it.
-   - **Domain `home`** — the internal fleet domain ([ADR 06](../decisions/06-local-dns-dnsmasq.md),
-     moved to the OPNsense router by [ADR 24](../decisions/24-edge-ingress-appliance.md)). The field
-     **prefills `Internal`**, so replace it. `.local` is independent — Avahi publishes `nas.local`
-     from the short hostname (§8).
+   - **Domain `home`** — the fleet domain as it stood when this was applied
+     ([ADR 06](../decisions/06-local-dns-dnsmasq.md)); **the LAN name space is now `.internal`**
+     ([ADR 37](../decisions/37-lan-name-space-internal.md)), so expect this field to be repointed when
+     the internal stack lands. The field **prefills `Internal`**, so replace it. `.local` is
+     independent — Avahi publishes `nas.local` from the short hostname (§8).
    - Record the root password.
 2. It deploys to the **first disk found** — the SanDisk SSD.
 3. On completion the machine reboots — **remove the USB stick**.
@@ -165,9 +166,10 @@ block):
 - Method: **Static** — IP `192.168.2.202`, netmask `255.255.255.0`, gateway `192.168.2.1`, DNS `192.168.2.1`.
 - Apply. Verify from `lab`: `ping 192.168.2.202`.
 - **Hostname** — `Network → General` (a **top-level** `Network` item, not `System → Network`):
-  confirm **`nas`** and domain **`home`** (both set at §3, so the FQDN is `nas.home`), giving mDNS
-  `nas.local` via Avahi (runbook 23 §8 pattern). The `common` role also enforces the inventory name
-  `nas` ([§8](#8-fleet-enrollment--ansible)).
+  confirm **`nas`** and, for now, domain **`home`** as set at §3 (so the FQDN is `nas.home`) — the name
+  space is now `.internal` ([ADR 37](../decisions/37-lan-name-space-internal.md)), so repoint this field
+  with the stack. Avahi publishes mDNS `nas.local` from the short hostname regardless (runbook 23 §8
+  pattern). The `common` role also enforces the inventory name `nas` ([§8](#8-fleet-enrollment--ansible)).
 
 ### 4d. HTTPS-only web UI
 
@@ -185,12 +187,11 @@ block):
 | Country | your own |
 | Organization / Unit / City / State / Email, Tags | leave blank (Tags auto-fills from the subject) |
 
-> **Why `nas.local` and not `nas.home`.** `.home` belongs to the OPNsense router
-> ([ADR 06](../decisions/06-local-dns-dnsmasq.md), amended by
-> [ADR 24](../decisions/24-edge-ingress-appliance.md)), and
-> [ADR 07](../decisions/07-reverse-proxy-caddy.md) fronts `.home` services with Caddy's internal CA —
-> OMV's own certificate is not the right home for it. `nas.local` is also the only name resolving
-> today. OMV adds **`subjectAltName=DNS:<Common Name>`**, so `https://nas.local` matches on name and
+> **Why `nas.local` and not `nas.internal`.** The LAN name space is now `.internal`
+> ([ADR 37](../decisions/37-lan-name-space-internal.md) — `.home` and DNSMasq retired), and
+> [ADR 07](../decisions/07-reverse-proxy-caddy.md) fronts internal services with Caddy's CA — but
+> **nothing resolves `.internal` yet**, so `nas.local` is the only name that works today, and OMV's own
+> certificate is not the right home for the internal name either. OMV adds **`subjectAltName=DNS:<Common Name>`**, so `https://nas.local` matches on name and
 > only the untrusted-issuer warning remains, which is inherent to a self-signed certificate. An
 > X.509 certificate can match an IP when that address is included as an `iPAddress` SAN, but this
 > OMV-generated certificate has only a DNS SAN, so `https://192.168.2.202` warns on the name — use
