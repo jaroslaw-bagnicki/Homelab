@@ -66,13 +66,13 @@ This ADR governs the **transport** only. Authenticating *users* stays per-servic
 - **No rule — per-service hardening** (status quo). Rejected: it works until someone deploys in a hurry, and compliance cannot be distinguished from luck.
 - **"No plaintext anything."** Rejected as unimplementable: DNS, mDNS and NTP offer no TLS alternative at all, so an absolute rule would be broken by the fleet's own baseline services — which teaches people to ignore rules. NUT is **not** in this category: it is TLS-capable and sits in the non-compliance table above.
 - **Central TLS termination** (one HTTPS entry point, services plaintext on loopback). Rejected for now: it concentrates the trust decision and the failure domain, and the services concerned already speak native TLS. Revisit if LAN-facing UIs multiply.
-- **Private CA (`step-ca`) issuing fleet certificates** — deferred, not rejected, and now tracked as [#126](https://github.com/jaroslaw-bagnicki/Homelab/issues/126). It is the only way to make certificates *authenticated* rather than merely encrypted, but its real cost is distributing the root to every client device for browser-facing services. Until it lands, ADR 27's self-signed residual stands.
+- **Private CA (`step-ca`) issuing fleet certificates** — deferred, not rejected, and now tracked as [#126](https://github.com/jaroslaw-bagnicki/Homelab/issues/126). It is the only way to make certificates *authenticated* rather than merely encrypted, but its real cost is distributing the root to every client device for browser-facing services. Until it lands, ADR 27's self-signed residual stands. The name space it must issue for is settled — `.internal` ([ADR 37](37-lan-name-space-internal.md)).
 
 ---
 
 ## References
 
-- [ADR 06](06-local-dns-dnsmasq.md) — Local DNS (`.home`), the plaintext DNS exception
+- [ADR 06](06-local-dns-dnsmasq.md) — Local DNS (`.home`, retired by [ADR 37](37-lan-name-space-internal.md)), the plaintext DNS exception
 - [ADR 24](24-edge-ingress-appliance.md) — Edge appliance (Caddy, constrained hardware)
 - [ADR 27](27-monitoring-strategy.md) — Monitoring strategy; HTTPS-only dashboard and the accepted LAN-trust residual
 - [ADR 29](29-nas-backup-target-beetle-m3-omv.md) — NAS (NFS/SMB decision pending)

@@ -1,4 +1,4 @@
-# 35 — Private CA and LAN Domain Naming — `.home.arpa` vs `.internal`, TLS for Non-Public Names, and the Unbound + Caddy + step-ca Stack
+# 35 — Private CA and LAN Domain Naming — `.internal` for the LAN, TLS for Non-Public Names, and the Unbound + Caddy + step-ca Stack
 
 **Source**: [Gemini chat 21 — "Pseudo-domains for local networks"](https://share.gemini.google/UPNAO3UsBe8l)
 (3.6 Flash; thread started 2026-09-28, published 2026-09-29). The whole thread is the seed for this
@@ -14,9 +14,11 @@ together by the service shape the operator leans toward — **local DNS → reve
 run as a **Docker Compose stack in an LXC on `pve`** — so the deployment mechanics of that shape are
 recorded too (§6, §7).
 
-**Status**: 📝 Analysis — **nothing is decided**. The naming question, the issuing tool and the host
-placement are all still open (§8). When they settle, the decision belongs in an ADR that also closes
-#126; this document is the analysis that feeds it, not the authority for it.
+**Status**: 📝 Analysis — the **name space is decided** (`.internal`,
+[ADR 37](../decisions/37-lan-name-space-internal.md), §1), which also retires DNSMasq and `.home`. The
+issuing tool, the CA hierarchy and the **host placement** are still open (§7, §8) — they belong to the
+ADR that closes [#126](https://github.com/jaroslaw-bagnicki/Homelab/issues/126). This document is the
+analysis that feeds them, not the authority for them.
 
 > ⚠️ **Verification status**: nothing in this document was run on the fleet. The RFC/ICANN claims are
 > the thread's own citations and are **not independently read** for this document; the `step-ca`
@@ -25,6 +27,29 @@ placement are all still open (§8). When they settle, the decision belongs in an
 > starting point to validate, not as a tested recipe. Two of the thread's snippets carried
 > transcription damage (noted in §6) and one figure — "the stack uses < 150 MB RAM" — is an
 > unmeasured claim.
+
+---
+
+## Decision Summary
+
+> **Decision authority:** [ADR 37](../decisions/37-lan-name-space-internal.md) — the LAN name space is
+> `.internal`, and DNSMasq / `.home` ([ADR 06](../decisions/06-local-dns-dnsmasq.md)) are retired. The
+> rows marked **open** below are *not* decided by ADR 37; they belong to the ADR that closes
+> [#126](https://github.com/jaroslaw-bagnicki/Homelab/issues/126).
+
+| Decision | Outcome |
+|---|---|
+| LAN name space | **`.internal`** — a single label, ICANN-reserved for private use ([ADR 37](../decisions/37-lan-name-space-internal.md)) |
+| `.home.arpa` | **Rejected** by the operator — a second-level name, too long for everyday use |
+| `.home` + DNSMasq | **Retired** with [ADR 06](../decisions/06-local-dns-dnsmasq.md) — never reinstalled after the M910q refresh |
+| `.lan` | Rejected — no RFC, no ICANN reservation |
+| `.local` | Rejected for unicast DNS — RFC 6762 reserves it for mDNS; it stays mDNS-only |
+| Subdomain of the owned public domain | **Fallback**, not adopted — publicly trusted TLS, but internal hostnames become public |
+| Issuing tool | **Open** — `step-ca` is the leading candidate (§3, §4); `cfssl` / Ansible-driven OpenSSL are the alternatives named in [#126](https://github.com/jaroslaw-bagnicki/Homelab/issues/126) |
+| CA hierarchy & key custody | **Open** — [#126](https://github.com/jaroslaw-bagnicki/Homelab/issues/126) sketches offline root / Key Vault intermediate / short-lived leaves |
+| Names issued for | **Open** — one wildcard on the proxy, or per-service leaves (§4, §8) |
+| Host placement | **Open** — `pve` (Docker Compose in an LXC), `edge` (bare metal), `lab` (k3s, blocked) (§7) |
+| Resolver | **Open** — Unbound vs AdGuard Home vs dnsmasq (§6) |
 
 ---
 
@@ -102,11 +127,20 @@ is special-use, but it has three real advantages the thread highlights:
 | Devices without a central DNS (mDNS) | `.local` |
 | Full public-grade TLS, no client config | a subdomain of a domain you own |
 
-**Applied to this fleet** the choice reads as: keep `.local` strictly for mDNS (unchanged), and pick
-between **`.home.arpa`**, **`.internal`**, and **migrating to a subdomain of the public domain the
-lab already owns** ([ADR 19](../decisions/19-cloudflare-tunnel-http-origin.md) / [ADR 20](../decisions/20-caddy-single-routing-layer.md)
-already use one for public ingress). The incumbent `.home` is the one option with neither a standard
-nor a guarantee.
+### What the fleet decided — `.internal` (2026-09-29)
+
+The operator settled this in favour of the thread's **second** row rather than its first: **the LAN name
+space is `.internal`** ([ADR 37](../decisions/37-lan-name-space-internal.md)) — a single label,
+ICANN-reserved for private use, guaranteed never to be delegated.
+
+| Name | Verdict | Reason |
+|---|---|---|
+| **`.internal`** | **Adopted** | ICANN 2024 reservation for private use; a single label — short, and safe to issue certificates for |
+| **`.home.arpa`** | Rejected | RFC 8375's standard home name space, and the thread's own recommendation for a homelab — but it is a **second-level** name and too long for everyday use |
+| **`.home`** | Retired | No RFC special-use status, no ICANN reservation, and its service (DNSMasq) was never reinstalled after the M910q refresh — retired with [ADR 37](../decisions/37-lan-name-space-internal.md) |
+| **`.lan`** | Rejected | No RFC and no ICANN reservation; ubiquitous in consumer firmware, which makes it *look* standard without being so |
+| **Subdomain of the owned public domain** | Fallback | Removes the client-trust problem entirely, but publishes internal hostnames in the public zone ([ADR 19](../decisions/19-cloudflare-tunnel-http-origin.md) / [ADR 20](../decisions/20-caddy-single-routing-layer.md) already use one for public ingress) |
+| **`.local`** | Rejected for unicast DNS | RFC 6762 reserves it for mDNS; it stays mDNS-only, unchanged |
 
 ## §2 — TLS for a name no public CA will issue for
 
@@ -440,12 +474,22 @@ Losing it means regenerating the CA and re-installing the root on every device.
 | Caddy | 80/tcp, 443/tcp | reverse proxy, TLS termination |
 | `step-ca` | 9000/tcp | private ACME endpoint |
 
-## §7 — Docker inside an LXC on `pve` (the operator's lean)
+## §7 — Hosting the stack — `pve`, `edge` or `lab`
 
-Running the whole stack in Docker inside an **unprivileged LXC** on the Proxmox VE node is the
-thread's endorsed shape for this fleet: light, isolated, and backed up as a unit by Proxmox
-snapshots / PBS. Container sizing it suggests: **1–2 vCPU, 512 MB–1 GB RAM** (claim: the stack uses
-under 150 MB — unmeasured), **8–10 GB disk**, static IP per [ADR 31](../decisions/31-static-address-scheme.md)
+**Open.** The operator's shortlist (2026-09-29) is three platforms:
+
+| Host | Shape | Status / concern |
+|---|---|---|
+| **`pve`** | Docker Compose workload in an **unprivileged LXC** on the Proxmox VE node | The operator's lean. Light, isolated, backed up as a unit by Proxmox snapshots / PBS; fits the `21x` guest block ([ADR 31](../decisions/31-static-address-scheme.md)) |
+| **`edge`** | **Bare metal** on the Wyse 3040, beside cloudflared + Caddy ([ADR 24](../decisions/24-edge-ingress-appliance.md)) | Open question: whether the 3040's resources carry this stack, and whether bare-metal upkeep is worth it against a Compose workload. **Unverified** — no sizing has been measured on that box |
+| **`lab`** | **Kubernetes workload** on the M910q | **Blocked** — k3s is not installed yet ([ADR 22](../decisions/22-k3s-arc-homelab.md), [#44](https://github.com/jaroslaw-bagnicki/Homelab/issues/44)) |
+
+The thread's recommended shape — and every mechanic below — assumes the `pve` / Compose option:
+
+### Docker inside an unprivileged LXC on `pve`
+
+Container sizing the thread suggests: **1–2 vCPU, 512 MB–1 GB RAM** (claim: the stack uses under 150 MB
+— unmeasured), **8–10 GB disk**, a static IP per [ADR 31](../decisions/31-static-address-scheme.md)
 (a guest on `pve` is `192.168.2.21x`, VMID = last octet).
 
 Two Proxmox-side prerequisites for Docker in an unprivileged LXC:
@@ -457,27 +501,20 @@ Two Proxmox-side prerequisites for Docker in an unprivileged LXC:
 
 Plus the port-53 caveat above, applied inside the container.
 
-### Where else this could live
+### OPNsense — out of the current shortlist
 
-| Host | How | Thread's verdict |
-|---|---|---|
-| **LXC on `pve`** (operator's lean) | Docker Compose stack, as above | Clean, snapshot-able, keeps the firewall appliance clean |
-| **OPNsense (Futro S930)** — native | Smallstep ships a FreeBSD binary (`step-ca_freebsd_*.tar.gz`) dropped in `/usr/local/bin` with an `rc.d` script; Unbound is already built in (Domain Overrides, or `local-zone`/`local-data` custom options) | Workable, but: the OPNsense **XML backup does not include** `/usr/local/bin` or `/var/db/step-ca`, so those need their own backup routine; and the router is a poor place to add moving parts |
-| **OPNsense as a VM, stack beside it** | Unbound stays on the router; `step-ca` + Caddy in an LXC/VM on the same hypervisor | Called the **cleanest architecture** in the thread — the firewall keeps DNS, the certificate stack lives where backups are easy |
-| **OPNsense's built-in CA** | `System → Trust → Authorities/Certificates` | GUI-only, no ACME **server** — OPNsense has only an ACME *client* (`os-acme-client`) for pulling certificates from outside. Loses automatic in-lab renewal, which is the whole point of #126 |
-
-Relevant sequencing: the OPNsense router itself is currently **Held** on `pve`'s sibling work — it
-waits on a power cable for its replacement SSD ([idea 07](../ideas/07-opnsense-futro-s930.md), [#96](https://github.com/jaroslaw-bagnicki/Homelab/issues/96)) —
-and the in-progress edge migration still describes `.home` DNS as owned by the router
-([docs/overview.md](../overview.md)). Whatever is chosen interacts with both.
+The thread evaluated the OPNsense router (Futro S930) as a host, recorded here for completeness, but it
+is **not in the operator's current shortlist**: a native FreeBSD `step-ca` binary needs an `rc.d` script
+and falls outside the router's XML backup (`/usr/local/bin`, `/var/db/step-ca`), and the router's own
+built-in CA has **no ACME server** — only `os-acme-client`, a *client* for pulling certificates from
+outside, which loses in-lab auto-renewal. The router is also **Held** on its own work — a power cable for
+its replacement SSD ([idea 07](../ideas/07-opnsense-futro-s930.md), [#96](https://github.com/jaroslaw-bagnicki/Homelab/issues/96)).
 
 ## §8 — Open questions
 
-- **Name space.** `.home.arpa` (standard for homes) vs `.internal` (ICANN-reserved, corporate
-  convention) vs a subdomain of the public domain already used for ingress. The third removes the
-  client-trust problem entirely but makes internal names public. The incumbent `.home` has no
-  standard at all, and migrating is a fleet-wide rename — including the OPNsense/edge DNS ownership
-  question in [ADR 06](../decisions/06-local-dns-dnsmasq.md) / [ADR 24](../decisions/24-edge-ingress-appliance.md).
+- **Host placement.** `pve` (Compose in an unprivileged LXC), `edge` (bare metal) or `lab` (k3s, blocked)
+  — §7. This gates everything else, because the host decides whether the stack is a Compose file, a set
+  of systemd units, or Kubernetes manifests.
 - **Certificate hierarchy and custody.** #126 already states the shape it wants — offline long-lived
   root, 1–3 year intermediate in Key Vault, short-lived leaves — and asks whether the issuing tool is
   `step-ca`, `cfssl`, or Ansible-driven OpenSSL. This thread supplies the `step-ca` case but does not
@@ -501,11 +538,14 @@ and the in-progress edge migration still describes `.home` DNS as owned by the r
 
 - [Gemini chat 21 — "Pseudo-domains for local networks"](https://share.gemini.google/UPNAO3UsBe8l)
   (3.6 Flash, published 2026-09-29) — the source thread
+- [ADR 37 — LAN name space is `.internal`](../decisions/37-lan-name-space-internal.md) — the naming
+  decision this research fed
 - [#126 — Private CA for LAN service certificates](https://github.com/jaroslaw-bagnicki/Homelab/issues/126) —
   the decision this research serves
 - [ADR 34 — LAN services are TLS-only](../decisions/34-lan-tls-only.md) — the rule, and the private-CA
   deferral to #126
-- [ADR 06 — Local DNS (DNSMasq, `.home`)](../decisions/06-local-dns-dnsmasq.md) ·
-  [ADR 07 — Caddy reverse proxy, internal CA](../decisions/07-reverse-proxy-caddy.md) — the incumbents
+- [ADR 06 — Local DNS (DNSMasq, `.home`)](../decisions/06-local-dns-dnsmasq.md) — retired by ADR 37 ·
+  [ADR 07 — Caddy reverse proxy, internal CA](../decisions/07-reverse-proxy-caddy.md) — the incumbent proxy
 - [ADR 31 — Static address scheme](../decisions/31-static-address-scheme.md) — where a guest on `pve` fits
-- [Idea 07 — OPNsense on a Futro S930](../ideas/07-opnsense-futro-s930.md) — the alternative host
+- [Idea 07 — OPNsense on a Futro S930](../ideas/07-opnsense-futro-s930.md) — the OPNsense host option,
+  outside the current shortlist

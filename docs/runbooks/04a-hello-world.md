@@ -1,5 +1,10 @@
 # Homelab Setup — Hello World Demo via Caddy
 
+> **Historical — written for the retired `.home` name space.** DNSMasq was not reinstalled after the
+> M910q OS refresh ([runbook 25](25-m910q-os-refresh.md)) and `.home` is retired
+> ([ADR 37](../decisions/37-lan-name-space-internal.md)); the LAN name space is now `.internal`, and the
+> demo returns with the internal stack ([idea 10](../ideas/10-internal-ca-dns-stack.md)).
+
 > Runbook for deploying a simple hello-world container behind Caddy to demo reverse proxy with `*.home` DNS.
 >
 > **How it works**: Caddy binds ports 80/443 on the host (the only public entry point). The hello container has **no host ports** — it only attaches to `homelab_net`. Caddy reaches it internally as `hello:80` via Docker DNS, so there's no port conflict.

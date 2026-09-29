@@ -71,7 +71,7 @@ DDR4 (both slots full — 16 GB means replacing both), M.2 **SATA** 128 GB (SK h
 
    > **Single DNS field.** The installer's network screen accepts **one** DNS server only — don't try to enter `1.1.1.1, 8.8.8.8` (it will reject the value as invalid). Enter just `1.1.1.1`; add `8.8.8.8` as a secondary via **Node `pve` → System → DNS**. A single resolver is fine for this host.
 
-   > `pve.local` resolves via Avahi mDNS; `pve.home` is the planned OPNsense domain ([ADR 24](../decisions/24-edge-ingress-appliance.md)) — revisit when OPNsense lands.
+   > `pve.local` resolves via Avahi mDNS; `pve.internal` is the planned name ([ADR 37](../decisions/37-lan-name-space-internal.md)) — nothing resolves it yet, see [idea 10](../ideas/10-internal-ca-dns-stack.md).
 
 4. Set a **strong root password** → **Keeper**. This is the breaking-glass account (Proxmox web UI
    admin + console).
@@ -84,8 +84,8 @@ DDR4 (both slots full — 16 GB means replacing both), M.2 **SATA** 128 GB (SK h
    ```
 7. Proxmox web UI: **https://192.168.2.201:8006** → log in as `root` (Keeper).
 
-> **Future (optional):** once OPNsense `.home` DNS lands ([#65](https://github.com/jaroslaw-bagnicki/Homelab/issues/65)/[#81](https://github.com/jaroslaw-bagnicki/Homelab/issues/81) · [#96](https://github.com/jaroslaw-bagnicki/Homelab/issues/96)), the Edge Caddy can alias
-> `http://pve.home` → `https://pve:8006` for a portless URL. Not needed here — direct `:8006` access is used.
+> **Future (optional):** once something serves `.internal` ([ADR 37](../decisions/37-lan-name-space-internal.md) — no host serves it yet, [idea 10](../ideas/10-internal-ca-dns-stack.md)), the Edge Caddy can alias
+> `http://pve.internal` → `https://pve:8006` for a portless URL. Not needed here — direct `:8006` access is used.
 
 > **Proxmox reality vs runbook 25:** Proxmox VE has **no "create user" step** — `root` is the only
 > built-in admin (console + web UI). There is no separate personal account like the Ubuntu installer's.

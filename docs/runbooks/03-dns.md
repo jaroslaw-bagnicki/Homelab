@@ -1,5 +1,11 @@
 # Homelab Setup — Local DNS (DNSMasq)
 
+> **Retired — superseded by [ADR 37](../decisions/37-lan-name-space-internal.md).**
+> DNSMasq was not reinstalled after the M910q OS refresh ([runbook 25](25-m910q-os-refresh.md)), so
+> this deployment is gone and the LAN name space is now `.internal`. Name resolution returns with the
+> internal service stack ([idea 10](../ideas/10-internal-ca-dns-stack.md) / [#126](https://github.com/jaroslaw-bagnicki/Homelab/issues/126)).
+> This runbook remains as historical reference for the original manual deployment.
+
 > Runbook for deploying DNSMasq in Docker to resolve `*.home` domains to the homelab server.
 
 ## Prerequisites

@@ -1,5 +1,11 @@
 # Homelab Setup — Caddy Reverse Proxy
 
+> **Historical — written for the retired `.home` name space.** DNSMasq was not reinstalled after the
+> M910q OS refresh ([runbook 25](25-m910q-os-refresh.md)) and `.home` is retired
+> ([ADR 37](../decisions/37-lan-name-space-internal.md), which sets the LAN name space to `.internal`).
+> Caddy itself is unchanged ([ADR 07](../decisions/07-reverse-proxy-caddy.md)) and returns with the
+> internal stack ([idea 10](../ideas/10-internal-ca-dns-stack.md)); read this for the original setup only.
+
 > Runbook for deploying Caddy as a reverse proxy with automatic TLS for `*.home` services.
 
 ## Prerequisites
