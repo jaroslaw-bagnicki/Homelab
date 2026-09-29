@@ -13,6 +13,7 @@ Significant architectural and technology choices recorded in
 
 | # | Date | ADR | Status |
 |---|------|-----|--------|
+| 37 | 2026-09-29 | [LAN Name Space Is `.internal` — DNSMasq and `.home` Retired](37-lan-name-space-internal.md) | Accepted |
 | 36 | 2026-09-27 | [Log Collector — Fluent Bit, Fleet-Wide, into VictoriaLogs](36-log-collector-fluentbit.md) | Accepted |
 | 35 | 2026-09-27 | [Log Store — VictoriaLogs in an LXC on the pve Node](35-log-store-victorialogs.md) | Accepted |
 | 34 | 2026-09-20 | [LAN Services Are TLS-Only — No Plaintext HTTP](34-lan-tls-only.md) | Accepted |
@@ -43,7 +44,7 @@ Significant architectural and technology choices recorded in
 | 9 | 2026‑06‑02 | [Azure Monitor via Arc for Homelab Monitoring](09-azure-monitor-via-arc.md) | Implemented (partial) |
 | 8 | 2026‑05‑30 | [Remote Access — Cloudflare Tunnel for Inbound HTTPS](08-remote-access-cloudflare-tunnel.md) | Superseded by [ADR 19](19-cloudflare-tunnel-http-origin.md) |
 | 7 | 2026‑05‑29 | [Reverse Proxy — Caddy with Auto-TLS and Configuration-as-Code](07-reverse-proxy-caddy.md) | Implemented |
-| 6 | 2026‑05‑29 | [Local DNS Resolution — DNSMasq with Wildcard `.home` Domains](06-local-dns-dnsmasq.md) | Implemented |
+| 6 | 2026‑05‑29 | [Local DNS Resolution — DNSMasq with Wildcard `.home` Domains](06-local-dns-dnsmasq.md) | Superseded by [ADR 37](37-lan-name-space-internal.md) |
 | 5 | 2026‑05‑24 | [OS Decision — Ubuntu Server 24.04 LTS](05-os-decision-ubuntu-server.md) | Implemented |
 | 4 | 2026‑05‑24 | [Hybrid Cloud Strategy — Physical Homelab + Minimal Azure](04-hybrid-cloud-azure-arc.md) | Implemented |
 | 3 | 2026‑05‑24 | [Container Strategy — Docker Compose First, k3s Migration Path](03-container-strategy.md) | Superseded by [ADR 22](22-k3s-arc-homelab.md) |

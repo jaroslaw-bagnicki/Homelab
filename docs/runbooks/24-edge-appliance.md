@@ -21,8 +21,10 @@
   no Docker.
 - **External routing:** `*.example.com` → Caddy → backends over the LAN
   (M910q k3s, ML110 OMV, future gear).
-- **Internal routing:** `.home` Caddy routing served by the edge box; `*.home` DNS
-  handled by the OPNsense router (idea 07) — ADR 24 architecture split, M910q is compute-only.
+- **Internal routing:** `.internal` Caddy routing served by the edge box — the LAN name
+  space is [ADR 37](../decisions/37-lan-name-space-internal.md) (DNSMasq and `.home`
+  retired); **which host serves `.internal` DNS is still open**
+  ([idea 10](../ideas/10-internal-ca-dns-stack.md)) — ADR 24 architecture split, M910q is compute-only.
 - **Monitoring:** Netdata **child node** with RAM-only buffering (no eMMC DB; ADR 27).
 - Stay lean: 2 GB RAM / 8 GB eMMC, ~2–3 W idle, fanless.
 
@@ -197,7 +199,7 @@ reuse — see §3a). Services §4–§6 are a follow-up once the base is verifie
   hardening; `security_ufw_deny_inbound_tcp_80: false` (the edge owns :80)
 - `ansible/roles/edge_host` (new) — `unattended-upgrades`, `logrotate`, journald
   `Storage=volatile`, the DNS search domain (`edge_dns_search`, default empty — removes the
-  installer's `cloud5.ovh` search leftover); UFW stays deny-inbound — cloudflared → Caddy
+  installer's `example.com` search leftover); UFW stays deny-inbound — cloudflared → Caddy
   runs over loopback, no :80 opened (nmbd dropped 2026-08-26 — Avahi suffices)
 - `ansible/host_vars/edge.yml` + `inventory.ini` (`edge` → `192.168.2.240`)
 
@@ -226,8 +228,10 @@ repo, rendered to `/etc/caddy/Caddyfile`, `Caddyfile reload` on change (ADR 10).
 - **Single Caddyfile for both planes** (ADR 20 — one Caddyfile is the source of truth):
   - **External** `*.example.com` sites → backends over the LAN (M910q k3s, ML110 OMV,
     future gear). Served on :80, TLS handled at the CF edge (ADR 19).
-  - **Internal** `*.home` sites (DNS via OPNsense, idea 07) → routed by the same Caddy on
-    :80/:443 with Caddy's local auto-TLS or plain HTTP per service.
+  - **Internal** `*.internal` sites → routed by the same Caddy on **:443, HTTPS only** —
+    [ADR 34](../decisions/34-lan-tls-only.md) prohibits plaintext. What is still *pending* is where the
+    certificates come from, not the transport
+    ([ADR 37](../decisions/37-lan-name-space-internal.md) / [idea 10](../ideas/10-internal-ca-dns-stack.md)).
 - No Cloudflare Origin CA needed on the edge: per ADR 19's revised pattern, cloudflared →
   Caddy is **plain HTTP over loopback** (`127.0.0.1:80`, both on the edge box) — the earlier
   HTTPS-origin attempt failed on SNI mismatch and config-file override limits.
@@ -271,8 +275,10 @@ repo, rendered to `/etc/caddy/Caddyfile`, `Caddyfile reload` on change (ADR 10).
 - **Services:** `systemctl status cloudflared caddy netdata` all active.
 - **External:** `curl https://app.example.com` resolves + serves from the backend edge box
   path; `*.example.com` wildcard → Caddy → backend.
-- **Internal DNS:** `nslookup service.home <edge-ip>` → edge IP; client on DHCP → router
-  hands out edge DNS → `service.home` resolves.
+- **Internal DNS:** `nslookup service.internal <dns-ip>` → Caddy IP; client on DHCP → the `.internal`
+  resolver → `service.internal` resolves. **Blocked until that resolver exists**
+  ([idea 10](../ideas/10-internal-ca-dns-stack.md)) — nothing serves `.internal` today
+  ([ADR 37](../decisions/37-lan-name-space-internal.md)).
 - **Monitoring:** Netdata dashboard reachable; child streams to parent once it lands.
 - **Failover:** behaviour with the M910q tunnel (replace vs parallel, idea 04) — decide
   during cutover.
@@ -288,9 +294,10 @@ repo, rendered to `/etc/caddy/Caddyfile`, `Caddyfile reload` on change (ADR 10).
 - Static IP `192.168.2.240` from the reserved `24x` block — assigned during install (see §2).
 - Update the topology diagrams in [overview](../overview.md) and [research 24](../research/24-network-topology-design.md)
   once the IP is assigned.
-- Repoint internal `.home` DNS consumers (router DHCP DNS, device configs) at the edge,
-  and note the M910q dnsmasq is retired (runbook 25 §What changes — DNS/Caddy/tunnel leave
-  the M910q).
+- Repoint internal `.internal` DNS consumers (router DHCP DNS, device configs) at whatever host
+  serves the name space ([ADR 37](../decisions/37-lan-name-space-internal.md)) — there is no such host
+  yet ([idea 10](../ideas/10-internal-ca-dns-stack.md)); the M910q dnsmasq is retired
+  (runbook 25 §What changes — DNS/Caddy/tunnel leave the M910q).
 
 ---
 
@@ -298,10 +305,10 @@ repo, rendered to `/etc/caddy/Caddyfile`, `Caddyfile reload` on change (ADR 10).
 
 - [x] §1 Debian minimal installed on `mmcblk0`; eMMC boots without F12 (entry re-added 2026-08-18)
 - [x] §2 Static IP `192.168.2.240` reachable; SSH key-only login (fleet key, 2026-08-30)
-- [x] §3 `edge.local` resolves on the LAN (mDNS); SSH key-only via fleet key (2026-09-05) — bare `edge` name deferred to OPNsense `.home` DNS (#96/#57)
+- [x] §3 `edge.local` resolves on the LAN (mDNS); SSH key-only via fleet key (2026-09-05) — the bare `edge` name waits on whatever serves `.internal` ([ADR 37](../decisions/37-lan-name-space-internal.md))
 - [x] §3 UFW active (SSH from LAN only); fail2ban on (live run 2026-08-30 — ok=24)
 - [ ] §4 cloudflared tunnel up (`cloudflared tunnel list`)
-- [ ] §5 Caddy serves `*.example.com` and `*.home`
+- [ ] §5 Caddy serves `*.example.com` and `*.internal` (the LAN name space, [ADR 37](../decisions/37-lan-name-space-internal.md))
 - [ ] §6 Netdata child running (RAM-only); dashboard reachable
 - [ ] §7 all validation checks pass
 - [ ] §8 switch port wired; `docs/overview.md` / `docs/hardware.md` reflect the edge node
@@ -315,6 +322,6 @@ repo, rendered to `/etc/caddy/Caddyfile`, `Caddyfile reload` on change (ADR 10).
 - [ADR 19](../decisions/19-cloudflare-tunnel-http-origin.md) — CF tunnel origin pattern (plain HTTP to origin)
 - [Research 25](../research/25-edge-ingress-sbc.md) — PL-market hardware + OS evaluation
 - [Idea 04](../ideas/04-edge-device-tunnel-caddy.md) — original edge idea
-- [Runbook 01](01-init.md) — base setup / hardening pattern · [Runbook 03](03-dns.md) — dnsmasq pattern
+- [Runbook 01](01-init.md) — base setup / hardening pattern · [Runbook 03](03-dns.md) — dnsmasq pattern (retired, [ADR 37](../decisions/37-lan-name-space-internal.md))
 - [Runbook 21](21-tl-sg108e-switch.md) — switch placement · [Runbook 25](25-m910q-os-refresh.md) — DNS/Caddy/tunnel migration context
 - [Issue #65](https://github.com/jaroslaw-bagnicki/Homelab/issues/65) — this work

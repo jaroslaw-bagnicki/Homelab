@@ -12,7 +12,7 @@ Extras for the Edge Wyse 3040 ingress appliance ([ADR 24](../../../docs/decision
 
 | Var | Default | Notes |
 |---|---|---|
-| `edge_dns_search` | `""` | DNS search domain. Empty removes it (clears the installer's `cloud5.ovh` leftover that hijacked bare LAN names); set to `home` once OPNsense `.home` DNS lands. |
+| `edge_dns_search` | `""` | DNS search domain. Empty removes it (clears the installer's `example.com` leftover that hijacked bare LAN names); set to `internal` once the LAN DNS the internal stack serves is live (ADR 37). |
 
 ## Notes
 

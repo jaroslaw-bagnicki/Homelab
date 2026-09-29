@@ -4,6 +4,7 @@
 **Status:** Accepted  
 **Amended:** 2026-08-24 — `.home` DNS changed from dnsmasq-on-edge to the **OPNsense router** ([idea 07](../ideas/07-opnsense-futro-s930.md)); see Decision/Consequences.  
 **Amended:** 2026-09-15 — the "ADR 19 pattern applies" bullet corrected: the edge uses the plain-HTTP origin (TLS terminates at the CF edge), not the abandoned Origin CA / Full (Strict) design.  
+**Amended:** 2026-09-29 — the LAN name space is `.internal` and DNSMasq/`.home` are retired ([ADR 37](37-lan-name-space-internal.md)); the `.home` DNS assignment below (and the OPNsense owner in References) no longer stands — which host serves `.internal` is open in [idea 10](../ideas/10-internal-ca-dns-stack.md). See the amendment note at the end.
 
 ---
 
@@ -24,7 +25,7 @@ Run the homelab's public ingress on a **dedicated, low-power edge appliance** on
 
 - **Hardware — Dell Wyse 3040** (Atom x5-Z8350, 2 GB DDR3L, 8 GB eMMC, GbE, ~90 PLN used — actual purchase 89,00 PLN on 2026-08-13, ~2–3 W fanless). Selected as a deliberate constrained-resources experiment and by far the cheapest reachable GbE device in PL. The Wyse 5070 (4 GB, SATA SSD) is the accepted fallback if the 2 GB ceiling is hit.
 - **Deployment model — bare-metal, not Docker.** `cloudflared` and Caddy install directly on a minimal distro as systemd services. **OS: Debian minimal as the baseline; Alpine Linux trialed in parallel** (sequential on-device trial) as part of the constrained-resources experiment — the Caddy/cloudflared configs are identical either way. Config-as-code preserved: the Caddyfile and cloudflared config are templated by Ansible (ADR 10); Debian keeps the apt/.deb update path.
-- **Architecture split — the edge appliance owns all inbound routing.** External: `*.example.com` → Caddy → backends over the LAN. Internal: `.home` Caddy routing on the edge box, with `*.home` DNS via the **OPNsense router** ([idea 07](../ideas/07-opnsense-futro-s930.md)) once it lands. The M910q is **compute-only** (k3s, ADR 22) — it no longer runs dnsmasq, Caddy, or the tunnel.
+- **Architecture split — the edge appliance owns all inbound routing.** External: `*.example.com` → Caddy → backends over the LAN. Internal: `.internal` Caddy routing on the edge box. **Amended 2026-09-29:** the name space is `.internal` and DNSMasq/`.home` are retired ([ADR 37](37-lan-name-space-internal.md)); the `*.home` DNS owner is **no longer** the OPNsense router — which host serves `.internal` is open in [idea 10](../ideas/10-internal-ca-dns-stack.md). The M910q is **compute-only** (k3s, ADR 22) — it no longer runs dnsmasq, Caddy, or the tunnel.
 - **ADR 19 pattern applies to the homelab edge.** cloudflared → Caddy in **plain HTTP over loopback** (`127.0.0.1:80`); TLS terminates at the Cloudflare edge — the HTTPS/Origin CA origin was attempted and abandoned (ADR 19).
 - **Provisioning.** A new Ansible `edge_host`-style role (systemd units), distinct from `docker_services`.
 
@@ -37,7 +38,7 @@ Run the homelab's public ingress on a **dedicated, low-power edge appliance** on
 - **Bare-metal diverges from the container-first stack** (ADR 03/22) — an intentional exception for a small set of daemons on an internet-facing appliance (cloudflared, Caddy): fewer layers, smaller attack surface, less eMMC write wear, fits 2 GB/8 GB.
 - **Constrained hardware** — 2 GB RAM / 8 GB eMMC are soldered (no upgrade); zero headroom for full-size agents or Arc enrolment. Monitoring on the appliance must use **lightweight components** — a **Netdata child node** ([ADR 27](27-monitoring-strategy.md)) and **Fluent Bit if adopted as a Tier B component** — and must **not cache/buffer data to the eMMC drive**: only a small RAM buffer is allowed (Netdata `memory mode = ram`, no `dbengine` disk store; Fluent Bit in-memory buffering only). If headroom is exhausted, move to the Wyse 5070. Cherry Trail is aging.
 - **Appliance-only OS deviation from ADR 05** — the edge box runs Debian minimal (leaner base, same apt/.deb toolchain) while Ubuntu stays the fleet standard for workload hosts. The Debian-vs-Alpine outcome is locked before the `edge_host` provisioning role is written.
-- **Local DNS moves off the M910q** — `*.home` resolution is served by the **OPNsense router** ([idea 07](../ideas/07-opnsense-futro-s930.md)) once it lands, amending the earlier dnsmasq-on-edge plan (ADR 06 pattern). The M910q drops dnsmasq entirely. A short `.home`-resolution gap is accepted while the OPNsense/router roll-out is in progress ([runbook 25](../runbooks/25-m910q-os-refresh.md), [issue #74](https://github.com/jaroslaw-bagnicki/Homelab/issues/74)).
+- **Local DNS moves off the M910q** — it is served by whatever host runs the internal stack ([idea 10](../ideas/10-internal-ca-dns-stack.md)). **Amended 2026-09-29:** the OPNsense router is **no longer** the owner — DNSMasq and `.home` are retired by [ADR 37](37-lan-name-space-internal.md), and nothing serves `.internal` yet, which amends the earlier dnsmasq-on-edge plan (ADR 06 pattern) as well. The M910q drops dnsmasq entirely, as [runbook 25](../runbooks/25-m910q-os-refresh.md) already did in practice.
 
 ### Alternatives Considered
 
@@ -53,7 +54,7 @@ Run the homelab's public ingress on a **dedicated, low-power edge appliance** on
 
 - [Research 25 — Edge ingress SBC, PL market](../research/25-edge-ingress-sbc.md)
 - [Idea 04 — Dedicated edge device for tunnel + caddy](../ideas/04-edge-device-tunnel-caddy.md)
-- [Idea 07 — OPNsense router on Futro S930](../ideas/07-opnsense-futro-s930.md) — `.home` DNS owner (amends ADR 24, 2026-08-24)
+- [Idea 07 — OPNsense router on Futro S930](../ideas/07-opnsense-futro-s930.md) — the router option; **no longer the `.home` DNS owner** (see the 2026-09-29 amendment)
 - [Issue #65](https://github.com/jaroslaw-bagnicki/Homelab/issues/65) — Dedicated edge device for Cloudflare Tunnel + Caddy ingress
 - [ADR 05](../decisions/05-os-decision-ubuntu-server.md) — OS decision (Ubuntu Server)
 - [ADR 06](../decisions/06-local-dns-dnsmasq.md) — local DNS
@@ -65,3 +66,14 @@ Run the homelab's public ingress on a **dedicated, low-power edge appliance** on
 - [ADR 22](../decisions/22-k3s-arc-homelab.md) — k3s + Azure Arc
 - [ADR 23](../decisions/23-nas-on-ml110.md) — ML110 OMV storage-only
 - [ADR 27](../decisions/27-monitoring-strategy.md) — two-tier monitoring strategy
+
+---
+
+## Amendment — 2026-09-29
+
+[ADR 37](37-lan-name-space-internal.md) retired DNSMasq and `.home`, and set the LAN name space to
+`.internal`. Two clauses above depended on `.home` and no longer stand: the **architecture split**
+(`*.home` DNS via the OPNsense router) and the **local-DNS consequence** (`*.home` resolution served by
+the OPNsense router). Which host serves `.internal` is open in
+[idea 10](../ideas/10-internal-ca-dns-stack.md); everything else — the appliance, the external ingress,
+the bare-metal deployment model and the compute-only M910q — is unchanged.
