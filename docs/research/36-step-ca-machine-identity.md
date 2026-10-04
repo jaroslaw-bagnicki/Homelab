@@ -309,7 +309,36 @@ it costs is the **packaged upgrade path**: the Ansible role must obtain and upda
 keeps a compiler toolchain out of the CA and preserves the minimal-attack-surface rationale. The TPM
 `/dev/tpmrm0` passthrough (below) is a separate concern from the CGO build.
 
-> **Unverified — validation work.** The LXC device-passthrough recipe, the `nesting`/storage-driver
+### Upgrade path for the CGO binary (recommendation)
+
+Because the binary stops being a packaged `.deb`, the upgrade mechanism has to be owned deliberately. The
+repo already has the shape for it — build an image locally and push it to **Zot**
+(`scripts/Push-OpencodeImagesToZot.ps1`, [runbook 20](../runbooks/20-deploy-zot.md)) — and that fits
+**without hosted CI** ([ADR 32](../decisions/32-no-hosted-ci.md)).
+
+- **Build.** A `docker/step-ca-hsm/Dockerfile` (multistage: `golang` + `gcc` + `libpcsclite-dev` +
+  `libtss2-dev` build stage → a minimal carrier stage holding `/usr/local/bin/step-ca`), pinned to a
+  **step-ca release tag** and built on the dev machine. Only `step-ca` needs this custom build — the
+  `step` CLI and `step-kms-plugin` are ordinary pure-Go releases and install normally.
+- **Store.** **Zot**, referenced by **tag *and* digest**. Not the repo (no binaries in git) and not a
+  build on the CA host (no compiler in the CA). The image is only a *carrier* for the binary — the LXC
+  supplies `libpcsclite1` and `tpm2-tss` at runtime, so the carrier stage can stay tiny.
+- **Deploy and upgrade.** The workload's Ansible role pulls the pinned artefact *inside the LXC* with
+  **`skopeo copy docker://… dir:`** (daemonless — no Docker runtime in the CA), extracts
+  `/usr/local/bin/step-ca`, verifies the checksum, installs it and restarts the `step-ca` systemd unit.
+  Bumping the version+digest pins and re-running the playbook **is** the upgrade.
+- **Acceptance check the role must assert.** A stock binary silently lacks TPM support, so verify the
+  artefact: `ldd /usr/local/bin/step-ca` lists the `tss`/`pcsclite` libraries, and
+  `step kms create --json 'tpmkms:name=smoke-test'` succeeds on the host.
+- **Impact and rollback.** A CA restart is low-risk — the root and intermediate are untouched, so nothing
+  needs re-trusting, and short-lived leaves renew from the same CA name. **Never combine a binary upgrade
+  with a key rotation.** Rollback is repinning the previous digest and re-running; CA state (`db/`, the
+  TPM key) is unaffected.
+
+> **Note.** Zot is the *cloudlab* registry, so this is an outbound HTTPS fetch at upgrade time only — pin
+> by digest and verify the checksum rather than trusting a moving tag.
+
+> **Unverified — validation work.** The LXC device-passthrough recipe, the `nesting`/storage-driver"
 > prerequisites for Docker-in-LXC (already flagged in research 35 §7), and the port-53 collision when a
 > resolver runs inside an LXC (research 35 §6) remain untested. The thread's passthrough snippets for
 > the LXC config (`lxc.cgroup2.devices.allow` / `lxc.mount.entry` for `/dev/tpmrm0`) are transcribed,

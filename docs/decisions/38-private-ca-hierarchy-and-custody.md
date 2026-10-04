@@ -65,9 +65,10 @@ with the TPM bound through, rather than one all-in-one stack).
   verify against the fleet root, which is the whole point of the exercise.
 - **The root is never online**, so compromising `pve` cannot forge a new intermediate — the worst case is
   a stolen 1-year intermediate, not a stolen root.
-- **TPM-bound custody forces the CGO build of `step-ca`** — the stock package cannot use a TPM. Packaging
-  and upgrades must ship the `step-ca:hsm` image or a source build
-  ([research 36 §4](../research/36-step-ca-machine-identity.md)).
+- **TPM-bound custody forces a CGO build of `step-ca`** — the stock package cannot use a TPM, and the
+  bundled `step-ca:hsm` image is only that build in a container, *not* a Docker requirement. Packaging and
+  upgrades therefore ship a **CGO binary** (built from source or lifted from the `hsm` image), with the
+  Ansible role owning the version ([research 36 §4–§5](../research/36-step-ca-machine-identity.md)).
 - **Recovery is cheap because the root stays offline: only the intermediate is re-issued.** If `pve` or
   its dTPM dies, the intermediate key is gone but the **root is unaffected** — the runbook re-signs a
   fresh 1-year intermediate with the offline root, and the fleet and workstations keep trusting the same
