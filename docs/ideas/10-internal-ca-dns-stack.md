@@ -11,10 +11,10 @@
 > ([ADR 07](../decisions/07-reverse-proxy-caddy.md)) is not a fleet trust anchor
 > ([ADR 34](../decisions/34-lan-tls-only.md) defers that to [#126](https://github.com/jaroslaw-bagnicki/Homelab/issues/126)).
 
-**Status**: 🧠 Idea — the **name space is decided** ([ADR 37](../decisions/37-lan-name-space-internal.md)); the issuing tool and the host placement are still open
-**Date**: 2026-09-29 (extended 2026-09-30)
+**Status**: 📋 Planned — decided by [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) (three-tier chain, key custody, `step-ca`, host `pve`); implementation not started
+**Date**: 2026-09-29 (extended 2026-09-30; decided 2026-10-04)
 **Source**: [Gemini — pseudo-domains for local networks](https://share.gemini.google/UPNAO3UsBe8l) (published 2026-09-29) · [machine identity](https://share.gemini.google/5jgOfXFrcdLV) · [step-ca overview](https://share.gemini.google/B603IrdX0Zgq) · [TPM 2.0 in business](https://share.gemini.google/9Ph6gwBvDzmk) · [step-ca architecture](https://share.gemini.google/xB7DpeltqTaG) (all 2026-09-30, published 2026-10-04)
-**Related**: [research 35](../research/35-private-ca-and-lan-naming.md) (naming + stack) · [research 36](../research/36-step-ca-machine-identity.md) (tool, key custody, placement, DR) · [research 37](../research/37-tpm2-hardware-and-fleet.md) (TPM hardware) · [ADR 37](../decisions/37-lan-name-space-internal.md) (`.internal`; DNSMasq and `.home` retired) · [#126](https://github.com/jaroslaw-bagnicki/Homelab/issues/126) (the private-CA ADR this feeds) · [ADR 34](../decisions/34-lan-tls-only.md) · [ADR 06](../decisions/06-local-dns-dnsmasq.md) / [ADR 07](../decisions/07-reverse-proxy-caddy.md) (incumbents) · [ADR 31](../decisions/31-static-address-scheme.md) (a guest on `pve`) · [ADR 22](../decisions/22-k3s-arc-homelab.md) (k3s — the `lab` blocker)
+**Related**: [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) (the decision) · [research 35](../research/35-private-ca-and-lan-naming.md) (naming + stack) · [research 36](../research/36-step-ca-machine-identity.md) (tool, key custody, placement, DR) · [research 37](../research/37-tpm2-hardware-and-fleet.md) (TPM hardware) · [ADR 37](../decisions/37-lan-name-space-internal.md) (`.internal`; DNSMasq and `.home` retired) · [#126](https://github.com/jaroslaw-bagnicki/Homelab/issues/126) (answered by ADR 38) · [ADR 34](../decisions/34-lan-tls-only.md) · [ADR 06](../decisions/06-local-dns-dnsmasq.md) / [ADR 07](../decisions/07-reverse-proxy-caddy.md) (incumbents) · [ADR 31](../decisions/31-static-address-scheme.md) (a guest on `pve`) · [ADR 22](../decisions/22-k3s-arc-homelab.md) (k3s — the `lab` blocker)
 
 ---
 
@@ -79,36 +79,36 @@ The OPNsense options the source thread evaluated are **not in the current shortl
 built-in CA has no ACME *server*, and a native FreeBSD `step-ca` binary falls outside its XML backup.
 Detail: [research 35 §7](../research/35-private-ca-and-lan-naming.md).
 
-## Tool, key custody and shape (research 36)
+## Tool, key custody and shape — decided ([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md))
 
-The 2026-09-30 threads sharpen the three open pieces. None is decided — they narrow the candidate.
+The 2026-09-30 threads sharpened the three open pieces; **ADR 38 settled them**:
 
 - **Tool: `step-ca`.** It covers ACME (proxies, k3s), OIDC identity-based issuance, and SSH
   certificates from one small binary — the machine-identity outcome of SPIRE or Vault PKI without the
   second control plane. SPIRE is the heavyweight alternative, Vault the middle ground.
   [research 36 §1–§3](../research/36-step-ca-machine-identity.md)
-- **Key custody.** The intermediate key can live in **`pve`'s dTPM 2.0** — but only with the CGO
-  `step-ca:hsm` build (the stock binary cannot use a TPM), and an emulated vTPM is explicitly **not** a
-  security boundary ([research 37 §6](../research/37-tpm2-hardware-and-fleet.md)). **Azure Key Vault**
-  (matching [#126](https://github.com/jaroslaw-bagnicki/Homelab/issues/126)'s sketch) and a **YubiKey /
-  YubiHSM** are the alternatives. [research 36 §4](../research/36-step-ca-machine-identity.md)
-- **Shape.** Rather than one all-in-one Compose stack, the CA should be a **dedicated unprivileged LXC
-  on `pve`**, provisioned by Ansible, with `/dev/tpmrm0` passed through — with **Caddy + Unbound in a
-  separate LXC**. Coupling the CA to the resolver and proxy creates cold-start dependencies and widens
-  the CA's attack surface. [research 36 §5](../research/36-step-ca-machine-identity.md)
+- **Certificate chain.** Three tiers — **10-year root**, **1-year intermediate**, short-lived leaves;
+  the root signs the intermediate, the intermediate signs the leaves.
+  ([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md))
+- **Key custody.** Root private key **offline on an IronKey** (later a YubiKey PIV); intermediate key in
+  the **`pve` dTPM 2.0**, which needs the CGO `step-ca:hsm` build. An emulated vTPM is explicitly **not**
+  a security boundary ([research 37 §6](../research/37-tpm2-hardware-and-fleet.md)); **Azure Key Vault**
+  and a **YubiHSM** remain fallbacks. [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md)
+- **Shape.** CA on **`pve`** (required by the TPM), provisioned by Ansible — [research 36 §5](../research/36-step-ca-machine-identity.md)
+  leans toward a **dedicated unprivileged LXC** with `/dev/tpmrm0` bound through, rather than one shared
+  Compose stack with Caddy + Unbound.
 - **Disaster recovery.** With a TPM-bound key, restoring the LXC is not enough: **re-issue the CA and
   redistribute the new root via Ansible**, accepting a manual re-trust window for non-Ansible devices.
   [research 36 §6](../research/36-step-ca-machine-identity.md)
 
 ## Open questions
 
-- **Host**: `pve` (the refined lean — a **dedicated LXC for the CA**, Caddy + Unbound separate), `edge`
-  (bare metal) or `lab` (k3s, blocked until k3s lands) — the gate for the whole idea, since it decides
-  the deployment shape.
-- **CA hierarchy and key custody** — [#126](https://github.com/jaroslaw-bagnicki/Homelab/issues/126)
-  sketches offline root / Key Vault intermediate / short-lived leaves; `step-ca` is the driver here.
-  **TPM vs Key Vault vs YubiKey vs file** for the intermediate, and the CGO-build packaging that TPM/
-  PKCS#11 custody forces, are open.
+- **Resolver**: Unbound vs AdGuard Home vs dnsmasq — the one part of the stack **ADR 38 deliberately
+  leaves open**.
+- **Wildcard vs per-service leaves** — ADR 38 fixes short-lived leaves but not whether one wildcard sits
+  on the proxy or each service gets its own.
+- **Deployment shape and the CGO build** — dedicated LXC vs VM, and packaging/upgrading the `step-ca:hsm`
+  image.
 - **One wildcard on the proxy, or per-service leaves?** Simplest operationally, but the same key sits
   in front of every service, and one expiry takes everything down together.
 - **Resolver**: Unbound vs AdGuard Home vs dnsmasq.

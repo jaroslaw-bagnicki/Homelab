@@ -16,9 +16,13 @@ live in a TPM, where the service should run in Proxmox, and what happens when th
 [#126](https://github.com/jaroslaw-bagnicki/Homelab/issues/126) and
 [idea 10](../ideas/10-internal-ca-dns-stack.md).
 
-**Status**: 📝 Analysis — no decision is settled here. The issuing tool (`step-ca`) is now the clear
-leader within these threads, but [#126](https://github.com/jaroslaw-bagnicki/Homelab/issues/126) owns
-the choice, the hierarchy and the placement.
+**Status**: 📝 Analysis — the tool, the hierarchy, key custody and the host are now **decided** by
+[ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md); this document is the analysis behind that
+decision.
+
+> **Decision authority:** [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) records the
+> settled outcome — `step-ca` as the issuing tool, a 10-year offline root / 1-year TPM-bound intermediate /
+> short-lived leaves chain, and `pve` as the host. The rows below are the analysis that fed it.
 
 > **Verification status.** As [research 35](35-private-ca-and-lan-naming.md) established, a transcribed
 > thread is a *claim*, not a fact. For this document the `step-ca` mechanics were checked against
@@ -38,8 +42,8 @@ the choice, the hierarchy and the placement.
 | Tool for machine identity | **`step-ca`** — chosen by the operator as the candidate; SPIRE is the heavyweight alternative, Vault the middle ground (§1) |
 | Issuance interfaces | **ACME** for proxies/Kubernetes, **OIDC** for humans and workloads, **JWK** for scripts, **SSHPOP** for SSH cert renewal — all verified provisioner types (§2, §3) |
 | SSH certificates | Wanted — remove `authorized_keys`, SSH CA with short-lived user/host certificates (§3) |
-| CA key custody | Intermediate in a **TPM** is the operator's aim; upstream supports `tpmkms` (CGO build) and PKCS#11, or **Azure Key Vault** which matches [#126](https://github.com/jaroslaw-bagnicki/Homelab/issues/126)'s sketch (§4) |
-| Host | **Dedicated unprivileged LXC on `pve`**, device-passthrough of `/dev/tpmrm0`, provisioned by Ansible; Caddy + Unbound in a **separate** LXC — not one shared Compose stack (§5) |
+| CA key custody | **Decided** ([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md)) — intermediate in the `pve` **dTPM 2.0**, root offline on an IronKey (later a YubiKey PIV); upstream supports `tpmkms` and PKCS#11, both needing the CGO build (§4) |
+| Host | **Decided** ([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md)) — `pve`, required by the TPM; the dedicated-unprivileged-LXC shape below is the working implementation (§5) |
 | Disaster recovery | **Regenerate the CA and redistribute the new root via Ansible** rather than back up the TPM key — with a propagation window for non-Ansible devices (§6) |
 | Wildcards | Unchanged from [research 35 §4](35-private-ca-and-lan-naming.md) — DNS-01 or manual, not HTTP-01 |
 

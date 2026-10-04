@@ -16,9 +16,10 @@ recorded too (§6, §7).
 
 **Status**: 📝 Analysis — the **name space is decided** (`.internal`,
 [ADR 37](../decisions/37-lan-name-space-internal.md), §1), which also retires DNSMasq and `.home`. The
-issuing tool, the CA hierarchy and the **host placement** are still open (§7, §8) — they belong to the
-ADR that closes [#126](https://github.com/jaroslaw-bagnicki/Homelab/issues/126). This document is the
-analysis that feeds them, not the authority for them.
+issuing tool, the CA hierarchy, key custody and the **host placement** are now decided by
+[ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) — §7 and §8 below are the analysis that fed
+that decision, not open questions. The resolver choice remains open. This document is the analysis behind
+the decisions, not their authority.
 
 > ⚠️ **Verification status**: nothing in this document was run on the fleet. The RFC/ICANN claims are
 > the thread's own citations and are **not independently read** for this document; the `step-ca`
@@ -34,8 +35,8 @@ analysis that feeds them, not the authority for them.
 
 > **Decision authority:** [ADR 37](../decisions/37-lan-name-space-internal.md) — the LAN name space is
 > `.internal`, and DNSMasq / `.home` ([ADR 06](../decisions/06-local-dns-dnsmasq.md)) are retired. The
-> rows marked **open** below are *not* decided by ADR 37; they belong to the ADR that closes
-> [#126](https://github.com/jaroslaw-bagnicki/Homelab/issues/126).
+> hierarchy, custody, tool and host rows were later settled by
+> [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md); the resolver row remains open.
 
 | Decision | Outcome |
 |---|---|
@@ -45,10 +46,10 @@ analysis that feeds them, not the authority for them.
 | `.lan` | Rejected — no RFC, no ICANN reservation |
 | `.local` | Rejected for unicast DNS — RFC 6762 reserves it for mDNS; it stays mDNS-only |
 | Subdomain of the owned public domain | **Fallback**, not adopted — publicly trusted TLS, but internal hostnames become public |
-| Issuing tool | **Open** — `step-ca` is the leading candidate (§3, §4); `cfssl` / Ansible-driven OpenSSL are the alternatives named in [#126](https://github.com/jaroslaw-bagnicki/Homelab/issues/126) |
-| CA hierarchy & key custody | **Open** — [#126](https://github.com/jaroslaw-bagnicki/Homelab/issues/126) sketches offline root / Key Vault intermediate / short-lived leaves |
-| Names issued for | **Open** — one wildcard on the proxy, or per-service leaves (§4, §8) |
-| Host placement | **Open** — `pve` (Docker Compose in an LXC), `edge` (bare metal), `lab` (k3s, blocked) (§7) |
+| Issuing tool | **`step-ca`** ([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md)) — `cfssl` / Ansible-driven OpenSSL were the alternatives named in [#126](https://github.com/jaroslaw-bagnicki/Homelab/issues/126) |
+| CA hierarchy & key custody | **Three-tier** — 10-year root offline, 1-year intermediate in the `pve` dTPM, short-lived leaves ([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md)) |
+| Names issued for | **Short-lived leaves** signed by the intermediate ([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md)); one wildcard on the proxy or per-service leaves remains an implementation choice (§4, §8) |
+| Host placement | **`pve`** — required by the TPM ([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md)); `edge` and `lab` are no longer candidates (§7) |
 | Resolver | **Open** — Unbound vs AdGuard Home vs dnsmasq (§6) |
 
 ---
