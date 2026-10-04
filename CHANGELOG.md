@@ -11,6 +11,10 @@ entry. Notable changes only: no instruction-file tweaks, typo/link fixes, cross-
 corrections, or changelog bookkeeping.
 Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month and newest entry first.
 
+## 2026‑10
+
+- **(docs)** Private CA — offline 10-year root, TPM-bound 1-year intermediate on `pve`, short-lived leaves — [ADR 38](docs/decisions/38-private-ca-hierarchy-and-custody.md)
+
 ## 2026‑09
 
 - **(docs)** Adopt `.internal` as the LAN name space, retiring DNSMasq and `.home` — [ADR 37](docs/decisions/37-lan-name-space-internal.md)
