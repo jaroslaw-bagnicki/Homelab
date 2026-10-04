@@ -2,10 +2,11 @@
 
 > Stand up the fleet's issuing CA: an unprivileged Debian 13 LXC (`ca`, LXC **215**, `192.168.2.215`)
 > on the `pve` node with the host's **TPM 2.0** passed through, running **`step-ca` as a native
-> systemd service** (no Docker), holding the intermediate from
-> [runbook 35](35-private-ca-init.md) and serving an **ACME provisioner**. Decision:
+> systemd service** (no Docker), serving an **ACME provisioner** for LAN services. The intermediate key
+> is created **inside the TPM** and only a **CSR** leaves the host; the root signs that CSR **offline**
+> ([runbook 36](36-private-ca-init.md)). Decision:
 > [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md); mechanics:
-> [research 36 §5](../research/36-step-ca-machine-identity.md) and the measured gate in
+> [research 36 §5](../research/36-step-ca-machine-identity.md); measured gate:
 > [#141](https://github.com/jaroslaw-bagnicki/Homelab/issues/141).
 >
 > ⚠ **This runbook is unexecuted.** It is written from ADR 38, research 36–37, and the
@@ -14,13 +15,15 @@
 > each as unverified until the first execution records its result. Gate-measured facts are marked
 > **(measured #141)**.
 >
-> ⚠ **Scope / split.** This is the **one-off on-host deployment**; the offline root/intermediate
-> ceremony is [runbook 35](35-private-ca-init.md). The two interleave once: **§1–§2 below run
-> before [runbook 35 §3](35-private-ca-init.md)**, because the intermediate key is created in the TPM
-> bound to this LXC; **§3–§6 run after [runbook 35 §5](35-private-ca-init.md)**.
-> Root distribution ([#144](https://github.com/jaroslaw-bagnicki/Homelab/issues/144)), proxy wiring
-> ([#142](https://github.com/jaroslaw-bagnicki/Homelab/issues/142)), and the first migrated service
-> ([#143](https://github.com/jaroslaw-bagnicki/Homelab/issues/143)) are out of scope.
+> ⚠ **Order — one-way.** Run **§1–§5 first**, then the offline ceremony
+> ([runbook 36](36-private-ca-init.md)), then **resume at §6**. §1–§5 need no root key and end by
+> handing out `intermediate_ca.csr`; §6 installs the root-signed certificate and starts the service.
+>
+> ⚠ **Scope.** This is the **on-host deployment**; the offline root/intermediate signing is
+> [runbook 36](36-private-ca-init.md). Root distribution to the fleet is
+> [#144](https://github.com/jaroslaw-bagnicki/Homelab/issues/144), proxy wiring is
+> [#142](https://github.com/jaroslaw-bagnicki/Homelab/issues/142), and the first migrated service is
+> [#143](https://github.com/jaroslaw-bagnicki/Homelab/issues/143) — all out of scope.
 >
 > ⚠ **Execution note.** Author on `docs/private-ca-runbooks`; **run only after CR**. §1–§2 are
 > manual/console on the `pve` host, reached as `ssh fleetadm@192.168.2.201`; the Ansible steps (§4–§6)
@@ -52,12 +55,12 @@ dedicated unprivileged LXC keeps it off the Proxmox host and away from the edge 
 - **Base roles** — `common` (hostname, UTC, NTP, **Avahi**), `security` (UFW default-deny; SSH + CA
   `9000` from `192.168.2.0/24`), `fluentbit` (ships the CA's journald to VictoriaLogs on `vtstack`).
 - **`ansible/workloads/step-ca/`** — a self-contained recipe installing `step-ca` + `step` CLI +
-  `step-kms-plugin` (checksum-verified) and `libpcsclite1`, deploying `ca.json` with the pinned
-  `tpmkms` storage directory, and running it as a native systemd unit.
+  `step-kms-plugin` (checksum-verified) and `libpcsclite1`, creating the intermediate key in the TPM,
+  and emitting `intermediate_ca.csr`.
 - **An ACME provisioner** — so the reverse proxy ([#142](https://github.com/jaroslaw-bagnicki/Homelab/issues/142))
   and services renew short-lived leaves automatically.
-- **Not backed up as a node** — the CA state is the offline root (IronKey) plus the TPM sealed key
-  ([runbook 35 §7](35-private-ca-init.md)); standard node backup is out of [ADR 02](../decisions/02-backup-strategy-restic-blob.md)'s scope.
+- **No node backup** — the CA's recovery is **re-issue, not restore** ([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md)):
+  the offline root stays untouched and the intermediate is re-signed, with no client re-trust.
 
 ## Prerequisites
 
@@ -65,11 +68,12 @@ dedicated unprivileged LXC keeps it off the Proxmox host and away from the edge 
 - [ ] TPM available and cleared on second-hand hardware (`Clear PTT` in BIOS;
       [research 37 §5](../research/37-tpm2-hardware-and-fleet.md)).
 - [ ] A Debian 13 LXC template available on the `pve` node (`pveam`).
-- [ ] Runbook 35 §1–§2 done — the offline root exists on the IronKey.
 - [ ] Ansible collections installed (`ansible-galaxy collection install -r ansible/requirements.yml`).
+- [ ] Azure Key Vault `homelab-bysxdb-kv` reachable from the controller (CA provisioner password, and
+      the Fluent Bit store password like every other node).
 - [ ] Fleet key in `ssh-agent` (`ssh-add -l` shows `fleetadm@homelab`).
-- [ ] Azure Key Vault `homelab-bysxdb-kv` reachable from the controller for the CA provisioner password
-      (and the Fluent Bit store password, like every other node).
+- [ ] The IronKey and the air-gapped signing island are needed for the **later** offline step
+      ([runbook 36](36-private-ca-init.md)), not for §1–§5.
 
 ---
 
@@ -234,7 +238,7 @@ ansible-playbook ansible/playbooks/playbook-ca.yml --diff
 
 > **Backout.** Re-run with the previous inventory/host_vars.
 
-## 5. Provision the `step-ca` workload
+## 5. Provision the `step-ca` workload — tooling, TPM key, CSR
 
 The workload is `ansible/workloads/step-ca/` ([workload convention](../workloads.md)). **Writing the
 role is out of scope here** — this section specifies what it must contain. From the repo root:
@@ -254,10 +258,30 @@ ansible-playbook ansible/workloads/step-ca/step-ca-playbook.yml --diff
   needs no PCSC (measured #141).
 - **Layout** — a `step` service user; `/etc/step-ca/{certs,config,secrets}` and
   `/var/lib/step-ca/tpm`.
-- **Certificates** — deploy `root_ca.crt` and `intermediate_ca.crt` from
-  [runbook 35 §4–§5](35-private-ca-init.md); the intermediate's private key is **never** a file (it is
-  the TPM sealed blob at `/var/lib/step-ca/tpm/key-homelab-intermediate-ca.tpmobj`).
-- **`ca.json`** — templated with the TPM key and the **pinned** storage directory (measured #141):
+- **Intermediate key in the TPM** — create it with the **pinned storage directory** (measured #141):
+
+  ```sh
+  step kms create --json 'tpmkms:name=homelab-intermediate-ca;storage-directory=/var/lib/step-ca/tpm'
+  ```
+
+  The key material lands in `/var/lib/step-ca/tpm/key-homelab-intermediate-ca.tpmobj` as a JSON blob.
+  **This is not a private-key file** — it is the sealed blob, useless off this TPM, and required on
+  disk for the service to start.
+- **CSR** — emit `intermediate_ca.csr`, signed by the TPM key, for the offline root to sign:
+
+  ```sh
+  step certificate create "Homelab Intermediate CA" \
+    intermediate_ca.csr intermediate_ca_key.pub \
+    --csr --profile intermediate-ca \
+    --kms 'tpmkms:storage-directory=/var/lib/step-ca/tpm' \
+    --key 'tpmkms:name=homelab-intermediate-ca'
+  ```
+
+  The exact `--csr` flag combination is **unverified**; confirm the CSR inspects correctly. **This task
+  must be re-runnable without recreating the key** — the annual re-sign
+  ([runbook 36 §4](36-private-ca-init.md)) re-runs it to produce a fresh CSR from the same TPM key.
+- **`ca.json`** — templated with the TPM key and the **pinned** storage directory (measured #141),
+  with the certificate paths the offline ceremony will fill:
 
   ```json
   {
@@ -268,24 +292,46 @@ ansible-playbook ansible/workloads/step-ca/step-ca-playbook.yml --diff
   }
   ```
 
+  **`step ca init` cannot bootstrap a TPM-backed CA** (measured #141) — its `--kms` accepts only
+  `azurekms`, and `--kms-intermediate 'tpmkms:…'` is silently ignored. The role may run `step ca init`
+  to create the provisioner skeleton and password, then **replace** the software intermediate
+  (delete `secrets/intermediate_ca_key`) and patch `ca.json`; it must not leave a software intermediate
+  key behind.
 - **Provisioner password** — fetch the CA provisioner password from Azure Key Vault
   (`homelab-bysxdb-kv`) and write it to a **root-only** file (`/etc/step-ca/secrets/password`, mode
   `0600`); the service reads it with `--password-file`, so it never appears in the unit's
   `Environment=` or on a command line.
-- **systemd** — `step-ca.service`, enabled and `restart=on-failure`, with
-  `ExecStart=/usr/bin/step-ca /etc/step-ca/config/ca.json --password-file /etc/step-ca/secrets/password`;
-  a handler restarts the service on config change.
-- **ACME provisioner** — `step ca provisioner add acme --type ACME` against the local CA, idempotent.
+- **systemd** — stage `step-ca.service` (enabled, `restart=on-failure`,
+  `ExecStart=/usr/bin/step-ca /etc/step-ca/config/ca.json --password-file /etc/step-ca/secrets/password`),
+  but **do not start it yet** — there is no signed intermediate certificate until §6.
 - **Root export** — make `root_ca.crt` available for distribution
   ([#144](https://github.com/jaroslaw-bagnicki/Homelab/issues/144)); distribution itself is out of scope.
 - **Ansible-side README** describing the role, its variables, and the AKV secret.
 
-> **Acceptance.** `systemctl is-active step-ca` → `active`; `systemctl is-enabled step-ca` → `enabled`;
-> `ca.json` carries the `kms` block; no `intermediate_ca_key` file exists anywhere.
+> **Acceptance.** `step kms` lists `homelab-intermediate-ca`; the `.tpmobj` and `intermediate_ca.csr`
+> exist; `ca.json` carries the `kms` block; `step-ca` is **not** running (no certificate yet); no
+> `intermediate_ca_key` file exists.
 
-> **Backout.** `systemctl disable --now step-ca`; restore the previous `ca.json`/`certs/`.
+> **Backout.** `pct destroy 215` (§2); nothing is trusted yet.
 
-## 6. Validate
+## 6. Resume — install the signed intermediate and start the CA
+
+This section runs **after** the offline ceremony ([runbook 36 §3](36-private-ca-init.md)) returns
+`intermediate_ca.crt`.
+
+```sh
+# on the ca guest
+install -m 0644 root_ca.crt         /etc/step-ca/certs/root_ca.crt
+install -m 0644 intermediate_ca.crt /etc/step-ca/certs/intermediate_ca.crt
+
+# add the ACME provisioner so the proxy (#142) can enrol
+step ca provisioner add acme --type ACME \
+  --ca-url https://192.168.2.215:9000 --root /etc/step-ca/certs/root_ca.crt
+
+systemctl enable --now step-ca
+```
+
+**Validate:**
 
 ```sh
 CA=https://192.168.2.215:9000
@@ -304,9 +350,6 @@ curl -s --connect-timeout 5 -o /dev/null -w '%{http_code}\n' http://192.168.2.21
 
 # UFW is the LAN boundary
 pct exec 215 -- ufw status verbose     # 22 + 9000 ALLOW IN 192.168.2.0/24
-
-# installed versions / no pin — record what shipped
-pct exec 215 -- step-ca version
 ```
 
 **Reboot survival** — `onboot 1`, the udev rule, and `restart=on-failure` together:
@@ -339,9 +382,10 @@ must report no changes.
 - **Leaves auto-renew** — 24 h default, 7 d maximum; the reverse proxy renews against the ACME
   directory ([#142](https://github.com/jaroslaw-bagnicki/Homelab/issues/142)). No CRL/OCSP: revocation
   is by short lifetime (ADR 38's accepted residual).
-- **Annual intermediate re-sign** — [runbook 35 §8](35-private-ca-init.md); set a reminder.
+- **Annual intermediate re-sign** — [runbook 36 §4](36-private-ca-init.md): re-run §5's CSR task for a
+  fresh CSR from the same TPM key, sign offline, then re-run §6. No new key, no new client trust.
 - **PTT key-loss hazard** — a BIOS update, `Clear PTT`, or NVRAM reset destroys the sealed key;
-  recover with [runbook 35 §9](35-private-ca-init.md). The root is unaffected.
+  recover with [runbook 36 §5](36-private-ca-init.md). The root is unaffected.
 - **Name resolution** — nothing resolves `ca.internal` yet (resolver is
   [idea 10](../ideas/10-internal-ca-dns-stack.md)); until then use the IP or a hosts entry.
 - **Out of scope** — proxy wiring [#142](https://github.com/jaroslaw-bagnicki/Homelab/issues/142),
@@ -359,14 +403,15 @@ summary, and each result when it is first run.
 - [ ] §2 LXC 215 `ca` created unprivileged, `.215`, TPM passed through
 - [ ] §3 `fleetadm` key-only SSH works; `sudo -n whoami` → root
 - [ ] §4 `playbook-ca.yml` applied cleanly; UFW `22` + `9000`; Avahi + Fluent Bit running
-- [ ] §5 step-ca workload applied; service `active` + `enabled`; `ca.json` has the `kms` block
-- [ ] §6 `step ca health` ok; ACME directory responds; leaf chain-verified; plaintext refused
-- [ ] §6 survives `pct reboot 215`; leaf re-issues; idempotent re-run reports no changes
+- [ ] §5 step-ca workload applied; TPM key created; CSR emitted; service **not** started
+- [ ] §6 (after runbook 36) signed intermediate installed; service `active` + `enabled`; ACME directory responds
+- [ ] §6 leaf chain-verified; plaintext refused; survives `pct reboot 215`; idempotent re-run
 - [ ] §7 annual re-sign reminder set; PTT recovery understood
 
 ## Follow-ups
 
 - **Workload role** — `ansible/workloads/step-ca/` is specified in §5 but not written here (non-goal).
+- **Offline ceremony** — [runbook 36](36-private-ca-init.md), between §5 and §6.
 - **Proxy wiring** — [#142](https://github.com/jaroslaw-bagnicki/Homelab/issues/142).
 - **First service** — [#143](https://github.com/jaroslaw-bagnicki/Homelab/issues/143) (`https://netdata.internal`).
 - **Root distribution** — [#144](https://github.com/jaroslaw-bagnicki/Homelab/issues/144).
@@ -378,7 +423,7 @@ summary, and each result when it is first run.
 - [Research 36 §5](../research/36-step-ca-machine-identity.md) — the measured LXC TPM passthrough recipe
 - [Research 37 §5–§6](../research/37-tpm2-hardware-and-fleet.md) — the `pve` Intel PTT fTPM; Proxmox TPM shapes
 - [Issue #141](https://github.com/jaroslaw-bagnicki/Homelab/issues/141) — the measured TPM custody gate
-- [Runbook 35](35-private-ca-init.md) — the offline root/intermediate ceremony this deployment consumes
+- [Runbook 36](36-private-ca-init.md) — the offline root/intermediate ceremony this deployment consumes
 - [Runbook 33](33-deploy-victorialogs.md) (LXC/Ansible pattern) · [Runbook 28](28-pve-proxmox-node.md) (Proxmox base)
 - [ADR 31](../decisions/31-static-address-scheme.md) (guest numbering) · [ADR 34](../decisions/34-lan-tls-only.md) (TLS-only) ·
   [ADR 36](../decisions/36-log-collector-fluentbit.md) (Fluent Bit) · [ADR 37](../decisions/37-lan-name-space-internal.md) (`.internal`)
