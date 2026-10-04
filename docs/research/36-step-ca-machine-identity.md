@@ -46,7 +46,7 @@ decision.
 | Tool for machine identity | **`step-ca`** — chosen by the operator as the candidate; SPIRE is the heavyweight alternative, Vault the middle ground (§1) |
 | Issuance interfaces | **ACME** for proxies/Kubernetes, **OIDC** for humans and workloads, **JWK** for scripts, **SSHPOP** for SSH cert renewal — all verified provisioner types (§2, §3) |
 | SSH certificates | Wanted — remove `authorized_keys`, SSH CA with short-lived user/host certificates (§3) |
-| CA key custody | **Decided** ([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md)) — intermediate in the `pve` **dTPM 2.0**, root offline on an IronKey (later a YubiKey PIV); the TPM path is pure Go on the **stock** binary, while PKCS #11 / YubiKey PIV need the CGO build (§4, §5) |
+| CA key custody | **Decided** ([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md)) — intermediate in the `pve` **TPM 2.0** (an **Intel PTT firmware TPM**, not a discrete chip — [research 37 §5](37-tpm2-hardware-and-fleet.md)), root offline on an IronKey (later a YubiKey PIV); the TPM path is pure Go on the **stock** binary, while PKCS #11 / YubiKey PIV need the CGO build (§4, §5) |
 | Host | **Decided** ([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md)) — `pve`, required by the TPM; the dedicated-unprivileged-LXC shape below is the working implementation (§5) |
 | Disaster recovery | **Re-issue the intermediate only** — the offline root is untouched, so no root re-issue and **no client re-trust**; only a root rotation needs redistribution (**decided** — [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md)) (§6) |
 | Wildcards | Unchanged from [research 35 §4](35-private-ca-and-lan-naming.md) — DNS-01 or manual, not HTTP-01 |
@@ -186,8 +186,10 @@ requester ──(1) OAuth login──► IdP
 ## §4 — Putting the CA key in the TPM (and the thread's config error)
 
 This is the thread's most security-interesting idea: instead of keeping the intermediate CA private key
-as a password-encrypted file on disk, generate it **inside the Wyse 5070's dTPM 2.0** so it never
-exists in the clear — signing happens in hardware.
+as a password-encrypted file on disk, generate it **inside the Wyse 5070's TPM 2.0** so it never
+exists in the clear — signing happens in hardware. That TPM is an **Intel PTT firmware TPM**, not a
+discrete chip ([research 37 §5](37-tpm2-hardware-and-fleet.md)); the custody caveat that implies is
+recorded in §8.
 
 **Verified upstream** ([Smallstep — Cryptographic Protection](https://smallstep.com/docs/step-ca/cryptographic-protection/)):
 
@@ -217,7 +219,7 @@ exists in the clear — signing happens in hardware.
   but `tpmkms` is pure Go and compiled into the stock binary; the CGO/`hsm` build is for **PKCS #11 and
   YubiKey PIV**. Evidence is in §5, and the claim is now **confirmed on hardware** (2026-10-04): the
   stock `step-ca` v0.30.2 binary — `CGO_ENABLED=0`, statically linked, 133 `tpmkms` symbol references,
-  zero PCSC — created a `pve` dTPM key, signed an intermediate with it, and served a CA that issued a
+  zero PCSC — created a `pve` TPM key, signed an intermediate with it, and served a CA that issued a
   chain-verified leaf. It **does** contradict the upstream docs page, which is stale.
 - **PKCS #11 is the general path** and covers YubiHSM 2, Nitrokey HSM 2, SoftHSMv2 and any
   `pkcs11`-exposing device, including a `tpm2-pkcs11` bridge:
@@ -245,7 +247,7 @@ exists in the clear — signing happens in hardware.
 
 **Trade-offs the thread names honestly:**
 
-| | Key in dTPM | Key as encrypted file |
+| | Key in TPM | Key as encrypted file |
 |---|---|---|
 | Private key on disk / in RAM | Never in the clear; signing in hardware | Encrypted file; decrypted into process memory to sign |
 | Exfiltration on container compromise | Key cannot leave the chip | Possible if password + file are taken together |
@@ -254,10 +256,12 @@ exists in the clear — signing happens in hardware.
 | Host requirement | The node must expose the TPM (`/dev/tpmrm0`); the **stock** binary suffices (TPM KMS is pure Go) | Any host |
 
 **Per-node TPM availability** decides which node *could* host a TPM-backed CA —
-see [research 37 §4](37-tpm2-hardware-and-fleet.md): `pve` (Wyse 5070) has a discrete dTPM 2.0, the
-M910q has one, the Wyse 3040 and Futro S930 do not. The thread also flags that the fleet could reach
-hardware key custody on nodes *without* a TPM by attaching a **YubiKey / YubiHSM 2 / Nitrokey** or a
-**motherboard TPM header module** — the TPM-technology side of that is in research 37.
+see [research 37 §4](37-tpm2-hardware-and-fleet.md): `pve` (Wyse 5070) has a **TPM 2.0 — an Intel PTT
+firmware TPM, not a discrete chip** (measured 2026-10-04, [research 37 §5](37-tpm2-hardware-and-fleet.md));
+the M910q's is still an unverified thread claim, and the Wyse 3040 and Futro S930 have none. The thread
+also flags that the fleet could reach hardware key custody on nodes *without* a TPM by attaching a
+**YubiKey / YubiHSM 2 / Nitrokey** or a **motherboard TPM header module** — the TPM-technology side of
+that is in research 37.
 
 > **Verified 2026-10-04 — see §5.** TPM passthrough into an unprivileged LXC and the stock binary's
 > `tpmkms` support are **no longer open**; both were run on `pve`. Still unmeasured: the signing
@@ -284,7 +288,7 @@ couple the CA to the resolver and the proxy**.
 
 | Criterion | Docker in unprivileged LXC (all-in-one) | Clean LXC, all-in-one | **Dedicated LXC per service** |
 |---|---|---|---|
-| dTPM passthrough | Hard — UID/GID mapping inside LXC *and* the Docker device map | Simple — device passed straight to the LXC | Simple and isolated |
+| TPM passthrough | Hard — UID/GID mapping inside LXC *and* the Docker device map | Simple — device passed straight to the LXC | Simple and isolated |
 | Service isolation | High (containers) | Low (shared systemd/package space) | Very high |
 | IaC / upkeep | Docker Compose | Ansible | Ansible |
 | Attack surface | Medium | Higher | Lowest |
@@ -380,7 +384,7 @@ to be re-issued depends on the hierarchy — and the three-tier chain
 ([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md): 10-year offline root → 1-year intermediate
 → short-lived leaves) splits recovery cleanly in two.
 
-**Intermediate lost — the common case (dead `pve` or dead dTPM).** The root is untouched:
+**Intermediate lost — the common case (dead `pve`, or its TPM wiped).** The root is untouched:
 
 1. Stand up a fresh `step-ca` (new hardware, or `pve` repaired) and re-create the intermediate key in the
    new TPM.
