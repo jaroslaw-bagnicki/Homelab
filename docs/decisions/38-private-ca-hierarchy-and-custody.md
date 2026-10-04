@@ -90,7 +90,8 @@ with the TPM bound through, rather than one all-in-one stack).
 - **Out of scope here**: the resolver choice (Unbound vs AdGuard Home vs dnsmasq), the wildcard-vs-
   per-service leaf question, and the SSH-certificate use of the same CA. They remain open in
   [idea 10](../ideas/10-internal-ca-dns-stack.md).
-- **#126 is answered by this ADR** and can close with it.
+- **The decision is recorded here; [#126](https://github.com/jaroslaw-bagnicki/Homelab/issues/126) stays open as
+  the implementation tracker** for the build.
 
 ### Alternatives Considered
 

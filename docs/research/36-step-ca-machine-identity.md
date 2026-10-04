@@ -393,8 +393,8 @@ chose the offline root.
 
 ## §8 — Open questions
 
-- **Tool choice.** `step-ca` leads inside these threads, but [#126](https://github.com/jaroslaw-bagnicki/Homelab/issues/126)
-  still owns `step-ca` vs `cfssl` vs Ansible-driven OpenSSL. Nothing here closes that.
+- **Tool choice — settled.** [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) adopts `step-ca`
+  as the issuing tool; this section's analysis is what that rested on.
 - **Key custody: TPM vs Azure Key Vault vs file.** All three are upstream-supported paths (§4) and
   **decided in favour of the TPM** by [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md). TPM
   maximises locality and hardware binding at the cost of re-signing the intermediate when the host fails
@@ -421,7 +421,7 @@ chose the offline root.
   the stack this document builds on
 - [Research 37 — TPM 2.0 technology and the fleet](37-tpm2-hardware-and-fleet.md) — the hardware behind §4
 - [Idea 10 — internal DNS + private CA + reverse proxy stack](../ideas/10-internal-ca-dns-stack.md) ·
-  [#126](https://github.com/jaroslaw-bagnicki/Homelab/issues/126) — the decision this feeds
+  [#126](https://github.com/jaroslaw-bagnicki/Homelab/issues/126) — the implementation issue
 - Upstream (verified): [Provisioners](https://smallstep.com/docs/step-ca/provisioners/) ·
   [ACME basics](https://smallstep.com/docs/step-ca/acme-basics/) ·
   [Cryptographic protection](https://smallstep.com/docs/step-ca/cryptographic-protection/) ·
