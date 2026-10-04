@@ -13,7 +13,7 @@ Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month 
 
 ## 2026‑10
 
-- **(docs)** Private CA — offline root/intermediate runbooks and the `step-ca` workload recipe on `pve` — [runbook 35](docs/runbooks/35-deploy-step-ca.md)
+- **(docs)** Private CA — measured TPM custody gate, offline root/intermediate runbooks, and the `step-ca` workload recipe on `pve` — [runbook 35](docs/runbooks/35-deploy-step-ca.md)
 
 ## 2026‑09
 

@@ -258,7 +258,8 @@ recorded in §8.
 **Per-node TPM availability** decides which node *could* host a TPM-backed CA —
 see [research 37 §4](37-tpm2-hardware-and-fleet.md): `pve` (Wyse 5070) has a **TPM 2.0 — an Intel PTT
 firmware TPM, not a discrete chip** (measured 2026-10-04, [research 37 §5](37-tpm2-hardware-and-fleet.md));
-the M910q's is still an unverified thread claim, and the Wyse 3040 and Futro S930 have none. The thread
+the M910q's is a **discrete Infineon SLB 9670** (measured 2026-10-04,
+[research 37 §5.1](37-tpm2-hardware-and-fleet.md)), and the Wyse 3040 and Futro S930 have none. The thread
 also flags that the fleet could reach hardware key custody on nodes *without* a TPM by attaching a
 **YubiKey / YubiHSM 2 / Nitrokey** or a **motherboard TPM header module** — the TPM-technology side of
 that is in research 37.

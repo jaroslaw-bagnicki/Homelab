@@ -80,24 +80,29 @@ Tooling is installed from the current upstream release and **checksum-verified**
 
 ## 1. Prepare the offline signing island
 
-Use a machine that will never hold the root key on its internal disk. Boot a live Linux USB with **no
-network route** to the LAN or internet, and install the `step` CLI there.
+The island has **no network**, so the CLI must be fetched on a **connected staging machine first**,
+verified there, and carried over on ordinary removable media — never the IronKey. Only then boot the
+island with no LAN or internet route and install from the carried archive.
 
 ```sh
-# On the island — verify the download against checksums.txt before running anything (measured #141)
+# 1. On the connected staging machine — download and verify before carrying (measured #141:
+#    a truncated download produced a false "step-ca is broken" result)
 wget https://dl.smallstep.com/gh-release/cli/gh-release-<current>/step_linux_amd64.tar.gz
 wget https://dl.smallstep.com/gh-release/cli/gh-release-<current>/checksums.txt
 sha256sum -c <(grep step_linux_amd64.tar.gz checksums.txt)
+
+# 2. carry the archive on ordinary media, then on the air-gapped island:
 tar -xzf step_linux_amd64.tar.gz
 ./step version
 ```
 
 - Install nothing else on the island. The `step-kms-plugin`/`libpcsclite1` requirement is on the
   **CA host** ([runbook 35 §5](35-deploy-step-ca.md)) — the root is an ordinary file on the IronKey.
+- Carry the archive on ordinary media; **never the IronKey**, which holds only the root.
 - Unlock the IronKey and mount it. **Never** leave the root key on the island's disk.
 
-> **Acceptance.** `step version` runs; the island has no route to `192.168.2.0/24` or the internet;
-> the IronKey mounts read/write.
+> **Acceptance.** `step version` runs on the island; the island has no route to `192.168.2.0/24` or
+> the internet; the IronKey mounts read/write.
 
 > **Backout.** Reboot the island from its own disk; wipe the live USB. Nothing was written yet.
 

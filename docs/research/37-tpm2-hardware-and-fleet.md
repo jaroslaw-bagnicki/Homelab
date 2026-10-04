@@ -253,8 +253,8 @@ adds an interceptable layer that defeats the tamper-resistance model. The altern
 ## §8 — Relevance to the lab
 
 - **The private CA** ([research 36](36-step-ca-machine-identity.md)) can use a hardware TPM as key
-  custody **only where one exists** — `pve` (an **Intel PTT firmware TPM**, §5) or `lab` (claimed
-  dTPM 2.0, **unverified**, and committed to k3s). Note the distinction: PTT is a real platform TPM and
+  custody **only where one exists** — `pve` (an **Intel PTT firmware TPM**, §5) or `lab` (a
+  **discrete Infineon SLB 9670**, §5.1, but committed to k3s). Note the distinction: PTT is a real platform TPM and
   is usable, but it is not a discrete tamper-resistant part.
 - **vTPM is a red herring for the CA** — Proxmox itself says an emulated TPM has no real security
   benefit; do not point the CA at `tpmstate0`. (PTT is *not* the same thing: it is a real TPM 2.0
@@ -269,7 +269,7 @@ adds an interceptable layer that defeats the tamper-resistance model. The altern
 - **The audit is only partly run — `pve` and `lab` are done, the rest is not.** Both were inspected
   2026-10-04: `pve` reports an **Intel PTT firmware TPM** (§5) and `lab` a **discrete Infineon SLB 9670**
   (§5.1). `edge`, the Futro S930 and the Beetle remain unconfirmed until §4's commands are run on each —
-  so the fleet's hardware-backed options are now known to be exactly those two hosts, and nothing else.
+  so those two are the **confirmed** hardware-backed hosts, and the rest stay open.
 - **TPM in an unprivileged LXC — tested 2026-10-04 and workable**
   ([research 36 §5](36-step-ca-machine-identity.md)): key creation **and** signing succeed from inside
   the container once the device node is chowned to the container's mapped root (`100000`). The device
