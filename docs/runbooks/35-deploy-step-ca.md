@@ -240,24 +240,26 @@ ansible-playbook ansible/playbooks/playbook-ca.yml --diff
 
 ## 5. Provision the `step-ca` workload — tooling, TPM key, CSR
 
-The workload is `ansible/workloads/step-ca/` ([workload convention](../workloads.md)). **Writing the
-role is out of scope here** — this section specifies what it must contain. From the repo root:
+The workload is implemented at `ansible/workloads/step-ca/` —
+[workload convention](../workloads.md), [workload README](../../ansible/workloads/step-ca/README.md).
+The role does the work below; this section records what it enforces. From the repo root:
 
 ```powershell
 ansible-playbook ansible/workloads/step-ca/step-ca-playbook.yml --diff
 ```
 
-**`step-ca-playbook.yml`** — an entrypoint targeting host `ca` and applying the role below.
+**`step-ca-playbook.yml`** — an entrypoint targeting host `ca` and applying the `step_ca` role.
 
-**Role `step_ca` must contain:**
+**Role `step_ca` enforces:**
 
 - **Packages** — install the current `step-cli`, `step-ca`, and `step-kms-plugin` releases,
   **checksum-verified** against `checksums.txt` (measured #141: a truncated tarball segfaulted and
   produced a false "step-ca is broken" result), plus **`libpcsclite1`** — `step-kms-plugin` is a CGO
   build linked against `libpcsclite.so.1` and fails for TPM-only work without it; `step-ca` itself
   needs no PCSC (measured #141).
-- **Layout** — a `step` service user; `/etc/step-ca/{certs,config,secrets}` and
-  `/var/lib/step-ca/tpm`.
+- **Layout** — root-owned `/etc/step-ca/{certs,config,secrets,db}` and `/var/lib/step-ca/tpm`. The
+  service runs as **root**: the TPM device is owned by container root (§1), so a non-root service could
+  not open it.
 - **Intermediate key in the TPM** — create it with the **pinned storage directory** (measured #141):
 
   ```sh
@@ -293,20 +295,22 @@ ansible-playbook ansible/workloads/step-ca/step-ca-playbook.yml --diff
   ```
 
   **`step ca init` cannot bootstrap a TPM-backed CA** (measured #141) — its `--kms` accepts only
-  `azurekms`, and `--kms-intermediate 'tpmkms:…'` is silently ignored. The role may run `step ca init`
-  to create the provisioner skeleton and password, then **replace** the software intermediate
-  (delete `secrets/intermediate_ca_key`) and patch `ca.json`; it must not leave a software intermediate
-  key behind.
+  `azurekms`, and `--kms-intermediate 'tpmkms:…'` is silently ignored. The role runs `step ca init`
+  **once into a throwaway `STEPPATH`** to mint the provisioner skeleton and password, writes the live
+  `ca.json` with the TPM key above, and then deletes the throwaway directory — so no software
+  intermediate key persists. It also adds the **ACME provisioner** to `ca.json`.
 - **Provisioner password** — fetch the CA provisioner password from Azure Key Vault
   (`homelab-bysxdb-kv`) and write it to a **root-only** file (`/etc/step-ca/secrets/password`, mode
   `0600`); the service reads it with `--password-file`, so it never appears in the unit's
   `Environment=` or on a command line.
 - **systemd** — stage `step-ca.service` (enabled, `restart=on-failure`,
-  `ExecStart=/usr/bin/step-ca /etc/step-ca/config/ca.json --password-file /etc/step-ca/secrets/password`),
+  `ExecStart=/usr/local/bin/step-ca /etc/step-ca/config/ca.json --password-file /etc/step-ca/secrets/password`),
   but **do not start it yet** — there is no signed intermediate certificate until §6.
-- **Root export** — make `root_ca.crt` available for distribution
+- **Root export** — `/etc/step-ca/certs/root_ca.crt` is the anchor for distribution
   ([#144](https://github.com/jaroslaw-bagnicki/Homelab/issues/144)); distribution itself is out of scope.
-- **Ansible-side README** describing the role, its variables, and the AKV secret.
+- **Re-runnable** — the TPM key is create-once (never recreated); the CSR is create-only unless
+  `step_ca_csr_force=true`; the service starts only once both certificates exist. A routine run cannot
+  destroy the key or clobber a CSR awaiting signing.
 
 > **Acceptance.** `step kms` lists `homelab-intermediate-ca`; the `.tpmobj` and `intermediate_ca.csr`
 > exist; `ca.json` carries the `kms` block; `step-ca` is **not** running (no certificate yet); no
@@ -317,18 +321,17 @@ ansible-playbook ansible/workloads/step-ca/step-ca-playbook.yml --diff
 ## 6. Resume — install the signed intermediate and start the CA
 
 This section runs **after** the offline ceremony ([runbook 36 §3](36-private-ca-init.md)) returns
-`intermediate_ca.crt`.
+`root_ca.crt` and `intermediate_ca.crt`. The role already put the ACME provisioner in `ca.json`.
 
 ```sh
-# on the ca guest
-install -m 0644 root_ca.crt         /etc/step-ca/certs/root_ca.crt
-install -m 0644 intermediate_ca.crt /etc/step-ca/certs/intermediate_ca.crt
+# on the ca guest — install the two public certificates the ceremony returned
+install -m 0600 root_ca.crt         /etc/step-ca/certs/root_ca.crt
+install -m 0600 intermediate_ca.crt /etc/step-ca/certs/intermediate_ca.crt
+```
 
-# add the ACME provisioner so the proxy (#142) can enrol
-step ca provisioner add acme --type ACME \
-  --ca-url https://192.168.2.215:9000 --root /etc/step-ca/certs/root_ca.crt
-
-systemctl enable --now step-ca
+```powershell
+# from the controller — the role sees both certificates and enables + starts step-ca
+ansible-playbook ansible/workloads/step-ca/step-ca-playbook.yml --diff
 ```
 
 **Validate:**
@@ -410,7 +413,6 @@ summary, and each result when it is first run.
 
 ## Follow-ups
 
-- **Workload role** — `ansible/workloads/step-ca/` is specified in §5 but not written here (non-goal).
 - **Offline ceremony** — [runbook 36](36-private-ca-init.md), between §5 and §6.
 - **Proxy wiring** — [#142](https://github.com/jaroslaw-bagnicki/Homelab/issues/142).
 - **First service** — [#143](https://github.com/jaroslaw-bagnicki/Homelab/issues/143) (`https://netdata.internal`).

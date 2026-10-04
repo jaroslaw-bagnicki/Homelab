@@ -13,7 +13,7 @@ Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month 
 
 ## 2026‑10
 
-- **(docs)** Private CA — offline 10-year root, TPM-bound 1-year intermediate on `pve`, short-lived leaves — [ADR 38](docs/decisions/38-private-ca-hierarchy-and-custody.md)
+- **(docs)** Private CA — offline root/intermediate runbooks and the `step-ca` workload recipe on `pve` — [runbook 35](docs/runbooks/35-deploy-step-ca.md)
 
 ## 2026‑09
 
