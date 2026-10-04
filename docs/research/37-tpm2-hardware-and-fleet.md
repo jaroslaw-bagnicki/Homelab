@@ -84,24 +84,25 @@ The thread's point for a homelab: a thin client is a **low-power, always-on node
 root** — which is exactly `pve`'s role, and the reason the TPM key-custody idea in
 [research 36 §4](36-step-ca-machine-identity.md) is even viable on a 4–7 W box.
 
-## §4 — Per-node TPM audit (thread, **unverified — verify on hardware**)
+## §4 — Per-node TPM audit (partly measured — **verify the rest on hardware**)
 
-The thread listed what each fleet node should have. **`pve` was inspected on 2026-10-04 and the thread's
-TPM claim for it was wrong (§5); every other row is still unconfirmed** — the check procedure is the
-same for every Debian/Ubuntu/Proxmox node:
+The thread listed what each fleet node should have. **`pve` and `lab` were inspected on 2026-10-04; the
+thread was wrong about `pve` and right about `lab` (§5, §5.1). The remaining rows are still
+unconfirmed** — the check procedure is the same for every Debian/Ubuntu/Proxmox node:
 
 ```bash
 ls -l /dev/tpm*                      # /dev/tpm0 and /dev/tpmrm0 present?
 dmesg | grep -i tpm                  # TPM 2.0 device, chip vendor
 systemd-cryptenroll --tpm2-device=list   # enumerates TPM 2.0 devices systemd can use
-# after installing tpm2-tools:
-tpm2_getcap properties-fixed | grep -A3 TPM2_PT_MANUFACTURER
+# the authoritative check — works even where DMI type 43 is empty (it is, on `lab`):
+#   TPM2_GetCapability(TPM_CAP_TPM_PROPERTIES, TPM_PT_MANUFACTURER) on /dev/tpmrm0
+#   INTC => Intel PTT (fTPM) · IFX/NTC/STM => a discrete chip
 ```
 
 | Node | Thread's claim | Notes |
 |---|---|---|
-| **`pve`** (Dell Wyse 5070) | ~~**dTPM 2.0** — discrete chip on the board~~ — **refuted in §5** | Measured 2026-10-04: it is an **Intel PTT firmware TPM (`INTC`)**; no discrete chip is fitted. It remains the CA-host candidate ([research 36 §5](36-step-ca-machine-identity.md)) |
-| **`lab`** (ThinkCentre M910q) | **dTPM 2.0** on the board | Thread called it a good PKI host candidate — but it is the k3s node and is **blocked** on k3s ([ADR 22](../decisions/22-k3s-arc-homelab.md)) |
+| **`pve`** (Dell Wyse 5070) | ~~**dTPM 2.0** — discrete chip on the board~~ — **refuted in §5** | Measured 2026-10-04: an **Intel PTT firmware TPM (`INTC`)**; no discrete chip is fitted. It is the CA host ([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md)) |
+| **`lab`** (ThinkCentre M910q) | **dTPM 2.0** on the board — **confirmed in §5.1** | Measured 2026-10-04: a **discrete Infineon SLB 9670 (`IFX`)**, driver `tpm_tis`. The fleet's only discrete TPM — but it is the k3s node and is **blocked** on k3s ([ADR 22](../decisions/22-k3s-arc-homelab.md)) |
 | **`edge`** (Dell Wyse 3040) | **No TPM** (Atom x5-Z8350; SoC/BIOS limits) | Identity would be software-only |
 | **Futro S930** (OPNsense candidate) | **TPM 1.2 or none** — older AMD G-series | Not usable for TPM 2.0 features |
 | **Beetle M-III** (the NAS) | **dTPM 1.2 or 2.0 depending on board variant** | Explicitly "verify in BIOS/LSHW" |
@@ -141,6 +142,31 @@ tpm2_getcap properties-fixed | grep -A3 TPM2_PT_MANUFACTURER
 > ⚠️ **Used/second-hand hardware**: run **`TPM Clear`** in the BIOS before re-provisioning — it removes
 > an owner hierarchy left by a corporate deployment, and this matters more than usual because PTT state
 > lives in the platform firmware. TPM **version** needs no further checking here: this one reports 2.0.
+
+### 5.1 The M910q's TPM in detail (measured 2026-10-04 — the thread was right)
+
+- **What it is**: a **discrete Infineon TPM** — self-reported vendor string **`SLB9670`**. This is the
+  thing the thread claimed for `pve`: a separate tamper-resistant chip, whose sealed key cannot be moved
+  to another machine and whose state is **not** firmware-resident.
+- **Evidence** (all read on `lab`, ThinkCentre M910q, Ubuntu 24.04.4):
+  - `TPM2_GetCapability` over `/dev/tpmrm0`: `TPM_PT_MANUFACTURER` = **`IFX`** (Infineon, `0x49465800`),
+    vendor string `"SLB9"` + `"670"` → **SLB 9670**, firmware version `0x000c3600`.
+  - Boot log: `tpm_tis MSFT0101:00: 2.0 TPM (device-id 0x1B, rev-id 16)` — `0x1B` is Infineon's TIS
+    device ID, and the driver is **`tpm_tis`** (contrast `pve`'s `tpm_crb`).
+  - ACPI `MSFT0101:00`; BIOS is Lenovo **M1AKT2CA** (2017-11-22); ACPI TPM2 table v03 from AMI.
+- **`dmidecode -t 43` is EMPTY on this node** — the Lenovo BIOS does not publish a TPM Device record even
+  though the TPM is present and working. So the DMI route that answered for `pve` is **not general**: the
+  `TPM2_GetCapability` query is the one that always works.
+- **Device permissions are friendlier than on `pve`**: systemd's standard udev rules give `/dev/tpmrm0`
+  mode `0660` owner/group `tss` (the `tss` group exists here, with the ARC agent `himds` in it), whereas
+  `pve` exposes `0600 root:root`. That asymmetry is exactly why the LXC passthrough recipe in
+  [research 36 §5](36-step-ca-machine-identity.md) needs its `chown` step on `pve` and would not on a node
+  with the standard rules.
+- **Bus not determined**: no SPI devices are enumerated under `/sys/bus/spi/`, so LPC vs SPI could not be
+  resolved from the OS. It does not bear on the custody decision.
+- **Not the CA host.** This node's **discrete** TPM is the stronger of the two anchors and was considered
+  for the CA, but the CA stays on `pve` ([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md)) —
+  `lab` carries the k3s role ([ADR 22](../decisions/22-k3s-arc-homelab.md)).
 
 ## §6 — Using the TPM with Proxmox VE (**verified upstream**)
 
@@ -229,10 +255,10 @@ adds an interceptable layer that defeats the tamper-resistance model. The altern
 
 ## §9 — Open questions
 
-- **The audit is only partly run — `pve` is done, the rest is not.** `pve` was inspected 2026-10-04 and
-  reports an **Intel PTT firmware TPM** (§5). Which of the other nodes report a TPM 2.0, and with which
-  chip, is still unknown until §4's commands are executed on each host — in particular `lab`'s "dTPM
-  2.0" is an unverified thread claim and the design must not lean on it.
+- **The audit is only partly run — `pve` and `lab` are done, the rest is not.** Both were inspected
+  2026-10-04: `pve` reports an **Intel PTT firmware TPM** (§5) and `lab` a **discrete Infineon SLB 9670**
+  (§5.1). `edge`, the Futro S930 and the Beetle remain unconfirmed until §4's commands are run on each —
+  so the fleet's hardware-backed options are now known to be exactly those two hosts, and nothing else.
 - **TPM in an unprivileged LXC — tested 2026-10-04 and workable**
   ([research 36 §5](36-step-ca-machine-identity.md)): key creation **and** signing succeed from inside
   the container once the device node is chowned to the container's mapped root (`100000`). The device
