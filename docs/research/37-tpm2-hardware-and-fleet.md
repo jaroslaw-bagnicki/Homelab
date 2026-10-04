@@ -175,7 +175,7 @@ changed later**). Proxmox implements it with `swtpm`.
 | Goal | Correct primitive | Notes |
 |---|---|---|
 | Windows 11 guest requirement | **vTPM** (`tpmstate0`, version v2.0) | Compatibility only — not a security boundary |
-| CA key that cannot leave hardware | **Physical dTPM**, used by the host or a dedicated LXC/VM | Needs the CGO `step-ca` build ([research 36 §4](36-step-ca-machine-identity.md)); passthrough is custom |
+| CA key that cannot leave hardware | **Physical dTPM**, used by the host or a dedicated LXC/VM | Runs on the **stock** `step-ca` binary — TPM KMS is pure Go ([research 36 §5](36-step-ca-machine-identity.md)); the device passthrough is the custom part |
 | Automatic disk unlock | Host dTPM + `systemd-cryptenroll` | Unverified on `pve` |
 | A guest that **must** attest as hardware | Physical dTPM passthrough to one VM | Blocks migration; single-consumer |
 

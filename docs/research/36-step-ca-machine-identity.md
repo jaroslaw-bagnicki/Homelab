@@ -42,7 +42,7 @@ decision.
 | Tool for machine identity | **`step-ca`** — chosen by the operator as the candidate; SPIRE is the heavyweight alternative, Vault the middle ground (§1) |
 | Issuance interfaces | **ACME** for proxies/Kubernetes, **OIDC** for humans and workloads, **JWK** for scripts, **SSHPOP** for SSH cert renewal — all verified provisioner types (§2, §3) |
 | SSH certificates | Wanted — remove `authorized_keys`, SSH CA with short-lived user/host certificates (§3) |
-| CA key custody | **Decided** ([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md)) — intermediate in the `pve` **dTPM 2.0**, root offline on an IronKey (later a YubiKey PIV); upstream supports `tpmkms` and PKCS#11, both needing the CGO build (§4) |
+| CA key custody | **Decided** ([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md)) — intermediate in the `pve` **dTPM 2.0**, root offline on an IronKey (later a YubiKey PIV); the TPM path is pure Go on the **stock** binary, while PKCS #11 / YubiKey PIV need the CGO build (§4, §5) |
 | Host | **Decided** ([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md)) — `pve`, required by the TPM; the dedicated-unprivileged-LXC shape below is the working implementation (§5) |
 | Disaster recovery | **Re-issue the intermediate only** — the offline root is untouched, so no root re-issue and **no client re-trust**; only a root rotation needs redistribution (**decided** — [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md)) (§6) |
 | Wildcards | Unchanged from [research 35 §4](35-private-ca-and-lan-naming.md) — DNS-01 or manual, not HTTP-01 |
@@ -202,10 +202,10 @@ exists in the clear — signing happens in hardware.
 
   created with `step kms create --json 'tpmkms:name=my-intermediate-ca'` (needs Smallstep's
   `step-kms-plugin` and, on Linux, the **`tpm2-tss`** package).
-- **The plain `step-ca` binary does not support TPM 2.0.** It requires a **CGO build** — build from
-  source or use the `smallstep/step-ca:hsm` container image. *The same CGO requirement applies to
-  PKCS #11.* This is the single most implementation-relevant fact the thread omitted: a stock
-  `dpkg -i step-ca…deb` install cannot use the TPM.
+- **TPM custody does *not* need CGO in current versions** — the thread assumed a CGO build was required,
+  but `tpmkms` is pure Go and compiled into the stock binary; the CGO/`hsm` build is for **PKCS #11 and
+  YubiKey PIV**. Evidence and the required smoke test are in §5. *(This is the one claim in this
+  document that contradicts the upstream docs page — verify on hardware.)*
 - **PKCS #11 is the general path** and covers YubiHSM 2, Nitrokey HSM 2, SoftHSMv2 and any
   `pkcs11`-exposing device, including a `tpm2-pkcs11` bridge:
 
@@ -226,8 +226,9 @@ exists in the clear — signing happens in hardware.
 > ⚠️ **Thread correction.** The thread's TPM configuration used a key named `"hsm"` with
 > `"provider": "pkcs11"` and a bare `module` path. Upstream's **native** path is `kms.type = tpmkms`
 > (not `pkcs11`) and the enclosing object is **`"kms"`**, not `"hsm"`. The `tpm2-pkcs11` route is a
-> legitimate *PKCS #11* deployment, but it must be expressed as a PKCS #11 KMS block — and both routes
-> need the CGO build. Treat the thread's snippet as written-through, not runnable.
+> legitimate *PKCS #11* deployment, but it must be expressed as a PKCS #11 KMS block — and the PKCS #11
+> block is the one that needs the CGO build (the native `tpmkms` block does not). Treat the thread's
+> snippet as written-through, not runnable.
 
 **Trade-offs the thread names honestly:**
 
@@ -237,7 +238,7 @@ exists in the clear — signing happens in hardware.
 | Exfiltration on container compromise | Key cannot leave the chip | Possible if password + file are taken together |
 | Disaster recovery | Restoring the LXC is **not** enough — the TPM-bound intermediate key cannot be re-imported to a different chip; re-sign an intermediate with the **offline root**, leaving the root and its distribution untouched (§6) | Restore the file and the password; CA identity survives |
 | Throughput | TPM signing is slow (thread claims ~100–300 ms/op — **unverified**) | CPU-speed signing |
-| Host requirement | The node must expose the TPM; and the CA binary must be the CGO build | Any host |
+| Host requirement | The node must expose the TPM (`/dev/tpmrm0`); the **stock** binary suffices (TPM KMS is pure Go) | Any host |
 
 **Per-node TPM availability** decides which node *could* host a TPM-backed CA —
 see [research 37 §4](37-tpm2-hardware-and-fleet.md): `pve` (Wyse 5070) has a discrete dTPM 2.0, the
@@ -246,8 +247,8 @@ hardware key custody on nodes *without* a TPM by attaching a **YubiKey / YubiHSM
 **motherboard TPM header module** — the TPM-technology side of that is in research 37.
 
 > **Unverified — validation work.** TPM passthrough into an unprivileged LXC (below), the signing
-> latency, `tpm2-pkcs11` operation, and whether a CGO `hsm` image even exists for the fleet's
-> architecture are all untested here. The upstream docs confirm the *capability*, not the lab recipe.
+> latency, `tpm2-pkcs11` operation, and the stock binary's `tpmkms` support (§5) are all untested here.
+> The upstream docs confirm only part of the picture — check the rest on hardware.
 
 ## §5 — Where to run it: the circular-dependency analysis
 
@@ -283,62 +284,49 @@ hardware key should have the smallest possible attack surface, and coupling it t
 [research 35 §6/§7](35-private-ca-and-lan-naming.md), which had leaned toward exactly the all-in-one
 Compose stack.
 
-### CGO and the LXC-vs-Docker question (verified upstream)
+### CGO, TPM and the LXC-vs-Docker question (verified upstream — with a documentation conflict)
 
-The operator's remaining doubt: `step-ca:hsm` is offered as a **Docker image**, so does TPM key custody
-force Docker inside the LXC? **No.** The requirement is about **which binary runs**, not how it is
-packaged:
+Two questions get conflated here. The answer to both is "no Docker needed".
 
-- **The stock binary cannot use a TPM or PKCS #11**
-  ([verified upstream](https://smallstep.com/docs/step-ca/cryptographic-protection/)) — the official
-  `.deb`/release builds are non-CGO, so the *packaged* upgrade path cannot deliver TPM key custody.
-- **A CGO build can.** Build from source with `go`, `make`, a C compiler and PCSC
-  (`libpcsclite-dev` on Debian), then `make bootstrap && make build GO_ENVS="CGO_ENABLED=1"` →
-  `bin/step-ca` ([upstream build instructions](https://github.com/smallstep/certificates/blob/master/CONTRIBUTING.md#build-step-ca-using-cgo)).
-  TPM 2.0 additionally needs the `tpm2-tss` package at runtime.
-- **`step-ca:hsm` is a convenience, not a requirement** — it is simply that CGO build packaged as an OCI
-  image. A native LXC host service can **build the binary from source** or **lift it out of the `hsm`
-  image** (`docker create` + `docker cp`, or `skopeo copy` / `crane export`) and run it under systemd.
-- **CGO is only for the local hardware backends** (TPM, PKCS #11, YubiKey PIV). The cloud KMS backends —
-  Azure Key Vault, AWS/GCP KMS — are pure Go and work in the **stock** binary. So choosing the TPM over
-  Key Vault is what carries the CGO cost; it is not a packaging decision.
+**Does TPM custody need CGO?** Smallstep's TPM page says yes ("The standard `step-ca` binary does not
+support TPM 2.0 … you'll need a CGO build"). **The source says otherwise, for current versions:**
 
-So "dedicated LXC with a native systemd service, no Docker" is **compatible with TPM key custody**. What
-it costs is the **packaged upgrade path**: the Ansible role must obtain and update the CGO binary itself
-(pin the version), and building on a separate host — then shipping just the binary into the CA container —
-keeps a compiler toolchain out of the CA and preserves the minimal-attack-surface rationale. The TPM
-`/dev/tpmrm0` passthrough (below) is a separate concern from the CGO build.
+- `cmd/step-ca/main.go` imports `go.step.sm/crypto/kms/tpmkms` **unconditionally** — not behind a cgo tag.
+- The implementation is gated by `//go:build !notpmkms` — an ordinary Go build tag, **on by default**.
+- The only `#cgo` directives in the `go.step.sm/crypto` module are **macOS** (`Security.framework`,
+  `CoreFoundation`); nothing for TPM on Linux.
+- The **standard** upstream image builds with plain `make V=1 bin/step-ca` under `golang:alpine` — **no
+  `CGO_ENABLED=1`** — whereas only `Dockerfile.hsm` sets `GO_ENVS="CGO_ENABLED=1"`.
 
-### Upgrade path for the CGO binary (recommendation)
+So TPM KMS (added in [smallstep/certificates#1772](https://github.com/smallstep/certificates/pull/1772))
+is **pure Go and present in the stock binary**; the CGO/`hsm` build exists for **PKCS #11 and YubiKey PIV**,
+which link PCSC/pkcs11 C libraries. The docs page looks stale — hence the smoke test below.
 
-Because the binary stops being a packaged `.deb`, the upgrade mechanism has to be owned deliberately. The
-repo already has the shape for it — build an image locally and push it to **Zot**
-(`scripts/Push-OpencodeImagesToZot.ps1`, [runbook 20](../runbooks/20-deploy-zot.md)) — and that fits
-**without hosted CI** ([ADR 32](../decisions/32-no-hosted-ci.md)).
+**Does the hosting model change anything?** No. A **native systemd service in a dedicated LXC** needs
+neither Docker nor a custom image. With TPM custody on the stock binary the CA is an ordinary packaged
+service, upgraded like any other. The `/dev/tpmrm0` passthrough is the only custom part, and it is
+independent of all of this.
 
-- **Build.** A `docker/step-ca-hsm/Dockerfile` (multistage: `golang` + `gcc` + `libpcsclite-dev` +
-  `libtss2-dev` build stage → a minimal carrier stage holding `/usr/local/bin/step-ca`), pinned to a
-  **step-ca release tag** and built on the dev machine. Only `step-ca` needs this custom build — the
-  `step` CLI and `step-kms-plugin` are ordinary pure-Go releases and install normally.
-- **Store.** **Zot**, referenced by **tag *and* digest**. Not the repo (no binaries in git) and not a
-  build on the CA host (no compiler in the CA). The image is only a *carrier* for the binary — the LXC
-  supplies `libpcsclite1` and `tpm2-tss` at runtime, so the carrier stage can stay tiny.
-- **Deploy and upgrade.** The workload's Ansible role pulls the pinned artefact *inside the LXC* with
-  **`skopeo copy docker://… dir:`** (daemonless — no Docker runtime in the CA), extracts
-  `/usr/local/bin/step-ca`, verifies the checksum, installs it and restarts the `step-ca` systemd unit.
-  Bumping the version+digest pins and re-running the playbook **is** the upgrade.
-- **Acceptance check the role must assert.** A stock binary silently lacks TPM support, so verify the
-  artefact: `ldd /usr/local/bin/step-ca` lists the `tss`/`pcsclite` libraries, and
-  `step kms create --json 'tpmkms:name=smoke-test'` succeeds on the host.
-- **Impact and rollback.** A CA restart is low-risk — the root and intermediate are untouched, so nothing
-  needs re-trusting, and short-lived leaves renew from the same CA name. **Never combine a binary upgrade
-  with a key rotation.** Rollback is repinning the previous digest and re-running; CA state (`db/`, the
-  TPM key) is unaffected.
+### Upgrade and verification (recommendation)
 
-> **Note.** Zot is the *cloudlab* registry, so this is an outbound HTTPS fetch at upgrade time only — pin
-> by digest and verify the checksum rather than trusting a moving tag.
+If the stock binary does provide `tpmkms` (expected — see above), there is **nothing to build and nothing
+to store**:
 
-> **Unverified — validation work.** The LXC device-passthrough recipe, the `nesting`/storage-driver"
+- **Install** the released `step-ca` package/binary as usual; the Ansible role pins the version and
+  upgrades it like any other service. No image, no artefact registry, no CGO toolchain.
+- **Prove TPM support on the host — this is the gate.** `step kms create --json 'tpmkms:name=smoke-test'`
+  must succeed against `/dev/tpmrm0`; the pure-Go path talks to the kernel resource manager, so no `tss`
+  library need appear in `ldd`. The setup tooling (`step` CLI + `step-kms-plugin`) must also carry TPM
+  support — the same test covers it. Run this on `pve` before committing to the design.
+- **Fallback only if the smoke test fails**: take `/usr/local/bin/step-ca` from the official
+  `smallstep/step-ca:hsm` image (`docker create` + `docker cp`, or `skopeo copy` / `crane export`), or
+  build with CGO (`make bootstrap && make build GO_ENVS="CGO_ENABLED=1"`). Still nothing to *publish* —
+  but then the Ansible role owns the binary and its version.
+- **The planned YubiKey PIV root is different.** YubiKey/PKCS #11 custody *does* need the CGO build — but
+  that sits on the machine performing root signing (the `step` CLI + `step-kms-plugin` with PCSC), not on
+  the CA server, which only ever sees the intermediate.
+
+> **Unverified — validation work.** The LXC device-passthrough recipe, the `nesting`/storage-driver
 > prerequisites for Docker-in-LXC (already flagged in research 35 §7), and the port-53 collision when a
 > resolver runs inside an LXC (research 35 §6) remain untested. The thread's passthrough snippets for
 > the LXC config (`lxc.cgroup2.devices.allow` / `lxc.mount.entry` for `/dev/tpmrm0`) are transcribed,
@@ -410,16 +398,17 @@ chose the offline root.
 - **Key custody: TPM vs Azure Key Vault vs file.** All three are upstream-supported paths (§4) and
   **decided in favour of the TPM** by [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md). TPM
   maximises locality and hardware binding at the cost of re-signing the intermediate when the host fails
-  (cheap, since the root stays offline — §6) and a CGO build; Key Vault would reintroduce a cloud
-  dependency into the trust anchor and remains the fallback.
-- **CGO build implications.** TPM/PKCS#11 custody forces the `hsm` CGO image or a source build — which
-  affects packaging, upgrades and the Ansible role. Unmeasured.
+  (cheap, since the root stays offline — §6); Key Vault would reintroduce a cloud dependency into the
+  trust anchor and remains the fallback.
+- **Verify the stock binary's TPM support.** `tpmkms` appears to be pure Go and already in the released
+  binary (§5), which would remove all packaging implications; the `pve` smoke test settles it. PKCS #11 /
+  YubiKey PIV *do* need the CGO build, and the Ansible role would then own that binary.
 - **Wildcards on the proxy** — unchanged and still open ([research 35 §4](35-private-ca-and-lan-naming.md)).
 - **Issuer vs host.** A dedicated CA LXC on `pve` is the thread's recommendation, but `edge` and `lab`
   remain on the [idea 10](../ideas/10-internal-ca-dns-stack.md) shortlist.
 - **SSH CA adoption** — is passwordless, certificate-based SSH actually wanted across a five-node
   fleet, or does it outgrow the `authorized_keys` problem it solves?
-- **Nothing was measured** — TPM signing latency, the CGO image's footprint on the Wyse 5070, and the
+- **Nothing was measured** — TPM signing latency, the stock binary's footprint on the Wyse 5070, and the
   whole LXC passthrough recipe are unverified.
 
 ## References

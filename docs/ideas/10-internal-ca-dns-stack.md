@@ -91,7 +91,7 @@ The 2026-09-30 threads sharpened the three open pieces; **ADR 38 settled them**:
   the root signs the intermediate, the intermediate signs the leaves.
   ([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md))
 - **Key custody.** Root private key **offline on an IronKey** (later a YubiKey PIV); intermediate key in
-  the **`pve` dTPM 2.0**, which needs the CGO `step-ca:hsm` build. An emulated vTPM is explicitly **not**
+  the **`pve` dTPM 2.0** (the TPM path is pure Go, so the stock `step-ca` binary suffices). An emulated vTPM is explicitly **not**
   a security boundary ([research 37 §6](../research/37-tpm2-hardware-and-fleet.md)); **Azure Key Vault**
   and a **YubiHSM** remain fallbacks. [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md)
 - **Shape.** CA on **`pve`** (required by the TPM), provisioned by Ansible — [research 36 §5](../research/36-step-ca-machine-identity.md)
@@ -108,8 +108,7 @@ The 2026-09-30 threads sharpened the three open pieces; **ADR 38 settled them**:
   leaves open**.
 - **Wildcard vs per-service leaves** — ADR 38 fixes short-lived leaves but not whether one wildcard sits
   on the proxy or each service gets its own.
-- **Deployment shape and the CGO build** — dedicated LXC vs VM, and packaging/upgrading the `step-ca:hsm`
-  image.
+- **Deployment shape** — dedicated LXC vs VM, as a native systemd service on the stock binary.
 - **One wildcard on the proxy, or per-service leaves?** Simplest operationally, but the same key sits
   in front of every service, and one expiry takes everything down together.
 - **Resolver**: Unbound vs AdGuard Home vs dnsmasq.
