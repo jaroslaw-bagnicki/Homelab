@@ -87,7 +87,7 @@ once it is ready to start — a row leaves the table with the PR that completes 
 |---|---|---|---|
 | **Power monitoring (Zigbee/Z2M)** | ⭐⭐ | Zigbee energy plugs → Prometheus, bootstrapped standalone on the M910q (ADR 26 — independent of Home Assistant) — sequenced **before** k3s | [#73](https://github.com/jaroslaw-bagnicki/Homelab/issues/73) · [ADR 26](decisions/26-zigbee-energy-monitoring.md) |
 | **YUMI multiboot USB standard** | ⭐ | ADR 29 + manage-YUMI runbook; de-conflate the Ventoy references | [#107](https://github.com/jaroslaw-bagnicki/Homelab/issues/107) · [research 12](research/12-first-boot-setup.md) |
-| **Private CA — proxy TLS issuance** | ⭐⭐ | Run the TPM-custody smoke test on `pve` (`step kms create … 'tpmkms:name=smoke-test'` against `/dev/tpmrm0`) — it gates the CA stand-up | [#126](https://github.com/jaroslaw-bagnicki/Homelab/issues/126) · [ADR 38](decisions/38-private-ca-hierarchy-and-custody.md) |
+| **Private CA — proxy TLS issuance** | ⭐⭐ | TPM-custody gate **passed** on `pve` (stock binary, unprivileged LXC — [#141](https://github.com/jaroslaw-bagnicki/Homelab/issues/141)); next: stand up `step-ca` with the TPM-bound intermediate and an ACME provisioner | [#126](https://github.com/jaroslaw-bagnicki/Homelab/issues/126) · [#141](https://github.com/jaroslaw-bagnicki/Homelab/issues/141) · [ADR 38](decisions/38-private-ca-hierarchy-and-custody.md) |
 
 ### Held
 
