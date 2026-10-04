@@ -69,26 +69,24 @@ disk for the service to start.
 
 ## Variables
 
+The role is single-host and single-purpose, so paths (`/etc/step-ca`,
+`/var/lib/step-ca/tpm`), the CA identity (`Homelab Internal CA`, `ca.internal`, `:9000`), the key
+name and the ACME provisioner name are **hardcoded in the tasks/templates**. Only these are knobs:
+
 | Variable | Default | Purpose |
 |---|---|---|
-| `step_ca_dir` | `/etc/step-ca` | CA root (`STEPPATH`) |
-| `step_ca_tpm_dir` | `/var/lib/step-ca/tpm` | `tpmkms` storage directory (pinned in `ca.json`) |
-| `step_ca_name` | `Homelab Internal CA` | CA instance name / certificate CN |
-| `step_ca_dns` | `ca.internal` | certificate SAN (ADR 37 name space) |
-| `step_ca_key_name` | `homelab-intermediate-ca` | TPM key name |
-| `step_ca_acme_provisioner` | `acme` | ACME provisioner name |
 | `step_ca_keyvault_name` | `homelab-bysxdb-kv` | Key Vault holding the password |
 | `step_ca_password_secret_name` | `step-ca-provisioner-password` | secret name |
 | `step_ca_password` | `""` | override to skip the Key Vault lookup (tests) |
 | `step_ca_csr_force` | `false` | regenerate the CSR from the existing TPM key (annual re-sign) |
 
-The binaries and download URLs are grouped in `step_ca_releases`; upgrades follow normal package
-practice — clear `step_ca_download_dir` and re-run.
+The binary assets live in the role's `vars/main.yml` (`step_ca_releases`). Upgrades follow normal
+package practice — clear `/var/tmp/step-ca-install` and re-run.
 
 ## Secrets
 
 - `step-ca-provisioner-password` — the CA provisioner password (`step_ca_password_secret_name`) in
-  `homelab-bysxdb-kv`. Written to `{{ step_ca_dir }}/secrets/password` (mode `0600`); the service
+  `homelab-bysxdb-kv`. Written to `/etc/step-ca/secrets/password` (mode `0600`); the service
   reads it with `--password-file`.
 
 ## Deploy

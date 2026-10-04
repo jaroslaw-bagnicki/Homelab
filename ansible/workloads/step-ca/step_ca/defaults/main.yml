@@ -1,47 +1,15 @@
 ---
-# Private CA (step-ca) — decide ADR 38, gate #141, runbooks 35/36.
-#
-# The current upstream release is installed (no version pin) and checksum-verified
-# against the release's own checksums.txt. Upgrade by clearing step_ca_download_dir
-# and re-running the playbook.
-step_ca_download_dir: /var/tmp/step-ca-install
-step_ca_github_base: https://github.com
-step_ca_releases:
-  cli:
-    repo: smallstep/cli
-    archive: step_linux_amd64.tar.gz
-    member: step_linux_amd64/step
-    dest: /usr/local/bin/step
-  ca:
-    repo: smallstep/certificates
-    archive: step-ca_linux_amd64.tar.gz
-    member: step-ca_linux_amd64/step-ca
-    dest: /usr/local/bin/step-ca
-  kms:
-    repo: smallstep/step-kms-plugin
-    archive: step-kms-plugin_linux_amd64.tar.gz
-    member: step-kms-plugin_linux_amd64/step-kms-plugin
-    dest: /usr/local/bin/step-kms-plugin
+# Private CA (step-ca) — ADR 38, gate #141, runbooks 35/36.
+# Single-host, single-purpose role: paths, URLs, CA identity and provisioner
+# names are hardcoded in the tasks/templates. Only genuine knobs live here.
 
-# CA identity
-step_ca_dir: /etc/step-ca
-step_ca_init_dir: /var/tmp/step-ca-init
-step_ca_tpm_dir: /var/lib/step-ca/tpm
-step_ca_name: Homelab Internal CA
-step_ca_dns: ca.internal
-step_ca_address: ":9000"
-step_ca_provisioner: admin@internal
-step_ca_key_name: homelab-intermediate-ca
-step_ca_acme_provisioner: acme
-step_ca_service: step-ca
-
-# Secrets — provisioner password from Azure Key Vault (never committed).
 step_ca_keyvault_name: homelab-bysxdb-kv
 step_ca_password_secret_name: step-ca-provisioner-password
+
 # Override to skip the Key Vault lookup (tests); normally left empty.
 step_ca_password: ""
 
 # Regenerate the intermediate CSR from the existing TPM key (annual re-sign).
 # Default false: the key and CSR are create-only, so a routine run never
-# destroys the sealed key or clobbers a CSR that is awaiting offline signing.
+# destroys the sealed key or clobbers a CSR awaiting offline signing.
 step_ca_csr_force: false

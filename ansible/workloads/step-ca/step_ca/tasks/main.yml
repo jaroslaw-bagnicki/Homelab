@@ -45,33 +45,29 @@
 
 - name: Ensure the download directory exists
   ansible.builtin.file:
-    path: "{{ step_ca_download_dir }}"
+    path: /var/tmp/step-ca-install
     state: directory
     owner: root
     group: root
     mode: "0755"
 
-- name: Download the Smallstep release archives and their checksums
-  vars:
-    step_ca_release_url: "{{ step_ca_github_base }}/{{ item.value.repo }}/releases/latest/download"
+- name: Download the Smallstep release archives
   ansible.builtin.get_url:
-    url: "{{ step_ca_release_url }}/{{ item.value.archive }}"
-    dest: "{{ step_ca_download_dir }}/{{ item.value.archive }}"
+    url: "https://github.com/{{ item.repo }}/releases/latest/download/{{ item.archive }}"
+    dest: "/var/tmp/step-ca-install/{{ item.archive }}"
     mode: "0644"
-  loop: "{{ step_ca_releases | dict2items }}"
+  loop: "{{ step_ca_releases }}"
   loop_control:
-    label: "{{ item.key }}"
+    label: "{{ item.tag }}"
 
 - name: Download the Smallstep checksums
-  vars:
-    step_ca_release_url: "{{ step_ca_github_base }}/{{ item.value.repo }}/releases/latest/download"
   ansible.builtin.get_url:
-    url: "{{ step_ca_release_url }}/checksums.txt"
-    dest: "{{ step_ca_download_dir }}/{{ item.key }}-checksums.txt"
+    url: "https://github.com/{{ item.repo }}/releases/latest/download/checksums.txt"
+    dest: "/var/tmp/step-ca-install/{{ item.tag }}-checksums.txt"
     mode: "0644"
-  loop: "{{ step_ca_releases | dict2items }}"
+  loop: "{{ step_ca_releases }}"
   loop_control:
-    label: "{{ item.key }}"
+    label: "{{ item.tag }}"
 
 # Gate finding (#141): a truncated release tarball segfaulted and produced a false
 # "step-ca is broken" result — always verify against the release checksums.txt.
@@ -79,36 +75,36 @@
   ansible.builtin.shell:
     cmd: >-
       set -o pipefail &&
-      grep -E ' +{{ item.value.archive | regex_escape }}$' {{ step_ca_download_dir }}/{{ item.key }}-checksums.txt
+      grep -E ' +{{ item.archive | regex_escape }}$' /var/tmp/step-ca-install/{{ item.tag }}-checksums.txt
       | sha256sum -c -
-    chdir: "{{ step_ca_download_dir }}"
+    chdir: /var/tmp/step-ca-install
     executable: /bin/bash
-  loop: "{{ step_ca_releases | dict2items }}"
+  loop: "{{ step_ca_releases }}"
   loop_control:
-    label: "{{ item.key }}"
+    label: "{{ item.tag }}"
   changed_when: false
 
 - name: Extract the release archives
   ansible.builtin.unarchive:
-    src: "{{ step_ca_download_dir }}/{{ item.value.archive }}"
-    dest: "{{ step_ca_download_dir }}"
+    src: "/var/tmp/step-ca-install/{{ item.archive }}"
+    dest: /var/tmp/step-ca-install
     remote_src: true
-    creates: "{{ step_ca_download_dir }}/{{ item.value.member }}"
-  loop: "{{ step_ca_releases | dict2items }}"
+    creates: "/var/tmp/step-ca-install/{{ item.member }}"
+  loop: "{{ step_ca_releases }}"
   loop_control:
-    label: "{{ item.key }}"
+    label: "{{ item.tag }}"
 
 - name: Install the Smallstep binaries
   ansible.builtin.copy:
-    src: "{{ step_ca_download_dir }}/{{ item.value.member }}"
-    dest: "{{ item.value.dest }}"
+    src: "/var/tmp/step-ca-install/{{ item.member }}"
+    dest: "{{ item.dest }}"
     remote_src: true
     owner: root
     group: root
     mode: "0755"
-  loop: "{{ step_ca_releases | dict2items }}"
+  loop: "{{ step_ca_releases }}"
   loop_control:
-    label: "{{ item.key }}"
+    label: "{{ item.tag }}"
 
 - name: Ensure the CA directory layout exists
   ansible.builtin.file:
@@ -118,12 +114,12 @@
     group: root
     mode: "{{ item.mode }}"
   loop:
-    - { path: "{{ step_ca_dir }}", mode: "0700" }
-    - { path: "{{ step_ca_dir }}/certs", mode: "0700" }
-    - { path: "{{ step_ca_dir }}/config", mode: "0700" }
-    - { path: "{{ step_ca_dir }}/secrets", mode: "0700" }
-    - { path: "{{ step_ca_dir }}/db", mode: "0700" }
-    - { path: "{{ step_ca_tpm_dir }}", mode: "0700" }
+    - { path: /etc/step-ca, mode: "0700" }
+    - { path: /etc/step-ca/certs, mode: "0700" }
+    - { path: /etc/step-ca/config, mode: "0700" }
+    - { path: /etc/step-ca/secrets, mode: "0700" }
+    - { path: /etc/step-ca/db, mode: "0700" }
+    - { path: /var/lib/step-ca/tpm, mode: "0700" }
   loop_control:
     label: "{{ item.path }}"
 
@@ -131,7 +127,7 @@
   when: step_ca_password | length > 0
   ansible.builtin.copy:
     content: "{{ step_ca_password }}"
-    dest: "{{ step_ca_dir }}/secrets/password"
+    dest: /etc/step-ca/secrets/password
     owner: root
     group: root
     mode: "0600"
@@ -139,7 +135,7 @@
 
 - name: Check whether the CA has already been initialized
   ansible.builtin.stat:
-    path: "{{ step_ca_dir }}/config/ca.json"
+    path: /etc/step-ca/config/ca.json
   register: step_ca_config_stat
 
 # step ca init cannot bootstrap a TPM-backed CA (gate #141): it only accepts
@@ -152,7 +148,7 @@
   block:
     - name: Create the throwaway init directory
       ansible.builtin.file:
-        path: "{{ step_ca_init_dir }}"
+        path: /var/tmp/step-ca-init
         state: directory
         owner: root
         group: root
@@ -165,53 +161,50 @@
           - ca
           - init
           - --name
-          - "{{ step_ca_name }}"
+          - Homelab Internal CA
           - --dns
-          - "{{ step_ca_dns }}"
+          - ca.internal
           - --address
-          - "{{ step_ca_address }}"
+          - ":9000"
           - --provisioner
-          - "{{ step_ca_provisioner }}"
+          - admin@internal
           - --password-file
-          - "{{ step_ca_dir }}/secrets/password"
+          - /etc/step-ca/secrets/password
       environment:
-        STEPPATH: "{{ step_ca_init_dir }}"
+        STEPPATH: /var/tmp/step-ca-init
       changed_when: true
 
     - name: Read the generated configuration
       ansible.builtin.slurp:
-        src: "{{ step_ca_init_dir }}/config/ca.json"
+        src: /var/tmp/step-ca-init/config/ca.json
       register: step_ca_config_raw
 
-    - name: Build the TPM-backed CA configuration
+    - name: Parse the generated configuration
       ansible.builtin.set_fact:
-        step_ca_config: >-
-          {{
-            (step_ca_config_raw.content | b64decode | from_json)
-            | combine({
-                'root': step_ca_dir ~ '/certs/root_ca.crt',
-                'crt': step_ca_dir ~ '/certs/intermediate_ca.crt',
-                'key': 'tpmkms:name=' ~ step_ca_key_name,
-                'kms': {'type': 'tpmkms', 'uri': 'tpmkms:storage-directory=' ~ step_ca_tpm_dir},
-                'db': {'type': 'badgerv2', 'dataSource': step_ca_dir ~ '/db'}
-              })
-          }}
-        step_ca_provisioners: >-
-          {{
-            ((step_ca_config_raw.content | b64decode | from_json).authority.provisioners
-             | rejectattr('name', 'equalto', step_ca_acme_provisioner) | list)
-            + [{'type': 'ACME', 'name': step_ca_acme_provisioner}]
-          }}
+        step_ca_base: "{{ step_ca_config_raw.content | b64decode | from_json }}"
 
     - name: Write the live TPM-backed CA configuration
       ansible.builtin.copy:
         content: >-
           {{
-            step_ca_config
-            | combine({'authority': step_ca_config.authority | combine({'provisioners': step_ca_provisioners})})
+            step_ca_base
+            | combine({
+                'root': '/etc/step-ca/certs/root_ca.crt',
+                'crt': '/etc/step-ca/certs/intermediate_ca.crt',
+                'key': 'tpmkms:name=homelab-intermediate-ca',
+                'kms': {'type': 'tpmkms', 'uri': 'tpmkms:storage-directory=/var/lib/step-ca/tpm'},
+                'db': {'type': 'badgerv2', 'dataSource': '/etc/step-ca/db'}
+              })
+            | combine({
+                'authority': step_ca_base.authority | combine({
+                  'provisioners': (step_ca_base.authority.provisioners
+                    | rejectattr('name', 'equalto', 'acme') | list)
+                    + [{'type': 'ACME', 'name': 'acme'}]
+                })
+              })
             | to_nice_json
           }}
-        dest: "{{ step_ca_dir }}/config/ca.json"
+        dest: /etc/step-ca/config/ca.json
         owner: root
         group: root
         mode: "0600"
@@ -219,18 +212,18 @@
 
     - name: Remove the throwaway init directory and its software keys
       ansible.builtin.file:
-        path: "{{ step_ca_init_dir }}"
+        path: /var/tmp/step-ca-init
         state: absent
 
-# Create-once: the sealed key never leaves this TPM and must never be recreated
-# over an existing one. `creates` is the guard; there is deliberately no force.
 - name: Enforce the CA configuration ownership and mode
   ansible.builtin.file:
-    path: "{{ step_ca_dir }}/config/ca.json"
+    path: /etc/step-ca/config/ca.json
     owner: root
     group: root
     mode: "0600"
 
+# Create-once: the sealed key never leaves this TPM and must never be recreated
+# over an existing one. `creates` is the guard; there is deliberately no force.
 - name: Create the intermediate CA key in the TPM
   ansible.builtin.command:
     argv:
@@ -238,15 +231,15 @@
       - kms
       - create
       - --json
-      - "tpmkms:name={{ step_ca_key_name }};storage-directory={{ step_ca_tpm_dir }}"
-    creates: "{{ step_ca_tpm_dir }}/key-{{ step_ca_key_name }}.tpmobj"
+      - "tpmkms:name=homelab-intermediate-ca;storage-directory=/var/lib/step-ca/tpm"
+    creates: /var/lib/step-ca/tpm/key-homelab-intermediate-ca.tpmobj
   environment:
-    STEPPATH: "{{ step_ca_dir }}"
+    STEPPATH: /etc/step-ca
 
 - name: Remove a stale CSR when a renewal is forced
   when: step_ca_csr_force | bool
   ansible.builtin.file:
-    path: "{{ step_ca_dir }}/intermediate_ca.csr"
+    path: /etc/step-ca/intermediate_ca.csr
     state: absent
 
 - name: Generate the intermediate CSR from the TPM key
@@ -255,24 +248,24 @@
       - step
       - certificate
       - create
-      - "{{ step_ca_name }} Intermediate CA"
-      - "{{ step_ca_dir }}/intermediate_ca.csr"
-      - "{{ step_ca_dir }}/intermediate_ca_key.pub"
+      - Homelab Internal CA Intermediate CA
+      - /etc/step-ca/intermediate_ca.csr
+      - /etc/step-ca/intermediate_ca_key.pub
       - --csr
       - --profile
       - intermediate-ca
       - --kms
-      - "tpmkms:storage-directory={{ step_ca_tpm_dir }}"
+      - "tpmkms:storage-directory=/var/lib/step-ca/tpm"
       - --key
-      - "tpmkms:name={{ step_ca_key_name }}"
-    creates: "{{ step_ca_dir }}/intermediate_ca.csr"
+      - "tpmkms:name=homelab-intermediate-ca"
+    creates: /etc/step-ca/intermediate_ca.csr
   environment:
-    STEPPATH: "{{ step_ca_dir }}"
+    STEPPATH: /etc/step-ca
 
 - name: Template the step-ca systemd unit
   ansible.builtin.template:
     src: step-ca.service.j2
-    dest: "/etc/systemd/system/{{ step_ca_service }}.service"
+    dest: /etc/systemd/system/step-ca.service
     owner: root
     group: root
     mode: "0644"
@@ -280,19 +273,19 @@
 
 - name: Check for the root-signed intermediate certificate
   ansible.builtin.stat:
-    path: "{{ step_ca_dir }}/certs/intermediate_ca.crt"
+    path: /etc/step-ca/certs/intermediate_ca.crt
   register: step_ca_cert
 
 - name: Check for the offline root certificate
   ansible.builtin.stat:
-    path: "{{ step_ca_dir }}/certs/root_ca.crt"
+    path: /etc/step-ca/certs/root_ca.crt
   register: step_ca_root
 
 # Runs only after the offline ceremony returns both certificates (runbook 36 §3).
 - name: Enable and start step-ca
   when: step_ca_cert.stat.exists and step_ca_root.stat.exists
   ansible.builtin.systemd:
-    name: "{{ step_ca_service }}"
+    name: step-ca
     enabled: true
     state: started
     daemon_reload: true
