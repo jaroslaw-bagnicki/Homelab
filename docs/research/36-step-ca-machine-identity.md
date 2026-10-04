@@ -283,6 +283,32 @@ hardware key should have the smallest possible attack surface, and coupling it t
 [research 35 §6/§7](35-private-ca-and-lan-naming.md), which had leaned toward exactly the all-in-one
 Compose stack.
 
+### CGO and the LXC-vs-Docker question (verified upstream)
+
+The operator's remaining doubt: `step-ca:hsm` is offered as a **Docker image**, so does TPM key custody
+force Docker inside the LXC? **No.** The requirement is about **which binary runs**, not how it is
+packaged:
+
+- **The stock binary cannot use a TPM or PKCS #11**
+  ([verified upstream](https://smallstep.com/docs/step-ca/cryptographic-protection/)) — the official
+  `.deb`/release builds are non-CGO, so the *packaged* upgrade path cannot deliver TPM key custody.
+- **A CGO build can.** Build from source with `go`, `make`, a C compiler and PCSC
+  (`libpcsclite-dev` on Debian), then `make bootstrap && make build GO_ENVS="CGO_ENABLED=1"` →
+  `bin/step-ca` ([upstream build instructions](https://github.com/smallstep/certificates/blob/master/CONTRIBUTING.md#build-step-ca-using-cgo)).
+  TPM 2.0 additionally needs the `tpm2-tss` package at runtime.
+- **`step-ca:hsm` is a convenience, not a requirement** — it is simply that CGO build packaged as an OCI
+  image. A native LXC host service can **build the binary from source** or **lift it out of the `hsm`
+  image** (`docker create` + `docker cp`, or `skopeo copy` / `crane export`) and run it under systemd.
+- **CGO is only for the local hardware backends** (TPM, PKCS #11, YubiKey PIV). The cloud KMS backends —
+  Azure Key Vault, AWS/GCP KMS — are pure Go and work in the **stock** binary. So choosing the TPM over
+  Key Vault is what carries the CGO cost; it is not a packaging decision.
+
+So "dedicated LXC with a native systemd service, no Docker" is **compatible with TPM key custody**. What
+it costs is the **packaged upgrade path**: the Ansible role must obtain and update the CGO binary itself
+(pin the version), and building on a separate host — then shipping just the binary into the CA container —
+keeps a compiler toolchain out of the CA and preserves the minimal-attack-surface rationale. The TPM
+`/dev/tpmrm0` passthrough (below) is a separate concern from the CGO build.
+
 > **Unverified — validation work.** The LXC device-passthrough recipe, the `nesting`/storage-driver
 > prerequisites for Docker-in-LXC (already flagged in research 35 §7), and the port-53 collision when a
 > resolver runs inside an LXC (research 35 §6) remain untested. The thread's passthrough snippets for
