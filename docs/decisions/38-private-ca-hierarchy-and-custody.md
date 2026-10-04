@@ -68,10 +68,13 @@ with the TPM bound through, rather than one all-in-one stack).
 - **TPM-bound custody forces the CGO build of `step-ca`** — the stock package cannot use a TPM. Packaging
   and upgrades must ship the `step-ca:hsm` image or a source build
   ([research 36 §4](../research/36-step-ca-machine-identity.md)).
-- **Recovery is re-issue, not restore.** If `pve` or its TPM dies, the intermediate key is gone; the
-  runbook must re-sign a new intermediate with the offline root, and if the root key is also lost, issue a
-  new root and **redistribute it**. Short-lived leaves make the leaf side of that cheap; the root side is
-  the one irreplaceable secret, which is why it lives on the IronKey and is planned for a YubiKey.
+- **Recovery is cheap because the root stays offline: only the intermediate is re-issued.** If `pve` or
+  its dTPM dies, the intermediate key is gone but the **root is unaffected** — the runbook re-signs a
+  fresh 1-year intermediate with the offline root, and the fleet and workstations keep trusting the same
+  root. There is **no root re-issue and no client re-trust window**, so a `pve` failure is contained to
+  the intermediate. Short-lived leaves then re-enrol automatically. Only the loss of the *root* key
+  forces a new root and a full redistribution — which is exactly why the root is the one key kept offline
+  on the IronKey, with the YubiKey PIV upgrade planned to make it non-exportable.
 - **Root distribution is the adoption cost.** Every client that should trust LAN names needs the root
   installed. The fleet is covered by Ansible; **workstations and personal devices are manual**, and a
   managed/corporate workstation may refuse a private root while Firefox keeps its own trust store — the

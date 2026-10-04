@@ -44,7 +44,7 @@ decision.
 | SSH certificates | Wanted — remove `authorized_keys`, SSH CA with short-lived user/host certificates (§3) |
 | CA key custody | **Decided** ([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md)) — intermediate in the `pve` **dTPM 2.0**, root offline on an IronKey (later a YubiKey PIV); upstream supports `tpmkms` and PKCS#11, both needing the CGO build (§4) |
 | Host | **Decided** ([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md)) — `pve`, required by the TPM; the dedicated-unprivileged-LXC shape below is the working implementation (§5) |
-| Disaster recovery | **Regenerate the CA and redistribute the new root via Ansible** rather than back up the TPM key — with a propagation window for non-Ansible devices (§6) |
+| Disaster recovery | **Re-issue the intermediate only** — the offline root is untouched, so no root re-issue and **no client re-trust**; only a root rotation needs redistribution (**decided** — [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md)) (§6) |
 | Wildcards | Unchanged from [research 35 §4](35-private-ca-and-lan-naming.md) — DNS-01 or manual, not HTTP-01 |
 
 ---
@@ -235,7 +235,7 @@ exists in the clear — signing happens in hardware.
 |---|---|---|
 | Private key on disk / in RAM | Never in the clear; signing in hardware | Encrypted file; decrypted into process memory to sign |
 | Exfiltration on container compromise | Key cannot leave the chip | Possible if password + file are taken together |
-| Disaster recovery | Restoring the LXC is **not** enough — the TPM-bound key cannot be re-imported to a different chip; plan to re-issue the CA (§6) | Restore the file and the password; CA identity survives |
+| Disaster recovery | Restoring the LXC is **not** enough — the TPM-bound intermediate key cannot be re-imported to a different chip; re-sign an intermediate with the **offline root**, leaving the root and its distribution untouched (§6) | Restore the file and the password; CA identity survives |
 | Throughput | TPM signing is slow (thread claims ~100–300 ms/op — **unverified**) | CPU-speed signing |
 | Host requirement | The node must expose the TPM; and the CA binary must be the CGO build | Any host |
 
@@ -290,32 +290,41 @@ Compose stack.
 > not run — and they varied between the two threads (`c 10:224` vs `c 225:*`), so treat the exact
 > device major/minor as a thing to look up on the host, not to copy.
 
-## §6 — Disaster recovery: re-issue the CA, don't hoard the key
+## §6 — Disaster recovery: re-issue the intermediate, keep the root
 
-The thread's most consequential operational conclusion. If the CA key is TPM-bound and the node dies,
-a backup of the LXC cannot restore the key onto new hardware. The thread recommends embracing that:
-**treat the CA as reproducible infrastructure and re-issue it.**
+The thread's most consequential operational conclusion: if the CA key is TPM-bound, a backup of the LXC
+cannot restore the key onto new hardware, so the model has to be **re-issue, not restore**. How much has
+to be re-issued depends on the hierarchy — and the three-tier chain
+([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md): 10-year offline root → 1-year intermediate
+→ short-lived leaves) splits recovery cleanly in two.
 
-**Recovery flow:**
+**Intermediate lost — the common case (dead `pve` or dead dTPM).** The root is untouched:
 
-1. Stand up a fresh `step-ca` (new node or repaired `pve`).
-2. `step ca init` → a **brand-new root + intermediate**. The old identity is abandoned.
-3. Ansible redeploys the new `root_ca.crt` to every node and refreshes the trust store
-   (the pattern is already in [research 35 §5](35-private-ca-and-lan-naming.md)).
-4. Services restart; Caddy and `cert-manager` fail trust, re-enrol via ACME, and receive new leaves.
-5. Because leaves are short-lived (hours–days), no stale certificate lingers.
+1. Stand up a fresh `step-ca` (new hardware, or `pve` repaired) and re-create the intermediate key in the
+   new TPM.
+2. **Re-sign a new intermediate** with the offline root — the root certificate and key do not change.
+3. Services re-enrol via ACME against the same CA and receive new short-lived leaves, so the changeover is
+   quick.
+4. **No root re-issue and no client re-trust** — the fleet and the workstations keep trusting the same
+   root, so there is **no propagation window at all**. This is the payoff of keeping the root offline and
+   long-lived, and it is why `pve`'s fragility stops being a fleet-wide event.
 
-**The one real cost — the propagation window.** Ansible covers the fleet in seconds; it does **not**
-cover phones, laptops, TVs and tablets. Those devices hold the *old* root in their trust store and will
-show warnings until someone installs the new root by hand. That is the argument for a **published,
-scoped, path-constrained root** or the public-subdomain fallback, and it is the same client-trust
-constraint [#126](https://github.com/jaroslaw-bagnicki/Homelab/issues/126) already records. The thread
-notes the counter-case honestly: if instead the root were restored *from backup*, those devices would
-never notice the outage at all — so the "re-issue" model trades a manual client re-trust for the
-freedom not to manage offline key backups.
+**Root lost — the rare case.** Only then is a new root issued, with the full cost below.
 
-> **Unverified — validation work.** The re-issue flow assumes automation is in place *before* the
-> outage. No drill was run.
+**The one real cost — the propagation window (root rotation only).** Ansible covers the fleet in seconds;
+it does **not** cover phones, laptops, TVs and tablets, which hold the root in their trust store and will
+show warnings until someone installs the new one by hand. With the offline root this window now applies
+**only to a root rotation**, not to a host failure — and it is the argument for treating the root key as
+the one irreplaceable secret, held offline on an IronKey and planned for a YubiKey PIV
+([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md)). It is also the same client-trust
+constraint [#126](https://github.com/jaroslaw-bagnicki/Homelab/issues/126) already records.
+
+The alternative the thread weighed — regenerate the **whole** CA on every rebuild — avoids managing an
+offline root key entirely, but pays with a client re-trust on every device after any host loss. ADR 38
+chose the offline root.
+
+> **Unverified — validation work.** The re-issue flow assumes automation is in place *before* the outage.
+> No drill was run.
 
 ## §7 — Root distribution details not already in research 35
 
@@ -343,10 +352,11 @@ freedom not to manage offline key backups.
 
 - **Tool choice.** `step-ca` leads inside these threads, but [#126](https://github.com/jaroslaw-bagnicki/Homelab/issues/126)
   still owns `step-ca` vs `cfssl` vs Ansible-driven OpenSSL. Nothing here closes that.
-- **Key custody: TPM vs Azure Key Vault vs file.** All three are upstream-supported paths (§4). TPM
-  maximises locality and hardware binding at the cost of a re-issue-on-failure model and a CGO build;
-  Key Vault matches the original [#126](https://github.com/jaroslaw-bagnicki/Homelab/issues/126) sketch
-  but reintroduces a cloud dependency into the trust anchor. **Not decided.**
+- **Key custody: TPM vs Azure Key Vault vs file.** All three are upstream-supported paths (§4) and
+  **decided in favour of the TPM** by [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md). TPM
+  maximises locality and hardware binding at the cost of re-signing the intermediate when the host fails
+  (cheap, since the root stays offline — §6) and a CGO build; Key Vault would reintroduce a cloud
+  dependency into the trust anchor and remains the fallback.
 - **CGO build implications.** TPM/PKCS#11 custody forces the `hsm` CGO image or a source build — which
   affects packaging, upgrades and the Ansible role. Unmeasured.
 - **Wildcards on the proxy** — unchanged and still open ([research 35 §4](35-private-ca-and-lan-naming.md)).

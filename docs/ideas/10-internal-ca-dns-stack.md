@@ -97,9 +97,10 @@ The 2026-09-30 threads sharpened the three open pieces; **ADR 38 settled them**:
 - **Shape.** CA on **`pve`** (required by the TPM), provisioned by Ansible — [research 36 §5](../research/36-step-ca-machine-identity.md)
   leans toward a **dedicated unprivileged LXC** with `/dev/tpmrm0` bound through, rather than one shared
   Compose stack with Caddy + Unbound.
-- **Disaster recovery.** With a TPM-bound key, restoring the LXC is not enough: **re-issue the CA and
-  redistribute the new root via Ansible**, accepting a manual re-trust window for non-Ansible devices.
-  [research 36 §6](../research/36-step-ca-machine-identity.md)
+- **Disaster recovery.** Losing `pve` or its dTPM costs **only the intermediate**: re-sign a new one with
+  the offline root, leaving the root and its distribution untouched, so there is **no client re-trust** and
+  no propagation window. Only a root loss forces a re-issue and redistribution.
+  [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) · [research 36 §6](../research/36-step-ca-machine-identity.md)
 
 ## Open questions
 
