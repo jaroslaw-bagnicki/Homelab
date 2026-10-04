@@ -11,6 +11,10 @@ entry. Notable changes only: no instruction-file tweaks, typo/link fixes, cross-
 corrections, or changelog bookkeeping.
 Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month and newest entry first.
 
+## 2026‑10
+
+- **(docs)** Research the private CA — machine identity, TPM-backed `step-ca` keys and the fleet's TPM inventory — [research 36](docs/research/36-step-ca-machine-identity.md) · [research 37](docs/research/37-tpm2-hardware-and-fleet.md)
+
 ## 2026‑09
 
 - **(docs)** Adopt `.internal` as the LAN name space, retiring DNSMasq and `.home` — [ADR 37](docs/decisions/37-lan-name-space-internal.md)
