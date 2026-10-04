@@ -166,9 +166,11 @@ changed later**). Proxmox implements it with `swtpm`.
   hold the physical TPM at a time, so it does not scale past one CA VM.
 - **Passing the dTPM into an LXC** (the shape [research 36 §5](36-step-ca-machine-identity.md)
   recommends for `step-ca`) is **not documented by Proxmox** and must be hand-written into
-  `/etc/pve/lxc/<VMID>.conf` (device allow + bind mount of `/dev/tpmrm0`). Treat that as **custom,
-  unverified configuration** — and note the two source threads disagreed on the device major/minor
-  (`c 10:224` vs `c 225:*`), which is precisely why it must be read off the host, not copied.
+  `/etc/pve/lxc/<VMID>.conf`. **Measured on `pve` 2026-10-04** — the full recipe is in
+  [research 36 §5](36-step-ca-machine-identity.md): device allow + bind mount for `/dev/tpm0`
+  (`c 10:224`) and `/dev/tpmrm0` (`c 252:65536`), **plus** a change of the device node's ownership,
+  without which an unprivileged container gets `permission denied`. The two source threads disagreed on
+  the major/minor (`c 10:224` vs `c 225:*`); the former is correct, but always read it off the host.
 
 ### 6.3 Which shape corresponds to what
 
@@ -211,8 +213,11 @@ adds an interceptable layer that defeats the tamper-resistance model. The altern
 - **The audit is unrun.** Which nodes actually report a TPM 2.0, and with which chip, is unknown until
   §4's commands are executed on each host. This should happen before any hardware-backed design is
   committed.
-- **TPM in an unprivileged LXC** — undocumented by Proxmox; needs a real test, and the two threads
-  disagree on the device mapping. Does `step-ca` in an LXC see `/dev/tpmrm0` reliably across reboots?
+- **TPM in an unprivileged LXC — tested 2026-10-04 and workable**
+  ([research 36 §5](36-step-ca-machine-identity.md)): key creation **and** signing succeed from inside
+  the container once the device node is chowned to the container's mapped root (`100000`). The device
+  mapping is settled (`c 10:224` / `c 252:65536`). Still open is **boot persistence** — the chown is not
+  reboot-durable without a udev rule, and Proxmox does not restore it for you.
 - **`systemd-cryptenroll` on `pve`** — does the Wyse 5070's boot chain enrol cleanly, and does a
   firmware update then lock the disk? PCR-binding has a real operational cost here.
 - **Fallback trigger for the CA key.** ADR 38 selects the TPM; the open question is what evidence would

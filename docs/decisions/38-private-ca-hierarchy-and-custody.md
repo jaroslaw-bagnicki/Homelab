@@ -75,8 +75,8 @@ with the TPM bound through, rather than one all-in-one stack).
   a stolen 1-year intermediate, not a stolen root.
 - **TPM key custody needs no custom build** — `tpmkms` is pure Go and compiled into the stock `step-ca`
   binary, so the CA stays an ordinary packaged service (the CGO / `step-ca-hsm` build is for PKCS #11 and
-  YubiKey PIV). That is expected from the source but contradicts Smallstep's docs page, so the stock
-  binary's TPM support is **verified on `pve` before the design is relied upon**
+  YubiKey PIV). That contradicts Smallstep's docs page, so it was **verified on `pve` on 2026-10-04** —
+  the stock binary served a CA from a dTPM-held intermediate and issued a chain-verified leaf
   ([research 36 §5](../research/36-step-ca-machine-identity.md)).
 - **Recovery is cheap because the root stays offline: only the intermediate is re-issued.** If `pve` or
   its dTPM dies, the intermediate key is gone but the **root is unaffected** — the runbook re-signs a

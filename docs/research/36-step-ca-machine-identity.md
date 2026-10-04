@@ -29,8 +29,12 @@ decision.
 > Smallstep's own documentation — provisioners, ACME basics, cryptographic protection and production
 > guidance — and each section below is labelled **verified upstream** or **unverified — validation
 > work**. The upstream check **corrected two thread assumptions** (the CA-key config shape in §4, and
-> the ACME wildcard picture already corrected in research 35 §4). Everything Proxmox-, LXC- and
-> hardware-specific is **unverified**: none of it was run on the fleet.
+> the ACME wildcard picture already corrected in research 35 §4).
+>
+> **Update 2026-10-04 — the TPM and LXC questions were then run on `pve`, not transcribed.** The stock
+> binary's `tpmkms` support, a TPM-backed CA end to end, and the unprivileged-LXC device passthrough
+> are now **measured** (§5), and running them corrected three thread assumptions about how the TPM path
+> is configured (§4, §5). What is still unverified is narrow, and listed in §8.
 
 ---
 
@@ -196,18 +200,25 @@ exists in the clear — signing happens in hardware.
     "root": "/etc/step-ca/certs/root_ca.crt",
     "crt": "/etc/step-ca/certs/intermediate_ca.crt",
     "key": "tpmkms:name=my-intermediate-ca",
-    "kms": { "type": "tpmkms", "uri": "tpmkms:" }
+    "kms": { "type": "tpmkms", "uri": "tpmkms:storage-directory=/var/lib/step-ca/tpm" }
   }
   ```
 
-  created with `step kms create --json 'tpmkms:name=my-intermediate-ca'` (needs Smallstep's
-  `step-kms-plugin`; **no `tpm2-tss` package is required** — the pure-Go path talks to the kernel's TPM
-  resource manager directly. The `tpm2-tss` library applies only to the PKCS #11 / `tpm2-pkcs11` route
-  below).
+  created with `step kms create --json 'tpmkms:name=my-intermediate-ca'`. Two practical notes, both
+  found by **running it on `pve`** (§5): the **`storage-directory` must be pinned** — `tpmkms` keeps
+  the sealed key as a *file* (`$STEPPATH/tpm/key-<name>.tpmobj`), not in TPM NV storage, and a bare
+  `tpmkms:` URI leaves `step-ca` reporting `failed getting key "…": not found` for a key the CLI had
+  just created and used; and the **setup tooling needs `libpcsclite1`** — `step-kms-plugin` is a CGO
+  build linked against PCSC, so `step kms` fails for TPM-only work when it is missing. **No `tpm2-tss`
+  package** is required though: the pure-Go path talks to the kernel's TPM resource manager directly,
+  and `step-ca` itself links no PCSC at all. `tpm2-tss` applies only to the PKCS #11 / `tpm2-pkcs11`
+  route below.
 - **TPM custody does *not* need CGO in current versions** — the thread assumed a CGO build was required,
   but `tpmkms` is pure Go and compiled into the stock binary; the CGO/`hsm` build is for **PKCS #11 and
-  YubiKey PIV**. Evidence and the required smoke test are in §5. *(This is the one claim in this
-  document that contradicts the upstream docs page — verify on hardware.)*
+  YubiKey PIV**. Evidence is in §5, and the claim is now **confirmed on hardware** (2026-10-04): the
+  stock `step-ca` v0.30.2 binary — `CGO_ENABLED=0`, statically linked, 133 `tpmkms` symbol references,
+  zero PCSC — created a `pve` dTPM key, signed an intermediate with it, and served a CA that issued a
+  chain-verified leaf. It **does** contradict the upstream docs page, which is stale.
 - **PKCS #11 is the general path** and covers YubiHSM 2, Nitrokey HSM 2, SoftHSMv2 and any
   `pkcs11`-exposing device, including a `tpm2-pkcs11` bridge:
 
@@ -248,9 +259,9 @@ M910q has one, the Wyse 3040 and Futro S930 do not. The thread also flags that t
 hardware key custody on nodes *without* a TPM by attaching a **YubiKey / YubiHSM 2 / Nitrokey** or a
 **motherboard TPM header module** — the TPM-technology side of that is in research 37.
 
-> **Unverified — validation work.** TPM passthrough into an unprivileged LXC (below), the signing
-> latency, `tpm2-pkcs11` operation, and the stock binary's `tpmkms` support (§5) are all untested here.
-> The upstream docs confirm only part of the picture — check the rest on hardware.
+> **Verified 2026-10-04 — see §5.** TPM passthrough into an unprivileged LXC and the stock binary's
+> `tpmkms` support are **no longer open**; both were run on `pve`. Still unmeasured: the signing
+> latency, `tpm2-pkcs11` operation, and whether the passthrough survives a host reboot.
 
 ## §5 — Where to run it: the circular-dependency analysis
 
@@ -306,34 +317,60 @@ which link PCSC/pkcs11 C libraries. The docs page looks stale — hence the smok
 
 **Does the hosting model change anything?** No. A **native systemd service in a dedicated LXC** needs
 neither Docker nor a custom image. With TPM custody on the stock binary the CA is an ordinary packaged
-service, upgraded like any other. The `/dev/tpmrm0` passthrough is the only custom part, and it is
-independent of all of this.
+service, upgraded like any other. The `/dev/tpmrm0` passthrough is the only custom part — and it is
+**two** steps, not one: the device allow + bind mount, **plus** an ownership change on the device node,
+because an unprivileged container's root maps to a host subuid and cannot open a `root:root 0600` device
+(the measured recipe is below). It is independent of all of this.
 
-### Upgrade and verification (recommendation)
+### Upgrade and verification
 
-If the stock binary does provide `tpmkms` (expected — see above), there is **nothing to build and nothing
-to store**:
+The stock binary does provide `tpmkms` — verified on `pve` (see above) — so there is **nothing to build
+and nothing to store**:
 
 - **Install** the released `step-ca` package/binary as usual; the Ansible role pins the version and
   upgrades it like any other service. No image, no artefact registry, no CGO toolchain.
-- **Prove TPM support on the host — this is the gate.** `step kms create --json 'tpmkms:name=smoke-test'`
-  must succeed against `/dev/tpmrm0`; the pure-Go path talks to the kernel resource manager, so no `tss`
-  library need appear in `ldd`. The setup tooling (`step` CLI + `step-kms-plugin`) must also carry TPM
-  support — the same test covers it. Run this on `pve` before committing to the design.
-- **Fallback only if the smoke test fails**: take `/usr/local/bin/step-ca` from the official
-  `smallstep/step-ca-hsm` image (`docker create` + `docker cp`, or `skopeo copy` / `crane export`), or
-  build with CGO (`make bootstrap && make build GO_ENVS="CGO_ENABLED=1"`). Still nothing to *publish* —
-  but then the Ansible role owns the binary and its version.
+- **Prove TPM support on the host — this was the gate, and it passed (2026-10-04).**
+  `step kms create --json 'tpmkms:name=smoke-test'` succeeded against `/dev/tpmrm0`, and `step-ca`
+  itself links no `tss` or PCSC library at all. **But the setup tooling does need one**:
+  `step-kms-plugin` is a CGO build linked against `libpcsclite.so.1` and the loader resolves it at
+  startup, so `step kms` fails for TPM-only work unless `libpcsclite1` is installed. That applies to the
+  machine doing provisioning, **not** to the CA server.
+- **Fallback — not needed.** The stock binary passed the gate, so lifting in the `smallstep/step-ca-hsm`
+  binary and building with CGO (`make bootstrap && make build GO_ENVS="CGO_ENABLED=1"`) both stay unused.
+  They remain relevant only to a PKCS #11 / YubiKey PIV root.
 - **The planned YubiKey PIV root is different.** YubiKey/PKCS #11 custody *does* need the CGO build — but
   that sits on the machine performing root signing (the `step` CLI + `step-kms-plugin` with PCSC), not on
   the CA server, which only ever sees the intermediate.
 
-> **Unverified — validation work.** The LXC device-passthrough recipe, the `nesting`/storage-driver
-> prerequisites for Docker-in-LXC (already flagged in research 35 §7), and the port-53 collision when a
-> resolver runs inside an LXC (research 35 §6) remain untested. The thread's passthrough snippets for
-> the LXC config (`lxc.cgroup2.devices.allow` / `lxc.mount.entry` for `/dev/tpmrm0`) are transcribed,
-> not run — and they varied between the two threads (`c 10:224` vs `c 225:*`), so treat the exact
-> device major/minor as a thing to look up on the host, not to copy.
+### The measured LXC passthrough recipe (unprivileged, on `pve`)
+
+Run and verified 2026-10-04. The bind mount alone is **not** sufficient — it yields `permission denied`,
+because the host device node is `root:root 0600` while an unprivileged container's root maps to host
+subuid `100000`, so inside the container the device appears as `nobody`:
+
+```ini
+# /etc/pve/lxc/<VMID>.conf  (in addition to the usual config)
+lxc.cgroup2.devices.allow: c 10:224 rwm       # /dev/tpm0
+lxc.cgroup2.devices.allow: c 252:65536 rwm    # /dev/tpmrm0
+lxc.mount.entry: /dev/tpm0   dev/tpm0   none bind,optional,create=file
+lxc.mount.entry: /dev/tpmrm0 dev/tpmrm0 none bind,optional,create=file
+```
+
+The second half is the ownership change, applied on the **host** — a udev rule is the persistent form:
+
+```bash
+chown 100000:100000 /dev/tpm0 /dev/tpmrm0     # 100000 = the container's mapped root uid
+```
+
+With that in place the device appears as `root` inside the container, and both key creation and signing
+work from inside the unprivileged container. A **privileged** container avoids the ownership change, at
+the cost of the isolation the unprivileged shape exists for. The device numbers confirm the threads'
+`c 10:224` and refute their `c 225:*` — but read them off the host (`ls -l /dev/tpm*`) rather than
+assuming.
+
+> **Still unverified.** The `nesting`/storage-driver prerequisites for Docker-in-LXC (already flagged in
+> research 35 §7), the port-53 collision when a resolver runs inside an LXC (research 35 §6), and whether
+> the passthrough survives a host reboot (the `chown` is not reboot-durable without the udev rule).
 
 ## §6 — Disaster recovery: re-issue the intermediate, keep the root
 
@@ -402,17 +439,21 @@ chose the offline root.
   maximises locality and hardware binding at the cost of re-signing the intermediate when the host fails
   (cheap, since the root stays offline — §6); Key Vault would reintroduce a cloud dependency into the
   trust anchor and remains the fallback.
-- **Verify the stock binary's TPM support.** `tpmkms` appears to be pure Go and already in the released
-  binary (§5), which would remove all packaging implications; the `pve` smoke test settles it. PKCS #11 /
-  YubiKey PIV *do* need the CGO build, and the Ansible role would then own that binary.
+- **Stock binary's TPM support — settled (2026-10-04).** `tpmkms` is pure Go and in the released binary
+  (§5); the `pve` gate passed end to end, including a chain-verified leaf issued by a TPM-backed CA. So
+  there is **no packaging implication** — no custom build, no `step-ca-hsm` image, no artefact store.
+  PKCS #11 / YubiKey PIV *do* need the CGO build, which is relevant only to the planned PIV root and only
+  on the machine performing the root-signing ceremony.
+- **Deployment shape on `pve` — LXC confirmed workable (2026-10-04).**
+  [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) fixes the **host** — the TPM makes it a
+  hard requirement — so `edge` and `lab` were never candidates. The unprivileged-LXC passthrough was run
+  and the recipe measured (§5). What remains open is plumbing, not shape: making the device ownership
+  survive reboots (udev rule vs a privileged CT), and sizing the LXC against `pve`'s single SSD.
 - **Wildcards on the proxy** — unchanged and still open ([research 35 §4](35-private-ca-and-lan-naming.md)).
-- **Deployment shape on `pve`.** [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) fixes the
-  **host** — the TPM makes it a hard requirement — so `edge` and `lab` are no longer candidates. What
-  remains open is the shape *within* `pve`: an LXC or a VM, and how the TPM is passed through.
 - **SSH CA adoption** — is passwordless, certificate-based SSH actually wanted across a five-node
   fleet, or does it outgrow the `authorized_keys` problem it solves?
-- **Nothing was measured** — TPM signing latency, the stock binary's footprint on the Wyse 5070, and the
-  whole LXC passthrough recipe are unverified.
+- **Still unmeasured** — TPM signing latency, the stock binary's footprint on the Wyse 5070, device
+  passthrough across a host reboot, and `tpm2-pkcs11` operation.
 
 ## References
 
