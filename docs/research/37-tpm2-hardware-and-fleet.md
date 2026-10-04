@@ -117,6 +117,16 @@ systemd-cryptenroll --tpm2-device=list   # enumerates TPM 2.0 devices systemd ca
   chipset, **not** a discrete chip. The thread's "discrete dTPM 2.0" and its **Nuvoton
   NPCT650/NPCT750** / **Infineon SLB 9665/SLB 9670** part numbers are **refuted**: no discrete TPM is
   fitted or exposed.
+- **Vendor confirmation.** Dell's own article for this exact machine —
+  [KB 000128307](https://www.dell.com/support/kbdoc/en-gb/000128307/tpm-firmware-version-is-present-after-updating-the-bios-to-1-2-4-and-above),
+  *"TPM Firmware Version is Present After Updating the BIOS to 1.2.4 and Above"*, affected product
+  **Wyse 5070** — is written entirely around a **"Firmware TPM device"**: "The customer can see a
+  Firmware TPM device under the BIOS setup Menu for ThinLinux, ThinOS, and Windows 10, when updating a
+  Wyse 5070 system BIOS to version 1.2.4 or later", and its FAQ answers "There is an **fTPM device**
+  present under the operating system and BIOS setup menu". Dell's stated cause: "Microsoft requires all
+  platforms that released after July 2018 to support TPM 2.0 either using dTPM, or fTPM" — the Wyse 5070
+  took the **fTPM** route. Our installed BIOS is **1.34.0**, far past that 1.2.4 threshold. So the
+  kernel-level reading above and Dell's documentation agree: **fTPM, no discrete chip**.
 - **Evidence** (all read on `pve`):
   - DMI type 43, i.e. what the **BIOS itself** reports: `Vendor ID: CTNI` — which is **`INTC`** in
     stored byte order — `Description: INTEL`, spec 2.0, firmware revision 403.0.
@@ -127,11 +137,12 @@ systemd-cryptenroll --tpm2-device=list   # enumerates TPM 2.0 devices systemd ca
   - ACPI path `\_SB_.TPM_` / `MSFT0101:00`, with `physical_node` → `/sys/devices/platform/MSFT0101:00`
     (a *platform* device, not an SPI/LPC child). It is the only entry in `/sys/class/tpm/`.
   - BIOS is Dell **1.34.0** (2024-11-08); the ACPI TPM2 table is AMI (`ALASKA A M I`).
-- **BIOS settings.** The TPM page is **Security → TPM 2.0 Security** (Dell firmware), typically offering
-  `TPM On`, `PPI` (physical presence interface), `Attestation Enable`, `Key Storage/Execution Enable`,
-  `SHA-256` and **`Clear`**. They are **not readable from Linux on this box**: `dell-wmi-sysman` refuses
-  to load (*No such device* — the Wyse line does not expose it) and `libsmbios` is no longer packaged in
-  Debian 13. Read them on the console (**F2** at boot).
+- **BIOS settings.** Dell's article names the control exactly: **Security → PTT security** — *"Press F2 …
+  Go to the Security page and select the **PTT security** item … Clear PTT On … Apply"*. That is also the
+  switch that would **destroy the sealed CA key**, so it is worth knowing by name. They are **not
+  readable from Linux on this box**: `dell-wmi-sysman` refuses to load (*No such device* — the Wyse line
+  does not expose it) and `libsmbios` is no longer packaged in Debian 13. Read them on the console
+  (**F2** at boot).
 
 > ⚠️ **What "firmware TPM" changes.** PTT is a genuine TPM 2.0 implementation, not an emulator like
 > `swtpm`, so a sealed key still cannot be exported. But the trust anchor is **platform firmware** rather
