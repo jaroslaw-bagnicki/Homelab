@@ -11,9 +11,12 @@ entry. Notable changes only: no instruction-file tweaks, typo/link fixes, cross-
 corrections, or changelog bookkeeping.
 Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month and newest entry first.
 
-## 2026‑09
+## 2026‑10
 
 - **(docs)** Private CA — offline 10-year root, TPM-bound 1-year intermediate on `pve`, short-lived leaves — [ADR 38](docs/decisions/38-private-ca-hierarchy-and-custody.md)
+
+## 2026‑09
+
 - **(docs)** Adopt `.internal` as the LAN name space, retiring DNSMasq and `.home` — [ADR 37](docs/decisions/37-lan-name-space-internal.md)
 - **(feat)** Fluent Bit collector — every LAN node ships its journald (and Docker) logs into VictoriaLogs — [ADR 36](docs/decisions/36-log-collector-fluentbit.md) · [runbook 34](docs/runbooks/34-deploy-fluentbit.md)
 - **(feat)** Adopt VictoriaLogs as the log store in an LXC on `pve` — [ADR 35](docs/decisions/35-log-store-victorialogs.md) · [runbook 33](docs/runbooks/33-deploy-victorialogs.md)

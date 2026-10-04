@@ -215,7 +215,9 @@ adds an interceptable layer that defeats the tamper-resistance model. The altern
   disagree on the device mapping. Does `step-ca` in an LXC see `/dev/tpmrm0` reliably across reboots?
 - **`systemd-cryptenroll` on `pve`** — does the Wyse 5070's boot chain enrol cleanly, and does a
   firmware update then lock the disk? PCR-binding has a real operational cost here.
-- **YubiKey vs TPM vs Key Vault** for the CA key — see [research 36 §4/§8](36-step-ca-machine-identity.md).
+- **Fallback trigger for the CA key.** ADR 38 selects the TPM; the open question is what evidence would
+  move the intermediate to **Azure Key Vault** or a **YubiHSM** — the TPM smoke test failing, or a future
+  need for attestation/PCI-style custody. See [research 36 §4/§8](36-step-ca-machine-identity.md).
 - **Beetle and Futro TPM versions** — 1.2 vs 2.0 vs absent, to be read from BIOS/`dmesg`; it changes
   whether those nodes can do anything hardware-backed.
 - **Nothing measured** — power, signing latency, and even the presence of the chips.

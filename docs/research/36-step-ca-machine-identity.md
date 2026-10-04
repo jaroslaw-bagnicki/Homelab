@@ -201,7 +201,9 @@ exists in the clear — signing happens in hardware.
   ```
 
   created with `step kms create --json 'tpmkms:name=my-intermediate-ca'` (needs Smallstep's
-  `step-kms-plugin` and, on Linux, the **`tpm2-tss`** package).
+  `step-kms-plugin`; **no `tpm2-tss` package is required** — the pure-Go path talks to the kernel's TPM
+  resource manager directly. The `tpm2-tss` library applies only to the PKCS #11 / `tpm2-pkcs11` route
+  below).
 - **TPM custody does *not* need CGO in current versions** — the thread assumed a CGO build was required,
   but `tpmkms` is pure Go and compiled into the stock binary; the CGO/`hsm` build is for **PKCS #11 and
   YubiKey PIV**. Evidence and the required smoke test are in §5. *(This is the one claim in this
@@ -319,7 +321,7 @@ to store**:
   library need appear in `ldd`. The setup tooling (`step` CLI + `step-kms-plugin`) must also carry TPM
   support — the same test covers it. Run this on `pve` before committing to the design.
 - **Fallback only if the smoke test fails**: take `/usr/local/bin/step-ca` from the official
-  `smallstep/step-ca:hsm` image (`docker create` + `docker cp`, or `skopeo copy` / `crane export`), or
+  `smallstep/step-ca-hsm` image (`docker create` + `docker cp`, or `skopeo copy` / `crane export`), or
   build with CGO (`make bootstrap && make build GO_ENVS="CGO_ENABLED=1"`). Still nothing to *publish* —
   but then the Ansible role owns the binary and its version.
 - **The planned YubiKey PIV root is different.** YubiKey/PKCS #11 custody *does* need the CGO build — but
@@ -404,8 +406,9 @@ chose the offline root.
   binary (§5), which would remove all packaging implications; the `pve` smoke test settles it. PKCS #11 /
   YubiKey PIV *do* need the CGO build, and the Ansible role would then own that binary.
 - **Wildcards on the proxy** — unchanged and still open ([research 35 §4](35-private-ca-and-lan-naming.md)).
-- **Issuer vs host.** A dedicated CA LXC on `pve` is the thread's recommendation, but `edge` and `lab`
-  remain on the [idea 10](../ideas/10-internal-ca-dns-stack.md) shortlist.
+- **Deployment shape on `pve`.** [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) fixes the
+  **host** — the TPM makes it a hard requirement — so `edge` and `lab` are no longer candidates. What
+  remains open is the shape *within* `pve`: an LXC or a VM, and how the TPM is passed through.
 - **SSH CA adoption** — is passwordless, certificate-based SSH actually wanted across a five-node
   fleet, or does it outgrow the `authorized_keys` problem it solves?
 - **Nothing was measured** — TPM signing latency, the stock binary's footprint on the Wyse 5070, and the

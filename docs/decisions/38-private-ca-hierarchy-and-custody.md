@@ -39,13 +39,21 @@ Adopt a **three-tier PKI** issued and renewed by **`step-ca`**:
 1. **Root CA — 10 years.** The private key is kept **offline on an IronKey**. It is used only to sign the
    intermediate, so it is touched rarely. The intended upgrade is to move the root key into a **YubiKey
    PIV** so the key becomes non-exportable; the plan is to keep the same root certificate and change only
-   its custody. The **root certificate is distributed to the fleet and to workstations** — Ansible for the
+   its custody. **The PIV migration is a ceremony, not a file move**: import the key into a PIV slot,
+   verify that it signs, then **destroy every exportable copy** — the IronKey copy and any backups of the
+   key file. Importing alone does not make the existing copies non-exportable, so the custody benefit is
+   only real once those copies are gone. (Generating a *new* root on the token is the alternative, and is
+   rejected because it forces the root redistribution the offline-root design exists to avoid.) The
+   **root certificate is distributed to the fleet and to workstations** — Ansible for the
    fleet, manually or by script for workstations.
 2. **Intermediate CA — 1 year**, signed by the root. Its private key is stored in the **Wyse 5070's
    discrete dTPM 2.0** on `pve`, so signing happens in hardware and the key never exists in the clear.
    Only the intermediate is online.
-3. **Leaves — short-lived**, signed by the intermediate: TLS/mTLS certificates for the reverse proxy
-   (Caddy) and the services behind it, issued over **ACME** so they renew automatically.
+3. **Leaves — short-lived**, signed by the intermediate: server certificates for the reverse proxy
+   (Caddy) and the services behind it, issued over **ACME** so they renew automatically. **Lifetime: 24 h
+   default, 7 d maximum** — `step-ca`'s own default, capped so a mis-set provisioner cannot mint
+   long-lived leaves. **No CRL or OCSP is operated**: revocation relies entirely on the short lifetime,
+   so a compromised leaf stays trusted until it expires. That is an accepted residual, not an oversight.
 
 The CA runs on **`pve`** — the TPM makes that host a hard requirement, since the intermediate key cannot
 move to another machine. The container/VM shape is an implementation detail, not part of this decision
@@ -66,7 +74,7 @@ with the TPM bound through, rather than one all-in-one stack).
 - **The root is never online**, so compromising `pve` cannot forge a new intermediate — the worst case is
   a stolen 1-year intermediate, not a stolen root.
 - **TPM key custody needs no custom build** — `tpmkms` is pure Go and compiled into the stock `step-ca`
-  binary, so the CA stays an ordinary packaged service (the CGO / `step-ca:hsm` build is for PKCS #11 and
+  binary, so the CA stays an ordinary packaged service (the CGO / `step-ca-hsm` build is for PKCS #11 and
   YubiKey PIV). That is expected from the source but contradicts Smallstep's docs page, so the stock
   binary's TPM support is **verified on `pve` before the design is relied upon**
   ([research 36 §5](../research/36-step-ca-machine-identity.md)).
