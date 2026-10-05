@@ -1,0 +1,14 @@
+---
+# Fixed asset table. For each release the linux_amd64 archive and its checksums
+# are resolved from the GitHub release API at run time, so the current release is
+# installed without pinning and without a fixed asset-name assumption.
+step_ca_releases:
+  - repo: smallstep/cli
+    binary: step
+    tag: cli
+  - repo: smallstep/certificates
+    binary: step-ca
+    tag: ca
+  - repo: smallstep/step-kms-plugin
+    binary: step-kms-plugin
+    tag: kms

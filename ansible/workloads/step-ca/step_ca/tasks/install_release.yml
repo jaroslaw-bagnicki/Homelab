@@ -1,0 +1,70 @@
+---
+# Per-release install: download, checksum-verify, extract, install the binary.
+# Called with `item` from `step_ca_assets` (tag, binary, version, asset, url, sums).
+# Extraction is version-scoped so a versioned archive (step-kms-plugin) never
+# leaves a second binary for the locator to pick up.
+
+- name: Configure the release directory
+  ansible.builtin.file:
+    path: "/var/tmp/step-ca-install/{{ item.tag }}/{{ item.version }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Download the release archive {{ item.binary }}
+  ansible.builtin.get_url:
+    url: "{{ item.url }}"
+    dest: "/var/tmp/step-ca-install/{{ item.tag }}/{{ item.version }}/{{ item.asset }}"
+    mode: "0644"
+
+- name: Download the release checksums {{ item.binary }}
+  ansible.builtin.get_url:
+    url: "{{ item.sums }}"
+    dest: "/var/tmp/step-ca-install/{{ item.tag }}/{{ item.version }}/checksums.txt"
+    mode: "0644"
+
+# Gate finding (#141): a truncated release tarball segfaulted and produced a false
+# "step-ca is broken" result — always verify against the release checksums.txt.
+- name: Verify the release archive {{ item.binary }}
+  ansible.builtin.shell:
+    cmd: >-
+      set -o pipefail &&
+      grep -E ' +{{ item.asset | regex_escape }}$' checksums.txt
+      | sha256sum -c -
+    chdir: "/var/tmp/step-ca-install/{{ item.tag }}/{{ item.version }}"
+    executable: /bin/bash
+  changed_when: false
+
+- name: Extract the release archive {{ item.binary }}
+  ansible.builtin.unarchive:
+    src: "/var/tmp/step-ca-install/{{ item.tag }}/{{ item.version }}/{{ item.asset }}"
+    dest: "/var/tmp/step-ca-install/{{ item.tag }}/{{ item.version }}"
+    remote_src: true
+    creates: "/var/tmp/step-ca-install/{{ item.tag }}/{{ item.version }}/.extracted"
+
+# The archive layout is not uniform (the CLI nests the binary under bin/), so
+# locate it after extraction rather than assuming a member path.
+- name: Locate the release executable {{ item.binary }}
+  ansible.builtin.find:
+    paths: "/var/tmp/step-ca-install/{{ item.tag }}/{{ item.version }}"
+    patterns: "{{ item.binary }}"
+    file_type: file
+    recurse: true
+  register: step_ca_found
+
+- name: Install the release executable {{ item.binary }}
+  ansible.builtin.copy:
+    src: "{{ step_ca_found.files[0].path }}"
+    dest: "/usr/local/bin/{{ item.binary }}"
+    remote_src: true
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Mark the extraction complete {{ item.binary }}
+  ansible.builtin.file:
+    path: "/var/tmp/step-ca-install/{{ item.tag }}/{{ item.version }}/.extracted"
+    state: touch
+    mode: "0644"
+  changed_when: false

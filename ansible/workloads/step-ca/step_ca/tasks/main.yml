@@ -1,0 +1,333 @@
+---
+# Private CA (step-ca) workload role — see ../../README.md and runbook 35.
+#
+# Two phases in one idempotent run:
+#   prepare  — install the toolchain, create the intermediate key IN THE TPM, emit a CSR.
+#   start    — once the root-signed intermediate certificate is present, enable and start step-ca.
+#
+# The TPM key is create-once (never recreated) and the CSR is create-only unless
+# `step_ca_csr_force` is set, so a routine run never destroys the sealed key or
+# clobbers a CSR awaiting offline signing. `step_ca_reset` clears stale state for
+# recovery (e.g. after a PTT clear) and is off by default.
+
+- name: Assert Azure controller credentials are set
+  when: step_ca_password | length == 0
+  ansible.builtin.assert:
+    that:
+      - lookup('ansible.builtin.env', 'AZURE_CLIENT_ID', default='') | length > 0
+      - lookup('ansible.builtin.env', 'AZURE_CLIENT_SECRET', default='') | length > 0
+      - lookup('ansible.builtin.env', 'AZURE_TENANT_ID', default='') | length > 0
+    fail_msg: "AZURE_CLIENT_ID, AZURE_CLIENT_SECRET and AZURE_TENANT_ID must be set on the Ansible controller for the Key Vault lookup."
+  delegate_to: localhost
+
+- name: Fetch the CA provisioner password from Key Vault
+  when: step_ca_password | length == 0
+  vars:
+    step_ca_vault_url: "https://{{ step_ca_keyvault_name }}.vault.azure.net"
+    step_ca_azure_client_id: "{{ lookup('ansible.builtin.env', 'AZURE_CLIENT_ID') }}"
+    step_ca_azure_secret: "{{ lookup('ansible.builtin.env', 'AZURE_CLIENT_SECRET') }}"
+    step_ca_azure_tenant_id: "{{ lookup('ansible.builtin.env', 'AZURE_TENANT_ID') }}"
+  ansible.builtin.set_fact:
+    step_ca_password: >-
+      {{ lookup('azure.azcollection.azure_keyvault_secret',
+      step_ca_password_secret_name, vault_url=step_ca_vault_url,
+      client_id=step_ca_azure_client_id, secret=step_ca_azure_secret,
+      tenant=step_ca_azure_tenant_id) }}
+  delegate_to: localhost
+  no_log: true
+
+- name: Install the TPM/PCSC and TLS support packages
+  ansible.builtin.apt:
+    name:
+      - libpcsclite1
+      - ca-certificates
+    state: present
+    update_cache: true
+
+# Resolve each repo's current linux_amd64 archive + checksums from the release
+# API — the step-kms-plugin asset is versioned, so a constructed URL 404s.
+- name: Resolve the latest upstream release metadata
+  ansible.builtin.uri:
+    url: "https://api.github.com/repos/{{ item.repo }}/releases/latest"
+    return_content: true
+    headers:
+      Accept: application/vnd.github+json
+  register: step_ca_release_meta
+  loop: "{{ step_ca_releases }}"
+  loop_control:
+    label: "{{ item.tag }}"
+  changed_when: false
+
+- name: Build the release asset plan
+  ansible.builtin.set_fact:
+    step_ca_assets: >-
+      {{
+        (step_ca_assets | default([]))
+        + [ item.0 | combine({
+              'version': item.1.json.tag_name,
+              'asset': (item.1.json.assets | selectattr('name', 'search', '_linux_amd64[.]tar[.]gz$') | map(attribute='name') | first),
+              'url': (item.1.json.assets | selectattr('name', 'search', '_linux_amd64[.]tar[.]gz$') | map(attribute='browser_download_url') | first),
+              'sums': (item.1.json.assets | selectattr('name', 'equalto', 'checksums.txt') | map(attribute='browser_download_url') | first)
+            }) ]
+      }}
+  loop: "{{ step_ca_releases | zip(step_ca_release_meta.results) | list }}"
+  loop_control:
+    label: "{{ item.0.tag }}"
+
+- name: Install the Smallstep releases
+  ansible.builtin.include_tasks: install_release.yml
+  loop: "{{ step_ca_assets }}"
+  loop_control:
+    label: "{{ item.tag }}"
+
+- name: Ensure the CA directory layout exists
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "{{ item.mode }}"
+  loop:
+    - { path: /etc/step-ca, mode: "0700" }
+    - { path: /etc/step-ca/certs, mode: "0700" }
+    - { path: /etc/step-ca/config, mode: "0700" }
+    - { path: /etc/step-ca/secrets, mode: "0700" }
+    - { path: /etc/step-ca/db, mode: "0700" }
+    - { path: /var/lib/step-ca/tpm, mode: "0700" }
+  loop_control:
+    label: "{{ item.path }}"
+
+- name: Write the CA provisioner password file
+  when: step_ca_password | length > 0
+  ansible.builtin.copy:
+    content: "{{ step_ca_password }}"
+    dest: /etc/step-ca/secrets/password
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+
+- name: Check whether the CA has already been initialized
+  ansible.builtin.stat:
+    path: /etc/step-ca/config/ca.json
+  register: step_ca_config_stat
+
+# step ca init cannot bootstrap a TPM-backed CA (gate #141): it only accepts
+# `azurekms` and silently ignores a tpmkms intermediate. Run it once into a
+# throwaway STEPPATH to mint the provisioner skeleton and password, then write a
+# live ca.json that points the CA at the TPM key — and delete the throwaway
+# software keys so they never persist.
+- name: Initialize the CA configuration
+  when: not step_ca_config_stat.stat.exists
+  block:
+    - name: Create the throwaway init directory
+      ansible.builtin.file:
+        path: /var/tmp/step-ca-init
+        state: directory
+        owner: root
+        group: root
+        mode: "0700"
+
+    - name: Run step ca init into the throwaway path
+      ansible.builtin.command:
+        argv:
+          - step
+          - ca
+          - init
+          - --name
+          - Homelab Internal CA
+          - --dns
+          - ca.internal
+          - --address
+          - ":9000"
+          - --deployment-type
+          - standalone
+          - --provisioner
+          - admin@internal
+          - --password-file
+          - /etc/step-ca/secrets/password
+      environment:
+        STEPPATH: /var/tmp/step-ca-init
+      changed_when: true
+
+    - name: Read the generated configuration
+      ansible.builtin.slurp:
+        src: /var/tmp/step-ca-init/config/ca.json
+      register: step_ca_config_raw
+
+    - name: Parse the generated configuration
+      ansible.builtin.set_fact:
+        step_ca_base: "{{ step_ca_config_raw.content | b64decode | from_json }}"
+
+    - name: Write the live TPM-backed CA configuration
+      ansible.builtin.copy:
+        content: >-
+          {{
+            step_ca_base
+            | combine({
+                'root': '/etc/step-ca/certs/root_ca.crt',
+                'crt': '/etc/step-ca/certs/intermediate_ca.crt',
+                'key': 'tpmkms:name=homelab-intermediate-ca',
+                'kms': {'type': 'tpmkms', 'uri': 'tpmkms:storage-directory=/var/lib/step-ca/tpm'},
+                'db': {'type': 'badgerv2', 'dataSource': '/etc/step-ca/db'}
+              })
+            | combine({
+                'authority': step_ca_base.authority | combine({
+                  'provisioners': (step_ca_base.authority.provisioners
+                    | rejectattr('name', 'equalto', 'acme') | list)
+                    + [{'type': 'ACME', 'name': 'acme'}]
+                })
+              })
+            | to_nice_json
+          }}
+        dest: /etc/step-ca/config/ca.json
+        owner: root
+        group: root
+        mode: "0600"
+      notify: Restart step-ca
+
+    - name: Remove the throwaway init directory and its software keys
+      ansible.builtin.file:
+        path: /var/tmp/step-ca-init
+        state: absent
+
+- name: Enforce the CA configuration ownership and mode
+  ansible.builtin.file:
+    path: /etc/step-ca/config/ca.json
+    owner: root
+    group: root
+    mode: "0600"
+
+# Recovery only: a PTT clear (or a lost key) leaves a blob the TPM can no longer
+# open, and the create guards below would skip regeneration. Clear the stale
+# artifacts so the run recreates the key and CSR.
+- name: Clear stale CA state when a reset is requested
+  when: step_ca_reset | bool
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /var/lib/step-ca/tpm/key-homelab-intermediate-ca.tpmobj
+    - /etc/step-ca/intermediate_ca.csr
+    - /etc/step-ca/intermediate_ca_key.pub
+    - /etc/step-ca/certs/intermediate_ca.crt
+    - /etc/step-ca/.active-intermediate.sha256
+  loop_control:
+    label: "{{ item }}"
+
+# Create-once: the sealed key never leaves this TPM and must never be recreated
+# over an existing one. `creates` is the guard; there is deliberately no force.
+- name: Create the intermediate CA key in the TPM
+  ansible.builtin.command:
+    argv:
+      - step
+      - kms
+      - create
+      - --json
+      - "tpmkms:name=homelab-intermediate-ca;storage-directory=/var/lib/step-ca/tpm"
+    creates: /var/lib/step-ca/tpm/key-homelab-intermediate-ca.tpmobj
+  environment:
+    STEPPATH: /etc/step-ca
+
+- name: Remove stale CSR outputs when a renewal is forced
+  when: step_ca_csr_force | bool
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /etc/step-ca/intermediate_ca.csr
+    - /etc/step-ca/intermediate_ca_key.pub
+  loop_control:
+    label: "{{ item }}"
+
+# The intermediate doubles as step-ca's TLS server certificate, so it carries the
+# service SANs — the API is validated by name (`ca.internal`) and by IP before DNS
+# exists (`192.168.2.215`).
+- name: Generate the intermediate CSR from the TPM key
+  ansible.builtin.command:
+    argv:
+      - step
+      - certificate
+      - create
+      - Homelab Internal CA Intermediate CA
+      - /etc/step-ca/intermediate_ca.csr
+      - /etc/step-ca/intermediate_ca_key.pub
+      - --csr
+      - --profile
+      - intermediate-ca
+      - --san
+      - ca.internal
+      - --san
+      - 192.168.2.215
+      - --kms
+      - "tpmkms:storage-directory=/var/lib/step-ca/tpm"
+      - --key
+      - "tpmkms:name=homelab-intermediate-ca"
+    creates: /etc/step-ca/intermediate_ca.csr
+  environment:
+    STEPPATH: /etc/step-ca
+
+- name: Template the step-ca systemd unit
+  ansible.builtin.template:
+    src: step-ca.service.j2
+    dest: /etc/systemd/system/step-ca.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Check for the root-signed intermediate certificate
+  ansible.builtin.stat:
+    path: /etc/step-ca/certs/intermediate_ca.crt
+  register: step_ca_cert
+
+- name: Check for the offline root certificate
+  ansible.builtin.stat:
+    path: /etc/step-ca/certs/root_ca.crt
+  register: step_ca_root
+
+- name: Read the last activated certificate checksum
+  ansible.builtin.slurp:
+    src: /etc/step-ca/.active-intermediate.sha256
+  register: step_ca_active
+  failed_when: false
+
+# Runs only after the offline ceremony returns both certificates (runbook 36 §3).
+- name: Determine whether the intermediate certificate changed
+  when: step_ca_cert.stat.exists and step_ca_root.stat.exists
+  ansible.builtin.set_fact:
+    step_ca_cert_changed: >-
+      {{
+        (step_ca_active.content | default('') | b64decode | trim)
+        != step_ca_cert.stat.checksum
+      }}
+
+- name: Enable step-ca
+  when: step_ca_cert.stat.exists and step_ca_root.stat.exists
+  ansible.builtin.systemd:
+    name: step-ca
+    enabled: true
+    daemon_reload: true
+
+- name: Start step-ca
+  when: step_ca_cert.stat.exists and step_ca_root.stat.exists
+  ansible.builtin.systemd:
+    name: step-ca
+    state: started
+
+# A renewed intermediate is only picked up on restart (state: started is a no-op
+# for a running service), so restart when the certificate checksum changed.
+- name: Restart step-ca when the intermediate certificate changed
+  when: step_ca_cert_changed | default(false) | bool
+  ansible.builtin.systemd:
+    name: step-ca
+    state: restarted
+
+- name: Record the activated intermediate certificate
+  when: step_ca_cert_changed | default(false) | bool
+  ansible.builtin.copy:
+    content: "{{ step_ca_cert.stat.checksum }}\n"
+    dest: /etc/step-ca/.active-intermediate.sha256
+    owner: root
+    group: root
+    mode: "0600"

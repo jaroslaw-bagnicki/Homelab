@@ -47,7 +47,7 @@ the decisions, not their authority.
 | `.local` | Rejected for unicast DNS — RFC 6762 reserves it for mDNS; it stays mDNS-only |
 | Subdomain of the owned public domain | **Fallback**, not adopted — publicly trusted TLS, but internal hostnames become public |
 | Issuing tool | **`step-ca`** ([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md)) — `cfssl` / Ansible-driven OpenSSL were the alternatives named in [#126](https://github.com/jaroslaw-bagnicki/Homelab/issues/126) |
-| CA hierarchy & key custody | **Three-tier** — 10-year root offline, 1-year intermediate in the `pve` dTPM, short-lived leaves ([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md)) |
+| CA hierarchy & key custody | **Three-tier** — 10-year root offline, 1-year intermediate in the `pve` TPM (an **Intel PTT firmware TPM**, not a discrete chip — [research 37 §5](37-tpm2-hardware-and-fleet.md)), short-lived leaves ([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md)) |
 | Names issued for | **Short-lived leaves** signed by the intermediate ([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md)); one wildcard on the proxy or per-service leaves remains an implementation choice (§4, §8) |
 | Host placement | **`pve`** — required by the TPM ([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md)); `edge` and `lab` are no longer candidates (§7) |
 | Resolver | **Open** — Unbound vs AdGuard Home vs dnsmasq (§6) |

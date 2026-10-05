@@ -27,6 +27,7 @@ hardware detail see [Hardware Inventory](hardware.md); for change history see
 | LXC 212 | Zigbee2MQTT | — | `.212` | 📋 |
 | LXC 213 | NUT server | `nut` | `.213` | ✅ |
 | LXC 214 | VictoriaLogs log store | `vtstack` | `.214` | ✅ |
+| LXC 215 | Private CA (`step-ca`) | `ca` | `.215` | 📋 |
 
 Addresses follow the static scheme ([ADR 31](decisions/31-static-address-scheme.md)); node hostnames name the host role ([ADR 33](decisions/33-fleet-node-hostnames.md)); the workload platform is migrating to k3s ([ADR 22](decisions/22-k3s-arc-homelab.md)).
 
@@ -87,7 +88,7 @@ once it is ready to start — a row leaves the table with the PR that completes 
 |---|---|---|---|
 | **Power monitoring (Zigbee/Z2M)** | ⭐⭐ | Zigbee energy plugs → Prometheus, bootstrapped standalone on the M910q (ADR 26 — independent of Home Assistant) — sequenced **before** k3s | [#73](https://github.com/jaroslaw-bagnicki/Homelab/issues/73) · [ADR 26](decisions/26-zigbee-energy-monitoring.md) |
 | **YUMI multiboot USB standard** | ⭐ | ADR 29 + manage-YUMI runbook; de-conflate the Ventoy references | [#107](https://github.com/jaroslaw-bagnicki/Homelab/issues/107) · [research 12](research/12-first-boot-setup.md) |
-| **Private CA — proxy TLS issuance** | ⭐⭐ | Run the TPM-custody smoke test on `pve` (`step kms create … 'tpmkms:name=smoke-test'` against `/dev/tpmrm0`) — it gates the CA stand-up | [#126](https://github.com/jaroslaw-bagnicki/Homelab/issues/126) · [ADR 38](decisions/38-private-ca-hierarchy-and-custody.md) |
+| **Private CA — proxy TLS issuance** | ⭐⭐ | TPM-custody gate **passed** on `pve` (stock binary, unprivileged LXC — [#141](https://github.com/jaroslaw-bagnicki/Homelab/issues/141)); runbooks and the `step-ca` workload recipe authored ([35 deploy](runbooks/35-deploy-step-ca.md), [36 init/re-sign](runbooks/36-private-ca-init.md)); next: run the deploy, execute the offline ceremony, then finish the deploy to stand up `step-ca` on LXC 215 `ca` with the TPM-bound intermediate and an ACME provisioner | [#126](https://github.com/jaroslaw-bagnicki/Homelab/issues/126) · [#141](https://github.com/jaroslaw-bagnicki/Homelab/issues/141) · [ADR 38](decisions/38-private-ca-hierarchy-and-custody.md) |
 
 ### Held
 
