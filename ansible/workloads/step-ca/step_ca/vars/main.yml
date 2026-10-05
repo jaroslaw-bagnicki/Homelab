@@ -1,18 +1,14 @@
 ---
-# Fixed asset table for the checksum-verified upstream releases.
+# Fixed asset table. For each release the linux_amd64 archive and its checksums
+# are resolved from the GitHub release API at run time, so the current release is
+# installed without pinning and without a fixed asset-name assumption.
 step_ca_releases:
   - repo: smallstep/cli
-    archive: step_linux_amd64.tar.gz
-    member: step_linux_amd64/step
-    dest: /usr/local/bin/step
+    binary: step
     tag: cli
   - repo: smallstep/certificates
-    archive: step-ca_linux_amd64.tar.gz
-    member: step-ca_linux_amd64/step-ca
-    dest: /usr/local/bin/step-ca
+    binary: step-ca
     tag: ca
   - repo: smallstep/step-kms-plugin
-    archive: step-kms-plugin_linux_amd64.tar.gz
-    member: step-kms-plugin_linux_amd64/step-kms-plugin
-    dest: /usr/local/bin/step-kms-plugin
+    binary: step-kms-plugin
     tag: kms

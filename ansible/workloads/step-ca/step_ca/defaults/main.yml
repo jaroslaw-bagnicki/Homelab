@@ -13,3 +13,7 @@ step_ca_password: ""
 # Default false: the key and CSR are create-only, so a routine run never
 # destroys the sealed key or clobbers a CSR awaiting offline signing.
 step_ca_csr_force: false
+
+# Recovery only: clear the stale TPM blob, CSR, public key and intermediate
+# certificate before recreating them (e.g. after a PTT clear destroyed the key).
+step_ca_reset: false

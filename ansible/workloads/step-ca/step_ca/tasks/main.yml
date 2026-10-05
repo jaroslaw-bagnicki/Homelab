@@ -7,7 +7,8 @@
 #
 # The TPM key is create-once (never recreated) and the CSR is create-only unless
 # `step_ca_csr_force` is set, so a routine run never destroys the sealed key or
-# clobbers a CSR awaiting offline signing.
+# clobbers a CSR awaiting offline signing. `step_ca_reset` clears stale state for
+# recovery (e.g. after a PTT clear) and is off by default.
 
 - name: Assert Azure controller credentials are set
   when: step_ca_password | length == 0
@@ -43,66 +44,39 @@
     state: present
     update_cache: true
 
-- name: Ensure the download directory exists
-  ansible.builtin.file:
-    path: /var/tmp/step-ca-install
-    state: directory
-    owner: root
-    group: root
-    mode: "0755"
-
-- name: Download the Smallstep release archives
-  ansible.builtin.get_url:
-    url: "https://github.com/{{ item.repo }}/releases/latest/download/{{ item.archive }}"
-    dest: "/var/tmp/step-ca-install/{{ item.archive }}"
-    mode: "0644"
-  loop: "{{ step_ca_releases }}"
-  loop_control:
-    label: "{{ item.tag }}"
-
-- name: Download the Smallstep checksums
-  ansible.builtin.get_url:
-    url: "https://github.com/{{ item.repo }}/releases/latest/download/checksums.txt"
-    dest: "/var/tmp/step-ca-install/{{ item.tag }}-checksums.txt"
-    mode: "0644"
-  loop: "{{ step_ca_releases }}"
-  loop_control:
-    label: "{{ item.tag }}"
-
-# Gate finding (#141): a truncated release tarball segfaulted and produced a false
-# "step-ca is broken" result — always verify against the release checksums.txt.
-- name: Verify the release archives against their checksums
-  ansible.builtin.shell:
-    cmd: >-
-      set -o pipefail &&
-      grep -E ' +{{ item.archive | regex_escape }}$' /var/tmp/step-ca-install/{{ item.tag }}-checksums.txt
-      | sha256sum -c -
-    chdir: /var/tmp/step-ca-install
-    executable: /bin/bash
+# Resolve each repo's current linux_amd64 archive + checksums from the release
+# API — the step-kms-plugin asset is versioned, so a constructed URL 404s.
+- name: Resolve the latest upstream release metadata
+  ansible.builtin.uri:
+    url: "https://api.github.com/repos/{{ item.repo }}/releases/latest"
+    return_content: true
+    headers:
+      Accept: application/vnd.github+json
+  register: step_ca_release_meta
   loop: "{{ step_ca_releases }}"
   loop_control:
     label: "{{ item.tag }}"
   changed_when: false
 
-- name: Extract the release archives
-  ansible.builtin.unarchive:
-    src: "/var/tmp/step-ca-install/{{ item.archive }}"
-    dest: /var/tmp/step-ca-install
-    remote_src: true
-    creates: "/var/tmp/step-ca-install/{{ item.member }}"
-  loop: "{{ step_ca_releases }}"
+- name: Build the release asset plan
+  ansible.builtin.set_fact:
+    step_ca_assets: >-
+      {{
+        (step_ca_assets | default([]))
+        + [ item.0 | combine({
+              'version': item.1.json.tag_name,
+              'asset': (item.1.json.assets | selectattr('name', 'search', '_linux_amd64[.]tar[.]gz$') | map(attribute='name') | first),
+              'url': (item.1.json.assets | selectattr('name', 'search', '_linux_amd64[.]tar[.]gz$') | map(attribute='browser_download_url') | first),
+              'sums': (item.1.json.assets | selectattr('name', 'equalto', 'checksums.txt') | map(attribute='browser_download_url') | first)
+            }) ]
+      }}
+  loop: "{{ step_ca_releases | zip(step_ca_release_meta.results) | list }}"
   loop_control:
-    label: "{{ item.tag }}"
+    label: "{{ item.0.tag }}"
 
-- name: Install the Smallstep binaries
-  ansible.builtin.copy:
-    src: "/var/tmp/step-ca-install/{{ item.member }}"
-    dest: "{{ item.dest }}"
-    remote_src: true
-    owner: root
-    group: root
-    mode: "0755"
-  loop: "{{ step_ca_releases }}"
+- name: Install the Smallstep releases
+  ansible.builtin.include_tasks: install_release.yml
+  loop: "{{ step_ca_assets }}"
   loop_control:
     label: "{{ item.tag }}"
 
@@ -166,6 +140,8 @@
           - ca.internal
           - --address
           - ":9000"
+          - --deployment-type
+          - standalone
           - --provisioner
           - admin@internal
           - --password-file
@@ -222,6 +198,23 @@
     group: root
     mode: "0600"
 
+# Recovery only: a PTT clear (or a lost key) leaves a blob the TPM can no longer
+# open, and the create guards below would skip regeneration. Clear the stale
+# artifacts so the run recreates the key and CSR.
+- name: Clear stale CA state when a reset is requested
+  when: step_ca_reset | bool
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /var/lib/step-ca/tpm/key-homelab-intermediate-ca.tpmobj
+    - /etc/step-ca/intermediate_ca.csr
+    - /etc/step-ca/intermediate_ca_key.pub
+    - /etc/step-ca/certs/intermediate_ca.crt
+    - /etc/step-ca/.active-intermediate.sha256
+  loop_control:
+    label: "{{ item }}"
+
 # Create-once: the sealed key never leaves this TPM and must never be recreated
 # over an existing one. `creates` is the guard; there is deliberately no force.
 - name: Create the intermediate CA key in the TPM
@@ -236,12 +229,20 @@
   environment:
     STEPPATH: /etc/step-ca
 
-- name: Remove a stale CSR when a renewal is forced
+- name: Remove stale CSR outputs when a renewal is forced
   when: step_ca_csr_force | bool
   ansible.builtin.file:
-    path: /etc/step-ca/intermediate_ca.csr
+    path: "{{ item }}"
     state: absent
+  loop:
+    - /etc/step-ca/intermediate_ca.csr
+    - /etc/step-ca/intermediate_ca_key.pub
+  loop_control:
+    label: "{{ item }}"
 
+# The intermediate doubles as step-ca's TLS server certificate, so it carries the
+# service SANs — the API is validated by name (`ca.internal`) and by IP before DNS
+# exists (`192.168.2.215`).
 - name: Generate the intermediate CSR from the TPM key
   ansible.builtin.command:
     argv:
@@ -254,6 +255,10 @@
       - --csr
       - --profile
       - intermediate-ca
+      - --san
+      - ca.internal
+      - --san
+      - 192.168.2.215
       - --kms
       - "tpmkms:storage-directory=/var/lib/step-ca/tpm"
       - --key
@@ -281,11 +286,48 @@
     path: /etc/step-ca/certs/root_ca.crt
   register: step_ca_root
 
+- name: Read the last activated certificate checksum
+  ansible.builtin.slurp:
+    src: /etc/step-ca/.active-intermediate.sha256
+  register: step_ca_active
+  failed_when: false
+
 # Runs only after the offline ceremony returns both certificates (runbook 36 §3).
-- name: Enable and start step-ca
+- name: Determine whether the intermediate certificate changed
+  when: step_ca_cert.stat.exists and step_ca_root.stat.exists
+  ansible.builtin.set_fact:
+    step_ca_cert_changed: >-
+      {{
+        (step_ca_active.content | default('') | b64decode | trim)
+        != step_ca_cert.stat.checksum
+      }}
+
+- name: Enable step-ca
   when: step_ca_cert.stat.exists and step_ca_root.stat.exists
   ansible.builtin.systemd:
     name: step-ca
     enabled: true
-    state: started
     daemon_reload: true
+
+- name: Start step-ca
+  when: step_ca_cert.stat.exists and step_ca_root.stat.exists
+  ansible.builtin.systemd:
+    name: step-ca
+    state: started
+
+# A renewed intermediate is only picked up on restart (state: started is a no-op
+# for a running service), so restart when the certificate checksum changed.
+- name: Restart step-ca when the intermediate certificate changed
+  when: step_ca_cert_changed | default(false) | bool
+  ansible.builtin.systemd:
+    name: step-ca
+    state: restarted
+
+- name: Record the activated intermediate certificate
+  when: step_ca_cert_changed | default(false) | bool
+  ansible.builtin.copy:
+    content: "{{ step_ca_cert.stat.checksum }}\n"
+    dest: /etc/step-ca/.active-intermediate.sha256
+    owner: root
+    group: root
+    mode: "0600"

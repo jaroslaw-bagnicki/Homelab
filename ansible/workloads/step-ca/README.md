@@ -79,9 +79,12 @@ name and the ACME provisioner name are **hardcoded in the tasks/templates**. Onl
 | `step_ca_password_secret_name` | `step-ca-provisioner-password` | secret name |
 | `step_ca_password` | `""` | override to skip the Key Vault lookup (tests) |
 | `step_ca_csr_force` | `false` | regenerate the CSR from the existing TPM key (annual re-sign) |
+| `step_ca_reset` | `false` | recovery: clear the stale blob/CSR/public key/cert before recreating (e.g. after a PTT clear) |
 
-The binary assets live in the role's `vars/main.yml` (`step_ca_releases`). Upgrades follow normal
-package practice — clear `/var/tmp/step-ca-install` and re-run.
+The repos to install are in `vars/main.yml` (`step_ca_releases`); the exact archive + checksums are
+resolved from the GitHub release API at run time (the `step-kms-plugin` asset is versioned), so the
+current release is installed without pinning. Upgrades follow normal package practice — clear
+`/var/tmp/step-ca-install` and re-run.
 
 ## Secrets
 
