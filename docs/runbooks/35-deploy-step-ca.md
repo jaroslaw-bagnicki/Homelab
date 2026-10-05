@@ -71,6 +71,10 @@ dedicated unprivileged LXC keeps it off the Proxmox host and away from the edge 
 - [ ] Ansible collections installed (`ansible-galaxy collection install -r ansible/requirements.yml`).
 - [ ] Azure Key Vault `homelab-bysxdb-kv` reachable from the controller (CA provisioner password, and
       the Fluent Bit store password like every other node).
+- [ ] Controller Python packages for the Key Vault lookup — `azure-identity` and
+      `azure-keyvault-secrets` (`pip3 install --break-system-packages azure-identity azure-keyvault-secrets`).
+- [ ] `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET` and `AZURE_TENANT_ID` exported on the controller — the
+      role reads the Key Vault secret through them.
 - [ ] Fleet key in `ssh-agent` (`ssh-add -l` shows `fleetadm@homelab`).
 - [ ] The IronKey and the air-gapped signing island are needed for the **later** offline step
       ([runbook 36](36-private-ca-init.md)), not for §1–§5.
@@ -253,10 +257,13 @@ ansible-playbook ansible/workloads/step-ca/step-ca-playbook.yml --diff
 **Role `step_ca` enforces:**
 
 - **Packages** — install the current `step-cli`, `step-ca`, and `step-kms-plugin` releases,
-  **checksum-verified** against `checksums.txt` (measured #141: a truncated tarball segfaulted and
-  produced a false "step-ca is broken" result), plus **`libpcsclite1`** — `step-kms-plugin` is a CGO
-  build linked against `libpcsclite.so.1` and fails for TPM-only work without it; `step-ca` itself
-  needs no PCSC (measured #141).
+  **checksum-verified** against each release's `checksums.txt` (measured #141: a truncated tarball
+  segfaulted and produced a false "step-ca is broken" result). The archive + checksums are resolved
+  from the GitHub **release API** at run time — the `step-kms-plugin` asset is versioned
+  (`step-kms-plugin_<ver>_linux_amd64.tar.gz`), so a constructed `latest/download/<fixed-name>` URL
+  404s — and the binary is located after extraction (the CLI archive nests it under `bin/`). Plus
+  **`libpcsclite1`** — `step-kms-plugin` is a CGO build linked against `libpcsclite.so.1` and fails for
+  TPM-only work without it; `step-ca` itself needs no PCSC (measured #141).
 - **Layout** — root-owned `/etc/step-ca/{certs,config,secrets,db}` and `/var/lib/step-ca/tpm`. The
   service runs as **root**: the TPM device is owned by container root (§1), so a non-root service could
   not open it.
@@ -269,19 +276,25 @@ ansible-playbook ansible/workloads/step-ca/step-ca-playbook.yml --diff
   The key material lands in `/var/lib/step-ca/tpm/key-homelab-intermediate-ca.tpmobj` as a JSON blob.
   **This is not a private-key file** — it is the sealed blob, useless off this TPM, and required on
   disk for the service to start.
-- **CSR** — emit `intermediate_ca.csr`, signed by the TPM key, for the offline root to sign:
+- **CSR** — emit `intermediate_ca.csr`, signed by the TPM key, for the offline root to sign. The
+  intermediate doubles as step-ca's **TLS server certificate**, so it carries the service SANs
+  (`ca.internal` and `192.168.2.215`) — without them a trusted health/ACME request fails hostname
+  verification:
 
   ```sh
   step certificate create "Homelab Intermediate CA" \
     intermediate_ca.csr intermediate_ca_key.pub \
     --csr --profile intermediate-ca \
+    --san ca.internal --san 192.168.2.215 \
     --kms 'tpmkms:storage-directory=/var/lib/step-ca/tpm' \
     --key 'tpmkms:name=homelab-intermediate-ca'
   ```
 
   The exact `--csr` flag combination is **unverified**; confirm the CSR inspects correctly. **This task
   must be re-runnable without recreating the key** — the annual re-sign
-  ([runbook 36 §4](36-private-ca-init.md)) re-runs it to produce a fresh CSR from the same TPM key.
+  ([runbook 36 §4](36-private-ca-init.md)) re-runs it to produce a fresh CSR from the same TPM key, and
+  the role removes both `intermediate_ca.csr` and `intermediate_ca_key.pub` first (the CLI refuses to
+  overwrite an existing output without a TTY).
 - **`ca.json`** — templated with the TPM key and the **pinned** storage directory (measured #141),
   with the certificate paths the offline ceremony will fill:
 
@@ -334,7 +347,10 @@ install -m 0600 intermediate_ca.crt /etc/step-ca/certs/intermediate_ca.crt
 ansible-playbook ansible/workloads/step-ca/step-ca-playbook.yml --diff
 ```
 
-**Validate:**
+The role **restarts** `step-ca` whenever the installed intermediate certificate's checksum changed —
+a renewed intermediate would otherwise stay unused until the next restart.
+
+**Validate** (on the `ca` guest):
 
 ```sh
 CA=https://192.168.2.215:9000
@@ -344,15 +360,17 @@ ROOT=/etc/step-ca/certs/root_ca.crt
 step ca health --ca-url "$CA" --root "$ROOT"
 curl -sk "$CA/acme/acme/directory"
 
-# issue a leaf over ACME and chain-verify it (use the IP — nothing resolves ca.internal yet)
+# JWK-provisioner smoke test — issues a leaf via the admin provisioner and chain-verifies it
+# (use the IP; nothing resolves ca.internal yet). This is NOT an ACME issuance check: real ACME
+# enrolment is exercised by the reverse proxy in #142.
 step ca certificate test.internal test.crt test.key --ca-url "$CA" --root "$ROOT"
 step certificate verify test.crt --roots "$ROOT"
 
 # plaintext is refused (ADR 34)
 curl -s --connect-timeout 5 -o /dev/null -w '%{http_code}\n' http://192.168.2.215:9000/acme/acme/directory
 
-# UFW is the LAN boundary
-pct exec 215 -- ufw status verbose     # 22 + 9000 ALLOW IN 192.168.2.0/24
+# UFW is the LAN boundary (run inside the guest — pct exists only on the pve host)
+ufw status verbose     # 22 + 9000 ALLOW IN 192.168.2.0/24
 ```
 
 **Reboot survival** — `onboot 1`, the udev rule, and `restart=on-failure` together:
@@ -372,7 +390,7 @@ must report no changes.
 > |---|---|
 > | `step ca health` | `{"status":"ok"}` |
 > | ACME directory | JSON with `newNonce`/`newAccount`/… |
-> | Leaf issued + verified | chain `leaf ← Homelab Intermediate CA ← Homelab Internal CA` |
+> | JWK leaf issued + verified | chain `leaf ← Homelab Intermediate CA ← Homelab Internal CA` |
 > | Plaintext request | refused (no cleartext service) |
 > | In-LXC UFW | `22` + `9000` ALLOW IN `192.168.2.0/24` |
 > | Reboot | service active, `/dev/tpmrm0` owned by container root, leaf re-issues |
@@ -387,8 +405,9 @@ must report no changes.
   is by short lifetime (ADR 38's accepted residual).
 - **Annual intermediate re-sign** — [runbook 36 §4](36-private-ca-init.md): re-run §5's CSR task for a
   fresh CSR from the same TPM key, sign offline, then re-run §6. No new key, no new client trust.
-- **PTT key-loss hazard** — a BIOS update, `Clear PTT`, or NVRAM reset destroys the sealed key;
-  recover with [runbook 36 §5](36-private-ca-init.md). The root is unaffected.
+- **PTT key-loss hazard** — a BIOS update, `Clear PTT`, or NVRAM reset destroys the sealed key. Run the
+  workload with `-e step_ca_reset=true` to clear the stale blob/CSR/certificate, then follow
+  [runbook 36 §5](36-private-ca-init.md). The root is unaffected.
 - **Name resolution** — nothing resolves `ca.internal` yet (resolver is
   [idea 10](../ideas/10-internal-ca-dns-stack.md)); until then use the IP or a hosts entry.
 - **Out of scope** — proxy wiring [#142](https://github.com/jaroslaw-bagnicki/Homelab/issues/142),

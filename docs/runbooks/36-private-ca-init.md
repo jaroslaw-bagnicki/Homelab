@@ -191,10 +191,13 @@ The `pve` TPM is an **Intel PTT firmware TPM** (measured 2026-10-04,
 
 Recovery is the same flow on demand:
 
-1. On the `ca` guest, re-run [runbook 35 §5](35-deploy-step-ca.md) to create a **fresh** intermediate
-   key in the (possibly cleared) TPM and emit a new CSR.
+1. On the controller, run the workload with `-e step_ca_reset=true`
+   ([runbook 35 §5](35-deploy-step-ca.md)) — this clears the stale TPM blob, CSR, public key and
+   intermediate certificate (which the create guards would otherwise keep), then creates a **fresh**
+   intermediate key in the (possibly cleared) TPM and emits a new CSR.
 2. Sign it here (§3) with the **same** offline root.
-3. Install it ([runbook 35 §6](35-deploy-step-ca.md)).
+3. Install the returned certificate(s) and re-run the workload ([runbook 35 §6](35-deploy-step-ca.md));
+   the role restarts `step-ca` on the changed intermediate.
 
 - The **root is unaffected**, so there is **no client re-trust**. A PTT wipe costs a re-signing
   ceremony, not a re-trust.
