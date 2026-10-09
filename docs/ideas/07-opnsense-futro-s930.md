@@ -36,7 +36,7 @@ thread; key reasons: 2× cores for Suricata/IPS, 8 GB mSATA included, factory PC
 | NIC | **Dell Broadcom 5720 2× 1 GbE** (low-profile PCIe, ~50 PLN) — chosen sweet spot: dual port (WAN + LAN on the card), mature FreeBSD `bge` driver; Intel i350-T1/T2 (`igb`) = the safer-driver upgrade path; needs the PCIe riser/ribbon cable in the case |
 | NIC cautions | Avoid 10GbE (X520/X540) and old Intel PRO/1000 PT/ET quad ports (power/heat overload the ~40–60 W PSU); beware Chinese i350 clones — prefer used OEM server cards (Dell/HP/Fujitsu/Lenovo) |
 | RAM | 4 GB DDR3L min; 8 GB for Zenarmor (Sensei) or Unbound with large DNSBL lists |
-| Disk | Replace the included 8 GB mSATA with a 32–128 GB mSATA SSD — OPNsense log writes wear flash quickly |
+| Disk | Fitted 8 GB mSATA **replaced with a 24 GB Kingston SMS151S324G mSATA** (2026-10-09, SMART PASSED — [research 31](../research/31-futro-s930-hardware-diagnostic.md)); below the 32–128 GB ideal, fine with RAM-based logs + `trim` |
 | Cooling | Add a quiet 40/60 mm fan (e.g. Noctua) over the card/CPU for sustained load on a quad-port card |
 
 ### Alternative platform — HP T730 (2026-08)

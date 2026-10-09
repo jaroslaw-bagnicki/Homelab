@@ -88,12 +88,12 @@ once it is ready to start — a row leaves the table with the PR that completes 
 | **Power monitoring (Zigbee/Z2M)** | ⭐⭐ | Zigbee energy plugs → Prometheus, bootstrapped standalone on the M910q (ADR 26 — independent of Home Assistant) — sequenced **before** k3s | [#73](https://github.com/jaroslaw-bagnicki/Homelab/issues/73) · [ADR 26](decisions/26-zigbee-energy-monitoring.md) |
 | **YUMI multiboot USB standard** | ⭐ | ADR 29 + manage-YUMI runbook; de-conflate the Ventoy references | [#107](https://github.com/jaroslaw-bagnicki/Homelab/issues/107) · [research 12](research/12-first-boot-setup.md) |
 | **Private CA — proxy TLS issuance** | ⭐⭐ | Run the TPM-custody smoke test on `pve` (`step kms create … 'tpmkms:name=smoke-test'` against `/dev/tpmrm0`) — it gates the CA stand-up | [#126](https://github.com/jaroslaw-bagnicki/Homelab/issues/126) · [ADR 38](decisions/38-private-ca-hierarchy-and-custody.md) |
+| **OPNsense router (Futro S930)** | ⭐⭐ | 24 GB mSATA acquired + SMART-verified (replaces the undersized 7.99 GB) — install OPNsense, then the LAN gateway NAT/firewall | [#96](https://github.com/jaroslaw-bagnicki/Homelab/issues/96) · [research 31](research/31-futro-s930-hardware-diagnostic.md) · [idea 07](ideas/07-opnsense-futro-s930.md) |
 
 ### Held
 
 | Item | Waiting on | Refs |
 |---|---|---|
-| **OPNsense router (Futro S930)** | power cable for the replacement SSD — order it, then install (the fitted 7.99 GB mSATA is undersized) | [#96](https://github.com/jaroslaw-bagnicki/Homelab/issues/96) · [research 31](research/31-futro-s930-hardware-diagnostic.md) |
 | **k3s migration** | deliberate sequencing — largest item, gates the Longhorn backup target and #48 | [#44](https://github.com/jaroslaw-bagnicki/Homelab/issues/44) · [ADR 22](decisions/22-k3s-arc-homelab.md) |
 | **Beetle on battery — modified-sine re-test** | replacement UPS unit — OMV now runs on the Beetle ([#98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98)) and its `nut_client` secondary is live (runbook 32 §8), so the active-PFC supply can finally be tested on a real load | [#117](https://github.com/jaroslaw-bagnicki/Homelab/issues/117) · [runbook 29](runbooks/29-nut-ups-shutdown.md) §7 · [report](reports/260919-nut-shutdown-drill.md) |
 

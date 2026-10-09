@@ -1,10 +1,10 @@
 # 31 — Futro S930 Hardware Diagnostic: Pre-Boot Audit (OPNsense Router)
 
-**Source**: SystemRescue 13.02 live session + hardinfo2 report, Sep 02 2026 · Issue [#96 — OPNsense router (Futro S930): initial setup](https://github.com/jaroslaw-bagnicki/Homelab/issues/96) · [Idea 07 — OPNsense Router on Fujitsu Futro S930](../ideas/07-opnsense-futro-s930.md)
+**Source**: SystemRescue 13.02 live session + hardinfo2 report, Sep 02 2026; replacement-disk SMART audit, Oct 09 2026 · Issue [#96 — OPNsense router (Futro S930): initial setup](https://github.com/jaroslaw-bagnicki/Homelab/issues/96) · [Idea 07 — OPNsense Router on Fujitsu Futro S930](../ideas/07-opnsense-futro-s930.md)
 
 **Scope**: Pre-boot hardware audit of the newly arrived **Fujitsu FUTRO S930** thin client (the planned OPNsense network edge, [issue #96](https://github.com/jaroslaw-bagnicki/Homelab/issues/96)) — full hardware inventory before committing OPNsense to the box. Same Phase 0 pattern as the [Wyse 3040 audit (research 28)](28-wyse3040-hardware-diagnostic.md) and the [Wyse 5070 audit (research 29)](29-wyse5070-hardware-diagnostic.md).
 
-**Status**: 🔨 In progress — SystemRescue/hardinfo2 inventory captured; internal mSATA capacity + **SMART PASSED**, **AES-NI confirmed**, **PCIe confirmed Gen1 ×1 (no BIOS option — platform limit)**; a memory-layout decision still pending ([Pending checks](#pending-checks)).
+**Status**: 🔨 In progress — SystemRescue/hardinfo2 inventory captured; **AES-NI confirmed**, **PCIe confirmed Gen1 ×1 (no BIOS option — platform limit)**; the undersized 8 GB mSATA was **replaced with a 24 GB Kingston SMS151S324G** (SMART PASSED, blank, self-tests clean, 2026-10-09); a memory-layout decision still pending ([Pending checks](#pending-checks)).
 
 ---
 
@@ -15,7 +15,7 @@
 > Phase 0 hardware audit output. It **confirms Idea 07's NIC, AES-NI & platform premise**
 > and **flags the internal 8 GB disk as tight** for OPNsense.
 
-| Decision | Outcome (as of 2026-09-02) |
+| Decision | Outcome (as of 2026-10-09) |
 |---|---|
 | Hardware | Fujitsu FUTRO S930 — **acquired** · SN `YMFH014511` · board `D3313-E1` · BIOS AMI `V4.6.5.4 R1.14.0` (2017-09-21) |
 | Role | OPNsense network edge — LAN gateway NAT/firewall, routing first, VLANs later (issue #96) |
@@ -24,7 +24,7 @@
 | NIC (card) | **Broadcom NetXtreme BCM5720 2× 1 GbE** (`enp1s0f0/f1`) — **Idea 07's chosen NIC**, FreeBSD `bge` driver |
 | NIC (onboard) | **Realtek RTL8111/8168 GbE** (`enp2s0`, `r8169`) — reserve as MGMT/OPT behind the `bge` card |
 | PCIe slot | **Gen1 (1.1) ×1** — no BIOS Gen option → **hard platform limit** (BCM5720 is Gen2 ×2 capable); ~1.6–1.7 Gbps/dir ceiling |
-| OS medium | Internal **Innodisk DEMSR-08GB mSATA — 7.99 GB (`sda`), SMART PASSED** (~5,066 POH, 0 errors); **8 GB is tight** for OPNsense (Idea 07's replace-with-32–128 GB) |
+| OS medium | **Kingston SMS151S324G mSATA — 24.0 GB (22.4 GiB), SMART PASSED** (replacement, acquired 2026-10-09; blank, 0 errors, self-tests clean) — see [Storage](#storage); the fitted Innodisk 8 GB is retired |
 | Crypto | ✅ **AES-NI present** (`aes` CPU flag, all 4 cores) — no SHA-NI (Jaguar). See [CPU & crypto](#cpu--security-notes) |
 
 ---
@@ -56,7 +56,7 @@ chipset + driver before choosing which port becomes WAN** (idea 07 §"HP T730" w
 | BIOS | Fujitsu / American Megatrends Inc. **`V4.6.5.4 R1.14.0`** for `D3313-E1x`, dated 2017-09-21 |
 | CPU | AMD **GX-424CC SOC** — 1 package, **4 cores / 4 threads**, 2400 MHz, 2 MB L2 — see [CPU](#cpu--security-notes) |
 | RAM | **4 GiB** (1× 4 GiB DDR3-1600 SO-DIMM), one socket free — see [RAM](#ram) |
-| Storage | Internal **Innodisk DEMSR-08GB mSATA 3ME3 — 7.99 GB (`sda`), SMART PASSED**; boot stick = `sdb` (USB) — see [Storage](#storage) |
+| Storage | Internal **Kingston SMS151S324G mSATA — 24.0 GB (`sda`)** (replacement, SMART PASSED); fitted Innodisk 7.99 GB retired; boot stick = `sdb` (USB) — see [Storage](#storage) |
 | NIC 0 | **Broadcom NetXtreme BCM5720** (`enp1s0f0`) — PCI `01:00.0`, altname `enx5c6f690f8714` |
 | NIC 1 | **Broadcom NetXtreme BCM5720** (`enp1s0f1`) — PCI `01:00.1`, altname `enx5c6f690f8715` |
 | NIC 2 | **Realtek RTL8111/8168** (`enp2s0`) — PCI `02:00.0`, altname `enx901b0ef0ec6b`, MAC `90:1b:0e:f0:ec:6b` (BIOS LAN 1) |
@@ -113,19 +113,42 @@ a wake-latency consideration, noted for a 24/7 router.)
 
 ### Storage
 
-- Internal = **Innodisk DEMSR-08GB mSATA 3ME3** — `sda`, **7.99 GB (7.4 GiB)**, SN
-  `20171003AAAA159004FC`, FW `S16425G3`, SATA 6.0 Gb/s, **TRIM available**. Confirmed by
-  `lsblk` + `smartctl` 2026-09-02 (matches Idea 07's "8 GB mSATA"). (`sdb` is the live USB
-  boot medium, not the router disk.)
+**Replacement disk — Kingston SMS151S324G 24 GB mSATA (2026-10-09).** The fitted Innodisk
+8 GB was replaced with a **Kingston SMS151S324G** mSATA — **24.0 GB (22.4 GiB)** — acquired to
+lift the tight-capacity flag below. Audited 2026-10-09 with `lsblk` + `smartctl` on the box
+(identical Phase 0 method; `sda` = the mSATA, `sdb` = the live USB):
 
-  **SMART — PASSED** (industrial Innodisk 3ME3): overall health **PASSED**; 0 reallocated /
-  pending / uncorrectable sectors; `Available_Reservd_Space` 100%; program & erase fail
-  counts 0; **5,066 power-on hours** (~211 days), 846 power cycles, 30 °C. Low wear for its
-  age — a healthy OS medium.
-- **8 GB is tight for OPNsense regardless** (Idea 07: "OPNsense log writes wear flash
-  quickly"). With **RAM-based logs** + `trim` the 8 GB survives; but a **32–128 GB mSATA**
-  (Idea 07's recommendation) is the safer long-term call for a 24/7 router that may add
-  Suricata/Zenarmor. See [Pending checks](#pending-checks).
+| Field | Value |
+|---|---|
+| Model | **KINGSTON SMS151S324G** |
+| Serial / Firmware | `50026B7242000EB5` / `S9FM00.7` |
+| Capacity | 24,015,495,168 B = **24.0 GB / 22.4 GiB** |
+| Interface | SATA 3.1, 6.0 Gb/s (current 6.0), **TRIM available**; SMART enabled |
+| Health | **PASSED** — error log empty; Short + Extended offline self-tests **completed without error** |
+| Wear | `Media_Wearout_Indicator` **100 / worst 100** (full); `Total_LBAs_Written` 49,688 / `Read` 1,029 → effectively untouched |
+| Errors | Reallocated **0**, Reallocated_Event **0**, Reported_Uncorrect **0**, UDMA_CRC **0** |
+| Power | **7 POH**, 2,072 power cycles, 31 °C (max 47 °C) |
+| State | **Blank** — no partition table (`fdisk -l`) and no leftover signatures (`wipefs -n`) |
+
+Two read-out caveats: (1) `Current_Pending_Sector` raw `1684300900` is the Kingston
+placeholder (`0x64646464` = `"dddd"`) for "not applicable" — **not** a count of pending
+sectors (normalized value 100, healthy); (2) **7 POH but 2,072 power cycles** is an unusual
+pairing (factory/test-rig history) — all health counters are clean, so it is acceptable, but
+noted. The model is **not in the smartctl 7.5 database**, so vendor attribute names are
+unresolved (the "2.5 inches" form factor is a Kingston mSATA reporting quirk).
+
+**Fitted disk — Innodisk DEMSR-08GB mSATA 3ME3 (superseded 2026-10-09).** `sda` before the
+swap: **7.99 GB (7.4 GiB)**, SN `20171003AAAA159004FC`, FW `S16425G3`, SATA 6.0 Gb/s,
+**TRIM available** (confirmed 2026-09-02). **SMART — PASSED**: 0 reallocated / pending /
+uncorrectable sectors; `Available_Reservd_Space` 100%; program & erase fail counts 0;
+**5,066 power-on hours** (~211 days), 846 power cycles, 30 °C. Healthy, but **8 GB is tight
+for OPNsense** (Idea 07: "OPNsense log writes wear flash quickly"). Retired when the 24 GB
+module was installed.
+
+- **Capacity verdict.** 24 GB is **3× the fitted 8 GB** but still **below Idea 07's
+  32–128 GB recommendation** — with **RAM-based logs** + `trim` it is comfortable for a
+  router; the margin gets thinner if Suricata/Zenarmor logging is added later (revisit then).
+  See [Pending checks](#pending-checks).
 
 ### CPU / Security notes
 
@@ -158,7 +181,7 @@ a wake-latency consideration, noted for a 24/7 router.)
 | **AES-NI** | **present** (`aes` flag, 4 cores); no SHA-NI | ✅ matches Idea 07 (WireGuard still CPU-bound) |
 | NIC = Dell Broadcom 5720 2× 1 GbE, `bge` | **Broadcom BCM5720 present** (`enp1s0f0/f1`), onboard Realtek | ✅ matches Idea 07's choice |
 | RAM 4 GB (→8 for Zenarmor) | 4 GiB (1×), **free slot** → 8 GB trivial | ✅ matches; upgrade path confirmed |
-| Disk = replace 8 GB mSATA | Internal **Innodisk DEMSR-08GB mSATA — 7.99 GB, SMART PASSED** (5,066 POH, 0 errors) | ⚠️ 8 GB is tight — 32–128 GB mSATA swap (Idea 07) |
+| Disk = replace 8 GB mSATA | **Kingston SMS151S324G 24 GB mSATA installed** (SMART PASSED, blank, self-tests clean) — 3× the fitted 8 GB | ✅ resolved — below Idea 07's 32–128 GB, but ample with RAM logs + `trim` |
 | Onboard NIC = check Realtek vs Intel | Onboard = **Realtek RTL8111/8168** (`re`) | ✅ **Realtek confirmed** — reserve as MGMT/OPT, not WAN/LAN |
 | PCIe 2.0 ×4 slot (idea 07) | Slot **trains Gen1 ×1**; no BIOS Gen option (confirmed) | ⚠️ hard platform limit — fine for 1 Gbps WAN, revisit for VLANs |
 | Passive/power | Fanless, ~59 °C idle, AC external PSU | ✅ matches |
@@ -167,10 +190,10 @@ a wake-latency consideration, noted for a 24/7 router.)
 
 ## Pending Checks
 
-1. **Internal mSATA** — ✅ **resolved 2026-09-02**: Innodisk **DEMSR-08GB mSATA 3ME3**,
-   7.99 GB, SN `20171003AAAA159004FC`, **SMART PASSED** (5,066 POH, 0 errors, 100% reserved
-   space). Usable but tight — decide **RAM-based logs + trim vs 32–128 GB mSATA swap**
-   (Idea 07) during the OPNsense install.
+1. **Internal mSATA** — ✅ **resolved 2026-09-02** (fitted Innodisk 8 GB, SMART PASSED) and
+   ✅ **superseded 2026-10-09**: replaced with **Kingston SMS151S324G 24 GB** (SMART PASSED,
+   blank, Short + Extended self-tests clean, 0 errors). The tight-capacity flag is lifted;
+   use **RAM-based logs + `trim`** at the OPNsense install.
 2. **AES-NI / crypto** — ✅ **resolved 2026-09-02**: AES-NI **present** (`aes` flag, 4
    cores); no SHA-NI. Idea 07's crypto premise holds; re-benchmark WireGuard/IPS at install.
 3. **BIOS Setup walk** — ✅ **walked 2026-09-02** (Main + Advanced tabs): BIOS `R1.14.0`,

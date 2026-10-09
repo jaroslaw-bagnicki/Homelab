@@ -294,8 +294,9 @@ TSDB behind the same Grafana datasource — a reconciliation for that ADR, not a
 
 ### 8. OPNsense (Futro S930) — the per-OS exception, and why the fleet rule does not transfer
 
-The router joins the fleet later — it is **held** pending a power cable for its undersized mSATA
-([research 31](31-futro-s930-hardware-diagnostic.md) · [overview](../overview.md)) — and
+The router joins the fleet later — it is **held** pending the OPNsense install, now that its
+undersized mSATA has been **replaced with a 24 GB module** (2026-10-09,
+[research 31](31-futro-s930-hardware-diagnostic.md) · [overview](../overview.md)) — and
 [ADR 27](../decisions/27-monitoring-strategy.md) already names FreeBSD "a per-OS exception" for the Netdata
 role. It is the same exception here, for a stronger reason: **none of §1's assumptions hold on it.**
 
@@ -303,7 +304,7 @@ role. It is the same exception here, for a stronger reason: **none of §1's assu
 |---|---|
 | systemd's journal is the log source | **No journald** — the appliance is FreeBSD and runs **syslog-ng**, writing `/var/log/*.log` (`filter.log`, `system.log`, …) |
 | Docker's json-file logs exist on some nodes | **No Docker** — it runs packages and plugins |
-| A small cursor file or package on disk is cheap | The **8 GB mSATA is the known constraint**, its replacement still pending ([research 31](31-futro-s930-hardware-diagnostic.md)) — anything installed or written there spends the scarcest resource in the fleet |
+| A small cursor file or package on disk is cheap | The **24 GB mSATA is still the scarcest resource** (the fitted 8 GB was replaced 2026-10-09, [research 31](31-futro-s930-hardware-diagnostic.md)) — anything installed or written there spends it |
 
 **Verified: Fluent Bit builds on FreeBSD, but OPNsense has no plugin for it.** FreeBSD's ports tree carries a
 maintained `sysutils/fluent-bit` (**v5.1.2**) with an rc.d script, so `pkg install fluent-bit` works in
@@ -424,7 +425,7 @@ OMV paths from their own source repositories (`proxmox/pve-manager`, `openmediav
 - [Research 33](33-centralized-logging-victorialogs.md) — the store analysis; §7 the store's verified mechanics
 - [Runbook 33](../runbooks/33-deploy-victorialogs.md) — the deployed store (`vlogs` basic auth, `:9428`, in-LXC UFW)
 - [Runbook 24](../runbooks/24-edge-appliance.md) — Edge: cloudflared + Caddy + Netdata as systemd services, no Docker
-- [Research 31](31-futro-s930-hardware-diagnostic.md) — Futro S930 (the router; its 8 GB mSATA is the flagged constraint)
+- [Research 31](31-futro-s930-hardware-diagnostic.md) — Futro S930 (the router; its 24 GB mSATA is the flagged constraint)
 - [FreeBSD port `sysutils/fluent-bit`](https://github.com/freebsd/freebsd-ports/tree/main/sysutils/fluent-bit) · [OPNsense plugins](https://github.com/opnsense/plugins) · [OPNsense syslog-ng templates](https://github.com/opnsense/core/tree/master/src/opnsense/service/templates/OPNsense/Syslog) — verified against the repos (§8)
 - [Issue #84](https://github.com/jaroslaw-bagnicki/Homelab/issues/84) — the collector · [#75](https://github.com/jaroslaw-bagnicki/Homelab/issues/75) umbrella · [#132](https://github.com/jaroslaw-bagnicki/Homelab/issues/132) store monitoring
 - [Log collector benchmark (vendor-authored)](https://victoriametrics.com/blog/log-collectors-benchmark-2026/) — VictoriaMetrics, Mar 2026
