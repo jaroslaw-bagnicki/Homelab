@@ -12,25 +12,35 @@
 > ([ADR 33](../decisions/33-fleet-node-hostnames.md)); it owns the gateway `192.168.2.1`
 > ([ADR 31](../decisions/31-static-address-scheme.md) / [research 24](../research/24-network-topology-design.md)).
 >
+> **Network path — build, then cutover.** The office reaches the internet **only through the
+> Tenda**, so OPNsense's WAN is fed from it. The **build** (§0–§11) is non-disruptive: the Tenda
+> stays in router mode and OPNsense sits on a **temporary LAN**, while its WAN reaches the
+> internet through the Tenda. The **cutover** ([§12](#12-cutover--bridge-the-tenda)) bridges the
+> Tenda and hands the homelab LAN (`192.168.2.0/24`) to OPNsense.
+>
 > ⚠ **Console install — not agent-delegable.** Every step runs at a **keyboard + monitor**
 > attached to the S930. Run this interactively from the repo's dev container (any interactive
 > session), like runbooks 24/25/28.
 
 ## Goals
 
+**Build phase (§0–§11, non-disruptive)** — stand OPNsense up alongside the live network: the S930
+on a **temporary LAN** (`192.168.99.1/24`), WAN1 reaching the internet **through the Tenda**
+(router mode, `192.168.2.x`), so the house is untouched while everything is configured and updated.
+
+**Cutover phase ([§12](#12-cutover--bridge-the-tenda), disruptive)** — bridge the Tenda and move
+the homelab LAN onto OPNsense at `192.168.2.1`.
+
 - Install **OPNsense 26.7** (ZFS) on the **24 GB Kingston mSATA** (`sda`).
 - First-boot wizard: hostname **`gw`**, domain `internal`, timezone `Etc/UTC`.
 - Assign interfaces: **`bge0` = WAN1**, **`bge1` = LAN**, **`re0` = WAN2_LTE**.
-- Set **LAN `192.168.2.1/24`** and **WAN1 DHCP** (upstream `192.168.1.x`).
+- Build: **LAN `192.168.99.1/24`** (temporary), **WAN1 DHCP** through the Tenda (`192.168.2.x`).
 - Disable `bge` hardware offloading (CRC/TSO/LRO).
 - Configure LAN **DHCP + NAT + default firewall**, with Unbound as the LAN resolver.
 - Add the **`re0` LTE failover WAN** (Huawei B593u-12) with a gateway group.
 - Enable **RAM disks** (`/var/log`, `/tmp`), ZFS TRIM, and a ZFS ARC cap for the 4 GB RAM.
 - Update to the latest 26.7.x.
-
-**Out of scope (later phase, [§12](#12-later--lan-cutover--mesh-demotion)):** moving the office
-drop onto OPNsense and demoting the Tenda Nova to bridge/AP. This runbook ends with a configured
-router that is **not yet carrying the LAN**.
+- Cutover: Tenda → **bridge mode**, OPNsense **LAN → `192.168.2.1/24`**, office drop onto OPNsense LAN.
 
 ## Status
 
@@ -38,12 +48,13 @@ Authored 2026-10-09, before execution — the checklist fills in as the install 
 
 - [ ] OPNsense 26.7 installed (ZFS) on the 24 GB mSATA; hostname `gw`
 - [ ] Interfaces assigned (`bge0` WAN1, `bge1` LAN, `re0` WAN2_LTE)
-- [ ] LAN `192.168.2.1/24` + WAN1 DHCP verified
+- [ ] Build: temporary LAN `192.168.99.1/24` + WAN1 DHCP via the Tenda verified
 - [ ] `bge` offloading disabled
 - [ ] LAN DHCP + NAT + firewall working
 - [ ] WAN2 LTE failover group configured
 - [ ] RAM disks + TRIM + ARC cap applied
 - [ ] Firmware updated; configuration backed up
+- [ ] Cutover: Tenda bridged; LAN `192.168.2.1/24`; office drop on OPNsense; verified
 
 ---
 
@@ -72,20 +83,22 @@ Authored 2026-10-09, before execution — the checklist fills in as the install 
   Ethernet cable (needed only at [§8](#8-wan2_lte--lte-failover)).
 - A **config laptop** for the web UI (its own NIC set static, or DHCP once LAN DHCP is up).
 
-### Cabling during setup (avoid the `.1` collision)
+### Cabling during the build (only the Tenda is reachable)
 
-The live LAN is still served by the Tenda Nova at **`192.168.2.1`**, and OPNsense's target LAN
-is **the same address**. Keep the new router off the live LAN while it is configured:
+The office reaches the internet **only through the Tenda**, so OPNsense's WAN is fed from it.
+During the build the Tenda stays in **router mode** (its LAN is `192.168.2.0/24`), and OPNsense
+rides a **temporary LAN** so nothing collides:
 
-| Port | Setup-time connection |
+| Port | Build-time connection |
 |---|---|
-| **WAN1** (`bge0`) | → **ISP router** LAN (`192.168.1.x`). If no direct drop is reachable, leave WAN1 unplugged until [§10](#10-firmware-update) and do the rest offline. |
-| **LAN** (`bge1`) | → **config laptop** only (never the live switch/mesh during setup) |
-| **WAN2** (`re0`) | → 4G modem (optional until §8) |
+| **WAN1** (`bge0`) | → a **Tenda** LAN port (DHCP → `192.168.2.x`, the upstream) |
+| **LAN** (`bge1`) | → **config laptop** only (temporary `192.168.99.0/24`; never the live LAN) |
+| **WAN2** (`re0`) | → 4G modem (optional until [§8](#8-wan2_lte--lte-failover)) |
 
-> If WAN1 is plugged into the Tenda instead of the ISP router, OPNsense's WAN gets a
-> `192.168.2.x` address — the **same subnet as its LAN**, which OPNsense rejects. Feed WAN1 from
-> the **ISP router** (`192.168.1.0/24`).
+> **No direct ISP-router access is needed.** The one trap is the subnet overlap: WAN1 would get
+> `192.168.2.x` from the Tenda, so **LAN must not be `192.168.2.0/24` during the build** — that is
+> what the temporary `192.168.99.0/24` avoids. `192.168.2.1` is applied **only at cutover**
+> ([§12](#12-cutover--bridge-the-tenda)).
 
 ---
 
@@ -138,34 +151,32 @@ At the console, when prompted to **assign interfaces**:
 > Identify ports by **MAC**, not by `bge0`/`bge1` order. If the names look swapped, re-run
 > option **1) Assign interfaces** on the console menu, or check with `ifconfig` via **8) Shell**.
 
-## 4. Console IPs (before connecting WAN1)
+## 4. Console IPs (build-time LAN first)
 
-Because OPNsense defaults its LAN to `192.168.1.1` — the **same subnet as the ISP router** —
-set the LAN first:
+OPNsense defaults its LAN to `192.168.1.1` — set the build-time LAN before anything else:
 
 1. Console menu **2) Set interface(s) IP address** → **LAN**:
-   - IPv4 address: **`192.168.2.1`**, CIDR **`/24`**.
+   - IPv4 address: **`192.168.99.1`**, CIDR **`/24`** (temporary — replaced at cutover).
    - Upstream gateway: **none** (LAN is not a WAN).
    - IPv4 DHCP server on LAN: **Enabled** (we refine the pool in §7).
-2. Console menu **2)** → **WAN** (or via the GUI wizard): **DHCP**. If WAN1 is plugged into the
-   ISP router it takes a `192.168.1.x` lease; if not plugged in yet it shows `0.0.0.0` — fine.
+2. Console menu **2)** → **WAN** (or via the GUI wizard): **DHCP**. With WAN1 plugged into the
+   Tenda it takes a `192.168.2.x` lease.
 
-Connect the config laptop to **LAN** (`bge1`), set it to `192.168.2.2/24` (or DHCP), and
-confirm `ping 192.168.2.1`.
+Connect the config laptop to **LAN** (`bge1`), let it take DHCP (or set `192.168.99.2/24`), and
+confirm `ping 192.168.99.1`.
 
 ## 5. Web UI + first-boot wizard
 
-1. Browse to **`https://192.168.2.1`** (accept the self-signed certificate — the private CA is
-  [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md), not yet deployed).
+1. Browse to **`https://192.168.99.1`** (accept the self-signed certificate — the private CA is
+   [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md), not yet deployed).
 2. Log in as **`root`** with the install password. **Change the password** immediately
    (`System → Access → Users`; set the `admin`/`root` password) → **Keeper**.
 3. Work through the wizard (`System → Wizard`):
    - **Hostname** `gw`; **Domain** `internal` → `gw.internal` ([ADR 37](../decisions/37-lan-name-space-internal.md)).
    - **Timezone** `Etc/UTC` (the fleet standard).
-   - **WAN** — DHCP; leave "Block private/bogon networks" **enabled** only if WAN1 is truly
-     public — here WAN1 is behind the ISP router (`192.168.1.x`), so **allow private networks on
-     WAN1** is not needed but private blocking must be **off** on WAN2 (a `192.168.x` modem).
-   - **LAN** — `192.168.2.1/24`.
+   - **WAN** — DHCP (upstream is the Tenda, `192.168.2.x`); leave private-network blocking on
+     only where it does not break WAN2 (a `192.168.x` modem — private blocking must be **off** on WAN2).
+   - **LAN** — **`192.168.99.1/24`** (temporary; becomes `192.168.2.1/24` at cutover).
    - Set a new **root password** if not already changed.
 
 ## 6. Disable `bge` hardware offloading
@@ -176,16 +187,16 @@ Segmentation Offloading (TSO)* and *Hardware Large Receive Offloading (LRO)* →
 
 ## 7. LAN DHCP, NAT, firewall, DNS
 
-1. **Services → DHCPv4 → LAN** — enable; set the pool clear of the static `.20x–.24x` block
-   ([ADR 31](../decisions/31-static-address-scheme.md)): e.g. **`.100`–`.199`**; gateway
-   `192.168.2.1`; DNS `192.168.2.1`.
+1. **Services → DHCPv4 → LAN** — enable; on the temporary LAN a default pool (e.g. `.100`–`.199`)
+   is fine — the static `.20x–.24x` block ([ADR 31](../decisions/31-static-address-scheme.md)) only
+   matters once LAN is `192.168.2.0/24` after cutover; gateway/DNS `192.168.99.1`.
 2. **Firewall → NAT → Outbound** — mode **Automatic** (default) is correct; no rule needed.
 3. **Firewall → Rules → LAN** — the wizard's default *allow LAN to any* rule is the baseline;
    no custom rules yet (VLAN/firewall policy is the follow-up phase).
 4. **Services → Unbound DNS** — enabled by default; it resolves for LAN clients. Point WAN DNS
    at the ISP-assigned servers (or a public resolver) under **System → Settings → General**.
-5. **Verify** from the config laptop: it holds a `192.168.2.x` DHCP lease, `ping 192.168.2.1`,
-   and — once WAN1 is connected — `ping 1.1.1.1` and a web page load.
+5. **Verify** from the config laptop: a `192.168.99.x` DHCP lease, `ping 192.168.99.1`, and
+   `ping 1.1.1.1` / a web page load (internet via the Tenda).
 
 ## 8. WAN2_LTE — LTE failover
 
@@ -193,8 +204,9 @@ The backup WAN terminates on the **onboard Realtek `re0`** ([idea 08](../ideas/0
 
 1. **Modem** — connect the **Huawei B593u-12** LAN port → `re0`. This modem is old T-Mobile
    firmware that **usually blocks bridge mode**, so run it in **router mode** on a subnet that
-   does **not** collide with WAN1: change the modem's LAN to e.g. **`192.168.8.1/24`** (its
-   default `192.168.1.1` collides with WAN1). **Disable the modem's Wi-Fi.**
+   does **not** collide with the cutover WAN1: change the modem's LAN to e.g. **`192.168.8.1/24`**
+   (its default `192.168.1.1` collides with the future `192.168.1.x` WAN1). **Disable the modem's
+   Wi-Fi.**
 2. **Interfaces → Assignments** — `re0` should already be **WAN2_LTE** (from §3); enable it,
    **IPv4 DHCP**, and turn **off** "Block private networks" (the modem hands out a private IP —
    double-NAT on the backup link is accepted).
@@ -224,14 +236,13 @@ The backup WAN terminates on the **onboard Realtek `re0`** ([idea 08](../ideas/0
 ## 10. Firmware update
 
 **System → Firmware → Updates → Check for updates** → install, and update **all** packages.
-The DVD image lags the release, so expect a 26.7.x point update; reboot if prompted. Reconnect
-WAN1 first if it was left unplugged.
+The DVD image lags the release, so expect a 26.7.x point update; reboot if prompted. The WAN is
+live through the Tenda during the build, so this runs online.
 
-## 11. Verification (acceptance)
+## 11. Verification — build phase
 
-- [ ] Web UI reachable at **`https://192.168.2.1`**
-- [ ] A LAN client receives **DHCP** from OPNsense (lease in `.100–.199`)
-- [ ] **WAN1 → LAN NAT** works (client can reach the internet)
+- [ ] Web UI reachable at **`https://192.168.99.1`**
+- [ ] A client on the temporary LAN receives **DHCP**; `ping 1.1.1.1` works (via the Tenda)
 - [ ] `bge` **offloading disabled**; `re0` present as **WAN2_LTE**
 - [ ] **WAN_FAILOVER** group lists WAN1 tier 1 / WAN2_LTE tier 2
 - [ ] **RAM disks** active for `/var/log` + `/tmp`; ZFS TRIM available; ARC capped at 512 MB
@@ -239,17 +250,32 @@ WAN1 first if it was left unplugged.
 - [ ] Configuration backed up (`System → Configuration → Backups`) → **Keeper**
 - [ ] Interface MACs recorded in `hardware.md`
 
-## 12. Later — LAN cutover & mesh demotion
+**After cutover ([§12](#12-cutover--bridge-the-tenda)):** `https://192.168.2.1` reachable, a
+homelab client gets a `.100–.199` lease, and WAN1→LAN NAT works on `192.168.1.x`.
 
-**Not part of this runbook.** Once the router is verified, the LAN is moved onto it:
+## 12. Cutover — bridge the Tenda
 
-1. Disconnect the office drop from the Tenda and connect it to **OPNsense LAN** (→ TL-SG108E).
-2. Set the Tenda Nova to **bridge mode** via the **Tenda App → Settings → Internet Settings**.
-   Tenda documents this for the **MW3/MW5**, and it disables the mesh's **guest network, parental
-   controls, port forwarding, UPnP, DNS, QoS and DHCP** — so the mesh keeps only its Wi-Fi role.
-   **Verify the toggle exists on the actual units** before relying on it; if a unit lacks it,
-   the fallback (replace the mesh Wi-Fi with dedicated APs) is a separate decision.
-3. Update `docs/overview.md` (topology) and `docs/hardware.md` (node status) once cut over.
+The disruptive step: hand the homelab LAN (`192.168.2.0/24`) to OPNsense. House Wi-Fi ends up on
+the **ISP's segment** (see the note below).
+
+1. **Bridge the Tenda** — **Tenda App → Settings → Internet Settings → bridge mode**. Tenda
+   documents this for the **MW3/MW5**; it disables the mesh's **guest network, parental controls,
+   port forwarding, UPnP, DNS, QoS and DHCP** — the mesh keeps only its Wi-Fi role, and its
+   ports/Wi-Fi now carry the ISP's `192.168.1.0/24`.
+2. **Re-cable** — the bridged Tenda's office port is now the ISP uplink:
+   - **WAN1** (`bge0`) → the bridged Tenda (takes `192.168.1.x` from the ISP router);
+   - **LAN** (`bge1`) → the **TL-SG108E** / office drop (the homelab switch).
+3. **Set the final LAN** — **Interfaces → LAN**: `192.168.2.1/24`; DHCP pool **`.100`–`.199`**
+   (clear of the `.20x–.24x` static block, [ADR 31](../decisions/31-static-address-scheme.md));
+   gateway/DNS `192.168.2.1`. Re-point the config laptop to the new LAN.
+4. **Verify** — `https://192.168.2.1` reachable; a homelab client gets a `.100–.199` lease;
+   WAN1→LAN NAT works; the static `192.168.2.x` devices (`lab`/`pve`/`nas`/`edge`/`gw`) answer.
+5. **Update the docs** — `docs/overview.md` (topology) and `docs/hardware.md` (node status).
+
+> **House Wi-Fi is not behind OPNsense in this shape.** The bridged Tenda rides the ISP's
+> `192.168.1.0/24`, so house devices are firewalled only by the ISP router. Putting house Wi-Fi
+> behind OPNsense needs **dedicated AP(s) on the OPNsense LAN** — a follow-up decision
+> ([ADR 39](../decisions/39-lan-edge-router-futro-s930.md)).
 
 ---
 

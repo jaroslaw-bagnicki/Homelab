@@ -42,9 +42,11 @@ DHCP, NAT and firewall for `192.168.2.0/24` — replacing the Tenda Nova as the 
   replaced or put in DMZ/bridge mode stays an open question (issue #96).
 - **Flash care** on the 24 GB mSATA: **RAM disks** for `/var/log` + `/tmp` and ZFS TRIM.
 - **`bge` offloading off** — CRC/TSO/LRO disabled, per idea 07 §OPNsense behaviour.
-- **Tenda Nova → bridge/AP** behind OPNsense, via the Tenda App (documented for MW3/MW5, which
-  disables the mesh's guest network, QoS, DNS and DHCP); **to be verified on the actual units**
-  at cutover.
+- **Tenda Nova → bridge mode**, via the Tenda App (documented for MW3/MW5, which disables the
+  mesh's guest network, QoS, DNS and DHCP). Bridged, the mesh's ports/Wi-Fi ride the **ISP's
+  `192.168.1.0/24`**, so OPNsense's WAN reaches the ISP router **through the Tenda** — the only
+  upstream path — and the homelab keeps its `192.168.2.0/24` addressing. Consequence: **house
+  Wi-Fi lands on the ISP segment, not behind OPNsense** (dedicated APs are the follow-up).
 
 The install and initial configuration are in
 [runbook 35](../runbooks/35-deploy-opnsense.md).
@@ -58,6 +60,9 @@ The install and initial configuration are in
   REST API, not by `playbook-*.yml`.
 - **Double-NAT** persists until the ISP-router handling is decided; remote access stays
   outbound-only via Cloudflare Tunnel ([ADR 08](08-remote-access-cloudflare-tunnel.md)).
+- **House Wi-Fi is not behind OPNsense.** The bridged Tenda rides the ISP's `192.168.1.0/24`, so
+  only the homelab (behind the OPNsense LAN) is firewalled by it; segmenting the house needs
+  dedicated AP(s) on the OPNsense LAN — a follow-up.
 - **4 GB RAM** caps headroom for Suricata/Zenarmor; the 8 GB one-stick upgrade is the next step.
 - The PCIe **Gen1 ×1** link is a non-issue for one 1 Gbps WAN↔LAN route but a consideration for
   inter-VLAN traffic once segmentation lands.
