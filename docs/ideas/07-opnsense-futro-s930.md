@@ -6,9 +6,9 @@
 > Tenda Nova mesh/LAN, adding NGFW features (Suricata IDS/IPS, Zenarmor, VLANs,
 > WireGuard/IPsec VPN, Unbound DNS) that the current flat mesh gateway lacks.
 
-**Status**: 🧠 Idea — Gemini discovery thread, no hardware acquired  
+**Status**: 🔨 Implementing — hardware acquired & verified ([research 31](../research/31-futro-s930-hardware-diagnostic.md)); direction recorded in [ADR 39](../decisions/39-lan-edge-router-futro-s930.md); install tracked in [issue #96](https://github.com/jaroslaw-bagnicki/Homelab/issues/96)  
 **Date**: 2026-08-21  
-**Updated**: 2026-08-24 — NIC comparison; Multi-WAN failover split out to idea 08  
+**Updated**: 2026-10-09 — ADR 39 accepted; [runbook 35](../runbooks/35-deploy-opnsense.md) authored; 24 GB mSATA installed  
 **Source**: [Gemini discussion — OPNsense firewall i router](https://share.gemini.google/k8PVbnk90fuo) (published 2026-08-21)
 
 ---

@@ -13,7 +13,7 @@ Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month 
 
 ## 2026‑10
 
-- **(docs)** Futro S930 hardware diagnostic — fitted 8 GB mSATA replaced with a SMART-verified 24 GB module — [research 31](docs/research/31-futro-s930-hardware-diagnostic.md)
+- **(docs)** Adopt OPNsense on the Futro S930 as the LAN edge router, routing-first — [ADR 39](docs/decisions/39-lan-edge-router-futro-s930.md) · [runbook 35](docs/runbooks/35-deploy-opnsense.md)
 - **(docs)** Private CA — offline 10-year root, TPM-bound 1-year intermediate on `pve`, short-lived leaves — [ADR 38](docs/decisions/38-private-ca-hierarchy-and-custody.md)
 
 ## 2026‑09

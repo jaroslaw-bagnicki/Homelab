@@ -10,10 +10,11 @@
 
 ## Decision Summary
 
-> **Decision authority:** the OPNsense-on-S930 direction is still an **idea** —
-> [Idea 07](../ideas/07-opnsense-futro-s930.md). No ADR yet. This research doc is the
-> Phase 0 hardware audit output. It **confirms Idea 07's NIC, AES-NI & platform premise**
-> and **flags the internal 8 GB disk as tight** for OPNsense.
+> **Decision authority:** the OPNsense-on-S930 direction is recorded in
+> [ADR 39 — LAN Edge Router — OPNsense on the Futro S930, Routing-First](../decisions/39-lan-edge-router-futro-s930.md).
+> This research doc is the Phase 0 hardware audit output. It **confirms the NIC, AES-NI &
+> platform premise** and **resolves the internal-disk capacity flag** (the 8 GB module was
+> replaced with a 24 GB one). Implementation is [runbook 35](../runbooks/35-deploy-opnsense.md).
 
 | Decision | Outcome (as of 2026-10-09) |
 |---|---|
