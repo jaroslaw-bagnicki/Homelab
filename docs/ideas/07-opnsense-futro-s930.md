@@ -6,7 +6,7 @@
 > router (its WAN via the bridged Tenda Nova), adding NGFW features (Suricata IDS/IPS,
 > Zenarmor, VLANs, WireGuard/IPsec VPN, Unbound DNS) that the current flat mesh gateway lacks.
 
-**Status**: 🔨 Implementing — hardware acquired & verified ([research 31](../research/31-futro-s930-hardware-diagnostic.md)); direction recorded in [ADR 39](../decisions/39-lan-edge-router-futro-s930.md); install tracked in [issue #96](https://github.com/jaroslaw-bagnicki/Homelab/issues/96)  
+**Status**: 🔨 Implementing — hardware acquired & verified ([research 31](../research/31-futro-s930-hardware-diagnostic.md)); direction recorded in [ADR 39](../decisions/39-lan-router-futro-s930.md); install tracked in [issue #96](https://github.com/jaroslaw-bagnicki/Homelab/issues/96)  
 **Date**: 2026-08-21  
 **Updated**: 2026-10-09 — ADR 39 accepted; [runbook 35](../runbooks/35-deploy-opnsense.md) authored; 24 GB mSATA installed  
 **Source**: [Gemini discussion — OPNsense firewall i router](https://share.gemini.google/k8PVbnk90fuo) (published 2026-08-21)
@@ -19,7 +19,7 @@ The lab today routes through the **Tenda Nova mesh** (`192.168.2.1`, single flat
 domain) on top of the ISP fiber router (`192.168.1.0/24`, CGNAT — remote access only via
 Cloudflare Tunnel, ADR 08). There is **no dedicated firewall/router** — no VLAN
 segmentation, no IDS/IPS, no self-hosted VPN endpoint. Idea 06 / research 27 are already
-adding energy monitoring; this idea adds the *network edge* the lab is missing.
+adding energy monitoring; this idea adds the *LAN router* the lab is missing.
 
 The Gemini thread is an exploratory OPNsense deep-dive that converged on the classic
 budget-router hardware path: **Fujitsu Futro S930 + Intel i350 multi-port NIC**, with

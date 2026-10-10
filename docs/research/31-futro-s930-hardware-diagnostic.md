@@ -2,7 +2,7 @@
 
 **Source**: SystemRescue 13.02 live session + hardinfo2 report, Sep 02 2026; replacement-disk SMART audit, Oct 09 2026 · Issue [#96 — OPNsense router (Futro S930): initial setup](https://github.com/jaroslaw-bagnicki/Homelab/issues/96) · [Idea 07 — OPNsense Router on Fujitsu Futro S930](../ideas/07-opnsense-futro-s930.md)
 
-**Scope**: Pre-boot hardware audit of the newly arrived **Fujitsu FUTRO S930** thin client (the planned OPNsense network edge, [issue #96](https://github.com/jaroslaw-bagnicki/Homelab/issues/96)) — full hardware inventory before committing OPNsense to the box. Same Phase 0 pattern as the [Wyse 3040 audit (research 28)](28-wyse3040-hardware-diagnostic.md) and the [Wyse 5070 audit (research 29)](29-wyse5070-hardware-diagnostic.md).
+**Scope**: Pre-boot hardware audit of the newly arrived **Fujitsu FUTRO S930** thin client (the planned OPNsense LAN router, [issue #96](https://github.com/jaroslaw-bagnicki/Homelab/issues/96)) — full hardware inventory before committing OPNsense to the box. Same Phase 0 pattern as the [Wyse 3040 audit (research 28)](28-wyse3040-hardware-diagnostic.md) and the [Wyse 5070 audit (research 29)](29-wyse5070-hardware-diagnostic.md).
 
 **Status**: 🔨 In progress — SystemRescue/hardinfo2 inventory captured; **AES-NI confirmed**, **PCIe confirmed Gen1 ×1 (no BIOS option — platform limit)**; the undersized 8 GB mSATA was **replaced with a 24 GB Kingston SMS151S324G** (SMART PASSED, blank, self-tests clean, 2026-10-09); a memory-layout decision still pending ([Pending checks](#pending-checks)).
 
@@ -11,7 +11,7 @@
 ## Decision Summary
 
 > **Decision authority:** the OPNsense-on-S930 direction is recorded in
-> [ADR 39 — LAN Edge Router — OPNsense on the Futro S930, Routing-First](../decisions/39-lan-edge-router-futro-s930.md).
+> [ADR 39 — LAN Router — OPNsense on the Futro S930, Routing-First](../decisions/39-lan-router-futro-s930.md).
 > This research doc is the Phase 0 hardware audit output. It **confirms the NIC, AES-NI &
 > platform premise** and **resolves the internal-disk capacity flag** (the 8 GB module was
 > replaced with a 24 GB one). Implementation is [runbook 35](../runbooks/35-deploy-opnsense.md).
@@ -19,7 +19,7 @@
 | Decision | Outcome (as of 2026-10-09) |
 |---|---|
 | Hardware | Fujitsu FUTRO S930 — **acquired** · SN `YMFH014511` · board `D3313-E1` · BIOS AMI `V4.6.5.4 R1.14.0` (2017-09-21) |
-| Role | OPNsense network edge — LAN gateway NAT/firewall, routing first, VLANs later (issue #96) |
+| Role | OPNsense LAN router — gateway NAT/firewall, routing first, VLANs later (issue #96) |
 | CPU | **AMD GX-424CC** (Jaguar-family, 4C/4T, 2.4 GHz, 2 MB L2) — confirmed |
 | RAM | **4 GiB (1× 4 GiB)**, one SODIMM slot free — see [RAM](#ram); Idea 07's 8 GB (Zenarmor) goal is a one-stick upgrade |
 | NIC (card) | **Broadcom NetXtreme BCM5720 2× 1 GbE** (`enp1s0f0/f1`) — **Idea 07's chosen NIC**, FreeBSD `bge` driver |
@@ -34,7 +34,7 @@
 
 The lab routes through the **Tenda Nova mesh** (`192.168.2.1`, single flat broadcast
 domain) on the ISP fiber router (`192.168.1.0/24`, CGNAT — inbound via Cloudflare Tunnel,
-ADR 08). Idea 07 / issue #96 add the missing network edge: a dedicated **OPNsense**
+ADR 08). Idea 07 / issue #96 add the missing LAN router: a dedicated **OPNsense**
 appliance. The audit follows the Phase 0 pattern used for the Wyses (research 28/29) and
 the ML110 (runbook 22 §3): capture exact specs and check for surprises **before**
 committing an OS. A critical audit concern is the **NIC**: Idea 07 selects the Dell

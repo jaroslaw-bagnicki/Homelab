@@ -2,13 +2,13 @@
 
 > **Implementation runbook for [issue #96 — OPNsense router (Futro S930): initial setup](https://github.com/jaroslaw-bagnicki/Homelab/issues/96).**
 > Installs **OPNsense 26.7** on the Fujitsu Futro S930 and configures it as the lab's
-> **LAN edge router** — DHCP + NAT + firewall for `192.168.2.0/24`, **routing-first** (flat
-> subnet; VLANs later). The decision is [ADR 39](../decisions/39-lan-edge-router-futro-s930.md);
+> **LAN router** — DHCP + NAT + firewall for `192.168.2.0/24`, **routing-first** (flat
+> subnet; VLANs later). The decision is [ADR 39](../decisions/39-lan-router-futro-s930.md);
 > the verified hardware is [research 31](../research/31-futro-s930-hardware-diagnostic.md);
 > the platform/NIC rationale is [idea 07](../ideas/07-opnsense-futro-s930.md); the LTE failover
 > WAN is [idea 08](../ideas/08-lte-wan-failover.md).
 >
-> **Hostname `gw`** — the node is named for its **role in the fleet**
+> **Hostname `router`** — the node is named for its **role in the fleet**
 > ([ADR 33](../decisions/33-fleet-node-hostnames.md)); it owns the gateway `192.168.2.1`
 > ([ADR 31](../decisions/31-static-address-scheme.md) / [research 24](../research/24-network-topology-design.md)).
 >
@@ -32,7 +32,7 @@ on a **temporary LAN** (`192.168.99.1/24`), WAN1 reaching the internet **through
 the homelab LAN onto OPNsense at `192.168.2.1`.
 
 - Install **OPNsense 26.7** (ZFS) on the **24 GB Kingston mSATA** (FreeBSD **`ada0`**; the USB installer is `da0`).
-- First-boot wizard: hostname **`gw`**, domain `internal`, timezone `Etc/UTC`.
+- First-boot wizard: hostname **`router`**, domain `internal`, timezone `Etc/UTC`.
 - Assign interfaces: **`bge0` = WAN1**, **`bge1` = LAN**, **`re0` = WAN2_LTE**.
 - Build: **LAN `192.168.99.1/24`** (temporary), **WAN1 DHCP** through the Tenda (`192.168.2.x`).
 - Disable `bge` hardware offloading (CRC/TSO/LRO).
@@ -46,7 +46,7 @@ the homelab LAN onto OPNsense at `192.168.2.1`.
 
 Authored 2026-10-09, before execution — the checklist fills in as the install runs.
 
-- [ ] OPNsense 26.7 installed (ZFS) on the 24 GB mSATA; hostname `gw`
+- [ ] OPNsense 26.7 installed (ZFS) on the 24 GB mSATA; hostname `router`
 - [ ] Interfaces assigned (`bge0` WAN1, `bge1` LAN, `re0` WAN2_LTE)
 - [ ] Build: temporary LAN `192.168.99.1/24` + WAN1 DHCP via the Tenda verified
 - [ ] `bge` offloading disabled
@@ -173,7 +173,7 @@ confirm `ping 192.168.99.1`.
 2. Log in as **`root`** with the install password. **Change the password** immediately
    (`System → Access → Users`; set the `admin`/`root` password) → **Keeper**.
 3. Work through the wizard (`System → Wizard`):
-   - **Hostname** `gw`; **Domain** `internal` → `gw.internal` ([ADR 37](../decisions/37-lan-name-space-internal.md)).
+   - **Hostname** `router`; **Domain** `internal` → `router.internal` ([ADR 37](../decisions/37-lan-name-space-internal.md)).
    - **Timezone** `Etc/UTC` (the fleet standard).
    - **WAN** — DHCP (upstream is the Tenda, `192.168.2.x`). **Disable *Block private networks***
      on WAN1 — its upstream is RFC1918 in both phases (`192.168.2.x` build, `192.168.1.x`
@@ -278,19 +278,19 @@ the **ISP's segment** (see the note below).
    (clear of the `.20x–.24x` static block, [ADR 31](../decisions/31-static-address-scheme.md));
    gateway/DNS `192.168.2.1`. Re-point the config laptop to the new LAN.
 4. **Verify** — `https://192.168.2.1` reachable; a homelab client gets a `.100–.199` lease;
-   WAN1→LAN NAT works; the static `192.168.2.x` devices (`lab`/`pve`/`nas`/`edge`/`gw`) answer.
+   WAN1→LAN NAT works; the static `192.168.2.x` devices (`lab`/`pve`/`nas`/`edge`/`router`) answer.
 5. **Update the docs** — `docs/overview.md` (topology) and `docs/hardware.md` (node status).
 
 > **House Wi-Fi is not behind OPNsense in this shape.** The bridged Tenda rides the ISP's
 > `192.168.1.0/24`, so house devices are firewalled only by the ISP router. Putting house Wi-Fi
 > behind OPNsense needs **dedicated AP(s) on the OPNsense LAN** — a follow-up decision
-> ([ADR 39](../decisions/39-lan-edge-router-futro-s930.md)).
+> ([ADR 39](../decisions/39-lan-router-futro-s930.md)).
 
 ---
 
 ## References
 
-- [ADR 39 — LAN Edge Router — OPNsense on the Futro S930, Routing-First](../decisions/39-lan-edge-router-futro-s930.md)
+- [ADR 39 — LAN Router — OPNsense on the Futro S930, Routing-First](../decisions/39-lan-router-futro-s930.md)
 - [Research 31 — Futro S930 hardware diagnostic](../research/31-futro-s930-hardware-diagnostic.md) — verified hardware + 24 GB mSATA
 - [Idea 07 — OPNsense Router on Fujitsu Futro S930](../ideas/07-opnsense-futro-s930.md) — platform + `bge` caveats
 - [Idea 08 — Homelab LTE/5G WAN Failover](../ideas/08-lte-wan-failover.md) — WAN2 on `re0`

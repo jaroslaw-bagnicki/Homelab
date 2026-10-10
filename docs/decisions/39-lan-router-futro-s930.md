@@ -1,4 +1,4 @@
-# LAN Edge Router — OPNsense on the Futro S930, Routing-First
+# LAN Router — OPNsense on the Futro S930, Routing-First
 
 **Date:** 2026-10-09
 **Status:** Accepted
@@ -29,8 +29,9 @@ Implementation is tracked in [#96](https://github.com/jaroslaw-bagnicki/Homelab/
 
 ## Decision
 
-Adopt **OPNsense on the Fujitsu Futro S930, bare-metal**, as the lab's **LAN edge router** —
+Adopt **OPNsense on the Fujitsu Futro S930, bare-metal**, as the lab's **LAN router** —
 DHCP, NAT and firewall for `192.168.2.0/24` — replacing the Tenda Nova as the gateway.
+Hostname **`router`** ([ADR 33](33-fleet-node-hostnames.md)).
 
 - **Routing-first.** Keep the single flat subnet now; introduce **VLAN segmentation
   (research 24 Option B) as a follow-up** once routing is stable. This unblocks #57 without
@@ -88,5 +89,5 @@ The install and initial configuration are in
 - [Research 31](../research/31-futro-s930-hardware-diagnostic.md) — hardware audit
 - [Idea 08](../ideas/08-lte-wan-failover.md) — LTE WAN failover on `re0` · [research 30](../research/30-mobile-internet-failover-offers.md)
 - [Research 24](../research/24-network-topology-design.md) — flat-vs-VLAN design · [ADR 31](31-static-address-scheme.md) — addressing
-- [ADR 08](08-remote-access-cloudflare-tunnel.md) — CGNAT / Cloudflare Tunnel · [ADR 24](24-edge-ingress-appliance.md) — edge split · [ADR 33](33-fleet-node-hostnames.md) — hostname `gw`
+- [ADR 08](08-remote-access-cloudflare-tunnel.md) — CGNAT / Cloudflare Tunnel · [ADR 24](24-edge-ingress-appliance.md) — edge split · [ADR 33](33-fleet-node-hostnames.md) — hostname `router`
 - [Runbook 35](../runbooks/35-deploy-opnsense.md) — install & initial setup

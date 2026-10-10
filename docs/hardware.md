@@ -12,7 +12,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | **Beetle NAS** | OMV NAS backup target (successor to ML110) | Wincor Beetle M-III | Pentium G4400 (2C/2T, 3.3 GHz) | 8 GB DDR4 (1×, 1 free slot) | SanDisk 128 GB SSD + 2× Seagate 1 TB 2.5" | 1× GbE Intel I219-V |
 | **Edge Ingress** | public ingress | Dell Wyse 3040 | Atom x5-Z8350 (2 W TDP) | 2 GB DDR3L | 8 GB eMMC | 1× GbE |
 | **Proxmox VE** | virtualisation host — smart-home + always-on services | Dell Wyse 5070 | Celeron J4105 (10 W) | 8 GB DDR4 (2× 4 GB) | M.2 SATA SK hynix 128 GB | 1× GbE + WiFi |
-| **OPNsense Router** | LAN edge router / firewall | Fujitsu Futro S930 | GX-424CC (4C/4T, 25 W TDP) | 4 GB DDR3 (1×, 1 free slot) | Kingston 24 GB mSATA | 3× GbE (BCM5720 2× + Realtek 1×) |
+| **OPNsense Router** | LAN router / firewall | Fujitsu Futro S930 | GX-424CC (4C/4T, 25 W TDP) | 4 GB DDR3 (1×, 1 free slot) | Kingston 24 GB mSATA | 3× GbE (BCM5720 2× + Realtek 1×) |
 | **Cloudlab VPS** | staging / playground | Contabo Cloud VPS 10 | 4 vCPU (cloud — no TDP) | 8 GB | 75 GB NVMe | public IP |
 
 ## Compute & Storage Nodes
@@ -96,7 +96,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Network | **Broadcom NetXtreme BCM5720 2× 1 GbE** (FreeBSD `bge`) in the PCIe slot = WAN + LAN · onboard **Realtek RTL8111/8168** (`re`) = WAN2_LTE (LTE failover) · **slot trains Gen1 ×1** (no BIOS option — platform limit) |
 | Firmware | BIOS AMI **R1.14.0** (2017-09-21) · board `D3313-E1` · SN `YMFH014511` |
 | Cooling | Fanless · ~59 °C idle · ~8–15 W idle (Jaguar 25 W) |
-| Role | LAN edge router (OPNsense) |
+| Role | LAN router (OPNsense) · hostname `router` |
 | Acquisition | 2026-09-02 — hardware diagnostic complete · 2026-10-09 — 24 GB mSATA replacement SMART-verified ([research 31](research/31-futro-s930-hardware-diagnostic.md)); OPNsense install pending |
 | Docs | [idea 07](ideas/07-opnsense-futro-s930.md) · [research 31](research/31-futro-s930-hardware-diagnostic.md) |
 
