@@ -22,7 +22,10 @@ fluentbit_apt_key_url: https://packages.fluentbit.io/fluentbit.key
 fluentbit_apt_base_url: "https://packages.fluentbit.io/{{ ansible_facts['distribution'] | lower }}/{{ ansible_facts['distribution_release'] }}"
 fluentbit_apt_suite: "{{ ansible_facts['distribution_release'] }}"
 
-fluentbit_flush: 1
+# Output flush interval (seconds). 5s batches records into fewer, larger HTTP requests to the
+# store — less overhead on the weak nodes and the Celeron store — at the cost of up to 5s query
+# latency, which only matters if near-real-time tailing is wanted (a 30-day search store is not).
+fluentbit_flush: 5
 fluentbit_log_level: info
 
 # VictoriaLogs output contract (ADR 35 / ADR 36) — the store runs on the vtstack guest.
