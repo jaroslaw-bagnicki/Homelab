@@ -23,3 +23,14 @@ services:
       - -tlsKeyFile=/etc/victorialogs/ssl/key.pem
       - -httpAuth.username={{ victorialogs_username }}
       - -httpAuth.password=file:///etc/victorialogs/password
+{% if victorialogs_syslog_enabled | bool %}
+      # Syslog listener (TLS) — the OPNsense router's syslog-ng destination (ADR 36 amendment).
+      # No auth (mTLS is Enterprise-only); the in-LXC UFW LAN rule is the boundary.
+      - -syslog.listenAddr.tcp=:{{ victorialogs_syslog_listen_port }}
+      - -syslog.tls
+      - -syslog.tlsCertFile=/etc/victorialogs/ssl/cert.pem
+      - -syslog.tlsKeyFile=/etc/victorialogs/ssl/key.pem
+{% if victorialogs_syslog_use_remote_ip | bool %}
+      - -syslog.useRemoteIP.tcp=true
+{% endif %}
+{% endif %}

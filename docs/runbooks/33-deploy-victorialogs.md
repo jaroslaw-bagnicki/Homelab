@@ -10,7 +10,7 @@
 > [#84](https://github.com/jaroslaw-bagnicki/Homelab/issues/84) and stays open — the store is
 > inert until at least one node ships logs. Resource monitoring of the store is
 > [#132](https://github.com/jaroslaw-bagnicki/Homelab/issues/132); VictoriaMetrics and
-> VictoriaTraces are **future ADRs** (§7).
+> VictoriaTraces are **future ADRs** (§8).
 >
 > ⚠ **Execution note.** Author on the `feat/victorialogs-log-store` branch; **run only after CR**.
 > LXC creation (§1–§2) is a manual/console procedure on the `pve` host, reached as
@@ -42,6 +42,9 @@ built-in `/select/vmui` UI ([ADR 35](../decisions/35-log-store-victorialogs.md))
   self-signed), HTTP basic auth (password from Azure Key Vault via a root-only file), 30-day
   retention plus disk caps, memory bounded, LAN-only enforced by a UFW rule **inside the LXC**
   ([ADR 34](../decisions/34-lan-tls-only.md)).
+- **A TLS syslog listener** (`:6514`) for the **OPNsense router's** syslog-ng — TLS, reusing the
+  store's certificate, **no authentication** (mTLS is Enterprise-only), so the LAN UFW rule is the
+  boundary ([ADR 36 amendment](../decisions/36-log-collector-fluentbit.md) · [runbook 35](35-deploy-opnsense.md) §13).
 - **Not backed up** — a rolling 30-day window stays outside [ADR 02](../decisions/02-backup-strategy-restic-blob.md)'s
   scope.
 
@@ -161,9 +164,9 @@ ansible-playbook ansible/playbooks/playbook-logs.yml --diff
 ```
 
 - **`common`** — hostname `vtstack`, `Etc/UTC`, NTP, and the fleet key on `fleetadm`.
-- **`security`** — UFW default-deny with a LAN allow for SSH `22` **and VictoriaLogs `9428`**
-  (`security_ufw_allow_tcp_ports`, `security_ufw_allow_tcp_from: 192.168.2.0/24`), plus fail2ban
-  and sshd hardening. This is the **verified in-container LAN rule** ADR 34 requires — not the host
+- **`security`** — UFW default-deny with a LAN allow for SSH `22`, **VictoriaLogs `9428`** and the
+  **syslog listener `6514`** (`security_ufw_allow_tcp_ports`, `security_ufw_allow_tcp_from: 192.168.2.0/24`),
+  plus fail2ban and sshd hardening. This is the **verified in-container LAN rule** ADR 34 requires — not the host
   firewall, which never sees container traffic.
 - **`docker_host`** — Docker Engine from Docker's official repository (distro-aware: Debian here).
 
@@ -217,6 +220,9 @@ templates the Compose file, and brings the `victorialogs` container up with:
 - `-tls -tlsCertFile=… -tlsKeyFile=…` (HTTPS only)
 - `-httpAuth.username=vlogs -httpAuth.password=file:///etc/victorialogs/password` (the
   **container** path; the host file is `/opt/vtstack/victorialogs/password`, mounted read-only)
+- `-syslog.listenAddr.tcp=:6514 -syslog.tls -syslog.tlsCertFile=… -syslog.tlsKeyFile=…` — the
+  router's **TLS syslog listener** ([§7](#7-syslog-listener-opnsense-router)), plus
+  `-syslog.useRemoteIP.tcp=true`
 - image pinned to an explicit tag, `restart: unless-stopped`, and **`network_mode: host`** so the
   in-LXC UFW filters `:9428` — a Docker *published* port would bypass UFW (see §6 / [ADR 35](../decisions/35-log-store-victorialogs.md))
 
@@ -272,7 +278,7 @@ curl -sk -o /dev/null -w '%{http_code}\n' https://192.168.2.214:9428/select/vmui
 curl -s --connect-timeout 5 -o /dev/null -w '%{http_code}\n' http://192.168.2.214:9428/select/vmui
 # → 400 ("Client sent an HTTP request to an HTTPS server.") — no cleartext service
 
-# UFW inside the container is the LAN boundary (host networking) — 22 + 9428 from 192.168.2.0/24 only
+# UFW inside the container is the LAN boundary (host networking) — 22 + 9428 + 6514 from 192.168.2.0/24 only
 pct exec 214 -- ufw status verbose
 
 # retention / memory / auth flags actually in effect
@@ -292,9 +298,6 @@ printf '%s\n%s\n' '{"create":{}}' '{"_msg":"bulk hello","level":"info"}' \
   | curl -sk --netrc-file "$VL_NETRC" -X POST \
       -H 'Content-Type: application/x-ndjson' --data-binary @- \
       'https://192.168.2.214:9428/insert/elasticsearch/_bulk?refresh=true'
-
-# done — take the credential back out of /dev/shm
-shred -u "$VL_NETRC"
 ```
 
 **Off-LAN refusal — the ADR 34 acceptance criterion — ⏸ deferred 2026-09-27.** The store must be
@@ -302,7 +305,7 @@ unreachable from outside `192.168.2.0/24`. **No usable source existed for this r
 container's traffic is NAT'd to a LAN address, `cloudlab` has no route to the LAN at all, and the
 Tenda mesh does not forward inbound from the upstream `192.168.1.0/24`. Confirm by **configuration**
 instead: a `network_mode: host` container has no Docker DNAT path, so the in-container UFW rule
-(`9428 ALLOW IN 192.168.2.0/24`, default-deny) is the boundary. When a source that can **route** to
+(`9428` + `6514` ALLOW IN `192.168.2.0/24`, default-deny) is the boundary. When a source that can **route** to
 the LXC while sitting on another subnet is available, re-run the check below — a request from
 `cloudlab` only proves there is no NAT/route to the LAN, not that the firewall refused it:
 
@@ -311,7 +314,7 @@ the LXC while sitting on another subnet is available, re-run the check below —
 curl -sk --connect-timeout 5 -o /dev/null -w '%{http_code}\n' https://192.168.2.214:9428/select/vmui
 
 # and confirm the rule that does the work (host networking → UFW INPUT):
-pct exec 214 -- ufw status verbose    # 9428 ALLOW IN 192.168.2.0/24
+pct exec 214 -- ufw status verbose    # 9428 + 6514 ALLOW IN 192.168.2.0/24
 ```
 
 **Reboot survival** — `onboot 1` plus `restart: unless-stopped`:
@@ -353,7 +356,53 @@ latency (VictoriaLogs' documented weak case — [research 33 §8](../research/33
 >
 > **Off-LAN test deferred (2026-09-27)** — no usable source in this topology (see §6 above).
 
-## 7. Future extension (metrics / traces)
+## 7. Syslog listener (OPNsense router)
+
+The **OPNsense router** (`router`) ships its logs to the store over **syslog-ng → a TLS syslog
+listener** — its per-OS path ([ADR 36 amendment](../decisions/36-log-collector-fluentbit.md) ·
+[research 34 §8](../research/34-log-collector-options.md) · [runbook 35](35-deploy-opnsense.md) §13).
+The listener is part of the store (flags in §5; [ADR 35 amendment](../decisions/35-log-store-victorialogs.md)):
+
+- **TLS only**, reusing the store's certificate (`ssl/cert.pem` + `ssl/key.pem`) —
+  `-syslog.listenAddr.tcp=:6514 -syslog.tls -syslog.tlsCertFile=… -syslog.tlsKeyFile=…`. 6514 is the
+  conventional **syslog-over-TLS** port.
+- **No authentication** — client-cert mTLS (`-syslog.mtls`) is VictoriaLogs **Enterprise-only**, so the
+  listener is encrypted but anonymous; the **in-LXC UFW LAN rule is the whole boundary** (ADR 35 amendment).
+- **`-syslog.useRemoteIP.tcp=true`** records the sender's IP (`remote_ip`) for provenance.
+- **Unparsed** — OPNsense's `filterlog` CSV arrives as one `_msg`; extract fields in LogsQL at query time.
+
+The router side lives in [runbook 35 §13](35-deploy-opnsense.md): add the store's certificate as a
+**trust anchor** (**System → Trust → Authorities**) so OPNsense verifies the server, and set
+`opnsense_syslog_certificate` to a **local client certificate** (**System → Trust → Certificates**, its
+own private key — syslog-ng's `cert-file`/`key-file`; it is **not** the store's cert). Then set
+`opnsense_syslog_enabled: true` and re-run `playbook-router.yml`.
+
+**Validate** (from the controller; `$VL_NETRC` is primed in §6 — its cleanup moves to the end of this section):
+
+```sh
+# listener present, and UFW allows 6514 too
+pct exec 214 -- ss -lntp | grep 6514
+pct exec 214 -- ufw status verbose          # 22 + 9428 + 6514 ALLOW IN 192.168.2.0/24
+
+# send a test RFC5424 line over TLS, then query it back
+printf '<13>1 2026-10-10T12:00:00Z gw syslog-test - - - hello syslog listener\n' \
+  | openssl s_client -quiet -connect 192.168.2.214:6514 2>/dev/null
+curl -sk --netrc-file "$VL_NETRC" \
+  'https://192.168.2.214:9428/select/logsql/query' -d 'query="hello syslog listener"'
+# → the test line; app_name/level come from the syslog parser. `remote_ip` is the *sender's*
+#   address (this test's source) — a message actually sent by `router` is the real provenance
+#   check (runbook 35 §13).
+
+# done — take the credential back out of /dev/shm (moved here from §6)
+shred -u "$VL_NETRC"
+```
+
+> **Timezone caveat.** VictoriaLogs parses `rfc3164` timestamps in the *server* timezone (the store runs
+> `Etc/UTC`); if the router's lines look shifted, set the **global** `-syslog.timezone` (e.g.
+> `Europe/Warsaw`) — it is not a per-listener flag — and the syslog-ng sender is configured in
+> [runbook 35 §13](35-deploy-opnsense.md).
+
+## 8. Future extension (metrics / traces)
 
 `vtstack` is deliberately named and laid out for the **Victoria stack** — one LXC, one Compose
 project, **separate containers** (`victorialogs` today; `victoriametrics`, `victoriatraces` later),
@@ -376,6 +425,7 @@ Executed on: **2026-09-27** — §1–§6 executed, off-LAN refusal **deferred**
 - [x] §5 store up; HTTPS `/select/vmui` → **302** (add `-L` for **200**); unauthenticated → **401**; plaintext refused (**400**)
 - [x] §5 `docker inspect` shows the retention/disk/memory flags
 - [x] §5 ingest smoke test (jsonline **and** ES `_bulk`) visible in a query
+- [ ] §7 the **syslog listener** (`:6514`) accepts a TLS test line and returns it in a query
 - [ ] §6 **off-LAN request refused** (ADR 34 acceptance criterion) — ⏸ **deferred 2026-09-27**, no routable non-LAN source (see §6)
 - [x] §6 survives `pct reboot 214`; `onboot 1` confirmed
 - [x] §6 idempotent — re-run leaves the container unrecreated (`Restarts=0`, same ID); the `pull: always` deploy task reports `changed` by design
@@ -385,14 +435,17 @@ Executed on: **2026-09-27** — §1–§6 executed, off-LAN refusal **deferred**
 
 - **Off-LAN refusal check** — ⏸ deferred 2026-09-27; needs a source that routes to `192.168.2.214` from another subnet, which the current Tenda-NAT topology does not offer (§6).
 - **Collector** — [#84](https://github.com/jaroslaw-bagnicki/Homelab/issues/84); the store is inert until one ships.
+- **Router syslog go-live** — enable the destination certificate + `opnsense_syslog_enabled` on `router` ([runbook 35](35-deploy-opnsense.md) §13) once this store change is deployed.
 - **Store monitoring** — [#132](https://github.com/jaroslaw-bagnicki/Homelab/issues/132); the Netdata Parent already charts the container as a Proxmox guest, and the `/metrics` job + alarms follow.
 - **Certificate pinning** — the private CA is [#126](https://github.com/jaroslaw-bagnicki/Homelab/issues/126); clients skip verification for now ([ADR 27](../decisions/27-monitoring-strategy.md)'s accepted residual).
-- **VictoriaMetrics / VictoriaTraces** — future ADRs (§7); same guest and Compose project.
+- **VictoriaMetrics / VictoriaTraces** — future ADRs (§8); same guest and Compose project.
 - **Re-size the rootfs** from the measured ingest rate once the collector lands.
 
 ## References
 
 - [ADR 35](../decisions/35-log-store-victorialogs.md) — VictoriaLogs log store in an LXC on `pve`
+- [ADR 36](../decisions/36-log-collector-fluentbit.md) — the collector decision; its 2026-10-09 amendment resolves the router's path to syslog-ng → this store
+- [Runbook 35 §13](35-deploy-opnsense.md) — the OPNsense router's Ansible onboarding (the syslog sender)
 - [Research 33](../research/33-centralized-logging-victorialogs.md) — host placement, engine comparison, verified mechanics
 - [ADR 24](../decisions/24-edge-ingress-appliance.md) (volatile journald) · [ADR 27](../decisions/27-monitoring-strategy.md) (Tier B) · [ADR 31](../decisions/31-static-address-scheme.md) (guest block) · [ADR 34](../decisions/34-lan-tls-only.md) (TLS-only, UFW scope)
 - [Runbook 28](28-pve-proxmox-node.md) (Proxmox base + `fleetadm`) · [Runbook 29](29-nut-ups-shutdown.md) (LXC 213 creation precedent) · [Runbook 31](31-deploy-netdata.md) (AKV/TLS/validation pattern)
