@@ -13,16 +13,14 @@ Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month 
 
 ## 2026‑10
 
-- **(feat)** Netdata Parent now retains the full 14 d of 1 s metrics — the Tier 0 cap was binding at ~9 d — [ADR 27](docs/decisions/27-monitoring-strategy.md)
-- **(feat)** VictoriaLogs accepts the OPNsense router's logs over a TLS syslog listener, and Fluent Bit flushes every 5 s — [runbook 33](docs/runbooks/33-deploy-victorialogs.md)
 - **(docs)** Private CA — offline 10-year root, TPM-bound 1-year intermediate on `pve`, short-lived leaves — [ADR 38](docs/decisions/38-private-ca-hierarchy-and-custody.md)
 
 ## 2026‑09
 
 - **(docs)** Adopt `.internal` as the LAN name space, retiring DNSMasq and `.home` — [ADR 37](docs/decisions/37-lan-name-space-internal.md)
-- **(feat)** Fluent Bit collector — every LAN node ships its journald (and Docker) logs into VictoriaLogs — [ADR 36](docs/decisions/36-log-collector-fluentbit.md) · [runbook 34](docs/runbooks/34-deploy-fluentbit.md)
-- **(feat)** Adopt VictoriaLogs as the log store in an LXC on `pve` — [ADR 35](docs/decisions/35-log-store-victorialogs.md) · [runbook 33](docs/runbooks/33-deploy-victorialogs.md)
-- **(feat)** Netdata retention is now per-tier — the Parent keeps raw 1s for 14 d, 1m for 30 d and 1h for 365 d (≈7 GiB cap) — [ADR 27](docs/decisions/27-monitoring-strategy.md)
+- **(feat)** Fluent Bit collector — every LAN node ships its journald (and Docker) logs into VictoriaLogs, flushing every 5 s — [ADR 36](docs/decisions/36-log-collector-fluentbit.md) · [runbook 34](docs/runbooks/34-deploy-fluentbit.md)
+- **(feat)** Adopt VictoriaLogs as the log store in an LXC on `pve` — now also a TLS syslog listener for the OPNsense router — [ADR 35](docs/decisions/35-log-store-victorialogs.md) · [runbook 33](docs/runbooks/33-deploy-victorialogs.md)
+- **(feat)** Netdata retention is now per-tier — the Parent keeps raw 1s for 14 d (tier-0 5 GiB), 1m for 30 d and 1h for 365 d (≈9 GiB cap) — [ADR 27](docs/decisions/27-monitoring-strategy.md)
 - **(feat)** UPS telemetry in Netdata — the Parent charts battery, load and voltage from the NUT server and raises on-battery events as local alarms — [runbook 31](docs/runbooks/31-deploy-netdata.md)
 - **(docs)** Add ADR 34 — LAN services are TLS-only, no plaintext HTTP — [ADR 34](docs/decisions/34-lan-tls-only.md)
 - **(feat)** Beetle M-III NAS Phase 1 — OMV 8.5 on `nas`, `md0` RAID1 reboot-verified, fleet-enrolled with the Netdata child + NUT secondary — [runbook 32](docs/runbooks/32-beetle-m3-omv-setup.md)

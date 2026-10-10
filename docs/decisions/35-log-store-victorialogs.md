@@ -65,17 +65,21 @@ LXC on the `pve` node.**
 - **Transport: HTTPS only** — native TLS (`-tls`, `-tlsCertFile`, `-tlsKeyFile`) with a self-signed
   certificate generated on the host by Ansible and mounted read-only. Plaintext HTTP is prohibited
   (ADR 34).
-- **Auth: HTTP basic auth from day one** — `-httpAuth.username` / `-httpAuth.password`, the password
-  written by Ansible from Azure Key Vault to a **root-only file** and read via
+- **Auth — HTTP ingest: basic auth from day one** — `-httpAuth.username` / `-httpAuth.password`, the
+  password written by Ansible from Azure Key Vault to a **root-only file** and read via
   `-httpAuth.password=file://…`, so the secret never appears in the container's argument list or
-  environment — upstream's recommended route over `-envflag.enable`.
+  environment — upstream's recommended route over `-envflag.enable`. **Syslog ingest is the exception**
+  (amended 2026-10-10): the TLS syslog listener is **unauthenticated** (client-cert mTLS is
+  Enterprise-only), so its LAN UFW rule is the only boundary — any LAN host can inject records; accepted
+  on the trusted LAN.
 - **LAN-only, enforced at the container** — the listener is restricted to `192.168.2.0/24` by a rule
   **inside the LXC** (or at the Proxmox firewall), not by the host's UFW, which never sees container
   traffic (ADR 34). The container therefore runs with **`network_mode: host`** so the in-LXC UFW
   (INPUT chain) actually filters the port — a Docker *published* port is forwarded through Docker's own
   iptables path and would **bypass UFW**. The store has **no IP allowlist of its own** — the upstream
   docs delegate that to the network — so this rule is the whole boundary. **Deployed 2026-09-27:** the
-  in-LXC UFW carries `22` + `9428` from `192.168.2.0/24`, with `80` denied and default-deny inbound
+  in-LXC UFW carries `22` + `9428` from `192.168.2.0/24` (with `6514` added 2026-10-10 for the syslog
+  listener), with `80` denied and default-deny inbound
   ([runbook 33](../runbooks/33-deploy-victorialogs.md) §6). **Still unverified — deferred:** the
   off-LAN refusal itself, because no source in this topology routes to the guest from another subnet.
 - **Retention: 30 days** (`-retentionPeriod`), **capped by disk space** —
@@ -136,12 +140,15 @@ LXC on the `pve` node.**
   verification, the same residual ADR 27 and ADR 34 accept. Pinning arrives with the private CA tracked
   as [#126](https://github.com/jaroslaw-bagnicki/Homelab/issues/126).
 - **A write-accepting service on the LAN** — the ingest path becomes the fleet's most sensitive
-  listener. Basic auth is only as strong as the Key Vault-sourced secret, and the LAN-only rule must be
-  re-verified whenever the container's networking changes.
+  listener. **HTTP** ingest is protected by basic auth (only as strong as the Key Vault secret); the
+  **syslog listener is unauthenticated** (amended 2026-10-10), so any LAN host can inject records there —
+  the LAN rule is its only boundary. Both listeners' LAN-only rules must be re-verified whenever the
+  container's networking changes.
 - **The store is inert until a collector ships** ([#84](https://github.com/jaroslaw-bagnicki/Homelab/issues/84));
   this ADR buys the destination, not the pipeline.
-- **A deliberately minimal security posture** — TLS plus built-in basic auth on a trusted LAN, not the
-  upstream vmauth front end, and **no HA**: a single instance with no replication means an outage drops
+- **A deliberately minimal security posture** — TLS plus built-in basic auth on the HTTP ingest, an
+  **unauthenticated TLS syslog listener** (LAN-bound), and no `vmauth` front end on a trusted LAN, and
+  **no HA**: a single instance with no replication means an outage drops
   or queues logs depending on the collector. Acceptable at 30-day retention, and revisited if the store
   ever leaves the LAN.
 

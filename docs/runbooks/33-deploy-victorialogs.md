@@ -298,9 +298,6 @@ printf '%s\n%s\n' '{"create":{}}' '{"_msg":"bulk hello","level":"info"}' \
   | curl -sk --netrc-file "$VL_NETRC" -X POST \
       -H 'Content-Type: application/x-ndjson' --data-binary @- \
       'https://192.168.2.214:9428/insert/elasticsearch/_bulk?refresh=true'
-
-# done — take the credential back out of /dev/shm
-shred -u "$VL_NETRC"
 ```
 
 **Off-LAN refusal — the ADR 34 acceptance criterion — ⏸ deferred 2026-09-27.** The store must be
@@ -374,11 +371,13 @@ The listener is part of the store (flags in §5; [ADR 35 amendment](../decisions
 - **`-syslog.useRemoteIP.tcp=true`** records the sender's IP (`remote_ip`) for provenance.
 - **Unparsed** — OPNsense's `filterlog` CSV arrives as one `_msg`; extract fields in LogsQL at query time.
 
-The router side lives in [runbook 35 §13](35-deploy-opnsense.md): import the store's certificate into
-OPNsense (**System → Trust → Certificates**), set the destination **certificate ID**, then set
+The router side lives in [runbook 35 §13](35-deploy-opnsense.md): add the store's certificate as a
+**trust anchor** (**System → Trust → Authorities**) so OPNsense verifies the server, and set
+`opnsense_syslog_certificate` to a **local client certificate** (**System → Trust → Certificates**, its
+own private key — syslog-ng's `cert-file`/`key-file`; it is **not** the store's cert). Then set
 `opnsense_syslog_enabled: true` and re-run `playbook-router.yml`.
 
-**Validate** (from the controller; `$VL_NETRC` is primed in §6):
+**Validate** (from the controller; `$VL_NETRC` is primed in §6 — its cleanup moves to the end of this section):
 
 ```sh
 # listener present, and UFW allows 6514 too
@@ -390,12 +389,18 @@ printf '<13>1 2026-10-10T12:00:00Z gw syslog-test - - - hello syslog listener\n'
   | openssl s_client -quiet -connect 192.168.2.214:6514 2>/dev/null
 curl -sk --netrc-file "$VL_NETRC" \
   'https://192.168.2.214:9428/select/logsql/query' -d 'query="hello syslog listener"'
-# → the test line, with remote_ip 192.168.2.1 and app_name/level extracted by the syslog parser
+# → the test line; app_name/level come from the syslog parser. `remote_ip` is the *sender's*
+#   address (this test's source) — a message actually sent by `router` is the real provenance
+#   check (runbook 35 §13).
+
+# done — take the credential back out of /dev/shm (moved here from §6)
+shred -u "$VL_NETRC"
 ```
 
 > **Timezone caveat.** VictoriaLogs parses `rfc3164` timestamps in the *server* timezone (the store runs
-> `Etc/UTC`); if the router's lines look shifted, set `-syslog.timezone.tcp` (e.g. `Europe/Warsaw`) — the
-> syslog-ng sender is configured in [runbook 35 §13](35-deploy-opnsense.md).
+> `Etc/UTC`); if the router's lines look shifted, set the **global** `-syslog.timezone` (e.g.
+> `Europe/Warsaw`) — it is not a per-listener flag — and the syslog-ng sender is configured in
+> [runbook 35 §13](35-deploy-opnsense.md).
 
 ## 8. Future extension (metrics / traces)
 
