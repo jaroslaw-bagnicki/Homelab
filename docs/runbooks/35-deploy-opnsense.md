@@ -339,7 +339,7 @@ ansible-playbook ansible/playbooks/playbook-router.yml --diff
 `playbook-router.yml` targets `router` with `connection: local` and the `opnsense` role, which:
 - installs the **`os-netdata`** plugin (`oxlorg.opnsense.package`);
 - configures the **syslog-ng remote destination** to the VictoriaLogs syslog listener
-  (`oxlorg.opnsense.syslog`), **gated** by `opnsense_syslog_enabled` (see §13e).
+  (**`192.168.2.214:6514`**, TLS; `oxlorg.opnsense.syslog`), **gated** by `opnsense_syslog_enabled` (see §13e).
 
 ### 13d. Netdata — Tier B child
 
@@ -352,7 +352,9 @@ Verify on the **Netdata dashboard on `pve`** that `router` appears as a child.
 
 ### 13e. Logging — syslog-ng → VictoriaLogs (gated)
 
-The router's path is **syslog-ng → the VictoriaLogs syslog listener** ([research 34 §8](../research/34-log-collector-options.md)),
+The router's path is **syslog-ng → the VictoriaLogs syslog listener** on **`192.168.2.214:6514`**
+(TLS — set by `opnsense_syslog_target` / `opnsense_syslog_port`, the latter matching the store's
+`-syslog.listenAddr.tcp`) ([research 34 §8](../research/34-log-collector-options.md)),
 which needs a **store-side change** (listener flags + TLS + in-LXC UFW) delivered by a
 **separate PR** ([runbook 33](33-deploy-victorialogs.md)). Until then:
 - `opnsense_syslog_enabled: false` in `host_vars/router.yml` — the playbook skips the destination.
