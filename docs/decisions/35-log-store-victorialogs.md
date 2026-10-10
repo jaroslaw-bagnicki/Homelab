@@ -125,7 +125,7 @@ LXC on the `pve` node.**
   bound the damage but do not remove the competition for a weak CPU. If the store proves disruptive,
   ADR 22's k3s node is the documented fallback and this ADR is updated or superseded.
 - **Disk is shared on one 128 GB M.2 SATA.** The `pve` node has a single SSD: `local` is a ~39 GiB
-  root LV already holding the Netdata Parent's ≈7 GiB per-tier database, and `local-lvm` is a ~68 GiB
+  root LV already holding the Netdata Parent's ≈9 GiB per-tier database, and `local-lvm` is a ~68 GiB
   thin pool backing the guests' disks. The store's volume and its retention cap are sized against that
   one device — the docs' guidance is ≥20% free space at the store's data directory, and a thin pool is
   overcommittable, so the numbers were fixed at deploy rather than assumed — a 16 GiB root volume
