@@ -175,11 +175,12 @@ depend on it.
   Netdata, dashboard on port `19999`), or a Netdata Parent in an LXC streaming from the
   router (`stream.conf`) — the Parent approach gives one dashboard for the whole lab and
   long-term retention, and matches the lab's monitoring stack (ADR 27).
-- **Ansible**: manage via the `opnsense.opnsense` collection over the REST API
-  (`ansible-galaxy collection install opnsense.opnsense`); declare firewall rules/aliases in
-  `group_vars`/`host_vars`; automate firmware updates via the API. Prereqs: API user + key
-  in OPNsense (System → Access → Users), ACL permissions. This fits the repo's
-  Ansible-driven provisioning model.
+- **Ansible**: manage via the **`oxlorg.opnsense`** collection over the REST API
+  (`ansible-galaxy collection install oxlorg.opnsense`); declare firewall rules/aliases in
+  `host_vars`; automate firmware updates via the API. Prereqs: API key/secret
+  (System → Access → Users → API keys), ACL permissions. This fits the repo's
+  Ansible-driven provisioning model — realised by `playbook-router.yml` / [runbook 35](../runbooks/35-deploy-opnsense.md) §13
+  ([ADR 10](../decisions/10-ansible-host-config.md) supplement).
 
 ## Open questions
 

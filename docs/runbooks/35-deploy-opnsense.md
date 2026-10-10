@@ -16,7 +16,9 @@
 > Tenda**, so OPNsense's WAN is fed from it. The **build** (§0–§11) is non-disruptive: the Tenda
 > stays in router mode and OPNsense sits on a **temporary LAN**, while its WAN reaches the
 > internet through the Tenda. The **cutover** ([§12](#12-cutover--bridge-the-tenda)) bridges the
-> Tenda and hands the homelab LAN (`192.168.2.0/24`) to OPNsense.
+> Tenda and hands the homelab LAN (`192.168.2.0/24`) to OPNsense. Then
+> [§13](#13-ansible-onboarding-post-cutover) onboards `router` to Ansible — its Netdata child
+> and, once the store lands, its syslog-ng logging path.
 >
 > ⚠ **Console install — not agent-delegable.** Every step runs at a **keyboard + monitor**
 > attached to the S930. Run this interactively from the repo's dev container (any interactive
@@ -41,6 +43,7 @@ the homelab LAN onto OPNsense at `192.168.2.1`.
 - Enable **RAM disks** (`/var/log`, `/tmp`), ZFS TRIM, and a ZFS ARC cap for the 4 GB RAM.
 - Update to the latest 26.7.x.
 - Cutover: Tenda → **bridge mode**, OPNsense **LAN → `192.168.2.1/24`**, office drop onto OPNsense LAN.
+- Onboard `router` to Ansible ([§13](#13-ansible-onboarding-post-cutover)) — the `os-netdata` plugin (child → Parent) and the syslog-ng → VictoriaLogs destination.
 
 ## Status
 
@@ -55,6 +58,9 @@ Authored 2026-10-09, before execution — the checklist fills in as the install 
 - [ ] RAM disks + TRIM + ARC cap applied
 - [ ] Firmware updated; configuration backed up
 - [ ] Cutover: Tenda bridged; LAN `192.168.2.1/24`; office drop on OPNsense; verified
+- [ ] Ansible: `router` onboarded via `playbook-router.yml` (`os-netdata` plugin installed)
+- [ ] Netdata: `router` streaming to the Parent on `pve`
+- [ ] Logging: syslog-ng → VictoriaLogs (gated on the store PR)
 
 ---
 
@@ -288,6 +294,76 @@ the **ISP's segment** (see the note below).
 
 ---
 
+## 13. Ansible onboarding (post-cutover)
+
+With `router` owning the LAN (`192.168.2.1`), bring it under Ansible. It is the fleet's
+**FreeBSD per-OS exception** — the Linux roles (`common`/`security`/`netdata`/`fluentbit`) do
+**not** apply. Ansible drives it over its **REST API** with the
+[`oxlorg.opnsense`](https://ansible-opnsense.oxl.app) collection (`connection: local`, modules
+run on the controller) — **no SSH, no `fleetadm`, no sudo**
+([ADR 10](../decisions/10-ansible-host-config.md) supplement · [ADR 27](../decisions/27-monitoring-strategy.md) ·
+[ADR 36](../decisions/36-log-collector-fluentbit.md)).
+
+### 13a. Create the API credentials
+
+1. In OPNsense: **System → Access → Users** → create a user + **API keys** (or use an API-only
+   user); grant the ACL for firmware/plugins and syslog.
+2. Store the key/secret in Azure Key Vault `homelab-bysxdb-kv` as **`opnsense-api-key`** and
+   **`opnsense-api-secret`**.
+
+### 13b. Controller prerequisites (LAN workstation)
+
+```sh
+python3 -m pip install --upgrade httpx                 # the collection's API client
+ansible-galaxy collection install -r ansible/requirements.yml
+```
+
+> The `oxlorg.opnsense` collection has **no multi-version support** — pin the release that
+> matches the router's **OPNsense 26.7** before running.
+
+### 13c. Run the playbook
+
+```sh
+chmod 755 /workspaces/Homelab /workspaces/Homelab/ansible   # world-writable fix
+ansible-playbook ansible/playbooks/playbook-router.yml --diff
+```
+
+`playbook-router.yml` targets `router` with `connection: local` and the `opnsense` role, which:
+- installs the **`os-netdata`** plugin (`oxlorg.opnsense.package`);
+- configures the **syslog-ng remote destination** to the VictoriaLogs syslog listener
+  (`oxlorg.opnsense.syslog`), **gated** by `opnsense_syslog_enabled` (see §13e).
+
+### 13d. Netdata — Tier B child
+
+After the plugin installs, configure it as a **child streaming to the Parent** on `pve` — the
+collection has **no module** for this, so set it in the plugin (**System → Netdata**):
+- stream destination **`192.168.2.201:19996`** with **`:SSL`** (the Parent forces TLS, self-signed);
+- keep it **RAM-only** (no disk `dbengine`) to spare the 24 GB mSATA ([ADR 39](../decisions/39-lan-router-futro-s930.md)).
+
+Verify on the **Netdata dashboard on `pve`** that `router` appears as a child.
+
+### 13e. Logging — syslog-ng → VictoriaLogs (gated)
+
+The router's path is **syslog-ng → the VictoriaLogs syslog listener** ([research 34 §8](../research/34-log-collector-options.md)),
+which needs a **store-side change** (listener flags + TLS + in-LXC UFW) delivered by a
+**separate PR** ([runbook 33](33-deploy-victorialogs.md)). Until then:
+- `opnsense_syslog_enabled: false` in `host_vars/router.yml` — the playbook skips the destination.
+- When the store PR is in: import the store's TLS certificate into OPNsense
+  (**System → Trust → Certificates**), set its **certificate ID** in
+  `opnsense_syslog_certificate`, flip `opnsense_syslog_enabled: true`, and re-run.
+
+> **Caveats:** the syslog listener has **no authentication** (client-cert mTLS is VictoriaLogs
+> *Enterprise*), so the LAN rule is the entire boundary; and `filterlog`'s CSV arrives
+> **unparsed** — extract fields in LogsQL at query time.
+
+### 13f. Verify
+
+- [ ] `router` appears as a **Netdata child** on the `pve` dashboard
+- [ ] (after the store PR) router logs reach **VictoriaLogs**
+- [ ] `playbook-router.yml` re-runs **idempotently** (no changes on a clean second run)
+
+---
+
 ## References
 
 - [ADR 39 — LAN Router — OPNsense on the Futro S930, Routing-First](../decisions/39-lan-router-futro-s930.md)
@@ -295,6 +371,8 @@ the **ISP's segment** (see the note below).
 - [Idea 07 — OPNsense Router on Fujitsu Futro S930](../ideas/07-opnsense-futro-s930.md) — platform + `bge` caveats
 - [Idea 08 — Homelab LTE/5G WAN Failover](../ideas/08-lte-wan-failover.md) — WAN2 on `re0`
 - [ADR 31 — Static address scheme](../decisions/31-static-address-scheme.md) · [research 24 — Network topology](../research/24-network-topology-design.md)
+- [ADR 10 — Ansible for host configuration](../decisions/10-ansible-host-config.md) · [ADR 27 — monitoring strategy](../decisions/27-monitoring-strategy.md) · [ADR 36 — log collector](../decisions/36-log-collector-fluentbit.md) — the router's per-OS exceptions
+- [Research 34 §8 — the router's logging paths](../research/34-log-collector-options.md) · [runbook 33 — the VictoriaLogs store](33-deploy-victorialogs.md) · [oxlorg.opnsense collection](https://ansible-opnsense.oxl.app)
 - [ADR 33 — Fleet node hostnames](../decisions/33-fleet-node-hostnames.md) · [ADR 08 — Cloudflare Tunnel](../decisions/08-remote-access-cloudflare-tunnel.md)
 - [OPNsense — Initial Installation & Configuration](https://docs.opnsense.org/manual/install.html) · [Tenda — MW3 bridge mode](https://www.tendacn.com/faq/2003218)
 - [Issue #96 — OPNsense router (Futro S930): initial setup](https://github.com/jaroslaw-bagnicki/Homelab/issues/96)

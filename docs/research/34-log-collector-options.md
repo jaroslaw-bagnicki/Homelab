@@ -329,6 +329,16 @@ destination, whether Telegraf picks up drop-ins, and whether an unauthenticated 
 — so it is recorded for **the router's own runbook/ADR when it joins**, with Fluent Bit documented as the
 fleet-consistency option rather than the default.
 
+> **Resolved 2026-10-09 — syslog-ng → the VictoriaLogs syslog listener.** The router's path is the **first
+> option above**: nothing installed on the router (syslog-ng is OPNsense's own logging daemon), configured
+> in-band through the GUI/API (`oxlorg.opnsense.syslog`), and upgrade-safe in `config.xml`. It confirms the
+> GUI exposes **TCP + TLS** for a destination. The two accepted caveats are the same ones named above —
+> **no authentication** (mTLS is VictoriaLogs *Enterprise*) and **no parsing** (`filterlog` CSV raw). This
+> supersedes the "decided when it joins" line; the store's syslog listener (flags + TLS + in-LXC UFW) lands
+> as a separate change to [runbook 33](../runbooks/33-deploy-victorialogs.md). See
+> [ADR 36's amendment](../decisions/36-log-collector-fluentbit.md) and
+> [runbook 35 §13](../runbooks/35-deploy-opnsense.md).
+
 ### 9. Source shapes — what each of the fleet's systems actually demands
 
 §1 lists nodes; this is the same ground by **system**, because the collector's work is set by the *shape* of

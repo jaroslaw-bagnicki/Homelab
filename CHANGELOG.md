@@ -13,7 +13,7 @@ Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month 
 
 ## 2026‑10
 
-- **(docs)** Adopt OPNsense on the Futro S930 as the LAN router, routing-first — [ADR 39](docs/decisions/39-lan-router-futro-s930.md) · [runbook 35](docs/runbooks/35-deploy-opnsense.md)
+- **(docs)** Adopt OPNsense as the Futro S930 LAN router (routing-first) and onboard it to Ansible over its REST API for Netdata + logging — [ADR 39](docs/decisions/39-lan-router-futro-s930.md) · [runbook 35](docs/runbooks/35-deploy-opnsense.md)
 - **(docs)** Private CA — offline 10-year root, TPM-bound 1-year intermediate on `pve`, short-lived leaves — [ADR 38](docs/decisions/38-private-ca-hierarchy-and-custody.md)
 
 ## 2026‑09

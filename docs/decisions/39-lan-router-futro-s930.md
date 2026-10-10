@@ -56,9 +56,10 @@ The install and initial configuration are in
 
 - The lab gains a dedicated firewall/router — the foundation for VLANs, IDS/IPS (Suricata),
   Zenarmor and a VPN endpoint that the flat mesh could not provide.
-- A **FreeBSD appliance** joins the fleet **outside the Linux Ansible fleet**; it is
-  provisioned by runbook 35 and later possibly via the `opnsense.opnsense` collection over its
-  REST API, not by `playbook-*.yml`.
+- A **FreeBSD appliance** joins the fleet **outside the Linux roles** — no apt/systemd/`fleetadm`.
+  Ansible manages it over its **REST API** via the `oxlorg.opnsense` collection
+  (`playbook-router.yml`, [runbook 35](../runbooks/35-deploy-opnsense.md) §13) — a per-OS
+  exception ([ADR 10](10-ansible-host-config.md) supplement).
 - **Double-NAT** persists until the ISP-router handling is decided; remote access stays
   outbound-only via Cloudflare Tunnel ([ADR 08](08-remote-access-cloudflare-tunnel.md)).
 - **House Wi-Fi is not behind OPNsense.** The bridged Tenda rides the ISP's `192.168.1.0/24`, so
