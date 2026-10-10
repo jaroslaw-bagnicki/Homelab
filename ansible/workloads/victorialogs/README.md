@@ -17,14 +17,14 @@ see [research 33 §4](../../../docs/research/33-centralized-logging-victorialogs
 The store is:
 
 - A single `victorialogs` container (`victoriametrics/victoria-logs`, tag-pinned) listening on
-  **`:9428`** (HTTP ingest + UI) — `docker run`-simple, no chunk store, no external dependencies.
+  **`:9428`** (HTTPS ingest + UI — TLS-only) — `docker run`-simple, no chunk store, no external dependencies.
 - A **TLS syslog listener on `:6514`** (`-syslog.listenAddr.tcp=:6514 -syslog.tls …`) for the
   **OPNsense router's** syslog-ng. It is **unauthenticated** — client-cert mTLS is VictoriaLogs
   Enterprise-only — so the in-LXC UFW LAN rule is the whole boundary
   ([ADR 35 amendment](../../../docs/decisions/35-log-store-victorialogs.md)).
 - **HTTPS only** — native TLS (`-tls`, `-tlsCertFile`, `-tlsKeyFile`) with a self-signed certificate
   generated on the host. Plaintext HTTP is prohibited on the LAN ([ADR 34](../../../docs/decisions/34-lan-tls-only.md)).
-- **Authenticated from day one (HTTP ingest)** — HTTP basic auth (`-httpAuth.username` / `-httpAuth.password`); the
+- **Authenticated from day one (HTTPS ingest)** — HTTP basic auth (`-httpAuth.username` / `-httpAuth.password`); the
   password is fetched from Azure Key Vault `homelab-bysxdb-kv` at playbook runtime and written to a
   **root-only `file://` password file** (`-httpAuth.password=file://…`), so it never appears in the
   container's argument list or environment. No credential is committed. *(The **syslog listener is the
@@ -45,7 +45,7 @@ The store is:
 
 | Service | Image | Port binding | Owned by |
 |---|---|---|---|
-| `victorialogs` | `victoriametrics/victoria-logs:v1.52.0` | host network (`:9428` HTTP, `:6514` syslog-TLS) | `victorialogs_store` role |
+| `victorialogs` | `victoriametrics/victoria-logs:v1.52.0` | host network (`:9428` HTTPS (TLS-only), `:6514` syslog-TLS) | `victorialogs_store` role |
 
 ## Host on-disk layout
 
