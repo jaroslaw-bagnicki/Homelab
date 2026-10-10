@@ -13,6 +13,7 @@ Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month 
 
 ## 2026‑10
 
+- **(feat)** VictoriaLogs accepts the OPNsense router's logs over a TLS syslog listener, and Fluent Bit flushes every 5 s — [runbook 33](docs/runbooks/33-deploy-victorialogs.md)
 - **(docs)** Private CA — offline 10-year root, TPM-bound 1-year intermediate on `pve`, short-lived leaves — [ADR 38](docs/decisions/38-private-ca-hierarchy-and-custody.md)
 
 ## 2026‑09

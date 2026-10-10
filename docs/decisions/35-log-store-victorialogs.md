@@ -2,6 +2,12 @@
 
 **Date:** 2026-09-27
 **Status:** Accepted
+**Amended:** 2026-10-10 — the store also runs a **TLS syslog listener** (`:6514`, `-syslog.*`) for the
+**OPNsense router** ([ADR 36 amendment](36-log-collector-fluentbit.md) · [runbook 35](../runbooks/35-deploy-opnsense.md) §13).
+It reuses the store's TLS certificate and has **no authentication** — client-cert mTLS is VictoriaLogs
+Enterprise-only — so it is the store's **one unauthenticated write path**, and the in-LXC LAN UFW rule is the
+entire boundary (the same posture as the "LAN-only, enforced at the container" clause above). Configured in
+[runbook 33](../runbooks/33-deploy-victorialogs.md) §7.
 
 ---
 
