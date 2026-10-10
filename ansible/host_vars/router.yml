@@ -19,6 +19,6 @@ opnsense_install_netdata: true
 # imported into OPNsense (System → Trust → Certificates) and its ID set below.
 opnsense_syslog_enabled: false
 opnsense_syslog_target: "192.168.2.214"
-opnsense_syslog_port: 5140
+opnsense_syslog_port: 6514
 opnsense_syslog_transport: tls4
 opnsense_syslog_certificate: ""

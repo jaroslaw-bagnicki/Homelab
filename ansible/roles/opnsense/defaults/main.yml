@@ -26,7 +26,7 @@ opnsense_netdata_package: os-netdata
 # OPNsense certificate ID for the store's TLS cert).
 opnsense_syslog_enabled: false
 opnsense_syslog_target: ""
-opnsense_syslog_port: 5140
+opnsense_syslog_port: 6514
 opnsense_syslog_transport: tls4
 opnsense_syslog_certificate: ""
 opnsense_syslog_level:
