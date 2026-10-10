@@ -9,10 +9,10 @@
 
 The lab lives on one flat `192.168.2.0/24` subnet behind the ISP fiber router
 (`192.168.1.0/24`, CGNAT — inbound only via Cloudflare Tunnel, [ADR 08](08-remote-access-cloudflare-tunnel.md)),
-routed by the consumer **Tenda Nova mesh**. That mesh is a single broadcast domain with
-no 802.1Q trunking and no routing features ([research 24](../research/24-network-topology-design.md)),
-so the lab has **no dedicated firewall/router** — no VLAN segmentation, no IDS/IPS, no
-self-hosted VPN endpoint. [#57](https://github.com/jaroslaw-bagnicki/Homelab/issues/57)
+routed by the consumer **Tenda Nova mesh**. That mesh **NATs the one flat subnet but cannot
+segment it** — a single broadcast domain with no 802.1Q trunking and no VLAN-capable routing
+([research 24](../research/24-network-topology-design.md)), so the lab has **no dedicated
+firewall/router** — no VLAN segmentation, no IDS/IPS, no self-hosted VPN endpoint. [#57](https://github.com/jaroslaw-bagnicki/Homelab/issues/57)
 gated VLAN segmentation (research 24 **Option B**) on acquiring a VLAN-capable edge router.
 
 [Idea 07](../ideas/07-opnsense-futro-s930.md) selected **OPNsense** as the platform, on the

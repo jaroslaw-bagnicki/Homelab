@@ -1,10 +1,10 @@
 # Idea 07 — OPNsense Router on Fujitsu Futro S930
 
 > Build a dedicated **OPNsense** firewall/router appliance on a **Fujitsu Futro S930**
-> (AMD GX-424CC 4C/4T + AES-NI) with a **low-profile Intel i350 multi-port NIC** —
-> the lab's first real router/firewall, sitting between the ISP fiber router and the
-> Tenda Nova mesh/LAN, adding NGFW features (Suricata IDS/IPS, Zenarmor, VLANs,
-> WireGuard/IPsec VPN, Unbound DNS) that the current flat mesh gateway lacks.
+> (AMD GX-424CC 4C/4T + AES-NI) with the verified **Broadcom BCM5720 2× 1 GbE** card
+> (FreeBSD `bge`) — the lab's first real router/firewall, sitting behind the ISP fiber
+> router (its WAN via the bridged Tenda Nova), adding NGFW features (Suricata IDS/IPS,
+> Zenarmor, VLANs, WireGuard/IPsec VPN, Unbound DNS) that the current flat mesh gateway lacks.
 
 **Status**: 🔨 Implementing — hardware acquired & verified ([research 31](../research/31-futro-s930-hardware-diagnostic.md)); direction recorded in [ADR 39](../decisions/39-lan-edge-router-futro-s930.md); install tracked in [issue #96](https://github.com/jaroslaw-bagnicki/Homelab/issues/96)  
 **Date**: 2026-08-21  

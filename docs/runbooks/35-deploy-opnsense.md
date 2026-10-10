@@ -31,7 +31,7 @@ on a **temporary LAN** (`192.168.99.1/24`), WAN1 reaching the internet **through
 **Cutover phase ([§12](#12-cutover--bridge-the-tenda), disruptive)** — bridge the Tenda and move
 the homelab LAN onto OPNsense at `192.168.2.1`.
 
-- Install **OPNsense 26.7** (ZFS) on the **24 GB Kingston mSATA** (`sda`).
+- Install **OPNsense 26.7** (ZFS) on the **24 GB Kingston mSATA** (FreeBSD **`ada0`**; the USB installer is `da0`).
 - First-boot wizard: hostname **`gw`**, domain `internal`, timezone `Etc/UTC`.
 - Assign interfaces: **`bge0` = WAN1**, **`bge1` = LAN**, **`re0` = WAN2_LTE**.
 - Build: **LAN `192.168.99.1/24`** (temporary), **WAN1 DHCP** through the Tenda (`192.168.2.x`).
@@ -128,8 +128,9 @@ Follow the installer ([official flow](https://docs.opnsense.org/manual/install.h
 1. **Keymap** — accept the default (or `Polish`/`US` as preferred).
 2. **Install** — choose **ZFS**.
 3. **Partitioning (ZFS)** — accept the default **`stripe`** (single disk).
-4. **Disk Selection** — pick the **24 GB Kingston** by capacity; **not** the USB device
-   (`da0`/the stick). The blank disk is the only internal disk.
+4. **Disk Selection** — pick the **24 GB Kingston mSATA** — the internal SATA disk, **`ada0`**
+   (AHCI) — **not** the USB installer, **`da0`**. Both are listed; the target is the internal
+   `ada0`, matched by capacity.
 5. **Last Chance!** — **Yes** (this destroys the disk contents).
 6. **Root password** — set a strong one → **Keeper**.
 7. **Complete Install** → the system reboots. **Remove the USB stick.**
@@ -174,8 +175,9 @@ confirm `ping 192.168.99.1`.
 3. Work through the wizard (`System → Wizard`):
    - **Hostname** `gw`; **Domain** `internal` → `gw.internal` ([ADR 37](../decisions/37-lan-name-space-internal.md)).
    - **Timezone** `Etc/UTC` (the fleet standard).
-   - **WAN** — DHCP (upstream is the Tenda, `192.168.2.x`); leave private-network blocking on
-     only where it does not break WAN2 (a `192.168.x` modem — private blocking must be **off** on WAN2).
+   - **WAN** — DHCP (upstream is the Tenda, `192.168.2.x`). **Disable *Block private networks***
+     on WAN1 — its upstream is RFC1918 in both phases (`192.168.2.x` build, `192.168.1.x`
+     cutover). WAN2's private blocking is handled in [§8](#8-wan2_lte--lte-failover).
    - **LAN** — **`192.168.99.1/24`** (temporary; becomes `192.168.2.1/24` at cutover).
    - Set a new **root password** if not already changed.
 
@@ -190,7 +192,11 @@ Segmentation Offloading (TSO)* and *Hardware Large Receive Offloading (LRO)* →
 1. **Services → DHCPv4 → LAN** — enable; on the temporary LAN a default pool (e.g. `.100`–`.199`)
    is fine — the static `.20x–.24x` block ([ADR 31](../decisions/31-static-address-scheme.md)) only
    matters once LAN is `192.168.2.0/24` after cutover; gateway/DNS `192.168.99.1`.
-2. **Firewall → NAT → Outbound** — mode **Automatic** (default) is correct; no rule needed.
+2. **Firewall → NAT → Source NAT** (named *Outbound NAT* before OPNsense 25.7). **Automatic**
+   (default) is usually enough, but **confirm the generated rules cover both WAN interfaces** —
+   the automatic set can effectively cover only the primary WAN, which would leave LAN clients
+   without NAT after a failover. If a WAN2 rule is missing, switch the mode to **Hybrid** and add
+   a rule: interface `LAN`, source `LAN net`, translation target the **`WAN_FAILOVER`** group.
 3. **Firewall → Rules → LAN** — the wizard's default *allow LAN to any* rule is the baseline;
    no custom rules yet (VLAN/firewall policy is the follow-up phase).
 4. **Services → Unbound DNS** — enabled by default; it resolves for LAN clients. Point WAN DNS
@@ -210,9 +216,10 @@ The backup WAN terminates on the **onboard Realtek `re0`** ([idea 08](../ideas/0
 2. **Interfaces → Assignments** — `re0` should already be **WAN2_LTE** (from §3); enable it,
    **IPv4 DHCP**, and turn **off** "Block private networks" (the modem hands out a private IP —
    double-NAT on the backup link is accepted).
-3. **System → Gateways → Configuration**:
+3. **System → Gateways → Configuration** — give each gateway a **distinct** monitor IP, or
+   per-uplink monitoring becomes ambiguous (a monitor IP reachable via the wrong gateway):
    - `GW_WAN1` — WAN1, **Priority 1**, monitoring `1.1.1.1` / `8.8.8.8`.
-   - `GW_WAN2_LTE` — WAN2_LTE, **Priority 2**, Far Gateway (DHCP), monitoring `1.1.1.1`.
+   - `GW_WAN2_LTE` — WAN2_LTE, **Priority 2**, Far Gateway (DHCP), monitoring `9.9.9.9`.
 4. **System → Gateways → Groups** — `WAN_FAILOVER`: `GW_WAN1` **Tier 1**, `GW_WAN2_LTE`
    **Tier 2**, trigger **Packet Loss or High Latency**.
 5. **Firewall → Rules → LAN** — in the default LAN rule, expand **Advanced** and set
@@ -245,6 +252,8 @@ live through the Tenda during the build, so this runs online.
 - [ ] A client on the temporary LAN receives **DHCP**; `ping 1.1.1.1` works (via the Tenda)
 - [ ] `bge` **offloading disabled**; `re0` present as **WAN2_LTE**
 - [ ] **WAN_FAILOVER** group lists WAN1 tier 1 / WAN2_LTE tier 2
+- [ ] **Failover exercised**: with a client online, unplug WAN1 (fiber) → the client keeps
+      reaching the internet via **WAN2_LTE**; restore WAN1 and confirm the primary returns
 - [ ] **RAM disks** active for `/var/log` + `/tmp`; ZFS TRIM available; ARC capped at 512 MB
 - [ ] Firmware at the latest **26.7.x**
 - [ ] Configuration backed up (`System → Configuration → Backups`) → **Keeper**

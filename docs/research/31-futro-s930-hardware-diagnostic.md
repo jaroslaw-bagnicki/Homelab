@@ -23,7 +23,7 @@
 | CPU | **AMD GX-424CC** (Jaguar-family, 4C/4T, 2.4 GHz, 2 MB L2) — confirmed |
 | RAM | **4 GiB (1× 4 GiB)**, one SODIMM slot free — see [RAM](#ram); Idea 07's 8 GB (Zenarmor) goal is a one-stick upgrade |
 | NIC (card) | **Broadcom NetXtreme BCM5720 2× 1 GbE** (`enp1s0f0/f1`) — **Idea 07's chosen NIC**, FreeBSD `bge` driver |
-| NIC (onboard) | **Realtek RTL8111/8168 GbE** (`enp2s0`, `r8169`) — reserve as MGMT/OPT behind the `bge` card |
+| NIC (onboard) | **Realtek RTL8111/8168 GbE** (`enp2s0`, `r8169`) — **WAN2_LTE** (LTE failover, [idea 08](../ideas/08-lte-wan-failover.md)) behind the `bge` card |
 | PCIe slot | **Gen1 (1.1) ×1** — no BIOS Gen option → **hard platform limit** (BCM5720 is Gen2 ×2 capable); ~1.6–1.7 Gbps/dir ceiling |
 | OS medium | **Kingston SMS151S324G mSATA — 24.0 GB (22.4 GiB), SMART PASSED** (replacement, acquired 2026-10-09; blank, 0 errors, self-tests clean) — see [Storage](#storage); the fitted Innodisk 8 GB is retired |
 | Crypto | ✅ **AES-NI present** (`aes` CPU flag, all 4 cores) — no SHA-NI (Jaguar). See [CPU & crypto](#cpu--security-notes) |
@@ -71,7 +71,7 @@ chipset + driver before choosing which port becomes WAN** (idea 07 §"HP T730" w
 |---|---|---|---|---|---|
 | `enp1s0f0` | Broadcom NetXtreme **BCM5720** | `01:00.0` | `tg3` | `bge(4)` | **WAN** (→ ISP fiber router) |
 | `enp1s0f1` | Broadcom NetXtreme **BCM5720** | `01:00.1` | `tg3` | `bge(4)` | **LAN** (→ TL-SG108E / mesh AP) |
-| `enp2s0` | Realtek RTL8111/8168 | `02:00.0` | `r8169` | `re(4)` | MGMT / OPT (reserve; sparingly) |
+| `enp2s0` | Realtek RTL8111/8168 | `02:00.0` | `r8169` | `re(4)` | **WAN2_LTE** (LTE failover — [idea 08](../ideas/08-lte-wan-failover.md)) |
 
 The dual-port card sits on **PCI bus 1** (`01:00.0/.1` = PCIe expansion slot) — the onboard
 Realtek is on **bus 2** (`02:00.0`). This **confirms Idea 07 §NIC**: the Dell Broadcom 5720
@@ -183,7 +183,7 @@ module was installed.
 | NIC = Dell Broadcom 5720 2× 1 GbE, `bge` | **Broadcom BCM5720 present** (`enp1s0f0/f1`), onboard Realtek | ✅ matches Idea 07's choice |
 | RAM 4 GB (→8 for Zenarmor) | 4 GiB (1×), **free slot** → 8 GB trivial | ✅ matches; upgrade path confirmed |
 | Disk = replace 8 GB mSATA | **Kingston SMS151S324G 24 GB mSATA installed** (SMART PASSED, blank, self-tests clean) — 3× the fitted 8 GB | ✅ resolved — below Idea 07's 32–128 GB, but ample with RAM logs + `trim` |
-| Onboard NIC = check Realtek vs Intel | Onboard = **Realtek RTL8111/8168** (`re`) | ✅ **Realtek confirmed** — reserve as MGMT/OPT, not WAN/LAN |
+| Onboard NIC = check Realtek vs Intel | Onboard = **Realtek RTL8111/8168** (`re`) | ✅ **Realtek confirmed** — **WAN2_LTE** (LTE failover, [idea 08](../ideas/08-lte-wan-failover.md)), not WAN1/LAN |
 | PCIe 2.0 ×4 slot (idea 07) | Slot **trains Gen1 ×1**; no BIOS Gen option (confirmed) | ⚠️ hard platform limit — fine for 1 Gbps WAN, revisit for VLANs |
 | Passive/power | Fanless, ~59 °C idle, AC external PSU | ✅ matches |
 

@@ -93,7 +93,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | CPU | AMD **GX-424CC** (Jaguar-family, 4C/4T, 2.4 GHz, 2 MB L2, 25 W TDP) — AES-NI present, no SHA-NI |
 | RAM | **4 GB DDR3-1600** (1× 4 GiB SK hynix `HMT451S6BFR8A-PB` @ 1600 MT/s) — 2 SODIMM slots, **DIMM 2 free** → 8 GB is a one-stick upgrade |
 | Storage | **Kingston SMS151S324G mSATA — 24.0 GB** (`sda`, SN `50026B7242000EB5`, FW `S9FM00.7`) · SMART **PASSED** (blank, Short + Extended self-tests clean, 0 errors); replaced the fitted Innodisk 7.99 GB on 2026-10-09 |
-| Network | **Broadcom NetXtreme BCM5720 2× 1 GbE** (FreeBSD `bge`) in the PCIe slot = WAN + LAN · onboard **Realtek RTL8111/8168** (`re`) = MGMT/OPT · **slot trains Gen1 ×1** (no BIOS option — platform limit) |
+| Network | **Broadcom NetXtreme BCM5720 2× 1 GbE** (FreeBSD `bge`) in the PCIe slot = WAN + LAN · onboard **Realtek RTL8111/8168** (`re`) = WAN2_LTE (LTE failover) · **slot trains Gen1 ×1** (no BIOS option — platform limit) |
 | Firmware | BIOS AMI **R1.14.0** (2017-09-21) · board `D3313-E1` · SN `YMFH014511` |
 | Cooling | Fanless · ~59 °C idle · ~8–15 W idle (Jaguar 25 W) |
 | Role | LAN edge router (OPNsense) |
