@@ -68,9 +68,12 @@ The install and initial configuration are in
 - **4 GB RAM** caps headroom for Suricata/Zenarmor; the 8 GB one-stick upgrade is the next step.
 - The PCIe **Gen1 ×1** link is a non-issue for one 1 Gbps WAN↔LAN route but a consideration for
   inter-VLAN traffic once segmentation lands.
-- The router joins the shared UPS rail ([ADR 30](30-ups-nut-graceful-shutdown.md)), and its
-  logging path is a per-OS exception still to be decided
-  ([research 34 §8](../research/34-log-collector-options.md)).
+- The router joins the shared UPS rail ([ADR 30](30-ups-nut-graceful-shutdown.md)); its logging
+  path is **syslog-ng → the VictoriaLogs syslog listener** ([ADR 36](36-log-collector-fluentbit.md)
+  amendment), onboarded in [runbook 35](../runbooks/35-deploy-opnsense.md) §13.
+- **Issue #96's "mesh serves Wi-Fi as an AP behind OPNsense" criterion is superseded** by this
+  topology: the bridged Tenda rides the **ISP segment**, so putting house Wi-Fi behind OPNsense
+  needs dedicated AP(s) on its LAN — a follow-up (issue #96 updated).
 
 ### Alternatives Considered
 

@@ -35,8 +35,10 @@ Deployed by [runbook 35](../../../docs/runbooks/35-deploy-opnsense.md) §13; tra
   runbook 35 §13 rather than automated here.
 - **Configures the syslog-ng remote destination** to the VictoriaLogs syslog listener
   (`oxlorg.opnsense.syslog`, `transport: tls4`) — **gated by `opnsense_syslog_enabled`**, off
-  until the store's syslog listener is deployed (separate PR / runbook 33). The TLS transport
-  needs the store's certificate imported into OPNsense and referenced by its certificate ID.
+  until the store's syslog listener is deployed (separate PR / runbook 33). For TLS the module's
+  `certificate` field takes a **local OPNsense client certificate** (syslog-ng's `cert-file`/`key-file`;
+  create one under System → Trust → Certificates) — **not** the store's server cert, which belongs in
+  the **trust store** (System → Trust → Authorities) so OPNsense verifies the server.
 
 Everything else on the router (interfaces, LAN DHCP/NAT/firewall, `bge` offloading, RAM disks)
 is set by runbook 35 and is **not** managed here — this role covers only the Ansible-onboarding

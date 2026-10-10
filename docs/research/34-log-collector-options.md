@@ -58,7 +58,7 @@ decision is recorded authoritatively in [ADR 36](../decisions/36-log-collector-f
 | Scope of logs | **Explicit inclusion list** (named units + a priority floor), never all of journald |
 | Metrics & traces | **Separate future ADRs** on the same `vtstack` guest — the collector decision is unaffected either way (§7) |
 | `cloudlab` | **Never a target** — outside the LAN, Tier A already covers it ([ADR 27](../decisions/27-monitoring-strategy.md)) |
-| OPNsense (Futro S930) | **Deferred** — a per-OS exception ([ADR 27](../decisions/27-monitoring-strategy.md)); Fluent Bit is installable from the FreeBSD port but has **no OPNsense plugin**, so the router's own path is decided when it joins (§8) |
+| OPNsense (Futro S930) | **Decided** — per-OS exception ([ADR 27](../decisions/27-monitoring-strategy.md)); its logs go **syslog-ng → the VictoriaLogs syslog listener** (in-band, TLS), not Fluent Bit (ADR 36 amendment / §8) |
 
 ---
 
@@ -383,7 +383,7 @@ OMV paths from their own source repositories (`proxmox/pve-manager`, `openmediav
 | **No collector** | ❌ rejected | The store stays inert and the Edge keeps losing its logs on every reboot — the reason the store exists |
 | Collector on `lab` only, forwarding for the fleet | ❌ rejected | The Edge's logs would still die locally, and it introduces a `lab` dependency for every node's logs |
 | **Whole-Victoria-stack collector** | ⚪ not available | There is no single Victoria agent for logs + metrics + traces; the stack's components each take their own protocol (§7) |
-| **OPNsense (Futro S930)** | ⚪ deferred | A per-OS exception with no journald and no Docker; Fluent Bit works from the FreeBSD port but has no OPNsense plugin, and two better-integrated paths (syslog-ng, Telegraf) exist on the router itself (§8) |
+| **OPNsense (Futro S930)** | ✅ **decided** | Per-OS exception with no journald/Docker — its logs go **syslog-ng → the VictoriaLogs syslog listener** (in-band, TLS; §8 / ADR 36 amendment), not Fluent Bit |
 
 ---
 
@@ -418,10 +418,11 @@ OMV paths from their own source repositories (`proxmox/pve-manager`, `openmediav
 - **How k3s logs are collected.** Host-level `tail` over `/var/log/pods/` (metadata-free) versus a DaemonSet
   with the `kubernetes` filter (pod labels and annotations, the standard k3s shape) is decided with
   [ADR 22](../decisions/22-k3s-arc-homelab.md)'s migration, not here (§9).
-- **The router's path (OPNsense, §8).** Three options and none decided: syslog-ng → the store's syslog
-  listener (nothing installed, but unauthenticated and unparsed), the Telegraf plugin (drop-in support
-  unverified), or Fluent Bit from the FreeBSD port (an out-of-band package). Choosing the syslog listener
-  also changes the **deployed store** — its flags and the in-LXC UFW rule — not just the router.
+- **The router's path (OPNsense, §8).** ✅ **Resolved 2026-10-09 — syslog-ng → the VictoriaLogs syslog
+  listener** (ADR 36 amendment). It was the first of the three options — nothing installed on the router,
+  configured in-band via the GUI/API, upgrade-safe — at the cost of the two accepted caveats (no auth, no
+  parsing). Choosing it changed the **deployed store** (its flags + the in-LXC UFW rule); deployed by
+  [runbook 33 §7](../runbooks/33-deploy-victorialogs.md).
 
 ---
 

@@ -158,8 +158,9 @@ The thread covers several deployment shapes; the one relevant to a single home r
   virtualized or dual-unit setup — the thread strongly advises **against** running OPNsense
   in K3s/LXC (FreeBSD kernel vs Linux containers; CARP needs L2/multicast that overlay CNIs
   break).
-- **Placement**: WAN port ← ISP fiber router, LAN port(s) → TL-SG108E switch / mesh in
-  bridge mode. The Tenda Nova mesh would drop to AP-only behind OPNsense.
+- **Placement**: WAN port ← the **bridged Tenda** (ISP segment), LAN port(s) → TL-SG108E switch.
+  *(Superseded — the Tenda bridges onto the **ISP segment**, not behind OPNsense; see
+  [ADR 39](../decisions/39-lan-router-futro-s930.md).)*
 
 ## Backup WAN / failover → idea 08
 
@@ -184,7 +185,7 @@ depend on it.
 
 ## Open questions
 
-1. Tenda Nova mesh → bridge/AP-only mode behind the OPNsense router, or a different AP plan?
+1. **Resolved** ([ADR 39](../decisions/39-lan-router-futro-s930.md)): the Nova bridges onto the **ISP segment**, not behind OPNsense; putting house Wi-Fi behind OPNsense needs dedicated APs — a follow-up.
 2. VLAN segmentation scope — separate lab / office / IoT VLANs (drives i350-T2 vs i350-T4)?
 3. Bare-metal appliance vs Proxmox-VM on the Futro (reuse the thin-client + Proxmox pattern
    from idea 05) — bare-metal keeps it a dedicated appliance; VM adds snapshots/HA.

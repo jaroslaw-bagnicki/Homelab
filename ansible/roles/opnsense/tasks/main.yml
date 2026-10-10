@@ -56,8 +56,4 @@
         level: "{{ opnsense_syslog_level }}"
         description: "{{ opnsense_syslog_description }}"
         match_fields: [description]
-
-    - name: Reload the syslog configuration
-      when: opnsense_syslog_enabled | bool
-      oxlorg.opnsense.reload:
-        target: syslog
+        reload: true   # apply only when the destination actually changes (keeps reruns idempotent)

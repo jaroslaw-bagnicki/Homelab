@@ -222,8 +222,9 @@ module was installed.
    or does a Proxmox-VM variant (Idea 07 §Deployment direction) ever supersede it?
 3. **Double-NAT handling** — OPNsense WAN behind the ISP router (`192.168.1.x`): replace
    its routing, or keep it in DMZ/bridge mode (Idea 07 open question 5 / issue #96).
-4. **Mesh demotion** — Tenda Nova → AP/bridge mode behind the OPNsense LAN (issue #96
-   in-scope item); confirm the mesh behaves as a plain AP once robbed of its routing role.
+4. **Mesh** — ✅ **Resolved** ([ADR 39](../decisions/39-lan-router-futro-s930.md)): the Tenda is set to
+   **bridge mode**, riding the **ISP's `192.168.1.0/24`** (its only role is now house Wi-Fi), **not**
+   behind the OPNsense LAN. Putting house Wi-Fi behind OPNsense (dedicated APs) is a follow-up.
 
 ---
 

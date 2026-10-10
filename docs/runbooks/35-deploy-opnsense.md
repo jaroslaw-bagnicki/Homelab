@@ -201,8 +201,10 @@ Segmentation Offloading (TSO)* and *Hardware Large Receive Offloading (LRO)* →
 2. **Firewall → NAT → Source NAT** (named *Outbound NAT* before OPNsense 25.7). **Automatic**
    (default) is usually enough, but **confirm the generated rules cover both WAN interfaces** —
    the automatic set can effectively cover only the primary WAN, which would leave LAN clients
-   without NAT after a failover. If a WAN2 rule is missing, switch the mode to **Hybrid** and add
-   a rule: interface `LAN`, source `LAN net`, translation target the **`WAN_FAILOVER`** group.
+   without NAT after a failover. If the **WAN2_LTE** rule is missing, switch the mode to **Hybrid**
+   and add a rule mapping LAN out that link: **Interface `WAN2_LTE`**, source `LAN net`, translation
+   **Interface address** — Source NAT matches the **egress** interface and translates to its address,
+   so a `LAN`-interface rule with a gateway-group target will **not** NAT on failover.
 3. **Firewall → Rules → LAN** — the wizard's default *allow LAN to any* rule is the baseline;
    no custom rules yet (VLAN/firewall policy is the follow-up phase).
 4. **Services → Unbound DNS** — enabled by default; it resolves for LAN clients. Point WAN DNS
@@ -228,11 +230,16 @@ The backup WAN terminates on the **onboard Realtek `re0`** ([idea 08](../ideas/0
    - `GW_WAN2_LTE` — WAN2_LTE, **Priority 2**, Far Gateway (DHCP), monitoring `9.9.9.9`.
 4. **System → Gateways → Groups** — `WAN_FAILOVER`: `GW_WAN1` **Tier 1**, `GW_WAN2_LTE`
    **Tier 2**, trigger **Packet Loss or High Latency**.
-5. **Firewall → Rules → LAN** — in the default LAN rule, expand **Advanced** and set
-   **Gateway** = `WAN_FAILOVER`.
-6. **Realtek caveat** — the FreeBSD `re` driver is fine for a failover link but can be flaky
+5. **Firewall → Rules → LAN** — add a rule **above** the default one allowing `LAN net` →
+   `This Firewall`, port `53`, so LAN clients' **Unbound** queries stay local and are **not**
+   policy-routed out the WAN group; then in the default *allow LAN to any* rule expand **Advanced**
+   and set **Gateway** = `WAN_FAILOVER`.
+6. **Default Gateway Switching** — **System → Settings → General** → enable **Default Gateway
+   Switching**, so the firewall's **own** upstream traffic (Unbound's forwarders) follows failover
+   too — without it the router itself keeps using a dead WAN1.
+7. **Realtek caveat** — the FreeBSD `re` driver is fine for a failover link but can be flaky
    under load; if it misbehaves, install **`os-realtek-re`** (System → Firmware → Plugins).
-7. Mobile operators use **CGNAT** on the backup link — fine, since inbound traffic flows over
+8. Mobile operators use **CGNAT** on the backup link — fine, since inbound traffic flows over
    Cloudflare Tunnel ([ADR 08](../decisions/08-remote-access-cloudflare-tunnel.md)).
 
 ## 9. Flash care & 4 GB RAM tuning
@@ -315,6 +322,7 @@ run on the controller) — **no SSH, no `fleetadm`, no sudo**
 
 ```sh
 python3 -m pip install --upgrade httpx                 # the collection's API client
+python3 -m pip install --break-system-packages azure-identity azure-keyvault-secrets   # Key Vault lookup (runbook 16/33)
 ansible-galaxy collection install -r ansible/requirements.yml
 ```
 
@@ -348,9 +356,13 @@ The router's path is **syslog-ng → the VictoriaLogs syslog listener** ([resear
 which needs a **store-side change** (listener flags + TLS + in-LXC UFW) delivered by a
 **separate PR** ([runbook 33](33-deploy-victorialogs.md)). Until then:
 - `opnsense_syslog_enabled: false` in `host_vars/router.yml` — the playbook skips the destination.
-- When the store PR is in: import the store's TLS certificate into OPNsense
-  (**System → Trust → Certificates**), set its **certificate ID** in
-  `opnsense_syslog_certificate`, flip `opnsense_syslog_enabled: true`, and re-run.
+- When the store PR is in ([runbook 33 §7](33-deploy-victorialogs.md)):
+  1. add the store's self-signed certificate as a **trust anchor** (**System → Trust →
+     Authorities**) so OPNsense verifies the syslog **server**;
+  2. create/select a **local client certificate** (**System → Trust → Certificates**, its own
+     private key) and set its **certificate ID** in `opnsense_syslog_certificate` — the module's
+     `certificate` field is syslog-ng's **client** cert+key, **not** the store's server cert;
+  3. flip `opnsense_syslog_enabled: true` and re-run.
 
 > **Caveats:** the syslog listener has **no authentication** (client-cert mTLS is VictoriaLogs
 > *Enterprise*), so the LAN rule is the entire boundary; and `filterlog`'s CSV arrives

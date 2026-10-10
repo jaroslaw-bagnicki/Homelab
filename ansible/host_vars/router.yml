@@ -15,8 +15,10 @@ opnsense_api_secret_secret_name: opnsense-api-secret
 opnsense_install_netdata: true
 
 # Syslog → the VictoriaLogs syslog listener. Enabled only once that listener is deployed
-# (separate store PR + runbook 33); the destination also needs the store's TLS certificate
-# imported into OPNsense (System → Trust → Certificates) and its ID set below.
+# (separate store PR + runbook 33). For TLS: add the store's self-signed cert as a **trust
+# anchor** (System → Trust → Authorities) so OPNsense verifies the server, and set
+# `opnsense_syslog_certificate` to a **local client certificate** (System → Trust →
+# Certificates, with its own private key) — NOT the store's cert, which has no key here.
 opnsense_syslog_enabled: false
 opnsense_syslog_target: "192.168.2.214"
 opnsense_syslog_port: 6514
