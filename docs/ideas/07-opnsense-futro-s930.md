@@ -1,14 +1,14 @@
 # Idea 07 — OPNsense Router on Fujitsu Futro S930
 
 > Build a dedicated **OPNsense** firewall/router appliance on a **Fujitsu Futro S930**
-> (AMD GX-424CC 4C/4T + AES-NI) with a **low-profile Intel i350 multi-port NIC** —
-> the lab's first real router/firewall, sitting between the ISP fiber router and the
-> Tenda Nova mesh/LAN, adding NGFW features (Suricata IDS/IPS, Zenarmor, VLANs,
-> WireGuard/IPsec VPN, Unbound DNS) that the current flat mesh gateway lacks.
+> (AMD GX-424CC 4C/4T + AES-NI) with the verified **Broadcom BCM5720 2× 1 GbE** card
+> (FreeBSD `bge`) — the lab's first real router/firewall, sitting behind the ISP fiber
+> router (its WAN via the bridged Tenda Nova), adding NGFW features (Suricata IDS/IPS,
+> Zenarmor, VLANs, WireGuard/IPsec VPN, Unbound DNS) that the current flat mesh gateway lacks.
 
-**Status**: 🧠 Idea — Gemini discovery thread, no hardware acquired  
+**Status**: 🔨 Implementing — hardware acquired & verified ([research 31](../research/31-futro-s930-hardware-diagnostic.md)); direction recorded in [ADR 39](../decisions/39-lan-router-futro-s930.md); install tracked in [issue #96](https://github.com/jaroslaw-bagnicki/Homelab/issues/96)  
 **Date**: 2026-08-21  
-**Updated**: 2026-08-24 — NIC comparison; Multi-WAN failover split out to idea 08  
+**Updated**: 2026-10-09 — ADR 39 accepted; [runbook 35](../runbooks/35-deploy-opnsense.md) authored; 24 GB mSATA installed  
 **Source**: [Gemini discussion — OPNsense firewall i router](https://share.gemini.google/k8PVbnk90fuo) (published 2026-08-21)
 
 ---
@@ -19,7 +19,7 @@ The lab today routes through the **Tenda Nova mesh** (`192.168.2.1`, single flat
 domain) on top of the ISP fiber router (`192.168.1.0/24`, CGNAT — remote access only via
 Cloudflare Tunnel, ADR 08). There is **no dedicated firewall/router** — no VLAN
 segmentation, no IDS/IPS, no self-hosted VPN endpoint. Idea 06 / research 27 are already
-adding energy monitoring; this idea adds the *network edge* the lab is missing.
+adding energy monitoring; this idea adds the *LAN router* the lab is missing.
 
 The Gemini thread is an exploratory OPNsense deep-dive that converged on the classic
 budget-router hardware path: **Fujitsu Futro S930 + Intel i350 multi-port NIC**, with
@@ -36,7 +36,7 @@ thread; key reasons: 2× cores for Suricata/IPS, 8 GB mSATA included, factory PC
 | NIC | **Dell Broadcom 5720 2× 1 GbE** (low-profile PCIe, ~50 PLN) — chosen sweet spot: dual port (WAN + LAN on the card), mature FreeBSD `bge` driver; Intel i350-T1/T2 (`igb`) = the safer-driver upgrade path; needs the PCIe riser/ribbon cable in the case |
 | NIC cautions | Avoid 10GbE (X520/X540) and old Intel PRO/1000 PT/ET quad ports (power/heat overload the ~40–60 W PSU); beware Chinese i350 clones — prefer used OEM server cards (Dell/HP/Fujitsu/Lenovo) |
 | RAM | 4 GB DDR3L min; 8 GB for Zenarmor (Sensei) or Unbound with large DNSBL lists |
-| Disk | Replace the included 8 GB mSATA with a 32–128 GB mSATA SSD — OPNsense log writes wear flash quickly |
+| Disk | Fitted 8 GB mSATA **replaced with a 24 GB Kingston SMS151S324G mSATA** (2026-10-09, SMART PASSED — [research 31](../research/31-futro-s930-hardware-diagnostic.md)); below the 32–128 GB ideal, fine with RAM-based logs + `trim` |
 | Cooling | Add a quiet 40/60 mm fan (e.g. Noctua) over the card/CPU for sustained load on a quad-port card |
 
 ### Alternative platform — HP T730 (2026-08)
@@ -158,8 +158,9 @@ The thread covers several deployment shapes; the one relevant to a single home r
   virtualized or dual-unit setup — the thread strongly advises **against** running OPNsense
   in K3s/LXC (FreeBSD kernel vs Linux containers; CARP needs L2/multicast that overlay CNIs
   break).
-- **Placement**: WAN port ← ISP fiber router, LAN port(s) → TL-SG108E switch / mesh in
-  bridge mode. The Tenda Nova mesh would drop to AP-only behind OPNsense.
+- **Placement**: WAN port ← the **bridged Tenda** (ISP segment), LAN port(s) → TL-SG108E switch.
+  *(Superseded — the Tenda bridges onto the **ISP segment**, not behind OPNsense; see
+  [ADR 39](../decisions/39-lan-router-futro-s930.md).)*
 
 ## Backup WAN / failover → idea 08
 
@@ -175,15 +176,16 @@ depend on it.
   Netdata, dashboard on port `19999`), or a Netdata Parent in an LXC streaming from the
   router (`stream.conf`) — the Parent approach gives one dashboard for the whole lab and
   long-term retention, and matches the lab's monitoring stack (ADR 27).
-- **Ansible**: manage via the `opnsense.opnsense` collection over the REST API
-  (`ansible-galaxy collection install opnsense.opnsense`); declare firewall rules/aliases in
-  `group_vars`/`host_vars`; automate firmware updates via the API. Prereqs: API user + key
-  in OPNsense (System → Access → Users), ACL permissions. This fits the repo's
-  Ansible-driven provisioning model.
+- **Ansible**: manage via the **`oxlorg.opnsense`** collection over the REST API
+  (`ansible-galaxy collection install oxlorg.opnsense`); declare firewall rules/aliases in
+  `host_vars`; automate firmware updates via the API. Prereqs: API key/secret
+  (System → Access → Users → API keys), ACL permissions. This fits the repo's
+  Ansible-driven provisioning model — realised by `playbook-router.yml` / [runbook 35](../runbooks/35-deploy-opnsense.md) §13
+  ([ADR 10](../decisions/10-ansible-host-config.md) supplement).
 
 ## Open questions
 
-1. Tenda Nova mesh → bridge/AP-only mode behind the OPNsense router, or a different AP plan?
+1. **Resolved** ([ADR 39](../decisions/39-lan-router-futro-s930.md)): the Nova bridges onto the **ISP segment**, not behind OPNsense; putting house Wi-Fi behind OPNsense needs dedicated APs — a follow-up.
 2. VLAN segmentation scope — separate lab / office / IoT VLANs (drives i350-T2 vs i350-T4)?
 3. Bare-metal appliance vs Proxmox-VM on the Futro (reuse the thin-client + Proxmox pattern
    from idea 05) — bare-metal keeps it a dedicated appliance; VM adds snapshots/HA.

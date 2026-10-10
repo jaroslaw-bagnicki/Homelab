@@ -1,0 +1,26 @@
+---
+# OPNsense router (`router`, 192.168.2.1) — the FreeBSD per-OS exception to the fleet's
+# Linux roles. Ansible manages it over its REST API (oxlorg.opnsense collection, run on the
+# controller with `connection: local`), not over SSH — so there is no `fleetadm`/sudo and no
+# apt/systemd. See ADR 10 (supplement), ADR 27 and ADR 36.
+
+# API credentials live in Key Vault, read at run time and never stored in the repo.
+opnsense_keyvault_name: homelab-bysxdb-kv
+opnsense_api_key_secret_name: opnsense-api-key
+opnsense_api_secret_secret_name: opnsense-api-secret
+
+# Netdata: install the os-netdata plugin (child streaming to the Tier B Parent on `pve`,
+# 192.168.2.201:19996, TLS). Streaming is configured in the plugin after install —
+# see runbook 35 §13.
+opnsense_install_netdata: true
+
+# Syslog → the VictoriaLogs syslog listener. Enabled only once that listener is deployed
+# (separate store PR + runbook 33). For TLS: add the store's self-signed cert as a **trust
+# anchor** (System → Trust → Authorities) so OPNsense verifies the server, and set
+# `opnsense_syslog_certificate` to a **local client certificate** (System → Trust →
+# Certificates, with its own private key) — NOT the store's cert, which has no key here.
+opnsense_syslog_enabled: false
+opnsense_syslog_target: "192.168.2.214"
+opnsense_syslog_port: 6514
+opnsense_syslog_transport: tls4
+opnsense_syslog_certificate: ""

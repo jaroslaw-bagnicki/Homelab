@@ -13,6 +13,7 @@ Significant architectural and technology choices recorded in
 
 | # | Date | ADR | Status |
 |---|------|-----|--------|
+| 39 | 2026-10-09 | [LAN Router — OPNsense on the Futro S930, Routing-First](39-lan-router-futro-s930.md) | Accepted |
 | 38 | 2026-10-04 | [Private CA — 10-Year Offline Root, TPM-Bound Intermediate, Short-Lived Leaves](38-private-ca-hierarchy-and-custody.md) | Accepted |
 | 37 | 2026-09-29 | [LAN Name Space Is `.internal` — DNSMasq and `.home` Retired](37-lan-name-space-internal.md) | Accepted |
 | 36 | 2026-09-27 | [Log Collector — Fluent Bit, Fleet-Wide, into VictoriaLogs](36-log-collector-fluentbit.md) | Accepted |

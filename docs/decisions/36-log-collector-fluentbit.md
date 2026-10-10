@@ -8,6 +8,12 @@ dropped for **collect-all**; buffering is **filesystem** on `pve`/`lab`/`nas` wi
 numeric **`PRIORITY`** is mapped to the readable **`level`** field the store displays and filters on; and
 the outputs retry **without limit** (`Retry_Limit False`), without which the filesystem buffers did not
 actually ride out an outage.
+**Amended:** 2026-10-09 — the **OPNsense router's** logging path is decided: **syslog-ng → the
+VictoriaLogs syslog listener** (in-band, configured through the GUI/API via `oxlorg.opnsense.syslog`),
+resolving the deferral below. Fluent Bit stays out on the router (no OPNsense plugin). The listener has
+**no authentication** (mTLS is VictoriaLogs Enterprise-only) and **no parsing** (`filterlog` CSV arrives
+raw) — the LAN rule and LogsQL carry those. Deployed by [runbook 35](../runbooks/35-deploy-opnsense.md) §13
+once the store's syslog listener lands.
 
 > **This ADR records the decision and why.** Flags, parsers, per-node paths, tuning and the full
 > comparison live in [research 34](../research/34-log-collector-options.md); how to deploy it lives in
@@ -101,6 +107,7 @@ at all (§7).
   [ADR 27](27-monitoring-strategy.md) already treats as a per-OS exception. Fluent Bit does build on FreeBSD,
   but OPNsense has **no plugin for it**, so it would sit outside the configuration backup. The router's own
   path is decided when it joins ([research 34 §8](../research/34-log-collector-options.md)).
+  *(Resolved 2026-10-09 — **syslog-ng → the VictoriaLogs syslog listener**; see the amendment above.)*
 - **The agent stays store-agnostic** — its output is configuration, so a future store change is an output
   section, not a re-platforming. Its `opentelemetry` output already speaks OTLP logs, metrics and traces.
 - **Metrics and traces remain separate future ADRs** on the same `vtstack` guest ([ADR 35](35-log-store-victorialogs.md)).

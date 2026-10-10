@@ -58,7 +58,7 @@ decision is recorded authoritatively in [ADR 36](../decisions/36-log-collector-f
 | Scope of logs | **Explicit inclusion list** (named units + a priority floor), never all of journald |
 | Metrics & traces | **Separate future ADRs** on the same `vtstack` guest — the collector decision is unaffected either way (§7) |
 | `cloudlab` | **Never a target** — outside the LAN, Tier A already covers it ([ADR 27](../decisions/27-monitoring-strategy.md)) |
-| OPNsense (Futro S930) | **Deferred** — a per-OS exception ([ADR 27](../decisions/27-monitoring-strategy.md)); Fluent Bit is installable from the FreeBSD port but has **no OPNsense plugin**, so the router's own path is decided when it joins (§8) |
+| OPNsense (Futro S930) | **Decided** — per-OS exception ([ADR 27](../decisions/27-monitoring-strategy.md)); its logs go **syslog-ng → the VictoriaLogs syslog listener** (in-band, TLS), not Fluent Bit (ADR 36 amendment / §8) |
 
 ---
 
@@ -294,8 +294,9 @@ TSDB behind the same Grafana datasource — a reconciliation for that ADR, not a
 
 ### 8. OPNsense (Futro S930) — the per-OS exception, and why the fleet rule does not transfer
 
-The router joins the fleet later — it is **held** pending a power cable for its undersized mSATA
-([research 31](31-futro-s930-hardware-diagnostic.md) · [overview](../overview.md)) — and
+The router joins the fleet later — it is **held** pending the OPNsense install, now that its
+undersized mSATA has been **replaced with a 24 GB module** (2026-10-09,
+[research 31](31-futro-s930-hardware-diagnostic.md) · [overview](../overview.md)) — and
 [ADR 27](../decisions/27-monitoring-strategy.md) already names FreeBSD "a per-OS exception" for the Netdata
 role. It is the same exception here, for a stronger reason: **none of §1's assumptions hold on it.**
 
@@ -303,7 +304,7 @@ role. It is the same exception here, for a stronger reason: **none of §1's assu
 |---|---|
 | systemd's journal is the log source | **No journald** — the appliance is FreeBSD and runs **syslog-ng**, writing `/var/log/*.log` (`filter.log`, `system.log`, …) |
 | Docker's json-file logs exist on some nodes | **No Docker** — it runs packages and plugins |
-| A small cursor file or package on disk is cheap | The **8 GB mSATA is the known constraint**, its replacement still pending ([research 31](31-futro-s930-hardware-diagnostic.md)) — anything installed or written there spends the scarcest resource in the fleet |
+| A small cursor file or package on disk is cheap | The **24 GB mSATA is still the scarcest resource** (the fitted 8 GB was replaced 2026-10-09, [research 31](31-futro-s930-hardware-diagnostic.md)) — anything installed or written there spends it |
 
 **Verified: Fluent Bit builds on FreeBSD, but OPNsense has no plugin for it.** FreeBSD's ports tree carries a
 maintained `sysutils/fluent-bit` (**v5.1.2**) with an rc.d script, so `pkg install fluent-bit` works in
@@ -327,6 +328,16 @@ in the fleet. Which path wins depends on facts not yet on the table — whether 
 destination, whether Telegraf picks up drop-ins, and whether an unauthenticated syslog listener is acceptable
 — so it is recorded for **the router's own runbook/ADR when it joins**, with Fluent Bit documented as the
 fleet-consistency option rather than the default.
+
+> **Resolved 2026-10-09 — syslog-ng → the VictoriaLogs syslog listener.** The router's path is the **first
+> option above**: nothing installed on the router (syslog-ng is OPNsense's own logging daemon), configured
+> in-band through the GUI/API (`oxlorg.opnsense.syslog`), and upgrade-safe in `config.xml`. It confirms the
+> GUI exposes **TCP + TLS** for a destination. The two accepted caveats are the same ones named above —
+> **no authentication** (mTLS is VictoriaLogs *Enterprise*) and **no parsing** (`filterlog` CSV raw). This
+> supersedes the "decided when it joins" line; the store's syslog listener (flags + TLS + in-LXC UFW) lands
+> as a separate change to [runbook 33](../runbooks/33-deploy-victorialogs.md). See
+> [ADR 36's amendment](../decisions/36-log-collector-fluentbit.md) and
+> [runbook 35 §13](../runbooks/35-deploy-opnsense.md).
 
 ### 9. Source shapes — what each of the fleet's systems actually demands
 
@@ -372,7 +383,7 @@ OMV paths from their own source repositories (`proxmox/pve-manager`, `openmediav
 | **No collector** | ❌ rejected | The store stays inert and the Edge keeps losing its logs on every reboot — the reason the store exists |
 | Collector on `lab` only, forwarding for the fleet | ❌ rejected | The Edge's logs would still die locally, and it introduces a `lab` dependency for every node's logs |
 | **Whole-Victoria-stack collector** | ⚪ not available | There is no single Victoria agent for logs + metrics + traces; the stack's components each take their own protocol (§7) |
-| **OPNsense (Futro S930)** | ⚪ deferred | A per-OS exception with no journald and no Docker; Fluent Bit works from the FreeBSD port but has no OPNsense plugin, and two better-integrated paths (syslog-ng, Telegraf) exist on the router itself (§8) |
+| **OPNsense (Futro S930)** | ✅ **decided** | Per-OS exception with no journald/Docker — its logs go **syslog-ng → the VictoriaLogs syslog listener** (in-band, TLS; §8 / ADR 36 amendment), not Fluent Bit |
 
 ---
 
@@ -407,10 +418,11 @@ OMV paths from their own source repositories (`proxmox/pve-manager`, `openmediav
 - **How k3s logs are collected.** Host-level `tail` over `/var/log/pods/` (metadata-free) versus a DaemonSet
   with the `kubernetes` filter (pod labels and annotations, the standard k3s shape) is decided with
   [ADR 22](../decisions/22-k3s-arc-homelab.md)'s migration, not here (§9).
-- **The router's path (OPNsense, §8).** Three options and none decided: syslog-ng → the store's syslog
-  listener (nothing installed, but unauthenticated and unparsed), the Telegraf plugin (drop-in support
-  unverified), or Fluent Bit from the FreeBSD port (an out-of-band package). Choosing the syslog listener
-  also changes the **deployed store** — its flags and the in-LXC UFW rule — not just the router.
+- **The router's path (OPNsense, §8).** ✅ **Resolved 2026-10-09 — syslog-ng → the VictoriaLogs syslog
+  listener** (ADR 36 amendment). It was the first of the three options — nothing installed on the router,
+  configured in-band via the GUI/API, upgrade-safe — at the cost of the two accepted caveats (no auth, no
+  parsing). Choosing it changed the **deployed store** (its flags + the in-LXC UFW rule); deployed by
+  [runbook 33 §7](../runbooks/33-deploy-victorialogs.md).
 
 ---
 
@@ -424,7 +436,7 @@ OMV paths from their own source repositories (`proxmox/pve-manager`, `openmediav
 - [Research 33](33-centralized-logging-victorialogs.md) — the store analysis; §7 the store's verified mechanics
 - [Runbook 33](../runbooks/33-deploy-victorialogs.md) — the deployed store (`vlogs` basic auth, `:9428`, in-LXC UFW)
 - [Runbook 24](../runbooks/24-edge-appliance.md) — Edge: cloudflared + Caddy + Netdata as systemd services, no Docker
-- [Research 31](31-futro-s930-hardware-diagnostic.md) — Futro S930 (the router; its 8 GB mSATA is the flagged constraint)
+- [Research 31](31-futro-s930-hardware-diagnostic.md) — Futro S930 (the router; its 24 GB mSATA is the flagged constraint)
 - [FreeBSD port `sysutils/fluent-bit`](https://github.com/freebsd/freebsd-ports/tree/main/sysutils/fluent-bit) · [OPNsense plugins](https://github.com/opnsense/plugins) · [OPNsense syslog-ng templates](https://github.com/opnsense/core/tree/master/src/opnsense/service/templates/OPNsense/Syslog) — verified against the repos (§8)
 - [Issue #84](https://github.com/jaroslaw-bagnicki/Homelab/issues/84) — the collector · [#75](https://github.com/jaroslaw-bagnicki/Homelab/issues/75) umbrella · [#132](https://github.com/jaroslaw-bagnicki/Homelab/issues/132) store monitoring
 - [Log collector benchmark (vendor-authored)](https://victoriametrics.com/blog/log-collectors-benchmark-2026/) — VictoriaMetrics, Mar 2026

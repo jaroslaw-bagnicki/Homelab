@@ -1,0 +1,41 @@
+---
+# OPNsense router role — manages the FreeBSD appliance through its REST API via the
+# oxlorg.opnsense collection (run on the controller, `connection: local`). This is the
+# per-OS exception to the fleet's Linux roles: `common`/`security`/`netdata`/`fluentbit`
+# do not apply (ADR 10 supplement, ADR 27, ADR 36).
+
+# API connection. api_port is the web-interface port; ssl_verify is off for the router's
+# self-signed cert (the fleet's accepted residual — pin with ssl_ca_file once ADR 38 lands).
+opnsense_api_port: 443
+opnsense_ssl_verify: false
+
+# API key/secret from Key Vault; empty => looked up at run time.
+opnsense_keyvault_name: homelab-bysxdb-kv
+opnsense_api_key_secret_name: opnsense-api-key
+opnsense_api_secret_secret_name: opnsense-api-secret
+opnsense_api_key: ""
+opnsense_api_secret: ""
+
+# Netdata plugin (Tier B child). The plugin streams to the Parent on `pve`; that streaming
+# configuration is done in the plugin, not this role (runbook 35 §13).
+opnsense_install_netdata: true
+opnsense_netdata_package: os-netdata
+
+# Syslog remote destination -> the VictoriaLogs syslog listener (research 34 §8). Off until
+# the store's listener is deployed (separate PR). transport `tls4` requires `certificate` =
+# a **local OPNsense client certificate** (its cert+key go into syslog-ng); the store's
+# self-signed cert is the **server trust anchor** (import via System → Trust → Authorities).
+opnsense_syslog_enabled: false
+opnsense_syslog_target: ""
+opnsense_syslog_port: 6514
+opnsense_syslog_transport: tls4
+opnsense_syslog_certificate: ""
+opnsense_syslog_level:
+  - info
+  - notice
+  - warn
+  - err
+  - crit
+  - alert
+  - emerg
+opnsense_syslog_description: victorialogs
