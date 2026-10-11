@@ -2,26 +2,28 @@
 name: fleet-connect
 description: >-
   SSH connectivity to any Homelab fleet node (cloudlab VPS, lab M910q, edge
-  Wyse 3040, pve Wyse 5070 Proxmox, omv NAS) from the right control node — for
+  Wyse 3040, pve Wyse 5070 Proxmox, nas Beetle M-III) from the right control node — for
   Ansible playbooks, ad-hoc shell access, file transfer, and AI agents
   (opencode, Copilot, …) that need to reach a node. Covers the fleet SSH key
   retrieval from Azure Key Vault, ssh-agent setup, per-host reachability, known
   connectivity pitfalls, and verification.
-  USE FOR: running ansible-playbook against cloudlab/lab/pve/edge, SSH/SCP to a
+  USE FOR: running ansible-playbook against cloudlab/lab/pve/edge/nas, SSH/SCP to a
   fleet node, loading the fleet SSH key, AI agent SSH access to a node,
   troubleshooting SSH to a fleet node.
   DO NOT USE FOR: provisioning the VPS (use cntb CLI), modifying the VPS in the
-  Contabo portal, setting up the physical nodes (use runbooks 24/25/28).
+  Contabo portal, setting up the physical nodes (use runbooks 24/25/28/32).
 when:
   - "ansible-playbook cloudlab"
   - "ansible-playbook lab"
   - "ansible-playbook edge"
   - "ansible-playbook pve"
+  - "ansible-playbook nas"
   - "run playbook against a fleet node"
   - "ssh to cloudlab"
   - "ssh to lab"
   - "ssh to edge"
   - "ssh to pve"
+  - "ssh to nas"
   - "SSH key fleet"
   - "load fleet key"
   - "connect to cloudlab"
@@ -36,7 +38,7 @@ when:
 
 # Fleet SSH Connectivity
 
-Every fleet node (`cloudlab`, `lab`, `pve`, `edge`, `omv`) accepts key-based SSH as **`fleetadm`** — the fleet-wide migration (ADR 28) completed 2026-08-30
+Every fleet node (`cloudlab`, `lab`, `pve`, `edge`, `nas`) accepts key-based SSH as **`fleetadm`** — the fleet-wide migration (ADR 28) completed 2026-08-30
 using the single **fleet key** (`fleetadm@homelab`, ADR 28). This is the **one way
 in** to every node — whether you're running Ansible, shelling in interactively,
 copying files, or an AI agent needs to reach a node, the flow is identical.
@@ -75,14 +77,16 @@ ssh-add -l
 | `cloudlab` | `173.249.27.13` | anywhere (public IP) | `ansible/playbooks/playbook.yml` |
 | `lab` | `192.168.2.200` | LAN workstation (`192.168.2.0/24`) | `ansible/playbooks/playbook-lab.yml` |
 | `pve` | `192.168.2.201` | LAN workstation (`192.168.2.0/24`) | `ansible/playbooks/playbook-pve.yml` |
-| `omv` | `192.168.2.210` | LAN workstation (`192.168.2.0/24`) | — (not Ansible-managed yet) |
+| `nas` | `192.168.2.202` | LAN workstation (`192.168.2.0/24`) | `ansible/playbooks/playbook-nas.yml` |
 | `edge` | `192.168.2.240` | LAN workstation (`192.168.2.0/24`) | `ansible/playbooks/playbook-edge.yml` |
 
-`lab`, `pve`, `edge`, and `omv` are LAN-only — connect to them (SSH or playbooks)
+`lab`, `pve`, `edge`, and `nas` are LAN-only — connect to them (SSH or playbooks)
 from a machine on `192.168.2.0/24` with the fleet key loaded in its agent (see
-runbooks 24/25/26/28). All nodes are on `fleetadm` since 2026-08-30; `edge` and
-`pve` are Ansible-managed (runbooks 24/28) — `omv` is the only LAN node not yet
-Ansible-enrolled.
+runbooks 24/25/28/32). All nodes are on `fleetadm` (ADR 28), and all four LAN
+nodes are Ansible-managed — each has a playbook in the table above. The retired
+ML110 NAS (`omv`, `192.168.2.210`) is not a connection target; `nas` — the Wincor
+Beetle M-III — is its successor
+([ADR 29](../../../docs/decisions/29-nas-backup-target-beetle-m3-omv.md)).
 
 ## Connecting to a Node
 
@@ -96,6 +100,7 @@ ansible-playbook ansible/playbooks/playbook.yml          # cloudlab
 ansible-playbook ansible/playbooks/playbook-lab.yml      # lab (LAN workstation)
 ansible-playbook ansible/playbooks/playbook-pve.yml      # pve (LAN workstation)
 ansible-playbook ansible/playbooks/playbook-edge.yml     # edge (LAN workstation)
+ansible-playbook ansible/playbooks/playbook-nas.yml      # nas (LAN workstation)
 ```
 
 > **Run playbooks visibly — never pipe to `tail`/`Select-Object`.** The operator
@@ -122,8 +127,8 @@ the **same fleet key** — no separate credentials:
   touches the private key material (it stays in the agent / Key Vault).
 - An agent on `cloudlab` that must reach another node needs the fleet key loaded
   in *cloudlab's* ssh-agent too — load it there the same way (§1).
-- LAN-only nodes (`lab`, `edge`, `pve`) require the agent to run on a machine on
-  `192.168.2.0/24` with the fleet key in its agent (runbooks 24/25/28).
+- LAN-only nodes (`lab`, `edge`, `pve`, `nas`) require the agent to run on a machine on
+  `192.168.2.0/24` with the fleet key in its agent (runbooks 24/25/28/32).
 
 ## Known Pitfalls
 
