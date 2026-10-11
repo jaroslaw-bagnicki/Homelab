@@ -80,11 +80,6 @@ with the kit. [01-building-step.md](../private-ca-offline-signing/01-building-st
 routes, and the [kit README](../private-ca-offline-signing/README.md) covers the machine end — boot
 offline, copy the kit to `/tmp`, mount the IronKey.
 
-> **Acceptance.** `./step version` runs on the signing machine; no route out to `192.168.2.0/24` or
-> the internet; the IronKey mounts read/write.
-
-> **Backout.** Reboot the signing machine from its own disk; wipe the live USB. Nothing was written.
-
 ## 2. Generate the 10-year root CA onto the IronKey
 
 **The kit runs this** — [02-issuing-root-cert.md](../private-ca-offline-signing/02-issuing-root-cert.md):
