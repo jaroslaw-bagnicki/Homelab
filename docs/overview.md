@@ -28,7 +28,7 @@ hardware detail see [Hardware Inventory](hardware.md); for change history see
 | LXC 213 | NUT server | `nut` | `.213` | ✅ |
 | LXC 214 | VictoriaLogs log store | `vtstack` | `.214` | ✅ |
 
-Addresses follow the static scheme ([ADR 31](decisions/31-static-address-scheme.md)); node hostnames name the host role ([ADR 33](decisions/33-fleet-node-hostnames.md)); the workload platform is migrating to k3s ([ADR 22](decisions/22-k3s-arc-homelab.md)).
+Addresses follow the static scheme ([ADR 31](decisions/31-static-address-scheme.md)); node hostnames name the host role ([ADR 33](decisions/33-fleet-node-hostnames.md)); the workload platform is migrating to k3s ([ADR 22](decisions/22-k3s-arc-homelab.md)). LXC 213 and 214 have their **configuration and logging** applied by Ansible (`playbook-nut.yml` / `playbook-logs.yml`), while the guest **lifecycle** (create/size/onboot/nesting/USB passthrough) stays a Proxmox-host runbook — [ADR 39](decisions/39-proxmox-guest-management.md) · [runbook 35](runbooks/35-manage-proxmox-guests.md).
 
 ## Workloads
 
@@ -45,7 +45,7 @@ Current state — what's running or in progress. Planned work is under [What's N
 | **Netdata Parent** | `pve` | Tier B central monitoring pane | [ADR 27](decisions/27-monitoring-strategy.md) · [runbook 31](runbooks/31-deploy-netdata.md) | ✅ |
 | **UPS + NUT** | `pve` (LXC 213) + `lab`/`edge`/`nas` clients | shared-rail power protection | [ADR 30](decisions/30-ups-nut-graceful-shutdown.md) · [runbook 29](runbooks/29-nut-ups-shutdown.md) · [runbook 30](runbooks/30-deploy-nut-clients.md) | ✅ |
 | **VictoriaLogs** | `pve` (LXC 214 `vtstack`) | Tier B log store | [ADR 35](decisions/35-log-store-victorialogs.md) · [runbook 33](runbooks/33-deploy-victorialogs.md) | ✅ |
-| **Fluent Bit** | every LAN node (`pve`, `edge`, `lab`, `nas`, `vtstack`) | Tier B log collector — ships journald + Docker logs to VictoriaLogs | [ADR 36](decisions/36-log-collector-fluentbit.md) · [runbook 34](runbooks/34-deploy-fluentbit.md) | ✅ |
+| **Fluent Bit** | every LAN node (`pve`, `edge`, `lab`, `nas`, `nut`, `vtstack`) | Tier B log collector — ships journald + Docker logs to VictoriaLogs | [ADR 36](decisions/36-log-collector-fluentbit.md) · [runbook 34](runbooks/34-deploy-fluentbit.md) | ✅ |
 
 ## Observability
 

@@ -1,0 +1,18 @@
+---
+# Configure LXC 213 `nut` — the NUT server guest on the `pve` node (ADR 30 / ADR 39).
+#
+# Base + logging only: common → security → fluentbit, so the guest's journal (nut-server,
+# nut-driver@ups, systemd) ships to VictoriaLogs. The NUT server's own /etc/nut/* files stay
+# runbook-owned (runbook 29 §3, #115) and the LXC lifecycle/USB passthrough stays on the Proxmox
+# host (runbook 29 §1–§2) — this playbook touches neither.
+#
+# Run from a LAN workstation with the fleet key loaded (fleet-connect skill):
+#   ansible-playbook ansible/playbooks/playbook-nut.yml --diff
+# See runbook 35 (enroll/validate Proxmox guests).
+- name: Configure nut (NUT server guest on pve) base
+  hosts: nut
+  become: true
+  roles:
+    - common
+    - security
+    - fluentbit

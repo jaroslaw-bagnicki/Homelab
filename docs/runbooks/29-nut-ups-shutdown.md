@@ -44,12 +44,15 @@ defined order.
 - **Fleet clients** — `lab` (M910q) and `edge` (Wyse 3040): `nut-client` + `upsmon`. The **Beetle
   M-III** joins as the NAS client once it is standing
   ([#98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98)).
-- **No new firewall rule** — LXC 213 is bridged on the LAN, so client traffic never traverses the
-  host's UFW chains (see §6).
+- **No new host firewall rule** — LXC 213 is bridged on the LAN, so client traffic never traverses the
+  host's UFW chains (see §6). Once enrolled, the guest carries its own UFW with a LAN allow for `3493`
+  ([runbook 35](35-manage-proxmox-guests.md), [ADR 39](../decisions/39-proxmox-guest-management.md)).
 
 > **Execution note.** Manual steps, run interactively from the repo's dev container. All three nodes
 > are LAN-only — reach them from a machine on `192.168.2.0/24` with the fleet key loaded
-> (`fleet-connect` skill). Ansible ownership of LXC 213 is a follow-up, not this runbook.
+> (`fleet-connect` skill). LXC 213's **configuration and logging** are now Ansible-managed
+> ([runbook 35](35-manage-proxmox-guests.md)); §1–§3 remain the runbook-owned **lifecycle and NUT
+> server build** ([ADR 39](../decisions/39-proxmox-guest-management.md)).
 
 ## Prerequisites
 
@@ -147,7 +150,8 @@ pct create 213 local:vztmpl/<template> \
 ```
 
 `--onboot 1` matters: if the host reboots while mains is present, the NUT server has to come back
-on its own. The container is **not** Ansible-managed in v1.
+on its own. The container's **lifecycle** stays runbook-owned; its **configuration and logging** are
+Ansible-managed ([runbook 35](35-manage-proxmox-guests.md), [ADR 39](../decisions/39-proxmox-guest-management.md)).
 
 DNS is deliberately **not** pinned with `--nameserver` — the container inherits the host's
 resolvers, so it keeps following whatever the LAN serves. A hardcoded public resolver would bypass
@@ -500,11 +504,16 @@ Accepted trade-off: a genuinely unreachable UPS *does* stop the fleet — fail-s
 that proves disruptive, raise `DEADTIME` and `POLLFREQALERT` together rather than relaxing
 `MINSUPPLIES`.
 
-**No new firewall rule is required.** LXC 213 is bridged on `192.168.2.0/24`, so client traffic
+**No new host firewall rule is required.** LXC 213 is bridged on `192.168.2.0/24`, so client traffic
 never traverses the host's UFW chains — UFW here is host-management-plane only
 ([runbook 28](28-pve-proxmox-node.md)). That changes only if the container is ever moved to a
 **routed** NIC (separate subnet); then `3493` has to be added to `security_ufw_allow_tcp_ports` in
 `ansible/host_vars/pve.yml` — not by hand, or the next `security` role run drops it.
+
+Once the guest is Ansible-enrolled ([runbook 35](35-manage-proxmox-guests.md)), the `security` role
+also runs **inside** it: UFW default-deny with a LAN allow for `3493`. That in-guest rule — not the
+host's — is what filters `upsd`, and it lives in `ansible/host_vars/nut.yml`. The first enrollment must
+pause the host's `nut-monitor` (§6 above) so an in-flight UFW change can never look like a dead UPS.
 
 ## 7. Validation
 
@@ -601,10 +610,11 @@ runbook completes on its own; the client rollout (§4/§5) is verified by
   [#85](https://github.com/jaroslaw-bagnicki/Homelab/issues/85)).
 - **AC-restore behaviour** — after a full drain the nodes stay off. Decide per node whether the BIOS
   should auto-power-on when mains returns, otherwise recovery is a manual walk to each machine.
-- **Ansible ownership** — split settled 2026-09-13: the **clients** are delivered as an Ansible role
-  ([#116](https://github.com/jaroslaw-bagnicki/Homelab/issues/116)) with its own runbook, while
-  **LXC 213 stays a runbook procedure** (§1–§3) — it is one container, built once, and the steps are
-  the deliverable. The server build is complete
+- **Ansible ownership** — split settled 2026-09-13 and refined 2026-10-11
+  ([ADR 39](../decisions/39-proxmox-guest-management.md)): the **clients** are an Ansible role
+  ([#116](https://github.com/jaroslaw-bagnicki/Homelab/issues/116)) with its own runbook, LXC 213's
+  **configuration and logging** are now Ansible-managed ([runbook 35](35-manage-proxmox-guests.md)),
+  and its **lifecycle + NUT server build** (§1–§3) stay this runbook — one container, built once
   ([#115](https://github.com/jaroslaw-bagnicki/Homelab/issues/115)).
 - **Beetle M-III as the NAS client** — it sits on strip 1 from day one but joins NUT (§5) only once
   [#98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98) has OMV running, including the
@@ -621,6 +631,7 @@ runbook completes on its own; the client rollout (§4/§5) is verified by
 - [Idea 09 — UPS with NUT + Home Assistant](../ideas/09-ups-nut-home-assistant.md) — load profile, model comparison, NUT architecture
 - [ADR 25 — Home Assistant on a thin client](../decisions/25-home-assistant-thin-client.md) · [ADR 27 — monitoring strategy](../decisions/27-monitoring-strategy.md) · [ADR 28 — fleet admin account and key](../decisions/28-fleet-admin-account-and-key.md)
 - [Runbook 28 — pve node install](28-pve-proxmox-node.md) · [Runbook 24 — edge appliance](24-edge-appliance.md) · [Runbook 21 — TL-SG108E switch](21-tl-sg108e-switch.md)
+- [Runbook 35 — Proxmox guests, enroll and validate](35-manage-proxmox-guests.md) · [ADR 39 — Proxmox guest management](../decisions/39-proxmox-guest-management.md)
 - [ADR 29 — NAS backup target on the Beetle M-III](../decisions/29-nas-backup-target-beetle-m3-omv.md) · [idea 07 — OPNsense on the Futro S930](../ideas/07-opnsense-futro-s930.md) · [idea 08 — LTE WAN failover](../ideas/08-lte-wan-failover.md)
 - [research 24 — network topology](../research/24-network-topology-design.md) (IP scheme) · [research 29 — Wyse 5070 diagnostic](../research/29-wyse5070-hardware-diagnostic.md) (USB hub topology)
 - [Network UPS Tools](https://networkupstools.org/) — `nutdrv_qx` driver, `upsd` / `upsmon`

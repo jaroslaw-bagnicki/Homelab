@@ -83,6 +83,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Network | Realtek GbE (`enp1s0`) · Intel CNVi WiFi/BT (`wlp0s12f0`) |
 | Zigbee | Sonoff ZBDongle-P (CC2652P) · USB coordinator for LXC 212 |
 | OS | Proxmox VE 9.2.2 installed at `192.168.2.201` · base provisioned ([runbook 28](runbooks/28-pve-proxmox-node.md)) |
+| Guests | LXC 213 `nut` (NUT server) and LXC 214 `vtstack` (VictoriaLogs) — configuration + logging applied by Ansible, lifecycle (USB passthrough, nesting, onboot) a Proxmox-host runbook ([ADR 39](decisions/39-proxmox-guest-management.md) · [runbook 35](runbooks/35-manage-proxmox-guests.md)) |
 | Role | Fleet virtualisation host (Proxmox VE) |
 | Docs | [idea 05](ideas/05-home-assistant-thin-client.md) · [ADR 25](decisions/25-home-assistant-thin-client.md) · [research 26](research/26-home-assistant-thin-client.md) · [research 29](research/29-wyse5070-hardware-diagnostic.md) · [runbook 28](runbooks/28-pve-proxmox-node.md) |
 

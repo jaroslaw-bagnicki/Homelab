@@ -1,0 +1,14 @@
+---
+# LXC 213 `nut` — NUT server guest on the `pve` node (ADR 30 / ADR 39).
+# Lifecycle (create/size/onboot/nesting/USB passthrough) stays a Proxmox-host runbook (runbook 29 §1–§2);
+# this playbook only configures the guest — it never writes /etc/pve/lxc/213.conf or the NUT server files.
+
+security_ufw_deny_inbound_tcp_80: true
+security_ufw_allow_ssh_from: "192.168.2.0/24"
+security_ufw_allow_tcp_from: "192.168.2.0/24"
+# NUT server listener — upsd on the LAN. Without it the fleet's upsmon clients lose the UPS for
+# DEADTIME and the fail-safe stops the lab on healthy mains (runbook 29 §6 / ADR 30).
+security_ufw_allow_tcp_ports:
+  - 3493
+
+# Fluent Bit collector (ADR 36) — journald only; NUT/systemd logs into VictoriaLogs as `_HOSTNAME=nut`.
