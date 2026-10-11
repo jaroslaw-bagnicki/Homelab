@@ -139,7 +139,7 @@ the base playbook once the NUT server on `pve` is up. This keeps a from-scratch 
 ## 4. Operational notes
 
 - **Pause every monitor before restarting `nut-server`.** With `MINSUPPLIES 1`, an unreachable
-  `upsd` for `DEADTIME` (60 s since 2026-10-11; 15 s when this was first written) is
+  `upsd` for `DEADTIME` (120 s since 2026-10-11; 15 s when this was first written) is
   indistinguishable from a failed UPS — for the secondaries as much as the host — so a server
   restart can stop the fleet while mains is present (runbook 29 §6):
 
