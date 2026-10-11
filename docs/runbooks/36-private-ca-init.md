@@ -1,10 +1,9 @@
 # Private CA — Offline Root and Intermediate Signing (Init + Annual Re-Sign)
 
-> The offline half of the CA: a 10-year **root** generated on an air-gapped signing machine (a live-USB
-> Linux boot with no network at all) and kept on the **Kingston IronKey Locker+ 50** in a safe, plus the
-> **root-signing of the intermediate CSR** the deploy host produced. §2 runs **once**; §4 re-runs
-> annually, before the 1-year intermediate expires. Decision:
-> [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md); mechanics:
+> Generate the CA's 10-year **root** on an air-gapped signing machine (a live-USB Linux boot with no
+> network at all), keep it on the **Kingston IronKey Locker+ 50** in a safe, and sign the intermediate
+> CSR the deploy host produced. §2 runs **once**; §4 re-runs annually, before the 1-year intermediate
+> expires. Decision: [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md); mechanics:
 > [research 36 §4–§5](../research/36-step-ca-machine-identity.md).
 >
 > ⚠ **Offline throughout.** It runs between [runbook 35 §6](35-deploy-step-ca.md) (makes the CSR) and
