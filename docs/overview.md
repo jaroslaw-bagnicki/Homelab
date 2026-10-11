@@ -28,7 +28,7 @@ hardware detail see [Hardware Inventory](hardware.md); for change history see
 | LXC 213 | NUT server | `nut` | `.213` | ✅ |
 | LXC 214 | VictoriaLogs log store | `vtstack` | `.214` | ✅ |
 
-Addresses follow the static scheme ([ADR 31](decisions/31-static-address-scheme.md)); node hostnames name the host role ([ADR 33](decisions/33-fleet-node-hostnames.md)); the workload platform is migrating to k3s ([ADR 22](decisions/22-k3s-arc-homelab.md)). LXC 213 and 214 have their **configuration and logging** applied by Ansible (`playbook-nut.yml` / `playbook-logs.yml`), while the guest **lifecycle** (create/size/onboot/nesting/USB passthrough) stays a Proxmox-host runbook — [ADR 39](decisions/39-proxmox-guest-management.md) · [runbook 35](runbooks/35-manage-proxmox-guests.md).
+Addresses follow the static scheme ([ADR 31](decisions/31-static-address-scheme.md)); node hostnames name the host role ([ADR 33](decisions/33-fleet-node-hostnames.md)); the workload platform is migrating to k3s ([ADR 22](decisions/22-k3s-arc-homelab.md)). LXC 213 and 214 have everything **inside** them applied by Ansible (`playbook-nut.yml` — including the NUT server — and `playbook-logs.yml`), while the guest **lifecycle** (create/size/onboot/nesting/**USB passthrough**) stays a Proxmox-host runbook — [ADR 39](decisions/39-proxmox-guest-management.md) · [runbook 35](runbooks/35-manage-proxmox-guests.md).
 
 ## Workloads
 

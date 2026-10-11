@@ -26,20 +26,20 @@ written down. [Issue #148](https://github.com/jaroslaw-bagnicki/Homelab/issues/1
 
 - **Lifecycle — the Proxmox host, via runbook.** Creating/destroying a guest and editing its options
   (vCPU, RAM, rootfs, `nesting`, `onboot`, network, USB passthrough in `/etc/pve/lxc/NNN.conf`) stays
-  a documented `pct` procedure on `pve`. **Ansible never writes the guest's config file.** That is what
-  makes a re-run idempotent and guarantees USB passthrough and the required LXC options survive it.
+  a documented `pct` procedure on `pve`. **Ansible never writes the guest's Proxmox config file
+  (`/etc/pve/lxc/NNN.conf`) or the host's udev rules** — nothing outside the guest. That is what makes
+  a re-run idempotent and guarantees USB passthrough and the required LXC options survive it.
   `community.proxmox` lifecycle automation is deferred to [#85](https://github.com/jaroslaw-bagnicki/Homelab/issues/85),
   which will establish the pattern when the Home Assistant guests land.
-- **Configuration — the guest, via an Ansible guest playbook.** Base OS, hardening and logging are
-  applied over the LAN with the fleet's shared roles (`common` → `security` → `fluentbit`), the same
-  path `vtstack` already uses. A guest's own services stay **separate workload recipes**, not folded
-  into the base playbook — the split already drawn between `playbook-logs.yml` and the `victorialogs`
-  workload.
-- **LXC 213 `nut` is enrolled** — `host_vars/nut.yml` and `playbook-nut.yml` apply `common`,
-  `security` and `fluentbit`; NUT/systemd events ship to VictoriaLogs with the stable identity
-  `_HOSTNAME=nut` (`192.168.2.213`). The NUT server's own `/etc/nut/*` files stay **runbook-owned**
-  (out of scope for [#115](https://github.com/jaroslaw-bagnicki/Homelab/issues/115)) — the playbook
-  must not touch them.
+- **Configuration — the guest, via an Ansible guest playbook.** Base OS, hardening, the guest's own
+  services and logging are applied **over the LAN, inside the guest**, with the fleet's shared roles —
+  the same path `vtstack` already uses. Nothing is applied to the `pve` host.
+- **LXC 213 `nut` is enrolled and fully configured from inside** — `host_vars/nut.yml` and
+  `playbook-nut.yml` apply `common` → `security` → `nut_server` → `fluentbit`. `nut_server` owns the
+  guest's `/etc/nut/*` (the `nutdrv_qx` driver, `upsd`, and `upsd.users` with Key Vault passwords);
+  NUT/systemd events ship to VictoriaLogs with the stable identity `_HOSTNAME=nut` (`192.168.2.213`).
+  A guest's own **workloads** stay separate recipes, not folded into the base playbook — the split
+  already drawn between `playbook-logs.yml` and the `victorialogs` workload.
 - **The guest firewall carries the NUT listener.** The `security` role's default-deny UFW is applied
   with a LAN allow for `3493`; without it the fleet's `upsmon` clients lose `upsd` for `DEADTIME` and
   the fail-safe stops the lab on healthy mains.
@@ -67,9 +67,14 @@ written down. [Issue #148](https://github.com/jaroslaw-bagnicki/Homelab/issues/1
 - **A single shared `playbook-proxmox-guests.yml`** — one group playbook with per-host conditionals.
   Rejected: it would re-route LXC 214 through a new path and risk drift in an already-working guest;
   per-node playbooks match the repo's existing `playbook-<node>.yml` convention.
-- **Managing the NUT server files (`upsd.conf`, `upsd.users`, `ups.conf`) with Ansible** — rejected as
-  out of scope: [#115](https://github.com/jaroslaw-bagnicki/Homelab/issues/115) built and verified them
-  by hand, and the issue explicitly excludes reimplementing the NUT server.
+- **Leaving the NUT server files runbook-owned** — the earlier narrow scope: `/etc/nut/*` hand-edited
+  per [#115](https://github.com/jaroslaw-bagnicki/Homelab/issues/115). Rejected: with the guest now
+  enrolled, keeping the NUT server config as hand-edited files reintroduces exactly the drift the
+  enrollment removes, so the `nut_server` role owns them.
+- **Managing USB passthrough / the host udev rule with Ansible** — rejected as **out of scope**: those
+  live **outside** the guest, on the `pve` host, and an unprivileged LXC cannot configure its own
+  device passthrough. They stay runbook steps ([runbook 29](../runbooks/29-nut-ups-shutdown.md) §1–§2),
+  the same "guest internals only, nothing on the host" boundary `vtstack` follows.
 
 ---
 

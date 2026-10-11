@@ -1,0 +1,19 @@
+---
+# NUT server role — configures `upsd` and the `nutdrv_qx` driver inside the NUT guest (LXC 213 on
+# the `pve` node). The guest's own files are role-owned; the LXC lifecycle, USB passthrough and the
+# host udev rule stay a Proxmox-host runbook (runbook 29 §1–§2). Decision: ADR 30 / ADR 39.
+nut_server_ups_name: ups
+nut_server_driver: nutdrv_qx
+nut_server_vendorid: "0665"
+nut_server_productid: "5161"
+nut_server_desc: "Green Cell UPSLM600"
+nut_server_listen_address: "{{ ansible_host }}"
+nut_server_port: 3493
+nut_server_keyvault_name: homelab-bysxdb-kv
+nut_server_primary_account: upsmon-host
+nut_server_primary_secret: nut-upsmon-primary-password
+nut_server_fleet_account: upsmon-fleet
+nut_server_fleet_secret: nut-upsmon-secondary-password
+# Override to skip the Key Vault lookups (tests); normally left empty.
+nut_server_primary_password: ""
+nut_server_fleet_password: ""

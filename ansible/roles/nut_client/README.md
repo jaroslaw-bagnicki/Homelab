@@ -1,6 +1,6 @@
 # nut_client
 
-Installs **NUT clients** (`nut-client` + `upsmon`) on the physical fleet nodes, so each node stops itself in an orderly way when the shared UPS battery runs down. It is the **client** half of the UPS/NUT setup: the NUT **server** runs in LXC 213 on the `pve` node and is built by [runbook 29](../../../docs/runbooks/29-nut-ups-shutdown.md) §1–§3. Decision: [ADR 30](../../../docs/decisions/30-ups-nut-graceful-shutdown.md); tracked in [issue #116](https://github.com/jaroslaw-bagnicki/Homelab/issues/116).
+Installs **NUT clients** (`nut-client` + `upsmon`) on the physical fleet nodes, so each node stops itself in an orderly way when the shared UPS battery runs down. It is the **client** half of the UPS/NUT setup: the NUT **server** runs in LXC 213 on the `pve` node and is delivered by the [`nut_server`](../nut_server/README.md) role ([runbook 35](../../../docs/runbooks/35-manage-proxmox-guests.md)). Decision: [ADR 30](../../../docs/decisions/30-ups-nut-graceful-shutdown.md); tracked in [issue #116](https://github.com/jaroslaw-bagnicki/Homelab/issues/116).
 
 ## Files
 
@@ -28,7 +28,7 @@ Installs **NUT clients** (`nut-client` + `upsmon`) on the physical fleet nodes, 
 | `nut-monitor` | `upsmon`; enabled and started by the role (when the server is reachable). |
 | `/etc/nut/nut.conf` | `MODE=netclient`, `0640 root:nut`. |
 | `/etc/nut/upsmon.conf` | `MONITOR` + shutdown policy, `0640 root:nut`; templated with `no_log` so the password never prints, including under `--diff`. |
-| `nut-server` / `nut-driver@ups` | LXC 213 only — out of scope (runbook 29 §1–§3). |
+| `nut-server` / `nut-driver@ups` | LXC 213 only — delivered by the [`nut_server`](../nut_server/README.md) role ([ADR 39](../../../docs/decisions/39-proxmox-guest-management.md)). |
 
 ## Secrets
 

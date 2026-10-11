@@ -13,6 +13,7 @@ Workloads are a separate concern: self-contained recipes run on demand (see [`..
 | `docker_services` | Portainer, Caddy, cloudflared, shared Docker networks | `playbook.yml` | [README](docker_services/README.md) |
 | `edge_host` | Edge appliance extras (unattended-upgrades, journald volatile, DNS search) | `playbook-edge.yml` | [README](edge_host/README.md) |
 | `nut_client` | `nut-client` + `upsmon` fleet clients | `playbook-pve.yml`, `playbook-lab.yml`, `playbook-edge.yml` | [README](nut_client/README.md) |
+| `nut_server` | NUT server (`upsd` + `nutdrv_qx`) inside the `nut` guest | `playbook-nut.yml` | [README](nut_server/README.md) |
 | `netdata` | Netdata agent — parent (stream aggregator) + child modes | `playbook-pve.yml`, `playbook-lab.yml`, `playbook-edge.yml` | [README](netdata/README.md) |
 | `fluentbit` | Fluent Bit log collector — journald + Docker logs into VictoriaLogs | `playbook-pve.yml`, `playbook-edge.yml`, `playbook-lab.yml`, `playbook-nas.yml`, `playbook-logs.yml`, `playbook-nut.yml` | [README](fluentbit/README.md) |
 

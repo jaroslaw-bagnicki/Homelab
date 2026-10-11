@@ -1,0 +1,10 @@
+---
+- name: Restart nut-server
+  ansible.builtin.systemd_service:
+    name: nut-server
+    state: restarted
+
+- name: Reload nut-server
+  ansible.builtin.systemd_service:
+    name: nut-server
+    state: reloaded

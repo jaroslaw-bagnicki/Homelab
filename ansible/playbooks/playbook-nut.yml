@@ -1,10 +1,10 @@
 ---
 # Configure LXC 213 `nut` — the NUT server guest on the `pve` node (ADR 30 / ADR 39).
 #
-# Base + logging only: common → security → fluentbit, so the guest's journal (nut-server,
-# nut-driver@ups, systemd) ships to VictoriaLogs. The NUT server's own /etc/nut/* files stay
-# runbook-owned (runbook 29 §3, #115) and the LXC lifecycle/USB passthrough stays on the Proxmox
-# host (runbook 29 §1–§2) — this playbook touches neither.
+# Everything inside the guest: common → security → nut_server → fluentbit, so the NUT server
+# (`upsd` + `nutdrv_qx`) is configured and its journal (nut-server, nut-driver@ups, systemd) ships
+# to VictoriaLogs. The LXC lifecycle (pct create), USB passthrough and the host udev rule stay a
+# Proxmox-host runbook (runbook 29 §1–§2) — this playbook touches nothing on `pve`.
 #
 # Run from a LAN workstation with the fleet key loaded (fleet-connect skill):
 #   ansible-playbook ansible/playbooks/playbook-nut.yml --diff
@@ -15,4 +15,5 @@
   roles:
     - common
     - security
+    - nut_server
     - fluentbit

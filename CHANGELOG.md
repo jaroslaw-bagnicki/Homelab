@@ -13,7 +13,7 @@ Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month 
 
 ## 2026‑10
 
-- **(feat)** Manage Proxmox guests — config by Ansible, lifecycle by runbook; LXC 213 `nut` now ships NUT/systemd logs to VictoriaLogs — [ADR 39](docs/decisions/39-proxmox-guest-management.md) · [runbook 35](docs/runbooks/35-manage-proxmox-guests.md)
+- **(feat)** LXC 213 `nut` fully Ansible-managed inside (NUT server + logging into VictoriaLogs); host lifecycle and USB passthrough stay runbook-owned — [ADR 39](docs/decisions/39-proxmox-guest-management.md) · [runbook 35](docs/runbooks/35-manage-proxmox-guests.md)
 - **(docs)** Private CA — offline 10-year root, TPM-bound 1-year intermediate on `pve`, short-lived leaves — [ADR 38](docs/decisions/38-private-ca-hierarchy-and-custody.md)
 
 ## 2026‑09

@@ -6,10 +6,12 @@
 > journal previously never reached **VictoriaLogs**. Decision and boundary:
 > [ADR 39](../decisions/39-proxmox-guest-management.md).
 >
-> ⚠ **Two layers, one owner each.** **Guest configuration** is Ansible (`playbook-nut.yml` — `common`
-> → `security` → `fluentbit`). **Guest lifecycle** — create/destroy, vCPU/RAM/rootfs, `nesting`,
-> `onboot`, USB passthrough — stays a Proxmox-host runbook ([runbook 29 §1–§2](29-nut-ups-shutdown.md));
-> Ansible **never** writes `/etc/pve/lxc/NNN.conf` or the NUT server's `/etc/nut/*` files.
+> ⚠ **Guest internals only — nothing on the host.** **Guest configuration** is Ansible
+> (`playbook-nut.yml` — `common` → `security` → `nut_server` → `fluentbit`), applied **inside** the LXC
+> over the LAN, the same boundary `vtstack` follows. **Everything on the `pve` host** — lifecycle
+> (`pct create`, vCPU/RAM/rootfs, `nesting`, `onboot`), **USB passthrough** and the **host udev rule** —
+> stays a Proxmox-host runbook ([runbook 29 §1–§2](29-nut-ups-shutdown.md)); Ansible never writes
+> `/etc/pve/lxc/NNN.conf` or the host's udev rules.
 >
 > ⚠ **Execution note.** Run from a LAN workstation (`192.168.2.0/24`) with the fleet key loaded
 > ([`fleet-connect` skill](../../.opencode/skills/fleet-connect/SKILL.md)); **run only after CR**.
@@ -26,10 +28,11 @@ sets the boundary; this runbook is the operating procedure and the validation.
 - **`nut` in inventory** — `[proxmox_guests]` in `ansible/inventory.ini` (`192.168.2.213`).
 - **`ansible/host_vars/nut.yml`** — UFW LAN allow for SSH **and NUT `3493`**, plus the default
   Fluent Bit journald source.
-- **`ansible/playbooks/playbook-nut.yml`** — `common` → `security` → `fluentbit`, so LXC 213 gets the
-  fleet base and ships its journal into VictoriaLogs with the stable identity `_HOSTNAME=nut`.
-- **No lifecycle or NUT-server change** — the LXC config and `/etc/nut/*` are untouched by design; a
-  re-run must leave both byte-identical.
+- **`ansible/playbooks/playbook-nut.yml`** — `common` → `security` → `nut_server` → `fluentbit`, applied
+  inside the guest: the NUT server (`upsd` + `nutdrv_qx`, `upsd.users` passwords from Key Vault) is
+  configured, and the journal ships to VictoriaLogs with the stable identity `_HOSTNAME=nut`.
+- **No host change** — the LXC config (`/etc/pve/lxc/213.conf`), USB passthrough and host udev stay
+  runbook-owned; a re-run must leave them byte-identical.
 
 ## Prerequisites
 
@@ -67,6 +70,9 @@ The play applies:
 - **`common`** — hostname `nut`, UTC, fleet key on `fleetadm`.
 - **`security`** — UFW default-deny with a LAN allow for SSH `22` **and NUT `3493`**; fail2ban; sshd
   hardening. This is what protects the NUT listener now that the guest carries its own firewall.
+- **`nut_server`** — installs `nut-server`/`nut-client`, writes `/etc/nut/*` (`MODE=netserver`, the
+  `nutdrv_qx` `[ups]` section, the `upsd` listener, and `upsd.users` with both Key Vault passwords),
+  and enables `nut-driver-enumerator` + `nut-server`.
 - **`fluentbit`** — Fluent Bit journald → `https://192.168.2.214:9428/insert/jsonline`, streams
   `_HOSTNAME` + `_SYSTEMD_UNIT` (so `_HOSTNAME=nut`).
 
@@ -79,21 +85,26 @@ ssh fleetadm@192.168.2.201 'upsc ups@192.168.2.213 | grep ups.status'
 
 ## 3. Idempotency and non-mutation
 
-**Capture the lifecycle state before and after** — Ansible must not have changed it:
+**Capture the host state before and after** — Ansible runs only inside the guest and must not have
+changed `/etc/pve/lxc/213.conf`, the USB passthrough or the host udev rule:
 
 ```sh
 ssh fleetadm@192.168.2.201 'sudo pct config 213'                       >/tmp/213.before
 ssh fleetadm@192.168.2.201 'sudo cat /etc/pve/lxc/213.conf'           >>/tmp/213.before
+ssh fleetadm@192.168.2.201 'sudo cat /etc/udev/rules.d/85-nut-usb.rules' >>/tmp/213.before
 # re-run the playbook, then:
 ssh fleetadm@192.168.2.201 'sudo pct config 213'                       >/tmp/213.after
 ssh fleetadm@192.168.2.201 'sudo cat /etc/pve/lxc/213.conf'           >>/tmp/213.after
-diff /tmp/213.before /tmp/213.after      # expect no output — nesting, onboot and the USB passthrough lines unchanged
+ssh fleetadm@192.168.2.201 'sudo cat /etc/udev/rules.d/85-nut-usb.rules' >>/tmp/213.after
+diff /tmp/213.before /tmp/213.after      # expect no output — USB passthrough / udev / LXC options unchanged
 ```
 
 **Idempotency** — a second `ansible-playbook ansible/playbooks/playbook-nut.yml --diff` must report
 `changed=0` **among the guest's own tasks**. As on `vtstack`
 ([runbook 34 §6](34-deploy-fluentbit.md)), `common`'s NTP task cannot converge inside an unprivileged
-LXC (no `CAP_SYS_TIME`), so that single task may re-fire; everything else must be unchanged.
+LXC (no `CAP_SYS_TIME`), so that single task may re-fire; everything else must be unchanged. The
+`nut_server` templates write only on change, and the passwords come from Key Vault at runtime — they
+never print, including under `--diff`.
 
 ## 4. Service health
 
@@ -101,6 +112,7 @@ LXC (no `CAP_SYS_TIME`), so that single task may re-fire; everything else must b
 ssh fleetadm@192.168.2.213 'systemctl status nut-server nut-driver@ups --no-pager | head -20'
 ssh fleetadm@192.168.2.213 'upsc ups@192.168.2.213 | grep -E "ups.status|battery"'
 ssh fleetadm@192.168.2.213 'sudo ufw status verbose'      # 3493 ALLOW IN 192.168.2.0/24
+ssh fleetadm@192.168.2.213 'sudo ls -l /etc/nut'          # all 0640 root:nut, written by nut_server
 ```
 
 The UPS must still be reachable from every client (the whole point of the `3493` allow):
@@ -177,9 +189,9 @@ Executed on: **pending** — run §1–§7 against the live fleet, record the `-
 
 - [ ] §1 `pve`'s `nut-monitor` paused before the first run and resumed after
 - [ ] §2 `playbook-nut.yml` applies cleanly (`failed=0`); guest UFW active with `22` + `3493` ALLOW IN `192.168.2.0/24`
-- [ ] §3 `pct config 213` and `/etc/pve/lxc/213.conf` unchanged (nesting, onboot, USB passthrough intact)
-- [ ] §3 second run reports `changed=0` among the guest's own tasks (only `common` NTP may re-fire)
-- [ ] §4 `nut-server` / `nut-driver@ups` active; `upsc` still answers; `ups.status` reachable from all four clients
+- [ ] §3 `pct config 213`, `/etc/pve/lxc/213.conf` and `/etc/udev/rules.d/85-nut-usb.rules` unchanged (USB passthrough, nesting, onboot intact)
+- [ ] §3 second run reports `changed=0` among the guest's own tasks (only `common` NTP may re-fire); `upsd.users` rewritten only on change, passwords never printed
+- [ ] §4 `nut-server` / `nut-driver@ups` active; `upsc` still answers; `/etc/nut/*` `0640 root:nut`; `ups.status` reachable from all four clients
 - [ ] §5 `_stream:{_HOSTNAME="nut"}` returns records; `nut-server.service` events present
 - [ ] §6 `pct reboot 213` → guest returns, `upsc` answers, host `nut-monitor` active
 - [ ] §7 `playbook-logs.yml` re-run shows no drift on `vtstack`

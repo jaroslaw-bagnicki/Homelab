@@ -50,9 +50,9 @@ defined order.
 
 > **Execution note.** Manual steps, run interactively from the repo's dev container. All three nodes
 > are LAN-only — reach them from a machine on `192.168.2.0/24` with the fleet key loaded
-> (`fleet-connect` skill). LXC 213's **configuration and logging** are now Ansible-managed
-> ([runbook 35](35-manage-proxmox-guests.md)); §1–§3 remain the runbook-owned **lifecycle and NUT
-> server build** ([ADR 39](../decisions/39-proxmox-guest-management.md)).
+> (`fleet-connect` skill). LXC 213's **configuration and logging** — including the NUT server — are now
+> Ansible-managed ([runbook 35](35-manage-proxmox-guests.md)); §1–§2 remain the runbook-owned
+> **lifecycle and USB passthrough** ([ADR 39](../decisions/39-proxmox-guest-management.md)).
 
 ## Prerequisites
 
@@ -184,6 +184,10 @@ this is where the GUI and `pct create` diverge:
 
 ## 2. USB passthrough
 
+> **Stays host-side — not Ansible-managed.** This is the USB bus/device grant on the `pve` host; an
+> unprivileged LXC cannot configure its own passthrough, so it is out of scope for the guest playbook
+> ([ADR 39](../decisions/39-proxmox-guest-management.md)) — run it by hand here.
+
 The UPS is a raw **usbfs** device, not a serial tty, so the container needs the USB bus mount plus
 the device cgroup allowance. There is **no serial number** on the unit, so nothing can be pinned
 per-device — bind the bus and let NUT find the unit by VID:PID.
@@ -264,6 +268,13 @@ found: the number moved `008` → `016` within hours on 2026-09-13, without a re
 > (Power Device)** — this is why `usbhid-ups` cannot drive it and `nutdrv_qx` is the driver.
 
 ## 3. NUT server in LXC 213 — and the driver probe (gate)
+
+> **Superseded — delivered by the `nut_server` role.** The guest's `/etc/nut/*` (`nut.conf`,
+> `ups.conf`, `upsd.conf`, `upsd.users`) and the `nut-driver-enumerator` / `nut-server` services are
+> now templated by the [`nut_server`](../../ansible/roles/nut_server/README.md) role via
+> `playbook-nut.yml` ([runbook 35](35-manage-proxmox-guests.md), [ADR 39](../decisions/39-proxmox-guest-management.md)).
+> This section remains the **reference** for the driver gate, the `maxretry` insertion trap, the
+> `upsc` variable table and troubleshooting; the hand-edits below are no longer the deploy path.
 
 ```sh
 pct exec 213 -- bash -lc 'apt update && apt install -y nut-server nut-client'
@@ -613,9 +624,10 @@ runbook completes on its own; the client rollout (§4/§5) is verified by
 - **Ansible ownership** — split settled 2026-09-13 and refined 2026-10-11
   ([ADR 39](../decisions/39-proxmox-guest-management.md)): the **clients** are an Ansible role
   ([#116](https://github.com/jaroslaw-bagnicki/Homelab/issues/116)) with its own runbook, LXC 213's
-  **configuration and logging** are now Ansible-managed ([runbook 35](35-manage-proxmox-guests.md)),
-  and its **lifecycle + NUT server build** (§1–§3) stay this runbook — one container, built once
-  ([#115](https://github.com/jaroslaw-bagnicki/Homelab/issues/115)).
+  **configuration and logging** — including the **NUT server**
+  ([`nut_server`](../../ansible/roles/nut_server/README.md)) — are Ansible-managed
+  ([runbook 35](35-manage-proxmox-guests.md)), while its **lifecycle + USB passthrough** (§1–§2) stay
+  this runbook ([#115](https://github.com/jaroslaw-bagnicki/Homelab/issues/115)).
 - **Beetle M-III as the NAS client** — it sits on strip 1 from day one but joins NUT (§5) only once
   [#98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98) has OMV running, including the
   OMV-panel-vs-files decision.
