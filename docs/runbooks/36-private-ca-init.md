@@ -87,8 +87,8 @@ and the exact failure messages: [03-signing-csr.md](../private-ca-offline-signin
 The intermediate lasts one year, so before it expires the same root signs a fresh one for the same TPM
 key:
 
-1. On the `ca` container, run [runbook 35 §6](35-deploy-step-ca.md)'s certificate-request task again.
-   That produces a fresh `intermediate_ca.csr` from the existing TPM key — do not recreate the key.
+1. Produce a fresh `intermediate_ca.csr` from the existing TPM key — re-run
+   [runbook 35 §6](35-deploy-step-ca.md)'s certificate-request task. Do not recreate the key.
 2. Sign it with the kit: `./sign.sh /mnt/ironkey`
    ([03-signing-csr.md](../private-ca-offline-signing/03-signing-csr.md)).
 3. Install it and restart the service ([runbook 35 §7](35-deploy-step-ca.md)).
@@ -123,7 +123,7 @@ ceremony is first performed.
 ## References
 
 - [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) — the three tiers, who holds what, and the 1-year intermediate
-- [Research 36 §4–§5](../research/36-step-ca-machine-identity.md) — how the TPM and KMS work, and the container recipe
+- [Research 36 §4–§5](../research/36-step-ca-machine-identity.md) — how the TPM and KMS work
 - [Research 37 §5](../research/37-tpm2-hardware-and-fleet.md) — the `pve` Intel PTT TPM, and why the key can be lost
 - [Issue #141](https://github.com/jaroslaw-bagnicki/Homelab/issues/141) — the TPM test that settled the approach
 - [Runbook 35](35-deploy-step-ca.md) — the deployment this ceremony feeds
