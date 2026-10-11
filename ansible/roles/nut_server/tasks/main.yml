@@ -85,6 +85,8 @@
     mode: "0640"
   notify: Restart nut-server
 
+# `upsd` binds sockets only at start, so a `LISTEN` change needs a restart — a reload would
+# leave it on the old address/port.
 - name: Template upsd.conf
   ansible.builtin.template:
     src: upsd.conf.j2
@@ -92,7 +94,7 @@
     owner: root
     group: "{{ nut_server_group }}"
     mode: "0640"
-  notify: Reload nut-server
+  notify: Restart nut-server
 
 - name: Template upsd.users
   ansible.builtin.template:
@@ -106,6 +108,14 @@
 
 # Server and primary share one host, so the fail-safe monitor must not start before upsd answers —
 # systemd ordering removes the cold-boot race ADR 30 had to mitigate (ADR 39).
+- name: Ensure the nut-monitor drop-in directory exists
+  ansible.builtin.file:
+    path: "{{ nut_server_monitor_dropin | dirname }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
 - name: Order nut-monitor after nut-server
   ansible.builtin.copy:
     content: |

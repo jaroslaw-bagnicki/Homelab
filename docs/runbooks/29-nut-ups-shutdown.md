@@ -143,9 +143,17 @@ to release it — and the fleet's fail-safe `upsmon` must be paused across the c
 `DEADTIME` blackout stops the lab on healthy mains.
 
 ```sh
-# 1. Pause every client's fail-safe monitor
+# 1. Pause every client's fail-safe monitor — abort if any node cannot be paused
+set -e
 for n in 192.168.2.201 192.168.2.200 192.168.2.240 192.168.2.202; do
   ssh fleetadm@"$n" 'sudo systemctl stop nut-monitor'
+done
+# assert none is still armed before touching LXC 213
+for n in 192.168.2.201 192.168.2.200 192.168.2.240 192.168.2.202; do
+  if ssh fleetadm@"$n" 'systemctl is-active --quiet nut-monitor'; then
+    echo "nut-monitor still active on $n — aborting before pct destroy" >&2
+    exit 1
+  fi
 done
 
 # 2. Stop and destroy the old container (from the pve host)
@@ -287,15 +295,20 @@ battery state on their own:
 and `HOSTSYNC` are set as in §4/§5 — with the stock values the host races the secondaries. The §7
 drill is what proves it.
 
-⚠ **Pause the host monitor before restarting the server.** With `MINSUPPLIES 1`, an `upsd` that cannot
-be reached for `DEADTIME` (15 s) is indistinguishable from a failed UPS, so stopping/upgrading
-`nut-server` — or a slow host boot — can stop the fleet while mains is present:
+⚠ **Pause every monitor before restarting the server.** With `MINSUPPLIES 1`, an `upsd` that cannot
+be reached for `DEADTIME` (15 s) is indistinguishable from a failed UPS — and that applies to the
+secondaries just as much as the host, so a server restart can stop the fleet while mains is present:
 
 ```sh
-ssh fleetadm@192.168.2.201 'sudo systemctl stop nut-monitor'     # host, before touching nut-server
+set -e
+for n in 192.168.2.201 192.168.2.200 192.168.2.240 192.168.2.202; do
+  ssh fleetadm@"$n" 'sudo systemctl stop nut-monitor'
+done
 ssh fleetadm@192.168.2.201 'sudo systemctl restart nut-server'
-ssh fleetadm@192.168.2.201 'upsc ups@localhost'                  # only continue once this answers
-ssh fleetadm@192.168.2.201 'sudo systemctl start nut-monitor'
+ssh fleetadm@192.168.2.201 'upsc ups@localhost'          # restore only once this answers
+for n in 192.168.2.201 192.168.2.200 192.168.2.240 192.168.2.202; do
+  ssh fleetadm@"$n" 'sudo systemctl start nut-monitor'
+done
 ```
 
 On a normal host boot this race no longer exists: `nut-monitor` is ordered **after** `nut-server`

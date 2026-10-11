@@ -138,14 +138,20 @@ the base playbook once the NUT server on `pve` is up. This keeps a from-scratch 
 
 ## 4. Operational notes
 
-- **Pause the host monitor before restarting `nut-server`.** With `MINSUPPLIES 1`, an unreachable
-  `upsd` for `DEADTIME` (15 s) is indistinguishable from a failed UPS, so a server restart can stop the
-  fleet while mains is present (runbook 29 §6):
+- **Pause every monitor before restarting `nut-server`.** With `MINSUPPLIES 1`, an unreachable
+  `upsd` for `DEADTIME` (15 s) is indistinguishable from a failed UPS — for the secondaries as much
+  as the host — so a server restart can stop the fleet while mains is present (runbook 29 §6):
 
   ```sh
-  ssh fleetadm@192.168.2.201 sudo systemctl stop nut-monitor
-  # restart nut-server, then wait for upsc ups@192.168.2.201 to answer
-  ssh fleetadm@192.168.2.201 sudo systemctl start nut-monitor
+  set -e
+  for n in 192.168.2.201 192.168.2.200 192.168.2.240 192.168.2.202; do
+    ssh fleetadm@"$n" 'sudo systemctl stop nut-monitor'
+  done
+  ssh fleetadm@192.168.2.201 'sudo systemctl restart nut-server'
+  ssh fleetadm@192.168.2.201 'upsc ups@192.168.2.201'   # restore only once this answers
+  for n in 192.168.2.201 192.168.2.200 192.168.2.240 192.168.2.202; do
+    ssh fleetadm@"$n" 'sudo systemctl start nut-monitor'
+  done
   ```
 
 - **`lab`** — k3s starts and stops with the host; no drain/cordon in v1 (single node, nothing to
@@ -167,13 +173,17 @@ Executed against the live fleet 2026-09-19 (role from
 [PR #119](https://github.com/jaroslaw-bagnicki/Homelab/pull/119); full evidence in
 [issue #116](https://github.com/jaroslaw-bagnicki/Homelab/issues/116#issuecomment-5740654644)):
 
-- [x] §1 both monitor passwords present in `homelab-bysxdb-kv`; accounts match `upsd.users` on `pve` — `[upsmon-host] upsmon primary`, `[upsmon-fleet] upsmon secondary`
+- [x] §1 both monitor passwords present in `homelab-bysxdb-kv`; accounts match LXC 213 `upsd.users` — `[upsmon-host] upsmon primary`, `[upsmon-fleet] upsmon secondary`
 - [x] §2 `playbook-pve.yml` / `playbook-lab.yml` / `playbook-edge.yml` apply cleanly (role reports the guard probe passing) — `failed=0` on all three; guard warn task skipped
 - [x] §3 `nut-monitor` `active (running)` on all three nodes — enabled + active
-- [x] §3 `upsc ups@192.168.2.201` returns the same values from all three nodes; no `Login failed` — `OL` / `100%` everywhere; full-journal `Login failed` count 0
+- [x] §3 `upsc ups@192.168.2.213` returns the same values from all three nodes; no `Login failed` — `OL` / `100%` everywhere; full-journal `Login failed` count 0
 - [x] §3 the two secondaries' `upsmon.conf` are identical; only per-role values differ from `pve` — `lab` vs `edge` byte-identical (password masked)
 - [x] §3 re-running a base playbook reports `changed=0` for the role — `pve`/`edge` 0; `lab` 1, that one being `azure_arc`
-- [x] §4 host monitor paused and restored across a `nut-server` restart — `pve` paused → `nut-server` restarted → `pve` active; secondaries never paused (`ActiveEnterTimestamp` unchanged)
+- [x] §4 host monitor paused and restored across a LXC 213 restart — `pve` paused → LXC 213 restarted → `pve` active; secondaries never paused (`ActiveEnterTimestamp` unchanged)
+
+> **Post-migration re-verification pending.** The rows above are the **2026-09-19** run against the
+> LXC 213 server and are kept as recorded. The host-native server on `pve` (`.201`) has **not** been
+> verified yet — re-run §1–§4 after the migration in [runbook 29](29-nut-ups-shutdown.md) §1–§3.
 
 > §4 caveat: the container was unreachable ~12 s against `DEADTIME` 15 s, so the clients never
 > marked the UPS *dead*. A normal restart is proven benign; the >15 s blackout case is not.
