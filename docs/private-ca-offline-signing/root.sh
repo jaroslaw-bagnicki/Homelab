@@ -1,11 +1,11 @@
 #!/bin/sh
-# Create the 10-year offline root CA on the IronKey. FIRST RUN ONLY.
+# Create the 10-year offline root CA on the secure USB stick. FIRST RUN ONLY.
 #
 #   ./root.sh [/path/to/ironkey] [passphrase-file]      (default ironkey: /mnt/ironkey)
 #
 # The root key is the one secret in this PKI that cannot be replaced: it signs the
 # intermediate, and every client trusts the certificate it belongs to. So it is
-# generated here, on a machine with no network, and stored only on the IronKey.
+# generated here, on a machine with no network, and stored only on the stick.
 #
 # This script deliberately refuses to run when a root already exists. Replacing a
 # root is a trust rotation (issue #144: every client must re-trust), not a re-run.
@@ -42,8 +42,8 @@ if [ ! -x "$DIR/step" ]; then
     exit 1
 fi
 
-# --- the IronKey ------------------------------------------------------------
-[ -d "$IRONKEY" ] || { echo "ABORT: $IRONKEY is not a directory (is the IronKey mounted?)" >&2; exit 1; }
+# --- the stick ------------------------------------------------------------
+[ -d "$IRONKEY" ] || { echo "ABORT: $IRONKEY is not a directory (is the stick mounted?)" >&2; exit 1; }
 
 # --- the one-way door -------------------------------------------------------
 if [ -e "$IRONKEY/root_ca_key" ] && [ -e "$IRONKEY/root_ca.crt" ]; then
@@ -123,7 +123,7 @@ chk "validity is 10 years"                       '"length"[: ]+315360000'
 if grep -q 'ENCRYPTED' "$IRONKEY/root_ca_key"; then
     echo "  OK    root key is passphrase-protected"
 else
-    echo "  FAIL  root key is NOT passphrase-protected (plaintext on the IronKey)" >&2
+    echo "  FAIL  root key is NOT passphrase-protected (plaintext on the stick)" >&2
     FAILED=1
 fi
 
@@ -153,6 +153,6 @@ echo "Root created. Next: sign the intermediate with it."
 echo "  ./sign.sh $IRONKEY"
 echo
 echo "Before you power this machine off:"
-echo "  - unmount and remove the IronKey, return it to the safe"
+echo "  - unmount and remove the stick, return it to the safe"
 echo "  - make sure the root key passphrase is written down in the safe"
 echo "=============================================================="

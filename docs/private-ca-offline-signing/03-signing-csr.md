@@ -5,9 +5,9 @@ every signing, including the annual re-sign before the intermediate expires.
 
 ## Before you start
 
-- The bundle is on the signing machine and `step` runs, and the IronKey is mounted — [README](README.md)
+- The bundle is on the signing machine and `step` runs, and the stick is mounted — [README](README.md)
   steps 2–4.
-- The **IronKey is mounted** and already holds the root (`root_ca.crt`, `root_ca_key`). If it does not,
+- The **secure USB stick** is mounted and already holds the root (`root_ca.crt`, `root_ca_key`). If it does not,
   create it first: [02](02-issuing-root-cert.md).
 
 ## Run it
@@ -44,7 +44,7 @@ leave a half-written certificate to carry home.
 
 | Check | Expected |
 |---|---|
-| chain | `certificate verify` succeeds against the root on the IronKey |
+| chain | `certificate verify` succeeds against the root on the stick |
 | is a CA | `is_ca: true` |
 | path length | `max_path_len: 0` — it issues leaves, nothing deeper |
 | key usage | `certificate_sign` and `crl_sign` |
@@ -64,7 +64,7 @@ Read the printed dump as well. It must show issuer `CN=Homelab Internal CA`, sub
 | Symptom | What to do |
 |---|---|
 | `error decrypting ... decryption password incorrect` | Wrong root key passphrase. Nothing was written; re-run with the right one. |
-| "`root_ca.crt` not found" | The IronKey is not mounted, or holds no root — see [02](02-issuing-root-cert.md). |
+| "`root_ca.crt` not found" | The stick is not mounted, or holds no root — see [02](02-issuing-root-cert.md). |
 | SAN line absent, or a `FAIL` line | Stop and do not carry the certificate home. No trust has been distributed, the root is untouched, and re-signing the same CSR is safe. |
 
 ## The annual re-sign

@@ -1,5 +1,5 @@
 #!/bin/sh
-# Sign the intermediate CSR with the offline root held on the IronKey.
+# Sign the intermediate CSR with the offline root held on the secure USB stick.
 #
 #   ./sign.sh [/path/to/ironkey] [passphrase-file]      (default ironkey: /mnt/ironkey)
 #
@@ -35,8 +35,8 @@ if [ ! -x "$DIR/step" ]; then
 fi
 [ -f "$DIR/intermediate_ca.csr" ]  || { echo "ABORT: $DIR/intermediate_ca.csr is missing" >&2; exit 1; }
 [ -f "$DIR/intermediate-ca.tpl" ]  || { echo "ABORT: $DIR/intermediate-ca.tpl is missing" >&2; exit 1; }
-[ -f "$IRONKEY/root_ca.crt" ]      || { echo "ABORT: $IRONKEY/root_ca.crt not found (is the IronKey mounted?)" >&2; exit 1; }
-[ -f "$IRONKEY/root_ca_key" ]      || { echo "ABORT: $IRONKEY/root_ca_key not found (is the IronKey mounted?)" >&2; exit 1; }
+[ -f "$IRONKEY/root_ca.crt" ]      || { echo "ABORT: $IRONKEY/root_ca.crt not found (is the stick mounted?)" >&2; exit 1; }
+[ -f "$IRONKEY/root_ca_key" ]      || { echo "ABORT: $IRONKEY/root_ca_key not found (is the stick mounted?)" >&2; exit 1; }
 
 cd "$DIR"
 
@@ -66,9 +66,9 @@ echo "Checking the result. Every line must read OK."
 FAILED=0
 
 if VERIFY_ERR="$("$DIR/step" certificate verify "$OUT" --roots "$IRONKEY/root_ca.crt" 2>&1)"; then
-    echo "  OK    chains to the root on the IronKey"
+    echo "  OK    chains to the root on the stick"
 else
-    echo "  FAIL  does NOT chain to the root on the IronKey" >&2
+    echo "  FAIL  does NOT chain to the root on the stick" >&2
     printf '%s\n' "$VERIFY_ERR" >&2
     FAILED=1
 fi

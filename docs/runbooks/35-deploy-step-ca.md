@@ -76,7 +76,7 @@ dedicated unprivileged LXC keeps it off the Proxmox host and away from the edge 
 - [ ] `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET` and `AZURE_TENANT_ID` exported on the controller — the
       role reads the Key Vault secret through them.
 - [ ] Fleet key in `ssh-agent` (`ssh-add -l` shows `fleetadm@homelab`).
-- [ ] The IronKey and the air-gapped signing machine are needed for the **later** offline step
+- [ ] The secure USB stick and the air-gapped signing machine are needed for the **later** offline step
       ([runbook 36](36-private-ca-init.md)), not for §1–§6.
 
 ---

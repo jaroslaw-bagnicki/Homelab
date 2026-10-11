@@ -1,13 +1,13 @@
 # 02 — Issuing the root certificate
 
-Creates the 10-year root CA on the IronKey. **First run only** — once in the life of this CA.
+Creates the 10-year root CA on the secure USB stick. **First run only** — once in the life of this CA.
 
 ## Before you start
 
-- The bundle is on the signing machine and `step` runs, and the IronKey is mounted — [README](README.md)
+- The bundle is on the signing machine and `step` runs, and the stick is mounted — [README](README.md)
   steps 2–4.
-- The **IronKey is mounted**, and holds **no root yet**. That is where the root is written.
-- **Skip this document completely** if the IronKey already holds a root, as it will on the annual
+- The **secure USB stick** is mounted, and holds **no root yet**. That is where the root is written.
+- **Skip this document completely** if the stick already holds a root, as it will on the annual
   re-sign. The repeat job is [03](03-signing-csr.md).
 
 ## Run it
@@ -16,7 +16,7 @@ Creates the 10-year root CA on the IronKey. **First run only** — once in the l
 ./root.sh /mnt/ironkey
 ```
 
-`root.sh` creates a passphrase-protected root key **on the IronKey**, and refuses to run if a root is
+`root.sh` creates a passphrase-protected root key **on the secure USB stick**, and refuses to run if a root is
 already there: replacing a root is a trust rotation — every client would have to re-trust — not a
 re-run.
 
@@ -62,4 +62,4 @@ together with the passphrase.
 | Symptom | What to do |
 |---|---|
 | "a root already exists" | Correct — it never replaces a root. Carry on with [03](03-signing-csr.md). |
-| "holds an INCOMPLETE root" | An earlier run failed part-way. Remove `root_ca.crt` **and** `root_ca_key` from the IronKey, then run it again. |
+| "holds an INCOMPLETE root" | An earlier run failed part-way. Remove `root_ca.crt` **and** `root_ca_key` from the stick, then run it again. |
