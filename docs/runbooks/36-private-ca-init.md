@@ -19,8 +19,7 @@
 > `--profile`-drops-SANs defect was found and the `--template` fix proven. **§1–§3 are now encapsulated
 > in the offline signing kit**
 > (`docs/private-ca-offline-signing/`), which is what the signing machine runs; the sections below keep
-> the reasoning rather than repeat the commands. §4 and §5 remain *plans*. Gate-measured facts are
-> marked **(measured #141)**.
+> the reasoning rather than repeat the commands. §4 and §5 remain *plans*.
 >
 > ⚠ **Order — one-way, purely offline.** Run **after** [runbook 35 §6](35-deploy-step-ca.md), which
 > produces `intermediate_ca.csr`; this runbook signs it and hands back `intermediate_ca.crt`, which
@@ -72,17 +71,6 @@ events, not emergencies.
       place ([01-building-step.md](../private-ca-offline-signing/01-building-step.md)).
 - [ ] A place to record the **root fingerprint** (safe copy / password manager, not the repo).
 
-## Tooling and measurements
-
-| Fact | Source |
-|---|---|
-| Stock `step-ca` contains `tpmkms` — `CGO_ENABLED=0`, statically linked, zero PCSC; no custom build needed | measured #141 |
-| The intermediate key is a **file** (`$STEPPATH/tpm/key-<name>.tpmobj`, JSON), not TPM NV — useless off the `pve` TPM and required on disk for the service | measured #141 |
-| `step ca init` cannot bootstrap a TPM-backed CA; the deploy runbook stages the TPM key + `ca.json` instead | measured #141 |
-| `step certificate create` prompts before overwriting an existing output — fails without a TTY; write to a fresh path and move into place | measured #141 |
-
-Tooling is installed from the current upstream release; no version is pinned.
-
 ---
 
 ## 1. Prepare the offline signing machine
@@ -110,7 +98,9 @@ Run **only on the signing machine**, with the IronKey mounted. `root.sh` wraps
 root-ca --not-after 87600h` and adds the guards a first-run step needs:
 
 - **It refuses to run when a root already exists** — replacing a root is a **root rotation** with a full
-  client re-trust, not a re-run — and it detects a half-written root pair left behind by a crashed run.
+  client re-trust, not a re-run. It also catches a half-written root pair left behind by a crashed run,
+  which matters because `step` will not overwrite an existing output without a TTY, so simply re-running
+  the raw command is not a way out.
 - **It asserts the shape** before you leave the signing machine: `CA:TRUE` with `pathlen` ≥ 1, key
   usage `certSign` + `crlSign`, 10-year validity, and that the key file is actually `ENCRYPTED`.
 - **It prints the fingerprint** to record, and stops rather than let you carry on if a check fails.
@@ -240,8 +230,7 @@ Recovery is the same flow on demand:
 
 Executed on: **never** — no ceremony has been run against the real IronKey. §1–§3's mechanics are
 rehearsed and encapsulated in the kit (`docs/private-ca-offline-signing/`), which is what the signing
-machine runs; record the date and each result when the real ceremony is first performed, and update the
-measured/planned labels above as facts are confirmed.
+machine runs; record the date and each result here when the real ceremony is first performed.
 
 - [ ] §1 signing machine air-gapped; kit on the stick with `step` in place; `./step version` runs
 - [ ] §2 root created with `CA:TRUE`, `pathlen:1`, ~10y; stored only on the IronKey; fingerprint and passphrase in the safe
