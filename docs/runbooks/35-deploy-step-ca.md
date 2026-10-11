@@ -120,10 +120,6 @@ ls -l /dev/tpmrm0        # owner must now be 100000:100000
 - A **privileged** container avoids the ownership change, at the cost of the isolation the unprivileged
   shape exists for — not used here.
 
-> **Done when.** `ls -l /dev/tpmrm0` shows `100000:100000`; after `reboot` it still does.
-
-> **To undo.** `rm /etc/udev/rules.d/60-tpm-lxc.rules`, reload rules, `chown root:root /dev/tpmrm0`.
-
 > **Execution record — 2026-10-11 (`pve`).** Rule written, then `udevadm control --reload-rules` and
 > `udevadm trigger --action=add --subsystem-match=tpmrm`:
 > `/dev/tpmrm0` → `crw------- 100000 100000 252, 65536` ✅ (`/dev/tpm0` left `root:root`, unused).
@@ -182,12 +178,6 @@ pct exec 215 -- ls -l /dev/tpmrm0     # present and owned by container root
 - The device numbers must match §1's host reading; update the config if the host differs.
 - Keep the Proxmox network **Firewall** flag at `0` — the boundary is the in-container UFW (§4).
 
-> **Done when.** `pct status 215` → `running`; `/dev/tpmrm0` visible inside and owned by container
-> root; `systemctl --failed` inside is **empty**; `findmnt` shows `/tmp`, `/run/lock` and
-> `/dev/mqueue` mounted with `nosuid,nodev`.
-
-> **To undo.** `pct stop 215 && pct destroy 215`; remove the udev rule (§1 backout).
-
 > **Execution record — 2026-10-11 (`pve`).** Guest created, passthrough appended, started. `pct
 > status` → `running`; `systemctl --failed` → **0 units** (`0 loaded units listed`); `findmnt` →
 > `/tmp` `rw,nosuid,nodev,nr_inodes=1048576`, `/run/lock` `rw,nosuid,nodev,noexec,size=5120k`,
@@ -227,10 +217,6 @@ passwd -l fleetadm
 ```sh
 ssh fleetadm@192.168.2.215 'sudo -n whoami'   # → root
 ```
-
-> **Done when.** `ssh fleetadm@192.168.2.215 'sudo -n whoami'` → `root`, key-only.
-
-> **To undo.** `pct destroy 215` (§2) removes the account with the container.
 
 > **Execution record — 2026-10-11.** Account verified: `authorized_keys` matches
 > `ansible/roles/common/files/ssh/fleetadm.pub` (compared *before* installing — it is current),
@@ -288,11 +274,6 @@ ansible-playbook ansible/playbooks/playbook-ca.yml --diff
   other LAN node ([ADR 36](../decisions/36-log-collector-fluentbit.md)); the store password comes from
   AKV at playbook runtime.
 
-> **Done when.** Clean `PLAY RECAP`; UFW active with `22` + `9000` allowed from `192.168.2.0/24`;
-> `avahi-daemon` and `fluent-bit` running; `systemctl --failed` empty.
-
-> **To undo.** Re-run with the previous inventory/host_vars.
-
 > **Execution record — 2026-10-11.** `ansible-playbook ansible/playbooks/playbook-ca.yml --diff` →
 > `ca : ok=39 changed=25 unreachable=0 failed=0 skipped=2 rescued=0 ignored=0`, no warnings (the two
 > skips are the eMMC-only Fluent Bit tmpfs tasks). Verified on the guest: hostname `ca`; `ufw status`
@@ -321,11 +302,6 @@ The role writes `homelab-bysxdb-kv/step-ca-provisioner-password` to a **root-onl
 secret never appears in the unit's environment or on a command line
 ([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md)). **Rotation**: re-run with `-Force`,
 then re-run the workload playbook (§6).
-
-> **Done when.** `Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name step-ca-provisioner-password`
-> reports the secret, `Enabled: True`; the value is never printed.
-
-> **To undo.** Delete the secret (`Remove-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name step-ca-provisioner-password -Force`) and re-run the workload; nothing else depends on the value.
 
 > **Execution record — 2026-10-11.** The secret was **absent** before this run. `./scripts/New-HomelabStepCaPassword.ps1`
 > → `Secret 'step-ca-provisioner-password' provisioned in 'homelab-bysxdb-kv'`. Read back:
@@ -394,7 +370,7 @@ ansible-playbook ansible/workloads/step-ca/step-ca-playbook.yml --diff
   - **no `--no-password`** — unnecessary once no key file is written.
 
   **This task must be re-runnable without recreating the key** — the annual re-sign
-  ([runbook 36 §4](36-private-ca-init.md)) re-runs it to produce a fresh CSR from the *same* TPM key,
+  ([runbook 36 §3](36-private-ca-init.md)) re-runs it to produce a fresh CSR from the *same* TPM key,
   so the role removes the existing CSR first when a renewal is forced (the CLI will not overwrite an
   existing output without a TTY).
 - **`ca.json`** — templated with the TPM key and the **pinned** storage directory (measured #141),
@@ -426,12 +402,6 @@ ansible-playbook ansible/workloads/step-ca/step-ca-playbook.yml --diff
 - **Re-runnable** — the TPM key is create-once (never recreated); the CSR is create-only unless
   `step_ca_csr_force=true`; the service starts only once both certificates exist. A routine run cannot
   destroy the key or clobber a CSR awaiting signing.
-
-> **Done when.** `step kms` lists `homelab-intermediate-ca`; the `.tpmobj` and `intermediate_ca.csr`
-> exist; `ca.json` carries the `kms` block; `step-ca` is **not** running (no certificate yet); no
-> `intermediate_ca_key` file exists.
-
-> **To undo.** `pct destroy 215` (§2); nothing is trusted yet.
 
 > **Execution record — 2026-10-11.** Took three runs. The TPM key was created on the first attempt
 > (`Create the intermediate CA key in the TPM` → `changed`), then the CSR task failed twice more:
@@ -475,8 +445,12 @@ CA=https://192.168.2.215:9000
 ROOT=/etc/step-ca/certs/root_ca.crt
 
 # health + the ACME directory the reverse proxy (#142) will point at
-step ca health --ca-url "$CA" --root "$ROOT"
+step ca health --ca-url "$CA" --root "$ROOT"    # → {"status":"ok"}
 curl -sk "$CA/acme/acme/directory"
+
+# the kit's signature kept CA:TRUE, pathlen:0 and both SANs (`--profile` signing drops the SANs, §6)
+step certificate inspect /etc/step-ca/certs/intermediate_ca.crt --format json \
+  | grep -E '"is_ca"|"max_path_len"|"dns_names"|"ip_addresses"'
 
 # JWK-provisioner smoke test — issues a leaf via the admin provisioner and chain-verifies it
 # (use the IP; nothing resolves ca.internal yet). This is NOT an ACME issuance check: real ACME
@@ -502,31 +476,16 @@ ssh fleetadm@192.168.2.215 'systemctl is-active step-ca && ls -l /dev/tpmrm0'
 **Idempotency** — a second `ansible-playbook ansible/workloads/step-ca/step-ca-playbook.yml --diff`
 must report no changes.
 
-> **Done when.**
-
-> | Check | Result |
-> |---|---|
-> | Intermediate cert shape | `CA:TRUE, pathlen:0`; key usage `certSign, crlSign`; SANs `DNS:ca.internal` + `IP Address:192.168.2.215` |
-> | `step ca health` | `{"status":"ok"}` |
-> | ACME directory | JSON with `newNonce`/`newAccount`/… |
-> | JWK leaf issued + verified | chain `leaf ← Homelab Intermediate CA ← Homelab Internal CA` |
-> | Plaintext request | refused (no cleartext service) |
-> | In-LXC UFW | `22` + `9000` ALLOW IN `192.168.2.0/24` |
-> | Reboot | service active, `/dev/tpmrm0` owned by container root, leaf re-issues |
-> | Idempotency | re-run reports no changes |
-
-> **To undo.** `systemctl disable --now step-ca`; the offline root and client trust are untouched.
-
 ## 8. Operations
 
 - **Leaves auto-renew** — 24 h default, 7 d maximum; the reverse proxy renews against the ACME
   directory ([#142](https://github.com/jaroslaw-bagnicki/Homelab/issues/142)). No CRL/OCSP: revocation
   is by short lifetime (ADR 38's accepted residual).
-- **Annual intermediate re-sign** — [runbook 36 §4](36-private-ca-init.md): re-run §6's CSR task for a
+- **Annual intermediate re-sign** — [runbook 36 §3](36-private-ca-init.md): re-run §6's CSR task for a
   fresh CSR from the same TPM key, sign offline, then re-run §7. No new key, no new client trust.
 - **PTT key-loss hazard** — a BIOS update, `Clear PTT`, or NVRAM reset destroys the sealed key. Run the
-  workload with `-e step_ca_reset=true` to clear the stale blob/CSR/certificate, then follow
-  [runbook 36 §5](36-private-ca-init.md). The root is unaffected.
+  workload with `-e step_ca_reset=true` to clear the stale blob/CSR/certificate, sign the fresh CSR
+  offline ([runbook 36 §2](36-private-ca-init.md)), then re-run §7. The root is unaffected.
 - **Name resolution** — nothing resolves `ca.internal` yet (resolver is
   [idea 10](../ideas/10-internal-ca-dns-stack.md)); until then use the IP or a hosts entry.
 - **Out of scope** — proxy wiring [#142](https://github.com/jaroslaw-bagnicki/Homelab/issues/142),

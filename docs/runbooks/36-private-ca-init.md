@@ -9,8 +9,8 @@
 > produces the certificate request, and [§7](35-deploy-step-ca.md), which installs the signed
 > certificate. Steps 1 and 2 are carried out by the
 > [offline signing kit](../private-ca-offline-signing/README.md), and have only ever been tested with a
-> throwaway key and a fake IronKey. Steps 3 and 4 have never been run. Sending the root certificate out
-> to the fleet is [#144](https://github.com/jaroslaw-bagnicki/Homelab/issues/144), not covered here.
+> throwaway key and a fake IronKey. Step 3 has never been run. Sending the root certificate out to the
+> fleet is [#144](https://github.com/jaroslaw-bagnicki/Homelab/issues/144), not covered here.
 
 ## Why
 
@@ -26,9 +26,8 @@ intermediate, and if `pve` or its TPM dies the root is untouched — the fix is 
 with the same root, not to hand every client a new root to trust. That only holds as long as the root
 key is created and used offline.
 
-The `pve` TPM is Intel PTT firmware rather than a separate chip, so a BIOS update, a `Clear PTT` or an
-NVRAM reset destroys the sealed key ([research 37 §5](../research/37-tpm2-hardware-and-fleet.md)). The
-annual re-sign in step 3 and the recovery in step 4 are therefore expected events, not emergencies.
+The `pve` TPM seals the intermediate key so it cannot be copied out
+([research 37 §5](../research/37-tpm2-hardware-and-fleet.md)).
 
 ## Prerequisites
 
@@ -98,38 +97,9 @@ Nothing else changes. No new key, no new root, and no client has to be told anyt
 client already trusts the same root. Set a reminder about 30 days before expiry; the current expiry is in
 `step certificate inspect intermediate_ca.crt`.
 
-> **Done when.** The new certificate chains to the root ([runbook 35 §7](35-deploy-step-ca.md)); the old
-> one is retired only after that; the new expiry is recorded.
-
-> **To undo.** Put the previous `intermediate_ca.crt` back before it expires, then repeat step 2 and
-> [runbook 35 §7](35-deploy-step-ca.md).
-
-## 4. Recovering from a lost TPM key
-
-The `pve` TPM is Intel PTT firmware rather than a separate chip, so any of these destroys the sealed
-key:
-
-- a BIOS or firmware update,
-- `Clear PTT` in the BIOS (**Security → PTT security → Clear PTT**),
-- an NVRAM reset.
-
-The recovery is the same sequence, run when it happens:
-
-1. On the controller, run the workload with `-e step_ca_reset=true`
-   ([runbook 35 §6](35-deploy-step-ca.md)). This clears the stale TPM blob, the old certificate request
-   and the old certificate, which the create guards would otherwise keep, then creates a **new**
-   intermediate key in the TPM and produces a matching request.
-2. Sign it with the **same** root — the kit's `./sign.sh /mnt/ironkey`
-   ([03-signing-csr.md](../private-ca-offline-signing/03-signing-csr.md)).
-3. Install the certificate that comes back and run the workload again
-   ([runbook 35 §7](35-deploy-step-ca.md)); the role restarts `step-ca`.
-
-The root is unaffected, so no client has to be told anything. A wiped TPM costs a re-signing, not a
-re-trust. Move the annual reminder afterwards.
-
-> **Done when.** The CA issues certificates again, and they chain to the root.
-
-> **To undo.** None needed — the root is untouched; repeat the steps if the first attempt fails.
+Keep the old `intermediate_ca.crt` until the new one verifies against the root
+([runbook 35 §7](35-deploy-step-ca.md)) — it is the way back if the signing is wrong, and it stays
+valid until it expires.
 
 ---
 
@@ -142,7 +112,6 @@ ceremony is first performed.
 - [ ] Step 1: root created, every check passed, fingerprint and passphrase written into the safe
 - [ ] Step 2: certificate signed, every check passed, IronKey back in the safe
 - [ ] Step 3: annual reminder set
-- [ ] Step 4: understood
 
 ## Follow-ups
 
