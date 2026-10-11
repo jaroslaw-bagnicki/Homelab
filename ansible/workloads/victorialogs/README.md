@@ -17,18 +17,23 @@ see [research 33 §4](../../../docs/research/33-centralized-logging-victorialogs
 The store is:
 
 - A single `victorialogs` container (`victoriametrics/victoria-logs`, tag-pinned) listening on
-  **`:9428`** — `docker run`-simple, no chunk store, no external dependencies.
+  **`:9428`** (HTTPS ingest + UI — TLS-only) — `docker run`-simple, no chunk store, no external dependencies.
+- A **TLS syslog listener on `:6514`** (`-syslog.listenAddr.tcp=:6514 -syslog.tls …`) for the
+  **OPNsense router's** syslog-ng. It is **unauthenticated** — client-cert mTLS is VictoriaLogs
+  Enterprise-only — so the in-LXC UFW LAN rule is the whole boundary
+  ([ADR 35 amendment](../../../docs/decisions/35-log-store-victorialogs.md)).
 - **HTTPS only** — native TLS (`-tls`, `-tlsCertFile`, `-tlsKeyFile`) with a self-signed certificate
   generated on the host. Plaintext HTTP is prohibited on the LAN ([ADR 34](../../../docs/decisions/34-lan-tls-only.md)).
-- **Authenticated from day one** — HTTP basic auth (`-httpAuth.username` / `-httpAuth.password`); the
+- **Authenticated from day one (HTTPS ingest)** — HTTP basic auth (`-httpAuth.username` / `-httpAuth.password`); the
   password is fetched from Azure Key Vault `homelab-bysxdb-kv` at playbook runtime and written to a
   **root-only `file://` password file** (`-httpAuth.password=file://…`), so it never appears in the
-  container's argument list or environment. No credential is committed.
+  container's argument list or environment. No credential is committed. *(The **syslog listener is the
+  one unauthenticated path** — see above.)*
 - **Retention-bounded** — `-retentionPeriod=30d` **plus** `-retention.maxDiskUsagePercent` and
   `-storage.minFreeDiskSpaceBytes`, so a full disk cannot put the store into read-only mode.
 - **Memory-bounded** — `-memory.allowedPercent` inside the LXC's ceiling, so its caches cannot
   starve the neighbouring smart-home services on the 8 GB node.
-- **LAN-only** — enforced by UFW **inside the LXC** (the `security` base role, `9428` from
+- **LAN-only** — enforced by UFW **inside the LXC** (the `security` base role, `9428` + `6514` from
   `192.168.2.0/24`). The container runs `network_mode: host` so UFW's INPUT chain filters the port — a
   Docker-*published* port is forwarded through Docker's iptables path and would **bypass UFW**
   ([ADR 34](../../../docs/decisions/34-lan-tls-only.md)).
@@ -40,7 +45,7 @@ The store is:
 
 | Service | Image | Port binding | Owned by |
 |---|---|---|---|
-| `victorialogs` | `victoriametrics/victoria-logs:v1.52.0` | host network (`:9428`) | `victorialogs_store` role |
+| `victorialogs` | `victoriametrics/victoria-logs:v1.52.0` | host network (`:9428` HTTPS (TLS-only), `:6514` syslog-TLS) | `victorialogs_store` role |
 
 ## Host on-disk layout
 
@@ -68,6 +73,7 @@ password at `/etc/victorialogs/password` (read-only).
 | `/insert/loki/api/v1/push` | Loki push API |
 | `/insert/opentelemetry/v1/logs` | OTLP logs |
 | `/metrics` | VictoriaLogs' own metrics (protected by `-httpAuth.*`; the [#132](https://github.com/jaroslaw-bagnicki/Homelab/issues/132) monitoring job is future work) |
+| syslog `:6514` (TLS) | TLS syslog ingest for the OPNsense router — **unauthenticated**; the LAN UFW rule is the boundary |
 
 ## Secrets
 
@@ -121,7 +127,8 @@ per runbook 33 §1–§3.
   `victorialogs_image`, `victorialogs_username`, `victorialogs_retention_period`,
   `victorialogs_max_disk_usage_percent`, `victorialogs_min_free_disk_space`,
   `victorialogs_memory_allowed_percent`, `victorialogs_tls_days`, `victorialogs_keyvault_name`,
-  `victorialogs_password_secret_name` — role defaults.
+  `victorialogs_password_secret_name`, `victorialogs_syslog_enabled`,
+  `victorialogs_syslog_listen_port`, `victorialogs_syslog_use_remote_ip` — role defaults.
 - `victorialogs_password` — normally fetched from Key Vault; set it to skip the lookup in tests.
 
 ## Operational runbook

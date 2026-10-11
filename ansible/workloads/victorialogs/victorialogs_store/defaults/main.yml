@@ -10,6 +10,12 @@ victorialogs_max_disk_usage_percent: 80
 victorialogs_min_free_disk_space: 2GiB
 victorialogs_memory_allowed_percent: 60
 victorialogs_tls_days: 3650
+# Syslog listener (TLS) — the OPNsense router ships its logs here via syslog-ng
+# (ADR 36 amendment / research 34 §8). Reuses the store's TLS certificate. NO authentication
+# (mTLS is VictoriaLogs Enterprise-only), so the LAN rule is the boundary. 6514 = syslog-over-TLS.
+victorialogs_syslog_enabled: true
+victorialogs_syslog_listen_port: 6514
+victorialogs_syslog_use_remote_ip: true
 victorialogs_keyvault_name: homelab-bysxdb-kv
 victorialogs_password_secret_name: victorialogs-basic-auth-password
 # Override to skip the Key Vault lookup (tests); normally left empty.

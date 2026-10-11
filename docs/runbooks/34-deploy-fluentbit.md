@@ -8,7 +8,9 @@
 >
 > ⚠ **Scope.** This is the **collector**; the store is [runbook 33](33-deploy-victorialogs.md)
 > ([#123](https://github.com/jaroslaw-bagnicki/Homelab/issues/123)) and must be live first. The
-> OPNsense router is out of scope ([research 34 §8](../research/34-log-collector-options.md)).
+> OPNsense router is **not a Fluent Bit target** — its logs reach the store via **syslog-ng**
+> ([runbook 35 §13](35-deploy-opnsense.md) · [runbook 33 §7](33-deploy-victorialogs.md) ·
+> [research 34 §8](../research/34-log-collector-options.md)).
 >
 > ⚠ **Execution note.** Author on the `feat/fluentbit-role` branch; **run only after CR**. The LAN
 > nodes are reached from a workstation on `192.168.2.0/24` with the fleet key loaded
@@ -36,6 +38,9 @@ the collector chosen in [ADR 36](../decisions/36-log-collector-fluentbit.md).
   `_stream_fields` / `_msg_field` / `_time_field`, `Format json_lines`, ISO8601 event time, `tls On` +
   `tls.verify Off` (self-signed, [ADR 34](../decisions/34-lan-tls-only.md)), basic auth `vlogs` with
   the password from Key Vault, gzip.
+- **Flush interval — 5 s** (`fluentbit_flush`), up from Fluent Bit's 1 s default: records batch into
+  fewer, larger requests to the store (less overhead on the weak nodes and the store) at the cost of up
+  to 5 s before a log is queryable — fine for a 30-day search store, not for near-real-time tailing.
 - **Severity** — a Lua filter maps journald's numeric `PRIORITY` to the readable `level` field the store
   displays and filters on (`0`-`7` → `emerg`, `alert`, `crit`, `error`, `warn`, `notice`, `info`, `debug`).
   `level` is a regular field, never a stream field — it changes per line.
