@@ -409,6 +409,20 @@ shred -u "$VL_NETRC"
 > `Europe/Warsaw`) — it is not a per-listener flag — and the syslog-ng sender is configured in
 > [runbook 35 §13](35-deploy-opnsense.md).
 
+> **Verified 2026-10-11 — passed** (store-side listener; the router's destination is still off).
+>
+> | Check | Result |
+> |---|---|
+> | Listener bound | `ss -lntp` in the LXC → `0.0.0.0:6514` + `0.0.0.0:9428`, both `victoria-logs` |
+> | Effective flags | `-syslog.listenAddr.tcp=:6514 -syslog.tls -syslog.tlsCertFile=… -syslog.tlsKeyFile=… -syslog.useRemoteIP.tcp=true` |
+> | In-LXC UFW | `9428/tcp` + `6514/tcp` ALLOW IN `192.168.2.0/24` (the `6514` rule lands only with `playbook-logs.yml` — see the remark above) |
+> | RFC5424 round-trip | `<13>1 2026-10-11T12:00:00Z gw syslog-test - - - hello syslog listener` sent over TLS, then queried back: `_msg:"hello syslog listener"`, `app_name=syslog-test`, `hostname=gw`, `facility=user`, `level=notice`, `severity=5`, `format=rfc5424` |
+> | Provenance | `remote_ip` = the **sender's** address (the test's source, `192.168.2.228` — the controller), never the router's |
+>
+> Deploy: `victorialogs-playbook.yml --diff` → `ok=11 changed=3 failed=0` (Compose gains the `-syslog.*` args; container recreated), then `playbook-logs.yml --diff` → `ok=48 changed=4 failed=0` for the `6514` UFW rule.
+>
+> **`openssl s_client -quiet -connect …:6514` hangs** — the server holds the connection open; the run above wrapped it in `timeout 5` (or send from a socket that closes after writing).
+
 ## 8. Future extension (metrics / traces)
 
 `vtstack` is deliberately named and laid out for the **Victoria stack** — one LXC, one Compose
@@ -423,7 +437,7 @@ which must also revisit the `pve` resource budget and the `vmauth` question
 ## Verification Checklist
 
 Executed on: **2026-09-27** — §1–§6 executed, off-LAN refusal **deferred** (§6) — record the
-`ansible-playbook --diff` summary and each result.
+`ansible-playbook --diff` summary and each result. **§7 executed 2026-10-11** (store-side listener only).
 
 - [x] §1 LXC 214 created — unprivileged, `vtstack`, `192.168.2.214`, `nesting=1,fuse=1`, `onboot 1`, `systemctl --failed` empty inside
 - [x] §2 `fleetadm` key-only SSH works; `sudo -n whoami` → root
@@ -432,7 +446,7 @@ Executed on: **2026-09-27** — §1–§6 executed, off-LAN refusal **deferred**
 - [x] §5 store up; HTTPS `/select/vmui` → **302** (add `-L` for **200**); unauthenticated → **401**; plaintext refused (**400**)
 - [x] §5 `docker inspect` shows the retention/disk/memory flags
 - [x] §5 ingest smoke test (jsonline **and** ES `_bulk`) visible in a query
-- [ ] §7 the **syslog listener** (`:6514`) accepts a TLS test line and returns it in a query
+- [x] §7 the **syslog listener** (`:6514`) accepts a TLS test line and returns it in a query — **2026-10-11** (router destination still off)
 - [ ] §6 **off-LAN request refused** (ADR 34 acceptance criterion) — ⏸ **deferred 2026-09-27**, no routable non-LAN source (see §6)
 - [x] §6 survives `pct reboot 214`; `onboot 1` confirmed
 - [x] §6 idempotent — re-run leaves the container unrecreated (`Restarts=0`, same ID); the `pull: always` deploy task reports `changed` by design
