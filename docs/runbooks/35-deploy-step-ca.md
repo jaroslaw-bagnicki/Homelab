@@ -9,11 +9,11 @@
 > [research 36 §5](../research/36-step-ca-machine-identity.md); measured gate:
 > [#141](https://github.com/jaroslaw-bagnicki/Homelab/issues/141).
 >
-> ⚠ **This runbook is unexecuted.** It is written from ADR 38, research 36–37, and the
-> [#141](https://github.com/jaroslaw-bagnicki/Homelab/issues/141) gate — which measured the TPM and LXC
-> mechanics on `pve` — but **no step below has been run as written**. Every command is a *plan*; treat
-> each as unverified until the first execution records its result. Gate-measured facts are marked
-> **(measured #141)**.
+> ⚠ **Partly executed — §1–§6 run 2026-10-11.** Each section carries an **Execution record** with the
+> output observed on the first run. §7–§8 are still unrun; treat those commands as *plans* until
+> their record is written. The runbook was written from ADR 38, research 36–37, and the
+> [#141](https://github.com/jaroslaw-bagnicki/Homelab/issues/141) gate, which measured the TPM and LXC
+> mechanics on `pve` — gate-measured facts are marked **(measured #141)**.
 >
 > ⚠ **Order — one-way.** Run **§1–§6 first**, then the offline ceremony
 > ([runbook 36](36-private-ca-init.md)), then **resume at §7**. §1–§6 need no root key and end by
@@ -47,9 +47,9 @@ dedicated unprivileged LXC keeps it off the Proxmox host and away from the edge 
 
 ## What changes
 
-- **LXC 215 `ca`** — unprivileged, **Debian 13**, static `192.168.2.215`, `onboot 1`, 1 vCPU /
-  512 MiB / 8 GiB rootfs, with `/dev/tpm0` + `/dev/tpmrm0` passed through. Next free guest in the
-  `21x` block ([ADR 31](../decisions/31-static-address-scheme.md) — VMID = last octet).
+- **LXC 215 `ca`** — unprivileged, **Debian 13**, `nesting=1`, static `192.168.2.215`, `onboot 1`,
+  1 vCPU / 512 MiB / 8 GiB rootfs, with `/dev/tpmrm0` passed through. Next free guest in the `21x`
+  block ([ADR 31](../decisions/31-static-address-scheme.md) — VMID = last octet).
 - **Reboot-durable TPM device ownership on `pve`** — a udev rule, because an unprivileged container's
   root maps to host subuid `100000` and cannot open a `root:root 0600` device (measured #141).
 - **Base roles** — `common` (hostname, UTC, NTP, **Avahi**), `security` (UFW default-deny; SSH + CA
@@ -90,27 +90,48 @@ that is `root:root 0600` on the host appears inside the container as `nobody` an
 
 ```sh
 # on pve
-ls -l /dev/tpm*        # read the majors/minors off the host — do not assume
+ls -l /dev/tpmrm0        # read the major/minor off the host — do not assume
 
+# Only the resource-manager node is used: the CA's tpmkms opens /dev/tpmrm0, and /dev/tpm0 is
+# never touched by anything, so it gets no rule. Note /dev/tpmrm0 is its own SUBSYSTEM ("tpmrm",
+# not "tpm") — a rule written as SUBSYSTEM=="tpm" matches only tpm0 and leaves the node the CA
+# uses at root:root (measured 2026-10-11).
 cat >/etc/udev/rules.d/60-tpm-lxc.rules <<'EOF'
-SUBSYSTEM=="tpm", KERNEL=="tpm*", RUN+="/bin/chown 100000:100000 /dev/%k"
+SUBSYSTEM=="tpmrm", KERNEL=="tpm*", RUN+="/bin/chown 100000:100000 /dev/%k"
 EOF
 
 udevadm control --reload-rules
-udevadm trigger --subsystem-match=tpm
-ls -l /dev/tpm0 /dev/tpmrm0        # owner must now be 100000:100000
+# `udevadm trigger` defaults to the "change" action, which does NOT run RUN keys — ownership only
+# lands with --action=add (measured 2026-10-11).
+udevadm trigger --action=add --subsystem-match=tpmrm
+ls -l /dev/tpmrm0        # owner must now be 100000:100000
 ```
 
+- **Only `tpmrm` is owned.** `/dev/tpmrm0` is a *separate subsystem* (`tpmrm`, not `tpm`) **and** the
+  only node the CA opens; `/dev/tpm0` is passed to no process and gets no rule. A rule written as
+  `SUBSYSTEM=="tpm"` therefore matches `tpm0` only and leaves the node the CA actually uses at
+  `root:root` (measured 2026-10-11).
+- **`--action=add` is required.** A bare `udevadm trigger` (action `change`) does not execute `RUN`
+  keys, so the rule is installed but nothing is chowned until the next boot (measured 2026-10-11).
 - The udev rule is the **persistent** form of the one-shot `chown 100000:100000 /dev/tpmrm0` the gate
   used; without it the ownership is lost on reboot.
-- The gate read `/dev/tpm0` as `10:224` and `/dev/tpmrm0` as `252:65536`; always `ls -l` on the host
-  (the `252` major is dynamic). Those numbers are used in the LXC config (§2).
+- The gate read `/dev/tpmrm0` as `252:65536`; always `ls -l` on the host (the `252` major is dynamic).
+  That pair is used in the LXC config (§2).
 - A **privileged** container avoids the ownership change, at the cost of the isolation the unprivileged
   shape exists for — not used here.
 
-> **Acceptance.** `ls -l /dev/tpm0 /dev/tpmrm0` shows `100000:100000`; after `reboot` they still do.
+> **Acceptance.** `ls -l /dev/tpmrm0` shows `100000:100000`; after `reboot` it still does.
 
-> **Backout.** `rm /etc/udev/rules.d/60-tpm-lxc.rules`, reload rules, `chown root:root /dev/tpm*`.
+> **Backout.** `rm /etc/udev/rules.d/60-tpm-lxc.rules`, reload rules, `chown root:root /dev/tpmrm0`.
+
+> **Execution record — 2026-10-11 (`pve`).** Rule written, then `udevadm control --reload-rules` and
+> `udevadm trigger --action=add --subsystem-match=tpmrm`:
+> `/dev/tpmrm0` → `crw------- 100000 100000 252, 65536` ✅ (`/dev/tpm0` left `root:root`, unused).
+> Two corrections were needed and are folded into the block above: the rule must match the `tpmrm`
+> subsystem (the node the CA opens), and `udevadm trigger` must use `--action=add` — the default
+> `change` action does not run `RUN` at all. **Reboot persistence proven same day** — after a `pve`
+> reboot the rule fired on its own: `/dev/tpmrm0` → `100000:100000`, `/dev/tpm0` → `root:root` (no
+> rule covers it, as intended).
 
 ## 2. Create LXC 215 `ca`
 
@@ -124,13 +145,23 @@ pveam list local
 
 pct create 215 local:vztmpl/<template> \
   --hostname ca --unprivileged 1 \
+  --features nesting=1 \
   --cores 1 --memory 512 --swap 512 \
   --rootfs local-lvm:8 \
   --net0 name=eth0,bridge=vmbr0,ip=192.168.2.215/24,gw=192.168.2.1 \
   --onboot 1
 ```
 
-- **No `nesting`/`fuse`** — `step-ca` is native, not Docker.
+- **`nesting=1` is required** (measured 2026-10-11). Debian 13's systemd (257) mounts its own `/tmp`,
+  `/run/lock` and `/dev/mqueue`; in an unprivileged container **without** nesting those three units
+  fail — `mount: /run/lock: tmpfs already mounted on /dev/shm`, because LXC already holds a tmpfs
+  there. The cost is not cosmetic: without `tmp.mount`, `/tmp` is a plain directory on the rootfs, so
+  it is **not `nosuid`/`nodev`**, not RAM-backed and not wiped on reboot — and because `/dev/tpmrm0`
+  is owned by container root, a setuid binary dropped in `/tmp` is a route to the CA's key. With
+  nesting the three mounts are restored with their intended options (`nosuid,nodev`; `noexec` + a
+  5 MiB cap on `/run/lock`) and `systemctl --failed` is genuinely empty. Measured against `vtstack`,
+  which runs `nesting=1`.
+- **No `fuse=1`** — `step-ca` is native, not Docker.
 - **`--onboot 1`** — the CA must return on its own after a host reboot.
 - `--rootfs local-lvm:8` is a starting estimate; `step-ca` and its state are small, re-check after
   deployment.
@@ -139,9 +170,7 @@ pct create 215 local:vztmpl/<template> \
 Append the TPM passthrough to `/etc/pve/lxc/215.conf`:
 
 ```ini
-lxc.cgroup2.devices.allow: c 10:224 rwm       # /dev/tpm0
 lxc.cgroup2.devices.allow: c 252:65536 rwm    # /dev/tpmrm0
-lxc.mount.entry: /dev/tpm0   dev/tpm0   none bind,optional,create=file
 lxc.mount.entry: /dev/tpmrm0 dev/tpmrm0 none bind,optional,create=file
 ```
 
@@ -153,10 +182,25 @@ pct exec 215 -- ls -l /dev/tpmrm0     # present and owned by container root
 - The device numbers must match §1's host reading; update the config if the host differs.
 - Keep the Proxmox network **Firewall** flag at `0` — the boundary is the in-container UFW (§4).
 
-> **Acceptance.** `pct status 215` → `running`; `/dev/tpmrm0` visible inside; `systemctl --failed`
-> inside is empty.
+> **Acceptance.** `pct status 215` → `running`; `/dev/tpmrm0` visible inside and owned by container
+> root; `systemctl --failed` inside is **empty**; `findmnt` shows `/tmp`, `/run/lock` and
+> `/dev/mqueue` mounted with `nosuid,nodev`.
 
 > **Backout.** `pct stop 215 && pct destroy 215`; remove the udev rule (§1 backout).
+
+> **Execution record — 2026-10-11 (`pve`).** Guest created, passthrough appended, started. `pct
+> status` → `running`; `systemctl --failed` → **0 units** (`0 loaded units listed`); `findmnt` →
+> `/tmp` `rw,nosuid,nodev,nr_inodes=1048576`, `/run/lock` `rw,nosuid,nodev,noexec,size=5120k`,
+> `/dev/mqueue` `rw,nosuid,nodev,noexec`; `/dev/tpmrm0` inside → `crw------- root root 252, 65536` ✅.
+> **Two defects the first run exposed:** (1) with no `nesting=1` all three mount units fail and `/tmp`
+> stays a rootfs directory without `nosuid`/`nodev` — see the bullet above; (2) the `tpm0` passthrough
+> this runbook originally carried was dead weight (nothing opens it) and has been removed.
+>
+> **Post-reboot (same day, after a `pve` reboot).** `onboot 1` brought the guest up (`pct list` →
+> `running`; note PVE starts guests a little *after* the host is reachable, so an immediate check can
+> briefly see `stopped`). Inside: `/dev/tpmrm0` → `crw------- root root 252, 65536`,
+> `systemctl --failed` → 0 units, and `/tmp`, `/run/lock`, `/dev/mqueue` still mounted with
+> `nosuid,nodev`; eth0 `.215`; `ssh fleetadm@192.168.2.215 'sudo -n whoami'` → `root`.
 
 ## 3. `fleetadm` bootstrap (unblock Ansible)
 
@@ -187,6 +231,13 @@ ssh fleetadm@192.168.2.215 'sudo -n whoami'   # → root
 > **Acceptance.** `ssh fleetadm@192.168.2.215 'sudo -n whoami'` → `root`, key-only.
 
 > **Backout.** `pct destroy 215` (§2) removes the account with the container.
+
+> **Execution record — 2026-10-11.** Account verified: `authorized_keys` matches
+> `ansible/roles/common/files/ssh/fleetadm.pub` (compared *before* installing — it is current),
+> `passwd -S fleetadm` → `L`, `/etc/sudoers.d/fleetadm` `0440 root:root`, `~/.ssh` `0700`,
+> `authorized_keys` `0600`. `ssh fleetadm@192.168.2.215 'sudo -n whoami'` → `root`, key-only ✅.
+> Note for §4: `sshd -T` still reports `passwordauthentication yes` — the `security` role is expected
+> to turn that off and must be verified there.
 
 ## 4. Ansible base provision + enrollment
 
@@ -242,6 +293,19 @@ ansible-playbook ansible/playbooks/playbook-ca.yml --diff
 
 > **Backout.** Re-run with the previous inventory/host_vars.
 
+> **Execution record — 2026-10-11.** `ansible-playbook ansible/playbooks/playbook-ca.yml --diff` →
+> `ca : ok=39 changed=25 unreachable=0 failed=0 skipped=2 rescued=0 ignored=0`, no warnings (the two
+> skips are the eMMC-only Fluent Bit tmpfs tasks). Verified on the guest: hostname `ca`; `ufw status`
+> **active**, default *deny incoming*, `22/tcp` + `9000/tcp` ALLOW IN `192.168.2.0/24`, `80/tcp` DENY;
+> `avahi-daemon`, `fluent-bit` and `fail2ban` active; `systemctl --failed` → 0 units; `sshd -T` →
+> `passwordauthentication no`, `kbdinteractiveauthentication no`. **One nuance:** `systemctl is-active
+> ufw` reads `inactive` while `ufw status` reads `active` — the role enables UFW through the CLI
+> rather than `systemctl start`, so the oneshot unit stays `dead` until the next boot even though the
+> rules are live. **Verified by a guest reboot the same day:** after `pct reboot 215` the unit reads
+> `active (exited)` with the same four rules, so the LAN boundary survives a reboot. Probed from the
+> LAN: `:22` returns the OpenSSH banner (allowed), `:80` times out (DROP), and `:9000` is refused —
+> allowed by UFW with nothing listening yet, which is correct before §6.
+
 ## 5. Provision the CA provisioner password
 
 `step-ca` runs its **JWK admin provisioner** under a password — the password decrypts the provisioner
@@ -262,6 +326,12 @@ then re-run the workload playbook (§6).
 > reports the secret, `Enabled: True`; the value is never printed.
 
 > **Backout.** Delete the secret (`Remove-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name step-ca-provisioner-password -Force`) and re-run the workload; nothing else depends on the value.
+
+> **Execution record — 2026-10-11.** The secret was **absent** before this run. `./scripts/New-HomelabStepCaPassword.ps1`
+> → `Secret 'step-ca-provisioner-password' provisioned in 'homelab-bysxdb-kv'`. Read back:
+> `present=True enabled=True created=13:42:02Z expires=(none)`. Only `Enabled` and the timestamps were
+> queried — **the value was never printed**. §6's `Assert Azure controller credentials are set` and
+> Key Vault lookup (measured in the §4 run) confirm the role can read it at deploy time.
 
 ## 6. Provision the `step-ca` workload — tooling, TPM key, CSR
 
@@ -298,24 +368,35 @@ ansible-playbook ansible/workloads/step-ca/step-ca-playbook.yml --diff
   **This is not a private-key file** — it is the sealed blob, useless off this TPM, and required on
   disk for the service to start.
 - **CSR** — emit `intermediate_ca.csr`, signed by the TPM key, for the offline root to sign. The
-  intermediate doubles as step-ca's **TLS server certificate**, so it carries the service SANs
-  (`ca.internal` and `192.168.2.215`) — without them a trusted health/ACME request fails hostname
-  verification:
+  intermediate doubles as step-ca's **TLS server certificate**, so it must end up carrying the service
+  SANs (`ca.internal` and `192.168.2.215`) — without them a trusted health/ACME request fails hostname
+  verification. The SANs are *requested* here, but the signing step is what decides the finished
+  certificate's shape (runbook 36 §3):
 
   ```sh
-  step certificate create "Homelab Intermediate CA" \
-    intermediate_ca.csr intermediate_ca_key.pub \
-    --csr --profile intermediate-ca \
+  step certificate create --csr \
     --san ca.internal --san 192.168.2.215 \
     --kms 'tpmkms:storage-directory=/var/lib/step-ca/tpm' \
-    --key 'tpmkms:name=homelab-intermediate-ca'
+    --key 'tpmkms:name=homelab-intermediate-ca' \
+    "Homelab Intermediate CA" \
+    /etc/step-ca/intermediate_ca.csr
   ```
 
-  The exact `--csr` flag combination is **unverified**; confirm the CSR inspects correctly. **This task
-  must be re-runnable without recreating the key** — the annual re-sign
-  ([runbook 36 §4](36-private-ca-init.md)) re-runs it to produce a fresh CSR from the same TPM key, and
-  the role removes both `intermediate_ca.csr` and `intermediate_ca_key.pub` first (the CLI refuses to
-  overwrite an existing output without a TTY).
+  Three things this invocation must **not** carry — each measured on the first execution, 2026-10-11:
+
+  - **no `--profile`** — a profile describes a certificate being *issued*; with `--csr` the CLI rejects
+    it outright (`flag '--profile' is incompatible with '--csr'`).
+  - **no second output file** — with `--kms`/`--key` the private key already lives in the TPM, so a
+    third positional is read as *“the private-key file to write”*: `step` prompts for a password
+    (which hangs when there is no TTY) and, handed `--no-password`, dies with
+    `cannot serialize type '*cryptoutil.kmsSigner'`. The documented KMS form takes two positionals:
+    subject + CSR.
+  - **no `--no-password`** — unnecessary once no key file is written.
+
+  **This task must be re-runnable without recreating the key** — the annual re-sign
+  ([runbook 36 §4](36-private-ca-init.md)) re-runs it to produce a fresh CSR from the *same* TPM key,
+  so the role removes the existing CSR first when a renewal is forced (the CLI will not overwrite an
+  existing output without a TTY).
 - **`ca.json`** — templated with the TPM key and the **pinned** storage directory (measured #141),
   with the certificate paths the offline ceremony will fill:
 
@@ -351,6 +432,22 @@ ansible-playbook ansible/workloads/step-ca/step-ca-playbook.yml --diff
 > `intermediate_ca_key` file exists.
 
 > **Backout.** `pct destroy 215` (§2); nothing is trusted yet.
+
+> **Execution record — 2026-10-11.** Took three runs. The TPM key was created on the first attempt
+> (`Create the intermediate CA key in the TPM` → `changed`), then the CSR task failed twice more:
+> `flag '--profile' is incompatible with '--csr'`, and then — after `--no-password --insecure` was
+> tried — a **hang**: `step` blocked on a password prompt with `fd 4 -> /dev/tty`, because the third
+> positional made it treat `/etc/step-ca/intermediate_ca_key.pub` as *the private key to write*. The
+> root cause is that positional, not any flag; with the documented two-positional KMS form the CSR
+> was produced immediately. Final state: `step` 0.31.0 / `step-ca` 0.30.2 (+`step-kms-plugin`),
+> checksum-verified install; `/etc/step-ca/{certs,config,db,secrets}` + `secrets/password` 0600;
+> `ca.json` pinning `tpmkms:storage-directory=/var/lib/step-ca/tpm` with the JWK admin + ACME
+> provisioners; `intermediate_ca.csr` (0600, `CN=Homelab Intermediate CA`, ECDSA P-256, SANs
+> `ca.internal` + `192.168.2.215`); the TPM blob; **no** `intermediate_ca_key` file anywhere; unit
+> staged **disabled/inactive**. `pct reboot 215` did not recreate the key (`ok`, not `changed`).
+>
+> The CSR's SANs are only *requested* — the rehearsal in runbook 36 settled that the signing step must
+> be given a template, since `--profile intermediate-ca` silently drops them.
 
 ## 7. Resume — install the signed intermediate and start the CA
 
@@ -409,6 +506,7 @@ must report no changes.
 
 > | Check | Result |
 > |---|---|
+> | Intermediate cert shape | `CA:TRUE, pathlen:0`; key usage `certSign, crlSign`; SANs `DNS:ca.internal` + `IP Address:192.168.2.215` |
 > | `step ca health` | `{"status":"ok"}` |
 > | ACME directory | JSON with `newNonce`/`newAccount`/… |
 > | JWK leaf issued + verified | chain `leaf ← Homelab Intermediate CA ← Homelab Internal CA` |
@@ -439,14 +537,15 @@ must report no changes.
 
 ## Verification Checklist
 
-Executed on: **never** — this runbook is unexecuted. Record the date, the `ansible-playbook --diff`
-summary, and each result when it is first run.
+Executed on: **2026-10-11** (in progress — §1–§6 done; §7 pending). Each section carries
+its own **Execution record** with the observed output.
 
-- [ ] §1 udev rule makes `/dev/tpm*` owned by `100000:100000`; survives reboot
-- [ ] §2 LXC 215 `ca` created unprivileged, `.215`, TPM passed through
-- [ ] §3 `fleetadm` key-only SSH works; `sudo -n whoami` → root
-- [ ] §4 `playbook-ca.yml` applied cleanly; UFW `22` + `9000`; Avahi + Fluent Bit running
-- [ ] §6 step-ca workload applied; TPM key created; CSR emitted; service **not** started
+- [x] §1 udev rule makes `/dev/tpmrm0` owned by `100000:100000`; survived a `pve` reboot
+- [x] §2 LXC 215 `ca` created unprivileged + `nesting=1`, `.215`, `/dev/tpmrm0` passed through; `--failed` empty
+- [x] §3 `fleetadm` key-only SSH works; `sudo -n whoami` → root
+- [x] §4 `playbook-ca.yml` applied cleanly; UFW `22` + `9000`; Avahi + Fluent Bit running
+- [x] §5 CA provisioner password provisioned in `homelab-bysxdb-kv`
+- [x] §6 step-ca workload applied; TPM key created; CSR emitted; service **not** started
 - [ ] §7 (after runbook 36) signed intermediate installed; service `active` + `enabled`; ACME directory responds
 - [ ] §7 leaf chain-verified; plaintext refused; survives `pct reboot 215`; idempotent re-run
 - [ ] §8 annual re-sign reminder set; PTT recovery understood

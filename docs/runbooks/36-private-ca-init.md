@@ -9,10 +9,10 @@
 > [research 36 §4–§5](../research/36-step-ca-machine-identity.md); measured gate:
 > [#141](https://github.com/jaroslaw-bagnicki/Homelab/issues/141).
 >
-> ⚠ **This runbook is unexecuted.** It is written from ADR 38, research 36–37, and the
-> [#141](https://github.com/jaroslaw-bagnicki/Homelab/issues/141) gate, but **no step below has been run
-> as written**. Every command is a *plan*; treat each as unverified until the first execution records
-> its result. Gate-measured facts are marked **(measured #141)**.
+> ⚠ **§3's signing mechanic is rehearsed; the rest is unrun.** On 2026-10-11 §3 was exercised on the
+> `ca` guest against a **throwaway software root in `/tmp`** (nothing real touched, no trust
+> distributed) — which is how the `--profile`-drops-SANs defect was found and the `--template` fix
+> proven. §1, §2, §4 and §5 remain *plans*. Gate-measured facts are marked **(measured #141)**.
 >
 > ⚠ **Order — one-way, purely offline.** Run **after** [runbook 35 §6](35-deploy-step-ca.md), which
 > produces `intermediate_ca.csr`; this runbook signs it and hands back `intermediate_ca.crt`, which
@@ -98,6 +98,10 @@ tar -xzf step_linux_amd64.tar.gz
 
 - Install nothing else on the island. The `step-kms-plugin`/`libpcsclite1` requirement is on the
   **CA host** ([runbook 35 §6](35-deploy-step-ca.md)) — the root is an ordinary file on the IronKey.
+- **Carry the CSR and its signing template together.** The island needs *both* `intermediate_ca.csr`
+  and `intermediate-ca.tpl` (§3): the template is what stamps `CA:TRUE` and the SANs onto the signed
+  certificate, so without it the ceremony cannot produce a usable intermediate. The template is
+  versioned at `ansible/workloads/step-ca/files/intermediate-ca.tpl`.
 - Carry the archive on ordinary media; **never the IronKey**, which holds only the root.
 - Unlock the IronKey and mount it. **Never** leave the root key on the island's disk.
 
@@ -137,27 +141,47 @@ step certificate fingerprint /mnt/ironkey/root_ca.crt
 
 ## 3. Offline-sign the intermediate CSR from runbook 35 §6
 
-Carry `intermediate_ca.csr` from the `ca` guest to the island on the ordinary USB stick. Insert the
+Carry **both** `intermediate_ca.csr` and `intermediate-ca.tpl` from the `ca` guest to the island on the
+ordinary USB stick — the template is part of the signing material and travels with the CSR. Insert the
 IronKey, sign the CSR, and return it to the safe.
 
 ```sh
-step certificate sign --profile intermediate-ca --not-after 8760h \
+step certificate sign --template intermediate-ca.tpl --not-after 8760h \
   intermediate_ca.csr \
   /mnt/ironkey/root_ca.crt /mnt/ironkey/root_ca_key \
   > intermediate_ca.crt
 
-step certificate inspect intermediate_ca.crt   # issuer = root CN, ~1 year, CA:TRUE
+step certificate inspect intermediate_ca.crt
 ```
 
+- **`--template`, never `--profile intermediate-ca`.** A profile rebuilds the certificate from its own
+  defaults and **silently drops the CSR's SANs** (measured 2026-10-11). The intermediate doubles as
+  step-ca's TLS server certificate, so a certificate without SANs passes an issuer/validity check and
+  then fails *every* trusted request with a hostname-verification error — including
+  [runbook 35 §7](35-deploy-step-ca.md)'s health check. The template makes the **signer** assert the
+  shape (`CA:TRUE, pathlen:0`; key usage `certSign, crlSign`; SANs `ca.internal`, `192.168.2.215`)
+  rather than inheriting it from the requester.
 - `8760h` = 1 year (ADR 38). The root is used for exactly this operation and nothing else.
 - **Lock/unmount the IronKey and return it to the safe** before the island is powered off.
 - Carry `intermediate_ca.crt` and a copy of `root_ca.crt` back to the `ca` guest — both are public;
   [runbook 35 §7](35-deploy-step-ca.md) installs them and starts the service.
 
-> **Acceptance.** `step certificate inspect intermediate_ca.crt` shows the root as issuer and a
-> ~1-year validity; the IronKey is locked and back in the safe.
+> **Acceptance.** `step certificate inspect intermediate_ca.crt` shows: issuer = the root's CN,
+> ~1-year validity, **`CA:TRUE, pathlen:0`**, and the **Subject Alternative Name**
+> `DNS:ca.internal` + `IP Address:192.168.2.215`. The IronKey is locked and back in the safe.
 
 > **Backout.** Discard the signed certificate and repeat §3. The root key is unaffected.
+
+> **Rehearsal record — 2026-10-11 (`ca` guest, throwaway root in `/tmp`).** Runbook 35 §6's real CSR
+> was signed with a temporary root, then the root and the signed certificate were deleted. Results:
+> `--profile intermediate-ca` → `CA:TRUE, pathlen:0` + correct key usage, **no SAN extension**;
+> `--profile csr` → SANs preserved, but **no** `CA:TRUE` and no key usage; `--template
+> intermediate-ca.tpl` → all three together (`Digital Signature, Certificate Sign, CRL Sign` /
+> `CA:TRUE, pathlen:0` / `DNS:ca.internal` + `IP Address:192.168.2.215`). Two template drafts were
+> rejected first and are worth knowing: a `sans` list of plain strings fails with
+> `cannot unmarshal string into Certificate.sans.0 of type x509util.SubjectAlternativeName`, and a
+> nested `{"dnsNames":…}` object is **silently ignored**, yielding a certificate with no SAN at all —
+> the working form uses the top-level `dnsNames` / `ipAddresses` fields.
 
 ## 4. Annual re-sign
 
