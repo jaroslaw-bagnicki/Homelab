@@ -4,3 +4,7 @@ ansible/**/*.retry
 # Ansible execution log
 ansible/ansible.log
 
+# Private CA offline signing kit: `step` is a 42 MB upstream binary, not stored in git.
+# Assemble it on the way in — see docs/private-ca-offline-signing/01-building-step.md
+docs/private-ca-offline-signing/step
+

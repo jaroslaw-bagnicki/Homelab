@@ -1,0 +1,76 @@
+# 03 — Signing the intermediate CSR
+
+Signs `intermediate_ca.csr` with the offline root. This is the operation that **repeats** — run it at
+every signing, including the annual re-sign before the intermediate expires.
+
+## Before you start
+
+- The bundle is on the island and `step` runs, and the IronKey is mounted — [README](README.md)
+  steps 2–4.
+- The **IronKey is mounted** and already holds the root (`root_ca.crt`, `root_ca_key`). If it does not,
+  create it first: [02](02-issuing-root-cert.md).
+
+## Run it
+
+```sh
+./sign.sh /mnt/ironkey
+```
+
+It runs exactly this, and asks for the root key's passphrase — or takes it from a file, as in
+[02](02-issuing-root-cert.md):
+
+```sh
+./step certificate sign --template intermediate-ca.tpl --not-after 8760h \
+  intermediate_ca.csr /mnt/ironkey/root_ca.crt /mnt/ironkey/root_ca_key \
+  > intermediate_ca.crt
+```
+
+**`--template`, never `--profile intermediate-ca`.** A profile rebuilds the certificate from its own
+defaults and silently drops the SANs, producing an intermediate that passes an issuer check and then
+fails *every* trusted TLS request (measured 2026-10-11). The template makes the **signer** assert the
+shape rather than inheriting it from the requester.
+
+The script writes to a temporary file and only moves it into place on success, so a failed run cannot
+leave a half-written certificate to carry home.
+
+## Acceptance
+
+`sign.sh` machine-checks the result and prints the certificate. **Every check must pass:**
+
+| Check | Expected |
+|---|---|
+| chain | `certificate verify` succeeds against the root on the IronKey |
+| is a CA | `is_ca: true` |
+| path length | `max_path_len: 0` — it issues leaves, nothing deeper |
+| key usage | `certificate_sign` and `crl_sign` |
+| SAN | `dns_names` present, containing `ca.internal` and `192.168.2.215` |
+| validity | 1 year |
+
+The SAN row is the important one. **A certificate without a SAN passes an issuer check and then fails
+every trusted TLS request** — runbook 35 §7 would fail on every request.
+
+Read the printed dump as well. It must show issuer `CN=Homelab Internal CA`, subject
+`CN=Homelab Intermediate CA`, ~1 year of validity, `critical CA:TRUE, pathlen:0`, key usage
+`Digital Signature, Certificate Sign, CRL Sign`, and a Subject Alternative Name of `DNS:ca.internal` /
+`IP Address:192.168.2.215`.
+
+## If it refuses
+
+| Symptom | What to do |
+|---|---|
+| `error decrypting ... decryption password incorrect` | Wrong root key passphrase. Nothing was written; re-run with the right one. |
+| "`root_ca.crt` not found" | The IronKey is not mounted, or holds no root — see [02](02-issuing-root-cert.md). |
+| SAN line absent, or a `FAIL` line | Stop and do not carry the certificate home. No trust has been distributed, the root is untouched, and re-signing the same CSR is safe. |
+
+## The annual re-sign
+
+ADR 38 sets the intermediate at **1 year**, so roughly annually the same root re-signs a fresh
+certificate for the **same TPM key**:
+
+1. On the `ca` guest, re-run runbook 35 §6's CSR task — a fresh `intermediate_ca.csr` from the existing
+   TPM key. Do **not** recreate the key.
+2. Sign it here.
+3. Install it and restart the service (runbook 35 §7).
+
+No new key, no root re-issue, no client re-trust — the fleet and workstations keep trusting the same
+root, so there is no propagation window. That is the payoff of the offline root.
