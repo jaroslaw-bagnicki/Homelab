@@ -87,7 +87,7 @@ Alerts view and the API ([ADR 27](../../../docs/decisions/27-monitoring-strategy
 | `netdata_proxmox_host` | `false` | Grants the `netdata` user `/etc/pve` read (parent on Proxmox). |
 | `netdata_upgrade` | `false` | `true` re-runs the kickstart installer (`--reinstall`) for one run. |
 | `netdata_upsd_address` | `""` | NUT daemon `host:port` to poll for UPS telemetry (`go.d/upsd.conf`); empty = no job. The parent sets `192.168.2.201:3493`. |
-| `netdata_upsd_name` | `nut` | Job name in the rendered `go.d/upsd.conf`. |
+| `netdata_upsd_name` | `nut` | Job name in the rendered `go.d/upsd.conf`. **Use `local` when the node also runs `upsd`**: Netdata's go.d service discovery (`sd:net_listeners`) already configures a `local` job for any listener on port 3493, and a different name charts the same UPS twice. The parent sets `local`. |
 
 ## Secrets
 
