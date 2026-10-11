@@ -30,6 +30,11 @@ defaults and silently drops the SANs, producing an intermediate that passes an i
 fails *every* trusted TLS request (measured 2026-10-11). The template makes the **signer** assert the
 shape rather than inheriting it from the requester.
 
+If you ever edit `intermediate-ca.tpl`, the working shape is a top-level `dnsNames` / `ipAddresses`
+pair. A `sans` list of plain strings fails with `cannot unmarshal string into
+Certificate.sans.0 of type x509util.SubjectAlternativeName`, and a nested `{"dnsNames":…}` object is
+silently ignored, producing a certificate with no SAN at all.
+
 The script writes to a temporary file and only moves it into place on success, so a failed run cannot
 leave a half-written certificate to carry home.
 
