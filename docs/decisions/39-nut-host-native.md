@@ -41,8 +41,11 @@ isolation…"*. In use, the costs of the LXC route have outweighed the isolation
   (primary + fleet accounts, passwords from Key Vault), the udev rule, and the services.
 - **The fleet clients are unchanged in shape** — `lab`/`edge`/`nas` stay `upsmon` secondaries via the
   [`nut_client`](../../ansible/roles/nut_client/README.md) role, repointed at `192.168.2.201`.
-- **Fail-safe is preserved** — `MINSUPPLIES 1` / `DEADTIME 15` stay as ADR 30 decided; the change is
-  placement, not shutdown policy.
+- **Fail-safe model unchanged in shape** — `MINSUPPLIES 1` stays as ADR 30 decided; the change is
+  placement, not fail-safe policy. **Amended 2026-10-11:** `DEADTIME` raised 15 s → **60 s**
+  (`nut_client_deadtime`) — with the server on the hypervisor's own host, an `upsd` restart or a
+  `pve` reboot became a routine event, and 15 s of blindness would have stopped the fleet on healthy
+  mains (runbook 29 §6).
 - **`pve`'s UFW allows `3493` from `192.168.2.0/24`** so the secondaries can reach `upsd`.
 - **LXC 213 is retired** and `.213` is released ([ADR 31](31-static-address-scheme.md)).
 

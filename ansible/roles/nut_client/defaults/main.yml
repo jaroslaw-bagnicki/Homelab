@@ -11,3 +11,7 @@ nut_client_account: upsmon-fleet
 nut_client_password_secret: nut-upsmon-secondary-password
 nut_client_hostsync: 15
 nut_client_finaldelay: 0
+# Seconds of `upsd` unavailability tolerated before `upsmon` decides the UPS is dead and the node
+# fails safe. 15 s (the NUT default) proved too tight once the server shared a host with Proxmox:
+# an `upsd` restart or a `pve` reboot would stop the whole fleet on healthy mains. Raised 2026-10-11.
+nut_client_deadtime: 60

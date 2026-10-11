@@ -139,8 +139,8 @@ per-device attribution wait for [#73](https://github.com/jaroslaw-bagnicki/Homel
 ## 1. Retire LXC 213 (release the USB device)
 
 The NUT server no longer lives in a container. Before the host can claim the UPS, the old LXC 213 has
-to release it — and the fleet's fail-safe `upsmon` must be paused across the cutover, or the 15 s
-`DEADTIME` blackout stops the lab on healthy mains.
+to release it — and the fleet's fail-safe `upsmon` must be paused across the cutover, or a blackout
+longer than `DEADTIME` (60 s since 2026-10-11 — §6) stops the lab on healthy mains.
 
 ```sh
 # 1. Pause every client's fail-safe monitor — abort if any node cannot be paused
@@ -297,8 +297,10 @@ and `HOSTSYNC` are set as in §4/§5 — with the stock values the host races th
 drill is what proves it.
 
 ⚠ **Pause every monitor before restarting the server.** With `MINSUPPLIES 1`, an `upsd` that cannot
-be reached for `DEADTIME` (15 s) is indistinguishable from a failed UPS — and that applies to the
-secondaries just as much as the host, so a server restart can stop the fleet while mains is present:
+be reached for `DEADTIME` (60 s since 2026-10-11) is indistinguishable from a failed UPS — and that
+applies to the secondaries just as much as the host, so a server restart that outlasts the window
+stops the fleet while mains is present. The wider window makes an ordinary restart survivable, but
+the sequence below is still how to do it deliberately:
 
 ```sh
 set -e
@@ -319,9 +321,12 @@ On a normal host boot this race no longer exists: `nut-monitor` is ordered **aft
 `ansible/host_vars/pve.yml`), so the secondaries can reach `upsd`. Add it via Ansible, never by hand,
 or the next `security` role run drops it.
 
-Accepted trade-off: a genuinely unreachable UPS *does* stop the fleet — fail-safe, not fail-open. If
-that proves disruptive, raise `DEADTIME` and `POLLFREQALERT` together rather than relaxing
-`MINSUPPLIES`.
+Accepted trade-off: a genuinely unreachable UPS *does* stop the fleet — fail-safe, not fail-open.
+**Applied 2026-10-11:** `DEADTIME` was raised 15 s → **60 s** (role default `nut_client_deadtime`) —
+the migration moved the server onto the hypervisor's own host, so an `upsd` restart or a `pve` reboot
+became a routine event, and 15 s of blindness would have stopped the fleet on healthy mains.
+`POLLFREQ` and `POLLFREQALERT` stay at 5 s: they govern how quickly `OB`/`LB` are *seen* (≤ 7 s in the
+2026-09-19 drill), so widening them would only slow genuine detection. `MINSUPPLIES 1` is unchanged.
 
 ## 7. Validation
 

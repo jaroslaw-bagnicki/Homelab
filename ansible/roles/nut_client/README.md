@@ -43,7 +43,7 @@ The accounts must match `upsd.users` on the `pve` host (`upsmon-host` = `upsmon 
 
 ## Reachability guard
 
-`upsmon` is **fail-safe**: with `MINSUPPLIES 1`, an `upsmon` that loses the server for `DEADTIME` shuts the node down. The role therefore probes the server with `upsc ups@192.168.2.201` (5 retries, 2 s apart) before touching the service:
+`upsmon` is **fail-safe**: with `MINSUPPLIES 1`, an `upsmon` that loses the server for `DEADTIME` (**60 s** — `nut_client_deadtime`) shuts the node down. The role therefore probes the server with `upsc ups@192.168.2.201` (5 retries, 2 s apart) before touching the service:
 
 - **Server answers** → `nut-monitor` is enabled and started (the restart handler is likewise gated).
 - **Server unreachable** → config is written, the service is left stopped, and the play warns. Re-run once the NUT server on `pve` is up.
@@ -72,6 +72,7 @@ The guard is **provisioning-only**: it governs whether the service is (re)starte
 | `nut_client_password_secret` | `nut-upsmon-secondary-password` | `nut-upsmon-primary-password` on `pve`. |
 | `nut_client_hostsync` | `15` | `30` on `pve`. |
 | `nut_client_finaldelay` | `0` | `30` on `pve`; inert on a secondary. |
+| `nut_client_deadtime` | `60` | Seconds of `upsd` silence before the node fails safe (shuts down). Raised from the NUT default 15 s on 2026-10-11 — see [runbook 29 §6](../../../docs/runbooks/29-nut-ups-shutdown.md). |
 
 `nut_client_upsmon_password` is a runtime fact from Key Vault — never a default.
 
