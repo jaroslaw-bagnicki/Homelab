@@ -34,8 +34,8 @@ argument — then delete that file before powering off:
 
 [03](03-signing-csr.md) says never to sign a CSR with `--profile`, and `root.sh` uses one. That is not a
 contradiction: a profile rebuilds a certificate from its own defaults, so signing a CSR with one
-discards whatever the requester asked for — for an intermediate, that silently drops the SANs it needs
-as a TLS server. A root has nothing to discard: it needs no SANs (it is never a TLS server) and
+discards whatever the requester asked for — for an intermediate, that silently drops the SANs that
+declare its identity. A root has nothing to discard: it needs no SANs (it is never a TLS server) and
 inherits nothing from a CSR (it is the trust anchor).
 
 ## Acceptance

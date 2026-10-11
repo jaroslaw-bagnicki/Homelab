@@ -13,7 +13,7 @@
 # Uses --profile root-ca, which is correct here and NOT a contradiction of sign.sh's
 # "never --profile" rule. A profile rebuilds a certificate from its own defaults, so
 # signing a CSR with one discards whatever the requester asked for - for the
-# intermediate that silently drops the SANs it needs as a TLS server. A root has no
+# intermediate that silently drops the SANs that declare its identity. A root has no
 # SANs to drop (it is never a TLS server) and inherits nothing from a CSR (it is the
 # trust anchor). Its whole required shape is CA:TRUE + pathlen>=1 + certSign/crlSign,
 # which is exactly what this profile produces.
@@ -27,7 +27,21 @@ ROOT_CN="Homelab Internal CA"
 ROOT_LIFETIME="87600h"   # 10 years
 
 # --- the signing machine must not have a network -----------------------------
-if command -v ip >/dev/null 2>&1 && ip route 2>/dev/null | grep -q '^default'; then
+# Fail closed: a missing `ip` proves nothing, and a default-route test alone misses
+# an interface that only has an on-link address.
+if ! command -v ip >/dev/null 2>&1; then
+    echo "ABORT: 'ip' is not available, so this machine's network state cannot be checked." >&2
+    exit 1
+fi
+NET="$(ip -o addr show 2>/dev/null | awk '{ n = $2; sub(/:$/, "", n); if (n != "lo") print "  " n " " $4 }')"
+if [ -n "$NET" ]; then
+    echo "ABORT: this machine has a non-loopback address:" >&2
+    printf '%s\n' "$NET" >&2
+    echo "       The root key must never be created on a networked machine." >&2
+    echo "       Unplug the cable / disable Wi-Fi (or 'ip link set <dev> down') and re-run." >&2
+    exit 1
+fi
+if ip route 2>/dev/null | grep -q '^default'; then
     echo "ABORT: this machine has a default route — it is not air-gapped." >&2
     echo "       The root key must never be created on a networked machine." >&2
     exit 1

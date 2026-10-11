@@ -4,8 +4,10 @@
 #   ./sign.sh <destination-path> [passphrase-file]      e.g. /mnt/sdX1 (no default)
 #
 # Uses --template, never --profile: a profile rebuilds the certificate from its own
-# defaults and silently drops the SANs, producing an intermediate that passes an
-# issuer check and then fails every TLS request (measured 2026-10-11).
+# defaults and silently drops the SANs — the intermediate's declared identity shape.
+# Measured 2026-10-11: the certificate that serves TLS is a separate self-issued leaf
+# built from ca.json's dnsNames, so a SAN-less intermediate is not an immediate
+# outage — it simply no longer matches the shape this CA is meant to carry.
 set -eu
 
 [ $# -ge 1 ] || { echo "usage: $0 <destination-path> [passphrase-file]" >&2; echo "       e.g. $0 /mnt/sdX1" >&2; exit 1; }
@@ -19,7 +21,21 @@ TMP="$OUT.new"
 trap 'rm -f "$TMP"' EXIT
 
 # --- the signing machine must not have a network -----------------------------
-if command -v ip >/dev/null 2>&1 && ip route 2>/dev/null | grep -q '^default'; then
+# Fail closed: a missing `ip` proves nothing, and a default-route test alone misses
+# an interface that only has an on-link address.
+if ! command -v ip >/dev/null 2>&1; then
+    echo "ABORT: 'ip' is not available, so this machine's network state cannot be checked." >&2
+    exit 1
+fi
+NET="$(ip -o addr show 2>/dev/null | awk '{ n = $2; sub(/:$/, "", n); if (n != "lo") print "  " n " " $4 }')"
+if [ -n "$NET" ]; then
+    echo "ABORT: this machine has a non-loopback address:" >&2
+    printf '%s\n' "$NET" >&2
+    echo "       The root key must never be used on a networked machine." >&2
+    echo "       Unplug the cable / disable Wi-Fi (or 'ip link set <dev> down') and re-run." >&2
+    exit 1
+fi
+if ip route 2>/dev/null | grep -q '^default'; then
     echo "ABORT: this machine has a default route — it is not air-gapped." >&2
     echo "       The root key must never be used on a networked machine." >&2
     exit 1
@@ -58,15 +74,15 @@ else
         > "$TMP"
 fi
 
-mv "$TMP" "$OUT"
-echo "Signed -> $OUT"
-
 # --- machine checks: does this certificate actually work? --------------------
+# Every check runs against the temporary file; it is promoted to intermediate_ca.crt
+# only once it passes, so a bad signature can never overwrite a good annual
+# certificate. The EXIT trap deletes the temp file if anything fails.
 echo
 echo "Checking the result. Every line must read OK."
 FAILED=0
 
-if VERIFY_ERR="$("$DIR/step" certificate verify "$OUT" --roots "$STICK/root_ca.crt" 2>&1)"; then
+if VERIFY_ERR="$("$DIR/step" certificate verify "$TMP" --roots "$STICK/root_ca.crt" 2>&1)"; then
     echo "  OK    chains to the root on the stick"
 else
     echo "  FAIL  does NOT chain to the root on the stick" >&2
@@ -74,7 +90,7 @@ else
     FAILED=1
 fi
 
-I="$("$DIR/step" certificate inspect --format json "$OUT")"
+I="$("$DIR/step" certificate inspect --format json "$TMP")"
 
 chk() {
     if printf '%s\n' "$I" | grep -Eq "$2"; then
@@ -89,18 +105,24 @@ chk "is a CA certificate"                      '"is_ca"[: ]+true'
 chk "path length 0 (issues leaves, no deeper)"  '"max_path_len"[: ]+0'
 chk "key usage: certificate sign"              '"certificate_sign"[: ]+true'
 chk "key usage: CRL sign"                      '"crl_sign"[: ]+true'
-chk "SAN exists (a missing SAN breaks TLS)"    '"dns_names"'
-chk "SAN contains ca.internal"                 'ca\.internal'
-chk "SAN contains 192.168.2.215"               '192\.168\.2\.215'
-chk "validity is 1 year"                       '"length"[: ]+31536000'
+# The SAN rows are policy checks on the CA's declared identity shape, not a TLS
+# requirement — see the note at the top of this file.
+chk "identity shape: SAN present"                    '"dns_names"'
+chk "identity shape: SAN carries ca.internal"        'ca\.internal'
+chk "identity shape: SAN carries 192.168.2.215"      '192\.168\.2\.215'
+chk "validity is 1 year"                             '"length"[: ]+31536000'
 
 if [ "$FAILED" -ne 0 ]; then
     echo >&2
     echo "STOP: this certificate is not fit to install. Nothing has been trusted" >&2
     echo "      yet — the root is untouched, and signing the same CSR again is" >&2
-    echo "      safe. Do not carry $OUT back." >&2
+    echo "      safe. The failed certificate was discarded; an earlier one on disk," >&2
+    echo "      if any, was left untouched." >&2
     exit 1
 fi
+
+mv "$TMP" "$OUT"
+echo "Signed -> $OUT"
 
 # --- human-readable view ----------------------------------------------------
 echo

@@ -22,21 +22,24 @@ It runs exactly this, and asks for the root key's passphrase — or takes it fro
 ```sh
 ./step certificate sign --template intermediate-ca.tpl --not-after 8760h \
   intermediate_ca.csr <destination-path>/root_ca.crt <destination-path>/root_ca_key \
-  > intermediate_ca.crt
+  > intermediate_ca.crt.new      # checked first, renamed to intermediate_ca.crt once it passes
 ```
 
 **`--template`, never `--profile intermediate-ca`.** A profile rebuilds the certificate from its own
-defaults and silently drops the SANs, producing an intermediate that passes an issuer check and then
-fails *every* trusted TLS request (measured 2026-10-11). The template makes the **signer** assert the
-shape rather than inheriting it from the requester.
+defaults and silently drops the SANs — the intermediate's declared identity shape. Measured 2026-10-11:
+the certificate that serves TLS is a **separate self-issued leaf** the CA builds from `ca.json`'s
+`dnsNames` (runbook 35 §7), so a SAN-less intermediate is not an instant outage — it is a silent change
+to the CA's declared shape, and the deployment record asserts those SANs. The template makes the
+**signer** assert the shape rather than inheriting it from the requester.
 
 If you ever edit `intermediate-ca.tpl`, the working shape is a top-level `dnsNames` / `ipAddresses`
 pair. A `sans` list of plain strings fails with `cannot unmarshal string into
 Certificate.sans.0 of type x509util.SubjectAlternativeName`, and a nested `{"dnsNames":…}` object is
 silently ignored, producing a certificate with no SAN at all.
 
-The script writes to a temporary file and only moves it into place on success, so a failed run cannot
-leave a half-written certificate to carry home.
+The script signs into a temporary file, runs every check on that file, and only then renames it into
+place — so a failed run cannot leave a half-written certificate to carry home, and cannot overwrite the
+previous year's good certificate either.
 
 ## Acceptance
 
@@ -51,8 +54,10 @@ leave a half-written certificate to carry home.
 | SAN | `dns_names` present, containing `ca.internal` and `192.168.2.215` |
 | validity | 1 year |
 
-The SAN row is the important one. **A certificate without a SAN passes an issuer check and then fails
-every trusted TLS request** — runbook 35 §7 would fail on every request.
+The SAN rows are the important ones. They assert the CA's **declared identity shape** — an identity
+policy, not a TLS requirement: the certificate that answers TLS is the separate self-issued leaf named
+from `ca.json`'s `dnsNames` (runbook 35 §7). An intermediate without those SANs would still serve the
+CA, but it would no longer match the shape this CA is documented to carry.
 
 Read the printed dump as well. It must show issuer `CN=Homelab Internal CA`, subject
 `CN=Homelab Intermediate CA`, ~1 year of validity, `critical CA:TRUE, pathlen:0`, key usage

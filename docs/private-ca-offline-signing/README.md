@@ -19,7 +19,7 @@ If you use Ubuntu Live rather than SystemRescue, three differences:
 |---|---|---|
 | Who you are | `root` | user `ubuntu` with passwordless `sudo` — prefix `sudo` where needed (`mkdir`, `mount`) |
 | Removable media | **not** auto-mounted — run `mountall`, or mount it yourself (step 4) | **auto-mounted** under `/media/ubuntu/<label>` — use that path |
-| Network | nothing brings it up | NetworkManager may connect by itself — **disable Wi-Fi / unplug the cable** before touching the stick. Both scripts abort if they find a default route. |
+| Network | nothing brings it up | NetworkManager may connect by itself — **disable Wi-Fi / unplug the cable** before touching the stick. Both scripts abort if they find **any non-loopback address** (or a default route). |
 
 It does **not** start the CA and does **not** distribute trust. Nothing in the bundle is private — the
 CSR and the template are public. The one secret it produces is the **root key**, and that must leave
@@ -57,9 +57,10 @@ versioned source. If you change one, change both — otherwise the signing machi
 2. **Never copy `root_ca_key` off the stick** — not into this bundle, not onto the YUMI stick, not
    anywhere on the machine's disk.
 3. **The signing machine must have no network** — no LAN cable, no Wi-Fi, and no default route. Both
-   scripts refuse to run if they find one.
-4. Never sign with `--profile intermediate-ca`. It silently drops the SANs, producing a certificate
-   that passes an issuer check and then fails every TLS request (measured 2026-10-11).
+   scripts refuse to run if they find a non-loopback address, and refuse to guess if `ip` is missing.
+4. Never sign with `--profile intermediate-ca`. It silently drops the SANs, which are the CA's declared
+   identity shape — the CA is not left unserved (the serving certificate is a separate self-issued leaf,
+   runbook 35 §7), but the certificate no longer matches the shape the deployment records.
 5. **`root.sh` runs once, ever.** It refuses to touch an existing root, because replacing a root is a
    trust rotation — every client would have to re-trust — not a re-run. The repeat job is `sign.sh`.
 6. **Write the root key passphrase down before you leave the machine.** It is the only way to use the
@@ -73,7 +74,8 @@ versioned source. If you change one, change both — otherwise the signing machi
 2. **On the signing machine.** Boot it (SystemRescue 13 or Ubuntu Live) and confirm it is offline:
 
    ```sh
-   ip route          # must print nothing — no default route is what "air-gapped" means
+   ip -brief addr show   # only `lo` may carry an address — any other one means the machine is networked
+   ip route              # must print nothing — no default route is what "air-gapped" means
    ```
 
 3. **Copy the bundle off the stick before running anything.** A boot stick is FAT32, exFAT or NTFS —
@@ -140,7 +142,7 @@ These are installed and the CA started by **runbook 35 §7**.
 |---|---|
 | `./step version` fails with `Permission denied` | You are running it from the stick — FAT32, exFAT and NTFS have no executable bit. Copy the bundle to `/tmp` first (step 3). |
 | `./step version` fails otherwise | The copy is truncated or corrupt. Re-copy it from the stick. |
-| Either script refuses: "has a default route" | The signing machine is not air-gapped. Disconnect it before using the stick. |
+| Either script refuses: "has a non-loopback address" or "has a default route" | The signing machine is not air-gapped. Unplug the cable / disable Wi-Fi (`ip link set <dev> down`) before using the stick. |
 | A `FAIL` line appears in the checks | Stop and do not carry the certificate home. No trust has been distributed, the root is untouched and re-signing the same CSR is safe. |
 
 Anything specific to one ceremony — a root that already exists, a missing SAN, a wrong passphrase — is
