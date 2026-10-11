@@ -113,12 +113,12 @@ tested only with a throwaway key and a fake IronKey. Record the date and the res
 ceremony is first performed.
 
 - [ ] Step 1: root created, every check passed, passphrase written into the safe
-- [ ] Step 2: certificate signed, every check passed, IronKey back in the safe
+- [ ] Step 2: the intermediate signed, every check passed, IronKey back in the safe
 - [ ] Step 3: annual reminder set
 
 ## Follow-ups
 
-- **Deployment** — [runbook 35](35-deploy-step-ca.md) installs the signed certificate and starts the CA.
+- **Deployment** — [runbook 35](35-deploy-step-ca.md) installs the signed intermediate and starts `step-ca`.
 - **Distributing the root** — [#144](https://github.com/jaroslaw-bagnicki/Homelab/issues/144), out of scope.
 - **Moving the root onto a YubiKey** — ADR 38's planned change. It makes the root impossible to copy out
   and destroys every copy that could be, so it is a ceremony rather than a file move. Out of scope.
