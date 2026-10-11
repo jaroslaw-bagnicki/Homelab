@@ -1,7 +1,7 @@
 # Private CA — Offline Root and Intermediate Signing (Init + Annual Re-Sign)
 
 > Generate the CA's 10-year **root** on an air-gapped signing machine (a live-USB Linux boot with no
-> network at all), keep it on the **Kingston IronKey Locker+ 50** in a safe, and sign the certificate
+> network at all), keep it on a **secure USB stick** in a safe, and sign the certificate
 > request the deploy host produced. Step 1 runs once; step 3 repeats every year, before the intermediate
 > expires.
 >
