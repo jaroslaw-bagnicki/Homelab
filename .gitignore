@@ -11,5 +11,6 @@ docs/private-ca-offline-signing/step
 # Private CA ceremony output — the certificates go to the CA host and the root travels via Key Vault
 # (#144); none of it belongs in the repo.
 docs/private-ca-offline-signing/*.crt
+docs/private-ca-offline-signing/*.csr
 docs/private-ca-offline-signing/root_ca_fingerprint
 

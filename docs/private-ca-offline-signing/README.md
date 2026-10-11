@@ -33,7 +33,7 @@ the signing machine only on the stick, back into the safe.
 | [`02-issuing-root-cert.md`](02-issuing-root-cert.md) | creates the 10-year root on the stick | **once ever** |
 | [`03-signing-csr.md`](03-signing-csr.md) | signs the intermediate CSR with that root | every signing |
 | `step` | the `step` CLI, linux/amd64 — **not stored in git** (42 MB upstream binary), added by 01 | — |
-| `intermediate_ca.csr` | the certificate request, created on the CA host by the key that lives in `pve`'s TPM | — |
+| `intermediate_ca.csr` | the certificate request, created on the CA host by the key that lives in `pve`'s TPM — **not stored in git**, bring the file the CA host produced | — |
 | `intermediate-ca.tpl` | the signing template — the extensions the finished certificate must carry | — |
 | `root.sh` | creates the root CA on the stick — first run only | — |
 | `sign.sh` | signs the CSR with that root, then machine-checks the result | — |
