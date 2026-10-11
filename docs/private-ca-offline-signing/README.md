@@ -109,8 +109,8 @@ versioned source. If you change one, change both — otherwise the signing machi
      To bring up the secure stick alone instead:
 
      ```sh
-     mkdir -p /mnt/ironkey
-     mount /dev/sdX1 /mnt/ironkey       # replace sdX1 with the real device from lsblk
+     mkdir -p /mnt/stick
+     mount /dev/sdX1 /mnt/stick       # replace sdX1 with the real device from lsblk
      ```
 
 5. **Create the root — once ever.** Only if the stick does not already hold one. The full ceremony,
@@ -123,7 +123,7 @@ versioned source. If you change one, change both — otherwise the signing machi
    removes it:
 
    ```sh
-   ./step certificate fingerprint /mnt/ironkey/root_ca.crt
+   ./step certificate fingerprint /mnt/stick/root_ca.crt
    ```
 
    Then unmount and remove the stick and return it to the safe, copy `intermediate_ca.crt` **and** a

@@ -1,14 +1,14 @@
 #!/bin/sh
 # Sign the intermediate CSR with the offline root held on the secure USB stick.
 #
-#   ./sign.sh [/path/to/ironkey] [passphrase-file]      (default ironkey: /mnt/ironkey)
+#   ./sign.sh [/path/to/stick] [passphrase-file]      (default: /mnt/stick)
 #
 # Uses --template, never --profile: a profile rebuilds the certificate from its own
 # defaults and silently drops the SANs, producing an intermediate that passes an
 # issuer check and then fails every TLS request (measured 2026-10-11).
 set -eu
 
-IRONKEY="${1:-/mnt/ironkey}"
+STICK="${1:-/mnt/stick}"
 PWFILE="${2:-}"
 DIR="$(cd "$(dirname "$0")" && pwd)"
 OUT="$DIR/intermediate_ca.crt"
@@ -35,25 +35,25 @@ if [ ! -x "$DIR/step" ]; then
 fi
 [ -f "$DIR/intermediate_ca.csr" ]  || { echo "ABORT: $DIR/intermediate_ca.csr is missing" >&2; exit 1; }
 [ -f "$DIR/intermediate-ca.tpl" ]  || { echo "ABORT: $DIR/intermediate-ca.tpl is missing" >&2; exit 1; }
-[ -f "$IRONKEY/root_ca.crt" ]      || { echo "ABORT: $IRONKEY/root_ca.crt not found (is the stick mounted?)" >&2; exit 1; }
-[ -f "$IRONKEY/root_ca_key" ]      || { echo "ABORT: $IRONKEY/root_ca_key not found (is the stick mounted?)" >&2; exit 1; }
+[ -f "$STICK/root_ca.crt" ]      || { echo "ABORT: $STICK/root_ca.crt not found (is the stick mounted?)" >&2; exit 1; }
+[ -f "$STICK/root_ca_key" ]      || { echo "ABORT: $STICK/root_ca_key not found (is the stick mounted?)" >&2; exit 1; }
 
 cd "$DIR"
 
-echo "Signing intermediate_ca.csr with the root on $IRONKEY"
+echo "Signing intermediate_ca.csr with the root on $STICK"
 if [ -n "$PWFILE" ]; then
     [ -r "$PWFILE" ] || { echo "ABORT: passphrase file $PWFILE is not readable" >&2; exit 1; }
     echo "(using the root key passphrase in $PWFILE)"
     echo
     "$DIR/step" certificate sign --template intermediate-ca.tpl --not-after 8760h \
         --password-file "$PWFILE" \
-        intermediate_ca.csr "$IRONKEY/root_ca.crt" "$IRONKEY/root_ca_key" \
+        intermediate_ca.csr "$STICK/root_ca.crt" "$STICK/root_ca_key" \
         > "$TMP"
 else
     echo "(the root key's passphrase will be requested now)"
     echo
     "$DIR/step" certificate sign --template intermediate-ca.tpl --not-after 8760h \
-        intermediate_ca.csr "$IRONKEY/root_ca.crt" "$IRONKEY/root_ca_key" \
+        intermediate_ca.csr "$STICK/root_ca.crt" "$STICK/root_ca_key" \
         > "$TMP"
 fi
 
@@ -65,7 +65,7 @@ echo
 echo "Checking the result. Every line must read OK."
 FAILED=0
 
-if VERIFY_ERR="$("$DIR/step" certificate verify "$OUT" --roots "$IRONKEY/root_ca.crt" 2>&1)"; then
+if VERIFY_ERR="$("$DIR/step" certificate verify "$OUT" --roots "$STICK/root_ca.crt" 2>&1)"; then
     echo "  OK    chains to the root on the stick"
 else
     echo "  FAIL  does NOT chain to the root on the stick" >&2

@@ -13,7 +13,7 @@ Creates the 10-year root CA on the secure USB stick. **First run only** — once
 ## Run it
 
 ```sh
-./root.sh /mnt/ironkey
+./root.sh /mnt/stick
 ```
 
 `root.sh` creates a passphrase-protected root key **on the secure USB stick**, and refuses to run if a root is
@@ -27,7 +27,7 @@ To drive it non-interactively, put the passphrase in a file on `/tmp` and pass t
 argument — then delete that file before powering off:
 
 ```sh
-./root.sh /mnt/ironkey /tmp/rootpass.txt
+./root.sh /mnt/stick /tmp/rootpass.txt
 ```
 
 ### Why `--profile root-ca` is right here

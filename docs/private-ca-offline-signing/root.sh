@@ -1,7 +1,7 @@
 #!/bin/sh
 # Create the 10-year offline root CA on the secure USB stick. FIRST RUN ONLY.
 #
-#   ./root.sh [/path/to/ironkey] [passphrase-file]      (default ironkey: /mnt/ironkey)
+#   ./root.sh [/path/to/stick] [passphrase-file]      (default: /mnt/stick)
 #
 # The root key is the one secret in this PKI that cannot be replaced: it signs the
 # intermediate, and every client trusts the certificate it belongs to. So it is
@@ -19,7 +19,7 @@
 # which is exactly what this profile produces.
 set -eu
 
-IRONKEY="${1:-/mnt/ironkey}"
+STICK="${1:-/mnt/stick}"
 PWFILE="${2:-}"
 DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT_CN="Homelab Internal CA"
@@ -43,11 +43,11 @@ if [ ! -x "$DIR/step" ]; then
 fi
 
 # --- the stick ------------------------------------------------------------
-[ -d "$IRONKEY" ] || { echo "ABORT: $IRONKEY is not a directory (is the stick mounted?)" >&2; exit 1; }
+[ -d "$STICK" ] || { echo "ABORT: $STICK is not a directory (is the stick mounted?)" >&2; exit 1; }
 
 # --- the one-way door -------------------------------------------------------
-if [ -e "$IRONKEY/root_ca_key" ] && [ -e "$IRONKEY/root_ca.crt" ]; then
-    echo "ABORT: a root already exists on $IRONKEY — nothing was created." >&2
+if [ -e "$STICK/root_ca_key" ] && [ -e "$STICK/root_ca.crt" ]; then
+    echo "ABORT: a root already exists on $STICK — nothing was created." >&2
     echo >&2
     echo "  This script only ever creates the FIRST root. Re-running it cannot" >&2
     echo "  replace the existing one: every client that already trusts it would" >&2
@@ -55,21 +55,21 @@ if [ -e "$IRONKEY/root_ca_key" ] && [ -e "$IRONKEY/root_ca.crt" ]; then
     echo "  re-trust of the fleet and workstations (issue #144)." >&2
     echo >&2
     echo "  To carry on with the root you already have, run:" >&2
-    echo "    ./sign.sh $IRONKEY" >&2
+    echo "    ./sign.sh $STICK" >&2
     exit 1
 fi
 
-if [ -e "$IRONKEY/root_ca_key" ] || [ -e "$IRONKEY/root_ca.crt" ]; then
-    echo "ABORT: $IRONKEY holds an INCOMPLETE root — one file without the other." >&2
+if [ -e "$STICK/root_ca_key" ] || [ -e "$STICK/root_ca.crt" ]; then
+    echo "ABORT: $STICK holds an INCOMPLETE root — one file without the other." >&2
     echo "       An earlier creation run must have failed part-way. Nothing was" >&2
     echo "       created now. Inspect it, then remove both files and run again:" >&2
-    echo "         ls -l $IRONKEY/root_ca*" >&2
-    echo "         rm -f $IRONKEY/root_ca.crt $IRONKEY/root_ca_key" >&2
+    echo "         ls -l $STICK/root_ca*" >&2
+    echo "         rm -f $STICK/root_ca.crt $STICK/root_ca_key" >&2
     exit 1
 fi
 
 # --- create -----------------------------------------------------------------
-echo "Creating the root CA on $IRONKEY"
+echo "Creating the root CA on $STICK"
 echo "  common name : $ROOT_CN"
 echo "  lifetime    : $ROOT_LIFETIME (10 years)"
 echo "  shape       : CA:TRUE, pathlen:1, keyUsage certSign + crlSign, no SANs"
@@ -80,7 +80,7 @@ if [ -n "$PWFILE" ]; then
     echo "Encrypting the root key with the passphrase in $PWFILE."
     echo
     "$DIR/step" certificate create "$ROOT_CN" \
-        "$IRONKEY/root_ca.crt" "$IRONKEY/root_ca_key" \
+        "$STICK/root_ca.crt" "$STICK/root_ca_key" \
         --profile root-ca --not-after "$ROOT_LIFETIME" \
         --password-file "$PWFILE"
 else
@@ -92,7 +92,7 @@ else
     echo "      re-trust of every client (issue #144)."
     echo
     "$DIR/step" certificate create "$ROOT_CN" \
-        "$IRONKEY/root_ca.crt" "$IRONKEY/root_ca_key" \
+        "$STICK/root_ca.crt" "$STICK/root_ca_key" \
         --profile root-ca --not-after "$ROOT_LIFETIME"
 fi
 
@@ -101,7 +101,7 @@ echo
 echo "Checking the result. Every line must read OK."
 echo
 
-J="$("$DIR/step" certificate inspect --format json "$IRONKEY/root_ca.crt")"
+J="$("$DIR/step" certificate inspect --format json "$STICK/root_ca.crt")"
 FAILED=0
 
 chk() {
@@ -120,7 +120,7 @@ chk "key usage: certificate sign"                '"certificate_sign"[: ]+true'
 chk "key usage: CRL sign"                        '"crl_sign"[: ]+true'
 chk "validity is 10 years"                       '"length"[: ]+315360000'
 
-if grep -q 'ENCRYPTED' "$IRONKEY/root_ca_key"; then
+if grep -q 'ENCRYPTED' "$STICK/root_ca_key"; then
     echo "  OK    root key is passphrase-protected"
 else
     echo "  FAIL  root key is NOT passphrase-protected (plaintext on the stick)" >&2
@@ -134,10 +134,10 @@ echo "        \"self_signed\": true is the correct check."
 
 if [ "$FAILED" -ne 0 ]; then
     echo >&2
-    echo "STOP: the root on $IRONKEY does not have the shape the CA needs." >&2
+    echo "STOP: the root on $STICK does not have the shape the CA needs." >&2
     echo "      No trust has been distributed yet, so it is safe to discard the" >&2
     echo "      root and start over:" >&2
-    echo "        rm -f $IRONKEY/root_ca.crt $IRONKEY/root_ca_key" >&2
+    echo "        rm -f $STICK/root_ca.crt $STICK/root_ca_key" >&2
     exit 1
 fi
 
@@ -145,12 +145,12 @@ fi
 echo
 echo "Root certificate fingerprint — record it OUTSIDE the repo (safe, password"
 echo "manager), together with the key passphrase:"
-"$DIR/step" certificate fingerprint "$IRONKEY/root_ca.crt"
+"$DIR/step" certificate fingerprint "$STICK/root_ca.crt"
 
 echo
 echo "=============================================================="
 echo "Root created. Next: sign the intermediate with it."
-echo "  ./sign.sh $IRONKEY"
+echo "  ./sign.sh $STICK"
 echo
 echo "Before you power this machine off:"
 echo "  - unmount and remove the stick, return it to the safe"
