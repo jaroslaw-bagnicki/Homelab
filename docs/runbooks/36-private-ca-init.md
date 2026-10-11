@@ -9,10 +9,14 @@
 > [research 36 §4–§5](../research/36-step-ca-machine-identity.md); measured gate:
 > [#141](https://github.com/jaroslaw-bagnicki/Homelab/issues/141).
 >
-> ⚠ **§3's signing mechanic is rehearsed; the rest is unrun.** On 2026-10-11 §3 was exercised on the
-> `ca` guest against a **throwaway software root in `/tmp`** (nothing real touched, no trust
-> distributed) — which is how the `--profile`-drops-SANs defect was found and the `--template` fix
-> proven. §1, §2, §4 and §5 remain *plans*. Gate-measured facts are marked **(measured #141)**.
+> ⚠ **The §1–§3 mechanics are rehearsed; no ceremony has been run against the real IronKey.** On
+> 2026-10-11 root creation and signing were both exercised against a **throwaway software root** and a
+> fake IronKey directory (nothing real touched, no trust distributed) — which is how the
+> `--profile`-drops-SANs defect was found and the `--template` fix proven. **§1–§3 are now encapsulated
+> in the offline signing kit**
+> (`docs/private-ca-offline-signing/`), which is what the island actually runs; the sections below keep
+> the reasoning rather than repeat the commands. §4 and §5 remain *plans*. Gate-measured facts are
+> marked **(measured #141)**.
 >
 > ⚠ **Order — one-way, purely offline.** Run **after** [runbook 35 §6](35-deploy-step-ca.md), which
 > produces `intermediate_ca.csr`; this runbook signs it and hands back `intermediate_ca.crt`, which
@@ -58,10 +62,10 @@ events, not emergencies.
 - [ ] The `pve` TPM is present and **not owned by a previous deployment**. On second-hand hardware,
       run `Clear TPM` / `Clear PTT` in the BIOS first
       ([research 37 §5](../research/37-tpm2-hardware-and-fleet.md)).
-- [ ] An air-gapped signing island (a live USB that will never hold the root key on its internal disk),
-      with the IronKey available.
-- [ ] A second, ordinary USB stick to carry the CSR/certificate across the air gap — **never the
-      IronKey**, which does not leave safe custody.
+- [ ] An air-gapped signing island — booted from the **YUMI multiboot stick**, which carries the live
+      ISO *and* the signing kit, so the IronKey is the only thing crossing the air gap besides it.
+- [ ] The **offline signing kit** (`docs/private-ca-offline-signing/`) on that stick, with `step` in
+      place ([01-building-step.md](../private-ca-offline-signing/01-building-step.md)).
 - [ ] A place to record the **root fingerprint** (safe copy / password manager, not the repo).
 
 ## Tooling and measurements
@@ -80,60 +84,72 @@ Tooling is installed from the current upstream release and **checksum-verified**
 
 ## 1. Prepare the offline signing island
 
-The island has **no network**, so the CLI must be fetched on a **connected staging machine first**,
-verified there, and carried over on ordinary removable media — never the IronKey. Only then boot the
-island with no LAN or internet route and install from the carried archive.
+**The mechanics live in the kit** — [01-building-step.md](../private-ca-offline-signing/01-building-step.md)
+puts `step` in place, and the [kit README](../private-ca-offline-signing/README.md) covers the rest of
+this section: boot offline, copy the kit to `/tmp`, mount the IronKey. What the runbook owns is the
+reasoning.
 
-```sh
-# 1. On the connected staging machine — download and verify before carrying (measured #141:
-#    a truncated download produced a false "step-ca is broken" result)
-wget https://dl.smallstep.com/gh-release/cli/gh-release-<current>/step_linux_amd64.tar.gz
-wget https://dl.smallstep.com/gh-release/cli/gh-release-<current>/checksums.txt
-sha256sum -c <(grep step_linux_amd64.tar.gz checksums.txt)
+- **The island has no network, so nothing can be fetched there.** `step` is put in place on the
+  connected machine. The kit prefers copying it from the `ca` guest, which already has it
+  checksum-verified ([runbook 35 §6](35-deploy-step-ca.md)); fetching the upstream release is the
+  from-scratch route. The role resolves the **current** release at install time rather than pinning one,
+  so the island CLI need not match a version.
+- **Verify the release against its own `checksums.txt`** (measured #141). A truncated tarball once
+  produced a binary that segfaulted on `--help` and gave a convincing false "step-ca is broken" result.
+  Match a **whole filename** — in an unanchored pattern the `.` characters are regex wildcards and also
+  match the `.sigstore.json` entry sitting beside it.
+- **Install nothing else on the island.** The `step-kms-plugin` / `libpcsclite1` requirement is on the
+  **CA host** ([runbook 35 §6](35-deploy-step-ca.md)); the root is an ordinary file on the IronKey, so
+  the island needs no PCSC and no plugin.
+- **Carry the CSR and its signing template together** — the kit ships both. The template is what stamps
+  `CA:TRUE` and the SANs onto the signed certificate (§3), so without it the ceremony cannot produce a
+  usable intermediate. It is a copy of `ansible/workloads/step-ca/files/intermediate-ca.tpl`; change
+  both together.
+- **Only the IronKey leaves safe custody for the island.** The CSR and the returned certificates are
+  public, so the kit travels on the ordinary boot stick; the root key never leaves the IronKey and never
+  touches the island's disk.
 
-# 2. carry the archive on ordinary media, then on the air-gapped island:
-tar -xzf step_linux_amd64.tar.gz
-./step version
-```
-
-- Install nothing else on the island. The `step-kms-plugin`/`libpcsclite1` requirement is on the
-  **CA host** ([runbook 35 §6](35-deploy-step-ca.md)) — the root is an ordinary file on the IronKey.
-- **Carry the CSR and its signing template together.** The island needs *both* `intermediate_ca.csr`
-  and `intermediate-ca.tpl` (§3): the template is what stamps `CA:TRUE` and the SANs onto the signed
-  certificate, so without it the ceremony cannot produce a usable intermediate. The template is
-  versioned at `ansible/workloads/step-ca/files/intermediate-ca.tpl`.
-- Carry the archive on ordinary media; **never the IronKey**, which holds only the root.
-- Unlock the IronKey and mount it. **Never** leave the root key on the island's disk.
-
-> **Acceptance.** `step version` runs on the island; the island has no route to `192.168.2.0/24` or
+> **Acceptance.** `./step version` runs on the island; the island has no route to `192.168.2.0/24` or
 > the internet; the IronKey mounts read/write.
 
 > **Backout.** Reboot the island from its own disk; wipe the live USB. Nothing was written yet.
 
 ## 2. Generate the 10-year root CA onto the IronKey
 
-Run **only on the island**, with the IronKey mounted. This is a first-run step — **do not overwrite an
-existing root**; if one already exists, skip to §3.
+**The kit runs this** — [02-issuing-root-cert.md](../private-ca-offline-signing/02-issuing-root-cert.md):
 
 ```sh
-step certificate create "Homelab Internal CA" \
-  /mnt/ironkey/root_ca.crt /mnt/ironkey/root_ca_key \
-  --profile root-ca --not-after 87600h
-# the key is passphrase-protected at the prompt; record the passphrase in the safe
-
-# record the root fingerprint somewhere durable OUTSIDE the repo
-step certificate fingerprint /mnt/ironkey/root_ca.crt
+./root.sh /mnt/ironkey
 ```
 
-- `87600h` = 10 years. `--profile root-ca` sets `CA:TRUE` and path-length constraints.
-- Both files live **only** on the IronKey. The certificate is public once distributed
-  ([#144](https://github.com/jaroslaw-bagnicki/Homelab/issues/144)); the **key must never leave the
-  IronKey**.
+Run **only on the island**, with the IronKey mounted. `root.sh` wraps
+`step certificate create "Homelab Internal CA" <ironkey>/root_ca.crt <ironkey>/root_ca_key --profile
+root-ca --not-after 87600h` and adds the guards a first-run step needs:
+
+- **It refuses to run when a root already exists** — replacing a root is a **root rotation** with a full
+  client re-trust, not a re-run — and it detects a half-written root pair left behind by a crashed run.
+- **It asserts the shape** before you leave the island: `CA:TRUE` with `pathlen` ≥ 1, key usage
+  `certSign` + `crlSign`, 10-year validity, and that the key file is actually `ENCRYPTED`.
+- **It prints the fingerprint** to record, and stops rather than let you carry on if a check fails.
+
+The reasoning it encodes:
+
+- `87600h` = 10 years. **`--profile root-ca` is correct here and does not contradict §3's rule** — a
+  profile rebuilds a certificate from its own defaults, so signing a *CSR* with one discards whatever
+  the requester asked for. A root has nothing to discard: it needs no SANs (it is never a TLS server)
+  and inherits nothing from a CSR (it is the trust anchor). The profile yields `CA:TRUE`, `pathlen:1`,
+  `certSign` + `crlSign`.
+- The root key is **passphrase-protected**, and that passphrase is written into the safe. Lose it and
+  the root key is unusable — the only recovery is a new root plus a full re-trust of every client.
+- Both files live **only** on the IronKey. The certificate is public and is exported later for
+  distribution ([#144](https://github.com/jaroslaw-bagnicki/Homelab/issues/144)); the **key must never
+  leave the IronKey**.
 - The CA instance name / CN is `Homelab Internal CA`. The service's DNS name is `ca.internal`
   ([runbook 35 §6](35-deploy-step-ca.md)); they are separate.
 
-> **Acceptance.** `step certificate inspect /mnt/ironkey/root_ca.crt` shows `CA:TRUE`, a path-length
-> constraint, and a ~10-year validity; the fingerprint is recorded in the safe.
+> **Acceptance.** Every `root.sh` check reports OK and the fingerprint is recorded in the safe. Note
+> that `"valid": false` in `step`'s JSON is normal for a self-signed root — there is no higher authority
+> to validate it against, so `self_signed: true` is the check.
 
 > **Backout (init only).** No trust has been distributed yet, so a wrong root is simply deleted and §2
 > repeated. Once the root has been distributed ([#144](https://github.com/jaroslaw-bagnicki/Homelab/issues/144)),
@@ -141,18 +157,19 @@ step certificate fingerprint /mnt/ironkey/root_ca.crt
 
 ## 3. Offline-sign the intermediate CSR from runbook 35 §6
 
-Carry **both** `intermediate_ca.csr` and `intermediate-ca.tpl` from the `ca` guest to the island on the
-ordinary USB stick — the template is part of the signing material and travels with the CSR. Insert the
-IronKey, sign the CSR, and return it to the safe.
+**The kit runs this** — [03-signing-csr.md](../private-ca-offline-signing/03-signing-csr.md). The CSR
+and its template travel in the kit, so the IronKey is the only secret that crosses the air gap.
 
 ```sh
-step certificate sign --template intermediate-ca.tpl --not-after 8760h \
-  intermediate_ca.csr \
-  /mnt/ironkey/root_ca.crt /mnt/ironkey/root_ca_key \
-  > intermediate_ca.crt
-
-step certificate inspect intermediate_ca.crt
+./sign.sh /mnt/ironkey
 ```
+
+Insert the IronKey, sign the CSR, return it to the safe. `sign.sh` wraps
+`step certificate sign --template intermediate-ca.tpl --not-after 8760h intermediate_ca.csr
+<ironkey>/root_ca.crt <ironkey>/root_ca_key`, then **machine-checks** the result rather than leaving it
+to an eye: `step certificate verify` against the root, plus `is_ca`, `pathlen:0`, key usage and the
+SANs. It writes to a temporary file and only moves it into place on success, so a failed run cannot
+leave a half-written certificate to carry home.
 
 - **`--template`, never `--profile intermediate-ca`.** A profile rebuilds the certificate from its own
   defaults and **silently drops the CSR's SANs** (measured 2026-10-11). The intermediate doubles as
@@ -164,7 +181,8 @@ step certificate inspect intermediate_ca.crt
 - `8760h` = 1 year (ADR 38). The root is used for exactly this operation and nothing else.
 - **Lock/unmount the IronKey and return it to the safe** before the island is powered off.
 - Carry `intermediate_ca.crt` and a copy of `root_ca.crt` back to the `ca` guest — both are public;
-  [runbook 35 §7](35-deploy-step-ca.md) installs them and starts the service.
+  [runbook 35 §7](35-deploy-step-ca.md) installs them and starts the service. The kit copies them back
+  onto the boot stick.
 
 > **Acceptance.** `step certificate inspect intermediate_ca.crt` shows: issuer = the root's CN,
 > ~1-year validity, **`CA:TRUE, pathlen:0`**, and the **Subject Alternative Name**
@@ -190,7 +208,8 @@ re-signs a fresh certificate for the **same TPM key**:
 
 1. On the `ca` guest, **re-run [runbook 35 §6](35-deploy-step-ca.md)'s CSR task** — a fresh
    `intermediate_ca.csr` from the existing TPM key. Do **not** recreate the key.
-2. Sign it here (§3).
+2. Sign it with the kit — `./sign.sh /mnt/ironkey`
+   ([03-signing-csr.md](../private-ca-offline-signing/03-signing-csr.md)).
 3. Install it and restart the service ([runbook 35 §7](35-deploy-step-ca.md)).
 
 - **No new key, no root re-issue, no client re-trust** — the fleet and workstations keep trusting the
@@ -219,7 +238,8 @@ Recovery is the same flow on demand:
    ([runbook 35 §6](35-deploy-step-ca.md)) — this clears the stale TPM blob, CSR, public key and
    intermediate certificate (which the create guards would otherwise keep), then creates a **fresh**
    intermediate key in the (possibly cleared) TPM and emits a new CSR.
-2. Sign it here (§3) with the **same** offline root.
+2. Sign it with the **same** offline root — the kit's `./sign.sh /mnt/ironkey`
+   ([03-signing-csr.md](../private-ca-offline-signing/03-signing-csr.md)).
 3. Install the returned certificate(s) and re-run the workload ([runbook 35 §7](35-deploy-step-ca.md));
    the role restarts `step-ca` on the changed intermediate.
 
@@ -235,12 +255,14 @@ Recovery is the same flow on demand:
 
 ## Verification Checklist
 
-Executed on: **never** — this runbook is unexecuted. Record the date and each result when it is first
-run; update the measured/planned labels above as facts are confirmed.
+Executed on: **never** — no ceremony has been run against the real IronKey. §1–§3's mechanics are
+rehearsed and encapsulated in the kit (`docs/private-ca-offline-signing/`), which is what the island
+runs; record the date and each result when the real ceremony is first performed, and update the
+measured/planned labels above as facts are confirmed.
 
-- [ ] §1 island air-gapped; `step` installed; checksums verified
-- [ ] §2 root created with `CA:TRUE`, ~10y; stored only on the IronKey; fingerprint recorded
-- [ ] §3 intermediate CSR from runbook 35 §6 signed by the offline root; IronKey returned to the safe
+- [ ] §1 island air-gapped; kit on the stick with `step` in place; `./step version` runs
+- [ ] §2 root created with `CA:TRUE`, `pathlen:1`, ~10y; stored only on the IronKey; fingerprint and passphrase in the safe
+- [ ] §3 intermediate CSR from runbook 35 §6 signed by the offline root; the kit's checks all pass; IronKey returned to the safe
 - [ ] §4 annual re-sign scheduled
 - [ ] §5 PTT-loss recovery documented and understood
 
@@ -258,5 +280,7 @@ run; update the measured/planned labels above as facts are confirmed.
 - [Research 37 §5](../research/37-tpm2-hardware-and-fleet.md) — the `pve` Intel PTT fTPM and key-loss risk
 - [Issue #141](https://github.com/jaroslaw-bagnicki/Homelab/issues/141) — the measured TPM custody gate
 - [Runbook 35](35-deploy-step-ca.md) — the on-host deployment this ceremony feeds
+- [Offline signing kit](../private-ca-offline-signing/README.md) — the scripts and island-facing
+  instructions that §1–§3 now point at
 - [Runbook 28](28-pve-proxmox-node.md) (Proxmox base) · [ADR 34](../decisions/34-lan-tls-only.md) (TLS-only) ·
   [ADR 37](../decisions/37-lan-name-space-internal.md) (`.internal`)
