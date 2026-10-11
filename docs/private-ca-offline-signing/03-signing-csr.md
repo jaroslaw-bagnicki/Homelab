@@ -13,7 +13,7 @@ every signing, including the annual re-sign before the intermediate expires.
 ## Run it
 
 ```sh
-./sign.sh <mount-path>
+./sign.sh <destination-path>
 ```
 
 It runs exactly this, and asks for the root key's passphrase — or takes it from a file, as in
@@ -21,7 +21,7 @@ It runs exactly this, and asks for the root key's passphrase — or takes it fro
 
 ```sh
 ./step certificate sign --template intermediate-ca.tpl --not-after 8760h \
-  intermediate_ca.csr <mount-path>/root_ca.crt <mount-path>/root_ca_key \
+  intermediate_ca.csr <destination-path>/root_ca.crt <destination-path>/root_ca_key \
   > intermediate_ca.crt
 ```
 

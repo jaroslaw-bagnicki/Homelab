@@ -1,14 +1,14 @@
 #!/bin/sh
 # Sign the intermediate CSR with the offline root held on the secure USB stick.
 #
-#   ./sign.sh <mount-path> [passphrase-file]      e.g. /mnt/sdX1 (no default)
+#   ./sign.sh <destination-path> [passphrase-file]      e.g. /mnt/sdX1 (no default)
 #
 # Uses --template, never --profile: a profile rebuilds the certificate from its own
 # defaults and silently drops the SANs, producing an intermediate that passes an
 # issuer check and then fails every TLS request (measured 2026-10-11).
 set -eu
 
-[ $# -ge 1 ] || { echo "usage: $0 <mount-path> [passphrase-file]" >&2; echo "       e.g. $0 /mnt/sdX1" >&2; exit 1; }
+[ $# -ge 1 ] || { echo "usage: $0 <destination-path> [passphrase-file]" >&2; echo "       e.g. $0 /mnt/sdX1" >&2; exit 1; }
 STICK="$1"
 PWFILE="${2:-}"
 DIR="$(cd "$(dirname "$0")" && pwd)"

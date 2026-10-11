@@ -115,7 +115,7 @@ versioned source. If you change one, change both — otherwise the signing machi
 
    **Nothing assumes a location.** Wherever the stick lands — `/mnt/sdX1`, `/media/ubuntu/<label>`, or
    a directory you made — that path is the first argument both scripts take. There is no default, so
-   the commands in 02 and 03 read `<mount-path>`.
+   the commands in 02 and 03 read `<destination-path>`.
 
 5. **Create the root — once ever.** Only if the stick does not already hold one. The full ceremony,
    its acceptance checks and its refusals: [02-issuing-root-cert.md](02-issuing-root-cert.md).
