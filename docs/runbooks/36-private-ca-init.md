@@ -99,10 +99,10 @@ Nothing else changes. No new key, no new root, and no client has to be told anyt
 client already trusts the same root. Set a reminder about 30 days before expiry; the current expiry is in
 `step certificate inspect intermediate_ca.crt`.
 
-> **Acceptance.** The new certificate chains to the root ([runbook 35 §7](35-deploy-step-ca.md)); the old
+> **Done when.** The new certificate chains to the root ([runbook 35 §7](35-deploy-step-ca.md)); the old
 > one is retired only after that; the new expiry is recorded.
 
-> **Backout.** Put the previous `intermediate_ca.crt` back before it expires, then repeat step 2 and
+> **To undo.** Put the previous `intermediate_ca.crt` back before it expires, then repeat step 2 and
 > [runbook 35 §7](35-deploy-step-ca.md).
 
 ## 4. Recovering from a lost TPM key
@@ -128,9 +128,9 @@ The recovery is the same sequence, run when it happens:
 The root is unaffected, so no client has to be told anything. A wiped TPM costs a re-signing, not a
 re-trust. Move the annual reminder afterwards.
 
-> **Acceptance.** The CA issues certificates again, and they chain to the root.
+> **Done when.** The CA issues certificates again, and they chain to the root.
 
-> **Backout.** None needed — the root is untouched; repeat the steps if the first attempt fails.
+> **To undo.** None needed — the root is untouched; repeat the steps if the first attempt fails.
 
 ---
 

@@ -120,9 +120,9 @@ ls -l /dev/tpmrm0        # owner must now be 100000:100000
 - A **privileged** container avoids the ownership change, at the cost of the isolation the unprivileged
   shape exists for — not used here.
 
-> **Acceptance.** `ls -l /dev/tpmrm0` shows `100000:100000`; after `reboot` it still does.
+> **Done when.** `ls -l /dev/tpmrm0` shows `100000:100000`; after `reboot` it still does.
 
-> **Backout.** `rm /etc/udev/rules.d/60-tpm-lxc.rules`, reload rules, `chown root:root /dev/tpmrm0`.
+> **To undo.** `rm /etc/udev/rules.d/60-tpm-lxc.rules`, reload rules, `chown root:root /dev/tpmrm0`.
 
 > **Execution record — 2026-10-11 (`pve`).** Rule written, then `udevadm control --reload-rules` and
 > `udevadm trigger --action=add --subsystem-match=tpmrm`:
@@ -182,11 +182,11 @@ pct exec 215 -- ls -l /dev/tpmrm0     # present and owned by container root
 - The device numbers must match §1's host reading; update the config if the host differs.
 - Keep the Proxmox network **Firewall** flag at `0` — the boundary is the in-container UFW (§4).
 
-> **Acceptance.** `pct status 215` → `running`; `/dev/tpmrm0` visible inside and owned by container
+> **Done when.** `pct status 215` → `running`; `/dev/tpmrm0` visible inside and owned by container
 > root; `systemctl --failed` inside is **empty**; `findmnt` shows `/tmp`, `/run/lock` and
 > `/dev/mqueue` mounted with `nosuid,nodev`.
 
-> **Backout.** `pct stop 215 && pct destroy 215`; remove the udev rule (§1 backout).
+> **To undo.** `pct stop 215 && pct destroy 215`; remove the udev rule (§1 backout).
 
 > **Execution record — 2026-10-11 (`pve`).** Guest created, passthrough appended, started. `pct
 > status` → `running`; `systemctl --failed` → **0 units** (`0 loaded units listed`); `findmnt` →
@@ -228,9 +228,9 @@ passwd -l fleetadm
 ssh fleetadm@192.168.2.215 'sudo -n whoami'   # → root
 ```
 
-> **Acceptance.** `ssh fleetadm@192.168.2.215 'sudo -n whoami'` → `root`, key-only.
+> **Done when.** `ssh fleetadm@192.168.2.215 'sudo -n whoami'` → `root`, key-only.
 
-> **Backout.** `pct destroy 215` (§2) removes the account with the container.
+> **To undo.** `pct destroy 215` (§2) removes the account with the container.
 
 > **Execution record — 2026-10-11.** Account verified: `authorized_keys` matches
 > `ansible/roles/common/files/ssh/fleetadm.pub` (compared *before* installing — it is current),
@@ -288,10 +288,10 @@ ansible-playbook ansible/playbooks/playbook-ca.yml --diff
   other LAN node ([ADR 36](../decisions/36-log-collector-fluentbit.md)); the store password comes from
   AKV at playbook runtime.
 
-> **Acceptance.** Clean `PLAY RECAP`; UFW active with `22` + `9000` allowed from `192.168.2.0/24`;
+> **Done when.** Clean `PLAY RECAP`; UFW active with `22` + `9000` allowed from `192.168.2.0/24`;
 > `avahi-daemon` and `fluent-bit` running; `systemctl --failed` empty.
 
-> **Backout.** Re-run with the previous inventory/host_vars.
+> **To undo.** Re-run with the previous inventory/host_vars.
 
 > **Execution record — 2026-10-11.** `ansible-playbook ansible/playbooks/playbook-ca.yml --diff` →
 > `ca : ok=39 changed=25 unreachable=0 failed=0 skipped=2 rescued=0 ignored=0`, no warnings (the two
@@ -322,10 +322,10 @@ secret never appears in the unit's environment or on a command line
 ([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md)). **Rotation**: re-run with `-Force`,
 then re-run the workload playbook (§6).
 
-> **Acceptance.** `Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name step-ca-provisioner-password`
+> **Done when.** `Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name step-ca-provisioner-password`
 > reports the secret, `Enabled: True`; the value is never printed.
 
-> **Backout.** Delete the secret (`Remove-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name step-ca-provisioner-password -Force`) and re-run the workload; nothing else depends on the value.
+> **To undo.** Delete the secret (`Remove-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name step-ca-provisioner-password -Force`) and re-run the workload; nothing else depends on the value.
 
 > **Execution record — 2026-10-11.** The secret was **absent** before this run. `./scripts/New-HomelabStepCaPassword.ps1`
 > → `Secret 'step-ca-provisioner-password' provisioned in 'homelab-bysxdb-kv'`. Read back:
@@ -427,11 +427,11 @@ ansible-playbook ansible/workloads/step-ca/step-ca-playbook.yml --diff
   `step_ca_csr_force=true`; the service starts only once both certificates exist. A routine run cannot
   destroy the key or clobber a CSR awaiting signing.
 
-> **Acceptance.** `step kms` lists `homelab-intermediate-ca`; the `.tpmobj` and `intermediate_ca.csr`
+> **Done when.** `step kms` lists `homelab-intermediate-ca`; the `.tpmobj` and `intermediate_ca.csr`
 > exist; `ca.json` carries the `kms` block; `step-ca` is **not** running (no certificate yet); no
 > `intermediate_ca_key` file exists.
 
-> **Backout.** `pct destroy 215` (§2); nothing is trusted yet.
+> **To undo.** `pct destroy 215` (§2); nothing is trusted yet.
 
 > **Execution record — 2026-10-11.** Took three runs. The TPM key was created on the first attempt
 > (`Create the intermediate CA key in the TPM` → `changed`), then the CSR task failed twice more:
@@ -502,7 +502,7 @@ ssh fleetadm@192.168.2.215 'systemctl is-active step-ca && ls -l /dev/tpmrm0'
 **Idempotency** — a second `ansible-playbook ansible/workloads/step-ca/step-ca-playbook.yml --diff`
 must report no changes.
 
-> **Acceptance.**
+> **Done when.**
 
 > | Check | Result |
 > |---|---|
@@ -515,7 +515,7 @@ must report no changes.
 > | Reboot | service active, `/dev/tpmrm0` owned by container root, leaf re-issues |
 > | Idempotency | re-run reports no changes |
 
-> **Backout.** `systemctl disable --now step-ca`; the offline root and client trust are untouched.
+> **To undo.** `systemctl disable --now step-ca`; the offline root and client trust are untouched.
 
 ## 8. Operations
 
