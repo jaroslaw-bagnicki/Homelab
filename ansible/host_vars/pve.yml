@@ -4,6 +4,7 @@ common_enable_avahi: true
 security_ufw_allow_ssh_from: "192.168.2.0/24"
 security_ufw_allow_tcp_from: "192.168.2.0/24"
 security_ufw_allow_tcp_ports:
+  - 3493
   - 8006
   - 19996
   - 19999
@@ -15,9 +16,14 @@ netdata_bind: "{{ ansible_host }}:19999=dashboard^SSL=force {{ ansible_host }}:1
 netdata_tls: true
 netdata_storage: dbengine
 # Retention is role-owned — see `netdata_retention_tiers_by_role` in the netdata role's defaults
-# (parent → 14 d / 3 GiB at 1s, 30 d / 2 GiB at 1m, 365 d / 2 GiB at 1h).
-# UPS telemetry — poll the NUT server (LXC 213 on this host); anonymous reads.
-netdata_upsd_address: "192.168.2.213:3493"
+# (parent → 14 d / 5 GiB at 1s, 30 d / 2 GiB at 1m, 365 d / 2 GiB at 1h).
+# UPS telemetry — poll the host-native NUT server on this node; anonymous reads.
+# The job name must stay `local` — Netdata's go.d service discovery (`sd:net_listeners`) auto-creates
+# an `upsd` job named `local` for any local listener on port 3493, and `upsd` now listens on this
+# host. Using the same name makes our declared job the one that exists, instead of collecting the
+# same UPS twice (see runbook 31).
+netdata_upsd_address: "192.168.2.201:3493"
+netdata_upsd_name: local
 
 nut_client_role: primary
 nut_client_account: upsmon-host

@@ -11,7 +11,7 @@ opnsense_api_secret_secret_name: opnsense-api-secret
 
 # Netdata: install the os-netdata plugin (child streaming to the Tier B Parent on `pve`,
 # 192.168.2.201:19996, TLS). Streaming is configured in the plugin after install —
-# see runbook 35 §13.
+# see runbook 37 §13.
 opnsense_install_netdata: true
 
 # Syslog → the VictoriaLogs syslog listener. Enabled only once that listener is deployed

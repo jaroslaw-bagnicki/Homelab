@@ -365,7 +365,7 @@ assumed away (see [Open Questions](#open-questions)).
 
 - **No measurements.** RAM and disk growth per day against the 30-day budget, and query latency on the
   Celeron, are unmeasured. The store's disk comes out of the `pve` node's single 128 GB M.2 SATA — the
-  ~39 GiB `local` root LV, where the Netdata Parent's ≈7 GiB per-tier DB already lives, or the
+  ~39 GiB `local` root LV, where the Netdata Parent's ≈9 GiB per-tier DB already lives, or the
   ~68 GiB `local-lvm` thin pool the guests use. Which storage the LXC's volume lands on is not decided
   here.
 - **The store's weak case needs measuring, not assuming.** VictoriaLogs is documented as *slower than

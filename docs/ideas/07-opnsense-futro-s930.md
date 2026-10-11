@@ -6,9 +6,9 @@
 > router (its WAN via the bridged Tenda Nova), adding NGFW features (Suricata IDS/IPS,
 > Zenarmor, VLANs, WireGuard/IPsec VPN, Unbound DNS) that the current flat mesh gateway lacks.
 
-**Status**: 🔨 Implementing — hardware acquired & verified ([research 31](../research/31-futro-s930-hardware-diagnostic.md)); direction recorded in [ADR 39](../decisions/39-lan-router-futro-s930.md); install tracked in [issue #96](https://github.com/jaroslaw-bagnicki/Homelab/issues/96)  
+**Status**: 🔨 Implementing — hardware acquired & verified ([research 31](../research/31-futro-s930-hardware-diagnostic.md)); direction recorded in [ADR 40](../decisions/40-lan-router-futro-s930.md); install tracked in [issue #96](https://github.com/jaroslaw-bagnicki/Homelab/issues/96)  
 **Date**: 2026-08-21  
-**Updated**: 2026-10-09 — ADR 39 accepted; [runbook 35](../runbooks/35-deploy-opnsense.md) authored; 24 GB mSATA installed  
+**Updated**: 2026-10-09 — ADR 40 accepted; [runbook 37](../runbooks/37-deploy-opnsense.md) authored; 24 GB mSATA installed  
 **Source**: [Gemini discussion — OPNsense firewall i router](https://share.gemini.google/k8PVbnk90fuo) (published 2026-08-21)
 
 ---
@@ -160,7 +160,7 @@ The thread covers several deployment shapes; the one relevant to a single home r
   break).
 - **Placement**: WAN port ← the **bridged Tenda** (ISP segment), LAN port(s) → TL-SG108E switch.
   *(Superseded — the Tenda bridges onto the **ISP segment**, not behind OPNsense; see
-  [ADR 39](../decisions/39-lan-router-futro-s930.md).)*
+  [ADR 40](../decisions/40-lan-router-futro-s930.md).)*
 
 ## Backup WAN / failover → idea 08
 
@@ -180,12 +180,12 @@ depend on it.
   (`ansible-galaxy collection install oxlorg.opnsense`); declare firewall rules/aliases in
   `host_vars`; automate firmware updates via the API. Prereqs: API key/secret
   (System → Access → Users → API keys), ACL permissions. This fits the repo's
-  Ansible-driven provisioning model — realised by `playbook-router.yml` / [runbook 35](../runbooks/35-deploy-opnsense.md) §13
+  Ansible-driven provisioning model — realised by `playbook-router.yml` / [runbook 37](../runbooks/37-deploy-opnsense.md) §13
   ([ADR 10](../decisions/10-ansible-host-config.md) supplement).
 
 ## Open questions
 
-1. **Resolved** ([ADR 39](../decisions/39-lan-router-futro-s930.md)): the Nova bridges onto the **ISP segment**, not behind OPNsense; putting house Wi-Fi behind OPNsense needs dedicated APs — a follow-up.
+1. **Resolved** ([ADR 40](../decisions/40-lan-router-futro-s930.md)): the Nova bridges onto the **ISP segment**, not behind OPNsense; putting house Wi-Fi behind OPNsense needs dedicated APs — a follow-up.
 2. VLAN segmentation scope — separate lab / office / IoT VLANs (drives i350-T2 vs i350-T4)?
 3. Bare-metal appliance vs Proxmox-VM on the Futro (reuse the thin-client + Proxmox pattern
    from idea 05) — bare-metal keeps it a dedicated appliance; VM adds snapshots/HA.

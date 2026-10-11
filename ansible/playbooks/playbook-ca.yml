@@ -1,0 +1,8 @@
+---
+- name: Configure ca (private CA guest on pve) base
+  hosts: ca
+  become: true
+  roles:
+    - common
+    - security
+    - fluentbit

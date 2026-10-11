@@ -81,9 +81,10 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Storage | M.2 SATA 2280 SK hynix SC311 128 GB SSD (SMART PASSED, ~97% life remaining) · unused 14.7 GiB eMMC |
 | Firmware | BIOS 1.34.0 (2024-11-08) · board `060J9C` |
 | Network | Realtek GbE (`enp1s0`) · Intel CNVi WiFi/BT (`wlp0s12f0`) |
+| TPM | **Intel PTT** firmware TPM 2.0 — `/dev/tpm0`, `/dev/tpmrm0` (measured 2026-10-04, [research 37 §5](research/37-tpm2-hardware-and-fleet.md)) · passed into LXC 215, which seals the CA's intermediate key to it |
 | Zigbee | Sonoff ZBDongle-P (CC2652P) · USB coordinator for LXC 212 |
 | OS | Proxmox VE 9.2.2 installed at `192.168.2.201` · base provisioned ([runbook 28](runbooks/28-pve-proxmox-node.md)) |
-| Role | Fleet virtualisation host (Proxmox VE) |
+| Role | Fleet virtualisation host (Proxmox VE) · hosts LXC 215 `ca`, the fleet trust anchor ([ADR 38](decisions/38-private-ca-hierarchy-and-custody.md)) |
 | Docs | [idea 05](ideas/05-home-assistant-thin-client.md) · [ADR 25](decisions/25-home-assistant-thin-client.md) · [research 26](research/26-home-assistant-thin-client.md) · [research 29](research/29-wyse5070-hardware-diagnostic.md) · [runbook 28](runbooks/28-pve-proxmox-node.md) |
 
 ### OPNsense Router — Fujitsu Futro S930 (planned)
@@ -162,8 +163,8 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Outlets | 4 (2× Schuko + 2× IEC) over two strips — servers (`pve`, `lab`, `edge`, `nas`) and network appliances; monitors, dock and laptop charger stay on the wall |
 | USB | `0665:5161` · HID page `0xFF00`, **no serial number** — driven by NUT `nutdrv_qx`, not `usbhid-ups` |
 | Measured | **17 W** self-consumption · **~55 min** to `LB` at the ~80 W fleet (inline meter, drill 2026-09-19); NUT reports no power — `ups.load` % only |
-| NUT | USB on the `pve` node; server in **LXC 213** (`.213`); `upsmon` on `pve` (primary) and `lab`/`edge`/`nas` (secondaries) |
-| Docs | [ADR 30](decisions/30-ups-nut-graceful-shutdown.md) · [runbook 29](runbooks/29-nut-ups-shutdown.md) · [runbook 30](runbooks/30-deploy-nut-clients.md) · [drill report](reports/260919-nut-shutdown-drill.md) |
+| NUT | USB on the `pve` node, which runs the server **host-native** (`.201`); `upsmon` on `pve` (primary) and `lab`/`edge`/`nas` (secondaries) |
+| Docs | [ADR 39](decisions/39-nut-host-native.md) · [runbook 29](runbooks/29-nut-ups-shutdown.md) · [runbook 30](runbooks/30-deploy-nut-clients.md) · [drill report](reports/260919-nut-shutdown-drill.md) |
 
 ## Smart Home
 

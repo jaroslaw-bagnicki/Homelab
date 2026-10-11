@@ -1,7 +1,7 @@
 # UPS Graceful Shutdown — NUT on the pve Node
 
 **Date:** 2026-09-12
-**Status:** Accepted
+**Status:** Superseded by [ADR 39](39-nut-host-native.md) — the NUT server is now host-native on `pve`, not in LXC 213
 
 ---
 

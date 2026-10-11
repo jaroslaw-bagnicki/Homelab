@@ -1,0 +1,15 @@
+[Unit]
+Description=Private CA (step-ca)
+Documentation=https://smallstep.com/docs/step-ca/
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/etc/step-ca
+ExecStart=/usr/local/bin/step-ca /etc/step-ca/config/ca.json --password-file /etc/step-ca/secrets/password
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

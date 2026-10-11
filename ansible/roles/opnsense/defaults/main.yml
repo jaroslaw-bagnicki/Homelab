@@ -17,7 +17,7 @@ opnsense_api_key: ""
 opnsense_api_secret: ""
 
 # Netdata plugin (Tier B child). The plugin streams to the Parent on `pve`; that streaming
-# configuration is done in the plugin, not this role (runbook 35 §13).
+# configuration is done in the plugin, not this role (runbook 37 §13).
 opnsense_install_netdata: true
 opnsense_netdata_package: os-netdata
 

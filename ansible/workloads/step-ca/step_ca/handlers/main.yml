@@ -1,0 +1,11 @@
+---
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Restart step-ca
+  ansible.builtin.systemd:
+    name: step-ca
+    state: restarted
+    daemon_reload: true
+  when: step_ca_cert is defined and step_ca_cert.stat.exists

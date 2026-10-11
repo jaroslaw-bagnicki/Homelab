@@ -2,6 +2,12 @@
 
 **Date:** 2026-09-27
 **Status:** Accepted
+**Amended:** 2026-10-10 — the store also runs a **TLS syslog listener** (`:6514`, `-syslog.*`) for the
+**OPNsense router** ([ADR 36 amendment](36-log-collector-fluentbit.md) · [runbook 37](../runbooks/37-deploy-opnsense.md) §13).
+It reuses the store's TLS certificate and has **no authentication** — client-cert mTLS is VictoriaLogs
+Enterprise-only — so it is the store's **one unauthenticated write path**, and the in-LXC LAN UFW rule is the
+entire boundary (the same posture as the "LAN-only, enforced at the container" clause above). Configured in
+[runbook 33](../runbooks/33-deploy-victorialogs.md) §7.
 
 ---
 
@@ -47,7 +53,7 @@ LXC on the `pve` node.**
   the node that is always on regardless of maintenance on `lab`, where the fleet's firewall policy is
   already managed, and whose guests' backup route (`vzdump` → the NAS share) is the natural path once
   the Beetle's share lands. **LXC 214 / `192.168.2.214`** — the next free guest ID, per ADR 31's
-  ID-is-the-address rule. The guest is **Debian 13** (LXC 213's precedent) and is provisioned as the
+  ID-is-the-address rule. The guest is **Debian 13** (the fleet's base) and is provisioned as the
   **Victoria stack** host (`vtstack`) — framed to carry VictoriaMetrics and VictoriaTraces as later
   services (research 33 §4), though this ADR deploys only the log store. A log store has no cgroup
   requirement, unlike the Netdata Parent, which must be host-native (ADR 27).
@@ -59,17 +65,21 @@ LXC on the `pve` node.**
 - **Transport: HTTPS only** — native TLS (`-tls`, `-tlsCertFile`, `-tlsKeyFile`) with a self-signed
   certificate generated on the host by Ansible and mounted read-only. Plaintext HTTP is prohibited
   (ADR 34).
-- **Auth: HTTP basic auth from day one** — `-httpAuth.username` / `-httpAuth.password`, the password
-  written by Ansible from Azure Key Vault to a **root-only file** and read via
+- **Auth — HTTP ingest: basic auth from day one** — `-httpAuth.username` / `-httpAuth.password`, the
+  password written by Ansible from Azure Key Vault to a **root-only file** and read via
   `-httpAuth.password=file://…`, so the secret never appears in the container's argument list or
-  environment — upstream's recommended route over `-envflag.enable`.
+  environment — upstream's recommended route over `-envflag.enable`. **Syslog ingest is the exception**
+  (amended 2026-10-10): the TLS syslog listener is **unauthenticated** (client-cert mTLS is
+  Enterprise-only), so its LAN UFW rule is the only boundary — any LAN host can inject records; accepted
+  on the trusted LAN.
 - **LAN-only, enforced at the container** — the listener is restricted to `192.168.2.0/24` by a rule
   **inside the LXC** (or at the Proxmox firewall), not by the host's UFW, which never sees container
   traffic (ADR 34). The container therefore runs with **`network_mode: host`** so the in-LXC UFW
   (INPUT chain) actually filters the port — a Docker *published* port is forwarded through Docker's own
   iptables path and would **bypass UFW**. The store has **no IP allowlist of its own** — the upstream
   docs delegate that to the network — so this rule is the whole boundary. **Deployed 2026-09-27:** the
-  in-LXC UFW carries `22` + `9428` from `192.168.2.0/24`, with `80` denied and default-deny inbound
+  in-LXC UFW carries `22` + `9428` from `192.168.2.0/24` (with `6514` added 2026-10-10 for the syslog
+  listener), with `80` denied and default-deny inbound
   ([runbook 33](../runbooks/33-deploy-victorialogs.md) §6). **Still unverified — deferred:** the
   off-LAN refusal itself, because no source in this topology routes to the guest from another subnet.
 - **Retention: 30 days** (`-retentionPeriod`), **capped by disk space** —
@@ -109,8 +119,8 @@ LXC on the `pve` node.**
   ([research 33 §8](../research/33-centralized-logging-victorialogs.md#8-how-the-three-engines-store-and-query-logs--the-mechanism-behind-the-store-choice)).
   Accepted: fleet queries are stream- and field-filtered sweeps, and an inverted index is what an 8 GB
   node cannot afford.
-- **Risk bounded, not removed — resource contention on a Celeron with 8 GB.** `pve` carries the NUT
-  server (LXC 213) and the host-native Netdata Parent today, and is slated to take the Home Assistant VM
+- **Risk bounded, not removed — resource contention on a Celeron with 8 GB.** `pve` carries the
+  host-native NUT server and the host-native Netdata Parent today, and is slated to take the Home Assistant VM
   plus the Mosquitto and Zigbee2MQTT LXCs (ADR 25, [#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68)).
   VictoriaLogs' compression and LogsQL scans are CPU-bound and its memory can spike under wide queries,
   so the store is placed **around** smart-home services rather than isolated from them. Gemini
@@ -119,7 +129,7 @@ LXC on the `pve` node.**
   bound the damage but do not remove the competition for a weak CPU. If the store proves disruptive,
   ADR 22's k3s node is the documented fallback and this ADR is updated or superseded.
 - **Disk is shared on one 128 GB M.2 SATA.** The `pve` node has a single SSD: `local` is a ~39 GiB
-  root LV already holding the Netdata Parent's ≈7 GiB per-tier database, and `local-lvm` is a ~68 GiB
+  root LV already holding the Netdata Parent's ≈9 GiB per-tier database, and `local-lvm` is a ~68 GiB
   thin pool backing the guests' disks. The store's volume and its retention cap are sized against that
   one device — the docs' guidance is ≥20% free space at the store's data directory, and a thin pool is
   overcommittable, so the numbers were fixed at deploy rather than assumed — a 16 GiB root volume
@@ -130,12 +140,15 @@ LXC on the `pve` node.**
   verification, the same residual ADR 27 and ADR 34 accept. Pinning arrives with the private CA tracked
   as [#126](https://github.com/jaroslaw-bagnicki/Homelab/issues/126).
 - **A write-accepting service on the LAN** — the ingest path becomes the fleet's most sensitive
-  listener. Basic auth is only as strong as the Key Vault-sourced secret, and the LAN-only rule must be
-  re-verified whenever the container's networking changes.
+  listener. **HTTP** ingest is protected by basic auth (only as strong as the Key Vault secret); the
+  **syslog listener is unauthenticated** (amended 2026-10-10), so any LAN host can inject records there —
+  the LAN rule is its only boundary. Both listeners' LAN-only rules must be re-verified whenever the
+  container's networking changes.
 - **The store is inert until a collector ships** ([#84](https://github.com/jaroslaw-bagnicki/Homelab/issues/84));
   this ADR buys the destination, not the pipeline.
-- **A deliberately minimal security posture** — TLS plus built-in basic auth on a trusted LAN, not the
-  upstream vmauth front end, and **no HA**: a single instance with no replication means an outage drops
+- **A deliberately minimal security posture** — TLS plus built-in basic auth on the HTTP ingest, an
+  **unauthenticated TLS syslog listener** (LAN-bound), and no `vmauth` front end on a trusted LAN, and
+  **no HA**: a single instance with no replication means an outage drops
   or queues logs depending on the collector. Acceptable at 30-day retention, and revisited if the store
   ever leaves the LAN.
 

@@ -3,7 +3,7 @@
 > **Implementation runbook for [issue #96 — OPNsense router (Futro S930): initial setup](https://github.com/jaroslaw-bagnicki/Homelab/issues/96).**
 > Installs **OPNsense 26.7** on the Fujitsu Futro S930 and configures it as the lab's
 > **LAN router** — DHCP + NAT + firewall for `192.168.2.0/24`, **routing-first** (flat
-> subnet; VLANs later). The decision is [ADR 39](../decisions/39-lan-router-futro-s930.md);
+> subnet; VLANs later). The decision is [ADR 40](../decisions/40-lan-router-futro-s930.md);
 > the verified hardware is [research 31](../research/31-futro-s930-hardware-diagnostic.md);
 > the platform/NIC rationale is [idea 07](../ideas/07-opnsense-futro-s930.md); the LTE failover
 > WAN is [idea 08](../ideas/08-lte-wan-failover.md).
@@ -297,7 +297,7 @@ the **ISP's segment** (see the note below).
 > **House Wi-Fi is not behind OPNsense in this shape.** The bridged Tenda rides the ISP's
 > `192.168.1.0/24`, so house devices are firewalled only by the ISP router. Putting house Wi-Fi
 > behind OPNsense needs **dedicated AP(s) on the OPNsense LAN** — a follow-up decision
-> ([ADR 39](../decisions/39-lan-router-futro-s930.md)).
+> ([ADR 40](../decisions/40-lan-router-futro-s930.md)).
 
 ---
 
@@ -346,7 +346,7 @@ ansible-playbook ansible/playbooks/playbook-router.yml --diff
 After the plugin installs, configure it as a **child streaming to the Parent** on `pve` — the
 collection has **no module** for this, so set it in the plugin (**System → Netdata**):
 - stream destination **`192.168.2.201:19996`** with **`:SSL`** (the Parent forces TLS, self-signed);
-- keep it **RAM-only** (no disk `dbengine`) to spare the 24 GB mSATA ([ADR 39](../decisions/39-lan-router-futro-s930.md)).
+- keep it **RAM-only** (no disk `dbengine`) to spare the 24 GB mSATA ([ADR 40](../decisions/40-lan-router-futro-s930.md)).
 
 Verify on the **Netdata dashboard on `pve`** that `router` appears as a child.
 
@@ -380,7 +380,7 @@ which needs a **store-side change** (listener flags + TLS + in-LXC UFW) delivere
 
 ## References
 
-- [ADR 39 — LAN Router — OPNsense on the Futro S930, Routing-First](../decisions/39-lan-router-futro-s930.md)
+- [ADR 40 — LAN Router — OPNsense on the Futro S930, Routing-First](../decisions/40-lan-router-futro-s930.md)
 - [Research 31 — Futro S930 hardware diagnostic](../research/31-futro-s930-hardware-diagnostic.md) — verified hardware + 24 GB mSATA
 - [Idea 07 — OPNsense Router on Fujitsu Futro S930](../ideas/07-opnsense-futro-s930.md) — platform + `bge` caveats
 - [Idea 08 — Homelab LTE/5G WAN Failover](../ideas/08-lte-wan-failover.md) — WAN2 on `re0`

@@ -11,10 +11,10 @@
 ## Decision Summary
 
 > **Decision authority:** the OPNsense-on-S930 direction is recorded in
-> [ADR 39 — LAN Router — OPNsense on the Futro S930, Routing-First](../decisions/39-lan-router-futro-s930.md).
+> [ADR 40 — LAN Router — OPNsense on the Futro S930, Routing-First](../decisions/40-lan-router-futro-s930.md).
 > This research doc is the Phase 0 hardware audit output. It **confirms the NIC, AES-NI &
 > platform premise** and **resolves the internal-disk capacity flag** (the 8 GB module was
-> replaced with a 24 GB one). Implementation is [runbook 35](../runbooks/35-deploy-opnsense.md).
+> replaced with a 24 GB one). Implementation is [runbook 37](../runbooks/37-deploy-opnsense.md).
 
 | Decision | Outcome (as of 2026-10-09) |
 |---|---|
@@ -222,7 +222,7 @@ module was installed.
    or does a Proxmox-VM variant (Idea 07 §Deployment direction) ever supersede it?
 3. **Double-NAT handling** — OPNsense WAN behind the ISP router (`192.168.1.x`): replace
    its routing, or keep it in DMZ/bridge mode (Idea 07 open question 5 / issue #96).
-4. **Mesh** — ✅ **Resolved** ([ADR 39](../decisions/39-lan-router-futro-s930.md)): the Tenda is set to
+4. **Mesh** — ✅ **Resolved** ([ADR 40](../decisions/40-lan-router-futro-s930.md)): the Tenda is set to
    **bridge mode**, riding the **ISP's `192.168.1.0/24`** (its only role is now house Wi-Fi), **not**
    behind the OPNsense LAN. Putting house Wi-Fi behind OPNsense (dedicated APs) is a follow-up.
 

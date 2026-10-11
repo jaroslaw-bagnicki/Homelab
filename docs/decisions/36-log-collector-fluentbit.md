@@ -12,7 +12,7 @@ actually ride out an outage.
 VictoriaLogs syslog listener** (in-band, configured through the GUI/API via `oxlorg.opnsense.syslog`),
 resolving the deferral below. Fluent Bit stays out on the router (no OPNsense plugin). The listener has
 **no authentication** (mTLS is VictoriaLogs Enterprise-only) and **no parsing** (`filterlog` CSV arrives
-raw) — the LAN rule and LogsQL carry those. Deployed by [runbook 35](../runbooks/35-deploy-opnsense.md) §13
+raw) — the LAN rule and LogsQL carry those. Deployed by [runbook 37](../runbooks/37-deploy-opnsense.md) §13
 once the store's syslog listener lands.
 
 > **This ADR records the decision and why.** Flags, parsers, per-node paths, tuning and the full

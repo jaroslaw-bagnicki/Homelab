@@ -50,7 +50,7 @@ Hostname **`router`** ([ADR 33](33-fleet-node-hostnames.md)).
   Wi-Fi lands on the ISP segment, not behind OPNsense** (dedicated APs are the follow-up).
 
 The install and initial configuration are in
-[runbook 35](../runbooks/35-deploy-opnsense.md).
+[runbook 37](../runbooks/37-deploy-opnsense.md).
 
 ## Consequences
 
@@ -58,7 +58,7 @@ The install and initial configuration are in
   Zenarmor and a VPN endpoint that the flat mesh could not provide.
 - A **FreeBSD appliance** joins the fleet **outside the Linux roles** — no apt/systemd/`fleetadm`.
   Ansible manages it over its **REST API** via the `oxlorg.opnsense` collection
-  (`playbook-router.yml`, [runbook 35](../runbooks/35-deploy-opnsense.md) §13) — a per-OS
+  (`playbook-router.yml`, [runbook 37](../runbooks/37-deploy-opnsense.md) §13) — a per-OS
   exception ([ADR 10](10-ansible-host-config.md) supplement).
 - **Double-NAT** persists until the ISP-router handling is decided; remote access stays
   outbound-only via Cloudflare Tunnel ([ADR 08](08-remote-access-cloudflare-tunnel.md)).
@@ -70,7 +70,7 @@ The install and initial configuration are in
   inter-VLAN traffic once segmentation lands.
 - The router joins the shared UPS rail ([ADR 30](30-ups-nut-graceful-shutdown.md)); its logging
   path is **syslog-ng → the VictoriaLogs syslog listener** ([ADR 36](36-log-collector-fluentbit.md)
-  amendment), onboarded in [runbook 35](../runbooks/35-deploy-opnsense.md) §13.
+  amendment), onboarded in [runbook 37](../runbooks/37-deploy-opnsense.md) §13.
 - **Issue #96's "mesh serves Wi-Fi as an AP behind OPNsense" criterion is superseded** by this
   topology: the bridged Tenda rides the **ISP segment**, so putting house Wi-Fi behind OPNsense
   needs dedicated AP(s) on its LAN — a follow-up (issue #96 updated).
@@ -94,4 +94,4 @@ The install and initial configuration are in
 - [Idea 08](../ideas/08-lte-wan-failover.md) — LTE WAN failover on `re0` · [research 30](../research/30-mobile-internet-failover-offers.md)
 - [Research 24](../research/24-network-topology-design.md) — flat-vs-VLAN design · [ADR 31](31-static-address-scheme.md) — addressing
 - [ADR 08](08-remote-access-cloudflare-tunnel.md) — CGNAT / Cloudflare Tunnel · [ADR 24](24-edge-ingress-appliance.md) — edge split · [ADR 33](33-fleet-node-hostnames.md) — hostname `router`
-- [Runbook 35](../runbooks/35-deploy-opnsense.md) — install & initial setup
+- [Runbook 37](../runbooks/37-deploy-opnsense.md) — install & initial setup

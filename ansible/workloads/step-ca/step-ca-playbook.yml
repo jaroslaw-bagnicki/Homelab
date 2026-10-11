@@ -1,0 +1,28 @@
+---
+# Private CA (step-ca) workload — self-contained recipe.
+#
+# Deploys `step-ca` as a native systemd service on the `ca` guest (LXC 215 on the
+# `pve` node) with the intermediate CA key held in the host TPM 2.0, per ADR 38.
+# One role recipe co-located under ansible/workloads/step-ca/:
+#   - role: step_ca   (toolchain + TPM key + CSR + TPM-backed ca.json + service)
+#
+# The base guest (common/security/fluentbit) is applied by playbook-ca.yml — this
+# workload assumes a Debian guest with UFW already restricting 9000 to the LAN and
+# /dev/tpmrm0 passed through (runbook 35 §1–§2).
+#
+# The run is two-phase: `prepare` creates the TPM key and emits a CSR, then the
+# offline ceremony (runbook 36) signs it, then a second run `start`s the service.
+#
+# Run standalone (from a LAN workstation, after CR):
+#   ansible-playbook ansible/workloads/step-ca/step-ca-playbook.yml
+#
+# See:
+#   ansible/workloads/step-ca/README.md             ansible-side facts
+#   docs/workloads.md                               general rules + index
+#   docs/runbooks/35-deploy-step-ca.md              operational steps
+#   docs/runbooks/36-private-ca-init.md             offline root/signing ceremony
+- name: Deploy the private CA (step-ca) on the ca guest
+  hosts: ca
+  become: true
+  roles:
+    - role: step_ca

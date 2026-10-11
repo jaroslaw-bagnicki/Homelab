@@ -1,13 +1,13 @@
 # nut_client
 
-Installs **NUT clients** (`nut-client` + `upsmon`) on the physical fleet nodes, so each node stops itself in an orderly way when the shared UPS battery runs down. It is the **client** half of the UPS/NUT setup: the NUT **server** runs in LXC 213 on the `pve` node and is built by [runbook 29](../../../docs/runbooks/29-nut-ups-shutdown.md) §1–§3. Decision: [ADR 30](../../../docs/decisions/30-ups-nut-graceful-shutdown.md); tracked in [issue #116](https://github.com/jaroslaw-bagnicki/Homelab/issues/116).
+Installs **NUT clients** (`nut-client` + `upsmon`) on the physical fleet nodes, so each node stops itself in an orderly way when the shared UPS battery runs down. It is the **client** half of the UPS/NUT setup: the NUT **server** runs host-native on the `pve` node and is delivered by the [`nut_server`](../nut_server/README.md) role ([runbook 29](../../../docs/runbooks/29-nut-ups-shutdown.md)). Decision: [ADR 30](../../../docs/decisions/30-ups-nut-graceful-shutdown.md) (placement changed by [ADR 39](../../../docs/decisions/39-nut-host-native.md)); tracked in [issue #116](https://github.com/jaroslaw-bagnicki/Homelab/issues/116).
 
 ## Files
 
 - `defaults/main.yml` — role parameters (secondary values).
 - `tasks/main.yml` — install, Key Vault password fetch, templates, reachability guard, service.
 - `handlers/main.yml` — restart `nut-monitor` (guarded).
-- `templates/nut.conf.j2` — `MODE=netclient`.
+- `templates/nut.conf.j2` — the NUT mode: `standalone` on `pve`, `netclient` on the secondaries.
 - `templates/upsmon.conf.j2` — the shared monitor config.
 
 ## Roles
@@ -26,9 +26,9 @@ Installs **NUT clients** (`nut-client` + `upsmon`) on the physical fleet nodes, 
 | Item | Notes |
 |---|---|
 | `nut-monitor` | `upsmon`; enabled and started by the role (when the server is reachable). |
-| `/etc/nut/nut.conf` | `MODE=netclient`, `0640 root:nut`. |
+| `/etc/nut/nut.conf` | `MODE=standalone` on `pve` (it also runs the server), `MODE=netclient` on the secondaries; `0640 root:nut`. |
 | `/etc/nut/upsmon.conf` | `MONITOR` + shutdown policy, `0640 root:nut`; templated with `no_log` so the password never prints, including under `--diff`. |
-| `nut-server` / `nut-driver@ups` | LXC 213 only — out of scope (runbook 29 §1–§3). |
+| `nut-server` / `nut-driver@ups` | `pve` — delivered by the [`nut_server`](../nut_server/README.md) role ([ADR 39](../../../docs/decisions/39-nut-host-native.md)). |
 
 ## Secrets
 
@@ -39,16 +39,16 @@ The monitor passwords already exist in `homelab-bysxdb-kv` (provisioned by `scri
 
 The role fetches the password for its role at run time via `azure.azcollection.azure_keyvault_secret` (`delegate_to: localhost`, `no_log`) and writes it straight into `/etc/nut/upsmon.conf`. **No password is a role default or is committed.** Rotation = re-run the script with `-Force`, then re-run the base playbook.
 
-The accounts must match `upsd.users` in LXC 213 (`upsmon-host` = `upsmon primary`, `upsmon-fleet` = `upsmon secondary`); a role mismatch surfaces as `Login failed: not authorized for this mode` in the client's `nut-monitor` log.
+The accounts must match `upsd.users` on the `pve` host (`upsmon-host` = `upsmon primary`, `upsmon-fleet` = `upsmon secondary`); a role mismatch surfaces as `Login failed: not authorized for this mode` in the client's `nut-monitor` log.
 
 ## Reachability guard
 
-`upsmon` is **fail-safe**: with `MINSUPPLIES 1`, an `upsmon` that loses the server for `DEADTIME` shuts the node down. The role therefore probes the server with `upsc ups@192.168.2.213` (5 retries, 2 s apart) before touching the service:
+`upsmon` is **fail-safe**: with `MINSUPPLIES 1`, an `upsmon` that loses the server for `DEADTIME` (**120 s** — `nut_client_deadtime`) shuts the node down. The role therefore probes the server with `upsc ups@192.168.2.201` (5 retries, 2 s apart) before touching the service:
 
 - **Server answers** → `nut-monitor` is enabled and started (the restart handler is likewise gated).
-- **Server unreachable** → config is written, the service is left stopped, and the play warns. Re-run once LXC 213 is up.
+- **Server unreachable** → config is written, the service is left stopped, and the play warns. Re-run once the NUT server on `pve` is up.
 
-This keeps a from-scratch `pve` rebuild (where the server container does not exist yet) from starting a fail-safe monitor with no server to reach.
+This keeps a from-scratch `pve` rebuild (where the NUT server is not up yet) from starting a fail-safe monitor with no server to reach.
 
 The guard is **provisioning-only**: it governs whether the service is (re)started and leaves an already-running `nut-monitor` alone, so a converged node whose server genuinely goes down still stops itself — the fail-safe trade-off [ADR 30](../../../docs/decisions/30-ups-nut-graceful-shutdown.md) accepts (see runbook 29 §6).
 
@@ -64,13 +64,15 @@ The guard is **provisioning-only**: it governs whether the service is (re)starte
 | Var | Default | Notes |
 |---|---|---|
 | `nut_client_ups_name` | `ups` | UPS section name in `ups.conf`. |
-| `nut_client_server` | `192.168.2.213` | NUT server (LXC 213). |
+| `nut_client_server` | `192.168.2.201` | NUT server (host-native on `pve`). |
 | `nut_client_keyvault_name` | `homelab-bysxdb-kv` | Key Vault for the password. |
 | `nut_client_role` | `secondary` | `primary` on `pve` (via `host_vars`). |
+| `nut_client_nut_mode` | `{{ 'standalone' if nut_client_role == 'primary' else 'netclient' }}` | `/etc/nut/nut.conf` MODE — derived from the role, not host-set. |
 | `nut_client_account` | `upsmon-fleet` | `upsmon-host` on `pve`. |
 | `nut_client_password_secret` | `nut-upsmon-secondary-password` | `nut-upsmon-primary-password` on `pve`. |
 | `nut_client_hostsync` | `15` | `30` on `pve`. |
 | `nut_client_finaldelay` | `0` | `30` on `pve`; inert on a secondary. |
+| `nut_client_deadtime` | `120` | Seconds of `upsd` silence before the node fails safe (shuts down). Raised from the NUT default 15 s on 2026-10-11 — a measured `pve` reboot leaves `upsd` unreachable for ~60–67 s (see [runbook 29 §6](../../../docs/runbooks/29-nut-ups-shutdown.md)). |
 
 `nut_client_upsmon_password` is a runtime fact from Key Vault — never a default.
 

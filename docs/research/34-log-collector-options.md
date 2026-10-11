@@ -337,7 +337,7 @@ fleet-consistency option rather than the default.
 > supersedes the "decided when it joins" line; the store's syslog listener (flags + TLS + in-LXC UFW) lands
 > as a separate change to [runbook 33](../runbooks/33-deploy-victorialogs.md). See
 > [ADR 36's amendment](../decisions/36-log-collector-fluentbit.md) and
-> [runbook 35 §13](../runbooks/35-deploy-opnsense.md).
+> [runbook 37 §13](../runbooks/37-deploy-opnsense.md).
 
 ### 9. Source shapes — what each of the fleet's systems actually demands
 
