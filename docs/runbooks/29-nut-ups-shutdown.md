@@ -263,8 +263,8 @@ the fleet — the drill in §7 is what proves it.
 
 ## 5. Fleet clients
 
-> **Delivered by the `nut_client` role.** `lab` (M910q) and `edge` (Wyse 3040) are
-> `upsmon` `secondary` nodes: account `upsmon-fleet`, `HOSTSYNC 15`, `FINALDELAY 0`, pointing at
+> **Delivered by the `nut_client` role.** `lab` (M910q), `edge` (Wyse 3040) and `nas` (Beetle M-III)
+> are `upsmon` `secondary` nodes: account `upsmon-fleet`, `HOSTSYNC 15`, `FINALDELAY 0`, pointing at
 > `192.168.2.201`. Installed and kept converged by the same role — [runbook 30](30-deploy-nut-clients.md).
 
 Node-specific notes:
@@ -272,10 +272,11 @@ Node-specific notes:
 - **`lab`** — k3s **starts and stops with the host**. No `kubectl drain`/cordon in v1: there is no
   other node to reschedule onto, so a drain would only delay the stop. Revisit if the cluster grows.
 - **`edge`** — 2 GB, RAM-only Netdata; `nut-client` is a rounding error next to that.
-- **The NAS (Beetle M-III), once it is up** — it runs **OMV**, which ships its **own UPS service
-  that also writes `/etc/nut`**. Pick one writer: either drive it from the OMV panel or disable that
-  service and configure NUT **by hand** — the `nut_client` role does not cover the NAS. Two writers
-  will fight and the config drifts. OMV is not Ansible-managed, so this one is manual.
+- **The NAS (Beetle M-III)** — enrolled as a secondary by `playbook-nas.yml`, exactly like
+  `lab`/`edge` (verified **2026-10-11**: `nut-monitor` active, `MODE=netclient`, `MONITOR` →
+  `192.168.2.201`). OMV *also* offers a UPS service that writes the same `/etc/nut` — it is **not**
+  installed today, and it must stay that way, or two writers fight and the config drifts. If the OMV
+  panel ever takes over, disable the `nut_client` job first instead of running both.
 
 ## 6. Shutdown choreography
 
@@ -398,13 +399,16 @@ runbook completes on its own; the client rollout (§4/§5) is verified by
 [runbook 30](30-deploy-nut-clients.md).
 
 - [ ] §0 UPS input on the wall socket; **both strips** on battery-backed outlets; monitors/dock/charger off the UPS
-- [ ] §1 LXC 213 retired, `.213` freed; the host's `lsusb -d 0665:5161` shows the UPS
-- [ ] §2 `playbook-pve.yml` applies cleanly; `/etc/udev/rules.d/85-nut-usb.rules` present; `nut-monitor` ordered after `nut-server`
-- [ ] §3 `/lib/nut/nutdrv_qx` attaches (as root **and** as `nut`), `upsc ups@192.168.2.201` returns real values, `battery.runtime` presence recorded
-- [ ] §3 both monitor passwords in AKV and written into `upsd.users`; `/etc/nut` files `640 root:nut`
-- [ ] §3 `upsd` reloaded after the accounts were written — a daemon that predates the edit still serves the old user list
-- [ ] §4/§5 the fleet's `nut-monitor` reaches `ups@192.168.2.201` from `pve`, `lab`, `edge`, `nas`
-- [ ] §7 on-battery ride performed from the dev container (2026-09-13, 5.5 min, fleet attached) — `OB`/`OL` propagate promptly; runtime **not** derivable by extrapolation
+- [x] §1 LXC 213 retired, `.213` freed; the host's `lsusb -d 0665:5161` shows the UPS — **2026-10-11** (all four monitors paused and asserted inactive first; LXC `/etc/nut` snapshotted to `pve:/tmp/nut-213-snapshot/`; `pct destroy 213` — container gone from `pct list`, UPS freed to the host)
+- [x] §2 `playbook-pve.yml` applies cleanly; `/etc/udev/rules.d/85-nut-usb.rules` present; `nut-monitor` ordered after `nut-server` — **2026-10-11** (`ok=80 changed=20 failed=0`; drop-in in place, and a re-run converges to `changed=0`)
+- [x] §3 `/lib/nut/nutdrv_qx` attaches (as root **and** as `nut`), `upsc ups@192.168.2.201` returns real values, `battery.runtime` presence recorded — **2026-10-11** (`nutdrv_qx` 2.8.1 claimed the device on the host; `upsc ups@localhost` → `OL` / 100 % / 27.29 V; **`battery.runtime` absent**, so the trigger stays `LB`)
+- [x] §3 both monitor passwords in AKV and written into `upsd.users`; `/etc/nut` files `640 root:nut` — **2026-10-11** (accounts `upsmon-host` + `upsmon-fleet`; every file `0640 root:nut`)
+- [x] §3 `upsd` reloaded after the accounts were written — a daemon that predates the edit still serves the old user list — **2026-10-11** (`upsd.users` notifies a reload)
+- [x] §4/§5 the fleet's `nut-monitor` reaches `ups@192.168.2.201` from `pve`, `lab`, `edge`, `nas` — **2026-10-11** (all four `active`, `MONITOR` → `.201`, `upsc` returns `OL`, no `Login failed`; `lab` `ok=74 changed=4`, `edge` `ok=59 changed=3`, `nas` `ok=55 changed=3`)
+- [x] §2 two defects the live run exposed, fixed **2026-10-11** — `nut_client` now derives `nut.conf` `MODE` from the role (`standalone` on `pve`, `netclient` on the secondaries; both roles templated that one file and the client ran last), and `nut_server` enumerates the driver only while it is down (the `oneshot` enumerator, `RemainAfterExit=no`, had made every run report `changed=1`)
+- [x] §7 NUT events from the host are queryable in VictoriaLogs with the host identity `pve` — **2026-10-11** (`upsd` 44, `nut-server` 7, `nut-monitor` 3, `nut-driver-enumerator` 11; issue [#148](https://github.com/jaroslaw-bagnicki/Homelab/issues/148) acceptance criterion)
+- [x] §7 Netdata no longer charts the UPS twice — the Parent's go.d job is renamed `nut` → `local` to match Netdata's own `sd:net_listeners` discovery, which had added a second device and summed `ups_on_line` to **2** — **2026-10-11**, [runbook 31](31-deploy-netdata.md) §2
+- [ ] §7 on-battery ride performed from the dev container (2026-09-13, 5.5 min, fleet attached) — `OB`/`OL` propagate promptly; runtime **not** derivable by extrapolation — **to re-run on the host-native topology**
 - [ ] §7 on-battery propagation confirmed on all three nodes (host, `lab`, `edge`); fleet-wide drill done — **2026-09-19** real-outage run (stronger than `upsmon -c fsd`: genuine battery trigger), ordering proven — FSD 11:29:43; `edge` down 11:29:47, `lab` `poweroff.target` 11:29:48; primary stops +30 s (`FINALDELAY 30`) — [report](../reports/260919-nut-shutdown-drill.md) — **[#117]**
 - [ ] §7 Beetle tested on battery at **idle and under spin-up** (or moved off battery outlets) — **[#117]**; **not** covered by the 2026-09-19 drill (the Beetle is powered but has no OS yet)
 
