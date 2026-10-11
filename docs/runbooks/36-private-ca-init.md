@@ -48,8 +48,7 @@ Run this only on the signing machine, with the IronKey mounted:
 The script runs `step certificate create` for you, gives the key a passphrase, and sets the root's
 lifetime to 10 years. It then checks what it produced and stops if anything is wrong: that the result is
 a CA certificate allowed to sign another CA, that it lasts 10 years, that it may sign certificates and
-revocation lists, and that the key file is protected. Finally it prints the fingerprint for you to write
-down.
+revocation lists, and that the key file is protected. Finally it prints the fingerprint.
 
 It refuses to run if a root already exists, because replacing a root later means every client has to be
 told to trust a different one. A wrong root therefore has to be dealt with before it is ever handed out.
@@ -113,7 +112,7 @@ Executed on: **never** — this has never been run against the real IronKey. Ste
 tested only with a throwaway key and a fake IronKey. Record the date and the result here when the real
 ceremony is first performed.
 
-- [ ] Step 1: root created, every check passed, fingerprint and passphrase written into the safe
+- [ ] Step 1: root created, every check passed, passphrase written into the safe
 - [ ] Step 2: certificate signed, every check passed, IronKey back in the safe
 - [ ] Step 3: annual reminder set
 
