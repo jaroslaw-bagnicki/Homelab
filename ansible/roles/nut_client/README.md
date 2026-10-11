@@ -7,7 +7,7 @@ Installs **NUT clients** (`nut-client` + `upsmon`) on the physical fleet nodes, 
 - `defaults/main.yml` — role parameters (secondary values).
 - `tasks/main.yml` — install, Key Vault password fetch, templates, reachability guard, service.
 - `handlers/main.yml` — restart `nut-monitor` (guarded).
-- `templates/nut.conf.j2` — `MODE=netclient`.
+- `templates/nut.conf.j2` — the NUT mode: `standalone` on `pve`, `netclient` on the secondaries.
 - `templates/upsmon.conf.j2` — the shared monitor config.
 
 ## Roles
@@ -26,7 +26,7 @@ Installs **NUT clients** (`nut-client` + `upsmon`) on the physical fleet nodes, 
 | Item | Notes |
 |---|---|
 | `nut-monitor` | `upsmon`; enabled and started by the role (when the server is reachable). |
-| `/etc/nut/nut.conf` | `MODE=netclient`, `0640 root:nut`. |
+| `/etc/nut/nut.conf` | `MODE=standalone` on `pve` (it also runs the server), `MODE=netclient` on the secondaries; `0640 root:nut`. |
 | `/etc/nut/upsmon.conf` | `MONITOR` + shutdown policy, `0640 root:nut`; templated with `no_log` so the password never prints, including under `--diff`. |
 | `nut-server` / `nut-driver@ups` | `pve` — delivered by the [`nut_server`](../nut_server/README.md) role ([ADR 39](../../../docs/decisions/39-nut-host-native.md)). |
 
@@ -67,6 +67,7 @@ The guard is **provisioning-only**: it governs whether the service is (re)starte
 | `nut_client_server` | `192.168.2.201` | NUT server (host-native on `pve`). |
 | `nut_client_keyvault_name` | `homelab-bysxdb-kv` | Key Vault for the password. |
 | `nut_client_role` | `secondary` | `primary` on `pve` (via `host_vars`). |
+| `nut_client_nut_mode` | `{{ 'standalone' if nut_client_role == 'primary' else 'netclient' }}` | `/etc/nut/nut.conf` MODE — derived from the role, not host-set. |
 | `nut_client_account` | `upsmon-fleet` | `upsmon-host` on `pve`. |
 | `nut_client_password_secret` | `nut-upsmon-secondary-password` | `nut-upsmon-primary-password` on `pve`. |
 | `nut_client_hostsync` | `15` | `30` on `pve`. |
