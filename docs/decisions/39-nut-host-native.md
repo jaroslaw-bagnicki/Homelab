@@ -17,8 +17,9 @@ VM/LXC backups. Running it that way exposed three problems that the isolation di
   rule has to target the container's **mapped** GID (`100000 + <container gid>`). Every layer is a
   place for the driver to lose the device.
 - **A cold-boot ordering race.** `pve`'s own `upsmon` (the fail-safe `nut-monitor`) and LXC 213 start
-  independently, so `upsmon` can begin before `upsd` answers. A gap longer than `DEADTIME` (15 s) looks
-  like a dead UPS and stops the fleet on healthy mains ([ADR 30](30-ups-nut-graceful-shutdown.md) §6).
+  independently, so `upsmon` can begin before `upsd` answers. A gap longer than `DEADTIME` (15 s at the
+  time — **120 s** since the amendment in Decision) looks like a dead UPS and stops the fleet on
+  healthy mains ([ADR 30](30-ups-nut-graceful-shutdown.md) §6).
 - **The guest's log gap.** LXC 213 is not a Fluent Bit target, so NUT/systemd events never reached
   VictoriaLogs — the reason [#148](https://github.com/jaroslaw-bagnicki/Homelab/issues/148) was opened.
 
@@ -45,7 +46,11 @@ isolation…"*. In use, the costs of the LXC route have outweighed the isolation
   placement, not fail-safe policy. **Amended 2026-10-11:** `DEADTIME` raised 15 s → **120 s**
   (`nut_client_deadtime`) — with the server on the hypervisor's own host, an `upsd` restart or a
   `pve` reboot became a routine event, and a measured `pve` reboot left `upsd` unreachable for
-  ~60–67 s, which stopped the fleet on healthy mains at the old value (runbook 29 §6).
+  ~60–67 s, which stopped the fleet on healthy mains at the old value (runbook 29 §6). **This softens
+  the first Context problem:** at 120 s, the LXC-era race would have needed a two-minute `upsd` gap to
+  bite. The move is still the right one — it *removes* the race (systemd orders `nut-monitor` after
+  `nut-server`) rather than widening the window that bounds it, and the USB-passthrough fragility and
+  the guest log gap are untouched by the amendment.
 - **`pve`'s UFW allows `3493` from `192.168.2.0/24`** so the secondaries can reach `upsd`.
 - **LXC 213 is retired** and `.213` is released ([ADR 31](31-static-address-scheme.md)).
 
