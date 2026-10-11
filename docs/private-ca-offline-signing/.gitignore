@@ -12,4 +12,3 @@ step
 *.pem
 *_key*
 *.new
-root_ca_fingerprint
