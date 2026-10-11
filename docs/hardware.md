@@ -81,9 +81,10 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Storage | M.2 SATA 2280 SK hynix SC311 128 GB SSD (SMART PASSED, ~97% life remaining) · unused 14.7 GiB eMMC |
 | Firmware | BIOS 1.34.0 (2024-11-08) · board `060J9C` |
 | Network | Realtek GbE (`enp1s0`) · Intel CNVi WiFi/BT (`wlp0s12f0`) |
+| TPM | **Intel PTT** firmware TPM 2.0 — `/dev/tpm0`, `/dev/tpmrm0` (measured 2026-10-04, [research 37 §5](research/37-tpm2-hardware-and-fleet.md)) · passed into LXC 215, which seals the CA's intermediate key to it |
 | Zigbee | Sonoff ZBDongle-P (CC2652P) · USB coordinator for LXC 212 |
 | OS | Proxmox VE 9.2.2 installed at `192.168.2.201` · base provisioned ([runbook 28](runbooks/28-pve-proxmox-node.md)) |
-| Role | Fleet virtualisation host (Proxmox VE) |
+| Role | Fleet virtualisation host (Proxmox VE) · hosts LXC 215 `ca`, the fleet trust anchor ([ADR 38](decisions/38-private-ca-hierarchy-and-custody.md)) |
 | Docs | [idea 05](ideas/05-home-assistant-thin-client.md) · [ADR 25](decisions/25-home-assistant-thin-client.md) · [research 26](research/26-home-assistant-thin-client.md) · [research 29](research/29-wyse5070-hardware-diagnostic.md) · [runbook 28](runbooks/28-pve-proxmox-node.md) |
 
 ### OPNsense Router — Fujitsu Futro S930 (planned)

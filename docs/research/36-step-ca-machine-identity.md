@@ -265,8 +265,10 @@ also flags that the fleet could reach hardware key custody on nodes *without* a 
 that is in research 37.
 
 > **Verified 2026-10-04 — see §5.** TPM passthrough into an unprivileged LXC and the stock binary's
-> `tpmkms` support are **no longer open**; both were run on `pve`. Still unmeasured: the signing
-> latency, `tpm2-pkcs11` operation, and whether the passthrough survives a host reboot.
+> `tpmkms` support are **no longer open**; both were run on `pve`. **Reboot persistence is settled too**
+> (2026-10-11): a udev rule restores the device ownership on its own after a `pve` reboot
+> ([runbook 35 §1](../runbooks/35-deploy-step-ca.md)). Still unmeasured: the signing latency and
+> `tpm2-pkcs11` operation.
 
 ## §5 — Where to run it: the circular-dependency analysis
 
@@ -374,8 +376,9 @@ the cost of the isolation the unprivileged shape exists for. The device numbers 
 assuming.
 
 > **Still unverified.** The `nesting`/storage-driver prerequisites for Docker-in-LXC (already flagged in
-> research 35 §7), the port-53 collision when a resolver runs inside an LXC (research 35 §6), and whether
-> the passthrough survives a host reboot (the `chown` is not reboot-durable without the udev rule).
+> research 35 §7) and the port-53 collision when a resolver runs inside an LXC (research 35 §6). Device
+> ownership across a reboot is **no longer open** — the udev rule carries it
+> ([runbook 35 §1](../runbooks/35-deploy-step-ca.md)).
 
 ## §6 — Disaster recovery: re-issue the intermediate, keep the root
 
@@ -452,13 +455,14 @@ chose the offline root.
 - **Deployment shape on `pve` — LXC confirmed workable (2026-10-04).**
   [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) fixes the **host** — the TPM makes it a
   hard requirement — so `edge` and `lab` were never candidates. The unprivileged-LXC passthrough was run
-  and the recipe measured (§5). What remains open is plumbing, not shape: making the device ownership
-  survive reboots (udev rule vs a privileged CT), and sizing the LXC against `pve`'s single SSD.
+  and the recipe measured (§5). Device ownership survives reboots — the udev rule, measured 2026-10-11
+  ([runbook 35 §1](../runbooks/35-deploy-step-ca.md)). What remains is sizing the LXC against `pve`'s
+  single SSD.
 - **Wildcards on the proxy** — unchanged and still open ([research 35 §4](35-private-ca-and-lan-naming.md)).
 - **SSH CA adoption** — is passwordless, certificate-based SSH actually wanted across a five-node
   fleet, or does it outgrow the `authorized_keys` problem it solves?
-- **Still unmeasured** — TPM signing latency, the stock binary's footprint on the Wyse 5070, device
-  passthrough across a host reboot, and `tpm2-pkcs11` operation.
+- **Still unmeasured** — TPM signing latency, the stock binary's footprint on the Wyse 5070, and
+  `tpm2-pkcs11` operation.
 
 ## References
 

@@ -80,12 +80,15 @@ leaves the stick. Passphrase handling, the exact refusal messages, and why this 
 The script signs `intermediate_ca.csr` with a one-year lifetime, then checks the result for you rather
 than leaving you to read the certificate: that it chains to the root on the stick, that it is a CA
 certificate, that it may sign certificates and revocation lists, that it carries the hostname and IP
-address the service needs, and that it lasts a year. It writes to a temporary file and moves that into
-place only on success, so a failed run cannot leave a half-finished certificate behind.
+address the CA's identity shape requires, and that it lasts a year. It validates the temporary file and
+moves it into place only once every check has passed, so a failed run cannot leave a half-finished
+certificate behind — or overwrite a good annual one.
 
 Sign with the template, never with `--profile intermediate-ca`. A profile rebuilds the certificate from
-its own defaults and quietly drops the hostname and IP address, and because this certificate is also what
-`step-ca` uses for TLS, the result would pass an issuer check and then fail on every request.
+its own defaults and quietly drops the hostname and IP address — the SANs that declare the CA's identity
+shape. That is not an immediate outage: the certificate that serves TLS is a separate self-issued leaf
+named from `ca.json`'s `dnsNames` (runbook 35 §7), but the intermediate would no longer match the shape
+this deployment records.
 
 Afterwards, unmount the stick and put it back in the safe, and carry `intermediate_ca.crt` and
 `root_ca.crt` back for [runbook 35 §7](35-deploy-step-ca.md). The required contents of the certificate

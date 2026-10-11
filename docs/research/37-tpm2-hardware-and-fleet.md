@@ -273,8 +273,9 @@ adds an interceptable layer that defeats the tamper-resistance model. The altern
 - **TPM in an unprivileged LXC — tested 2026-10-04 and workable**
   ([research 36 §5](36-step-ca-machine-identity.md)): key creation **and** signing succeed from inside
   the container once the device node is chowned to the container's mapped root (`100000`). The device
-  mapping is settled (`c 10:224` / `c 252:65536`). Still open is **boot persistence** — the chown is not
-  reboot-durable without a udev rule, and Proxmox does not restore it for you.
+  mapping is settled (`c 10:224` / `c 252:65536`), and **boot persistence is settled too** (2026-10-11):
+  a udev rule restores the ownership on its own after a `pve` reboot
+  ([runbook 35 §1](../runbooks/35-deploy-step-ca.md)).
 - **`systemd-cryptenroll` on `pve`** — does the Wyse 5070's boot chain enrol cleanly, and does a
   firmware update then lock the disk? PCR-binding has a real operational cost here.
 - **Fallback trigger for the CA key.** ADR 38 selects the TPM; the open question is what evidence would

@@ -301,8 +301,11 @@ password lives in Azure Key Vault and is fetched at deploy time:
 The role writes `homelab-bysxdb-kv/step-ca-provisioner-password` to a **root-only file**
 (`/etc/step-ca/secrets/password`, mode `0600`) and starts `step-ca` with `--password-file …`, so the
 secret never appears in the unit's environment or on a command line
-([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md)). **Rotation**: re-run with `-Force`,
-then re-run the workload playbook (§6).
+([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md)). **Rotation is not a password swap** —
+the JWK provisioner's `encryptedKey` is encrypted with this password when `step ca init` runs, so
+replacing the Key Vault secret alone would leave the new password unable to issue while the old one kept
+working. The script therefore refuses to overwrite an existing secret; rotate the provisioner itself
+(§8).
 
 > **Execution record — 2026-10-11.** The secret was **absent** before this run. `./scripts/New-HomelabStepCaPassword.ps1`
 > → `Secret 'step-ca-provisioner-password' provisioned in 'homelab-bysxdb-kv'`. Read back:
@@ -440,7 +443,8 @@ ansible-playbook ansible/workloads/step-ca/step-ca-playbook.yml --diff
 The role **restarts** `step-ca` whenever the installed intermediate certificate's checksum changed —
 a renewed intermediate would otherwise stay unused until the next restart.
 
-**Validate** (on the `ca` guest):
+**Validate** (on the `ca` guest, as root — `ssh fleetadm@192.168.2.215`, then `sudo -i`: the certificates
+and the provisioner-password file are `0600 root:root`, so a plain `fleetadm` shell cannot read them):
 
 ```sh
 # `ca.internal` must resolve on the client — add a hosts entry until idea 10 provides the resolver. The
@@ -455,7 +459,8 @@ curl -s --cacert "$ROOT" "$CA/acme/acme/directory"
 # the served TLS identity: a short-lived leaf the CA issues for itself, named from ca.json's dnsNames
 echo | openssl s_client -connect 192.168.2.215:9000 2>/dev/null | openssl x509 -noout -subject -issuer -dates -ext subjectAltName
 
-# the certificate the ceremony signed kept CA:TRUE, pathlen:0 and both SANs (`--profile` drops the SANs, §6)
+# the certificate the ceremony signed kept CA:TRUE, pathlen:0 and both SANs — the CA's declared identity
+# shape, not what serves TLS (§6)
 step certificate inspect /etc/step-ca/certs/intermediate_ca.crt --format json \
   | grep -E '"is_ca"|"max_path_len"|"dns_names"|"ip_addresses"'
 
@@ -476,11 +481,15 @@ curl -s --connect-timeout 5 -o /dev/null -w '%{http_code}\n' http://192.168.2.21
 ufw status verbose     # 22 + 9000 ALLOW IN 192.168.2.0/24
 ```
 
-**Reboot survival** — `onboot 1`, the udev rule, and `restart=on-failure` together:
+**Reboot survival** — `onboot 1`, the udev rule, and `restart=on-failure` together. `pct` lives on the
+`pve` host, the service check on the guest:
 
 ```sh
+# on the pve host (ssh fleetadm@192.168.2.201, then sudo -i)
 pct reboot 215
-ssh fleetadm@192.168.2.215 'systemctl is-active step-ca && ls -l /dev/tpmrm0'
+
+# on the ca guest (ssh fleetadm@192.168.2.215, then sudo -i)
+systemctl is-active step-ca && ls -l /dev/tpmrm0
 # then re-issue a leaf — this proves the sealed blob + TPM still resolve after a reboot
 ```
 
@@ -512,6 +521,15 @@ must report no changes.
   is by short lifetime (ADR 38's accepted residual).
 - **Annual intermediate re-sign** — [runbook 36 §3](36-private-ca-init.md): re-run §6's CSR task for a
   fresh CSR from the same TPM key, sign offline, then re-run §7. No new key, no new client trust.
+- **JWK provisioner password** — the value in Key Vault is the one the `admin@internal` provisioner was
+  encrypted with at init, so it cannot be rotated by writing a new secret (§5). To rotate: re-issue the
+  provisioner on the guest as root — `step ca provisioner remove admin@internal` then
+  `step ca provisioner add admin@internal --type JWK --create --password-file <new>` (both with
+  `--ca-url https://ca.internal:9000`, `--root /etc/step-ca/certs/root_ca.crt`, and
+  `--admin-provisioner admin@internal --admin-password-file /etc/step-ca/secrets/password` for the
+  still-valid old password) — install the new password as `/etc/step-ca/secrets/password`, restart
+  `step-ca`, and write the same value into the Key Vault secret. ACME issuance
+  ([#142](https://github.com/jaroslaw-bagnicki/Homelab/issues/142)) is untouched either way.
 - **PTT key-loss hazard** — a BIOS update, `Clear PTT`, or NVRAM reset destroys the sealed key. Run the
   workload with `-e step_ca_reset=true` to clear the stale blob/CSR/certificate, sign the fresh CSR
   offline ([runbook 36 §2](36-private-ca-init.md)), then re-run §7. The root is unaffected.
