@@ -41,6 +41,9 @@ operating on its own.
   status, update `docs/overview.md` (nodes/workloads view) and `docs/hardware.md`
   (per-node specs + network appliances) in the same change. Do not let them go stale
   like the old "What's Done" table did.
+- **Retired stays visible**: a removed node, guest or workload keeps its row and is marked
+  🪦 — the state docs are a map with tombstones, not a diff. History beyond that lives in
+  `CHANGELOG.md`.
 - **Remove the `docs/overview.md` "What's Next" row in the same PR that completes the
   work** — alongside its `CHANGELOG.md` entry. A completed item leaves the board; an
   item that stalls without a start date moves to `## Not Scheduled` instead.

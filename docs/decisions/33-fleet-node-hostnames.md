@@ -10,7 +10,7 @@
 Fleet hostnames accumulated ad hoc. `cloudlab`, `lab`, and `edge` each name a **host role**, but the
 Wyse 5070 was named `ha` after the Home Assistant OS VM it was bought to run
 ([ADR 25](25-home-assistant-thin-client.md)) — and it has since become the fleet's virtualisation
-host: that VM plus LXCs 211/212/213 (Mosquitto, Zigbee2MQTT, NUT server), with the Netdata Parent to
+host: that VM plus LXCs 211/212 (Mosquitto, Zigbee2MQTT), with the Netdata Parent to
 come ([ADR 27](27-monitoring-strategy.md), [ADR 30](30-ups-nut-graceful-shutdown.md),
 [ADR 31](31-static-address-scheme.md)).
 
@@ -67,5 +67,5 @@ The Wyse 5070 is renamed **`ha` → `pve`**; its address `192.168.2.201` is unch
 ## References
 
 - [ADR 25](25-home-assistant-thin-client.md) — the node's founding workload · [ADR 27](27-monitoring-strategy.md) — Netdata Parent on this host
-- [ADR 30](30-ups-nut-graceful-shutdown.md) — NUT server LXC 213 and the `upsmon` primary role · [ADR 31](31-static-address-scheme.md) — addressing, unchanged by this rename
+- [ADR 39](39-nut-host-native.md) — NUT server host-native on `pve` and the `upsmon` primary role · [ADR 31](31-static-address-scheme.md) — addressing, unchanged by this rename
 - [Runbook 28](../runbooks/28-pve-proxmox-node.md) — the node's install and base provision

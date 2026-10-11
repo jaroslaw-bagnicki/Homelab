@@ -29,6 +29,9 @@
 - **State docs stay current**: when a node or workload is added, removed, or changes
   status, update `docs/overview.md` (nodes/workloads view) and `docs/hardware.md`
   (per-node specs + network appliances) in the same change
+- **Retired stays visible**: a removed node, guest or workload keeps its row and is marked
+  🪦 — the state docs are a map with tombstones, not a diff. History beyond that lives in
+  `CHANGELOG.md`.
 
 ## Issue Tracking
 

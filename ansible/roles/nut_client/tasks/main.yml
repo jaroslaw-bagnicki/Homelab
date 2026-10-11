@@ -67,5 +67,5 @@
   ansible.builtin.debug:
     msg: >-
       NUT server {{ nut_client_server }} is unreachable — nut-client is configured but
-      nut-monitor was left stopped. Re-run this playbook once LXC 213 is up.
+      nut-monitor was left stopped. Re-run this playbook once the NUT server on pve is up.
   when: nut_client_upsc.rc != 0

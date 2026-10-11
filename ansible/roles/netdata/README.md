@@ -59,7 +59,7 @@ charts `upsd.ups_battery_charge`, `upsd.ups_battery_voltage`, `upsd.ups_load` (%
 Reads are **anonymous** (`upsd` is open on the LAN, [ADR 30](../../../docs/decisions/30-ups-nut-graceful-shutdown.md)),
 so there is **no NUT account and no Key Vault secret** — only [`host_vars/pve.yml`](../../host_vars/pve.yml)
 sets an address. A node with the variable empty converges with **no job** (`/etc/netdata/go.d/upsd.conf`
-is removed). The module polls a **remote** `upsd`, so no agent goes inside LXC 213 — one agent per node
+is removed). The module polls a **remote** `upsd`, so no agent goes inside a guest — one agent per node
 (ADR 27) still holds. `upsd.ups_battery_estimated_runtime` stays empty on this unit: `nutdrv_qx` reports
 no `battery.runtime` (issue #115).
 
@@ -86,8 +86,8 @@ Alerts view and the API ([ADR 27](../../../docs/decisions/27-monitoring-strategy
 | `netdata_stream_ssl` | `false` | Child only: append `:SSL` to the stream destination. |
 | `netdata_proxmox_host` | `false` | Grants the `netdata` user `/etc/pve` read (parent on Proxmox). |
 | `netdata_upgrade` | `false` | `true` re-runs the kickstart installer (`--reinstall`) for one run. |
-| `netdata_upsd_address` | `""` | NUT daemon `host:port` to poll for UPS telemetry (`go.d/upsd.conf`); empty = no job. The parent sets `192.168.2.213:3493`. |
-| `netdata_upsd_name` | `nut` | Job name in the rendered `go.d/upsd.conf`. |
+| `netdata_upsd_address` | `""` | NUT daemon `host:port` to poll for UPS telemetry (`go.d/upsd.conf`); empty = no job. The parent sets `192.168.2.201:3493`. |
+| `netdata_upsd_name` | `nut` | Job name in the rendered `go.d/upsd.conf`. **Use `local` when the node also runs `upsd`**: Netdata's go.d service discovery (`sd:net_listeners`) already configures a `local` job for any listener on port 3493, and a different name charts the same UPS twice. The parent sets `local`. |
 
 ## Secrets
 

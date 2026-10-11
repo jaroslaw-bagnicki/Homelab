@@ -14,7 +14,7 @@ hardware detail see [Hardware Inventory](hardware.md); for change history see
 | **OMV NAS** | backup target | HP ProLiant ML110 G5 · OMV 8.3 | `omv` | `192.168.2.210` | 🪦 |
 | **Beetle NAS** | backup target (successor to ML110) | Wincor Beetle M-III · OMV 8.5 | `nas` | `192.168.2.202` | 🔨 |
 | **Edge Ingress** | public ingress (cloudflared + Caddy) | Dell Wyse 3040 · Debian 13 minimal | `edge` | `192.168.2.240` | 🔨 |
-| **Proxmox VE** | virtualisation host — smart-home + always-on services | Dell Wyse 5070 | `pve` | `192.168.2.201` · guests `.210`–`.214` | ✅ |
+| **Proxmox VE** | virtualisation host — smart-home + always-on services | Dell Wyse 5070 | `pve` | `192.168.2.201` · guests `.210`–`.212`, `.214` | ✅ |
 | **LLM server** | local LLM inference | Minisforum X1 Lite | — | TBD | 🧠 |
 | **Cloudlab VPS** | staging for Lab (Ansible + Docker/k3s workloads) | Contabo VPS 10 · Ubuntu 24.04 | `cloudlab` | `173.249.27.13` | ✅ |
 
@@ -25,8 +25,10 @@ hardware detail see [Hardware Inventory](hardware.md); for change history see
 | VM 210 | Home Assistant OS | — | `.210` | 📋 |
 | LXC 211 | Mosquitto | — | `.211` | 📋 |
 | LXC 212 | Zigbee2MQTT | — | `.212` | 📋 |
-| LXC 213 | NUT server | `nut` | `.213` | ✅ |
+| LXC 213 | NUT server — retired, moved host-native to `pve` | `nut` | `.213` | 🪦 |
 | LXC 214 | VictoriaLogs log store | `vtstack` | `.214` | ✅ |
+
+The NUT server now runs **host-native on `pve`** ([ADR 39](decisions/39-nut-host-native.md)); LXC 213 is retired and `.213` is free.
 
 Addresses follow the static scheme ([ADR 31](decisions/31-static-address-scheme.md)); node hostnames name the host role ([ADR 33](decisions/33-fleet-node-hostnames.md)); the workload platform is migrating to k3s ([ADR 22](decisions/22-k3s-arc-homelab.md)).
 
@@ -43,7 +45,7 @@ Current state — what's running or in progress. Planned work is under [What's N
 | **Zot** | `cloudlab` | self-hosted OCI registry + pull-through cache | [runbook 20](runbooks/20-deploy-zot.md) | ✅ |
 | **OpenMediaVault** | `omv` | network shares (SMB) + backup target | [ADR 23](decisions/23-nas-on-ml110.md) | 🪦 |
 | **Netdata Parent** | `pve` | Tier B central monitoring pane | [ADR 27](decisions/27-monitoring-strategy.md) · [runbook 31](runbooks/31-deploy-netdata.md) | ✅ |
-| **UPS + NUT** | `pve` (LXC 213) + `lab`/`edge`/`nas` clients | shared-rail power protection | [ADR 30](decisions/30-ups-nut-graceful-shutdown.md) · [runbook 29](runbooks/29-nut-ups-shutdown.md) · [runbook 30](runbooks/30-deploy-nut-clients.md) | ✅ |
+| **UPS + NUT** | `pve` (host-native NUT server) + `lab`/`edge`/`nas` clients | shared-rail power protection | [ADR 39](decisions/39-nut-host-native.md) · [runbook 29](runbooks/29-nut-ups-shutdown.md) · [runbook 30](runbooks/30-deploy-nut-clients.md) | ✅ |
 | **VictoriaLogs** | `pve` (LXC 214 `vtstack`) | Tier B log store | [ADR 35](decisions/35-log-store-victorialogs.md) · [runbook 33](runbooks/33-deploy-victorialogs.md) | ✅ |
 | **Fluent Bit** | every LAN node (`pve`, `edge`, `lab`, `nas`, `vtstack`) | Tier B log collector — ships journald + Docker logs to VictoriaLogs | [ADR 36](decisions/36-log-collector-fluentbit.md) · [runbook 34](runbooks/34-deploy-fluentbit.md) | ✅ |
 
@@ -79,7 +81,7 @@ once it is ready to start — a row leaves the table with the PR that completes 
 |---|---|---|---|
 | **Edge Ingress — service migration** | ⭐⭐ | Move `cloudflared` + Caddy off the M910q onto the Wyse 3040 (base OS + `edge_host` role already shipped); the LAN name space is now `.internal` and **no host serves it yet** — DNSMasq was retired with it | [#65](https://github.com/jaroslaw-bagnicki/Homelab/issues/65) · [#81](https://github.com/jaroslaw-bagnicki/Homelab/issues/81) · [ADR 24](decisions/24-edge-ingress-appliance.md) · [ADR 37](decisions/37-lan-name-space-internal.md) |
 | **Beetle NAS** | ⭐⭐⭐ | **Phase 1 done** — OMV 8.5 on `nas`, `md0` RAID1 clean + reboot-verified, fleet-enrolled with the Netdata child and NUT secondary; next: create the share and move the backup target, then retire the ML110 and release `.210` (Memtest86+ and the RTC coin cell stay deferred — [research 32](research/32-wincor-beetle-m3-hardware-diagnostic.md)) | [#98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98) · [ADR 29](decisions/29-nas-backup-target-beetle-m3-omv.md) · [runbook 32](runbooks/32-beetle-m3-omv-setup.md) |
-| **Home Assistant VM + LXCs** | ⭐⭐⭐ | VM 210 (HA OS) + LXC 211/212 (Mosquitto, Zigbee2MQTT) on the `pve` node (the base from runbook 28), then point HA's NUT integration at `192.168.2.213` for UPS status + power-loss notifications | [#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68) · [#85](https://github.com/jaroslaw-bagnicki/Homelab/issues/85) · [ADR 25](decisions/25-home-assistant-thin-client.md) · [#111](https://github.com/jaroslaw-bagnicki/Homelab/issues/111) |
+| **Home Assistant VM + LXCs** | ⭐⭐⭐ | VM 210 (HA OS) + LXC 211/212 (Mosquitto, Zigbee2MQTT) on the `pve` node (the base from runbook 28), then point HA's NUT integration at `192.168.2.201` for UPS status + power-loss notifications | [#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68) · [#85](https://github.com/jaroslaw-bagnicki/Homelab/issues/85) · [ADR 25](decisions/25-home-assistant-thin-client.md) · [#111](https://github.com/jaroslaw-bagnicki/Homelab/issues/111) |
 
 ### Planned
 
@@ -127,8 +129,8 @@ Tenda Nova mesh — 192.168.2.0/24, gateway 192.168.2.1 (single broadcast domain
 ```
 
 **Power**: both strips sit behind the shared-rail **Green Cell UPSLM600** — USB on the `pve` node,
-NUT server in LXC 213, `upsmon` on `pve`/`lab`/`edge`/`nas`
-([ADR 30](decisions/30-ups-nut-graceful-shutdown.md)).
+which runs the NUT server **host-native**, with `upsmon` on `pve`/`lab`/`edge`/`nas`
+([ADR 39](decisions/39-nut-host-native.md)).
 
 Cloudlab VPS (Contabo) sits outside the LAN with its own Cloudflare Tunnel + Caddy (ADR 19).
 

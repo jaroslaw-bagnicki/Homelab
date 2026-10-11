@@ -53,7 +53,7 @@ LXC on the `pve` node.**
   the node that is always on regardless of maintenance on `lab`, where the fleet's firewall policy is
   already managed, and whose guests' backup route (`vzdump` → the NAS share) is the natural path once
   the Beetle's share lands. **LXC 214 / `192.168.2.214`** — the next free guest ID, per ADR 31's
-  ID-is-the-address rule. The guest is **Debian 13** (LXC 213's precedent) and is provisioned as the
+  ID-is-the-address rule. The guest is **Debian 13** (the fleet's base) and is provisioned as the
   **Victoria stack** host (`vtstack`) — framed to carry VictoriaMetrics and VictoriaTraces as later
   services (research 33 §4), though this ADR deploys only the log store. A log store has no cgroup
   requirement, unlike the Netdata Parent, which must be host-native (ADR 27).
@@ -119,8 +119,8 @@ LXC on the `pve` node.**
   ([research 33 §8](../research/33-centralized-logging-victorialogs.md#8-how-the-three-engines-store-and-query-logs--the-mechanism-behind-the-store-choice)).
   Accepted: fleet queries are stream- and field-filtered sweeps, and an inverted index is what an 8 GB
   node cannot afford.
-- **Risk bounded, not removed — resource contention on a Celeron with 8 GB.** `pve` carries the NUT
-  server (LXC 213) and the host-native Netdata Parent today, and is slated to take the Home Assistant VM
+- **Risk bounded, not removed — resource contention on a Celeron with 8 GB.** `pve` carries the
+  host-native NUT server and the host-native Netdata Parent today, and is slated to take the Home Assistant VM
   plus the Mosquitto and Zigbee2MQTT LXCs (ADR 25, [#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68)).
   VictoriaLogs' compression and LogsQL scans are CPU-bound and its memory can spike under wide queries,
   so the store is placed **around** smart-home services rather than isolated from them. Gemini
