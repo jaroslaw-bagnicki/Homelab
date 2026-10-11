@@ -5,7 +5,7 @@ every signing, including the annual re-sign before the intermediate expires.
 
 ## Before you start
 
-- The bundle is on the island and `step` runs, and the IronKey is mounted — [README](README.md)
+- The bundle is on the signing machine and `step` runs, and the IronKey is mounted — [README](README.md)
   steps 2–4.
 - The **IronKey is mounted** and already holds the root (`root_ca.crt`, `root_ca_key`). If it does not,
   create it first: [02](02-issuing-root-cert.md).

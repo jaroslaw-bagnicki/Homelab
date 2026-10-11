@@ -17,7 +17,7 @@ TMP="$OUT.new"
 # never leave a half-written certificate behind for someone to carry home
 trap 'rm -f "$TMP"' EXIT
 
-# --- the island must not have a network -------------------------------------
+# --- the signing machine must not have a network -----------------------------
 if command -v ip >/dev/null 2>&1 && ip route 2>/dev/null | grep -q '^default'; then
     echo "ABORT: this machine has a default route — it is not air-gapped." >&2
     echo "       The root key must never be used on a networked machine." >&2

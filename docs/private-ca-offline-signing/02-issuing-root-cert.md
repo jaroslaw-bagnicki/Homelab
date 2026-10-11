@@ -4,7 +4,7 @@ Creates the 10-year root CA on the IronKey. **First run only** — once in the l
 
 ## Before you start
 
-- The bundle is on the island and `step` runs, and the IronKey is mounted — [README](README.md)
+- The bundle is on the signing machine and `step` runs, and the IronKey is mounted — [README](README.md)
   steps 2–4.
 - The **IronKey is mounted**, and holds **no root yet**. That is where the root is written.
 - **Skip this document completely** if the IronKey already holds a root, as it will on the annual
@@ -20,7 +20,7 @@ Creates the 10-year root CA on the IronKey. **First run only** — once in the l
 already there: replacing a root is a trust rotation — every client would have to re-trust — not a
 re-run.
 
-When it asks for a passphrase, **write it down and put it in the safe before you leave the island.** It
+When it asks for a passphrase, **write it down and put it in the safe before you leave the machine.** It
 is the only way to use this root key again; lose it and the key is dead.
 
 To drive it non-interactively, put the passphrase in a file on `/tmp` and pass the path as a second

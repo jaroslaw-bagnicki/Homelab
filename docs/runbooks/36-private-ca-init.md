@@ -1,6 +1,6 @@
 # Private CA — Offline Root and Intermediate Signing (Init + Annual Re-Sign)
 
-> The offline half of the CA: a 10-year **root** generated on an air-gapped signing island and kept on
+> The offline half of the CA: a 10-year **root** generated on an air-gapped signing machine and kept on
 > the **Kingston IronKey Locker+ 50** in a safe, plus the **root-signing of the intermediate CSR** the
 > deploy host produced ([runbook 35 §6](35-deploy-step-ca.md)). Run §2 **once** to create the root,
 > then **§4 annually** to re-sign the intermediate before it expires — ADR 38 sets the intermediate at
@@ -9,16 +9,16 @@
 > [research 36 §4–§5](../research/36-step-ca-machine-identity.md); measured gate:
 > [#141](https://github.com/jaroslaw-bagnicki/Homelab/issues/141).
 >
-> **"The island"** — the air-gapped signing machine these steps run on: a live-USB Linux boot
-> (SystemRescue 13 or Ubuntu Live) with **no network of any kind** — no cable, no Wi-Fi, no route out.
-> It exists only for this ceremony, and is powered off afterwards.
+> **"Air-gapped"** means no network of any kind — no cable, no Wi-Fi, no route out. The steps below run
+> on a live-USB Linux boot (SystemRescue 13 or Ubuntu Live) used only for this ceremony, and powered
+> off afterwards.
 >
 > ⚠ **The §1–§3 mechanics are rehearsed; no ceremony has been run against the real IronKey.** On
 > 2026-10-11 root creation and signing were both exercised against a **throwaway software root** and a
 > fake IronKey directory (nothing real touched, no trust distributed) — which is how the
 > `--profile`-drops-SANs defect was found and the `--template` fix proven. **§1–§3 are now encapsulated
 > in the offline signing kit**
-> (`docs/private-ca-offline-signing/`), which is what the island actually runs; the sections below keep
+> (`docs/private-ca-offline-signing/`), which is what the signing machine runs; the sections below keep
 > the reasoning rather than repeat the commands. §4 and §5 remain *plans*. Gate-measured facts are
 > marked **(measured #141)**.
 >
@@ -51,7 +51,7 @@ events, not emergencies.
 
 ## What changes
 
-- **Offline root** — `Homelab Internal CA` root key generated on an air-gapped signing island and
+- **Offline root** — `Homelab Internal CA` root key generated on an air-gapped signing machine and
   stored **only** on the IronKey (Locker+ 50, an encrypted USB carrier kept in a safe). The root cert
   is public and is exported later for distribution ([#144](https://github.com/jaroslaw-bagnicki/Homelab/issues/144)).
 - **Signed intermediate** — the CSR from [runbook 35 §6](35-deploy-step-ca.md) is signed here; the
@@ -66,7 +66,7 @@ events, not emergencies.
 - [ ] The `pve` TPM is present and **not owned by a previous deployment**. On second-hand hardware,
       run `Clear TPM` / `Clear PTT` in the BIOS first
       ([research 37 §5](../research/37-tpm2-hardware-and-fleet.md)).
-- [ ] An air-gapped signing island — booted from the **YUMI multiboot stick**, which carries the live
+- [ ] An air-gapped signing machine — booted from the **YUMI multiboot stick**, which carries the live
       ISO *and* the signing kit, so the IronKey is the only thing crossing the air gap besides it.
 - [ ] The **offline signing kit** (`docs/private-ca-offline-signing/`) on that stick, with `step` in
       place ([01-building-step.md](../private-ca-offline-signing/01-building-step.md)).
@@ -85,17 +85,17 @@ Tooling is installed from the current upstream release; no version is pinned.
 
 ---
 
-## 1. Prepare the offline signing island
+## 1. Prepare the offline signing machine
 
-The island has no network, so `step` goes in place beforehand and travels on the boot stick with the
-kit. [01-building-step.md](../private-ca-offline-signing/01-building-step.md) covers both routes, and
-the [kit README](../private-ca-offline-signing/README.md) covers the island end — boot offline, copy
-the kit to `/tmp`, mount the IronKey.
+The signing machine has no network, so `step` goes in place beforehand and travels on the boot stick
+with the kit. [01-building-step.md](../private-ca-offline-signing/01-building-step.md) covers both
+routes, and the [kit README](../private-ca-offline-signing/README.md) covers the machine end — boot
+offline, copy the kit to `/tmp`, mount the IronKey.
 
-> **Acceptance.** `./step version` runs on the island; no route to `192.168.2.0/24` or the internet;
-> the IronKey mounts read/write.
+> **Acceptance.** `./step version` runs on the signing machine; no route out to `192.168.2.0/24` or
+> the internet; the IronKey mounts read/write.
 
-> **Backout.** Reboot the island from its own disk; wipe the live USB. Nothing was written yet.
+> **Backout.** Reboot the signing machine from its own disk; wipe the live USB. Nothing was written.
 
 ## 2. Generate the 10-year root CA onto the IronKey
 
@@ -105,14 +105,14 @@ the kit to `/tmp`, mount the IronKey.
 ./root.sh /mnt/ironkey
 ```
 
-Run **only on the island**, with the IronKey mounted. `root.sh` wraps
+Run **only on the signing machine**, with the IronKey mounted. `root.sh` wraps
 `step certificate create "Homelab Internal CA" <ironkey>/root_ca.crt <ironkey>/root_ca_key --profile
 root-ca --not-after 87600h` and adds the guards a first-run step needs:
 
 - **It refuses to run when a root already exists** — replacing a root is a **root rotation** with a full
   client re-trust, not a re-run — and it detects a half-written root pair left behind by a crashed run.
-- **It asserts the shape** before you leave the island: `CA:TRUE` with `pathlen` ≥ 1, key usage
-  `certSign` + `crlSign`, 10-year validity, and that the key file is actually `ENCRYPTED`.
+- **It asserts the shape** before you leave the signing machine: `CA:TRUE` with `pathlen` ≥ 1, key
+  usage `certSign` + `crlSign`, 10-year validity, and that the key file is actually `ENCRYPTED`.
 - **It prints the fingerprint** to record, and stops rather than let you carry on if a check fails.
 
 The reasoning it encodes:
@@ -162,7 +162,7 @@ leave a half-written certificate to carry home.
   shape (`CA:TRUE, pathlen:0`; key usage `certSign, crlSign`; SANs `ca.internal`, `192.168.2.215`)
   rather than inheriting it from the requester.
 - `8760h` = 1 year (ADR 38). The root is used for exactly this operation and nothing else.
-- **Lock/unmount the IronKey and return it to the safe** before the island is powered off.
+- **Lock/unmount the IronKey and return it to the safe** before the signing machine is powered off.
 - Carry `intermediate_ca.crt` and a copy of `root_ca.crt` back to the `ca` guest — both are public;
   [runbook 35 §7](35-deploy-step-ca.md) installs them and starts the service. The kit copies them back
   onto the boot stick.
@@ -239,11 +239,11 @@ Recovery is the same flow on demand:
 ## Verification Checklist
 
 Executed on: **never** — no ceremony has been run against the real IronKey. §1–§3's mechanics are
-rehearsed and encapsulated in the kit (`docs/private-ca-offline-signing/`), which is what the island
-runs; record the date and each result when the real ceremony is first performed, and update the
+rehearsed and encapsulated in the kit (`docs/private-ca-offline-signing/`), which is what the signing
+machine runs; record the date and each result when the real ceremony is first performed, and update the
 measured/planned labels above as facts are confirmed.
 
-- [ ] §1 island air-gapped; kit on the stick with `step` in place; `./step version` runs
+- [ ] §1 signing machine air-gapped; kit on the stick with `step` in place; `./step version` runs
 - [ ] §2 root created with `CA:TRUE`, `pathlen:1`, ~10y; stored only on the IronKey; fingerprint and passphrase in the safe
 - [ ] §3 intermediate CSR from runbook 35 §6 signed by the offline root; the kit's checks all pass; IronKey returned to the safe
 - [ ] §4 annual re-sign scheduled
@@ -263,7 +263,7 @@ measured/planned labels above as facts are confirmed.
 - [Research 37 §5](../research/37-tpm2-hardware-and-fleet.md) — the `pve` Intel PTT fTPM and key-loss risk
 - [Issue #141](https://github.com/jaroslaw-bagnicki/Homelab/issues/141) — the measured TPM custody gate
 - [Runbook 35](35-deploy-step-ca.md) — the on-host deployment this ceremony feeds
-- [Offline signing kit](../private-ca-offline-signing/README.md) — the scripts and island-facing
-  instructions that §1–§3 now point at
+- [Offline signing kit](../private-ca-offline-signing/README.md) — the scripts and the instructions
+  for the signing machine that §1–§3 now point at
 - [Runbook 28](28-pve-proxmox-node.md) (Proxmox base) · [ADR 34](../decisions/34-lan-tls-only.md) (TLS-only) ·
   [ADR 37](../decisions/37-lan-name-space-internal.md) (`.internal`)

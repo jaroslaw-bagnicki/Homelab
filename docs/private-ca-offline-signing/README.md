@@ -1,13 +1,13 @@
 # Private CA — offline signing bundle
 
-Everything the air-gapped signing island needs — **except the IronKey**.
+Everything the air-gapped signing machine needs — **except the IronKey**.
 
 ## What this is, and is not
 
 The fleet CA's **offline root** is created here, and the **intermediate certificate** is signed by it.
-Both happen on a machine with no network ("the island"), because the root's private key lives on the
+Both happen on a machine with no network of any kind, because the root's private key lives on the
 IronKey and must never touch a networked machine. This bundle carries the tool, the request and the
-recipes, so the island needs **nothing installed and nothing downloaded**.
+recipes, so the signing machine needs **nothing installed and nothing downloaded**.
 
 **Any live Linux will do.** SystemRescue 13 is the default; an Ubuntu Live desktop works just as well.
 Nothing has to be installed: the bundled `step` is statically linked, so it does not care what the host
@@ -23,7 +23,7 @@ If you use Ubuntu Live rather than SystemRescue, three differences:
 
 It does **not** start the CA and does **not** distribute trust. Nothing in the bundle is private — the
 CSR and the template are public. The one secret it produces is the **root key**, and that must leave
-the island only on the IronKey, back into the safe.
+the signing machine only on the IronKey, back into the safe.
 
 ## Contents
 
@@ -39,30 +39,30 @@ the island only on the IronKey, back into the safe.
 | `sign.sh` | signs the CSR with that root, then machine-checks the result | — |
 
 `intermediate-ca.tpl` is a **copy** of `ansible/workloads/step-ca/files/intermediate-ca.tpl`, which is the
-versioned source. If you change one, change both — otherwise the island keeps signing to the old shape.
+versioned source. If you change one, change both — otherwise the signing machine uses the old shape.
 
 ## What you must bring (deliberately not in this bundle)
 
 - **The IronKey (Locker+ 50)**, unlocked. **Empty** on the first run — that is where `root.sh` writes
   the root. On any later run it already holds `root_ca.crt` and `root_ca_key`.
-- The **YUMI multiboot stick**, with this bundle on it. One stick does both jobs: it boots the island
-  (SystemRescue 13, or an Ubuntu Live desktop) *and* carries the bundle, so there is no second USB to
-  keep track of.
+- The **YUMI multiboot stick**, with this bundle on it. One stick does both jobs: it boots the signing
+  machine (SystemRescue 13, or an Ubuntu Live desktop) *and* carries the bundle, so there is no second
+  USB to keep track of.
 - A safe place to record the root fingerprint and the result.
 
 ## Rules
 
-1. **Never put the root on the island's disk.** It exists only on the mounted IronKey; unmount and
-   remove the IronKey before powering the island off.
+1. **Never put the root on the machine's disk.** It exists only on the mounted IronKey; unmount and
+   remove the IronKey before powering the machine off.
 2. **Never copy `root_ca_key` off the IronKey** — not into this bundle, not onto the YUMI stick, not
-   anywhere on the island's disk.
-3. **The island must have no network** — no LAN cable, no Wi-Fi, and no default route. Both scripts
-   refuse to run if they find one.
+   anywhere on the machine's disk.
+3. **The signing machine must have no network** — no LAN cable, no Wi-Fi, and no default route. Both
+   scripts refuse to run if they find one.
 4. Never sign with `--profile intermediate-ca`. It silently drops the SANs, producing a certificate
    that passes an issuer check and then fails every TLS request (measured 2026-10-11).
 5. **`root.sh` runs once, ever.** It refuses to touch an existing root, because replacing a root is a
    trust rotation — every client would have to re-trust — not a re-run. The repeat job is `sign.sh`.
-6. **Write the root key passphrase down before you leave the island.** It is the only way to use the
+6. **Write the root key passphrase down before you leave the machine.** It is the only way to use the
    root again; lose it and the root key is dead.
 
 ## The flow, end to end
@@ -70,7 +70,7 @@ versioned source. If you change one, change both — otherwise the island keeps 
 1. **On the connected machine.** Put this whole folder onto the YUMI stick, alongside the live ISO, and
    add `step` to it — [01-building-step.md](01-building-step.md).
 
-2. **On the island.** Boot it (SystemRescue 13 or Ubuntu Live) and confirm it is offline:
+2. **On the signing machine.** Boot it (SystemRescue 13 or Ubuntu Live) and confirm it is offline:
 
    ```sh
    ip route          # must print nothing — no default route is what "air-gapped" means
@@ -128,7 +128,7 @@ versioned source. If you change one, change both — otherwise the island keeps 
    ```
 
    Then unmount and remove the IronKey and return it to the safe, copy `intermediate_ca.crt` **and** a
-   copy of `root_ca.crt` back onto the YUMI stick (both are public certificates), and power the island
+   copy of `root_ca.crt` back onto the YUMI stick (both are public certificates), and power the machine
    off.
 
 ## Bring back
@@ -145,7 +145,7 @@ These are installed and the CA started by **runbook 35 §7**.
 |---|---|
 | `./step version` fails with `Permission denied` | You are running it from the stick — FAT32, exFAT and NTFS have no executable bit. Copy the bundle to `/tmp` first (step 3). |
 | `./step version` fails otherwise | The copy is truncated or corrupt. Re-copy it from the stick. |
-| Either script refuses: "has a default route" | The island is not air-gapped. Disconnect it before using the IronKey. |
+| Either script refuses: "has a default route" | The signing machine is not air-gapped. Disconnect it before using the IronKey. |
 | A `FAIL` line appears in the checks | Stop and do not carry the certificate home. No trust has been distributed, the root is untouched and re-signing the same CSR is safe. |
 
 Anything specific to one ceremony — a root that already exists, a missing SAN, a wrong passphrase — is

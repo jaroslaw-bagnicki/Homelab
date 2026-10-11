@@ -41,4 +41,4 @@ The bundle was assembled with **v0.31.0**. A newer CLI is fine — the ceremonie
 `certificate create`, `sign`, `inspect`, `verify` and `fingerprint` — so read the version string as a
 sanity check, not a pin. Bump the two version strings above if you deliberately move forward.
 
-Then carry the folder to the island and pick up the [flow in the README](README.md).
+Then carry the folder to the signing machine and pick up the [flow in the README](README.md).

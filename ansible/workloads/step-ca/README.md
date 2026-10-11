@@ -21,7 +21,7 @@ there is no image to build and the CA keeps the smallest possible attack surface
 | **prepare** | every run | install `step`/`step-ca`/`step-kms-plugin` (checksum-verified) + `libpcsclite1`; create the intermediate key **in the TPM**; emit `intermediate_ca.csr`; write the TPM-backed `ca.json`; stage the systemd unit **disabled** |
 | **start** | only once the root-signed `intermediate_ca.crt` and `root_ca.crt` are present in `/etc/step-ca/certs/` | enable and start `step-ca` |
 
-The root signs the CSR **offline** on an air-gapped island ([runbook 36](../../../docs/runbooks/36-private-ca-init.md)),
+The root signs the CSR **offline** on an air-gapped machine ([runbook 36](../../../docs/runbooks/36-private-ca-init.md)),
 so between the two phases the operator copies the two public certificates onto the guest. The start
 step is gated on their presence, so a run before the offline signing simply prepares and stops.
 

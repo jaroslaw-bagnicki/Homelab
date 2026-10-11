@@ -25,7 +25,7 @@ DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT_CN="Homelab Internal CA"
 ROOT_LIFETIME="87600h"   # 10 years
 
-# --- the island must not have a network -------------------------------------
+# --- the signing machine must not have a network -----------------------------
 if command -v ip >/dev/null 2>&1 && ip route 2>/dev/null | grep -q '^default'; then
     echo "ABORT: this machine has a default route — it is not air-gapped." >&2
     echo "       The root key must never be created on a networked machine." >&2
@@ -87,7 +87,7 @@ else
     echo "You will now be asked to choose a passphrase for the root key."
     echo
     echo "  ==> WRITE THE PASSPHRASE DOWN AND PUT IT IN THE SAFE BEFORE YOU LEAVE"
-    echo "      THE ISLAND. It is the only way to use this root key again. Lose it"
+    echo "      THIS MACHINE. It is the only way to use this root key again. Lose it"
     echo "      and the root key is dead - recovery is a new root plus a full"
     echo "      re-trust of every client (issue #144)."
     echo
@@ -152,7 +152,7 @@ echo "=============================================================="
 echo "Root created. Next: sign the intermediate with it."
 echo "  ./sign.sh $IRONKEY"
 echo
-echo "Before you power the island off:"
+echo "Before you power this machine off:"
 echo "  - unmount and remove the IronKey, return it to the safe"
 echo "  - make sure the root key passphrase is written down in the safe"
 echo "=============================================================="
