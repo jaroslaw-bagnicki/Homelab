@@ -140,7 +140,7 @@ per-device attribution wait for [#73](https://github.com/jaroslaw-bagnicki/Homel
 
 The NUT server no longer lives in a container. Before the host can claim the UPS, the old LXC 213 has
 to release it — and the fleet's fail-safe `upsmon` must be paused across the cutover, or a blackout
-longer than `DEADTIME` (60 s since 2026-10-11 — §6) stops the lab on healthy mains.
+longer than `DEADTIME` (120 s since 2026-10-11 — §6) stops the lab on healthy mains.
 
 ```sh
 # 1. Pause every client's fail-safe monitor — abort if any node cannot be paused
@@ -297,7 +297,7 @@ and `HOSTSYNC` are set as in §4/§5 — with the stock values the host races th
 drill is what proves it.
 
 ⚠ **Pause every monitor before restarting the server.** With `MINSUPPLIES 1`, an `upsd` that cannot
-be reached for `DEADTIME` (60 s since 2026-10-11) is indistinguishable from a failed UPS — and that
+be reached for `DEADTIME` (120 s since 2026-10-11) is indistinguishable from a failed UPS — and that
 applies to the secondaries just as much as the host, so a server restart that outlasts the window
 stops the fleet while mains is present. The wider window makes an ordinary restart survivable, but
 the sequence below is still how to do it deliberately:
@@ -322,11 +322,13 @@ On a normal host boot this race no longer exists: `nut-monitor` is ordered **aft
 or the next `security` role run drops it.
 
 Accepted trade-off: a genuinely unreachable UPS *does* stop the fleet — fail-safe, not fail-open.
-**Applied 2026-10-11:** `DEADTIME` was raised 15 s → **60 s** (role default `nut_client_deadtime`) —
-the migration moved the server onto the hypervisor's own host, so an `upsd` restart or a `pve` reboot
-became a routine event, and 15 s of blindness would have stopped the fleet on healthy mains.
-`POLLFREQ` and `POLLFREQALERT` stay at 5 s: they govern how quickly `OB`/`LB` are *seen* (≤ 7 s in the
-2026-09-19 drill), so widening them would only slow genuine detection. `MINSUPPLIES 1` is unchanged.
+**Applied 2026-10-11:** `DEADTIME` was raised 15 s → **120 s** (role default `nut_client_deadtime`).
+The migration moved the server onto the hypervisor's own host, so an `upsd` restart or a `pve` reboot
+became a routine event — and the reboot test measured `upsd` unreachable for **~60–67 s**, i.e. the
+fleet would have stopped itself on healthy mains at the old 15 s *or* at a 60 s cut. 120 s leaves the
+headroom to make a `pve` reboot survivable without pausing the secondaries. `POLLFREQ` and
+`POLLFREQALERT` stay at 5 s: they govern how quickly `OB`/`LB` are *seen* (≤ 7 s in the 2026-09-19
+drill), so widening them would only slow genuine detection. `MINSUPPLIES 1` is unchanged.
 
 ## 7. Validation
 
@@ -413,9 +415,12 @@ runbook completes on its own; the client rollout (§4/§5) is verified by
 - [x] §2 two defects the live run exposed, fixed **2026-10-11** — `nut_client` now derives `nut.conf` `MODE` from the role (`standalone` on `pve`, `netclient` on the secondaries; both roles templated that one file and the client ran last), and `nut_server` enumerates the driver only while it is down (the `oneshot` enumerator, `RemainAfterExit=no`, had made every run report `changed=1`)
 - [x] §7 NUT events from the host are queryable in VictoriaLogs with the host identity `pve` — **2026-10-11** (`upsd` 44, `nut-server` 7, `nut-monitor` 3, `nut-driver-enumerator` 11; issue [#148](https://github.com/jaroslaw-bagnicki/Homelab/issues/148) acceptance criterion)
 - [x] §7 Netdata no longer charts the UPS twice — the Parent's go.d job is renamed `nut` → `local` to match Netdata's own `sd:net_listeners` discovery, which had added a second device and summed `ups_on_line` to **2** — **2026-10-11**, [runbook 31](31-deploy-netdata.md) §2
-- [ ] §7 on-battery ride performed from the dev container (2026-09-13, 5.5 min, fleet attached) — `OB`/`OL` propagate promptly; runtime **not** derivable by extrapolation — **to re-run on the host-native topology**
-- [ ] §7 on-battery propagation confirmed on all three nodes (host, `lab`, `edge`); fleet-wide drill done — **2026-09-19** real-outage run (stronger than `upsmon -c fsd`: genuine battery trigger), ordering proven — FSD 11:29:43; `edge` down 11:29:47, `lab` `poweroff.target` 11:29:48; primary stops +30 s (`FINALDELAY 30`) — [report](../reports/260919-nut-shutdown-drill.md) — **[#117]**
-- [ ] §7 Beetle tested on battery at **idle and under spin-up** (or moved off battery outlets) — **[#117]**; **not** covered by the 2026-09-19 drill (the Beetle is powered but has no OS yet)
+- [x] §7 on-battery ride performed from the dev container (2026-09-13, 5.5 min, fleet attached) — `OB`/`OL` propagate promptly; runtime **not** derivable by extrapolation — re-run on the host-native topology **2026-10-11**
+- [x] §7 on-battery propagation on the host-native topology — **2026-10-11**, ~90 s ride with the fleet loaded: `on battery` logged pve 10:46:29, nas :30, edge :31, lab :32; `on line power` pve 10:47:59, nas :00, edge :01, lab :02 — **≤ 3 s each way to all four nodes**. `ups.load` read 17 % on battery / 7 % on mains and `input.voltage` parked at 16.9 V while unplugged, exactly as the §7 caveats predict
+- [x] §7 `pve` reboot — `nut-monitor` comes up **after** `nut-server` — **2026-10-11**: `nut-driver@ups` 10:50:14 → `nut-server` 10:50:14 → `nut-monitor` 10:50:15, with the boot-journal order `nut-driver-enumerator.path` → `nut-driver@ups` → `nut-server` → listening on both addresses → driver connected. The UPS was claimed at cold boot by the udev rule — **no boot race**. `upsd` was unreachable for **~60–67 s** across the reboot (secondaries paused for the test), which is the measurement that set `DEADTIME` to 120 s
+- [x] §7 Beetle on battery **under disk load** — **2026-10-11**, ride taken with the NAS mid long-SMART-test: **no reset** (`nas` up since 10:22:41, uninterrupted through the ride), so the AcBel active-PFC supply rode a modified sine wave under load
+- [x] §7 fleet rides out an `upsd` outage — `DEADTIME` raised 15 s → **120 s** (`nut_client_deadtime`) **2026-10-11**, applied and verified on all four nodes; the fail-safe model itself (`MINSUPPLIES 1`) is unchanged — [ADR 39](../decisions/39-nut-host-native.md), §6
+- [x] §7 fleet-wide **`upsmon -c fsd` drill — dropped** by decision (2026-10-11): the host-native ride above is a *genuine* battery trigger, which is stronger than a forced flag, and the 2026-09-19 run already proved the `FINALDELAY`/`HOSTSYNC` ordering — [report](../reports/260919-nut-shutdown-drill.md) · **[#117]**
 
 ## Follow-ups
 
