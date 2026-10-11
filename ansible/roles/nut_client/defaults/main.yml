@@ -1,9 +1,18 @@
 ---
 nut_client_ups_name: ups
-nut_client_server: 192.168.2.213
+nut_client_server: 192.168.2.201
 nut_client_keyvault_name: homelab-bysxdb-kv
 nut_client_role: secondary
+# `/etc/nut/nut.conf` MODE. The primary is always co-located with the host-native NUT server
+# (ADR 39), so it runs `standalone`; the secondaries run `netclient`. Both this role and
+# `nut_server` template that one file — keying the value to the role keeps them in agreement.
+nut_client_nut_mode: "{{ 'standalone' if nut_client_role == 'primary' else 'netclient' }}"
 nut_client_account: upsmon-fleet
 nut_client_password_secret: nut-upsmon-secondary-password
 nut_client_hostsync: 15
 nut_client_finaldelay: 0
+# Seconds of `upsd` unavailability tolerated before `upsmon` decides the UPS is dead and the node
+# fails safe. The NUT default of 15 s proved too tight once the server shared a host with Proxmox:
+# a measured `pve` reboot left `upsd` unreachable for ~60-67 s (2026-10-11), so at the old value the
+# fleet stopped itself on healthy mains. 120 s leaves real headroom.
+nut_client_deadtime: 120

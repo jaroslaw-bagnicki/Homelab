@@ -469,5 +469,5 @@ Executed on: **2026-09-27** — §1–§6 executed, off-LAN refusal **deferred**
 - [Runbook 35 §13](35-deploy-opnsense.md) — the OPNsense router's Ansible onboarding (the syslog sender)
 - [Research 33](../research/33-centralized-logging-victorialogs.md) — host placement, engine comparison, verified mechanics
 - [ADR 24](../decisions/24-edge-ingress-appliance.md) (volatile journald) · [ADR 27](../decisions/27-monitoring-strategy.md) (Tier B) · [ADR 31](../decisions/31-static-address-scheme.md) (guest block) · [ADR 34](../decisions/34-lan-tls-only.md) (TLS-only, UFW scope)
-- [Runbook 28](28-pve-proxmox-node.md) (Proxmox base + `fleetadm`) · [Runbook 29](29-nut-ups-shutdown.md) (LXC 213 creation precedent) · [Runbook 31](31-deploy-netdata.md) (AKV/TLS/validation pattern)
+- [Runbook 28](28-pve-proxmox-node.md) (Proxmox base + `fleetadm`) · [Runbook 29](29-nut-ups-shutdown.md) (host-native NUT on `pve`) · [Runbook 31](31-deploy-netdata.md) (AKV/TLS/validation pattern)
 - [Issue #123](https://github.com/jaroslaw-bagnicki/Homelab/issues/123) · [#84](https://github.com/jaroslaw-bagnicki/Homelab/issues/84) (collector) · [#132](https://github.com/jaroslaw-bagnicki/Homelab/issues/132) (monitoring) · [#75](https://github.com/jaroslaw-bagnicki/Homelab/issues/75) (umbrella)

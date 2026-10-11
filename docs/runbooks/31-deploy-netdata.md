@@ -53,7 +53,7 @@ Edge nodes stream to the Parent on the `pve` node; the NAS joins when it joins t
 - **Children** — Lab (M910q, `dbengine`) and Edge (Wyse 3040, `ram` — eMMC-safe) stream to
   `192.168.2.201:19996:SSL` (`netdata_stream_ssl: true` — the Parent refuses plaintext streams).
 - **UPS telemetry** — the Parent's bundled go.d `upsd` module polls the NUT server
-  (`netdata_upsd_address: 192.168.2.213:3493`, set in `host_vars/pve.yml`) and charts battery
+  (`netdata_upsd_address: 192.168.2.201:3493`, set in `host_vars/pve.yml`) and charts battery
   charge, load, voltages and the `OL`/`OB`/`LB` status (runtime too, though this unit reports none).
   Reads are **anonymous**, so no NUT account and no Key Vault secret — and the same run installs two
   **power-state alarms** (`on_battery` → warning, `low_battery` → critical), because the stock UPS
@@ -123,20 +123,27 @@ The same run enables the Parent's **UPS charts**. The go.d `upsd` module ships w
 agent, so this is configuration only — `host_vars/pve.yml` sets
 
 ```yaml
-netdata_upsd_address: "192.168.2.213:3493"   # NUT server in LXC 213
+netdata_upsd_address: "192.168.2.201:3493"   # NUT server host-native on pve
+netdata_upsd_name: local                     # must match the name Netdata's discovery uses
 ```
 
-and the role renders `/etc/netdata/go.d/upsd.conf` (one job named `nut` at that address) and restarts
+and the role renders `/etc/netdata/go.d/upsd.conf` (one job named `local` at that address) and restarts
 `netdata`. The NUT server allows **anonymous** reads, so there is no NUT account and no Key Vault
-secret; `pve` reaches `.213:3493` outbound (UFW allows outgoing traffic by default). A node with the
+secret; `pve` reaches `.201:3493` locally (UFW allows loopback and the LAN rule). A node with the
 variable empty converges with no `upsd.conf`.
 
-The module is documented for **remote instances** ([integration page](https://www.netdata.cloud/integrations/data-collection/hardware-and-sensors/ups-nut/)) and
-does not support auto-detection, so the explicit job is what activates it — and no Netdata agent is
-needed inside LXC 213. Each metric carries two names: the **context** (`upsd.ups_battery_charge`,
-`upsd.ups_status`, …) and the job-scoped **chart id** the API answers to (`upsd_<job>_<ups>.<metric>` —
-here `upsd_nut_ups.battery_charge_percentage`, `upsd_nut_ups.status`, `upsd_nut_ups.input_voltage`,
-`upsd_nut_ups.load_percentage`, `upsd_nut_ups.load_usage`). Populated on this unit: charge, battery
+**The job name is not free.** The `upsd` module itself has no auto-detection
+([integration page](https://www.netdata.cloud/integrations/data-collection/hardware-and-sensors/ups-nut/)),
+and no Netdata agent is needed inside a guest — but Netdata's go.d **service discovery** ships a rule
+(`go.d/sd/net_listeners.conf`) that matches *any* local listener on port 3493 and configures a job named
+`local`. Once the NUT server moved onto the Parent's own host ([ADR 39](../decisions/39-nut-host-native.md)),
+a job under any other name made the agent chart the same UPS **twice** — `upsd_nut_ups` *and*
+`upsd_local_ups`, with `upsd.ups_status`'s `on_line` dimension summing to **2**. Declaring our job as
+`local` makes it the one that exists (2026-10-11). Each metric carries two names: the **context**
+(`upsd.ups_battery_charge`, `upsd.ups_status`, …) and the job-scoped **chart id** the API answers to
+(`upsd_<job>_<ups>.<metric>` — here `upsd_local_ups.battery_charge_percentage`, `upsd_local_ups.status`,
+`upsd_local_ups.input_voltage`, `upsd_local_ups.load_percentage`, `upsd_local_ups.load_usage`).
+Populated on this unit: charge, battery
 voltage, load (%) and status. **Empty by nature of the UPS:** `load_usage` (W) and
 `battery_estimated_runtime` — `nutdrv_qx` reports neither, which is also why the shutdown trigger is
 `LB`, not a runtime countdown ([ADR 30](../decisions/30-ups-nut-graceful-shutdown.md)).
@@ -194,8 +201,8 @@ curl -sk https://192.168.2.201:19999/api/v2/contexts | grep -o upsd[._a-z]* | so
 
 # Live values — the API answers to the job-scoped chart id, not the context:
 # upsd_<job>_<ups>.<metric>
-curl -sk "https://192.168.2.201:19999/api/v1/data?chart=upsd_nut_ups.battery_charge_percentage&after=-60&format=json" | tail -c 120   # 100
-curl -sk "https://192.168.2.201:19999/api/v1/data?chart=upsd_nut_ups.status&after=-60&format=json" | tail -c 200                     # 1 on the on_line dimension
+curl -sk "https://192.168.2.201:19999/api/v1/data?chart=upsd_local_ups.battery_charge_percentage&after=-60&format=json" | tail -c 120   # 100
+curl -sk "https://192.168.2.201:19999/api/v1/data?chart=upsd_local_ups.status&after=-60&format=json" | tail -c 200                     # 1 on the on_line dimension
 
 # Alarms — the three stock upsd templates, the job's collection status, and the two power-state
 # alarms this role installs
@@ -284,6 +291,7 @@ Executed 2026-09-19 (install and configuration) and 2026-09-20 (§5 updates) —
 - [x] §5 validated 2026-09-20 on all three nodes — with the flag: install skipped, `--reinstall` ran (`pve` `ok=40 changed=1`, `lab` `ok=52 changed=2`, `edge` `ok=42 changed=1`); without it: `changed=0` on `pve`/`edge` (`lab` `changed=1` = `azure_arc`); all three were already at the current stable, so no version change was observable
 - [x] §2 UPS collector live on the Parent — `upsd` job in `go.d/upsd.conf`; 12 `upsd.*` contexts, battery charge **100**, status `on_line`, collection alarm **CLEAR** (2026-09-26 — `playbook-pve.yml` `ok=41 changed=3 failed=0`)
 - [x] §2 power-state alarms registered — `upsd_nut_ups.status.upsd_ups_on_battery` + `…upsd_ups_low_battery` (2026-09-26 — `ok=43 changed=2 failed=0`), and **both raise/clear paths validated on a real mains loss the same day**: wall plug pulled 11:54:05 → *warning* within ~10 s ("UPS ups is on battery", value `1 status`); mains restored → **cleared** (verified 09:56 UTC)
+- [x] §2 UPS job **renamed `nut` → `local`** — **2026-10-11**: with the NUT server host-native on the Parent's own host, Netdata's `sd:net_listeners` discovery added a second `upsd` job, so the same UPS was charted twice and `ups_on_line` summed to **2**. Chart ids are now `upsd_local_ups.*` and the alarm instances `upsd_local_ups.status.upsd_ups_on_battery` / `…upsd_ups_low_battery`; the entries directly above keep the pre-rename instance names they were verified under. `nut_ups` history is not carried over (accepted)
 - [x] §2 UPS charts visible in the Parent's dashboard — **`Remote Devices → UPS → NUT`** (observed **2026-09-27**); they were **absent from the UI** immediately after the 2026-09-26 integration although the API published the contexts and values from the first run (§2 caveat 1)
 - [ ] Not in scope: alarm delivery (deferred to the HA VM, [#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68)); `cloudlab` untouched
 

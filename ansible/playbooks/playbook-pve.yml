@@ -5,6 +5,7 @@
   roles:
     - common
     - security
+    - nut_server
     - nut_client
     - netdata
     - fluentbit
