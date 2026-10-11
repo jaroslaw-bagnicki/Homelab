@@ -1,0 +1,15 @@
+# This bundle carries its own ignore rules: it is copied around as a folder, so what must never be
+# committed is declared next to the files it applies to. Paths are relative to this directory.
+
+# `step` is a 42 MB upstream binary. Assemble it on the way in — see 01-building-step.md
+step
+
+# Ceremony output. The certificates go to the CA host, and the root reaches clients through Key Vault
+# (#144); nothing the ceremony writes belongs in the repo.
+*.crt
+*.csr
+*.key
+*.pem
+*_key*
+*.new
+root_ca_fingerprint

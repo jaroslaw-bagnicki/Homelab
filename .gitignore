@@ -4,19 +4,3 @@ ansible/**/*.retry
 # Ansible execution log
 ansible/ansible.log
 
-# Private CA offline signing kit: `step` is a 42 MB upstream binary, not stored in git.
-# Assemble it on the way in — see docs/private-ca-offline-signing/01-building-step.md
-docs/private-ca-offline-signing/step
-
-# Private CA ceremony output — the certificates go to the CA host and the root travels to clients
-# through Key Vault (#144), so nothing the ceremony writes belongs in the repo: certificates,
-# requests, key files in any form, the scratch file `sign.sh` leaves on a failure, and the derived
-# fingerprint.
-docs/private-ca-offline-signing/*.crt
-docs/private-ca-offline-signing/*.csr
-docs/private-ca-offline-signing/*.key
-docs/private-ca-offline-signing/*.pem
-docs/private-ca-offline-signing/*_key*
-docs/private-ca-offline-signing/*.new
-docs/private-ca-offline-signing/root_ca_fingerprint
-
