@@ -48,7 +48,7 @@ versioned source. If you change one, change both — otherwise the signing machi
 - The **YUMI multiboot stick**, with this bundle on it. One stick does both jobs: it boots the signing
   machine (SystemRescue 13, or an Ubuntu Live desktop) *and* carries the bundle, so there is no second
   USB to keep track of.
-- A safe place to record the root fingerprint and the result.
+- A safe place to keep the stick and the written-down key passphrase.
 
 ## Rules
 
@@ -123,22 +123,14 @@ versioned source. If you change one, change both — otherwise the signing machi
 6. **Sign the intermediate.** This is the operation that repeats — including the annual re-sign:
    [03-signing-csr.md](03-signing-csr.md).
 
-7. **Finish.** Record the root's fingerprint **while the stick is still mounted** — the next step
-   removes it:
-
-   ```sh
-   ./step certificate fingerprint <mount-path>/root_ca.crt
-   ```
-
-   Then unmount and remove the stick and return it to the safe, copy `intermediate_ca.crt` **and** a
-   copy of `root_ca.crt` back onto the YUMI stick (both are public certificates), and power the machine
-   off.
+7. **Finish.** Unmount and remove the stick and return it to the safe, copy `intermediate_ca.crt`
+   **and** a copy of `root_ca.crt` back onto the YUMI stick (both are public certificates), and power
+   the machine off.
 
 ## Bring back
 
 - `intermediate_ca.crt` — the signed intermediate
 - `root_ca.crt` — a copy taken from the stick
-- the root **fingerprint**, recorded in the safe / password manager (**never** in the repo)
 
 These are installed and the CA started by **runbook 35 §7**.
 
