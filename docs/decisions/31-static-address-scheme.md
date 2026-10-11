@@ -31,12 +31,12 @@ guest's VMID its address's last octet.**
 | Block | Class | Members |
 |---|---|---|
 | `200–209` | physical servers | `lab` M910q `.200` · `pve` Wyse 5070 `.201` · Beetle NAS `.202` |
-| `210–219` | Proxmox guests on the `pve` node | **VM 210** `.210` · **LXC 211** `.211` · **LXC 212** `.212` · **LXC 213** `.213` |
+| `210–219` | Proxmox guests on the `pve` node | **VM 210** `.210` · **LXC 211** `.211` · **LXC 212** `.212` · **LXC 214** `.214` (`.213` free — the NUT server is host-native, [ADR 39](39-nut-host-native.md)) |
 | `220–229` | LLM server (Phase 2) | — |
 | `230–239` | switch management | TL-SG108E `.230` |
 | `240–249` | edge/ingress appliances | Wyse 3040 `.240` |
 
-The ID and the address are **the same number** — `VM 210` is `.210`, `LXC 213` is `.213` — so
+The ID and the address are **the same number** — `VM 210` is `.210`, `LXC 214` is `.214` — so
 neither needs a lookup or an offset. Everything else stays on mesh DHCP. The IDs are assigned while
 the guests are still unbuilt ([#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68) /
 [#85](https://github.com/jaroslaw-bagnicki/Homelab/issues/85)); once a guest exists, changing its ID
@@ -87,5 +87,5 @@ is a restore, not an edit.
 ## References
 
 - [Research 24 — Homelab Network Topology & Design](../research/24-network-topology-design.md) — allocation table and block rationale
-- [Runbook 29 — UPS graceful shutdown (NUT on the pve node)](../runbooks/29-nut-ups-shutdown.md) — first consumer of the guest numbering (LXC 213 `.213`)
-- [ADR 23](23-nas-on-ml110.md) — the ML110's `.210` · [ADR 25](25-home-assistant-thin-client.md) — the `pve` node · [ADR 29](29-nas-backup-target-beetle-m3-omv.md) — Beetle NAS · [ADR 30](30-ups-nut-graceful-shutdown.md) — NUT
+- [Runbook 29 — UPS graceful shutdown (NUT on the pve node)](../runbooks/29-nut-ups-shutdown.md) — the NUT server is now **host-native** on `pve` (`.201`), so `.213` is free ([ADR 39](39-nut-host-native.md))
+- [ADR 23](23-nas-on-ml110.md) — the ML110's `.210` · [ADR 25](25-home-assistant-thin-client.md) — the `pve` node · [ADR 29](29-nas-backup-target-beetle-m3-omv.md) — Beetle NAS · [ADR 39](39-nut-host-native.md) — NUT host-native

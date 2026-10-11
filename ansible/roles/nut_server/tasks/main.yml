@@ -1,0 +1,148 @@
+---
+- name: Install the NUT server and client packages
+  ansible.builtin.apt:
+    name:
+      - nut-server
+      - nut-client
+    state: present
+    update_cache: true
+
+- name: Ensure the NUT group exists
+  ansible.builtin.group:
+    name: "{{ nut_server_group }}"
+    system: true
+
+- name: Assert Azure controller credentials are set
+  when: nut_server_primary_password | length == 0 or nut_server_fleet_password | length == 0
+  ansible.builtin.assert:
+    that:
+      - lookup('ansible.builtin.env', 'AZURE_CLIENT_ID', default='') | length > 0
+      - lookup('ansible.builtin.env', 'AZURE_CLIENT_SECRET', default='') | length > 0
+      - lookup('ansible.builtin.env', 'AZURE_TENANT_ID', default='') | length > 0
+    fail_msg: >-
+      AZURE_CLIENT_ID, AZURE_CLIENT_SECRET and AZURE_TENANT_ID must be set on the
+      Ansible controller for the upsmon password Key Vault lookups.
+  delegate_to: localhost
+
+- name: Fetch the upsmon primary password from Key Vault
+  when: nut_server_primary_password | length == 0
+  vars:
+    vault_url: "https://{{ nut_server_keyvault_name }}.vault.azure.net"
+    azure_client_id: "{{ lookup('ansible.builtin.env', 'AZURE_CLIENT_ID') }}"
+    azure_secret: "{{ lookup('ansible.builtin.env', 'AZURE_CLIENT_SECRET') }}"
+    azure_tenant_id: "{{ lookup('ansible.builtin.env', 'AZURE_TENANT_ID') }}"
+  ansible.builtin.set_fact:
+    nut_server_primary_password: >-
+      {{ lookup('azure.azcollection.azure_keyvault_secret', nut_server_primary_secret,
+      vault_url=vault_url, client_id=azure_client_id, secret=azure_secret, tenant=azure_tenant_id) }}
+  delegate_to: localhost
+  no_log: true
+
+- name: Fetch the upsmon fleet password from Key Vault
+  when: nut_server_fleet_password | length == 0
+  vars:
+    vault_url: "https://{{ nut_server_keyvault_name }}.vault.azure.net"
+    azure_client_id: "{{ lookup('ansible.builtin.env', 'AZURE_CLIENT_ID') }}"
+    azure_secret: "{{ lookup('ansible.builtin.env', 'AZURE_CLIENT_SECRET') }}"
+    azure_tenant_id: "{{ lookup('ansible.builtin.env', 'AZURE_TENANT_ID') }}"
+  ansible.builtin.set_fact:
+    nut_server_fleet_password: >-
+      {{ lookup('azure.azcollection.azure_keyvault_secret', nut_server_fleet_secret,
+      vault_url=vault_url, client_id=azure_client_id, secret=azure_secret, tenant=azure_tenant_id) }}
+  delegate_to: localhost
+  no_log: true
+
+# The unit has no serial number, so it is matched by VID:PID and granted to the `nut` group
+# directly on the host — no container ID mapping (ADR 39).
+- name: Grant the NUT group access to the UPS USB device
+  ansible.builtin.copy:
+    content: >-
+      SUBSYSTEM=="usb", ATTR{idVendor}=="{{ nut_server_vendorid }}",
+      ATTR{idProduct}=="{{ nut_server_productid }}", MODE="0660", GROUP="{{ nut_server_group }}"
+    dest: "{{ nut_server_udev_rules }}"
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - Reload udev rules
+    - Trigger USB udev
+
+- name: Template nut.conf
+  ansible.builtin.template:
+    src: nut.conf.j2
+    dest: /etc/nut/nut.conf
+    owner: root
+    group: "{{ nut_server_group }}"
+    mode: "0640"
+  notify: Restart nut-server
+
+- name: Template ups.conf
+  ansible.builtin.template:
+    src: ups.conf.j2
+    dest: /etc/nut/ups.conf
+    owner: root
+    group: "{{ nut_server_group }}"
+    mode: "0640"
+  notify: Restart nut-server
+
+- name: Template upsd.conf
+  ansible.builtin.template:
+    src: upsd.conf.j2
+    dest: /etc/nut/upsd.conf
+    owner: root
+    group: "{{ nut_server_group }}"
+    mode: "0640"
+  notify: Reload nut-server
+
+- name: Template upsd.users
+  ansible.builtin.template:
+    src: upsd.users.j2
+    dest: /etc/nut/upsd.users
+    owner: root
+    group: "{{ nut_server_group }}"
+    mode: "0640"
+  no_log: true
+  notify: Reload nut-server
+
+# Server and primary share one host, so the fail-safe monitor must not start before upsd answers —
+# systemd ordering removes the cold-boot race ADR 30 had to mitigate (ADR 39).
+- name: Order nut-monitor after nut-server
+  ansible.builtin.copy:
+    content: |
+      [Unit]
+      After=nut-server.service
+      Wants=nut-server.service
+    dest: "{{ nut_server_monitor_dropin }}"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Enable and start the NUT driver enumerator and server
+  ansible.builtin.systemd_service:
+    name: "{{ item }}"
+    state: started
+    enabled: true
+  loop:
+    - nut-driver-enumerator
+    - nut-server
+
+- name: Apply pending NUT configuration changes
+  ansible.builtin.meta: flush_handlers
+
+- name: Check the driver is serving the UPS
+  ansible.builtin.command:
+    cmd: upsc {{ nut_server_ups_name }}@localhost
+  register: nut_server_upsc
+  changed_when: false
+  failed_when: false
+  until: nut_server_upsc.rc == 0
+  retries: 5
+  delay: 2
+
+- name: Warn when the driver cannot reach the UPS
+  ansible.builtin.debug:
+    msg: >-
+      upsc {{ nut_server_ups_name }}@localhost did not answer — the driver cannot claim the UPS.
+      Check the USB udev rule and whether usbhid is holding the interface (runbook 29 §2–§3).
+  when: nut_server_upsc.rc != 0

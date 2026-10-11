@@ -3,14 +3,15 @@
 > Roll the **NUT client** (`nut-client` + `upsmon`) out to `pve`, `lab`, and `edge` with the
 > `nut_client` base role, so every node stops itself in order when the shared UPS battery runs down.
 > The role is applied by the base playbooks (`playbook-pve.yml`, `playbook-lab.yml`, `playbook-edge.yml`); the NUT **server**
-> (LXC 213, `.213`, `nutdrv_qx`) is built by [runbook 29](29-nut-ups-shutdown.md) §1–§3. This
+> (host-native on `pve`, `nutdrv_qx`) is built by [runbook 29](29-nut-ups-shutdown.md) §1–§3. This
 > runbook is the client half, tracked in
 > [issue #116](https://github.com/jaroslaw-bagnicki/Homelab/issues/116) under
-> [ADR 30](../decisions/30-ups-nut-graceful-shutdown.md). Role facts live in the
-> [role README](../../ansible/roles/nut_client/README.md).
+> [ADR 39](../decisions/39-nut-host-native.md) (which supersedes [ADR 30](../decisions/30-ups-nut-graceful-shutdown.md)).
+> Role facts live in the [role README](../../ansible/roles/nut_client/README.md).
 >
-> ⚠ **Depends on the server.** The role is only useful once LXC 213 answers `upsc ups@192.168.2.213`
-> (runbook 29 §3, verified). It does **not** depend on the shutdown drill ([#117](https://github.com/jaroslaw-bagnicki/Homelab/issues/117)).
+> ⚠ **Depends on the server.** The role is only useful once the host-native NUT server on `pve`
+> answers `upsc ups@192.168.2.201` (runbook 29 §3, verified). It does **not** depend on the shutdown
+> drill ([#117](https://github.com/jaroslaw-bagnicki/Homelab/issues/117)).
 >
 > ⚠ **Execution note.** Manual step, run interactively from a machine on `192.168.2.0/24` with the
 > fleet key loaded (all three nodes are LAN-only — see the [fleet-connect skill](../../.github/skills/fleet-connect)).
@@ -25,7 +26,7 @@ role. The role renders one `upsmon.conf` template; the files differ only in the 
 
 ## Prerequisites
 
-- [ ] LXC 213 (NUT server) built and answering — `upsc ups@192.168.2.213` on the server
+- [ ] NUT server built and answering — `upsc ups@192.168.2.201` on `pve`
   (runbook 29 §1–§3, [#115](https://github.com/jaroslaw-bagnicki/Homelab/issues/115)).
 - [ ] Both monitor passwords in `homelab-bysxdb-kv` — `nut-upsmon-primary-password`,
   `nut-upsmon-secondary-password`
@@ -40,7 +41,7 @@ role. The role renders one `upsmon.conf` template; the files differ only in the 
 
 ## 1. Confirm the accounts and passwords exist
 
-The role expects the two `upsmon` accounts to match `upsd.users` in LXC 213:
+The role expects the two `upsmon` accounts to match `upsd.users` on `pve`:
 
 | Node(s) | `upsmon` role | Account | Key Vault secret |
 |---|---|---|---|
@@ -77,10 +78,10 @@ Each node installs `nut-client`, fetches its password from Key Vault at run time
 template task runs with `no_log: true`, so `--diff` never prints the password.
 
 **Reachability guard.** Before starting `nut-monitor`, the role probes the server with
-`upsc ups@192.168.2.213` (5 retries, 2 s apart). If it answers, the service is enabled and started;
+`upsc ups@192.168.2.201` (5 retries, 2 s apart). If it answers, the service is enabled and started;
 if not, the config is written but the service is left stopped and the play prints a warning — re-run
-the base playbook once LXC 213 is up. This keeps a from-scratch `pve` rebuild (server LXC not yet
-built) from starting a fail-safe monitor with no server to reach.
+the base playbook once the NUT server on `pve` is up. This keeps a from-scratch `pve` rebuild
+(server not yet up) from starting a fail-safe monitor with no server to reach.
 
 > Because the role fetches from Key Vault, `playbook-pve.yml`/`playbook-edge.yml` now need `AZURE_*`
 > and the Key Vault Python packages (`azure-identity`, `azure-keyvault-secrets`) — `playbook-lab.yml`
@@ -102,7 +103,7 @@ built) from starting a fail-safe monitor with no server to reach.
 2. **The client reads the UPS** — from each node, through the server:
 
    ```sh
-   upsc ups@192.168.2.213 | grep -E 'ups.status|battery'
+   upsc ups@192.168.2.201 | grep -E 'ups.status|battery'
    ```
 
    Every node returns the same values (`ups.status: OL` on mains).
@@ -137,13 +138,13 @@ built) from starting a fail-safe monitor with no server to reach.
 
 ## 4. Operational notes
 
-- **Pause the host monitor before touching LXC 213.** With `MINSUPPLIES 1`, an unreachable `upsd` for
-  `DEADTIME` (15 s) is indistinguishable from a failed UPS, so restarting the container can stop the
+- **Pause the host monitor before restarting `nut-server`.** With `MINSUPPLIES 1`, an unreachable
+  `upsd` for `DEADTIME` (15 s) is indistinguishable from a failed UPS, so a server restart can stop the
   fleet while mains is present (runbook 29 §6):
 
   ```sh
   ssh fleetadm@192.168.2.201 sudo systemctl stop nut-monitor
-  # stop/upgrade/start LXC 213, then wait for upsc ups@192.168.2.213 to answer
+  # restart nut-server, then wait for upsc ups@192.168.2.201 to answer
   ssh fleetadm@192.168.2.201 sudo systemctl start nut-monitor
   ```
 
@@ -166,13 +167,13 @@ Executed against the live fleet 2026-09-19 (role from
 [PR #119](https://github.com/jaroslaw-bagnicki/Homelab/pull/119); full evidence in
 [issue #116](https://github.com/jaroslaw-bagnicki/Homelab/issues/116#issuecomment-5740654644)):
 
-- [x] §1 both monitor passwords present in `homelab-bysxdb-kv`; accounts match LXC 213 `upsd.users` — `[upsmon-host] upsmon primary`, `[upsmon-fleet] upsmon secondary`
+- [x] §1 both monitor passwords present in `homelab-bysxdb-kv`; accounts match `upsd.users` on `pve` — `[upsmon-host] upsmon primary`, `[upsmon-fleet] upsmon secondary`
 - [x] §2 `playbook-pve.yml` / `playbook-lab.yml` / `playbook-edge.yml` apply cleanly (role reports the guard probe passing) — `failed=0` on all three; guard warn task skipped
 - [x] §3 `nut-monitor` `active (running)` on all three nodes — enabled + active
-- [x] §3 `upsc ups@192.168.2.213` returns the same values from all three nodes; no `Login failed` — `OL` / `100%` everywhere; full-journal `Login failed` count 0
+- [x] §3 `upsc ups@192.168.2.201` returns the same values from all three nodes; no `Login failed` — `OL` / `100%` everywhere; full-journal `Login failed` count 0
 - [x] §3 the two secondaries' `upsmon.conf` are identical; only per-role values differ from `pve` — `lab` vs `edge` byte-identical (password masked)
 - [x] §3 re-running a base playbook reports `changed=0` for the role — `pve`/`edge` 0; `lab` 1, that one being `azure_arc`
-- [x] §4 host monitor paused and restored across a LXC 213 restart — `pve` paused → LXC 213 restarted → `pve` active; secondaries never paused (`ActiveEnterTimestamp` unchanged)
+- [x] §4 host monitor paused and restored across a `nut-server` restart — `pve` paused → `nut-server` restarted → `pve` active; secondaries never paused (`ActiveEnterTimestamp` unchanged)
 
 > §4 caveat: the container was unreachable ~12 s against `DEADTIME` 15 s, so the clients never
 > marked the UPS *dead*. A normal restart is proven benign; the >15 s blackout case is not.

@@ -1,12 +1,15 @@
-# UPS Graceful Shutdown — NUT on the pve Node
+# UPS Graceful Shutdown — NUT Host-Native on the pve Node
 
 > Put the lab's shared power rail under **NUT (Network UPS Tools)**: the Green Cell **UPSLM600**
-> stays plugged into the `pve` node, a dedicated **LXC 213** runs the NUT
-> server (`upsd` + `nutdrv_qx`), and the hypervisor plus the fleet each run a NUT client that stops
-> the node in order once the battery runs down. The decision is recorded in
-> [ADR 30](../decisions/30-ups-nut-graceful-shutdown.md); implementation is tracked in
-> [issue #111](https://github.com/jaroslaw-bagnicki/Homelab/issues/111), and the load profile plus
-> model comparison are in [idea 09](../ideas/09-ups-nut-home-assistant.md).
+> stays plugged into the `pve` node, which runs the NUT server (`nutdrv_qx` driver + `upsd`)
+> **host-native**, and the hypervisor plus the fleet each run a NUT client that stops the node in
+> order once the battery runs down. The placement is [ADR 39](../decisions/39-nut-host-native.md),
+> which **supersedes** [ADR 30](../decisions/30-ups-nut-graceful-shutdown.md)'s LXC route; the load
+> profile and model comparison are in [idea 09](../ideas/09-ups-nut-home-assistant.md).
+>
+> ⚠ **This runbook now retires LXC 213.** The NUT server moved out of the container onto the `pve`
+> host (§1), where it is built by the [`nut_server`](../../ansible/roles/nut_server/README.md) role
+> (§2–§3).
 >
 > ⚠ **§3 is a gate.** The NUT server is only trusted once the driver actually attaches and answers
 > `upsc`. Until then everything below it is expected behaviour, not verified behaviour.
@@ -26,41 +29,47 @@ RAID1 and its SMB/NFS exports, for the Proxmox VMs/LXCs, and for k3s state. NUT 
 into an orderly stop: every node sees the same UPS state and cuts itself over on low battery, in a
 defined order.
 
+The server was originally in a dedicated LXC (213). In use that placement cost more than it gave —
+USB passthrough into an unprivileged container, a boot-ordering race between the fail-safe monitor and
+the guest, and a guest whose logs needed their own collector. [ADR 39](../decisions/39-nut-host-native.md)
+moves it host-native and removes all three.
+
 ## What changes
 
 - **UPS stays on the `pve` node** — Green Cell `UPSLM600`, USB **`0665:5161`**
   (Cypress/INNO TECH bridge). The unit has **no serial number**, so NUT finds it by
   `vendorid`/`productid` rather than by a port path — which port it occupies is irrelevant, and the
   cable can be moved without touching any config.
-- **LXC 213** (`nut`, unprivileged, Debian) — NUT server: `nutdrv_qx` driver + `upsd` on
-  **`192.168.2.213:3493`** — the `21x` virtual-guest block, where the container ID is the address's last octet ([ADR 31](../decisions/31-static-address-scheme.md)).
-  Next free ID after VM 210 / LXC 211 / LXC 212
-  ([ADR 25](../decisions/25-home-assistant-thin-client.md)); the Netdata Parent
-  ([#104](https://github.com/jaroslaw-bagnicki/Homelab/issues/104),
-  [ADR 27](../decisions/27-monitoring-strategy.md)) takes a later ID.
-- **Proxmox host** — `nut-client` only. An **unprivileged LXC cannot power off its own host**, so
-  the hypervisor runs its own `upsmon` and shuts itself down; Proxmox then stops the VM/LXCs in
-  order itself.
-- **Fleet clients** — `lab` (M910q) and `edge` (Wyse 3040): `nut-client` + `upsmon`. The **Beetle
-  M-III** joins as the NAS client once it is standing
-  ([#98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98)).
-- **No new firewall rule** — LXC 213 is bridged on the LAN, so client traffic never traverses the
-  host's UFW chains (see §6).
+- **Host-native NUT server on `pve`** — the `nutdrv_qx` driver and `upsd` run directly on the host,
+  listening on **`192.168.2.201:3493`** ([ADR 39](../decisions/39-nut-host-native.md)). No LXC, no USB
+  passthrough. The [`nut_server`](../../ansible/roles/nut_server/README.md) role owns the config and
+  the USB udev rule.
+- **One primary `upsmon` — on `pve`** — the host is the sole `upsmon` `primary` and shuts itself down;
+  Proxmox then stops its guests in order. Because server and primary share the host, systemd starts
+  `nut-monitor` after `nut-server` — no cold-boot race.
+- **Fleet clients** — `lab` (M910q), `edge` (Wyse 3040) and, once OMV is up, the **Beetle M-III** are
+  `upsmon` secondaries pointing at `192.168.2.201`, delivered by the `nut_client` role
+  ([runbook 30](30-deploy-nut-clients.md)).
+- **`pve` UFW allows `3493`** from `192.168.2.0/24` so the secondaries can reach `upsd`.
 
-> **Execution note.** Manual steps, run interactively from the repo's dev container. All three nodes
-> are LAN-only — reach them from a machine on `192.168.2.0/24` with the fleet key loaded
-> (`fleet-connect` skill). Ansible ownership of LXC 213 is a follow-up, not this runbook.
+> **Execution note.** The host build and the fleet clients are Ansible-managed — `playbook-pve.yml`
+> applies `nut_server` → `nut_client`; `playbook-lab.yml` / `playbook-edge.yml` / `playbook-nas.yml`
+> apply the secondaries. Only the LXC 213 retirement (§1) and the driver gate (§3) are manual, run from
+> a LAN workstation with the fleet key loaded (`fleet-connect` skill).
 
 ## Prerequisites
 
 - UPS on the `pve` node's USB and mains connected. The HID interface is **single-owner** — nothing else
-  may be holding the device, or the container stays blind to it.
-- `fleetadm` SSH + `sudo -n` on `pve`, `lab`, `edge`.
-- Azure Key Vault access to `homelab-bysxdb-kv` for the monitor password.
+  may be holding the device, which is why LXC 213 must release it first (§1).
+- `fleetadm` SSH + `sudo -n` on `pve`, `lab`, `edge`, `nas`.
+- Both monitor passwords in Azure Key Vault `homelab-bysxdb-kv` —
+  `nut-upsmon-primary-password`, `nut-upsmon-secondary-password`
+  (`scripts/New-HomelabNutUpsmonPasswords.ps1`, `-Force` to rotate).
+- Controller `AZURE_CLIENT_ID` / `AZURE_CLIENT_SECRET` / `AZURE_TENANT_ID` exported (the roles read the
+  passwords from Key Vault), and `ansible-galaxy collection install -r ansible/requirements.yml`.
 - Refs: [idea 09](../ideas/09-ups-nut-home-assistant.md) (architecture) ·
-  [ADR 25](../decisions/25-home-assistant-thin-client.md) ·
+  [ADR 39](../decisions/39-nut-host-native.md) (placement) ·
   [research 24](../research/24-network-topology-design.md) (IP scheme) ·
-  [research 26 §4](../research/26-home-assistant-thin-client.md) (USB passthrough pattern) ·
   [runbook 28](28-pve-proxmox-node.md) (the Proxmox base this builds on).
 
 ---
@@ -78,7 +87,7 @@ Two strips, both UPS-fed:
 
 | Strip | Load | Note |
 |---|---|---|
-| **1 — servers** | Dell Wyse 5070 (pve node) | hosts the NUT server's USB, `0665:5161` |
+| **1 — servers** | Dell Wyse 5070 (pve node) | hosts the UPS's USB, `0665:5161` |
 | | Lenovo M910q (lab) | 65/90 W external brick · k3s |
 | | Dell Wyse 3040 (edge) | external brick |
 | | Wincor Beetle M-III | the OMV NAS ([#98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98), [ADR 29](../decisions/29-nas-backup-target-beetle-m3-omv.md)) |
@@ -127,286 +136,82 @@ arithmetic: read against the same pass's baseline the rows stack (37 W + ~12 W r
 so the earlier apparent mismatch was the drift band rather than a bad reading. For sizing use a sustained average; for
 per-device attribution wait for [#73](https://github.com/jaroslaw-bagnicki/Homelab/issues/73).
 
-## 1. Create LXC 213
+## 1. Retire LXC 213 (release the USB device)
 
-On the Proxmox host (`ssh fleetadm@192.168.2.201`, then `sudo -i`):
-
-```sh
-# template — pick the current Debian build, don't hardcode a point release
-pveam update
-pveam available --section system | grep debian-13
-pveam download local <debian-13-template-from-the-line-above>
-pveam list local
-
-pct create 213 local:vztmpl/<template> \
-  --hostname nut --unprivileged 1 --features nesting=1 \
-  --cores 1 --memory 512 --swap 512 \
-  --rootfs local-lvm:4 \
-  --net0 name=eth0,bridge=vmbr0,ip=192.168.2.213/24,gw=192.168.2.1 \
-  --onboot 1
-```
-
-`--onboot 1` matters: if the host reboots while mains is present, the NUT server has to come back
-on its own. The container is **not** Ansible-managed in v1.
-
-DNS is deliberately **not** pinned with `--nameserver` — the container inherits the host's
-resolvers, so it keeps following whatever the LAN serves. A hardcoded public resolver would bypass
-that, including the `.internal` names the internal stack is due to serve
-([ADR 37](../decisions/37-lan-name-space-internal.md), [idea 10](../ideas/10-internal-ca-dns-stack.md)).
-
-⚠ **Building it in the GUI wizard instead of the snippet above?** Three fields need attention, because
-this is where the GUI and `pct create` diverge:
-
-- **Keep Nesting ticked** (General) — the wizard's default is right on this one. Debian 13 ships
-  **systemd 257**, and PVE warns on both create and start: `Systemd 257 detected. You may need to
-  enable nesting.` With nesting off, `tmp.mount`, `run-lock.mount` and `dev-mqueue.mount` end up in
-  `failed` state inside the container. The snippet above matches the default with
-  `--features nesting=1`.
-- **Untick Firewall** on the Network tab — that is `firewall=1` inside `net0`, which `pct create`
-  leaves at `0` (see the note below).
-- **Set Start at boot** under **Options** once the container exists — the wizard has no `--onboot`
-  field.
-
-> **Note — two firewalls, not one.** Proxmox's own firewall is a separate system from the host's UFW
-> (§6 covers that side), and every container interface carries a flag for it: `firewall=1` inside
-> `net0`.
-> - **Inert today** — no `/etc/pve/firewall/cluster.fw`, no host or guest rule files, and
->   `pve-firewall` running unenforced (checked 2026-09-13).
-> - **But it arms the interface** — once the datacenter firewall is enabled, LXC 213's inbound
->   becomes rule-driven with **no rules of its own**, and `3493` unreachable is exactly what the
->   fleet's clients read as a dead UPS (`DEADTIME`, §6).
-> - **So keep the flag at `0`** — `pct create` does; in the wizard the Network tab's **Firewall**
->   checkbox must stay unticked.
-
-## 2. USB passthrough
-
-The UPS is a raw **usbfs** device, not a serial tty, so the container needs the USB bus mount plus
-the device cgroup allowance. There is **no serial number** on the unit, so nothing can be pinned
-per-device — bind the bus and let NUT find the unit by VID:PID.
-
-Append to `/etc/pve/lxc/213.conf` on the host:
-
-```
-lxc.cgroup2.devices.allow: c 189:* rwm
-lxc.mount.entry: /dev/bus/usb dev/bus/usb none bind,optional,create=dir
-```
+The NUT server no longer lives in a container. Before the host can claim the UPS, the old LXC 213 has
+to release it — and the fleet's fail-safe `upsmon` must be paused across the cutover, or the 15 s
+`DEADTIME` blackout stops the lab on healthy mains.
 
 ```sh
-pct start 213
-pct exec 213 -- sh -c 'ls -l /dev/bus/usb/*/'   # the UPS node must be listed, on whatever bus
+# 1. Pause every client's fail-safe monitor
+for n in 192.168.2.201 192.168.2.200 192.168.2.240 192.168.2.202; do
+  ssh fleetadm@"$n" 'sudo systemctl stop nut-monitor'
+done
+
+# 2. Stop and destroy the old container (from the pve host)
+ssh fleetadm@192.168.2.201 'sudo pct stop 213'
+ssh fleetadm@192.168.2.201 "sudo sed -i -e '/^lxc.cgroup2.devices.allow: c 189:/d' -e '\%^lxc.mount.entry: /dev/bus/usb%d' /etc/pve/lxc/213.conf"
+ssh fleetadm@192.168.2.201 'sudo pct destroy 213'
 ```
 
-Bus and device numbers are reassigned across reboots — never assume `001`. Expect them to move on
-their own: the unit sat at device `008` in the morning of 2026-09-13, at `016` an hour later, and at
-`018` shortly after — three numbers in a single day, without a reboot. The container's listing shows
-bus/device numbers but no vendors, so ask the host which node is the UPS — and derive the path
-rather than pasting one:
+`pct destroy 213` frees the container; `.213` returns to the free guest pool
+([ADR 31](../decisions/31-static-address-scheme.md)). Confirm the host now sees the UPS on its own USB:
 
 ```sh
-dev=$(lsusb -d 0665:5161 | awk '{print "/dev/bus/usb/" $2 "/" $4}' | tr -d :)
-pct exec 213 -- ls -l "$dev"
+ssh fleetadm@192.168.2.201 'lsusb -d 0665:5161'
 ```
 
-**Permissions.** A visible node is not a *writable* one. Measured 2026-09-13, inside the container the
-node reads `nobody nogroup`, mode `crw-rw-r--`: host `root` sits outside an unprivileged container's
-ID map (so it shows as `nobody`), and that mode leaves *other* read-only — the driver as `nut` could
-open the device but not write to it. The host has no NUT package, so nothing grants that access for
-you — do it with a udev rule, matching the unit by VID:PID.
+## 2. Build the host-native NUT server
 
-**The GID has to come from the container, and it only exists once §3 has installed NUT** — the
-package creates the `nut` user and group. Read it there, then work backwards:
+The server is applied by Ansible — no hand edits:
 
-```sh
-pct exec 213 -- getent group nut                  # e.g. nut:x:105:
-sudo groupadd -g $((100000 + 105)) nut            # 100105 — the *mapped* GID, see below
-sudo tee /etc/udev/rules.d/85-nut-usb.rules >/dev/null <<'EOF'
-SUBSYSTEM=="usb", ATTR{idVendor}=="0665", ATTR{idProduct}=="5161", MODE="0660", GROUP="nut"
-EOF
-sudo udevadm control --reload && sudo udevadm trigger --subsystem-match=usb
+```powershell
+ansible-playbook ansible/playbooks/playbook-pve.yml --diff
 ```
 
-The `100000 +` is not decoration: an unprivileged container's IDs sit behind a user namespace
-(container `N` ↔ host `100000+N` — verified on this node, where the container's `init` runs as UID
-`100000` on the host). The device node itself lives on the *host*, so for it to appear as group
-`nut` **inside** the container, the host group has to carry the mapped GID. `MODE="0666"` would
-sidestep the arithmetic by making the node world-writable on the host — this is the narrower grant.
+- **`nut_server`** installs `nut-server`/`nut-client`, writes `/etc/nut/*` (`MODE=standalone`, the
+  `nutdrv_qx` `[ups]` section, `upsd` listening on `192.168.2.201:3493`, and `upsd.users` with both
+  Key Vault passwords), writes the USB **udev rule** (`/etc/udev/rules.d/85-nut-usb.rules`,
+  `GROUP="nut"` — a direct host grant, no mapped GID), and orders `nut-monitor` **after** `nut-server`.
+- **`nut_client`** writes the host's primary `upsmon.conf` and starts `nut-monitor` once `upsd`
+  answers.
 
-Verify that the group arrives inside the container:
+> **Two things moved from hand-editing to the role** (see [ADR 39](../decisions/39-nut-host-native.md)):
+> the USB/udev grant is now a direct host rule instead of a container-mapped GID, and the `ups.conf`
+> is templated as a whole file, so Debian's shipped `maxretry` global can no longer be mis-inserted as
+> a device option (the old §3 trap).
 
-```sh
-dev=$(lsusb -d 0665:5161 | awk '{print "/dev/bus/usb/" $2 "/" $4}' | tr -d :)
-pct exec 213 -- ls -l "$dev"                                    # expect group `nut`, mode 660
-pct exec 213 -- runuser -u nut -- test -w "$dev" && echo "writable as nut"
-```
+> **`usbhid` may hold the interface.** If the driver cannot claim the device, unbind `usbhid` for it
+> with a host udev rule — the same fallback ADR 30 documented. Do **not** switch to `usbhid-ups`; it is
+> structurally wrong for this unit's vendor-defined usage page (§3).
 
-Verified 2026-09-13: host side `crw-rw---- root nut`, inside the container `crw-rw---- nobody nut`,
-and the write test passes as `nut`. The owner still reads `nobody` — host `root` sits outside the
-container's ID map — while the group lands on the container's own `nut`, which is the whole point of
-the mapped GID above.
-
-§3 then repeats the same check with the driver, which is the one that counts.
-
-⚠ Binding the whole bus also exposes the Zigbee coordinator's raw USB node to this container. That
-is acceptable here (unprivileged container, LAN-trusted host) but it is a deliberate trade: pinning
-a single node requires the bus/device **numbering to stay consistent** inside the container, which
-is exactly what changes across reboots on a serial-less device. The driver needs that tree anyway —
-with no serial number there is no path to name, so `nutdrv_qx` finds the unit by scanning usbfs
-(`port = auto`), and a single mounted node would have to sit at exactly `/dev/bus/usb/BBB/DDD` to be
-found: the number moved `008` → `016` within hours on 2026-09-13, without a reboot.
-
-> **Expected device identity** — `0665:5161`, manufacturer `INNO TECH`, `bcdDevice 0.03`,
-> HID class 3 / subclass 0 / protocol 0, 8-byte interrupt IN + OUT, bus-powered at 100 mA.
-> The HID report descriptor declares **usage page `0xFF00` (vendor-defined)**, **not `0x84`
-> (Power Device)** — this is why `usbhid-ups` cannot drive it and `nutdrv_qx` is the driver.
-
-## 3. NUT server in LXC 213 — and the driver probe (gate)
-
-```sh
-pct exec 213 -- bash -lc 'apt update && apt install -y nut-server nut-client'
-```
-
-**`/etc/nut/nut.conf`**
-
-```
-MODE=netserver
-```
-
-**`/etc/nut/ups.conf`**
-
-```
-[ups]
-    driver = nutdrv_qx
-    port = auto
-    vendorid = 0665
-    productid = 5161
-    desc = "Green Cell UPSLM600"
-```
-
-`port = auto` is not optional — with no serial number there is no stable `/dev` path to name.
-
-> **Append the section — don't insert it.** The shipped `ups.conf` carries an uncommented
-> `maxretry = 3` (Debian's own default), and the same file documents such directives as ones that
-> "should be specified outside of a driver definition". Put the `[ups]` block **below** it (end of
-> file). Inserted above, the global becomes a device option and the driver dies with
-> `Fatal error: 'maxretry' is not a valid variable name for this driver`, then exit-loops under
-> systemd — seen 2026-09-13, restart counter at 9.
-
-**`/etc/nut/upsd.conf`**
-
-```
-LISTEN 192.168.2.213 3493
-```
-
-**`/etc/nut/upsd.users`** — **two accounts, one per role.** NUT authorizes the roles separately, so a
-`primary` account is not accepted as a `secondary`. Passwords come from Azure Key Vault, never from
-this file in Git:
-
-```
-[upsmon-host]
-    password = <AKV: nut-upsmon-primary-password>
-    upsmon primary
-[upsmon-fleet]
-    password = <AKV: nut-upsmon-secondary-password>
-    upsmon secondary
-```
-
-> Create both secrets once, from the dev container — the one-shot script writes both and prints the
-> **read-back commands**, never the values: a generated password belongs in the file that consumes it,
-> not in terminal scrollback or a session log.
->
-> ```powershell
-> ./scripts/New-HomelabNutUpsmonPasswords.ps1     # -Force rotates an existing pair
-> ```
->
-> Then **read each value and substitute it** — the `<AKV: …>` text above is a placeholder, and a
-> literal copy fails authentication:
->
-> ```powershell
-> Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name nut-upsmon-primary-password -AsPlainText
-> Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name nut-upsmon-secondary-password -AsPlainText
-> ```
->
-> **These two reads do print the value — that is the one deliberate exposure, not an oversight.** A
-> secret cannot reach a config file without being seen once; the script's job is to keep that from
-> happening on *every* run, and so it reports what it provisioned instead of echoing what it made.
-> Do the substitution in the same session, and if that terminal's output is ever captured or shared,
-> rotate with `-Force` and substitute again.
->
-> Put both values into `upsd.users` in the container
-> (`pct exec 213 -- nano /etc/nut/upsd.users`). Neither value goes into Git. The client side — the
-> host's `upsmon.conf` and each fleet node's `MONITOR` line — is written by the `nut_client` role
-> straight from Key Vault ([runbook 30](30-deploy-nut-clients.md)), so those values are never
-> printed or hand-edited.
->
-> Recent NUT (2.8+) spells the role `primary` / `secondary`; older 2.7.x uses `master` / `slave`.
-> Check `upsd -V` and use that spelling — a wrong role surfaces as
-> `Login failed: not authorized for this mode` in the client logs.
-
-Lock the files down — they hold the password:
-
-```sh
-chown root:nut /etc/nut/*
-chmod 640 /etc/nut/ups.conf /etc/nut/upsd.conf /etc/nut/upsd.users
-```
-
-> **The packages already ship `/etc/nut/*` as `640 root:nut`** (verified 2026-09-13: all six files,
-> including the untouched `upsmon.conf`/`upssched.conf`, whose `ctime` is the install time and `mtime`
-> the 2025-06-27 build) — the daemons run as `nut` and must read their own configs. These commands
-> therefore **re-assert** a mode that is already correct: cheap and idempotent, but not a step you can
-> later prove you ran. On a file you edited, `ctime == mtime` means no separate `chmod` followed the
-> write — re-`chmod`ing an already-`640` file bumps `ctime` alone. Check the resulting mode, not the
-> fact of running the command.
-
-> **A running `upsd` does not see the new accounts.** The packages leave `nut-server` already active,
-> and `upsd` reads `upsd.users` **once at start** (verified 2026-09-13: `upsd` had been up since
-> 08:06:23, the accounts were written at 08:11:39, and nothing took effect until a reload). Reload
-> after writing them — the unit's `ExecReload` is `upsd -c reload -P $MAINPID`, a SIGHUP:
->
-> ```sh
-> pct exec 213 -- bash -lc 'systemctl reload nut-server'   # journal: SIGHUP: reloading configuration
-> ```
->
-> Skipping this fails silently here and surfaces later as `Login failed` in a client's `upsmon` —
-> which reads like a wrong password. Check `systemctl show -p ActiveEnterTimestamp nut-server` against
-> the file's mtime before assuming the accounts are live.
-
-### Probe before enabling anything
+## 3. Driver probe (gate)
 
 > **The driver may already be running.** `nut-driver-enumerator.path` watches `ups.conf` and starts
-> `nut-driver@ups` as soon as it holds a valid section — you do not have to enable anything for it.
-> A running driver **holds the USB device**, so a manual probe against it fails with a misleading
-> "device busy". Either read the service's own journal instead, or stop it first:
-> `systemctl stop nut-driver@ups`.
+> `nut-driver@ups` as soon as it holds a valid section. A running driver **holds the USB device**, so a
+> manual probe against it fails with a misleading "device busy". Either read the service's own journal,
+> or stop it first: `sudo systemctl stop nut-driver@ups`.
 
 Run the driver in the foreground first; this is the gate:
 
 ```sh
 # Debian installs the drivers into /lib/nut, which is not on root's PATH
-pct exec 213 -- bash -lc '/lib/nut/nutdrv_qx -a ups -DDD'                    # as root
-pct exec 213 -- bash -lc 'runuser -u nut -- /lib/nut/nutdrv_qx -a ups -DDD'  # as the service user
+ssh fleetadm@192.168.2.201 'sudo /lib/nut/nutdrv_qx -a ups -DDD'                    # as root
+ssh fleetadm@192.168.2.201 'sudo runuser -u nut -- /lib/nut/nutdrv_qx -a ups -DDD'  # as the service user
 ```
 
-`runuser`, not `sudo` — the Debian template ships **no `sudo`** (verified 2026-09-13: only `su` is
-present, while `/usr/sbin/runuser` works and reports `uid=102(nut) gid=105(nut)`).
-
 Both runs must initialise. A driver that works as root but not as `nut` fails in service too — the
-unit carries no `User=`, but NUT's drivers **drop to `nut` themselves** once started as root (verified
-2026-09-13: the running `nutdrv_qx` is uid 102 / gid 105). That is precisely what §2's permission
-step buys: the driver opens the device as `nut`, not as root.
+unit carries no `User=`, but NUT's drivers **drop to `nut` themselves** once started as root. That is
+precisely what §2's udev rule buys: the driver opens the device as `nut`, not as root.
 
 Then bring the services up and read the unit:
 
 ```sh
-pct exec 213 -- bash -lc 'systemctl enable --now nut-driver-enumerator nut-server'
-pct exec 213 -- bash -lc 'systemctl status nut-driver@ups --no-pager'
-pct exec 213 -- bash -lc 'upsc ups@192.168.2.213'   # named address — upsd does not listen on 127.0.0.1
+ssh fleetadm@192.168.2.201 'systemctl status nut-driver@ups --no-pager'
+ssh fleetadm@192.168.2.201 'systemctl status nut-server nut-monitor --no-pager'
+ssh fleetadm@192.168.2.201 'upsc ups@localhost'            # local (upsd listens on the LAN address too)
+ssh fleetadm@192.168.2.200 'upsc ups@192.168.2.201'        # from a secondary
 ```
-
-> **`nut-monitor` in the container is expected to be `inactive`.** The package enables it and
-> `nut.target` is active, but `upsmon` itself checks the mode and exits — `upsmon disabled, please
-> adjust the configuration to your needs` in the journal. The guard lives in the daemon, not the
-> unit: `nut-monitor.service` carries no mode condition. The container is the server; the monitors
-> are the host (§4) and the fleet (§5).
 
 Record from the `upsc` dump:
 
@@ -424,22 +229,21 @@ Record from the `upsc` dump:
 > watts**, and it does not track the meter: sizing comes from the measured draws in §0 and from the
 > unit's own LCD, not from this variable.
 
-⚠ If the driver cannot claim the device, the cause is almost always the kernel's `usbhid` holding
-the interface. Fallbacks, in order: (1) confirm the node really is visible inside the container
-(§2); (2) unbind `usbhid` for this device with a host udev rule; (3) as a last resort run the
-container privileged. Do **not** paper over it by switching drivers — `usbhid-ups` is structurally
-not an option for a vendor-defined usage page.
+⚠ **Confirmed 2026-09-13: no runtime estimate.** The `upsc` dump carries no `battery.runtime`, and the
+driver states why at startup — `Battery runtime will not be calculated (runtimecal not set)`. The
+trigger is therefore **`LB`**; do not build a countdown on a variable that does not exist.
 
-⚠ **Confirmed 2026-09-13: no runtime estimate.** The first `upsc` dump carries no `battery.runtime`,
-and the driver states why at startup — `Battery runtime will not be calculated (runtimecal not set)`.
-The trigger is therefore **`LB`**; do not build a countdown on a variable that does not exist.
+> **Expected device identity** — `0665:5161`, manufacturer `INNO TECH`, `bcdDevice 0.03`,
+> HID class 3 / subclass 0 / protocol 0, 8-byte interrupt IN + OUT, bus-powered at 100 mA.
+> The HID report descriptor declares **usage page `0xFF00` (vendor-defined)**, **not `0x84`
+> (Power Device)** — this is why `usbhid-ups` cannot drive it and `nutdrv_qx` is the driver.
 
-## 4. Proxmox host — NUT client
+## 4. Proxmox host — NUT client (primary)
 
-> **Superseded — delivered by the `nut_client` role.** The host is the **one and only `upsmon`
-> `primary`**: account `upsmon-host`, `FINALDELAY 30`, `HOSTSYNC 30`. It is installed and kept
-> converged by the base `playbook-pve.yml` — see [runbook 30](30-deploy-nut-clients.md). The
-> hand-edited `upsmon.conf` this section used to carry is gone; the role is the reference.
+> **Delivered by the `nut_client` role.** The host is the **one and only `upsmon` `primary`**: account
+> `upsmon-host`, `FINALDELAY 30`, `HOSTSYNC 30`, monitoring `ups@192.168.2.201` (itself). It is
+> installed and kept converged by the base `playbook-pve.yml` — see
+> [runbook 30](30-deploy-nut-clients.md).
 
 `/sbin/shutdown -h +0` is all that is needed to stop the VMs/LXCs in order — Proxmox handles the
 guest shutdown, NUT only has to stop the host.
@@ -451,9 +255,9 @@ the fleet — the drill in §7 is what proves it.
 
 ## 5. Fleet clients
 
-> **Superseded — delivered by the `nut_client` role.** `lab` (M910q) and `edge` (Wyse 3040) are
-> `upsmon` `secondary` nodes: account `upsmon-fleet`, `HOSTSYNC 15`, `FINALDELAY 0`. Installed and
-> kept converged by the same role — [runbook 30](30-deploy-nut-clients.md).
+> **Delivered by the `nut_client` role.** `lab` (M910q) and `edge` (Wyse 3040) are
+> `upsmon` `secondary` nodes: account `upsmon-fleet`, `HOSTSYNC 15`, `FINALDELAY 0`, pointing at
+> `192.168.2.201`. Installed and kept converged by the same role — [runbook 30](30-deploy-nut-clients.md).
 
 Node-specific notes:
 
@@ -474,50 +278,49 @@ battery state on their own:
 2. Every `upsmon` watching that UPS — host and secondaries alike — receives FSD and runs its own
    `SHUTDOWNCMD`. The secondaries stop first.
 3. The primary then waits `FINALDELAY` (30 s) before running its own `SHUTDOWNCMD`, which is the
-   window the secondaries get. Proxmox stops VM 210 and LXC 211/212/213 in order.
+   window the secondaries get. Proxmox stops its guests in order.
 4. The battery drains and the unit powers off, taking **both strips** with it — the mesh node and the
    LTE modem included, so the house Wi-Fi goes down with the lab. **Nothing tells the UPS to cut its
-   outlets**: the driver lives in a container Proxmox has already stopped, so there is no
-   `upsdrvctl shutdown` path. That is accepted for v1.
+   outlets** — no late-shutdown `upsdrvctl shutdown` hook is wired in v1. That is accepted.
 
 ⚠ **That ordering is a design intent, not an emergent property.** It holds only while `FINALDELAY`
 and `HOSTSYNC` are set as in §4/§5 — with the stock values the host races the secondaries. The §7
 drill is what proves it.
 
-⚠ **Pause the host monitor before touching LXC 213.** With `MINSUPPLIES 1`, an `upsd` that cannot be
-reached for `DEADTIME` (15 s) is indistinguishable from a failed UPS, so restarting the container —
-or letting it boot more slowly than the host's `nut-monitor` — can stop the fleet while mains is
-present:
+⚠ **Pause the host monitor before restarting the server.** With `MINSUPPLIES 1`, an `upsd` that cannot
+be reached for `DEADTIME` (15 s) is indistinguishable from a failed UPS, so stopping/upgrading
+`nut-server` — or a slow host boot — can stop the fleet while mains is present:
 
 ```sh
-systemctl stop nut-monitor                 # host, before stopping/upgrading LXC 213
-pct stop 213 / upgrade / pct start 213
-pct exec 213 -- bash -lc 'upsc ups@192.168.2.213'   # only continue once this answers
-systemctl start nut-monitor
+ssh fleetadm@192.168.2.201 'sudo systemctl stop nut-monitor'     # host, before touching nut-server
+ssh fleetadm@192.168.2.201 'sudo systemctl restart nut-server'
+ssh fleetadm@192.168.2.201 'upsc ups@localhost'                  # only continue once this answers
+ssh fleetadm@192.168.2.201 'sudo systemctl start nut-monitor'
 ```
+
+On a normal host boot this race no longer exists: `nut-monitor` is ordered **after** `nut-server`
+(§2), so it waits for `upsd` rather than fail-safing.
+
+**Firewall.** `pve`'s UFW now allows `3493` from `192.168.2.0/24` (`security_ufw_allow_tcp_ports` in
+`ansible/host_vars/pve.yml`), so the secondaries can reach `upsd`. Add it via Ansible, never by hand,
+or the next `security` role run drops it.
 
 Accepted trade-off: a genuinely unreachable UPS *does* stop the fleet — fail-safe, not fail-open. If
 that proves disruptive, raise `DEADTIME` and `POLLFREQALERT` together rather than relaxing
 `MINSUPPLIES`.
 
-**No new firewall rule is required.** LXC 213 is bridged on `192.168.2.0/24`, so client traffic
-never traverses the host's UFW chains — UFW here is host-management-plane only
-([runbook 28](28-pve-proxmox-node.md)). That changes only if the container is ever moved to a
-**routed** NIC (separate subnet); then `3493` has to be added to `security_ufw_allow_tcp_ports` in
-`ansible/host_vars/pve.yml` — not by hand, or the next `security` role run drops it.
-
 ## 7. Validation
 
-1. **Read, don't trust** — `upsc ups@192.168.2.213` from every client returns the same values.
+1. **Read, don't trust** — `upsc ups@192.168.2.201` from every client returns the same values.
 2. **On-battery propagation** — pull the UPS's mains plug:
 
    ```sh
-   watch -n2 "upsc ups@192.168.2.213 | grep -E 'ups.status|battery'"
+   watch -n2 "upsc ups@192.168.2.201 | grep -E 'ups.status|battery'"
    ```
 
    Every node must flip to `OB` within a few seconds while the fleet keeps running. Plug back in
    and confirm `OL`.
-3. **Quick test (non-destructive)** — `upscmd -l ups@192.168.2.213` lists what the unit actually
+3. **Quick test (non-destructive)** — `upscmd -l ups@192.168.2.201` lists what the unit actually
    supports. Expect a short self-test only: the discharge test is not available on this unit.
 4. **Shutdown drill** — two different tests, and they are not interchangeable:
    - **Per-node test:** on a secondary, point `SHUTDOWNCMD` at a benign command for the test
@@ -567,7 +370,7 @@ Full planned fleet at **~80 W** (inline meter), mains pulled with every node loa
 | FSD set by the primary | 11:29:43 (`upsd` log) |
 | Secondary stop | `lab` reached `poweroff.target` ≈5 s after FSD |
 | Primary stop | 30 s after its FSD decision — `FINALDELAY 30` honoured precisely |
-| Guest order | Proxmox stopped CT 213 during that shutdown, then completed |
+| Guest order | Proxmox stopped its guests during that shutdown, then completed |
 
 Two operational notes: **`lab` does not auto-start on AC restore** (it needed a manual power press,
 unlike the other two nodes), and a drill on `edge` should set `Storage=persistent` for the window — its journal
@@ -577,50 +380,49 @@ so this drill produced **no modified-sine verdict**.
 ## Verification Checklist
 
 Items tagged **[#117]** depend on the DR drill — a sub-issue of
-[#111](https://github.com/jaroslaw-bagnicki/Homelab/issues/111). The server side (§1–§3) is what this
+[#111](https://github.com/jaroslaw-bagnicki/Homelab/issues/111). The host server (§1–§3) is what this
 runbook completes on its own; the client rollout (§4/§5) is verified by
 [runbook 30](30-deploy-nut-clients.md).
 
 - [ ] §0 UPS input on the wall socket; **both strips** on battery-backed outlets; monitors/dock/charger off the UPS
-- [x] §1 LXC 213 created unprivileged, `192.168.2.213`, `nesting=1`, `onboot 1`, starts cleanly and `systemctl --failed` is empty inside
-- [x] §2 USB node visible in the container **and** writable as `nut` (udev/permission step done)
-- [x] §3 `/lib/nut/nutdrv_qx` attaches (as root **and** as `nut`), `upsc ups@192.168.2.213` returns real values, `battery.runtime` presence recorded
-- [x] §3 both monitor passwords in AKV (`nut-upsmon-primary-password`, `nut-upsmon-secondary-password`) and substituted into the files; `/etc/nut` files `640 root:nut`
-- [x] §3 `upsd` reloaded after the accounts were written (`systemctl reload nut-server`) — a daemon that predates the edit still serves the old user list
-- [x] §7 on-battery ride performed from the dev container (2026-09-13, 5.5 min, fleet attached) — `OB`/`OL` propagate promptly; runtime **not** derivable by extrapolation
-- [x] §7 on-battery propagation confirmed on all three nodes (host, `lab`, `edge`); fleet-wide drill done — **2026-09-19** real-outage run (stronger than `upsmon -c fsd`: genuine battery trigger), ordering proven — FSD 11:29:43; `edge` down 11:29:47, `lab` `poweroff.target` 11:29:48; primary stops +30 s (`FINALDELAY 30`) — [report](../reports/260919-nut-shutdown-drill.md) — **[#117]**
+- [ ] §1 LXC 213 retired, `.213` freed; the host's `lsusb -d 0665:5161` shows the UPS
+- [ ] §2 `playbook-pve.yml` applies cleanly; `/etc/udev/rules.d/85-nut-usb.rules` present; `nut-monitor` ordered after `nut-server`
+- [ ] §3 `/lib/nut/nutdrv_qx` attaches (as root **and** as `nut`), `upsc ups@192.168.2.201` returns real values, `battery.runtime` presence recorded
+- [ ] §3 both monitor passwords in AKV and written into `upsd.users`; `/etc/nut` files `640 root:nut`
+- [ ] §3 `upsd` reloaded after the accounts were written — a daemon that predates the edit still serves the old user list
+- [ ] §4/§5 the fleet's `nut-monitor` reaches `ups@192.168.2.201` from `pve`, `lab`, `edge`, `nas`
+- [ ] §7 on-battery ride performed from the dev container (2026-09-13, 5.5 min, fleet attached) — `OB`/`OL` propagate promptly; runtime **not** derivable by extrapolation
+- [ ] §7 on-battery propagation confirmed on all three nodes (host, `lab`, `edge`); fleet-wide drill done — **2026-09-19** real-outage run (stronger than `upsmon -c fsd`: genuine battery trigger), ordering proven — FSD 11:29:43; `edge` down 11:29:47, `lab` `poweroff.target` 11:29:48; primary stops +30 s (`FINALDELAY 30`) — [report](../reports/260919-nut-shutdown-drill.md) — **[#117]**
 - [ ] §7 Beetle tested on battery at **idle and under spin-up** (or moved off battery outlets) — **[#117]**; **not** covered by the 2026-09-19 drill (the Beetle is powered but has no OS yet)
 
 ## Follow-ups
 
-- **ADR** — the direction is recorded in [ADR 30](../decisions/30-ups-nut-graceful-shutdown.md). It is
-  dated to the decision, so if §3 or §7 fails the fix is to **update or supersede it** — not to leave
-  it silently wrong.
-- **Home Assistant integration** — NUT integration at `192.168.2.213:3493` plus `OB`/`LB`/`OL`
+- **ADR** — the placement is recorded in [ADR 39](../decisions/39-nut-host-native.md), which supersedes
+  [ADR 30](../decisions/30-ups-nut-graceful-shutdown.md). If §3 or §7 fails after the move, update or
+  supersede it rather than leaving it silently wrong.
+- **Home Assistant integration** — NUT integration at `192.168.2.201:3493` plus `OB`/`LB`/`OL`
   automations, once the HA OS VM lands ([#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68) /
   [#85](https://github.com/jaroslaw-bagnicki/Homelab/issues/85)).
 - **AC-restore behaviour** — after a full drain the nodes stay off. Decide per node whether the BIOS
   should auto-power-on when mains returns, otherwise recovery is a manual walk to each machine.
-- **Ansible ownership** — split settled 2026-09-13: the **clients** are delivered as an Ansible role
-  ([#116](https://github.com/jaroslaw-bagnicki/Homelab/issues/116)) with its own runbook, while
-  **LXC 213 stays a runbook procedure** (§1–§3) — it is one container, built once, and the steps are
-  the deliverable. The server build is complete
-  ([#115](https://github.com/jaroslaw-bagnicki/Homelab/issues/115)).
+- **Ansible ownership** — complete: the **server** is the `nut_server` role on `pve`, the **clients**
+  are the `nut_client` role ([#116](https://github.com/jaroslaw-bagnicki/Homelab/issues/116)); only the
+  LXC 213 retirement (§1) and the driver gate (§3) remain manual.
 - **Beetle M-III as the NAS client** — it sits on strip 1 from day one but joins NUT (§5) only once
   [#98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98) has OMV running, including the
   OMV-panel-vs-files decision.
 - **Router client** — the Futro S930 is on strip 1 from day one too, but OPNsense is FreeBSD, so its
   client path differs ([#96](https://github.com/jaroslaw-bagnicki/Homelab/issues/96)).
 - **Telemetry** — **Netdata configured** (2026-09-26): the Parent's go.d `upsd` job ships in the
-  `netdata` role — [runbook 31](31-deploy-netdata.md) §2; its status follows the post-review `--diff`
-  run. Prometheus/Grafana remains open with
-  [#73](https://github.com/jaroslaw-bagnicki/Homelab/issues/73).
+  `netdata` role, now pointing at `192.168.2.201:3493` — [runbook 31](31-deploy-netdata.md) §2.
+  Prometheus/Grafana remains open with [#73](https://github.com/jaroslaw-bagnicki/Homelab/issues/73).
 
 ## References
 
 - [Idea 09 — UPS with NUT + Home Assistant](../ideas/09-ups-nut-home-assistant.md) — load profile, model comparison, NUT architecture
+- [ADR 39 — NUT server host-native on the pve node](../decisions/39-nut-host-native.md) · [ADR 30 (superseded)](../decisions/30-ups-nut-graceful-shutdown.md)
 - [ADR 25 — Home Assistant on a thin client](../decisions/25-home-assistant-thin-client.md) · [ADR 27 — monitoring strategy](../decisions/27-monitoring-strategy.md) · [ADR 28 — fleet admin account and key](../decisions/28-fleet-admin-account-and-key.md)
-- [Runbook 28 — pve node install](28-pve-proxmox-node.md) · [Runbook 24 — edge appliance](24-edge-appliance.md) · [Runbook 21 — TL-SG108E switch](21-tl-sg108e-switch.md)
+- [Runbook 28 — pve node install](28-pve-proxmox-node.md) · [Runbook 30 — NUT clients](30-deploy-nut-clients.md) · [Runbook 21 — TL-SG108E switch](21-tl-sg108e-switch.md)
 - [ADR 29 — NAS backup target on the Beetle M-III](../decisions/29-nas-backup-target-beetle-m3-omv.md) · [idea 07 — OPNsense on the Futro S930](../ideas/07-opnsense-futro-s930.md) · [idea 08 — LTE WAN failover](../ideas/08-lte-wan-failover.md)
 - [research 24 — network topology](../research/24-network-topology-design.md) (IP scheme) · [research 29 — Wyse 5070 diagnostic](../research/29-wyse5070-hardware-diagnostic.md) (USB hub topology)
 - [Network UPS Tools](https://networkupstools.org/) — `nutdrv_qx` driver, `upsd` / `upsmon`

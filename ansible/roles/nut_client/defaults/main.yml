@@ -1,6 +1,6 @@
 ---
 nut_client_ups_name: ups
-nut_client_server: 192.168.2.213
+nut_client_server: 192.168.2.201
 nut_client_keyvault_name: homelab-bysxdb-kv
 nut_client_role: secondary
 nut_client_account: upsmon-fleet

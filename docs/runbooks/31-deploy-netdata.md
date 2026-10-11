@@ -53,7 +53,7 @@ Edge nodes stream to the Parent on the `pve` node; the NAS joins when it joins t
 - **Children** — Lab (M910q, `dbengine`) and Edge (Wyse 3040, `ram` — eMMC-safe) stream to
   `192.168.2.201:19996:SSL` (`netdata_stream_ssl: true` — the Parent refuses plaintext streams).
 - **UPS telemetry** — the Parent's bundled go.d `upsd` module polls the NUT server
-  (`netdata_upsd_address: 192.168.2.213:3493`, set in `host_vars/pve.yml`) and charts battery
+  (`netdata_upsd_address: 192.168.2.201:3493`, set in `host_vars/pve.yml`) and charts battery
   charge, load, voltages and the `OL`/`OB`/`LB` status (runtime too, though this unit reports none).
   Reads are **anonymous**, so no NUT account and no Key Vault secret — and the same run installs two
   **power-state alarms** (`on_battery` → warning, `low_battery` → critical), because the stock UPS
@@ -123,17 +123,17 @@ The same run enables the Parent's **UPS charts**. The go.d `upsd` module ships w
 agent, so this is configuration only — `host_vars/pve.yml` sets
 
 ```yaml
-netdata_upsd_address: "192.168.2.213:3493"   # NUT server in LXC 213
+netdata_upsd_address: "192.168.2.201:3493"   # NUT server host-native on pve
 ```
 
 and the role renders `/etc/netdata/go.d/upsd.conf` (one job named `nut` at that address) and restarts
 `netdata`. The NUT server allows **anonymous** reads, so there is no NUT account and no Key Vault
-secret; `pve` reaches `.213:3493` outbound (UFW allows outgoing traffic by default). A node with the
+secret; `pve` reaches `.201:3493` locally (UFW allows loopback and the LAN rule). A node with the
 variable empty converges with no `upsd.conf`.
 
 The module is documented for **remote instances** ([integration page](https://www.netdata.cloud/integrations/data-collection/hardware-and-sensors/ups-nut/)) and
 does not support auto-detection, so the explicit job is what activates it — and no Netdata agent is
-needed inside LXC 213. Each metric carries two names: the **context** (`upsd.ups_battery_charge`,
+needed inside a guest. Each metric carries two names: the **context** (`upsd.ups_battery_charge`,
 `upsd.ups_status`, …) and the job-scoped **chart id** the API answers to (`upsd_<job>_<ups>.<metric>` —
 here `upsd_nut_ups.battery_charge_percentage`, `upsd_nut_ups.status`, `upsd_nut_ups.input_voltage`,
 `upsd_nut_ups.load_percentage`, `upsd_nut_ups.load_usage`). Populated on this unit: charge, battery
