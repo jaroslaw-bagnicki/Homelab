@@ -4,10 +4,8 @@
 #   ./sign.sh <destination-path> [passphrase-file]      e.g. /mnt/sdX1 (no default)
 #
 # Uses --template, never --profile: a profile rebuilds the certificate from its own
-# defaults and silently drops the SANs — the intermediate's declared identity shape.
-# Measured 2026-10-11: the certificate that serves TLS is a separate self-issued leaf
-# built from ca.json's dnsNames, so a SAN-less intermediate is not an immediate
-# outage — it simply no longer matches the shape this CA is meant to carry.
+# defaults and silently drops the SANs — the CA's declared identity shape. Why that
+# matters here, and how the CA actually serves TLS: 03-signing-csr.md.
 set -eu
 
 [ $# -ge 1 ] || { echo "usage: $0 <destination-path> [passphrase-file]" >&2; echo "       e.g. $0 /mnt/sdX1" >&2; exit 1; }
@@ -21,8 +19,7 @@ TMP="$OUT.new"
 trap 'rm -f "$TMP"' EXIT
 
 # --- the signing machine must not have a network -----------------------------
-# Fail closed: a missing `ip` proves nothing, and a default-route test alone misses
-# an interface that only has an on-link address.
+# Both checks are deliberate: the address test also catches an on-link-only machine.
 if ! command -v ip >/dev/null 2>&1; then
     echo "ABORT: 'ip' is not available, so this machine's network state cannot be checked." >&2
     exit 1
@@ -105,8 +102,7 @@ chk "is a CA certificate"                      '"is_ca"[: ]+true'
 chk "path length 0 (issues leaves, no deeper)"  '"max_path_len"[: ]+0'
 chk "key usage: certificate sign"              '"certificate_sign"[: ]+true'
 chk "key usage: CRL sign"                      '"crl_sign"[: ]+true'
-# The SAN rows are policy checks on the CA's declared identity shape, not a TLS
-# requirement — see the note at the top of this file.
+# the CA's declared identity shape — policy checks, not TLS requirements
 chk "identity shape: SAN present"                    '"dns_names"'
 chk "identity shape: SAN carries ca.internal"        'ca\.internal'
 chk "identity shape: SAN carries 192.168.2.215"      '192\.168\.2\.215'

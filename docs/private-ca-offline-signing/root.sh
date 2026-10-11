@@ -27,8 +27,7 @@ ROOT_CN="Homelab Internal CA"
 ROOT_LIFETIME="87600h"   # 10 years
 
 # --- the signing machine must not have a network -----------------------------
-# Fail closed: a missing `ip` proves nothing, and a default-route test alone misses
-# an interface that only has an on-link address.
+# Both checks are deliberate: the address test also catches an on-link-only machine.
 if ! command -v ip >/dev/null 2>&1; then
     echo "ABORT: 'ip' is not available, so this machine's network state cannot be checked." >&2
     exit 1
