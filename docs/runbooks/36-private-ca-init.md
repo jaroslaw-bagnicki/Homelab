@@ -118,13 +118,13 @@ valid until it expires.
 
 ## Verification Checklist
 
-Executed on: **never** — this has never been run against the real stick. Steps 1 and 2 are the kit,
-tested only with a throwaway key and a stand-in stick. Record the date and the result here when the real
-ceremony is first performed.
+Executed on: **2026-10-11**. The root is self-signed, `CA:TRUE, pathlen:1`, 10 years; the intermediate
+chains to it, `CA:TRUE, pathlen:0`, carrying the SANs `ca.internal` + `192.168.2.215`, and lasts one
+year; the root is published to Key Vault as `ca-root-cert`.
 
-- [ ] Step 1: root created, every check passed, passphrase written into the safe, root published to Key Vault
-- [ ] Step 2: the intermediate signed, every check passed, stick back in the safe
-- [ ] Step 3: annual reminder set
+- [x] Step 1: root created, every check passed, passphrase written into the safe, root published to Key Vault
+- [x] Step 2: the intermediate signed, every check passed, stick back in the safe
+- [ ] Step 3: annual reminder set — the intermediate expires **2027-10-11**
 
 ## Follow-ups
 

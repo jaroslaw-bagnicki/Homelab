@@ -9,9 +9,10 @@
 > [research 36 §5](../research/36-step-ca-machine-identity.md); measured gate:
 > [#141](https://github.com/jaroslaw-bagnicki/Homelab/issues/141).
 >
-> ⚠ **Partly executed — §1–§6 run 2026-10-11.** Each section carries an **Execution record** with the
-> output observed on the first run. §7–§8 are still unrun; treat those commands as *plans* until
-> their record is written. The runbook was written from ADR 38, research 36–37, and the
+> ⚠ **Partly executed — §1–§6 run 2026-10-11, and the offline ceremony
+> ([runbook 36](36-private-ca-init.md)) completed the same day; §7 is the remaining run.** Each section
+> carries an **Execution record** with the output observed on the first run; treat the §7–§8 commands as
+> *plans* until their record is written. The runbook was written from ADR 38, research 36–37, and the
 > [#141](https://github.com/jaroslaw-bagnicki/Homelab/issues/141) gate, which measured the TPM and LXC
 > mechanics on `pve` — gate-measured facts are marked **(measured #141)**.
 >
@@ -421,7 +422,7 @@ ansible-playbook ansible/workloads/step-ca/step-ca-playbook.yml --diff
 
 ## 7. Resume — install the signed intermediate and start the CA
 
-This section runs **after** the offline ceremony ([runbook 36 §3](36-private-ca-init.md)) returns
+This section runs **after** the offline ceremony ([runbook 36 §2](36-private-ca-init.md)) returns
 `root_ca.crt` and `intermediate_ca.crt`. The role already put the ACME provisioner in `ca.json`.
 
 ```sh
