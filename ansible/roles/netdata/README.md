@@ -36,14 +36,15 @@ DB ceiling is the **sum** of the caps.
 
 | Tier | Granularity | Parent | Child |
 |---|---|---|---|
-| 0 | 1 s | 14 d / 3 GiB | 7 d / 256 MiB |
+| 0 | 1 s | 14 d / 5 GiB | 7 d / 256 MiB |
 | 1 | 1 m | 30 d / 2 GiB | 7 d / 256 MiB |
 | 2 | 1 h | 365 d / 2 GiB | 7 d / 256 MiB |
-| **DB ceiling** | | **≈7 GiB** | **≈768 MiB** |
+| **DB ceiling** | | **≈9 GiB** | **≈768 MiB** |
 
-- Sizes come from measured growth (~145 MB/day tier 0, ~59 MB/day tier 1, ~5 MB/day tier 2 at 18.8k
-  metrics, 2026-09-26): 14 d uses ≈2 GB of tier 0's 3 GiB, so the remainder is headroom for growth
-  (k3s). The Parent's DB sits on its own root LV, which the guests do not share.
+- Sized from measured growth — the live Parent (2026-10-10, ~15.8k metrics) filled tier 0 to
+  **2.97 GB in 9.2 days** (≈0.32 GB/day), so the **5 GiB** cap now carries the full **14 d** at 1 s and
+  the rest is headroom for growth (k3s); tier 1 runs ≈59 MB/day and tier 2 ≈5 MB/day, both far under
+  their 2 GiB caps. The Parent's DB sits on its own root LV, which the guests do not share.
 - A `ram` node (Edge) keeps no `dbengine` history, so the retention tasks are skipped there.
 - Override `netdata_retention_tiers` on a host only if its disk cannot carry its role's caps.
 
@@ -77,7 +78,7 @@ Alerts view and the API ([ADR 27](../../../docs/decisions/27-monitoring-strategy
 | `netdata_stream_target` | `""` | Parent `host:port`; empty on a `child` = standalone (no streaming). |
 | `netdata_storage` | `dbengine` | `ram` on eMMC-only nodes. |
 | `netdata_retention_tiers` | selected from `netdata_role` | The effective per-tier list (`time` + `size`, combined limits — the ceiling is the sum of the caps); `dbengine` only. Defaults to `netdata_retention_tiers_by_role[netdata_role]`; override only if a host's disk cannot carry its role's caps. |
-| `netdata_retention_tiers_by_role` | `parent` → 14d/3GiB, 30d/2GiB, 365d/2GiB · `child` → 7d/256MiB per tier | The retention **policy**, keyed by role — the parent is the long-term store, a child a short-term forwarder. |
+| `netdata_retention_tiers_by_role` | `parent` → 14d/5GiB, 30d/2GiB, 365d/2GiB · `child` → 7d/256MiB per tier | The retention **policy**, keyed by role — the parent is the long-term store, a child a short-term forwarder. |
 | `netdata_bind` | `127.0.0.1` | `[web] bind to` — a plain address, or Netdata's per-listener spec (`<ip>:<port>=<service>^SSL=force`); the parent lists two TLS-only listeners. |
 | `netdata_port` | `19999` | Default web port. |
 | `netdata_tls` | `false` | Serve listeners over TLS and write the `[web] ssl` paths; the parent sets `true`. |

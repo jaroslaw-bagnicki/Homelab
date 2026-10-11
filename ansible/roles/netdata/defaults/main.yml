@@ -13,7 +13,7 @@ netdata_storage: dbengine
 # overrides it only when its own disk cannot carry its role's caps.
 netdata_retention_tiers_by_role:
   parent:
-    - { time: "14d", size: "3GiB" }     # tier 0 — 1s
+    - { time: "14d", size: "5GiB" }     # tier 0 — 1s
     - { time: "30d", size: "2GiB" }     # tier 1 — 1m
     - { time: "365d", size: "2GiB" }    # tier 2 — 1h
   child:

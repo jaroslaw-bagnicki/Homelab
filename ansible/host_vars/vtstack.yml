@@ -6,6 +6,7 @@ security_ufw_allow_ssh_from: "192.168.2.0/24"
 security_ufw_allow_tcp_from: "192.168.2.0/24"
 security_ufw_allow_tcp_ports:
   - 9428
+  - 6514   # VictoriaLogs TLS syslog listener (OPNsense router; ADR 36 amendment)
 
 # Fluent Bit collector (ADR 36) — journald plus the Victoria stack's own container logs.
 fluentbit_collect_docker: true
