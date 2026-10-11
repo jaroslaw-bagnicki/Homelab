@@ -79,8 +79,12 @@ its own defaults and quietly drops the hostname and IP address, and because this
 `step-ca` uses for TLS, the result would pass an issuer check and then fail on every request.
 
 Afterwards, unmount the IronKey and put it back in the safe, and carry `intermediate_ca.crt` and
-`root_ca.crt` back for [runbook 35 §7](35-deploy-step-ca.md). The required contents of the certificate
-and the exact failure messages: [03-signing-csr.md](../private-ca-offline-signing/03-signing-csr.md).
+`root_ca.crt` back for [runbook 35 §7](35-deploy-step-ca.md).
+
+`step certificate inspect intermediate_ca.crt` shows: issuer = the root's CN, ~1-year validity,
+**`CA:TRUE, pathlen:0`**, and the **Subject Alternative Name** `DNS:ca.internal` + `IP Address:192.168.2.215`.
+The checks the script runs and their exact failure messages:
+[03-signing-csr.md](../private-ca-offline-signing/03-signing-csr.md).
 
 ## 3. Annual re-sign
 
