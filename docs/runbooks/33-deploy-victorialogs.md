@@ -371,6 +371,13 @@ The listener is part of the store (flags in §5; [ADR 35 amendment](../decisions
 - **`-syslog.useRemoteIP.tcp=true`** records the sender's IP (`remote_ip`) for provenance.
 - **Unparsed** — OPNsense's `filterlog` CSV arrives as one `_msg`; extract fields in LogsQL at query time.
 
+> ⚠ **The `6514` port is opened by a separate playbook.** `victorialogs-playbook.yml` starts the
+> listener but never touches UFW — the `6514`/tcp LAN rule comes from `security_ufw_allow_tcp_ports`
+> in `host_vars/vtstack.yml`, applied by the **`security` role in `playbook-logs.yml`** (§3). Deploy
+> the store on its own and `ss -lntp` shows `:6514` **bound** while every external connect **times
+> out** — UFW drops it silently, which reads as a broken listener. Run `playbook-logs.yml` before
+> validating, then confirm with the `ufw status verbose` check below.
+
 The router side lives in [runbook 35 §13](35-deploy-opnsense.md): add the store's certificate as a
 **trust anchor** (**System → Trust → Authorities**) so OPNsense verifies the server, and set
 `opnsense_syslog_certificate` to a **local client certificate** (**System → Trust → Certificates**, its
