@@ -9,6 +9,10 @@
 > [research 36 §4–§5](../research/36-step-ca-machine-identity.md); measured gate:
 > [#141](https://github.com/jaroslaw-bagnicki/Homelab/issues/141).
 >
+> **"The island"** — the air-gapped signing machine these steps run on: a live-USB Linux boot
+> (SystemRescue 13 or Ubuntu Live) with **no network of any kind** — no cable, no Wi-Fi, no route out.
+> It exists only for this ceremony, and is powered off afterwards.
+>
 > ⚠ **The §1–§3 mechanics are rehearsed; no ceremony has been run against the real IronKey.** On
 > 2026-10-11 root creation and signing were both exercised against a **throwaway software root** and a
 > fake IronKey directory (nothing real touched, no trust distributed) — which is how the
@@ -76,41 +80,20 @@ events, not emergencies.
 | The intermediate key is a **file** (`$STEPPATH/tpm/key-<name>.tpmobj`, JSON), not TPM NV — useless off the `pve` TPM and required on disk for the service | measured #141 |
 | `step ca init` cannot bootstrap a TPM-backed CA; the deploy runbook stages the TPM key + `ca.json` instead | measured #141 |
 | `step certificate create` prompts before overwriting an existing output — fails without a TTY; write to a fresh path and move into place | measured #141 |
-| The `step-ca` release tarball arrived **truncated** on one download; the truncated binary segfaulted and gave a false "broken" result — **verify `checksums.txt`** | measured #141 |
 
-Tooling is installed from the current upstream release and **checksum-verified**; no version is pinned.
+Tooling is installed from the current upstream release; no version is pinned.
 
 ---
 
 ## 1. Prepare the offline signing island
 
-**The mechanics live in the kit** — [01-building-step.md](../private-ca-offline-signing/01-building-step.md)
-puts `step` in place, and the [kit README](../private-ca-offline-signing/README.md) covers the rest of
-this section: boot offline, copy the kit to `/tmp`, mount the IronKey. What the runbook owns is the
-reasoning.
+The island has no network, so `step` goes in place beforehand and travels on the boot stick with the
+kit. [01-building-step.md](../private-ca-offline-signing/01-building-step.md) covers both routes, and
+the [kit README](../private-ca-offline-signing/README.md) covers the island end — boot offline, copy
+the kit to `/tmp`, mount the IronKey.
 
-- **The island has no network, so nothing can be fetched there.** `step` is put in place on the
-  connected machine. The kit prefers copying it from the `ca` guest, which already has it
-  checksum-verified ([runbook 35 §6](35-deploy-step-ca.md)); fetching the upstream release is the
-  from-scratch route. The role resolves the **current** release at install time rather than pinning one,
-  so the island CLI need not match a version.
-- **Verify the release against its own `checksums.txt`** (measured #141). A truncated tarball once
-  produced a binary that segfaulted on `--help` and gave a convincing false "step-ca is broken" result.
-  Match a **whole filename** — in an unanchored pattern the `.` characters are regex wildcards and also
-  match the `.sigstore.json` entry sitting beside it.
-- **Install nothing else on the island.** The `step-kms-plugin` / `libpcsclite1` requirement is on the
-  **CA host** ([runbook 35 §6](35-deploy-step-ca.md)); the root is an ordinary file on the IronKey, so
-  the island needs no PCSC and no plugin.
-- **Carry the CSR and its signing template together** — the kit ships both. The template is what stamps
-  `CA:TRUE` and the SANs onto the signed certificate (§3), so without it the ceremony cannot produce a
-  usable intermediate. It is a copy of `ansible/workloads/step-ca/files/intermediate-ca.tpl`; change
-  both together.
-- **Only the IronKey leaves safe custody for the island.** The CSR and the returned certificates are
-  public, so the kit travels on the ordinary boot stick; the root key never leaves the IronKey and never
-  touches the island's disk.
-
-> **Acceptance.** `./step version` runs on the island; the island has no route to `192.168.2.0/24` or
-> the internet; the IronKey mounts read/write.
+> **Acceptance.** `./step version` runs on the island; no route to `192.168.2.0/24` or the internet;
+> the IronKey mounts read/write.
 
 > **Backout.** Reboot the island from its own disk; wipe the live USB. Nothing was written yet.
 
