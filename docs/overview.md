@@ -27,6 +27,7 @@ hardware detail see [Hardware Inventory](hardware.md); for change history see
 | LXC 212 | Zigbee2MQTT | — | `.212` | 📋 |
 | LXC 213 | NUT server — retired, moved host-native to `pve` | `nut` | `.213` | 🪦 |
 | LXC 214 | VictoriaLogs log store | `vtstack` | `.214` | ✅ |
+| LXC 215 | Private CA (`step-ca`) | `ca` | `.215` | ✅ |
 
 The NUT server now runs **host-native on `pve`** ([ADR 39](decisions/39-nut-host-native.md)); LXC 213 is retired and `.213` is free.
 
@@ -47,6 +48,7 @@ Current state — what's running or in progress. Planned work is under [What's N
 | **Netdata Parent** | `pve` | Tier B central monitoring pane | [ADR 27](decisions/27-monitoring-strategy.md) · [runbook 31](runbooks/31-deploy-netdata.md) | ✅ |
 | **UPS + NUT** | `pve` (host-native NUT server) + `lab`/`edge`/`nas` clients | shared-rail power protection | [ADR 39](decisions/39-nut-host-native.md) · [runbook 29](runbooks/29-nut-ups-shutdown.md) · [runbook 30](runbooks/30-deploy-nut-clients.md) | ✅ |
 | **VictoriaLogs** | `pve` (LXC 214 `vtstack`) | Tier B log store | [ADR 35](decisions/35-log-store-victorialogs.md) · [runbook 33](runbooks/33-deploy-victorialogs.md) | ✅ |
+| **Private CA** (`step-ca`) | `pve` (LXC 215 `ca`) | fleet trust anchor — ACME issuance, intermediate sealed in the `pve` TPM | [ADR 38](decisions/38-private-ca-hierarchy-and-custody.md) · [runbook 35](runbooks/35-deploy-step-ca.md) | ✅ |
 | **Fluent Bit** | every LAN node (`pve`, `edge`, `lab`, `nas`, `vtstack`) | Tier B log collector — ships journald + Docker logs to VictoriaLogs | [ADR 36](decisions/36-log-collector-fluentbit.md) · [runbook 34](runbooks/34-deploy-fluentbit.md) | ✅ |
 
 ## Observability
@@ -89,7 +91,7 @@ once it is ready to start — a row leaves the table with the PR that completes 
 |---|---|---|---|
 | **Power monitoring (Zigbee/Z2M)** | ⭐⭐ | Zigbee energy plugs → Prometheus, bootstrapped standalone on the M910q (ADR 26 — independent of Home Assistant) — sequenced **before** k3s | [#73](https://github.com/jaroslaw-bagnicki/Homelab/issues/73) · [ADR 26](decisions/26-zigbee-energy-monitoring.md) |
 | **YUMI multiboot USB standard** | ⭐ | ADR 29 + manage-YUMI runbook; de-conflate the Ventoy references | [#107](https://github.com/jaroslaw-bagnicki/Homelab/issues/107) · [research 12](research/12-first-boot-setup.md) |
-| **Private CA — proxy TLS issuance** | ⭐⭐ | Run the TPM-custody smoke test on `pve` (`step kms create … 'tpmkms:name=smoke-test'` against `/dev/tpmrm0`) — it gates the CA stand-up | [#126](https://github.com/jaroslaw-bagnicki/Homelab/issues/126) · [ADR 38](decisions/38-private-ca-hierarchy-and-custody.md) |
+| **Private CA — proxy TLS issuance** | ⭐⭐ | **Running** — `step-ca` on LXC 215 `ca` serves ACME with a TPM-sealed intermediate, signed offline by a 10-year root ([35 deploy](runbooks/35-deploy-step-ca.md), [36 init/re-sign](runbooks/36-private-ca-init.md)); next: wire the reverse proxy to it ([#142](https://github.com/jaroslaw-bagnicki/Homelab/issues/142)), migrate the first service ([#143](https://github.com/jaroslaw-bagnicki/Homelab/issues/143)), then distribute the root ([#144](https://github.com/jaroslaw-bagnicki/Homelab/issues/144)) | [#126](https://github.com/jaroslaw-bagnicki/Homelab/issues/126) · [#141](https://github.com/jaroslaw-bagnicki/Homelab/issues/141) · [ADR 38](decisions/38-private-ca-hierarchy-and-custody.md) |
 
 ### Held
 

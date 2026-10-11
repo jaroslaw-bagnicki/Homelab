@@ -1,0 +1,19 @@
+---
+# Private CA (step-ca) — ADR 38, gate #141, runbooks 35/36.
+# Single-host, single-purpose role: paths, URLs, CA identity and provisioner
+# names are hardcoded in the tasks/templates. Only genuine knobs live here.
+
+step_ca_keyvault_name: homelab-bysxdb-kv
+step_ca_password_secret_name: step-ca-provisioner-password
+
+# Override to skip the Key Vault lookup (tests); normally left empty.
+step_ca_password: ""
+
+# Regenerate the intermediate CSR from the existing TPM key (annual re-sign).
+# Default false: the key and CSR are create-only, so a routine run never
+# destroys the sealed key or clobbers a CSR awaiting offline signing.
+step_ca_csr_force: false
+
+# Recovery only: clear the stale TPM blob, CSR, public key and intermediate
+# certificate before recreating them (e.g. after a PTT clear destroyed the key).
+step_ca_reset: false
