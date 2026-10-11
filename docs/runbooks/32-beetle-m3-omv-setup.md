@@ -480,7 +480,7 @@ The roles do the following:
 |---|---|
 | `common` | Enforces hostname **`nas`**, `Etc/UTC`, Avahi, and the fleet SSH key on `fleetadm` |
 | `security` | UFW (deny incoming; allow SSH + **80/443** from `192.168.2.0/24`), fail2ban, SSH hardening |
-| `nut_client` | `nut-client` + `upsmon` as a **secondary** of the LXC 213 server (`.213`) |
+| `nut_client` | `nut-client` + `upsmon` as a **secondary** of the host-native NUT server on `pve` (`.201`) |
 | `netdata` | Agent streaming to the **`pve` Parent** at `192.168.2.201:19996` (TLS), loopback dashboard |
 
 > **OMV × Ansible interaction.** The `security` role writes a `sshd_config.d` drop-in; OMV manages
@@ -492,7 +492,7 @@ The roles do the following:
 
 ```sh
 # NUT client receiving UPS state
-ssh fleetadm@nas 'systemctl is-active nut-monitor; upsc ups@192.168.2.213 | grep ups.status'
+ssh fleetadm@nas 'systemctl is-active nut-monitor; upsc ups@192.168.2.201 | grep ups.status'
 ```
 
 - Netdata: on the `pve` dashboard (`https://192.168.2.201:19999`), the Nodes view should now list

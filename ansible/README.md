@@ -49,7 +49,7 @@ ansible-playbook ansible/workloads/step-ca/step-ca-playbook.yml
 | `playbooks/playbook-arc.yml` | Arc enrolment only (for already-configured hosts) |
 | `playbooks/playbook-lab.yml` | M910q base provision: common → security → docker_host → azure_arc → nut_client → netdata → fluentbit (no `docker_services` — see below) |
 | `playbooks/playbook-edge.yml` | Wyse 3040 edge base provision: common → security → edge_host → nut_client → netdata → fluentbit (bare-metal, no Docker/Arc — ADR 24) |
-| `playbooks/playbook-pve.yml` | Wyse 5070 Proxmox host base provision: common → security → nut_client → netdata → fluentbit (UFW LAN allow for SSH + Proxmox UI 8006 + Netdata dashboard 19999 / streaming 19996, both TLS-only) |
+| `playbooks/playbook-pve.yml` | Wyse 5070 Proxmox host base provision: common → security → nut_server → nut_client → netdata → fluentbit (UFW LAN allow for SSH + NUT 3493 + Proxmox UI 8006 + Netdata dashboard 19999 / streaming 19996, both TLS-only) |
 | `playbooks/playbook-nas.yml` | Beetle M-III OMV NAS base provision: common → security → nut_client → netdata → fluentbit (UFW LAN allow for SSH + OMV web `443`, `80` denied per ADR 34; Netdata child streaming to `pve`) |
 | `playbooks/playbook-logs.yml` | Victoria stack guest (`vtstack`, LXC 214) base provision: common → security → docker_host → fluentbit (Docker from the official repo, Debian) |
 | `playbooks/playbook-ca.yml` | Private CA guest (`ca`, LXC 215) base provision: common → security → fluentbit (Debian LXC on `pve`, no Docker) |
@@ -76,7 +76,7 @@ Base shared roles live in [`roles/`](roles/README.md). The [roles index](roles/R
 | `playbook-arc.yml` | azure_arc | Adding Arc to an already-configured host |
 | `playbook-lab.yml` | common → security → docker_host → azure_arc → nut_client → netdata → fluentbit | M910q base provision after the 24.04 reinstall (see [runbook 25](../docs/runbooks/25-m910q-os-refresh.md)) |
 | `playbook-edge.yml` | common → security → edge_host → nut_client → netdata → fluentbit | Wyse 3040 edge base provision (see [runbook 24](../docs/runbooks/24-edge-appliance.md)) |
-| `playbook-pve.yml` | common → security → nut_client → netdata → fluentbit | Wyse 5070 Proxmox host base provision + Netdata Parent (see [runbook 28](../docs/runbooks/28-pve-proxmox-node.md) / [runbook 31](../docs/runbooks/31-deploy-netdata.md)) |
+| `playbook-pve.yml` | common → security → nut_server → nut_client → netdata → fluentbit | Wyse 5070 Proxmox host base provision + NUT server + Netdata Parent (see [runbook 28](../docs/runbooks/28-pve-proxmox-node.md) / [runbook 29](../docs/runbooks/29-nut-ups-shutdown.md) / [runbook 31](../docs/runbooks/31-deploy-netdata.md)) |
 | `playbook-nas.yml` | common → security → nut_client → netdata → fluentbit | Beetle M-III OMV NAS base provision + Netdata child (see [runbook 32](../docs/runbooks/32-beetle-m3-omv-setup.md)) |
 | `playbook-logs.yml` | common → security → docker_host → fluentbit | Victoria stack guest (`vtstack`, LXC 214) base provision — Debian 13 LXC on `pve` (see [runbook 33](../docs/runbooks/33-deploy-victorialogs.md)) |
 | `playbook-ca.yml` | common → security → fluentbit | Private CA guest (`ca`, LXC 215) base provision — Debian 13 LXC on `pve` (see [runbook 35](../docs/runbooks/35-deploy-step-ca.md)) |

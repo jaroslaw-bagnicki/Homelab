@@ -41,6 +41,9 @@ operating on its own.
   status, update `docs/overview.md` (nodes/workloads view) and `docs/hardware.md`
   (per-node specs + network appliances) in the same change. Do not let them go stale
   like the old "What's Done" table did.
+- **Retired stays visible**: a removed node, guest or workload keeps its row and is marked
+  🪦 — the state docs are a map with tombstones, not a diff. History beyond that lives in
+  `CHANGELOG.md`.
 - **Remove the `docs/overview.md` "What's Next" row in the same PR that completes the
   work** — alongside its `CHANGELOG.md` entry. A completed item leaves the board; an
   item that stalls without a start date moves to `## Not Scheduled` instead.
@@ -54,6 +57,7 @@ Avoid ADR bloat — reference other ADRs and issues by name, do not restate thei
 - **GitHub repository**: `https://github.com/jaroslaw-bagnicki/Homelab` (owner: `jaroslaw-bagnicki`, repo: `Homelab`)
 - **Always use GitHub MCP tools** for GitHub operations — never GitKraken MCP tools for GitHub
 - **If a GitHub MCP tool call fails**, report the error to the user and do not attempt the operation via any other tool or CLI
+- **Update PRs non-interactively — never via the GitHub MCP form.** The MCP write tools (`update_pull_request`, `issue_write`, …) only apply when a human clicks **Submit**, so an autonomous session silently changes nothing. Use `gh` with a token pulled from the dev container's git credential and never printed: `export GH_TOKEN=$(printf 'protocol=https\nhost=github.com\n\n' | git credential fill 2>/dev/null | sed -n 's/^password=//p')`, then `gh pr edit <N> --body-file <file>`; read the body back to confirm. Read-only MCP tools are unaffected.
 - **Work on a feature branch in a worktree** — see [Worktree Workflow](#worktree-workflow) below; do not commit to `main` from an autonomous session
 - **Never open a PR unless the user explicitly asks** — push the branch and report it, then stop. Opening the PR is the user's call, not the agent's; see [Worktree Workflow](#worktree-workflow).
 - **Commit message format**: `(type) description` with parentheses. Common types: `docs`, `feat`, `fix`, `chore`, `refactor`

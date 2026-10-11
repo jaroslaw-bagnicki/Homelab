@@ -39,11 +39,11 @@ TLS-capable protocols that are not yet configured for it. Each row carries a rem
 
 | Protocol | Port | Why it is currently plaintext | Removal condition |
 |---|---|---|---|
-| NUT | 3493 | `upsd`/`upsc` **do support TLS** — ours is unconfigured, so this is a deployment choice, not an inherent limitation. Anonymous reads are enabled, and nothing restricts the source: LXC 213 is bridged, so client traffic never traverses the host's UFW chains ([runbook 29 §6](https://github.com/jaroslaw-bagnicki/Homelab/blob/main/docs/runbooks/29-nut-ups-shutdown.md)); the container runs no firewall of its own (`ufw` inactive, nftables `policy accept`) and the Proxmox firewall is inert. Verified 2026-09-20: `3493` was reachable from a non-LAN host (`172.17.0.x`). | Configure NUT TLS (`upsd` + `upsmon` certificates) **and** filter the source at the container or Proxmox firewall — or record an explicit accepted-risk waiver in [ADR 30](30-ups-nut-graceful-shutdown.md) |
+| NUT | 3493 | `upsd`/`upsc` **do support TLS** — ours is unconfigured, so this is a deployment choice, not an inherent limitation. Anonymous reads are enabled. The listener is now **host-native on `pve`** ([ADR 39](39-nut-host-native.md)) and the host's UFW allows `3493` from `192.168.2.0/24` only; previously, in LXC 213 with no firewall of its own, it was reachable from a non-LAN host (verified 2026-09-20). | Configure NUT TLS (`upsd` + `upsmon` certificates) — or record an explicit accepted-risk waiver in [ADR 39](39-nut-host-native.md) |
 
 **NAS storage is a requirement, not an exception.** NFS and SMB are encryption-capable, so when the NAS joins ([ADR 29](29-nas-backup-target-beetle-m3-omv.md)) the choice must be NFSv4 with `krb5p` or SMB with encryption enabled — plaintext NFS/SMB is not admitted by this ADR.
 
-**Host UFW does not filter container traffic.** A service inside an LXC sits outside the host's UFW chains entirely — true of LXC 213 today, and true of any container-hosted workload, including the planned log store should it land in an LXC on `pve`. Container-hosted services need their own filtering; "the host firewall covers it" is never true for them.
+**Host UFW does not filter container traffic.** A service inside an LXC sits outside the host's UFW chains entirely — true of the VictoriaLogs store in LXC 214, and of any container-hosted workload. Container-hosted services need their own filtering; "the host firewall covers it" is never true for them. (The NUT server no longer fits this case — it is host-native on `pve`, [ADR 39](39-nut-host-native.md), so the host UFW *does* filter its `3493`.)
 
 This ADR governs the **transport** only. Authenticating *users* stays per-service: Netdata's dashboard is unauthenticated on a trusted LAN (the residual accepted in ADR 27), while the planned log store takes HTTP basic auth from day one.
 
@@ -76,4 +76,4 @@ This ADR governs the **transport** only. Authenticating *users* stays per-servic
 - [ADR 24](24-edge-ingress-appliance.md) — Edge appliance (Caddy, constrained hardware)
 - [ADR 27](27-monitoring-strategy.md) — Monitoring strategy; HTTPS-only dashboard and the accepted LAN-trust residual
 - [ADR 29](29-nas-backup-target-beetle-m3-omv.md) — NAS (NFS/SMB decision pending)
-- [ADR 30](30-ups-nut-graceful-shutdown.md) — NUT (plaintext `upsd`, LAN-restricted)
+- [ADR 39](39-nut-host-native.md) — NUT server host-native on `pve` (plaintext `upsd`, LAN-restricted by the host UFW)
