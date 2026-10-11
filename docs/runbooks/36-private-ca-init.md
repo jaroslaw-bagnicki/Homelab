@@ -2,15 +2,15 @@
 
 > Generate the CA's 10-year **root** on an air-gapped signing machine (a live-USB Linux boot with no
 > network at all), keep it on the **Kingston IronKey Locker+ 50** in a safe, and sign the certificate
-> request the deploy host produced. Step 2 runs once; step 4 repeats every year, before the intermediate
+> request the deploy host produced. Step 1 runs once; step 3 repeats every year, before the intermediate
 > expires. Decisions: [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md); TPM details:
 > [research 36 §4–§5](../research/36-step-ca-machine-identity.md).
 >
 > ⚠ **No step here touches the network.** This sits between [runbook 35 §6](35-deploy-step-ca.md), which
 > produces the certificate request, and [§7](35-deploy-step-ca.md), which installs the signed
-> certificate. Steps 1–3 are carried out by the
+> certificate. Steps 1 and 2 are carried out by the
 > [offline signing kit](../private-ca-offline-signing/README.md), and have only ever been tested with a
-> throwaway key and a fake IronKey. Steps 4 and 5 have never been run. Sending the root certificate out
+> throwaway key and a fake IronKey. Steps 3 and 4 have never been run. Sending the root certificate out
 > to the fleet is [#144](https://github.com/jaroslaw-bagnicki/Homelab/issues/144), not covered here.
 
 ## Why
@@ -29,7 +29,7 @@ key is created and used offline.
 
 The `pve` TPM is Intel PTT firmware rather than a separate chip, so a BIOS update, a `Clear PTT` or an
 NVRAM reset destroys the sealed key ([research 37 §5](../research/37-tpm2-hardware-and-fleet.md)). The
-annual re-sign in step 4 and the recovery in step 5 are therefore expected events, not emergencies.
+annual re-sign in step 3 and the recovery in step 4 are therefore expected events, not emergencies.
 
 ## Prerequisites
 
@@ -39,15 +39,7 @@ annual re-sign in step 4 and the recovery in step 5 are therefore expected event
 
 ---
 
-## 1. Prepare the signing machine
-
-`step` cannot be downloaded here, because the machine has no network. It is put in place beforehand and
-travels on the boot stick with the kit.
-[01-building-step.md](../private-ca-offline-signing/01-building-step.md) covers both ways to obtain it,
-and the [kit README](../private-ca-offline-signing/README.md) covers booting offline, copying the kit to
-`/tmp`, and mounting the IronKey.
-
-## 2. Create the root certificate on the IronKey
+## 1. Create the root certificate on the IronKey
 
 Run this only on the signing machine, with the IronKey mounted:
 
@@ -70,9 +62,9 @@ it against — and `self_signed: true` is the line that matters.
 The root certificate is public and is sent out to clients later
 ([#144](https://github.com/jaroslaw-bagnicki/Homelab/issues/144)). The key never leaves the IronKey.
 Passphrase handling, the exact refusal messages, and why this step may use `--profile root-ca` while
-step 3 must not: [02-issuing-root-cert.md](../private-ca-offline-signing/02-issuing-root-cert.md).
+step 2 must not: [02-issuing-root-cert.md](../private-ca-offline-signing/02-issuing-root-cert.md).
 
-## 3. Sign the certificate request
+## 2. Sign the certificate request
 
 ```sh
 ./sign.sh /mnt/ironkey
@@ -92,7 +84,7 @@ Afterwards, unmount the IronKey and put it back in the safe, and carry `intermed
 `root_ca.crt` back for [runbook 35 §7](35-deploy-step-ca.md). The required contents of the certificate
 and the exact failure messages: [03-signing-csr.md](../private-ca-offline-signing/03-signing-csr.md).
 
-## 4. Annual re-sign
+## 3. Annual re-sign
 
 The intermediate lasts one year, so before it expires the same root signs a fresh one for the same TPM
 key:
@@ -110,10 +102,10 @@ client already trusts the same root. Set a reminder about 30 days before expiry;
 > **Acceptance.** The new certificate chains to the root ([runbook 35 §7](35-deploy-step-ca.md)); the old
 > one is retired only after that; the new expiry is recorded.
 
-> **Backout.** Put the previous `intermediate_ca.crt` back before it expires, then repeat step 3 and
+> **Backout.** Put the previous `intermediate_ca.crt` back before it expires, then repeat step 2 and
 > [runbook 35 §7](35-deploy-step-ca.md).
 
-## 5. Recovering from a lost TPM key
+## 4. Recovering from a lost TPM key
 
 The `pve` TPM is Intel PTT firmware rather than a separate chip, so any of these destroys the sealed
 key:
@@ -144,15 +136,14 @@ re-trust. Move the annual reminder afterwards.
 
 ## Verification Checklist
 
-Executed on: **never** — this has never been run against the real IronKey. Steps 1–3 are the kit, tested
-only with a throwaway key and a fake IronKey. Record the date and the result here when the real ceremony
-is first performed.
+Executed on: **never** — this has never been run against the real IronKey. Steps 1 and 2 are the kit,
+tested only with a throwaway key and a fake IronKey. Record the date and the result here when the real
+ceremony is first performed.
 
-- [ ] Step 1: the signing machine has no network, the IronKey mounts, and `./step version` runs
-- [ ] Step 2: root created, every check passed, fingerprint and passphrase written into the safe
-- [ ] Step 3: certificate signed, every check passed, IronKey back in the safe
-- [ ] Step 4: annual reminder set
-- [ ] Step 5: understood
+- [ ] Step 1: root created, every check passed, fingerprint and passphrase written into the safe
+- [ ] Step 2: certificate signed, every check passed, IronKey back in the safe
+- [ ] Step 3: annual reminder set
+- [ ] Step 4: understood
 
 ## Follow-ups
 
