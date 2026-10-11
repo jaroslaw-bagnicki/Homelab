@@ -186,6 +186,9 @@
         mode: "0600"
       notify: Restart step-ca
 
+  always:
+    # Also runs when a task above fails: throwaway CA software keys must not survive
+    # in /var/tmp, and a leftover STEPPATH would break the next run.
     - name: Remove the throwaway init directory and its software keys
       ansible.builtin.file:
         path: /var/tmp/step-ca-init
@@ -238,15 +241,16 @@
   loop_control:
     label: "{{ item }}"
 
-# The intermediate doubles as step-ca's TLS server certificate, so it carries the
-# service SANs — the API is validated by name (`ca.internal`) and by IP before DNS
-# exists (`192.168.2.215`).
+# The SANs are the CA's declared identity shape — `ca.internal` plus the IP it answers on
+# before DNS exists (`192.168.2.215`). Measured 2026-10-11: they are *not* what serves
+# TLS; step-ca builds a separate self-issued leaf from ca.json's `dnsNames` (runbook 35
+# §7), so these SANs only preserve the shape this certificate is meant to carry.
 #
 # Two things this invocation must NOT do (both measured 2026-10-11):
 #  * no `--profile` — a profile describes a certificate being *issued*, so `step`
 #    rejects it together with `--csr` ("flag '--profile' is incompatible with
-#    '--csr'"). The `intermediate-ca` profile is applied at signing time instead
-#    (`step certificate sign --profile intermediate-ca`, runbook 36 §3).
+#    '--csr'"). Signing asserts the shape with `--template intermediate-ca.tpl`, never
+#    with the `intermediate-ca` profile (runbook 36 §2).
 #  * no second output file — with `--kms`/`--key` the private key already lives in the
 #    KMS, so a third positional is read as "the private key file to write": step then
 #    prompts for a password (which hangs without a TTY) and, when given

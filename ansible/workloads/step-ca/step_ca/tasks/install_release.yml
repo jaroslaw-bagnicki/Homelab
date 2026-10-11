@@ -53,6 +53,9 @@
     recurse: true
   register: step_ca_found
 
+# Replacing the binary does not activate it: the running service keeps executing the
+# old inode until it restarts. The handler no-ops while no certificate is installed,
+# so a first run is unaffected.
 - name: Install the release executable {{ item.binary }}
   ansible.builtin.copy:
     src: "{{ step_ca_found.files[0].path }}"
@@ -61,6 +64,7 @@
     owner: root
     group: root
     mode: "0755"
+  notify: Restart step-ca
 
 - name: Mark the extraction complete {{ item.binary }}
   ansible.builtin.file:
