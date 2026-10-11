@@ -77,7 +77,7 @@ Keep the single `192.168.2.0/24` broadcast domain. Reserve a dedicated static bl
 | `192.168.2.210` | VM 210 — Home Assistant OS |
 | `192.168.2.211` | LXC 211 — Mosquitto |
 | `192.168.2.212` | LXC 212 — Zigbee2MQTT |
-| `192.168.2.213` | *(free)* — the NUT server is host-native on `pve` `.201` ([ADR 39](../decisions/39-nut-host-native.md)) |
+| `192.168.2.213` | LXC 213 — NUT server (retired; now host-native on `pve` `.201`, [ADR 39](../decisions/39-nut-host-native.md)) |
 | `192.168.2.220` | LLM server (Phase 2, future) |
 | `192.168.2.230` | TL-SG108E management IP (proposed) |
 | `192.168.2.240` | **Edge ingress appliance (Wyse 3040)** — `24x` block (decided 2026-08-17, runbook 24) |

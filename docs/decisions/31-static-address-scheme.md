@@ -31,7 +31,7 @@ guest's VMID its address's last octet.**
 | Block | Class | Members |
 |---|---|---|
 | `200–209` | physical servers | `lab` M910q `.200` · `pve` Wyse 5070 `.201` · Beetle NAS `.202` |
-| `210–219` | Proxmox guests on the `pve` node | **VM 210** `.210` · **LXC 211** `.211` · **LXC 212** `.212` · **LXC 214** `.214` (`.213` free — the NUT server is host-native, [ADR 39](39-nut-host-native.md)) |
+| `210–219` | Proxmox guests on the `pve` node | **VM 210** `.210` · **LXC 211** `.211` · **LXC 212** `.212` · **LXC 213** `.213` (retired — NUT host-native, [ADR 39](39-nut-host-native.md)) · **LXC 214** `.214` |
 | `220–229` | LLM server (Phase 2) | — |
 | `230–239` | switch management | TL-SG108E `.230` |
 | `240–249` | edge/ingress appliances | Wyse 3040 `.240` |
