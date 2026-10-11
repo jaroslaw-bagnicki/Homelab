@@ -9,10 +9,10 @@
 > [research 36 §5](../research/36-step-ca-machine-identity.md); measured gate:
 > [#141](https://github.com/jaroslaw-bagnicki/Homelab/issues/141).
 >
-> ⚠ **Partly executed — §1–§6 run 2026-10-11, and the offline ceremony
-> ([runbook 36](36-private-ca-init.md)) completed the same day; §7 is the remaining run.** Each section
-> carries an **Execution record** with the output observed on the first run; treat the §7–§8 commands as
-> *plans* until their record is written. The runbook was written from ADR 38, research 36–37, and the
+> ⚠ **Executed — §1–§7 run 2026-10-11**, together with the offline ceremony
+> ([runbook 36](36-private-ca-init.md)) the same day. Each section carries an **Execution record** with
+> the output observed on the run. §8 is operations: the only outstanding item is the annual re-sign
+> reminder. The runbook was written from ADR 38, research 36–37, and the
 > [#141](https://github.com/jaroslaw-bagnicki/Homelab/issues/141) gate, which measured the TPM and LXC
 > mechanics on `pve` — gate-measured facts are marked **(measured #141)**.
 >
@@ -344,11 +344,12 @@ ansible-playbook ansible/workloads/step-ca/step-ca-playbook.yml --diff
   The key material lands in `/var/lib/step-ca/tpm/key-homelab-intermediate-ca.tpmobj` as a JSON blob.
   **This is not a private-key file** — it is the sealed blob, useless off this TPM, and required on
   disk for the service to start.
-- **CSR** — emit `intermediate_ca.csr`, signed by the TPM key, for the offline root to sign. The
-  intermediate doubles as step-ca's **TLS server certificate**, so it must end up carrying the service
-  SANs (`ca.internal` and `192.168.2.215`) — without them a trusted health/ACME request fails hostname
-  verification. The SANs are *requested* here, but the signing step is what decides the finished
-  certificate's shape (runbook 36 §3):
+- **CSR** — emit `intermediate_ca.csr`, signed by the TPM key, for the offline root to sign, requesting
+  the service SANs (`ca.internal` and `192.168.2.215`). The signing step is what decides the finished
+  certificate's shape (runbook 36 §3). **The intermediate is not what serves TLS** (measured §7):
+  `step-ca` self-issues a short-lived server leaf for the `dnsNames` in `ca.json`, so the identity a
+  client verifies is `ca.internal` — the SANs are kept on the request so a re-signed intermediate is
+  shaped exactly like its predecessor.
 
   ```sh
   step certificate create --csr \
@@ -442,21 +443,30 @@ a renewed intermediate would otherwise stay unused until the next restart.
 **Validate** (on the `ca` guest):
 
 ```sh
-CA=https://192.168.2.215:9000
+# `ca.internal` must resolve on the client — add a hosts entry until idea 10 provides the resolver. The
+# CA serves a self-issued leaf for that name and no IP SAN, so the IP fails hostname verification.
+CA=https://ca.internal:9000
 ROOT=/etc/step-ca/certs/root_ca.crt
 
 # health + the ACME directory the reverse proxy (#142) will point at
 step ca health --ca-url "$CA" --root "$ROOT"    # → {"status":"ok"}
-curl -sk "$CA/acme/acme/directory"
+curl -s --cacert "$ROOT" "$CA/acme/acme/directory"
 
-# the kit's signature kept CA:TRUE, pathlen:0 and both SANs (`--profile` signing drops the SANs, §6)
+# the served TLS identity: a short-lived leaf the CA issues for itself, named from ca.json's dnsNames
+echo | openssl s_client -connect 192.168.2.215:9000 2>/dev/null | openssl x509 -noout -subject -issuer -dates -ext subjectAltName
+
+# the certificate the ceremony signed kept CA:TRUE, pathlen:0 and both SANs (`--profile` drops the SANs, §6)
 step certificate inspect /etc/step-ca/certs/intermediate_ca.crt --format json \
   | grep -E '"is_ca"|"max_path_len"|"dns_names"|"ip_addresses"'
 
-# JWK-provisioner smoke test — issues a leaf via the admin provisioner and chain-verifies it
-# (use the IP; nothing resolves ca.internal yet). This is NOT an ACME issuance check: real ACME
-# enrolment is exercised by the reverse proxy in #142.
-step ca certificate test.internal test.crt test.key --ca-url "$CA" --root "$ROOT"
+# JWK-provisioner smoke test — issues a leaf and chain-verifies it. Naming the provisioner is required:
+# without --provisioner, `step` opens an interactive menu and dies with "error allocating terminal" in a
+# script, and it also asks for a private-key passphrase — hence the empty --password-file. This is NOT an
+# ACME check: real ACME enrolment is exercised by the reverse proxy in #142.
+step ca certificate test.internal test.crt test.key --ca-url "$CA" --root "$ROOT" \
+  --provisioner admin@internal \
+  --provisioner-password-file /etc/step-ca/secrets/password \
+  --password-file /tmp/empty
 step certificate verify test.crt --roots "$ROOT"
 
 # plaintext is refused (ADR 34)
@@ -477,6 +487,24 @@ ssh fleetadm@192.168.2.215 'systemctl is-active step-ca && ls -l /dev/tpmrm0'
 **Idempotency** — a second `ansible-playbook ansible/workloads/step-ca/step-ca-playbook.yml --diff`
 must report no changes.
 
+> **Execution record — 2026-10-11.** Certificates installed `0600 root:root`, SHA-256 matching the files
+> carried back from the ceremony (`5a19b660…` root, `ddbcb513…` intermediate). First run: `changed=4` —
+> enable, start, restart on the changed intermediate checksum, and record the activated checksum
+> (`22b1869a…`); second run: `changed=0`. `step-ca` is `active` + `enabled`, and the log confirms
+> `X.509 Root Fingerprint: 0283b26b…` plus `The primary server URL is https://ca.internal:9000`. Health
+> `{"status":"ok"}` and the ACME directory both answer over a **verifying** TLS connection; plaintext on
+> `:9000` is refused (`400`, *client sent an HTTP request to an HTTPS server*). A leaf issued through
+> `admin@internal` chain-verified against the root — before, and again after `pct reboot 215`, which
+> proves the sealed TPM blob and the udev rule survive (new boot id, service back up, `/dev/tpmrm0`
+> present, 0 failed units).
+>
+> **Two corrections this run forced, both folded into the blocks above.** (1) `step ca certificate` needs
+> `--provisioner admin@internal` — without it, `step` opens an interactive menu and dies with *"error
+> allocating terminal"* in a non-interactive session, and it prompts for a key passphrase unless an empty
+> `--password-file` is given. (2) **The CA does not serve the intermediate**: it self-issues a 24 h leaf
+> (`CN=Step Online CA`, issued by the intermediate) carrying `DNS:ca.internal` and **no IP SAN**, so a
+> verifying client must use the name — `https://192.168.2.215:9000` fails hostname verification.
+
 ## 8. Operations
 
 - **Leaves auto-renew** — 24 h default, 7 d maximum; the reverse proxy renews against the ACME
@@ -488,7 +516,9 @@ must report no changes.
   workload with `-e step_ca_reset=true` to clear the stale blob/CSR/certificate, sign the fresh CSR
   offline ([runbook 36 §2](36-private-ca-init.md)), then re-run §7. The root is unaffected.
 - **Name resolution** — nothing resolves `ca.internal` yet (resolver is
-  [idea 10](../ideas/10-internal-ca-dns-stack.md)); until then use the IP or a hosts entry.
+  [idea 10](../ideas/10-internal-ca-dns-stack.md)); add a hosts entry on each client until it does. The
+  IP is not a substitute: the CA's server certificate carries `ca.internal` and no IP SAN, so a verifying
+  client rejects `https://192.168.2.215:9000`.
 - **Out of scope** — proxy wiring [#142](https://github.com/jaroslaw-bagnicki/Homelab/issues/142),
   first service [#143](https://github.com/jaroslaw-bagnicki/Homelab/issues/143), root distribution
   [#144](https://github.com/jaroslaw-bagnicki/Homelab/issues/144).
@@ -497,8 +527,8 @@ must report no changes.
 
 ## Verification Checklist
 
-Executed on: **2026-10-11** (in progress — §1–§6 done; §7 pending). Each section carries
-its own **Execution record** with the observed output.
+Executed on: **2026-10-11** — §1–§7 done. Each section carries its own **Execution record** with the
+observed output.
 
 - [x] §1 udev rule makes `/dev/tpmrm0` owned by `100000:100000`; survived a `pve` reboot
 - [x] §2 LXC 215 `ca` created unprivileged + `nesting=1`, `.215`, `/dev/tpmrm0` passed through; `--failed` empty
@@ -506,9 +536,9 @@ its own **Execution record** with the observed output.
 - [x] §4 `playbook-ca.yml` applied cleanly; UFW `22` + `9000`; Avahi + Fluent Bit running
 - [x] §5 CA provisioner password provisioned in `homelab-bysxdb-kv`
 - [x] §6 step-ca workload applied; TPM key created; CSR emitted; service **not** started
-- [ ] §7 (after runbook 36) signed intermediate installed; service `active` + `enabled`; ACME directory responds
-- [ ] §7 leaf chain-verified; plaintext refused; survives `pct reboot 215`; idempotent re-run
-- [ ] §8 annual re-sign reminder set; PTT recovery understood
+- [x] §7 signed intermediate installed; service `active` + `enabled`; ACME directory responds
+- [x] §7 leaf chain-verified; plaintext refused; survives `pct reboot 215`; idempotent re-run
+- [ ] §8 annual re-sign reminder set (intermediate expires 2027-10-11); PTT recovery understood
 
 ## Follow-ups
 
