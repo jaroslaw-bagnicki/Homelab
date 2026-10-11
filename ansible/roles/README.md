@@ -16,6 +16,7 @@ Workloads are a separate concern: self-contained recipes run on demand (see [`..
 | `nut_server` | NUT server (`upsd` + `nutdrv_qx`) host-native on `pve` | `playbook-pve.yml` | [README](nut_server/README.md) |
 | `netdata` | Netdata agent — parent (stream aggregator) + child modes | `playbook-pve.yml`, `playbook-lab.yml`, `playbook-edge.yml` | [README](netdata/README.md) |
 | `fluentbit` | Fluent Bit log collector — journald + Docker logs into VictoriaLogs | `playbook-pve.yml`, `playbook-edge.yml`, `playbook-lab.yml`, `playbook-nas.yml`, `playbook-logs.yml` | [README](fluentbit/README.md) |
+| `opnsense` | OPNsense router over its REST API (`oxlorg.opnsense`) — `os-netdata` plugin + syslog destination; the FreeBSD per-OS exception | `playbook-router.yml` | [README](opnsense/README.md) |
 
 ---
 

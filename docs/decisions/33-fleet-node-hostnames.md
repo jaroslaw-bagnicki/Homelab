@@ -29,6 +29,7 @@ here: Ansible addresses hosts by name, and so do the runbooks and the `fleet-con
 | `lab` | main workload host (M910q) |
 | `pve` | virtualisation host (Wyse 5070) |
 | `edge` | public-ingress appliance (Wyse 3040) |
+| `router` | LAN router / firewall (Futro S930) |
 
 The Wyse 5070 is renamed **`ha` → `pve`**; its address `192.168.2.201` is unchanged
 ([ADR 31](31-static-address-scheme.md) owns addressing). Prose keeps host and workload distinct:

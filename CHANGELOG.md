@@ -13,6 +13,7 @@ Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month 
 
 ## 2026‑10
 
+- **(docs)** Adopt OPNsense on the Futro S930 as the LAN router, routing-first — [ADR 40](docs/decisions/40-lan-router-futro-s930.md)
 - **(feat)** Move the NUT server host-native on `pve` under Ansible, retiring LXC 213, and widen the NUT fail-safe window to 120 s — [ADR 39](docs/decisions/39-nut-host-native.md) · [runbook 29](docs/runbooks/29-nut-ups-shutdown.md)
 - **(feat)** Private CA — offline signing kit, root and TPM-sealed intermediate issued, `step-ca` serving ACME on the `ca` guest — [runbook 35](docs/runbooks/35-deploy-step-ca.md)
 
@@ -36,7 +37,6 @@ Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month 
 - **(docs)** Add idea 09 — shared-rail UPS with NUT-driven shutdown — [idea 09](docs/ideas/09-ups-nut-home-assistant.md)
 - **(feat)** Proxmox VE host (Wyse 5070) — **9.2.2** installed and base provisioned — [runbook 28](docs/runbooks/28-pve-proxmox-node.md)
 - **(feat)** Fleet SSH access restricted to the LAN, with devcontainer key autoload — [runbook 24](docs/runbooks/24-edge-appliance.md)
-- **(docs)** Futro S930 hardware diagnostic — OPNsense router candidate — [research 31](docs/research/31-futro-s930-hardware-diagnostic.md)
 
 ## 2026‑08
 

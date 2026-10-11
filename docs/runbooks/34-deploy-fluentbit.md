@@ -9,7 +9,7 @@
 > ⚠ **Scope.** This is the **collector**; the store is [runbook 33](33-deploy-victorialogs.md)
 > ([#123](https://github.com/jaroslaw-bagnicki/Homelab/issues/123)) and must be live first. The
 > OPNsense router is **not a Fluent Bit target** — its logs reach the store via **syslog-ng**
-> ([runbook 35 §13](35-deploy-opnsense.md) · [runbook 33 §7](33-deploy-victorialogs.md) ·
+> ([runbook 37 §13](37-deploy-opnsense.md) · [runbook 33 §7](33-deploy-victorialogs.md) ·
 > [research 34 §8](../research/34-log-collector-options.md)).
 >
 > ⚠ **Execution note.** Author on the `feat/fluentbit-role` branch; **run only after CR**. The LAN

@@ -44,7 +44,7 @@ built-in `/select/vmui` UI ([ADR 35](../decisions/35-log-store-victorialogs.md))
   ([ADR 34](../decisions/34-lan-tls-only.md)).
 - **A TLS syslog listener** (`:6514`) for the **OPNsense router's** syslog-ng — TLS, reusing the
   store's certificate, **no authentication** (mTLS is Enterprise-only), so the LAN UFW rule is the
-  boundary ([ADR 36 amendment](../decisions/36-log-collector-fluentbit.md) · [runbook 35](35-deploy-opnsense.md) §13).
+  boundary ([ADR 36 amendment](../decisions/36-log-collector-fluentbit.md) · [runbook 37](37-deploy-opnsense.md) §13).
 - **Not backed up** — a rolling 30-day window stays outside [ADR 02](../decisions/02-backup-strategy-restic-blob.md)'s
   scope.
 
@@ -360,7 +360,7 @@ latency (VictoriaLogs' documented weak case — [research 33 §8](../research/33
 
 The **OPNsense router** (`router`) ships its logs to the store over **syslog-ng → a TLS syslog
 listener** — its per-OS path ([ADR 36 amendment](../decisions/36-log-collector-fluentbit.md) ·
-[research 34 §8](../research/34-log-collector-options.md) · [runbook 35](35-deploy-opnsense.md) §13).
+[research 34 §8](../research/34-log-collector-options.md) · [runbook 37](37-deploy-opnsense.md) §13).
 The listener is part of the store (flags in §5; [ADR 35 amendment](../decisions/35-log-store-victorialogs.md)):
 
 - **TLS only**, reusing the store's certificate (`ssl/cert.pem` + `ssl/key.pem`) —
@@ -378,7 +378,7 @@ The listener is part of the store (flags in §5; [ADR 35 amendment](../decisions
 > out** — UFW drops it silently, which reads as a broken listener. Run `playbook-logs.yml` before
 > validating, then confirm with the `ufw status verbose` check below.
 
-The router side lives in [runbook 35 §13](35-deploy-opnsense.md): add the store's certificate as a
+The router side lives in [runbook 37 §13](37-deploy-opnsense.md): add the store's certificate as a
 **trust anchor** (**System → Trust → Authorities**) so OPNsense verifies the server, and set
 `opnsense_syslog_certificate` to a **local client certificate** (**System → Trust → Certificates**, its
 own private key — syslog-ng's `cert-file`/`key-file`; it is **not** the store's cert). Then set
@@ -398,7 +398,7 @@ curl -sk --netrc-file "$VL_NETRC" \
   'https://192.168.2.214:9428/select/logsql/query' -d 'query="hello syslog listener"'
 # → the test line; app_name/level come from the syslog parser. `remote_ip` is the *sender's*
 #   address (this test's source) — a message actually sent by `router` is the real provenance
-#   check (runbook 35 §13).
+#   check (runbook 37 §13).
 
 # done — take the credential back out of /dev/shm (moved here from §6)
 shred -u "$VL_NETRC"
@@ -407,7 +407,7 @@ shred -u "$VL_NETRC"
 > **Timezone caveat.** VictoriaLogs parses `rfc3164` timestamps in the *server* timezone (the store runs
 > `Etc/UTC`); if the router's lines look shifted, set the **global** `-syslog.timezone` (e.g.
 > `Europe/Warsaw`) — it is not a per-listener flag — and the syslog-ng sender is configured in
-> [runbook 35 §13](35-deploy-opnsense.md).
+> [runbook 37 §13](37-deploy-opnsense.md).
 
 > **Verified 2026-10-11 — passed** (store-side listener; the router's destination is still off).
 >
@@ -456,7 +456,7 @@ Executed on: **2026-09-27** — §1–§6 executed, off-LAN refusal **deferred**
 
 - **Off-LAN refusal check** — ⏸ deferred 2026-09-27; needs a source that routes to `192.168.2.214` from another subnet, which the current Tenda-NAT topology does not offer (§6).
 - **Collector** — [#84](https://github.com/jaroslaw-bagnicki/Homelab/issues/84); the store is inert until one ships.
-- **Router syslog go-live** — enable the destination certificate + `opnsense_syslog_enabled` on `router` ([runbook 35](35-deploy-opnsense.md) §13) once this store change is deployed.
+- **Router syslog go-live** — enable the destination certificate + `opnsense_syslog_enabled` on `router` ([runbook 37](37-deploy-opnsense.md) §13) once this store change is deployed.
 - **Store monitoring** — [#132](https://github.com/jaroslaw-bagnicki/Homelab/issues/132); the Netdata Parent already charts the container as a Proxmox guest, and the `/metrics` job + alarms follow.
 - **Certificate pinning** — the private CA is [#126](https://github.com/jaroslaw-bagnicki/Homelab/issues/126); clients skip verification for now ([ADR 27](../decisions/27-monitoring-strategy.md)'s accepted residual).
 - **VictoriaMetrics / VictoriaTraces** — future ADRs (§8); same guest and Compose project.
@@ -466,7 +466,7 @@ Executed on: **2026-09-27** — §1–§6 executed, off-LAN refusal **deferred**
 
 - [ADR 35](../decisions/35-log-store-victorialogs.md) — VictoriaLogs log store in an LXC on `pve`
 - [ADR 36](../decisions/36-log-collector-fluentbit.md) — the collector decision; its 2026-10-09 amendment resolves the router's path to syslog-ng → this store
-- [Runbook 35 §13](35-deploy-opnsense.md) — the OPNsense router's Ansible onboarding (the syslog sender)
+- [Runbook 37 §13](37-deploy-opnsense.md) — the OPNsense router's Ansible onboarding (the syslog sender)
 - [Research 33](../research/33-centralized-logging-victorialogs.md) — host placement, engine comparison, verified mechanics
 - [ADR 24](../decisions/24-edge-ingress-appliance.md) (volatile journald) · [ADR 27](../decisions/27-monitoring-strategy.md) (Tier B) · [ADR 31](../decisions/31-static-address-scheme.md) (guest block) · [ADR 34](../decisions/34-lan-tls-only.md) (TLS-only, UFW scope)
 - [Runbook 28](28-pve-proxmox-node.md) (Proxmox base + `fleetadm`) · [Runbook 29](29-nut-ups-shutdown.md) (host-native NUT on `pve`) · [Runbook 31](31-deploy-netdata.md) (AKV/TLS/validation pattern)
