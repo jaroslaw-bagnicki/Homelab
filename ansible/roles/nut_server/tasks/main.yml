@@ -128,14 +128,35 @@
     mode: "0644"
   notify: Reload systemd
 
-- name: Enable and start the NUT driver enumerator and server
+- name: Enable the NUT driver enumerator and server
   ansible.builtin.systemd_service:
     name: "{{ item }}"
-    state: started
     enabled: true
   loop:
     - nut-driver-enumerator
     - nut-server
+
+# `nut-driver-enumerator` is `Type=oneshot` with `RemainAfterExit=no`, so it is inactive between
+# runs — `state: started` on it would report `changed` on every play. Its `.path` unit already
+# reacts to later `ups.conf` edits, so the role only needs it to have run once, while the driver
+# is not up yet.
+- name: Gather service facts to see whether the UPS driver already runs
+  ansible.builtin.service_facts:
+
+- name: Enumerate the NUT driver when it is not running yet
+  vars:
+    nut_server_driver_unit: "nut-driver@{{ nut_server_ups_name }}.service"
+  when: >-
+    ansible_facts.services[nut_server_driver_unit] is not defined or
+    ansible_facts.services[nut_server_driver_unit].state != 'running'
+  ansible.builtin.systemd_service:
+    name: nut-driver-enumerator
+    state: started
+
+- name: Start the NUT server
+  ansible.builtin.systemd_service:
+    name: nut-server
+    state: started
 
 - name: Apply pending NUT configuration changes
   ansible.builtin.meta: flush_handlers
