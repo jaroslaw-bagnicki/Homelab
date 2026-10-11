@@ -84,7 +84,7 @@ and the exact failure messages: [03-signing-csr.md](../private-ca-offline-signin
 
 > **Acceptance.** `step certificate inspect intermediate_ca.crt` shows: issuer = the root's CN,
 > ~1-year validity, **`CA:TRUE, pathlen:0`**, and the **Subject Alternative Name**
-> `DNS:ca.internal` + `IP Address:192.168.2.215`. The IronKey is locked and back in the safe.
+> `DNS:ca.internal` + `IP Address:192.168.2.215`.
 
 ## 3. Annual re-sign
 
