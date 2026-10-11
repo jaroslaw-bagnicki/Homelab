@@ -2,7 +2,7 @@
 
 > The offline half of the CA: a 10-year **root** generated on an air-gapped signing island and kept on
 > the **Kingston IronKey Locker+ 50** in a safe, plus the **root-signing of the intermediate CSR** the
-> deploy host produced ([runbook 35 §5](35-deploy-step-ca.md)). Run §2 **once** to create the root,
+> deploy host produced ([runbook 35 §6](35-deploy-step-ca.md)). Run §2 **once** to create the root,
 > then **§4 annually** to re-sign the intermediate before it expires — ADR 38 sets the intermediate at
 > **1 year**, so the **same TPM key** gets a fresh certificate from the **same root** each year.
 > Decision: [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md); mechanics:
@@ -14,9 +14,9 @@
 > as written**. Every command is a *plan*; treat each as unverified until the first execution records
 > its result. Gate-measured facts are marked **(measured #141)**.
 >
-> ⚠ **Order — one-way, purely offline.** Run **after** [runbook 35 §5](35-deploy-step-ca.md), which
+> ⚠ **Order — one-way, purely offline.** Run **after** [runbook 35 §6](35-deploy-step-ca.md), which
 > produces `intermediate_ca.csr`; this runbook signs it and hands back `intermediate_ca.crt`, which
-> [runbook 35 §6](35-deploy-step-ca.md) installs. **No step here touches the LAN.**
+> [runbook 35 §7](35-deploy-step-ca.md) installs. **No step here touches the LAN.**
 >
 > ⚠ **Scope.** Root distribution to the fleet and workstations is
 > [#144](https://github.com/jaroslaw-bagnicki/Homelab/issues/144) (out of scope); this runbook only
@@ -46,14 +46,14 @@ events, not emergencies.
 - **Offline root** — `Homelab Internal CA` root key generated on an air-gapped signing island and
   stored **only** on the IronKey (Locker+ 50, an encrypted USB carrier kept in a safe). The root cert
   is public and is exported later for distribution ([#144](https://github.com/jaroslaw-bagnicki/Homelab/issues/144)).
-- **Signed intermediate** — the CSR from [runbook 35 §5](35-deploy-step-ca.md) is signed here; the
+- **Signed intermediate** — the CSR from [runbook 35 §6](35-deploy-step-ca.md) is signed here; the
   intermediate's private key never leaves the TPM, so only a public CSR and a public certificate cross
   the air gap.
 - **A repeatable annual signing** — §3–§4 re-run each year against the same root and the same TPM key.
 
 ## Prerequisites
 
-- [ ] [Runbook 35 §1–§5](35-deploy-step-ca.md) done — LXC 215 `ca` exists and
+- [ ] [Runbook 35 §1–§6](35-deploy-step-ca.md) done — LXC 215 `ca` exists and
       `intermediate_ca.csr` has been generated from the TPM key.
 - [ ] The `pve` TPM is present and **not owned by a previous deployment**. On second-hand hardware,
       run `Clear TPM` / `Clear PTT` in the BIOS first
@@ -97,7 +97,7 @@ tar -xzf step_linux_amd64.tar.gz
 ```
 
 - Install nothing else on the island. The `step-kms-plugin`/`libpcsclite1` requirement is on the
-  **CA host** ([runbook 35 §5](35-deploy-step-ca.md)) — the root is an ordinary file on the IronKey.
+  **CA host** ([runbook 35 §6](35-deploy-step-ca.md)) — the root is an ordinary file on the IronKey.
 - Carry the archive on ordinary media; **never the IronKey**, which holds only the root.
 - Unlock the IronKey and mount it. **Never** leave the root key on the island's disk.
 
@@ -126,7 +126,7 @@ step certificate fingerprint /mnt/ironkey/root_ca.crt
   ([#144](https://github.com/jaroslaw-bagnicki/Homelab/issues/144)); the **key must never leave the
   IronKey**.
 - The CA instance name / CN is `Homelab Internal CA`. The service's DNS name is `ca.internal`
-  ([runbook 35 §5](35-deploy-step-ca.md)); they are separate.
+  ([runbook 35 §6](35-deploy-step-ca.md)); they are separate.
 
 > **Acceptance.** `step certificate inspect /mnt/ironkey/root_ca.crt` shows `CA:TRUE`, a path-length
 > constraint, and a ~10-year validity; the fingerprint is recorded in the safe.
@@ -135,7 +135,7 @@ step certificate fingerprint /mnt/ironkey/root_ca.crt
 > repeated. Once the root has been distributed ([#144](https://github.com/jaroslaw-bagnicki/Homelab/issues/144)),
 > replacing it is a **root rotation** with a full client re-trust window — do not treat it as routine.
 
-## 3. Offline-sign the intermediate CSR from runbook 35 §5
+## 3. Offline-sign the intermediate CSR from runbook 35 §6
 
 Carry `intermediate_ca.csr` from the `ca` guest to the island on the ordinary USB stick. Insert the
 IronKey, sign the CSR, and return it to the safe.
@@ -152,7 +152,7 @@ step certificate inspect intermediate_ca.crt   # issuer = root CN, ~1 year, CA:T
 - `8760h` = 1 year (ADR 38). The root is used for exactly this operation and nothing else.
 - **Lock/unmount the IronKey and return it to the safe** before the island is powered off.
 - Carry `intermediate_ca.crt` and a copy of `root_ca.crt` back to the `ca` guest — both are public;
-  [runbook 35 §6](35-deploy-step-ca.md) installs them and starts the service.
+  [runbook 35 §7](35-deploy-step-ca.md) installs them and starts the service.
 
 > **Acceptance.** `step certificate inspect intermediate_ca.crt` shows the root as issuer and a
 > ~1-year validity; the IronKey is locked and back in the safe.
@@ -164,21 +164,21 @@ step certificate inspect intermediate_ca.crt   # issuer = root CN, ~1 year, CA:T
 ADR 38 sets the intermediate at **1 year**, so roughly **annually** (before it expires) the same root
 re-signs a fresh certificate for the **same TPM key**:
 
-1. On the `ca` guest, **re-run [runbook 35 §5](35-deploy-step-ca.md)'s CSR task** — a fresh
+1. On the `ca` guest, **re-run [runbook 35 §6](35-deploy-step-ca.md)'s CSR task** — a fresh
    `intermediate_ca.csr` from the existing TPM key. Do **not** recreate the key.
 2. Sign it here (§3).
-3. Install it and restart the service ([runbook 35 §6](35-deploy-step-ca.md)).
+3. Install it and restart the service ([runbook 35 §7](35-deploy-step-ca.md)).
 
 - **No new key, no root re-issue, no client re-trust** — the fleet and workstations keep trusting the
   same root, so there is no propagation window. This is the payoff of the offline root.
 - Set a calendar reminder ~30 days before expiry. The intermediate's actual expiry is in
   `step certificate inspect intermediate_ca.crt`.
 
-> **Acceptance.** The new intermediate chain verifies ([runbook 35 §6](35-deploy-step-ca.md)); the old
+> **Acceptance.** The new intermediate chain verifies ([runbook 35 §7](35-deploy-step-ca.md)); the old
 > certificate is retired only after the new one passes; the new expiry is recorded.
 
 > **Backout.** Revert to the previous `intermediate_ca.crt` before it expires; re-run §3 and
-> [runbook 35 §6](35-deploy-step-ca.md).
+> [runbook 35 §7](35-deploy-step-ca.md).
 
 ## 5. PTT key-loss recovery
 
@@ -192,11 +192,11 @@ The `pve` TPM is an **Intel PTT firmware TPM** (measured 2026-10-04,
 Recovery is the same flow on demand:
 
 1. On the controller, run the workload with `-e step_ca_reset=true`
-   ([runbook 35 §5](35-deploy-step-ca.md)) — this clears the stale TPM blob, CSR, public key and
+   ([runbook 35 §6](35-deploy-step-ca.md)) — this clears the stale TPM blob, CSR, public key and
    intermediate certificate (which the create guards would otherwise keep), then creates a **fresh**
    intermediate key in the (possibly cleared) TPM and emits a new CSR.
 2. Sign it here (§3) with the **same** offline root.
-3. Install the returned certificate(s) and re-run the workload ([runbook 35 §6](35-deploy-step-ca.md));
+3. Install the returned certificate(s) and re-run the workload ([runbook 35 §7](35-deploy-step-ca.md));
    the role restarts `step-ca` on the changed intermediate.
 
 - The **root is unaffected**, so there is **no client re-trust**. A PTT wipe costs a re-signing
@@ -216,7 +216,7 @@ run; update the measured/planned labels above as facts are confirmed.
 
 - [ ] §1 island air-gapped; `step` installed; checksums verified
 - [ ] §2 root created with `CA:TRUE`, ~10y; stored only on the IronKey; fingerprint recorded
-- [ ] §3 intermediate CSR from runbook 35 §5 signed by the offline root; IronKey returned to the safe
+- [ ] §3 intermediate CSR from runbook 35 §6 signed by the offline root; IronKey returned to the safe
 - [ ] §4 annual re-sign scheduled
 - [ ] §5 PTT-loss recovery documented and understood
 

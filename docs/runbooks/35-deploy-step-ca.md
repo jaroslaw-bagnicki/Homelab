@@ -15,9 +15,9 @@
 > each as unverified until the first execution records its result. Gate-measured facts are marked
 > **(measured #141)**.
 >
-> ⚠ **Order — one-way.** Run **§1–§5 first**, then the offline ceremony
-> ([runbook 36](36-private-ca-init.md)), then **resume at §6**. §1–§5 need no root key and end by
-> handing out `intermediate_ca.csr`; §6 installs the root-signed certificate and starts the service.
+> ⚠ **Order — one-way.** Run **§1–§6 first**, then the offline ceremony
+> ([runbook 36](36-private-ca-init.md)), then **resume at §7**. §1–§6 need no root key and end by
+> handing out `intermediate_ca.csr`; §7 installs the root-signed certificate and starts the service.
 >
 > ⚠ **Scope.** This is the **on-host deployment**; the offline root/intermediate signing is
 > [runbook 36](36-private-ca-init.md). Root distribution to the fleet is
@@ -26,7 +26,7 @@
 > [#143](https://github.com/jaroslaw-bagnicki/Homelab/issues/143) — all out of scope.
 >
 > ⚠ **Execution note.** Author on `docs/private-ca-runbooks`; **run only after CR**. §1–§2 are
-> manual/console on the `pve` host, reached as `ssh fleetadm@192.168.2.201`; the Ansible steps (§4–§6)
+> manual/console on the `pve` host, reached as `ssh fleetadm@192.168.2.201`; the Ansible steps (§4–§7)
 > run with the fleet key loaded ([`fleet-connect` skill](../../.opencode/skills/fleet-connect/SKILL.md)).
 
 ## Why
@@ -69,15 +69,15 @@ dedicated unprivileged LXC keeps it off the Proxmox host and away from the edge 
       [research 37 §5](../research/37-tpm2-hardware-and-fleet.md)).
 - [ ] A Debian 13 LXC template available on the `pve` node (`pveam`).
 - [ ] Ansible collections installed (`ansible-galaxy collection install -r ansible/requirements.yml`).
-- [ ] Azure Key Vault `homelab-bysxdb-kv` reachable from the controller (CA provisioner password, and
-      the Fluent Bit store password like every other node).
+- [ ] Azure Key Vault `homelab-bysxdb-kv` reachable from the controller (CA provisioner password —
+      provisioned in §5 — and the Fluent Bit store password like every other node).
 - [ ] Controller Python packages for the Key Vault lookup — `azure-identity` and
       `azure-keyvault-secrets` (`pip3 install --break-system-packages azure-identity azure-keyvault-secrets`).
 - [ ] `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET` and `AZURE_TENANT_ID` exported on the controller — the
       role reads the Key Vault secret through them.
 - [ ] Fleet key in `ssh-agent` (`ssh-add -l` shows `fleetadm@homelab`).
 - [ ] The IronKey and the air-gapped signing island are needed for the **later** offline step
-      ([runbook 36](36-private-ca-init.md)), not for §1–§5.
+      ([runbook 36](36-private-ca-init.md)), not for §1–§6.
 
 ---
 
@@ -242,7 +242,28 @@ ansible-playbook ansible/playbooks/playbook-ca.yml --diff
 
 > **Backout.** Re-run with the previous inventory/host_vars.
 
-## 5. Provision the `step-ca` workload — tooling, TPM key, CSR
+## 5. Provision the CA provisioner password
+
+`step-ca` runs its **JWK admin provisioner** under a password — the password decrypts the provisioner
+at startup and authorises admin operations. It is **not** the CA key (which lives in the TPM). The
+password lives in Azure Key Vault and is fetched at deploy time:
+
+```powershell
+.\scripts\New-HomelabStepCaPassword.ps1
+```
+
+The role writes `homelab-bysxdb-kv/step-ca-provisioner-password` to a **root-only file**
+(`/etc/step-ca/secrets/password`, mode `0600`) and starts `step-ca` with `--password-file …`, so the
+secret never appears in the unit's environment or on a command line
+([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md)). **Rotation**: re-run with `-Force`,
+then re-run the workload playbook (§6).
+
+> **Acceptance.** `Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name step-ca-provisioner-password`
+> reports the secret, `Enabled: True`; the value is never printed.
+
+> **Backout.** Delete the secret (`Remove-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name step-ca-provisioner-password -Force`) and re-run the workload; nothing else depends on the value.
+
+## 6. Provision the `step-ca` workload — tooling, TPM key, CSR
 
 The workload is implemented at `ansible/workloads/step-ca/` —
 [workload convention](../workloads.md), [workload README](../../ansible/workloads/step-ca/README.md).
@@ -318,7 +339,7 @@ ansible-playbook ansible/workloads/step-ca/step-ca-playbook.yml --diff
   `Environment=` or on a command line.
 - **systemd** — stage `step-ca.service` (enabled, `restart=on-failure`,
   `ExecStart=/usr/local/bin/step-ca /etc/step-ca/config/ca.json --password-file /etc/step-ca/secrets/password`),
-  but **do not start it yet** — there is no signed intermediate certificate until §6.
+  but **do not start it yet** — there is no signed intermediate certificate until §7.
 - **Root export** — `/etc/step-ca/certs/root_ca.crt` is the anchor for distribution
   ([#144](https://github.com/jaroslaw-bagnicki/Homelab/issues/144)); distribution itself is out of scope.
 - **Re-runnable** — the TPM key is create-once (never recreated); the CSR is create-only unless
@@ -331,7 +352,7 @@ ansible-playbook ansible/workloads/step-ca/step-ca-playbook.yml --diff
 
 > **Backout.** `pct destroy 215` (§2); nothing is trusted yet.
 
-## 6. Resume — install the signed intermediate and start the CA
+## 7. Resume — install the signed intermediate and start the CA
 
 This section runs **after** the offline ceremony ([runbook 36 §3](36-private-ca-init.md)) returns
 `root_ca.crt` and `intermediate_ca.crt`. The role already put the ACME provisioner in `ca.json`.
@@ -398,13 +419,13 @@ must report no changes.
 
 > **Backout.** `systemctl disable --now step-ca`; the offline root and client trust are untouched.
 
-## 7. Operations
+## 8. Operations
 
 - **Leaves auto-renew** — 24 h default, 7 d maximum; the reverse proxy renews against the ACME
   directory ([#142](https://github.com/jaroslaw-bagnicki/Homelab/issues/142)). No CRL/OCSP: revocation
   is by short lifetime (ADR 38's accepted residual).
-- **Annual intermediate re-sign** — [runbook 36 §4](36-private-ca-init.md): re-run §5's CSR task for a
-  fresh CSR from the same TPM key, sign offline, then re-run §6. No new key, no new client trust.
+- **Annual intermediate re-sign** — [runbook 36 §4](36-private-ca-init.md): re-run §6's CSR task for a
+  fresh CSR from the same TPM key, sign offline, then re-run §7. No new key, no new client trust.
 - **PTT key-loss hazard** — a BIOS update, `Clear PTT`, or NVRAM reset destroys the sealed key. Run the
   workload with `-e step_ca_reset=true` to clear the stale blob/CSR/certificate, then follow
   [runbook 36 §5](36-private-ca-init.md). The root is unaffected.
@@ -425,14 +446,14 @@ summary, and each result when it is first run.
 - [ ] §2 LXC 215 `ca` created unprivileged, `.215`, TPM passed through
 - [ ] §3 `fleetadm` key-only SSH works; `sudo -n whoami` → root
 - [ ] §4 `playbook-ca.yml` applied cleanly; UFW `22` + `9000`; Avahi + Fluent Bit running
-- [ ] §5 step-ca workload applied; TPM key created; CSR emitted; service **not** started
-- [ ] §6 (after runbook 36) signed intermediate installed; service `active` + `enabled`; ACME directory responds
-- [ ] §6 leaf chain-verified; plaintext refused; survives `pct reboot 215`; idempotent re-run
-- [ ] §7 annual re-sign reminder set; PTT recovery understood
+- [ ] §6 step-ca workload applied; TPM key created; CSR emitted; service **not** started
+- [ ] §7 (after runbook 36) signed intermediate installed; service `active` + `enabled`; ACME directory responds
+- [ ] §7 leaf chain-verified; plaintext refused; survives `pct reboot 215`; idempotent re-run
+- [ ] §8 annual re-sign reminder set; PTT recovery understood
 
 ## Follow-ups
 
-- **Offline ceremony** — [runbook 36](36-private-ca-init.md), between §5 and §6.
+- **Offline ceremony** — [runbook 36](36-private-ca-init.md), between §6 and §7.
 - **Proxy wiring** — [#142](https://github.com/jaroslaw-bagnicki/Homelab/issues/142).
 - **First service** — [#143](https://github.com/jaroslaw-bagnicki/Homelab/issues/143) (`https://netdata.internal`).
 - **Root distribution** — [#144](https://github.com/jaroslaw-bagnicki/Homelab/issues/144).
