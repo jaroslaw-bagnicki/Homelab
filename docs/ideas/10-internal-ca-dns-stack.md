@@ -91,13 +91,15 @@ The 2026-09-30 threads sharpened the three open pieces; **ADR 38 settled them**:
   the root signs the intermediate, the intermediate signs the leaves.
   ([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md))
 - **Key custody.** Root private key **offline on an IronKey** (later a YubiKey PIV); intermediate key in
-  the **`pve` dTPM 2.0** (the TPM path is pure Go, so the stock `step-ca` binary suffices). An emulated vTPM is explicitly **not**
-  a security boundary ([research 37 §6](../research/37-tpm2-hardware-and-fleet.md)); **Azure Key Vault**
-  and a **YubiHSM** remain fallbacks. [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md)
+  the **`pve` TPM 2.0** — an **Intel PTT firmware TPM**, not a discrete chip
+  ([research 37 §5](../research/37-tpm2-hardware-and-fleet.md)) — and the TPM path is pure Go, so the
+  stock `step-ca` binary suffices. An emulated vTPM is explicitly **not** a security boundary
+  ([research 37 §6](../research/37-tpm2-hardware-and-fleet.md)); **Azure Key Vault** and a **YubiHSM**
+  remain fallbacks. [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md)
 - **Shape.** CA on **`pve`** (required by the TPM), provisioned by Ansible — [research 36 §5](../research/36-step-ca-machine-identity.md)
   leans toward a **dedicated unprivileged LXC** with `/dev/tpmrm0` bound through, rather than one shared
   Compose stack with Caddy + Unbound.
-- **Disaster recovery.** Losing `pve` or its dTPM costs **only the intermediate**: re-sign a new one with
+- **Disaster recovery.** Losing `pve` or its TPM costs **only the intermediate**: re-sign a new one with
   the offline root, leaving the root and its distribution untouched, so there is **no client re-trust** and
   no propagation window. Only a root loss forces a re-issue and redistribution.
   [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) · [research 36 §6](../research/36-step-ca-machine-identity.md)
