@@ -1,7 +1,4 @@
 #!/usr/bin/env pwsh
-param(
-    [switch]$Force
-)
 
 $vault = "homelab-bysxdb-kv"
 $secretName = "step-ca-provisioner-password"
@@ -18,12 +15,11 @@ try {
 }
 
 if ($exists) {
-    if ($Force) {
-        Write-Warning "Secret '${secretName}' already exists. Overwriting."
-    } else {
-        Write-Warning "Secret '${secretName}' already exists. Use -Force to rotate."
-        exit 0
-    }
+    Write-Warning "Secret '${secretName}' already exists - nothing written."
+    Write-Host "The JWK provisioner's encryptedKey is bound to this password when 'step ca init' runs, so"
+    Write-Host "replacing the secret alone would leave the new password unable to issue while the old one"
+    Write-Host "kept working. Rotate the provisioner itself instead - runbook 35 §8."
+    exit 0
 }
 
 # Alphanumeric generator, matching New-HomelabNutUpsmonPasswords.ps1 — no +/ or = punctuation.
@@ -37,4 +33,3 @@ Set-AzKeyVaultSecret -VaultName $vault -Name $secretName `
 
 Write-Host "Secret '${secretName}' provisioned in '${vault}'."
 Write-Host "The step_ca role fetches it at deploy time and writes the root-only file:// provisioner password."
-Write-Host "Rotation: re-run with -Force, then re-run the workload playbook."
