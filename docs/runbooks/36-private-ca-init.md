@@ -5,11 +5,13 @@
 > request the deploy host produced. Step 1 runs once; step 3 repeats every year, before the intermediate
 > expires.
 >
-> ⚠ **No step here touches the network.** This sits between [runbook 35 §6](35-deploy-step-ca.md), which
-> produces the certificate request, and [§7](35-deploy-step-ca.md), which installs the signed
-> certificate. Steps 1 and 2 are carried out by the
-> [offline signing kit](../private-ca-offline-signing/README.md). Sending the root certificate out to the
-> fleet is [#144](https://github.com/jaroslaw-bagnicki/Homelab/issues/144), not covered here.
+> ⚠ **The ceremony never touches the network.** This sits between
+> [runbook 35 §6](35-deploy-step-ca.md), which produces the certificate request, and
+> [§7](35-deploy-step-ca.md), which installs the signed certificate. Steps 1 and 2 are carried out by
+> the [offline signing kit](../private-ca-offline-signing/README.md). The one command that needs a
+> network is publishing the root to Key Vault at the end of step 1 — it runs on the controller,
+> deliberately away from the signing machine. Installing the root on the fleet is
+> [#144](https://github.com/jaroslaw-bagnicki/Homelab/issues/144), not covered here.
 
 ## Why
 
@@ -56,9 +58,18 @@ The output also reports `valid: false`. That is normal for a root — there is n
 it against — and `self_signed: true` is the line that matters.
 
 The root certificate is public and is sent out to clients later
-([#144](https://github.com/jaroslaw-bagnicki/Homelab/issues/144)). The key never leaves the stick.
-Passphrase handling, the exact refusal messages, and why this step may use `--profile root-ca` while
-step 2 must not: [02-issuing-root-cert.md](../private-ca-offline-signing/02-issuing-root-cert.md).
+([#144](https://github.com/jaroslaw-bagnicki/Homelab/issues/144)). Publish it to Key Vault once, from a
+machine with network access — not the signing machine:
+
+```powershell
+.\scripts\Set-HomelabCaRootCert.ps1 -Path <path to root_ca.crt>
+```
+
+That writes `homelab-bysxdb-kv/ca-root-cert`, the copy every fleet node installs the anchor from. Only
+the certificate is published: the script refuses a file that carries a private key, and the key never
+leaves the stick. Passphrase handling, the exact refusal messages, and why this step may use
+`--profile root-ca` while step 2 must not:
+[02-issuing-root-cert.md](../private-ca-offline-signing/02-issuing-root-cert.md).
 
 ## 2. Sign the certificate request
 
@@ -111,7 +122,7 @@ Executed on: **never** — this has never been run against the real stick. Steps
 tested only with a throwaway key and a stand-in stick. Record the date and the result here when the real
 ceremony is first performed.
 
-- [ ] Step 1: root created, every check passed, passphrase written into the safe
+- [ ] Step 1: root created, every check passed, passphrase written into the safe, root published to Key Vault
 - [ ] Step 2: the intermediate signed, every check passed, stick back in the safe
 - [ ] Step 3: annual reminder set
 
