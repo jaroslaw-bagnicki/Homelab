@@ -8,9 +8,9 @@
 > ⚠ **No step here touches the network.** This sits between [runbook 35 §6](35-deploy-step-ca.md), which
 > produces the certificate request, and [§7](35-deploy-step-ca.md), which installs the signed
 > certificate. Steps 1 and 2 are carried out by the
-> [offline signing kit](../private-ca-offline-signing/README.md), and have only ever been tested with a
-> throwaway key and a fake IronKey. Step 3 has never been run. Sending the root certificate out to the
-> fleet is [#144](https://github.com/jaroslaw-bagnicki/Homelab/issues/144), not covered here.
+> [offline signing kit](../private-ca-offline-signing/README.md). Step 3 has never been run. Sending the
+> root certificate out to the fleet is [#144](https://github.com/jaroslaw-bagnicki/Homelab/issues/144),
+> not covered here.
 
 ## Why
 
