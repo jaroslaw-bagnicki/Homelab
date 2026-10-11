@@ -14,7 +14,7 @@ Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month 
 ## 2026‑10
 
 - **(feat)** Move the NUT server host-native on `pve` under Ansible, retiring LXC 213, and widen the NUT fail-safe window to 120 s — [ADR 39](docs/decisions/39-nut-host-native.md) · [runbook 29](docs/runbooks/29-nut-ups-shutdown.md)
-- **(docs)** Private CA — measured TPM custody gate, offline root/intermediate runbooks, and the `step-ca` workload recipe on `pve` — [runbook 35](docs/runbooks/35-deploy-step-ca.md)
+- **(feat)** Private CA — offline signing kit, root and TPM-sealed intermediate issued, root published to Key Vault — [runbook 36](docs/runbooks/36-private-ca-init.md)
 
 ## 2026‑09
 
