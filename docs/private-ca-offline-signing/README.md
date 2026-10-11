@@ -113,6 +113,10 @@ versioned source. If you change one, change both — otherwise the signing machi
      mount /dev/sdX1 /mnt/stick       # replace sdX1 with the real device from lsblk
      ```
 
+   **Nothing assumes a location.** Wherever the stick lands — `/mnt/sdX1`, `/media/ubuntu/<label>`, or
+   a directory you made — that path is the first argument both scripts take. There is no default, so
+   the commands in 02 and 03 read `<mount-path>`.
+
 5. **Create the root — once ever.** Only if the stick does not already hold one. The full ceremony,
    its acceptance checks and its refusals: [02-issuing-root-cert.md](02-issuing-root-cert.md).
 
@@ -123,7 +127,7 @@ versioned source. If you change one, change both — otherwise the signing machi
    removes it:
 
    ```sh
-   ./step certificate fingerprint /mnt/stick/root_ca.crt
+   ./step certificate fingerprint <mount-path>/root_ca.crt
    ```
 
    Then unmount and remove the stick and return it to the safe, copy `intermediate_ca.crt` **and** a

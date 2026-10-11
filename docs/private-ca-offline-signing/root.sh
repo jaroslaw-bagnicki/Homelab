@@ -1,7 +1,7 @@
 #!/bin/sh
 # Create the 10-year offline root CA on the secure USB stick. FIRST RUN ONLY.
 #
-#   ./root.sh [/path/to/stick] [passphrase-file]      (default: /mnt/stick)
+#   ./root.sh <mount-path> [passphrase-file]      e.g. /mnt/sdX1 (no default)
 #
 # The root key is the one secret in this PKI that cannot be replaced: it signs the
 # intermediate, and every client trusts the certificate it belongs to. So it is
@@ -19,7 +19,8 @@
 # which is exactly what this profile produces.
 set -eu
 
-STICK="${1:-/mnt/stick}"
+[ $# -ge 1 ] || { echo "usage: $0 <mount-path> [passphrase-file]" >&2; echo "       e.g. $0 /mnt/sdX1" >&2; exit 1; }
+STICK="$1"
 PWFILE="${2:-}"
 DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT_CN="Homelab Internal CA"

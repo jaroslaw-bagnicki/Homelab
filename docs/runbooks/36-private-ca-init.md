@@ -41,7 +41,7 @@ The `pve` TPM seals the intermediate key so it cannot be copied out
 Run this only on the signing machine, with the stick mounted:
 
 ```sh
-./root.sh /mnt/stick
+./root.sh <mount-path>
 ```
 
 The script runs `step certificate create` for you, gives the key a passphrase, and sets the root's
@@ -63,7 +63,7 @@ step 2 must not: [02-issuing-root-cert.md](../private-ca-offline-signing/02-issu
 ## 2. Sign the certificate request
 
 ```sh
-./sign.sh /mnt/stick
+./sign.sh <mount-path>
 ```
 
 The script signs `intermediate_ca.csr` with a one-year lifetime, then checks the result for you rather
@@ -91,7 +91,7 @@ key:
 
 1. Produce a fresh `intermediate_ca.csr` from the existing TPM key — re-run
    [runbook 35 §6](35-deploy-step-ca.md)'s certificate-request task. Do not recreate the key.
-2. Sign it with the kit: `./sign.sh /mnt/stick`
+2. Sign it with the kit: `./sign.sh <mount-path>`
    ([03-signing-csr.md](../private-ca-offline-signing/03-signing-csr.md)).
 3. Install it and restart the service ([runbook 35 §7](35-deploy-step-ca.md)).
 
