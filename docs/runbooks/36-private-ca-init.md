@@ -31,28 +31,11 @@ The `pve` TPM is Intel PTT firmware rather than a separate chip, so a BIOS updat
 NVRAM reset destroys the sealed key ([research 37 §5](../research/37-tpm2-hardware-and-fleet.md)). The
 annual re-sign in step 4 and the recovery in step 5 are therefore expected events, not emergencies.
 
-## What changes
-
-- **The root** — created on the signing machine and stored only on the IronKey. Its certificate is
-  public, and is sent out to clients later ([#144](https://github.com/jaroslaw-bagnicki/Homelab/issues/144)).
-- **The intermediate** — the certificate request from [runbook 35 §6](35-deploy-step-ca.md) is signed
-  here. Its private key never leaves the TPM, so only a public request and a public certificate ever
-  leave the machine.
-- **The annual re-sign** — steps 3 and 4 repeat every year against the same root and the same TPM key.
-
 ## Prerequisites
 
-- [ ] [Runbook 35 §1–§6](35-deploy-step-ca.md) done — the `ca` container (LXC 215) exists and
-      `intermediate_ca.csr` has been produced from the TPM key.
-- [ ] The TPM on `pve` is present and has not been used by an earlier deployment. On second-hand
-      hardware, clear it in the BIOS first
-      ([research 37 §5](../research/37-tpm2-hardware-and-fleet.md)).
-- [ ] A machine to use as the signing machine, booted from the **YUMI multiboot stick** — that stick
-      carries both the live Linux ISO and the signing kit.
-- [ ] The [offline signing kit](../private-ca-offline-signing/README.md) on that stick, with `step` in
-      place ([01-building-step.md](../private-ca-offline-signing/01-building-step.md)).
-- [ ] Somewhere to write down the root fingerprint that is not the repository — a safe or a password
-      manager.
+- [ ] `intermediate_ca.csr` — produced by [runbook 35 §6](35-deploy-step-ca.md)
+- [ ] The [offline signing kit](../private-ca-offline-signing/README.md), with `step` in place
+- [ ] A machine to use as the signing machine, booted from the YUMI multiboot stick
 
 ---
 
