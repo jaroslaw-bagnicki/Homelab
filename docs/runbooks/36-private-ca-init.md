@@ -3,8 +3,7 @@
 > Generate the CA's 10-year **root** on an air-gapped signing machine (a live-USB Linux boot with no
 > network at all), keep it on the **Kingston IronKey Locker+ 50** in a safe, and sign the certificate
 > request the deploy host produced. Step 1 runs once; step 3 repeats every year, before the intermediate
-> expires. Decisions: [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md); TPM details:
-> [research 36 §4–§5](../research/36-step-ca-machine-identity.md).
+> expires.
 >
 > ⚠ **No step here touches the network.** This sits between [runbook 35 §6](35-deploy-step-ca.md), which
 > produces the certificate request, and [§7](35-deploy-step-ca.md), which installs the signed
