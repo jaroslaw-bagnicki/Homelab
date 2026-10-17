@@ -110,6 +110,13 @@ The `technitium` and `caddy` roles (split out of `edge_host`, which now only car
 7. the `security` role opens UFW `53/tcp+udp` and `443/tcp` from the LAN, keeps TCP/80 closed, and
    leaves the Technitium API loopback-only.
 
+To re-apply one side only, both playbooks need the same `AZURE_*` controller variables:
+
+```powershell
+ansible-playbook ansible/playbooks/playbook-caddy.yml --diff        # proxy only
+ansible-playbook ansible/playbooks/playbook-technitium.yml --diff   # DNS + host resolver only
+```
+
 ## 4. Verify DNS
 
 From a LAN client:
@@ -258,7 +265,8 @@ survive a reboot.
 - **Technitium console** — `https://dns.internal` over TLS via Caddy. Technitium itself only
   listens on `127.0.0.1:5380`; that port is never opened and plaintext HTTP is not a supported path.
 - **Add a service** — add a `caddy_sites` entry (name + upstream) and, if the name should not
-  use the wildcard, a `technitium_records` entry; re-run `playbook-edge.yml`. The wildcard already
+  use the wildcard, a `technitium_records` entry; re-run `playbook-caddy.yml` (or
+  `playbook-technitium.yml` for a record) instead of the whole edge play. The wildcard already
   points every other `.internal` name at the proxy.
 - **Rotate the Technitium admin password** — change it through the API, update
   `technitium-admin-password` in AKV, then re-run the edge playbook.

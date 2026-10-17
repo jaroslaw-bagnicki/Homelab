@@ -3,10 +3,12 @@
   when: caddy_require_technitium | bool
   ansible.builtin.assert:
     that:
-      - technitium_enabled | default(false) | bool
+      # `default(true)` mirrors the technitium role default so a targeted
+      # playbook-caddy.yml run (which does not load that role) still passes.
+      - technitium_enabled | default(true) | bool
     fail_msg: >-
-      caddy_require_technitium is set but the technitium role is not enabled on
-      this host: Caddy's ca.internal lookups rely on the local resolver. Set
+      caddy_require_technitium is set but technitium_enabled is false on this
+      host: Caddy's ca.internal lookups rely on the local resolver. Set
       caddy_require_technitium: false when the resolver is managed elsewhere.
 
 - name: Install Caddy prerequisites
