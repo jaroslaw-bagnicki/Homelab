@@ -11,7 +11,7 @@
 > ([ADR 07](../decisions/07-reverse-proxy-caddy.md)) is not a fleet trust anchor
 > ([ADR 34](../decisions/34-lan-tls-only.md) defers that to [#126](https://github.com/jaroslaw-bagnicki/Homelab/issues/126)).
 
-**Status**: 📋 Planned — the CA is decided by [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md), and the host, resolver and proxy packaging by [ADR 40](../decisions/40-internal-dns-proxy-lxc.md) (Technitium DNS + Caddy, native systemd, unprivileged LXC 216 on `pve`); implementation not started
+**Status**: 📋 Planned — the CA is decided by [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md), and the host, resolver and proxy packaging by [ADR 40](../decisions/40-internal-dns-proxy-edge.md) (Technitium DNS + Caddy, native systemd, on the `edge` node); implementation not started
 **Date**: 2026-09-29 (extended 2026-09-30; decided 2026-10-04)
 **Source**: [Gemini — pseudo-domains for local networks](https://share.gemini.google/UPNAO3UsBe8l) (published 2026-09-29) · [machine identity](https://share.gemini.google/5jgOfXFrcdLV) · [step-ca overview](https://share.gemini.google/B603IrdX0Zgq) · [TPM 2.0 in business](https://share.gemini.google/9Ph6gwBvDzmk) · [step-ca architecture](https://share.gemini.google/xB7DpeltqTaG) (all 2026-09-30, published 2026-10-04)
 **Related**: [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) (the decision) · [research 35](../research/35-private-ca-and-lan-naming.md) (naming + stack) · [research 36](../research/36-step-ca-machine-identity.md) (tool, key custody, placement, DR) · [research 37](../research/37-tpm2-hardware-and-fleet.md) (TPM hardware) · [ADR 37](../decisions/37-lan-name-space-internal.md) (`.internal`; DNSMasq and `.home` retired) · [#126](https://github.com/jaroslaw-bagnicki/Homelab/issues/126) (implementation tracker) · [ADR 34](../decisions/34-lan-tls-only.md) · [ADR 06](../decisions/06-local-dns-dnsmasq.md) / [ADR 07](../decisions/07-reverse-proxy-caddy.md) (incumbents) · [ADR 31](../decisions/31-static-address-scheme.md) (a guest on `pve`) · [ADR 22](../decisions/22-k3s-arc-homelab.md) (k3s — the `lab` blocker)
@@ -67,9 +67,9 @@ delegated. `.home` and DNSMasq are retired with it. RFC/ICANN authority and the 
 
 ## Host — the shortlist
 
-**Decided: `pve`, unprivileged LXC 216** at `192.168.2.216`, running both Technitium DNS and Caddy as
-native services ([ADR 40](../decisions/40-internal-dns-proxy-lxc.md)). The shortlist that fed the
-decision (2026-09-29), each carrying the operator's own caveat:
+**Decided: `edge`** at `192.168.2.240`, running both Technitium DNS and Caddy as native services
+([ADR 40](../decisions/40-internal-dns-proxy-edge.md)). The shortlist that fed the decision (2026-09-29),
+each carrying the operator's own caveat:
 
 | Host | Shape | Status / concern |
 |---|---|---|

@@ -12,9 +12,9 @@ space, [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) settles the
 about the DNS server that makes the names resolve, and about the two follow-on questions the thread
 raises: **k3s service registration** and **mDNS-to-unicast bridging**.
 
-**Status**: 📝 Analysis — **decided in [ADR 40](../decisions/40-internal-dns-proxy-lxc.md)** (Technitium DNS as
-the resolver, beside Caddy, in one unprivileged LXC on `pve`). This document is the analysis behind
-the decision, not its authority.
+**Status**: 📝 Analysis — **decided in [ADR 40](../decisions/40-internal-dns-proxy-edge.md)** (Technitium DNS as
+the resolver, beside Caddy, natively on the `edge` node). This document is the analysis behind the
+decision, not its authority.
 
 > ⚠️ **Verification status**: nothing below was run on the fleet. Every product claim (resource use,
 > plugin names, API paths, package names) is **transcribed from the thread** and is not independently
@@ -31,7 +31,7 @@ Not a decision record — a shortlist with the operator's current leaning.
 | Question | Leaning | Alternatives |
 |---|---|---|
 | Resolver for `.internal` | **Technitium DNS** — full authoritative + recursive, GUI + REST API, mDNS app, ad-blocker in one service | Unbound, AdGuard Home (+ Unbound), CoreDNS, BIND 9, DNSMasq |
-| Where it runs | not settled — an unprivileged **LXC on `pve`** is the shape the thread converges on | Docker container (needs `network_mode: host` for mDNS), `edge`, `lab`/k3s |
+| Where it runs | **`edge` (Wyse 3040), native systemd** ([ADR 40](../decisions/40-internal-dns-proxy-edge.md)) | an unprivileged LXC on `pve`, a Docker container (needs `network_mode: host` for mDNS), `lab`/k3s |
 | k3s service registration | **ExternalDNS → Technitium REST API** (when k3s exists) | wildcard to the ingress IP, CoreDNS `k8s_external` |
 | mDNS (`pve.local`) → unicast (`.internal`) | **Technitium mDNS Resolver app** | dnsmasq + Avahi sync script, CoreDNS `mdns`, `mdns2dns` container |
 
@@ -222,8 +222,8 @@ stored the same way, not in plain variables.
 
 ## §9 — Open questions
 
-- **Host and packaging** — settled by [ADR 40](../decisions/40-internal-dns-proxy-lxc.md): unprivileged
-  LXC 216 on `pve`, native systemd (no Compose), both services on the one guest.
+- **Host and packaging** — settled by [ADR 40](../decisions/40-internal-dns-proxy-edge.md): native systemd
+  on `edge` (`.240`), both services on the one box — no Compose, no new guest.
 - **One resolver or two** — single LXC is enough for a dozen records; a second LXC + Keepalived only
   if DHCP hands out a single DNS address.
 - **DHCP DNS hand-out** — who advertises the resolver: the mesh gateway today, the OPNsense router
@@ -234,7 +234,7 @@ stored the same way, not in plain variables.
 - **mDNS bridging** — needed at all, or do static records cover the fleet (all nodes are
   Ansible-managed and statically addressed)?
 - **Authoritative vs recursive** — settled as **scenario A** (all-in-one Technitium) by
-  [ADR 40](../decisions/40-internal-dns-proxy-lxc.md); scenario B stays a fallback if the resolver ever
+  [ADR 40](../decisions/40-internal-dns-proxy-edge.md); scenario B stays a fallback if the resolver ever
   has to become a pure privacy resolver.
 
 ## References
