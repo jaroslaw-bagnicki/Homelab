@@ -1,0 +1,119 @@
+---
+- name: Assert Caddy has a local resolver
+  when: caddy_require_technitium | bool
+  ansible.builtin.assert:
+    that:
+      # `default(true)` mirrors the technitium role default so a targeted
+      # playbook-caddy.yml run (which does not load that role) still passes.
+      - technitium_enabled | default(true) | bool
+    fail_msg: >-
+      caddy_require_technitium is set but technitium_enabled is false on this
+      host: Caddy's ca.internal lookups rely on the local resolver. Set
+      caddy_require_technitium: false when the resolver is managed elsewhere.
+
+- name: Install Caddy prerequisites
+  ansible.builtin.apt:
+    name:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - debian-archive-keyring
+      - debian-keyring
+    state: present
+    update_cache: true
+
+- name: Fetch the Caddy signing key
+  ansible.builtin.get_url:
+    url: https://dl.cloudsmith.io/public/caddy/stable/gpg.key
+    dest: /usr/share/keyrings/caddy-stable-archive-keyring.asc
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Configure the Caddy apt repository
+  ansible.builtin.copy:
+    content: |
+      deb [signed-by=/usr/share/keyrings/caddy-stable-archive-keyring.asc] https://dl.cloudsmith.io/public/caddy/stable/deb/debian any-version main
+    dest: /etc/apt/sources.list.d/caddy-stable.list
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Install Caddy
+  ansible.builtin.apt:
+    name: caddy
+    state: present
+    update_cache: true
+
+- name: Assert Azure controller credentials are set for the CA root
+  when: caddy_ca_root | length == 0
+  ansible.builtin.assert:
+    that:
+      - lookup('ansible.builtin.env', 'AZURE_CLIENT_ID', default='') | length > 0
+      - lookup('ansible.builtin.env', 'AZURE_CLIENT_SECRET', default='') | length > 0
+      - lookup('ansible.builtin.env', 'AZURE_TENANT_ID', default='') | length > 0
+    fail_msg: >-
+      AZURE_CLIENT_ID, AZURE_CLIENT_SECRET and AZURE_TENANT_ID must be set on the
+      Ansible controller for the CA root-certificate Key Vault lookup.
+  delegate_to: localhost
+
+- name: Fetch the fleet CA root certificate from Key Vault
+  when: caddy_ca_root | length == 0
+  vars:
+    caddy_vault_url: "https://{{ caddy_keyvault_name }}.vault.azure.net"
+    caddy_azure_client_id: "{{ lookup('ansible.builtin.env', 'AZURE_CLIENT_ID') }}"
+    caddy_azure_secret: "{{ lookup('ansible.builtin.env', 'AZURE_CLIENT_SECRET') }}"
+    caddy_azure_tenant_id: "{{ lookup('ansible.builtin.env', 'AZURE_TENANT_ID') }}"
+  ansible.builtin.set_fact:
+    caddy_ca_root: >-
+      {{ lookup('azure.azcollection.azure_keyvault_secret',
+      caddy_ca_root_secret_name, vault_url=caddy_vault_url,
+      client_id=caddy_azure_client_id, secret=caddy_azure_secret,
+      tenant=caddy_azure_tenant_id) }}
+  delegate_to: localhost
+  no_log: true
+
+- name: Install the CA root certificate for the ACME client
+  ansible.builtin.copy:
+    content: "{{ caddy_ca_root }}\n"
+    dest: "{{ caddy_ca_root_path }}"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart Caddy
+
+- name: Deploy the Caddyfile
+  ansible.builtin.template:
+    src: Caddyfile.j2
+    dest: "{{ caddy_file }}"
+    owner: root
+    group: root
+    mode: "0644"
+    validate: "caddy validate --config %s --adapter caddyfile"
+  notify: Reload Caddy
+
+- name: Ensure the Caddy systemd drop-in directory exists
+  ansible.builtin.file:
+    path: /etc/systemd/system/caddy.service.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Order Caddy after the DNS resolver
+  ansible.builtin.copy:
+    content: |
+      [Unit]
+      After={{ caddy_after_service }}
+      Wants={{ caddy_after_service }}
+    dest: /etc/systemd/system/caddy.service.d/10-after-dns.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart Caddy
+
+- name: Enable and start Caddy
+  ansible.builtin.systemd_service:
+    name: caddy
+    enabled: true
+    state: started

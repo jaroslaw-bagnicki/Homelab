@@ -1,0 +1,43 @@
+---
+- name: Read the resolv.conf metadata
+  ansible.builtin.stat:
+    path: /etc/resolv.conf
+    follow: false
+  register: technitium_resolv_conf
+
+- name: Remove a systemd-resolved resolv.conf symlink
+  when: technitium_resolv_conf.stat.islnk | default(false)
+  ansible.builtin.file:
+    path: /etc/resolv.conf
+    state: absent
+
+- name: Configure the live resolver
+  ansible.builtin.copy:
+    content: |
+      {{ technitium_resolv_conf_comment }}
+      {% for nameserver in technitium_host_nameservers %}
+      nameserver {{ nameserver }}
+      {% endfor %}
+      {% if technitium_host_search | length > 0 %}
+      search {{ technitium_host_search }}
+      {% endif %}
+    dest: /etc/resolv.conf
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Manage the DNS nameservers in interfaces
+  ansible.builtin.lineinfile:
+    path: /etc/network/interfaces
+    regexp: '^\s*dns-nameservers.*$'
+    line: "    dns-nameservers {{ technitium_host_nameservers | join(' ') }}"
+    insertafter: '^\s*iface .*inet static'
+    state: "{{ 'present' if technitium_host_nameservers | length > 0 else 'absent' }}"
+
+- name: Manage the DNS search domain in interfaces
+  ansible.builtin.lineinfile:
+    path: /etc/network/interfaces
+    regexp: '^\s*dns-search.*$'
+    line: "    dns-search {{ technitium_host_search }}"
+    insertafter: '^\s*iface .*inet static'
+    state: "{{ 'present' if technitium_host_search else 'absent' }}"

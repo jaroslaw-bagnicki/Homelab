@@ -21,10 +21,10 @@
   no Docker.
 - **External routing:** `*.example.com` → Caddy → backends over the LAN
   (M910q k3s, ML110 OMV, future gear).
-- **Internal routing:** `.internal` Caddy routing served by the edge box — the LAN name
-  space is [ADR 37](../decisions/37-lan-name-space-internal.md) (DNSMasq and `.home`
-  retired); **which host serves `.internal` DNS is still open**
-  ([idea 10](../ideas/10-internal-ca-dns-stack.md)) — ADR 24 architecture split, M910q is compute-only.
+- **Internal routing:** `.internal` DNS and Caddy routing served by the edge box —
+  [ADR 40](../decisions/40-internal-dns-proxy-edge.md), implemented in
+  [runbook 37](37-deploy-internal-access-stack.md). The LAN name space is
+  [ADR 37](../decisions/37-lan-name-space-internal.md) (DNSMasq and `.home` retired).
 - **Monitoring:** Netdata **child node** with RAM-only buffering (no eMMC DB; ADR 27).
 - Stay lean: 2 GB RAM / 8 GB eMMC, ~2–3 W idle, fanless.
 
@@ -184,23 +184,28 @@ The role provisions everything beyond the §2 bootstrap, idempotently, via
 - **UFW** (SSH from `192.168.2.0/24`, deny inbound otherwise) + **fail2ban** +
   `unattended-upgrades`
 - **eMMC longevity** — journald `Storage=volatile`, logrotate; Netdata is RAM-only (see §6)
-- **services §4–§6** — cloudflared, Caddy, Netdata (install + config + systemd units; Netdata is
-  applied by the shared `netdata` role, not `edge_host`)
+- **services §4–§6** — cloudflared, Caddy, Netdata. Caddy and Technitium DNS are provisioned by
+  [runbook 37](37-deploy-internal-access-stack.md) (live verification pending); Netdata is live;
+  cloudflared waits on the public-ingress decision. Netdata is applied by the shared `netdata` role,
+  not `edge_host`.
 
 **Base provisioning is written and committed 2026-08-26** (the `edge_host` role + `common`/`security`
-reuse — see §3a). Services §4–§6 are a follow-up once the base is verified live on the box.
+reuse — see §3a). The LAN access stack is being deployed in
+[runbook 37](37-deploy-internal-access-stack.md) (live verification pending).
 
 ### 3a. Role layout (base phase)
 
 - `ansible/roles/common` (reused) — hostname `edge`, `Etc/UTC`, `systemd-timesyncd`, Avahi
   (`common_enable_avahi: true` → `edge.local`)
 - `ansible/roles/security` (reused, tuned via `host_vars/edge.yml`) — UFW default-deny +
-  SSH allow from `192.168.2.0/24` (`security_ufw_allow_ssh_from`), fail2ban, sshd key-only
-  hardening; `security_ufw_deny_inbound_tcp_80: false` (the edge owns :80)
-- `ansible/roles/edge_host` (new) — `unattended-upgrades`, `logrotate`, journald
-  `Storage=volatile`, the DNS search domain (`edge_dns_search`, default empty — removes the
-  installer's `example.com` search leftover); UFW stays deny-inbound — cloudflared → Caddy
-  runs over loopback, no :80 opened (nmbd dropped 2026-08-26 — Avahi suffices)
+  SSH allow from `192.168.2.0/24` (`security_ufw_allow_ssh_from`), DNS `53/tcp+udp`, HTTPS
+  `443` (the Technitium console included — `5380` stays on loopback), fail2ban, sshd key-only
+  hardening; TCP/80 stays closed (`security_ufw_deny_inbound_tcp_80: true`)
+- `ansible/roles/edge_host` — `unattended-upgrades`, `logrotate`, journald `Storage=volatile`
+- `ansible/roles/technitium` — **Technitium DNS** (authoritative `internal.`, DoT upstreams,
+  API-driven zone/records) and the `127.0.0.1` / `internal` host resolver
+- `ansible/roles/caddy` — **Caddy** LAN reverse proxy, per-service leaves from `step-ca`
+- Details: [runbook 37](37-deploy-internal-access-stack.md)
 - `ansible/host_vars/edge.yml` + `inventory.ini` (`edge` → `192.168.2.240`)
 
 ---
@@ -222,16 +227,15 @@ reuse — see §3a). Services §4–§6 are a follow-up once the base is verifie
 
 ## 5. Caddy — Reverse Proxy
 
-**Target state (services follow-up, §4–§6)** — to be installed/configured by the `edge_host` role; the Caddyfile lives in the
-repo, rendered to `/etc/caddy/Caddyfile`, `Caddyfile reload` on change (ADR 10).
+**LAN plane implemented** by the `edge_host` role — the full build and verification steps are in
+[runbook 37](37-deploy-internal-access-stack.md). The Caddyfile lives in the repo and is rendered to
+`/etc/caddy/Caddyfile`.
 
-- **Single Caddyfile for both planes** (ADR 20 — one Caddyfile is the source of truth):
-  - **External** `*.example.com` sites → backends over the LAN (M910q k3s, ML110 OMV,
-    future gear). Served on :80, TLS handled at the CF edge (ADR 19).
-  - **Internal** `*.internal` sites → routed by the same Caddy on **:443, HTTPS only** —
-    [ADR 34](../decisions/34-lan-tls-only.md) prohibits plaintext. What is still *pending* is where the
-    certificates come from, not the transport
-    ([ADR 37](../decisions/37-lan-name-space-internal.md) / [idea 10](../ideas/10-internal-ca-dns-stack.md)).
+- **Internal** `*.internal` sites run on **:443, HTTPS only**, with short-lived leaves issued by
+  `step-ca` through TLS-ALPN-01 ([ADR 34](../decisions/34-lan-tls-only.md),
+  [ADR 40](../decisions/40-internal-dns-proxy-edge.md)). HTTP-01 is disabled and TCP/80 stays closed.
+- **External** `*.example.com` sites remain with the public-ingress work (held until the
+  remote-access decision); if it returns, the same Caddyfile adds the public plane.
 - No Cloudflare Origin CA needed on the edge: per ADR 19's revised pattern, cloudflared →
   Caddy is **plain HTTP over loopback** (`127.0.0.1:80`, both on the edge box) — the earlier
   HTTPS-origin attempt failed on SNI mismatch and config-file override limits.
@@ -275,10 +279,9 @@ repo, rendered to `/etc/caddy/Caddyfile`, `Caddyfile reload` on change (ADR 10).
 - **Services:** `systemctl status cloudflared caddy netdata` all active.
 - **External:** `curl https://app.example.com` resolves + serves from the backend edge box
   path; `*.example.com` wildcard → Caddy → backend.
-- **Internal DNS:** `nslookup service.internal <dns-ip>` → Caddy IP; client on DHCP → the `.internal`
-  resolver → `service.internal` resolves. **Blocked until that resolver exists**
-  ([idea 10](../ideas/10-internal-ca-dns-stack.md)) — nothing serves `.internal` today
-  ([ADR 37](../decisions/37-lan-name-space-internal.md)).
+- **Internal DNS:** `dig @192.168.2.240 service.internal` → `.240`; Caddy serves
+  `https://service.internal` with a step-ca leaf. Clients adopt the resolver per device until DHCP
+  hands it out ([runbook 37](37-deploy-internal-access-stack.md)).
 - **Monitoring:** Netdata dashboard reachable; child streams to parent once it lands.
 - **Failover:** behaviour with the M910q tunnel (replace vs parallel, idea 04) — decide
   during cutover.
@@ -294,9 +297,8 @@ repo, rendered to `/etc/caddy/Caddyfile`, `Caddyfile reload` on change (ADR 10).
 - Static IP `192.168.2.240` from the reserved `24x` block — assigned during install (see §2).
 - Update the topology diagrams in [overview](../overview.md) and [research 24](../research/24-network-topology-design.md)
   once the IP is assigned.
-- Repoint internal `.internal` DNS consumers (router DHCP DNS, device configs) at whatever host
-  serves the name space ([ADR 37](../decisions/37-lan-name-space-internal.md)) — there is no such host
-  yet ([idea 10](../ideas/10-internal-ca-dns-stack.md)); the M910q dnsmasq is retired
+- Repoint internal `.internal` DNS consumers (router DHCP DNS, device configs) at `192.168.2.240`
+  ([runbook 37](37-deploy-internal-access-stack.md)); the M910q dnsmasq is retired
   (runbook 25 §What changes — DNS/Caddy/tunnel leave the M910q).
 
 ---
@@ -305,10 +307,10 @@ repo, rendered to `/etc/caddy/Caddyfile`, `Caddyfile reload` on change (ADR 10).
 
 - [x] §1 Debian minimal installed on `mmcblk0`; eMMC boots without F12 (entry re-added 2026-08-18)
 - [x] §2 Static IP `192.168.2.240` reachable; SSH key-only login (fleet key, 2026-08-30)
-- [x] §3 `edge.local` resolves on the LAN (mDNS); SSH key-only via fleet key (2026-09-05) — the bare `edge` name waits on whatever serves `.internal` ([ADR 37](../decisions/37-lan-name-space-internal.md))
+- [x] §3 `edge.local` resolves on the LAN (mDNS); SSH key-only via fleet key (2026-09-05); `edge.internal` waits on the live [runbook 37](37-deploy-internal-access-stack.md) verification
 - [x] §3 UFW active (SSH from LAN only); fail2ban on (live run 2026-08-30 — ok=24)
 - [ ] §4 cloudflared tunnel up (`cloudflared tunnel list`)
-- [ ] §5 Caddy serves `*.example.com` and `*.internal` (the LAN name space, [ADR 37](../decisions/37-lan-name-space-internal.md))
+- [ ] §5 Caddy serves `*.internal` (LAN plane, [runbook 37](37-deploy-internal-access-stack.md)); `*.example.com` waits on the public-ingress decision
 - [ ] §6 Netdata child running (RAM-only); dashboard reachable
 - [ ] §7 all validation checks pass
 - [ ] §8 switch port wired; `docs/overview.md` / `docs/hardware.md` reflect the edge node
@@ -319,6 +321,7 @@ repo, rendered to `/etc/caddy/Caddyfile`, `Caddyfile reload` on change (ADR 10).
 - [ADR 24](../decisions/24-edge-ingress-appliance.md) — edge appliance decision (OS, DNS, bare-metal)
 - [ADR 27](../decisions/27-monitoring-strategy.md) — Netdata child node on the edge (RAM-only)
 - [ADR 20](../decisions/20-caddy-single-routing-layer.md) — single Caddyfile routing layer
+- [ADR 40](../decisions/40-internal-dns-proxy-edge.md) — Technitium DNS + Caddy on the edge · [runbook 37](37-deploy-internal-access-stack.md) — build + verification
 - [ADR 19](../decisions/19-cloudflare-tunnel-http-origin.md) — CF tunnel origin pattern (plain HTTP to origin)
 - [Research 25](../research/25-edge-ingress-sbc.md) — PL-market hardware + OS evaluation
 - [Idea 04](../ideas/04-edge-device-tunnel-caddy.md) — original edge idea

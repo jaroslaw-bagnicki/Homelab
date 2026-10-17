@@ -1,0 +1,42 @@
+---
+- name: Gather service facts before starting Technitium
+  ansible.builtin.service_facts:
+
+- name: Stop systemd-resolved so Technitium can bind port 53
+  when: "'systemd-resolved.service' in ansible_facts.services"
+  ansible.builtin.systemd_service:
+    name: systemd-resolved
+    enabled: false
+    state: stopped
+  register: technitium_resolved_stop
+
+- name: Read the resolv.conf metadata before starting Technitium
+  ansible.builtin.stat:
+    path: /etc/resolv.conf
+    follow: false
+  register: technitium_resolv_conf_prepare
+
+- name: Remove a systemd-resolved resolv.conf symlink before starting Technitium
+  when: technitium_resolv_conf_prepare.stat.islnk | default(false)
+  ansible.builtin.file:
+    path: /etc/resolv.conf
+    state: absent
+
+- name: Decide whether a temporary resolver is needed
+  ansible.builtin.set_fact:
+    technitium_resolver_bootstrap: >-
+      {{ technitium_resolved_stop.changed | default(false) or
+      (technitium_resolv_conf_prepare.stat.islnk | default(false)) }}
+
+- name: Keep a working resolver while Technitium starts
+  when: technitium_resolver_bootstrap | bool
+  ansible.builtin.copy:
+    content: |
+      # Temporary resolver while Technitium starts; replaced by the local resolver below.
+      {% for nameserver in technitium_bootstrap_nameservers %}
+      nameserver {{ nameserver }}
+      {% endfor %}
+    dest: /etc/resolv.conf
+    owner: root
+    group: root
+    mode: "0644"

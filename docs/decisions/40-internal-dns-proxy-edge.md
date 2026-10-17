@@ -66,13 +66,16 @@ routing entry point.**
   the trap already recorded for the VictoriaLogs workload) — so a container adds a daemon and a boot
   ordering dependency without adding isolation. On this box it also keeps the write path off the eMMC.
 - **The node's own resolver is Technitium** — `127.0.0.1` in `/etc/resolv.conf`, with `internal` as
-  the search suffix (`edge_dns_search` carries the suffix, not the nameserver). **The CA guest is
+  the search suffix (`technitium_host_search` carries the suffix, not the nameserver). **The CA guest is
   pointed at the same resolver** (`192.168.2.240`) before issuance: `step-ca` must resolve
-  `netdata.internal` to validate a challenge, and [runbook 35](../runbooks/35-deploy-step-ca.md)
-  currently leaves LXC 215 on the host resolvers.
-- **UFW** allows `53`/`443` from `192.168.2.0/24` and the Technitium API only from the fleet; nothing
-  is opened to the internet — the public plane stays closed until the remote-access decision. **TCP/80
-  stays closed**; it is opened only if the HTTP-01 fallback is ever used, from the CA guest alone.
+  `netdata.internal` to validate a challenge. [Runbook 35](../runbooks/35-deploy-step-ca.md)
+  initially left LXC 215 on the host resolvers; the CA playbook now points it at the edge resolver
+  ([runbook 37](../runbooks/37-deploy-internal-access-stack.md)).
+- **UFW** allows `53`/`443` from `192.168.2.0/24`; nothing is opened to the internet — the public
+  plane stays closed until the remote-access decision. The Technitium admin API binds
+  **`127.0.0.1:5380` only**; the console and zone export are reached through an SSH tunnel, so the
+  admin password never crosses the LAN in plaintext. **TCP/80 stays closed**; it is opened only if
+  the HTTP-01 fallback is ever used, from the CA guest alone.
 - **mDNS bridging is optional and later.** All nodes are Ansible-managed and statically addressed, so
   static records cover the fleet; Technitium's mDNS app is adopted only if discovery of
   DHCP/mobile devices becomes useful.
@@ -142,7 +145,7 @@ certificates does not need `pve`.
 - [Research 38](../research/38-technitium-dns.md) — resolver comparison, mDNS bridging, Ansible deployment
 - [Research 39](../research/39-caddy-on-opnsense-rejected.md) — why the router is not the proxy
 - [Research 35](../research/35-private-ca-and-lan-naming.md) — name space and the stack analysis
-- [Runbook 24](../runbooks/24-edge-appliance.md) — the edge appliance and its Caddy/DNS target state · [runbook 27](../runbooks/27-edge-backup-restore.md) — full-image backup/restore
+- [Runbook 24](../runbooks/24-edge-appliance.md) — the edge appliance and its Caddy/DNS target state · [runbook 27](../runbooks/27-edge-backup-restore.md) — full-image backup/restore · [runbook 37](../runbooks/37-deploy-internal-access-stack.md) — build + verification
 - [Research 28](../research/28-wyse3040-hardware-diagnostic.md) — Wyse 3040 hardware and eMMC health
 - [ADR 37](37-lan-name-space-internal.md) · [ADR 38](38-private-ca-hierarchy-and-custody.md) · [ADR 34](34-lan-tls-only.md) · [ADR 31](31-static-address-scheme.md) · [ADR 20](20-caddy-single-routing-layer.md) · [ADR 24](24-edge-ingress-appliance.md)
 - [Idea 10](../ideas/10-internal-ca-dns-stack.md) — the stack this implements
