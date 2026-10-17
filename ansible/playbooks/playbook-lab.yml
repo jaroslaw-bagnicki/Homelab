@@ -13,6 +13,7 @@
   roles:
     - common
     - security
+    - ca_trust
     - docker_host
     - azure_arc
     - nut_client

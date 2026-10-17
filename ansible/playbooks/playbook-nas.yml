@@ -5,6 +5,7 @@
   roles:
     - common
     - security
+    - ca_trust
     - nut_client
     - netdata
     - fluentbit

@@ -1,0 +1,6 @@
+---
+# Fleet CA trust — install the private CA root into the system trust store.
+ca_trust_keyvault_name: homelab-bysxdb-kv
+ca_trust_secret_name: ca-root-cert
+# Override to skip the Key Vault lookup (tests).
+ca_trust_cert: ""

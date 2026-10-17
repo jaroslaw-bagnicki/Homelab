@@ -1,0 +1,3 @@
+---
+ca_trust_file: /usr/local/share/ca-certificates/homelab-root-ca.crt
+ca_trust_bundle: /etc/ssl/certs/ca-certificates.crt
