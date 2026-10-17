@@ -139,6 +139,9 @@ websites**. For managed workstations, deploy a `policies.json` with `Certificate
 the warning. User-installed CAs are trusted by Chrome, but **not** by apps targeting API 24+ unless
 the app opts in via `network_security_config` — treat in-app TLS as unsupported on Android.
 
+**Execution record.** The LAN workstation installed the root on 2026-10-17; browsers now trust
+`https://*.internal` without warnings. Phones are not installed yet.
+
 ## 4. Containers
 
 A host trust store does not reach inside a container. Either point the runtime at the certificate or
