@@ -266,14 +266,20 @@ The full eMMC image already contains `/etc/dns`, but the `internal.` zone is the
 edge box that is worth exporting separately — it survives an image loss and can be re-imported into a
 fresh Technitium install ([runbook 37](37-deploy-internal-access-stack.md)).
 
-From the controller (the API is LAN-restricted and the password is never written to disk):
+The Technitium API is loopback-only, so open a tunnel from the controller first:
+
+```sh
+ssh -N -L 5380:127.0.0.1:5380 fleetadm@192.168.2.240
+```
+
+Then run this in another terminal (the password is never written to disk):
 
 ```powershell
 $pw = Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name technitium-admin-password -AsPlainText
-$session = Invoke-RestMethod -Method Post -Uri http://192.168.2.240:5380/api/user/login `
+$session = Invoke-RestMethod -Method Post -Uri http://127.0.0.1:5380/api/user/login `
     -Body @{ user = 'admin'; pass = $pw }
 Invoke-RestMethod -Headers @{ Authorization = "Bearer $($session.token)" } `
-    -Uri 'http://192.168.2.240:5380/api/zones/export?zone=internal' `
+    -Uri 'http://127.0.0.1:5380/api/zones/export?zone=internal' `
     -OutFile .\internal.zone
 ```
 

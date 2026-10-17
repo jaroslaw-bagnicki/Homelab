@@ -14,7 +14,9 @@ edge_host_bootstrap_nameservers:
 # and the fleet resolver. The portable app needs the ASP.NET Core runtime.
 edge_host_technitium_enabled: true
 edge_host_technitium_portable_url: "https://download.technitium.com/dns/DnsServerPortable.tar.gz"
+edge_host_technitium_portable_sha256: "d56e2822a3645baa4850a987a033b207ffc3759761d2ee6cccdd70b8047252ff"
 edge_host_technitium_dotnet_install_url: "https://dot.net/v1/dotnet-install.sh"
+edge_host_technitium_dotnet_install_sha256: "082f7685e156738a1b2e2ed8381a621870d4ce8e8c59278034556f05c186eb2e"
 edge_host_technitium_dotnet_channel: "10.0"
 edge_host_technitium_dotnet_runtime: "Microsoft.AspNetCore.App 10.0."
 edge_host_technitium_dotnet_dir: /opt/dotnet
@@ -67,6 +69,7 @@ edge_host_technitium_settings:
   ipv6Mode: Disabled
   dnsServerEnableCheckForUpdate: "false"
   dnsAppsEnableAutomaticUpdate: "false"
+  webServiceLocalAddresses: "127.0.0.1"
   webServiceHttpPort: "5380"
   webServiceEnableTls: "false"
 

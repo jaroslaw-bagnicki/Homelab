@@ -1,7 +1,7 @@
 # Internal DNS and Reverse Proxy — Technitium + Caddy on the Edge Node
 
 **Date:** 2026-10-17
-**Status:** Implemented
+**Status:** Accepted
 
 ---
 
@@ -71,9 +71,11 @@ routing entry point.**
   `netdata.internal` to validate a challenge. [Runbook 35](../runbooks/35-deploy-step-ca.md)
   initially left LXC 215 on the host resolvers; the CA playbook now points it at the edge resolver
   ([runbook 37](../runbooks/37-deploy-internal-access-stack.md)).
-- **UFW** allows `53`/`443` and the Technitium API from `192.168.2.0/24`; nothing is opened to the
-  internet — the public plane stays closed until the remote-access decision. **TCP/80
-  stays closed**; it is opened only if the HTTP-01 fallback is ever used, from the CA guest alone.
+- **UFW** allows `53`/`443` from `192.168.2.0/24`; nothing is opened to the internet — the public
+  plane stays closed until the remote-access decision. The Technitium admin API binds
+  **`127.0.0.1:5380` only**; the console and zone export are reached through an SSH tunnel, so the
+  admin password never crosses the LAN in plaintext. **TCP/80 stays closed**; it is opened only if
+  the HTTP-01 fallback is ever used, from the CA guest alone.
 - **mDNS bridging is optional and later.** All nodes are Ansible-managed and statically addressed, so
   static records cover the fleet; Technitium's mDNS app is adopted only if discovery of
   DHCP/mobile devices becomes useful.

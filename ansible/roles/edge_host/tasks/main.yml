@@ -38,12 +38,21 @@
     mode: "0644"
   notify: Restart systemd-journald
 
+- name: Assert Caddy has a local resolver
+  ansible.builtin.assert:
+    that:
+      - not (edge_host_caddy_enabled | bool) or (edge_host_technitium_enabled | bool)
+    fail_msg: >-
+      edge_host_caddy_enabled requires edge_host_technitium_enabled: Caddy's
+      ca.internal lookups rely on the local Technitium resolver.
+
 - name: Deploy Technitium DNS
   ansible.builtin.import_tasks: technitium.yml
   when: edge_host_technitium_enabled | bool
 
 - name: Point the host at the local resolver
   ansible.builtin.import_tasks: resolver.yml
+  when: edge_host_technitium_enabled | bool
 
 - name: Deploy Caddy
   ansible.builtin.import_tasks: caddy.yml

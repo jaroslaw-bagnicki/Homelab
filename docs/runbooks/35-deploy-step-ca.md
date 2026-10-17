@@ -162,9 +162,10 @@ pct create 215 local:vztmpl/<template> \
 - **`--onboot 1`** — the CA must return on its own after a host reboot.
 - `--rootfs local-lvm:8` is a starting estimate; `step-ca` and its state are small, re-check after
   deployment.
-- DNS is pinned by `playbook-ca.yml` once the `.internal` stack is live: the `ca` guest uses
-  `192.168.2.240` (Technitium on `edge`) so `step-ca` can resolve service names during ACME
-  challenge validation. The playbook verifies the resolver before changing `/etc/resolv.conf`
+- DNS is pinned in a later phase by `playbook-ca-resolver.yml` once the `.internal` stack is
+  live: the `ca` guest uses `192.168.2.240` (Technitium on `edge`) so `step-ca` can resolve
+  service names during ACME challenge validation. The separate playbook verifies the resolver
+  before changing `/etc/resolv.conf`, so the base CA bootstrap in this runbook is unaffected
   ([runbook 37](37-deploy-internal-access-stack.md)).
 
 Append the TPM passthrough to `/etc/pve/lxc/215.conf`:

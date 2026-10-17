@@ -23,12 +23,14 @@ Extras for the Edge Wyse 3040 ingress appliance ([ADR 24](../../../docs/decision
 | `edge_host_bootstrap_nameservers` | `[1.1.1.1, 8.8.8.8]` | Transient upstream only while `systemd-resolved` is being replaced. |
 | `edge_host_technitium_enabled` | `true` | Deploy the DNS service. |
 | `edge_host_technitium_install_dir` | `/opt/technitium/dns` | Portable app directory. |
-| `edge_host_technitium_config_dir` | `/etc/dns` | Zone database and server configuration. |
+| `edge_host_technitium_config_dir` | `/etc/dns` | Zone database and server configuration; mode `0700`, owned by the service user. |
 | `edge_host_technitium_admin_secret_name` | `technitium-admin-password` | AKV secret holding the admin password. |
 | `edge_host_technitium_admin_password` | `""` | Override to skip the AKV lookup (tests). |
 | `edge_host_technitium_forwarders` | Cloudflare + Quad9 | DoT upstreams; IP + name keeps bootstrap off the local resolver. |
+| `edge_host_technitium_dotnet_install_sha256` | pinned | SHA-256 of the downloaded `dotnet-install.sh`; bump deliberately with a runtime upgrade. |
+| `edge_host_technitium_portable_sha256` | pinned | SHA-256 of the Technitium portable archive; bump deliberately with an app upgrade. |
 | `edge_host_technitium_records` | fleet `A` records + `*.internal` | Explicit `ca.internal` → `.215`, wildcard → `.240`. |
-| `edge_host_technitium_upgrade` | `false` | Opt-in portable-app/runtime refresh. |
+| `edge_host_technitium_upgrade` | `false` | Opt-in portable-app/runtime refresh; update the pinned checksums first. |
 | `edge_host_caddy_enabled` | `true` | Deploy the proxy. |
 | `edge_host_caddy_ca_url` | `https://ca.internal:9000/acme/acme/directory` | step-ca ACME directory. |
 | `edge_host_caddy_ca_root_secret_name` | `ca-root-cert` | AKV secret with the fleet root. |
@@ -38,7 +40,8 @@ Extras for the Edge Wyse 3040 ingress appliance ([ADR 24](../../../docs/decision
 
 - **eMMC discipline** — journald is volatile, Technitium query logging is off, stats stay in memory, the cache is not saved to disk, and logs go to journald. The zone database is the only meaningful write path.
 - **ADRs 34/40** — Caddy validates through TLS-ALPN-01 on `443`; HTTP-01 is disabled and TCP/80 stays closed.
-- **Certificates** — every Caddy site obtains a short-lived leaf from `step-ca` in LXC 215 through `ca.internal`; the ACME client trusts the fleet root from AKV.
+- **Certificates** — every Caddy site obtains a short-lived leaf from `step-ca` in LXC 215 through `ca.internal`; the ACME client trusts the fleet root from AKV and restarts Caddy when that root changes.
+- **Admin API** — Technitium binds its web/API service to `127.0.0.1:5380`; use an SSH tunnel for the console and zone export instead of exposing `5380` to the LAN.
 - **Bootstrap** — the host resolver is switched to Technitium only after the service answers, so the play does not cut its own DNS during provisioning.
 - **Backend hop** — the `netdata.internal` site currently reaches Netdata's self-signed HTTPS backend with `tls_insecure_skip_verify`; the client-facing leg is already the step-ca leaf. [#143](https://github.com/jaroslaw-bagnicki/Homelab/issues/143) removes the backend self-signed hop.
 - Applied by `playbook-edge.yml`; hostname/UTC/Avahi come from `common`, UFW/fail2ban/sshd from `security`.

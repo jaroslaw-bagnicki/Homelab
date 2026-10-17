@@ -13,7 +13,7 @@ Significant architectural and technology choices recorded in
 
 | # | Date | ADR | Status |
 |---|------|-----|--------|
-| 40 | 2026-10-17 | [Internal DNS and Reverse Proxy — Technitium + Caddy on the Edge Node](40-internal-dns-proxy-edge.md) | Implemented |
+| 40 | 2026-10-17 | [Internal DNS and Reverse Proxy — Technitium + Caddy on the Edge Node](40-internal-dns-proxy-edge.md) | Accepted |
 | 39 | 2026-10-11 | [NUT Server Host-Native on the pve Node](39-nut-host-native.md) | Accepted |
 | 38 | 2026-10-04 | [Private CA — 10-Year Offline Root, TPM-Bound Intermediate, Short-Lived Leaves](38-private-ca-hierarchy-and-custody.md) | Accepted |
 | 37 | 2026-09-29 | [LAN Name Space Is `.internal` — DNSMasq and `.home` Retired](37-lan-name-space-internal.md) | Accepted |

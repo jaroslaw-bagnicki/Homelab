@@ -31,6 +31,9 @@ ansible-playbook ansible/playbooks/playbook-logs.yml
 # ca private CA guest base provision (from a LAN workstation, runbook 35)
 ansible-playbook ansible/playbooks/playbook-ca.yml
 
+# ca resolver migration to Technitium on edge (later phase, runbook 37)
+ansible-playbook ansible/playbooks/playbook-ca-resolver.yml
+
 # OpenCode per-project workload (decoupled recipe)
 ansible-playbook ansible/workloads/opencode/opencode-playbook.yml
 
@@ -53,6 +56,7 @@ ansible-playbook ansible/workloads/step-ca/step-ca-playbook.yml
 | `playbooks/playbook-nas.yml` | Beetle M-III OMV NAS base provision: common → security → nut_client → netdata → fluentbit (UFW LAN allow for SSH + OMV web `443`, `80` denied per ADR 34; Netdata child streaming to `pve`) |
 | `playbooks/playbook-logs.yml` | Victoria stack guest (`vtstack`, LXC 214) base provision: common → security → docker_host → fluentbit (Docker from the official repo, Debian) |
 | `playbooks/playbook-ca.yml` | Private CA guest (`ca`, LXC 215) base provision: common → security → fluentbit (Debian LXC on `pve`, no Docker) |
+| `playbooks/playbook-ca-resolver.yml` | Later-phase migration of the CA guest to the Technitium resolver on `edge` (runbook 37) |
 | `workloads/` | Self-contained workload recipes — playbook entrypoint, role recipes, ansible-side README, all co-located per workload |
 | `workloads/opencode/` | OpenCode per-project server workload (see [README](workloads/opencode/README.md)) |
 | `workloads/step-ca/` | Private CA — `step-ca` native service on the `ca` guest, TPM-bound intermediate (see [README](workloads/step-ca/README.md)) |
@@ -80,6 +84,7 @@ Base shared roles live in [`roles/`](roles/README.md). The [roles index](roles/R
 | `playbook-nas.yml` | common → security → nut_client → netdata → fluentbit | Beetle M-III OMV NAS base provision + Netdata child (see [runbook 32](../docs/runbooks/32-beetle-m3-omv-setup.md)) |
 | `playbook-logs.yml` | common → security → docker_host → fluentbit | Victoria stack guest (`vtstack`, LXC 214) base provision — Debian 13 LXC on `pve` (see [runbook 33](../docs/runbooks/33-deploy-victorialogs.md)) |
 | `playbook-ca.yml` | common → security → fluentbit | Private CA guest (`ca`, LXC 215) base provision — Debian 13 LXC on `pve` (see [runbook 35](../docs/runbooks/35-deploy-step-ca.md)) |
+| `playbook-ca-resolver.yml` | none (tasks only) | Later-phase resolver migration for the CA guest — requires Technitium on `edge` (see [runbook 37](../docs/runbooks/37-deploy-internal-access-stack.md)) |
 | `workloads/opencode/opencode-playbook.yml` | docker_opencode_ingress → docker_opencode_instances | Deploy the OpenCode per-project server workload (see [runbook 17](../docs/runbooks/17-deploy-opencode-on-cloudlab.md)) |
 | `workloads/step-ca/step-ca-playbook.yml` | step_ca | Deploy the private CA (`step-ca`) with a TPM-bound intermediate (see [runbook 35](../docs/runbooks/35-deploy-step-ca.md) / [runbook 36](../docs/runbooks/36-private-ca-init.md)) |
 

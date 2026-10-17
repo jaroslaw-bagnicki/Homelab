@@ -8,9 +8,9 @@
 > [#151](https://github.com/jaroslaw-bagnicki/Homelab/issues/151).
 >
 > ⚠ **Run order.** Deploy the edge stack and verify DNS; Caddy may still be waiting on a certificate.
-> Then point the `ca` guest at `192.168.2.240` with `playbook-ca.yml`, restart Caddy, and verify TLS.
-> The CA playbook verifies the edge resolver before changing `/etc/resolv.conf`, so a missing edge
-> stack fails safely.
+> Then point the `ca` guest at `192.168.2.240` with `playbook-ca-resolver.yml`, restart Caddy, and verify TLS.
+> The resolver playbook verifies the edge resolver before changing `/etc/resolv.conf`, so a missing
+> edge stack fails safely.
 >
 > ⚠ **Snapshot first.** This changes the edge's resolver, firewall and listening services. Take the
 > full eMMC image from [runbook 27](27-edge-backup-restore.md) before the first live run.
@@ -25,8 +25,9 @@
   the canary site.
 - **Resolver** — `edge` resolves through `127.0.0.1` with `internal` as the search suffix; the switch
   happens only after Technitium answers.
-- **UFW** — `53/tcp+udp` and `443/tcp` from `192.168.2.0/24`, Technitium API `5380/tcp` from the LAN,
-  TCP/80 stays closed, nothing exposed to the internet.
+- **UFW** — `53/tcp+udp` and `443/tcp` from `192.168.2.0/24`; TCP/80 stays closed and nothing is
+  exposed to the internet. Technitium's admin API binds `127.0.0.1:5380` only — use an SSH tunnel
+  for the console and zone export.
 - **CA prerequisite** — the `ca` guest (LXC 215) uses `192.168.2.240` so `step-ca` can resolve
   `netdata.internal` during challenge validation.
 - **No new guest**; the hostname stays `edge` ([ADR 33](../decisions/33-fleet-node-hostnames.md)).
@@ -102,7 +103,7 @@ The `edge_host` role:
 5. switches `/etc/resolv.conf` and `/etc/network/interfaces` to `127.0.0.1` / `internal`;
 6. installs Caddy from its official apt repository, installs the fleet root from AKV, renders the
    Caddyfile and order Caddy after `dns.service`;
-7. opens UFW `53/tcp+udp`, `443/tcp`, `5380/tcp` from the LAN and keeps TCP/80 closed.
+7. opens UFW `53/tcp+udp` and `443/tcp` from the LAN, keeps TCP/80 closed, and leaves the Technitium API loopback-only.
 
 ## 4. Verify DNS
 
@@ -131,10 +132,10 @@ getent hosts ca.internal
 Only after §4 passes:
 
 ```powershell
-ansible-playbook ansible/playbooks/playbook-ca.yml --diff
+ansible-playbook ansible/playbooks/playbook-ca-resolver.yml --diff
 ```
 
-The playbook installs `dig`, verifies `dig @192.168.2.240 netdata.internal` returns `.240`, then
+The resolver playbook installs `dig`, verifies `dig @192.168.2.240 netdata.internal` returns `.240`, then
 writes `nameserver 192.168.2.240` and `search internal` to the CA guest and disables
 `systemd-resolved` if it was the active resolver. If the check fails, the play stops before touching
 `/etc/resolv.conf`.
@@ -158,6 +159,13 @@ step ca health --ca-url https://ca.internal:9000 --root /etc/step-ca/certs/root_
 
 ## 6. Verify Caddy, ACME and TLS
 
+The Technitium console is not exposed to the LAN. Open an SSH tunnel when you need it:
+
+```sh
+ssh -N -L 5380:127.0.0.1:5380 fleetadm@192.168.2.240
+# browse http://localhost:5380
+```
+
 The CA resolver from §5 must be live before this section: without it `step-ca` cannot resolve
 `netdata.internal` to validate a challenge, and Caddy will keep retrying issuance.
 
@@ -167,6 +175,9 @@ systemctl status dns caddy --no-pager
 ufw status verbose
 ss -lntup | grep -E ':53|:443|:5380'
 ```
+
+`ss` must show Technitium on `127.0.0.1:5380`, not `0.0.0.0:5380`, and `ufw status` must not list
+`5380`.
 
 From a client that trusts the fleet root (copy `root_ca.crt` from the offline kit, or use
 `--cacert`):
@@ -197,7 +208,7 @@ curl -sS --connect-timeout 5 -o /dev/null -w '%{http_code}\n' http://192.168.2.2
 
 ```powershell
 ansible-playbook ansible/playbooks/playbook-edge.yml --diff
-ansible-playbook ansible/playbooks/playbook-ca.yml --diff
+ansible-playbook ansible/playbooks/playbook-ca-resolver.yml --diff
 ```
 
 Both must end with `changed=0` (after the first run). Then reboot `edge` and verify:
@@ -222,13 +233,17 @@ survive a reboot.
 
 ## 9. Operations
 
+- **Technitium console** — `ssh -N -L 5380:127.0.0.1:5380 fleetadm@192.168.2.240`, then
+  `http://localhost:5380`; the API is loopback-only.
 - **Add a service** — add an `edge_host_caddy_sites` entry (name + upstream) and, if the name should not
   use the wildcard, an `edge_host_technitium_records` entry; re-run `playbook-edge.yml`. The wildcard already
   points every other `.internal` name at the proxy.
 - **Rotate the Technitium admin password** — change it through the API, update
   `technitium-admin-password` in AKV, then re-run the edge playbook.
-- **Upgrade Technitium** — re-run with `-e edge_host_technitium_upgrade=true`; review the upstream
-  changelog first. Caddy follows the apt repository and unattended upgrades.
+- **Upgrade Technitium** — review the upstream changelog, bump
+  `edge_host_technitium_portable_sha256` (and `edge_host_technitium_dotnet_install_sha256` when the
+  runtime changes), then re-run with `-e edge_host_technitium_upgrade=true`. Caddy follows the apt
+  repository and unattended upgrades.
 - **eMMC watch** — `journalctl --disk-usage` (volatile), `du -sh /etc/dns /var/lib/caddy`,
   `systemctl --failed`. Query logging and disk stats must stay off.
 

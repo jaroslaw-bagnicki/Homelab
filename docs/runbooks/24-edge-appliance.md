@@ -184,12 +184,14 @@ The role provisions everything beyond the §2 bootstrap, idempotently, via
 - **UFW** (SSH from `192.168.2.0/24`, deny inbound otherwise) + **fail2ban** +
   `unattended-upgrades`
 - **eMMC longevity** — journald `Storage=volatile`, logrotate; Netdata is RAM-only (see §6)
-- **services §4–§6** — cloudflared, Caddy, Netdata. Caddy, Technitium DNS and Netdata are live;
+- **services §4–§6** — cloudflared, Caddy, Netdata. Caddy and Technitium DNS are provisioned by
+  [runbook 37](37-deploy-internal-access-stack.md) (live verification pending); Netdata is live;
   cloudflared waits on the public-ingress decision. Netdata is applied by the shared `netdata` role,
   not `edge_host`.
 
 **Base provisioning is written and committed 2026-08-26** (the `edge_host` role + `common`/`security`
-reuse — see §3a). The LAN access stack landed in [runbook 37](37-deploy-internal-access-stack.md).
+reuse — see §3a). The LAN access stack is being deployed in
+[runbook 37](37-deploy-internal-access-stack.md) (live verification pending).
 
 ### 3a. Role layout (base phase)
 
@@ -304,7 +306,7 @@ reuse — see §3a). The LAN access stack landed in [runbook 37](37-deploy-inter
 
 - [x] §1 Debian minimal installed on `mmcblk0`; eMMC boots without F12 (entry re-added 2026-08-18)
 - [x] §2 Static IP `192.168.2.240` reachable; SSH key-only login (fleet key, 2026-08-30)
-- [x] §3 `edge.local` resolves on the LAN (mDNS); SSH key-only via fleet key (2026-09-05); `edge.internal` is served by Technitium ([runbook 37](37-deploy-internal-access-stack.md))
+- [x] §3 `edge.local` resolves on the LAN (mDNS); SSH key-only via fleet key (2026-09-05); `edge.internal` waits on the live [runbook 37](37-deploy-internal-access-stack.md) verification
 - [x] §3 UFW active (SSH from LAN only); fail2ban on (live run 2026-08-30 — ok=24)
 - [ ] §4 cloudflared tunnel up (`cloudflared tunnel list`)
 - [ ] §5 Caddy serves `*.internal` (LAN plane, [runbook 37](37-deploy-internal-access-stack.md)); `*.example.com` waits on the public-ingress decision

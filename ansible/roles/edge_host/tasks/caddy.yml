@@ -68,6 +68,7 @@
     owner: root
     group: root
     mode: "0644"
+  notify: Restart Caddy
 
 - name: Deploy the Caddyfile
   ansible.builtin.template:

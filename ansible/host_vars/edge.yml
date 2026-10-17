@@ -2,14 +2,14 @@
 common_enable_avahi: true
 
 # LAN DNS + reverse proxy (ADR 40). TCP/80 stays closed — Caddy validates through
-# TLS-ALPN-01 on 443, and Technitium serves DNS on 53/tcp+udp and its API on 5380.
+# TLS-ALPN-01 on 443, and Technitium serves DNS on 53/tcp+udp. Its admin API is
+# loopback-only; use an SSH tunnel rather than opening 5380 to the LAN.
 security_ufw_deny_inbound_tcp_80: true
 security_ufw_allow_ssh_from: "192.168.2.0/24"
 security_ufw_allow_tcp_from: "192.168.2.0/24"
 security_ufw_allow_tcp_ports:
   - 53
   - 443
-  - 5380
 security_ufw_allow_udp_from: "192.168.2.0/24"
 security_ufw_allow_udp_ports:
   - 53
