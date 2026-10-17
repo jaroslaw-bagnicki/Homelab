@@ -35,7 +35,25 @@
 
 ## 1. Fleet rollout
 
-Apply the base playbook of each node — `ca_trust` runs right after `security`:
+**Existing fleet — run the dedicated playbook.** It applies `ca_trust` and nothing else:
+
+```sh
+# Dev container only — the world-writable workspace breaks ansible.cfg:
+chmod 755 /workspaces/Homelab /workspaces/Homelab/ansible
+
+# LAN nodes (pve, lab, edge, nas, vtstack) — from a workstation
+ansible-playbook ansible/playbooks/playbook-ca-trust.yml --diff \
+  --limit 'physical:proxmox_guests'
+
+# VPS — from the dev container
+ansible-playbook ansible/playbooks/playbook-ca-trust.yml --diff --limit cloudlab
+```
+
+The play is `hosts: all:!ca` — the `ca` guest is excluded because it installs root **and**
+intermediate for its own TLS.
+
+**New or re-provisioned node — nothing extra to do.** `ca_trust` sits in every base playbook, right
+after `security`:
 
 | Host | Playbook |
 |---|---|
@@ -46,24 +64,8 @@ Apply the base playbook of each node — `ca_trust` runs right after `security`:
 | `vtstack` | `ansible/playbooks/playbook-logs.yml` |
 | `cloudlab` | `ansible/playbooks/playbook.yml` |
 
-```sh
-# Dev container only — the world-writable workspace breaks ansible.cfg:
-chmod 755 /workspaces/Homelab /workspaces/Homelab/ansible
-
-ansible-playbook ansible/playbooks/playbook-pve.yml --diff
-```
-
-To apply **only** the trust role, without re-running the rest of a node's base playbook:
-
-```sh
-ansible-playbook ansible/playbooks/playbook-ca-trust.yml --diff \
-  --limit 'physical:proxmox_guests'       # LAN nodes, from a workstation
-ansible-playbook ansible/playbooks/playbook-ca-trust.yml --diff \
-  --limit cloudlab                        # VPS, from the dev container
-```
-
-Run the rollout **twice** (base playbook or the targeted one): the first run installs the root and
-fires `update-ca-certificates`; the second must report `changed=0` for the `ca_trust` tasks.
+Run the rollout **twice**: the first run installs the root and fires `update-ca-certificates`; the
+second must report `changed=0` for the `ca_trust` tasks.
 
 ## 2. Verify a node trusts the root
 
@@ -86,6 +88,10 @@ re-run the playbook and read the output of `update-ca-certificates`.
 
 `cloudlab` has no route to `.internal`: there the role's own store assertion
 (`openssl verify -CAfile /etc/ssl/certs/ca-certificates.crt`) is the verification.
+
+**Execution record.** Applied 2026-10-17 with `playbook-ca-trust.yml` across all six nodes —
+`ok=10 changed=2`, re-run `changed=0`; end-to-end checks passed on the five LAN nodes
+([#144](https://github.com/jaroslaw-bagnicki/Homelab/issues/144)).
 
 ## 3. Workstations and phones
 
