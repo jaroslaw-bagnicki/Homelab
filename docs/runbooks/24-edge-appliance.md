@@ -199,8 +199,8 @@ reuse — see §3a). The LAN access stack is being deployed in
   (`common_enable_avahi: true` → `edge.local`)
 - `ansible/roles/security` (reused, tuned via `host_vars/edge.yml`) — UFW default-deny +
   SSH allow from `192.168.2.0/24` (`security_ufw_allow_ssh_from`), DNS `53/tcp+udp`, HTTPS
-  `443`, Technitium API `5380` from the LAN, fail2ban, sshd key-only hardening; TCP/80 stays
-  closed (`security_ufw_deny_inbound_tcp_80: true`)
+  `443` (the Technitium console included — `5380` stays on loopback), fail2ban, sshd key-only
+  hardening; TCP/80 stays closed (`security_ufw_deny_inbound_tcp_80: true`)
 - `ansible/roles/edge_host` — `unattended-upgrades`, `logrotate`, journald `Storage=volatile`,
   **Technitium DNS** (authoritative `internal.`, DoT upstreams, API-driven zone/records) and
   **Caddy** (LAN reverse proxy, per-service leaves from `step-ca`), plus the `127.0.0.1` /

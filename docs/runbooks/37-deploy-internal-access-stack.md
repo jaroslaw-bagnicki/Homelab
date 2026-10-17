@@ -26,8 +26,9 @@
 - **Resolver** — `edge` resolves through `127.0.0.1` with `internal` as the search suffix; the switch
   happens only after Technitium answers.
 - **UFW** — `53/tcp+udp` and `443/tcp` from `192.168.2.0/24`; TCP/80 stays closed and nothing is
-  exposed to the internet. Technitium's admin API binds `127.0.0.1:5380` only — use an SSH tunnel
-  for the console and zone export.
+  exposed to the internet. Technitium's admin API binds `127.0.0.1:5380` only, and Caddy publishes
+  the console at `https://technitium.internal` — plaintext HTTP never reaches the LAN
+  ([ADR 34](../decisions/34-lan-tls-only.md)).
 - **CA prerequisite** — the `ca` guest (LXC 215) uses `192.168.2.240` so `step-ca` can resolve
   `netdata.internal` during challenge validation.
 - **No new guest**; the hostname stays `edge` ([ADR 33](../decisions/33-fleet-node-hostnames.md)).
@@ -159,12 +160,18 @@ step ca health --ca-url https://ca.internal:9000 --root /etc/step-ca/certs/root_
 
 ## 6. Verify Caddy, ACME and TLS
 
-The Technitium console is not exposed to the LAN. Open an SSH tunnel when you need it:
+The Technitium console is published by Caddy over TLS — open `https://technitium.internal` from a
+client that resolves it through Technitium and trusts the fleet root. Plaintext HTTP is never exposed:
+Technitium listens on `127.0.0.1:5380` and nothing opens that port to the LAN.
 
 ```sh
-ssh -N -L 5380:127.0.0.1:5380 fleetadm@192.168.2.240
-# browse http://localhost:5380
+# Same check as the browser, from a client that trusts the root
+curl --resolve technitium.internal:443:192.168.2.240 --cacert root_ca.crt \
+  -sS -o /dev/null -w '%{http_code}\n' https://technitium.internal/
 ```
+
+Expected: `200` and the `step-ca` leaf — `openssl s_client` must show `DNS:technitium.internal`. A
+`502` means Technitium is not listening on loopback (`systemctl status dns`).
 
 The CA resolver from §5 must be live before this section: without it `step-ca` cannot resolve
 `netdata.internal` to validate a challenge, and Caddy will keep retrying issuance.
@@ -233,8 +240,8 @@ survive a reboot.
 
 ## 9. Operations
 
-- **Technitium console** — `ssh -N -L 5380:127.0.0.1:5380 fleetadm@192.168.2.240`, then
-  `http://localhost:5380`; the API is loopback-only.
+- **Technitium console** — `https://technitium.internal` over TLS via Caddy. Technitium itself only
+  listens on `127.0.0.1:5380`; that port is never opened and plaintext HTTP is not a supported path.
 - **Add a service** — add an `edge_host_caddy_sites` entry (name + upstream) and, if the name should not
   use the wildcard, an `edge_host_technitium_records` entry; re-run `playbook-edge.yml`. The wildcard already
   points every other `.internal` name at the proxy.
@@ -252,7 +259,7 @@ survive a reboot.
 | Symptom | Check |
 |---|---|
 | `dns.service` does not start | `journalctl -u dns -n 50`; `ss -lntp \| grep :53`; ensure `systemd-resolved` is stopped; confirm `libicu76` and the ASP.NET runtime are installed |
-| Technitium API login fails | `curl http://127.0.0.1:5380/api/status` shows `hasDefaultCredentials`; verify the AKV secret matches the password on the appliance |
+| Technitium API login fails | From `edge`: `curl -s http://127.0.0.1:5380/api/status` shows `hasDefaultCredentials`; verify the AKV secret matches the password on the appliance |
 | `ca.internal` resolves to `.240` | The explicit `ca.internal` record is missing — re-run the edge playbook; delete the bad record first if it was created manually |
 | Caddy serves the default page | `caddy validate`, `systemctl status caddy`, `journalctl -u caddy`; confirm the Caddyfile template was rendered |
 | ACME fails | `journalctl -u caddy`; from `edge`, `dig ca.internal`; from `ca`, `dig netdata.internal`; confirm TCP/443 reaches `.240` and TCP/9000 reaches `.215`; check clocks |
