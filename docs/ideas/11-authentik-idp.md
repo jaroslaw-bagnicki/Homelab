@@ -7,9 +7,9 @@
 > [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md)); what remains is **who** is
 > calling.
 
-**Status**: 🧠 Idea — no lab decision taken yet
-**Date**: 2026-10-17
-**Source**: [Gemini — what Authentik is, Caddy/VictoriaLogs integration, local-only deployment](https://share.gemini.google/hybMZLfvSa85) (published 2026-10-17)
+**Status**: 🧠 Idea — no lab decision taken yet  
+**Date**: 2026-10-17  
+**Source**: [Gemini — what Authentik is, Caddy/VictoriaLogs integration, local-only deployment](https://share.gemini.google/hybMZLfvSa85) (published 2026-10-17)  
 **Related**: [ADR 34](../decisions/34-lan-tls-only.md) (transport, not users) · [idea 10](10-internal-ca-dns-stack.md) (the access stack this sits on) · [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) / [ADR 37](../decisions/37-lan-name-space-internal.md) (TLS and names) · [ADR 36](../decisions/36-log-collector-fluentbit.md) / [ADR 35](../decisions/35-log-store-victorialogs.md) (log shipping) · [ADR 31](../decisions/31-static-address-scheme.md) (guest addressing) · [ADR 22](../decisions/22-k3s-arc-homelab.md) (k3s platform)
 
 ---
