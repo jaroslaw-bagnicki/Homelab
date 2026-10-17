@@ -237,10 +237,14 @@ sudo grep -E 'tier [0-2] retention' /etc/netdata/netdata.conf   # per-tier time 
 du -sh /var/cache/netdata/dbengine                              # actual DB size vs the caps
 ```
 
-Check the C-state charts — one `cpuN_cpuidle` chart per core (4 / 4 / 2 / 4 across the fleet):
+Check the C-state charts on every host — one `cpuN_cpuidle` chart per core:
 
 ```sh
-curl -sk https://192.168.2.201:19999/host/pve/api/v1/charts | grep -o 'cpu[0-9]*_cpuidle' | sort -u
+for h in pve:4 lab:4 nas:2 edge:4; do
+  host=${h%%:*}; want=${h##*:}
+  got=$(curl -sk "https://192.168.2.201:19999/host/$host/api/v1/charts" | grep -o 'cpu[0-9]*_cpuidle' | sort -u | wc -l)
+  echo "$host: $got (expected $want)"
+done
 ```
 
 Retention is a **combined** limit — data is dropped when either the time or the size limit is

@@ -13,7 +13,7 @@ Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month 
 
 ## 2026‑10
 
-- **(feat)** Chart per-core CPU C-state residency in Netdata on all four nodes — [research 40](docs/research/40-netdata-cpu-cstates.md)
+- **(feat)** Enable per-core CPU C-state residency charts in Netdata across the fleet — [runbook 31](docs/runbooks/31-deploy-netdata.md)
 - **(fix)** Replace the failed `md0` mirror disk on the Beetle NAS (`WDEPBVR3` → `WL10C3NG`), restoring `[2/2] [UU]` — [runbook 38](docs/runbooks/38-nas-disk-replacement.md)
 - **(feat)** Serve `.internal` from the `edge` node — Technitium DNS + Caddy with short-lived `step-ca` leaves — [runbook 37](docs/runbooks/37-deploy-internal-access-stack.md)
 - **(docs)** Add idea 11 — Authentik as the lab identity provider — [idea 11](docs/ideas/11-authentik-idp.md)

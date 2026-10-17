@@ -65,9 +65,10 @@ Three findings from the installed **v2.12.1** source (`proc_stat.c`):
    above that threshold). The upstream README still says "more than 50 processors" — stale; the source
    and `metadata.yaml` agree on 128. Every fleet node is 2–4 cores, so the default is simply `no`.
 2. **`auto` does not create the charts.** The chart-creation guard is
-   `r != -1 && (do_cpuidle == CONFIG_BOOLEAN_YES || r > 0)`, while `read_cpuidle_states()` returns `0`
-   on success and `1` only on error — so the `auto` value never satisfies it. `yes` is the only value
-   that yields charts. (An `auto` written into `netdata.conf` looks configured but stays dark.)
+   `r != -1 && (do_cpuidle == CONFIG_BOOLEAN_YES || r > 0)` (`proc_stat.c:968` in v2.12.1), while
+   `read_cpuidle_states()` returns `0` on success and `1` only on error; `inicfg.h` defines `NO = 0`,
+   `YES = 1`, `AUTO = 2`, so the `auto` value never satisfies the guard. `yes` is the only value that
+   yields charts. (An `auto` written into `netdata.conf` looks configured but stays dark.)
 3. `/proc/schedstat` must exist and parse; if the `stat()` on it fails the module forces the option back
    to `no` **regardless of the config value**.
 
@@ -125,9 +126,11 @@ sudo systemctl restart netdata
 curl -sk https://192.168.2.201:19999/host/<host>/api/v1/charts | grep -o 'cpu[0-9]*_cpuidle' | sort -u
 ```
 
-Follow-ups for the implementing PR: a note in [runbook 31](../runbooks/31-deploy-netdata.md)'s config
-section, and the `CHANGELOG.md` entry; the Observability table in [overview](../overview.md) needs no
-new row — this extends the existing "Node metrics" signal.
+Implemented in the same PR — `netdata_cpu_idle_states` (role default `true`), documented here, in the
+role README and in [runbook 31](../runbooks/31-deploy-netdata.md). Outstanding: the live playbook runs
+and the per-core chart count (4 / 4 / 2 / 4); the runbook checklist row stays open until then. The
+Observability table in [overview](../overview.md) needs no new row — this extends the existing
+"Node metrics" signal.
 
 ## §6 — What appears
 
@@ -167,7 +170,7 @@ and named "C-state residency time". Each shows `active` plus one dimension per k
 | States exposed | `cat /sys/devices/system/cpu/cpuidle/current_driver` | `intel_idle` |
 | Active-time source | `test -r /proc/schedstat && echo ok` | `ok` |
 | Option present | `grep -A2 'plugin:proc:/proc/stat' /etc/netdata/netdata.conf` | `cpu idle states = yes` |
-| Charts created | `curl -sk https://<parent>:19999/host/<host>/api/v1/charts \| grep -c cpuidle` | one per core (4/4/2/4) |
+| Charts created | `curl -sk https://<parent>:19999/host/<host>/api/v1/charts \| grep -o 'cpu[0-9]*_cpuidle' \| sort -u \| wc -l` | one per core (4/4/2/4) |
 | Sanity fallback | `cpupower idle-info` | same state names |
 
 ## References
