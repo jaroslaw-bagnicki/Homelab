@@ -13,7 +13,7 @@ Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month 
 
 ## 2026‑10
 
-- **(feat)** Every fleet node and personal device now trusts the private CA — root distribution from Key Vault via the `ca_trust` role — [runbook 39](docs/runbooks/39-trust-private-ca.md)
+- **(feat)** Automate private-CA root distribution to the fleet (`ca_trust` role) and document the trust procedure for personal devices — [runbook 39](docs/runbooks/39-trust-private-ca.md)
 - **(fix)** Replace the failed `md0` mirror disk on the Beetle NAS (`WDEPBVR3` → `WL10C3NG`), restoring `[2/2] [UU]` — [runbook 38](docs/runbooks/38-nas-disk-replacement.md)
 - **(feat)** Serve `.internal` from the `edge` node — Technitium DNS + Caddy with short-lived `step-ca` leaves — [runbook 37](docs/runbooks/37-deploy-internal-access-stack.md)
 - **(docs)** Add idea 11 — Authentik as the lab identity provider — [idea 11](docs/ideas/11-authentik-idp.md)

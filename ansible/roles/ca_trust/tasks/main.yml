@@ -27,6 +27,26 @@
   delegate_to: localhost
   no_log: true
 
+- name: Read the fetched root certificate fingerprint
+  when: ca_trust_root_sha256 | length > 0
+  ansible.builtin.command:
+    cmd: openssl x509 -noout -fingerprint -sha256
+    stdin: "{{ ca_trust_cert }}"
+  register: ca_trust_fetched_fingerprint
+  changed_when: false
+  delegate_to: localhost
+
+- name: Assert the fetched certificate is the pinned fleet root
+  when: ca_trust_root_sha256 | length > 0
+  ansible.builtin.assert:
+    that:
+      - ca_trust_fetched_fingerprint.stdout.split('=')[-1] | trim | upper == ca_trust_root_sha256 | upper
+    fail_msg: >-
+      The Key Vault secret '{{ ca_trust_secret_name }}' is not the pinned fleet root (expected
+      SHA-256 {{ ca_trust_root_sha256 }}, got
+      {{ ca_trust_fetched_fingerprint.stdout.split('=')[-1] | trim }}). Re-publish the issued root
+      with Set-HomelabCaRootCert.ps1; change the pin only if the root was re-issued.
+
 - name: Install trust-store prerequisites
   ansible.builtin.apt:
     name:

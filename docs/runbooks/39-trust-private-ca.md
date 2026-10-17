@@ -56,8 +56,10 @@ Run each playbook **twice**: the first run installs the root and fires
 
 ## 2. Verify a node trusts the root
 
-The role already asserts the fingerprint-bearing certificate is in the bundle the system consults
-(`openssl verify -CAfile /etc/ssl/certs/ca-certificates.crt …`). Check the end-to-end path:
+The role pins the root's public SHA-256 fingerprint, so a stale or foreign Key Vault entry fails
+before anything is installed, and it asserts the installed certificate is in the bundle the system
+consults (`openssl verify -CAfile /etc/ssl/certs/ca-certificates.crt`). That proves ingestion, not
+the live chain — check the end-to-end path:
 
 ```sh
 # from any fleet node, once its resolver points at Technitium (runbook 37)

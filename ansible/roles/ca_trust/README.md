@@ -20,16 +20,23 @@ re-sign.
 |---|---|---|
 | `ca_trust_keyvault_name` | `homelab-bysxdb-kv` | Vault holding the CA root. |
 | `ca_trust_secret_name` | `ca-root-cert` | Secret name — PEM value, `Expires` mirrors the root's `notAfter`. |
+| `ca_trust_root_sha256` | `02:83:B2:6B:…:2C:E0` | Pinned SHA-256 fingerprint of the fleet root; the Key Vault value must match. `""` skips the pin (tests). |
 | `ca_trust_cert` | `""` | Override to skip the Key Vault lookup (tests). |
 
 ## Behaviour
 
 - **One source of truth** — the root is read from Key Vault, never checked in: a repo copy and a
   vault copy would be two truths for a 10-year anchor. Trust comes from the authenticated read.
+- **Pinned identity, not a self-check** — the fetched certificate's SHA-256 fingerprint must equal
+  `ca_trust_root_sha256` *before* anything is installed, so a stale or foreign vault entry fails on
+  every node (the fingerprint is public; it is the root's identity, not a secret). Change the pin
+  only when the root itself is re-issued.
 - **Content-driven idempotence** — `copy` compares content, so `update-ca-certificates` runs only
   on a real change.
-- **Verified, not assumed** — the last task proves the installed root is in the bundle the system
-  actually consults (`openssl verify -CAfile /etc/ssl/certs/ca-certificates.crt`).
+- **Store presence is asserted** — the last task proves the installed root is in the bundle the
+  system consults (`openssl verify -CAfile /etc/ssl/certs/ca-certificates.crt`). That proves
+  ingestion, not the live chain: end-to-end validation against `ca.internal` is
+  [runbook 39](../../../docs/runbooks/39-trust-private-ca.md) §2.
 - **Debian/Ubuntu only** — the whole fleet runs Debian/Ubuntu; the FreeBSD `certctl` path is not
   implemented because no FreeBSD host exists.
 - **Not applied to `ca`** — the CA guest installs root **and** intermediate in `/etc/step-ca/certs`
