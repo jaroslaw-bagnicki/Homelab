@@ -1,8 +1,8 @@
 # Internal Access Stack — Technitium DNS + Caddy on the `edge` Node
 
 > Make `.internal` resolve and terminate TLS on the edge appliance: **Technitium DNS** is
-> authoritative for `internal.` and the fleet resolver, **Caddy** is the single LAN reverse proxy,
-> and both issue per-service leaves from the fleet `step-ca` over ACME TLS-ALPN-01. Decision:
+> authoritative for `internal.` and the fleet resolver, **Caddy** is the single LAN reverse proxy and
+> issues per-service leaves from the fleet `step-ca` over ACME TLS-ALPN-01. Decision:
 > [ADR 40](../decisions/40-internal-dns-proxy-edge.md); resolver analysis:
 > [research 38](../research/38-technitium-dns.md); tracked in
 > [#151](https://github.com/jaroslaw-bagnicki/Homelab/issues/151).
@@ -20,9 +20,9 @@
 - **Technitium DNS** — native systemd on `edge` (`192.168.2.240`), authoritative zone `internal.`,
   wildcard `*.internal` → `.240`, explicit fleet `A` records (`ca.internal` → `.215`), DoT upstreams,
   admin password from AKV. Query logging, disk stats and cache persistence are off (eMMC discipline).
-- **Caddy** — native systemd, `:443` only, Caddyfile rendered by Ansible. It obtains short-lived
-  per-service certificates from `step-ca` with TLS-ALPN-01 and serves `https://netdata.internal` as
-  the canary site.
+- **Caddy** — native systemd, `:443` only, Caddyfile rendered by Ansible from the `caddy_sites`
+  list. It obtains short-lived per-service certificates from `step-ca` with TLS-ALPN-01 and publishes
+  `dns`, `netdata`, `logs`, `proxmox` and `omv` under `.internal`.
 - **Resolver** — `edge` resolves through `127.0.0.1` with `internal` as the search suffix; the switch
   happens only after Technitium answers.
 - **UFW** — `53/tcp+udp` and `443/tcp` from `192.168.2.0/24`; TCP/80 stays closed and nothing is
@@ -124,8 +124,13 @@ From a LAN client:
 
 ```sh
 dig @192.168.2.240 netdata.internal +short    # 192.168.2.240
+dig @192.168.2.240 dns.internal +short        # 192.168.2.240 (wildcard)
+dig @192.168.2.240 logs.internal +short       # 192.168.2.240 (wildcard)
+dig @192.168.2.240 proxmox.internal +short    # 192.168.2.240 (wildcard)
+dig @192.168.2.240 omv.internal +short        # 192.168.2.240 (wildcard)
 dig @192.168.2.240 ca.internal +short         # 192.168.2.215
 dig @192.168.2.240 pve.internal +short        # 192.168.2.201
+dig @192.168.2.240 nas.internal +short        # 192.168.2.202
 dig @192.168.2.240 edge.internal +short       # 192.168.2.240
 dig @192.168.2.240 example.com +short         # forwarded upstream
 ```
@@ -248,7 +253,10 @@ Both must end with `changed=0` (after the first run). Then reboot `edge` and ver
 systemctl is-active dns caddy
 systemctl --failed
 dig @192.168.2.240 netdata.internal +short
-curl --resolve netdata.internal:443:192.168.2.240 --cacert root_ca.crt https://netdata.internal/
+for n in dns netdata logs proxmox omv; do
+  curl --resolve $n.internal:443:192.168.2.240 --cacert root_ca.crt -sS -o /dev/null \
+    -w "$n.internal: %{http_code}\n" https://$n.internal/
+done
 ```
 
 Technitium's zone database, the Caddy certificates under `/var/lib/caddy`, and the systemd units all
@@ -271,7 +279,7 @@ survive a reboot.
   `playbook-technitium.yml` for a record) instead of the whole edge play. The wildcard already
   points every other `.internal` name at the proxy.
 - **Rotate the Technitium admin password** — change it through the API, update
-  `technitium-admin-password` in AKV, then re-run the edge playbook.
+  `technitium-admin-password` in AKV, then re-run `playbook-technitium.yml`.
 - **Upgrade Technitium** — review the upstream changelog, bump
   `technitium_portable_sha256` (and `technitium_dotnet_install_sha256` when the
   runtime changes), then re-run with `-e technitium_upgrade=true`. Caddy follows the apt
@@ -290,21 +298,24 @@ survive a reboot.
 | ACME fails | `journalctl -u caddy`; from `edge`, `dig ca.internal`; from `ca`, `dig netdata.internal`; confirm TCP/443 reaches `.240` and TCP/9000 reaches `.215`; check clocks |
 | Certificate warning in a browser | The client lacks the fleet root — [#144](https://github.com/jaroslaw-bagnicki/Homelab/issues/144) distributes it |
 | `netdata.internal` returns 502 | Netdata Parent not listening on `192.168.2.201:19999`; check [runbook 31](31-deploy-netdata.md) |
+| Any other site returns 502 | The upstream is down: Technitium `:5380` on `edge`, VictoriaLogs `192.168.2.214:9428`, `pveproxy` `192.168.2.201:8006`, OMV nginx `192.168.2.202:443` |
 | Caddy starts before DNS on boot | Confirm `caddy.service.d/10-after-dns.conf` exists; Caddy should still start on a CA outage and retry issuance |
 
 ---
 
 ## Verification Checklist
 
-- [ ] §1 pre-flight clean; CA reachable from `edge`
-- [ ] §2 `technitium-admin-password` and `ca-root-cert` present in AKV
-- [ ] §3 `playbook-edge.yml` applied cleanly
-- [ ] §4 `netdata.internal` and `ca.internal` resolve from a LAN client
-- [ ] §5 CA guest uses `192.168.2.240`; `step ca health` clean
-- [ ] §6 Caddy serves `https://netdata.internal` with a step-ca leaf; TCP/80 closed
-- [ ] §7 both playbooks re-run with `changed=0`; edge survives a reboot
-- [ ] §8 zone export stored beside the eMMC image
-- [ ] `docs/overview.md` / `docs/hardware.md` reflect the edge's LAN role
+Executed **2026-10-17** on the live fleet; the eMMC snapshot prerequisite was waived by the operator.
+
+- [x] §1 pre-flight clean; CA reachable from `edge`
+- [x] §2 `technitium-admin-password` and `ca-root-cert` present in AKV
+- [x] §3 `playbook-edge.yml` applied cleanly
+- [x] §4 all `.internal` records resolve from a LAN client (`ca.internal` explicit, everything else wildcard)
+- [x] §5 CA guest uses `192.168.2.240`; `step ca health` clean
+- [x] §6 `dns`/`netdata`/`proxmox`/`omv` serve 200 and `logs` serves 401 over step-ca leaves; TCP/80 closed
+- [x] §7 both playbooks re-run with `changed=0`; edge survives a reboot
+- [ ] §8 zone export stored beside the eMMC image — export taken, but the NAS share does not exist yet
+- [x] `docs/overview.md` / `docs/hardware.md` reflect the edge's LAN role
 
 ## References
 
