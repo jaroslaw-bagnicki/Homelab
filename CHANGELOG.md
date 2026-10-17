@@ -13,6 +13,7 @@ Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month 
 
 ## 2026‑10
 
+- **(docs)** Research 38/39 — Technitium DNS as the `.internal` resolver, and Caddy staying off the OPNsense router — [research 38](docs/research/38-technitium-dns.md)
 - **(feat)** Move the NUT server host-native on `pve` under Ansible, retiring LXC 213, and widen the NUT fail-safe window to 120 s — [ADR 39](docs/decisions/39-nut-host-native.md) · [runbook 29](docs/runbooks/29-nut-ups-shutdown.md)
 - **(feat)** Private CA — offline signing kit, root and TPM-sealed intermediate issued, `step-ca` serving ACME on the `ca` guest — [runbook 35](docs/runbooks/35-deploy-step-ca.md)
 
