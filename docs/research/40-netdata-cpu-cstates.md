@@ -132,17 +132,24 @@ targeted `playbook-netdata.yml`; the parent API reports one `cpuN_cpuidle` chart
 across `pve` / `lab` / `nas` / `edge`. The Observability table in [overview](../overview.md) needs no
 new row — this extends the existing "Node metrics" signal.
 
-## §6 — What appears
+## §6 — What appears — and why the dashboard shows one panel
 
-One chart **per core**, per host — 14 charts fleet-wide (4 + 4 + 2 + 4), all under the `cpuidle` family
-and named "C-state residency time". Each shows `active` plus one dimension per kernel state, stacked to
-~100 %. On the new dashboard they surface beside the other CPU charts; searching the Metrics tab for
-"C-state" is the reliable way to find a specific core.
+Netdata **stores one chart per core**, per host — 14 charts fleet-wide (4 + 4 + 2 + 4), all sharing the
+context `cpuidle.cpu_cstate_residency_time` and named "C-state residency time". Each stores `active`
+plus one dimension per kernel state, stacked to ~100 %.
+
+The new dashboard, however, **groups charts by context and aggregates matching dimensions across the
+four per-core charts**: the panel is labelled "4 cpu cores", the selector reads "Group by dimension …
+each as AVG()", and the values shown are each dimension **averaged across the cores**, not one core's
+residency. Drill into a single CPU with the instance selector ("4 cpu cores" → pick `cpu0`…`cpuN`) or
+by changing the grouping/aggregation. The API has no aggregated chart — `cpu.cpu0_cpuidle` …
+`cpu.cpuN_cpuidle` are distinct.
 
 ## §7 — Caveats
 
-- **Per-core, never aggregated.** Netdata does not merge cores into a fleet chart; use the family view
-  or filter by host.
+- **Per-core storage, aggregated presentation.** The agent writes one chart per core; the dashboard
+  groups by dimension and averages them ("4 cpu cores", `AVG()`), so the panel is a summary across
+  cores. Select a single core in the instance selector before drawing conclusions about one CPU.
 - **The collector wakes idle cores.** When a core showed no run time in an interval, `proc.plugin`
   briefly schedules a thread pinned to that core so the cpuidle counters advance. That is one short
   wake per fully idle core per collection interval — deliberate, negligible, but it does mean the act of

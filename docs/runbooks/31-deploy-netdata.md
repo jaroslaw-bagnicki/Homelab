@@ -250,6 +250,9 @@ for h in pve:4 lab:4 nas:2 edge:4; do
 done
 ```
 
+The dashboard groups the per-core charts into one panel — "4 cpu cores", each dimension as `AVG()` —
+so pick a core in the instance selector (`4 cpu cores` → `cpuN`) before reading a single CPU's residency.
+
 Retention is a **combined** limit — data is dropped when either the time or the size limit is
 reached — and both apply **per tier**, so the DB ceiling is the **sum** of the three caps (≈9 GiB on
 the Parent). If a tier binds on size before its time target, raise that tier's `size` in
