@@ -220,7 +220,8 @@
   no_log: true
 
 - name: Log in to Technitium with the provisioned password again
-  when: edge_host_technitium_default_login.json is defined
+  # Unconditional on purpose: a task skipped by `when` still assigns its result to
+  # `register`, which would replace the success above with a dict that has no `json`.
   ansible.builtin.uri:
     url: "{{ edge_host_technitium_api_url }}/api/user/login"
     method: POST
