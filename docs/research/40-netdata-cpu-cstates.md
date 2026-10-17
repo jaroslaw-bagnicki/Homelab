@@ -7,7 +7,9 @@ residency is collected, why it is missing from the dashboards today, and the sin
 it on. Not a power-monitoring design: it is a per-node diagnostic signal beside the existing CPU
 charts ([ADR 27](../decisions/27-monitoring-strategy.md), [runbook 31](../runbooks/31-deploy-netdata.md)).
 
-**Status**: 📋 Researched — ready to implement as a role change.
+**Status**: ✅ Adopted — implemented as `netdata_cpu_idle_states: true` in the shared `netdata` role
+(supersedes the earlier "researched" state; deployment and chart verification are recorded in
+[runbook 31](../runbooks/31-deploy-netdata.md)).
 
 > **Verification**: mechanics read from the **v2.12.1** source (`src/collectors/proc.plugin/proc_stat.c`,
 > the version running on every node) and the upstream integration metadata; fleet facts captured live
