@@ -60,6 +60,8 @@ Edge nodes stream to the Parent on the `pve` node; the NAS joins when it joins t
   alarms never flag a mains loss (§2).
 - **Stream key** — a shared `netdata-stream-api-key` in `homelab-bysxdb-kv`, fetched at deploy time,
   sent only inside the TLS stream (§1).
+- **CPU C-states** — per-core C-state residency charts on every host (`cpu idle states = yes`; the
+  agent's default is off and `auto` never creates them — [research 40](../research/40-netdata-cpu-cstates.md)).
 - **History** — per-tier, from `netdata_retention_tiers`, which the role selects by `netdata_role` from `netdata_retention_tiers_by_role` (a `time` target and a `size` cap per tier).
   Children stay at 7 d / 256 MiB; the **Parent** holds **14 d at 1s (5 GiB)**, **30 d at 1m (2 GiB)** and
   **365 d at 1h (2 GiB)** — sized from measured growth: the live Parent (2026-10-10, ~15.8k metrics)
@@ -235,6 +237,22 @@ sudo grep -E 'tier [0-2] retention' /etc/netdata/netdata.conf   # per-tier time 
 du -sh /var/cache/netdata/dbengine                              # actual DB size vs the caps
 ```
 
+Targeted re-apply: `ansible-playbook ansible/playbooks/playbook-netdata.yml --diff` — `hosts: physical`,
+so `pve`, `lab`, `nas` and `edge` get the `netdata` role only and nothing else re-runs.
+
+Check the C-state charts on every host — one `cpuN_cpuidle` chart per core:
+
+```sh
+for h in pve:4 lab:4 nas:2 edge:4; do
+  host=${h%%:*}; want=${h##*:}
+  got=$(curl -sk "https://192.168.2.201:19999/host/$host/api/v1/charts" | grep -o 'cpu[0-9]*_cpuidle' | sort -u | wc -l)
+  echo "$host: $got (expected $want)"
+done
+```
+
+The dashboard groups the per-core charts into one panel — "4 cpu cores", each dimension as `AVG()` —
+so pick a core in the instance selector (`4 cpu cores` → `cpuN`) before reading a single CPU's residency.
+
 Retention is a **combined** limit — data is dropped when either the time or the size limit is
 reached — and both apply **per tier**, so the DB ceiling is the **sum** of the three caps (≈9 GiB on
 the Parent). If a tier binds on size before its time target, raise that tier's `size` in
@@ -285,6 +303,7 @@ Executed 2026-09-19 (install and configuration) and 2026-09-20 (§5 updates) —
 - [x] §3 Edge child streams to the Parent; `netdata.conf` `mode = ram`
 - [x] §4 `dbengine tier 0/1/2 retention time = 7d` + `retention size` present (1 GiB per tier on the parent); `du -sh /var/cache/netdata/dbengine` → `512K` on a fresh install — *superseded 2026-09-26 by the per-tier row below*
 - [x] §4 retention is now **per-tier** (role-owned) — `netdata_retention_tiers` renders **`14d`/`3GiB`**, **`30d`/`2GiB`**, **`365d`/`2GiB`** on the Parent (verified live in `netdata.conf` 2026-09-26 — the 21 d first cut ran `ok=45 changed=3 failed=0`, the trim to 14 d ran `ok=45 changed=2 failed=0`; `netdata` active, DB 993 MB); children stay at 7 d / 256 MiB — **tier-0 cap raised `3GiB` → `5GiB` 2026-10-10** (the 3 GiB cap bound at ~9 d of the 14 d target)
+- [x] §4 C-state charts present on all four hosts — `pve` 4 / `lab` 4 / `nas` 2 / `edge` 4 `cpuN_cpuidle` charts from the parent API (2026-10-17, targeted `playbook-netdata.yml`: `ok=11–18 changed=2 failed=0` per host — the option plus the restart), enabled by `netdata_cpu_idle_states` ([research 40](../research/40-netdata-cpu-cstates.md))
 - [ ] §4 per-tier retention **effective** values confirmed as the tiers fill — the console storage view should show `effective` = `configured` for tiers 1 and 2 once 30 d / 365 d of data exist (weeks out)
 - [x] §4 no validation command printed the shared key
 - [x] Idempotent — a re-run reports **`changed=0`** for this role on all three nodes (`pve` `ok=38 changed=0`, `edge` `ok=40 changed=0`; `lab` `changed=1`, that one being `azure_arc`'s Arc-connect task, unrelated)

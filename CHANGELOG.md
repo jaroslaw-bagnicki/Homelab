@@ -13,6 +13,7 @@ Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month 
 
 ## 2026‑10
 
+- **(feat)** Enable per-core CPU C-state residency charts in Netdata across the fleet — [runbook 31](docs/runbooks/31-deploy-netdata.md)
 - **(feat)** Automate private-CA root distribution to the fleet (`ca_trust` role) and document the trust procedure for personal devices — [runbook 39](docs/runbooks/39-trust-private-ca.md)
 - **(fix)** Replace the failed `md0` mirror disk on the Beetle NAS (`WDEPBVR3` → `WL10C3NG`), restoring `[2/2] [UU]` — [runbook 38](docs/runbooks/38-nas-disk-replacement.md)
 - **(feat)** Serve `.internal` from the `edge` node — Technitium DNS + Caddy with short-lived `step-ca` leaves — [runbook 37](docs/runbooks/37-deploy-internal-access-stack.md)
