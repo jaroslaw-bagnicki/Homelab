@@ -550,7 +550,7 @@ its replacement SSD ([idea 07](../ideas/07-opnsense-futro-s930.md), [#96](https:
 - **Wildcard vs per-service leaves.** One `*.‹domain›` on the proxy is operationally simplest but
   puts the same key in front of every service; per-service leaves need `step-ca` to be reachable by
   each service (or a proxy-side automation).
-- **Resolver.** Settled — **Technitium DNS**, in the same LXC as the proxy, native systemd
+- **Resolver.** Settled — **Technitium DNS**, natively on the `edge` node beside Caddy
   ([ADR 40](../decisions/40-internal-dns-proxy-edge.md), [research 38](38-technitium-dns.md)).
 - **Client trust rollout.** A managed/corporate workstation may refuse a private root, and Firefox
   keeps a separate trust store from the OS — the same constraint #126 records. This is the argument

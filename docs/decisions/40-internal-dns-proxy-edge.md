@@ -55,16 +55,24 @@ routing entry point.**
   the service's real address on the LAN — and it is already in place if the public tunnel decision
   reverses, so both planes share one proxy.
 - **Certificates come from `step-ca` in LXC 215** on `pve` over ACME, starting with **per-service
-  leaves** (HTTP-01). A `*.internal` wildcard via DNS-01 is a later optimisation, not a prerequisite;
-  root distribution to clients stays [#144](https://github.com/jaroslaw-bagnicki/Homelab/issues/144).
+  leaves** validated by **TLS-ALPN-01 on 443** — the CA proves control on the port the proxy already
+  serves, so [ADR 34](34-lan-tls-only.md)'s plaintext prohibition needs no exception. **HTTP-01 is the
+  documented fallback only**: it needs TCP/80 from the CA guest (`192.168.2.215`) alone, a narrow
+  exception to record if it is ever used. A `*.internal` wildcard via DNS-01 is a later optimisation,
+  not a prerequisite; root distribution to clients stays
+  [#144](https://github.com/jaroslaw-bagnicki/Homelab/issues/144).
 - **Native systemd units, not a Docker Compose stack.** Both services need host-level networking —
   real client IPs, mDNS visibility, and UFW as the only firewall (a Docker-published port bypasses it,
   the trap already recorded for the VictoriaLogs workload) — so a container adds a daemon and a boot
   ordering dependency without adding isolation. On this box it also keeps the write path off the eMMC.
-- **The node's own resolver is Technitium on `127.0.0.1`** (and in `edge_dns_search`), so
-  `ca.internal` and every other in-fleet name resolves on the box that needs them.
+- **The node's own resolver is Technitium** — `127.0.0.1` in `/etc/resolv.conf`, with `internal` as
+  the search suffix (`edge_dns_search` carries the suffix, not the nameserver). **The CA guest is
+  pointed at the same resolver** (`192.168.2.240`) before issuance: `step-ca` must resolve
+  `netdata.internal` to validate a challenge, and [runbook 35](../runbooks/35-deploy-step-ca.md)
+  currently leaves LXC 215 on the host resolvers.
 - **UFW** allows `53`/`443` from `192.168.2.0/24` and the Technitium API only from the fleet; nothing
-  is opened to the internet — the public plane stays closed until the remote-access decision.
+  is opened to the internet — the public plane stays closed until the remote-access decision. **TCP/80
+  stays closed**; it is opened only if the HTTP-01 fallback is ever used, from the CA guest alone.
 - **mDNS bridging is optional and later.** All nodes are Ansible-managed and statically addressed, so
   static records cover the fleet; Technitium's mDNS app is adopted only if discovery of
   DHCP/mobile devices becomes useful.
