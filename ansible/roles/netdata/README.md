@@ -77,6 +77,7 @@ Alerts view and the API ([ADR 27](../../../docs/decisions/27-monitoring-strategy
 | `netdata_role` | `child` | `parent` accepts streams; `child` streams to `netdata_stream_target`. |
 | `netdata_stream_target` | `""` | Parent `host:port`; empty on a `child` = standalone (no streaming). |
 | `netdata_storage` | `dbengine` | `ram` on eMMC-only nodes. |
+| `netdata_cpu_idle_states` | `true` | Per-core C-state residency charts (`cpu idle states` in `[plugin:proc:/proc/stat]`); the agent default is off and `auto` never creates them — only `yes` does ([research 40](../../../docs/research/40-netdata-cpu-cstates.md)). |
 | `netdata_retention_tiers` | selected from `netdata_role` | The effective per-tier list (`time` + `size`, combined limits — the ceiling is the sum of the caps); `dbengine` only. Defaults to `netdata_retention_tiers_by_role[netdata_role]`; override only if a host's disk cannot carry its role's caps. |
 | `netdata_retention_tiers_by_role` | `parent` → 14d/5GiB, 30d/2GiB, 365d/2GiB · `child` → 7d/256MiB per tier | The retention **policy**, keyed by role — the parent is the long-term store, a child a short-term forwarder. |
 | `netdata_bind` | `127.0.0.1` | `[web] bind to` — a plain address, or Netdata's per-listener spec (`<ip>:<port>=<service>^SSL=force`); the parent lists two TLS-only listeners. |

@@ -1,0 +1,10 @@
+---
+# Targeted run for Netdata only — the same role the node playbooks apply, without
+# re-running the base, security, NUT or Fluent Bit roles.
+# Needs AZURE_CLIENT_ID / AZURE_CLIENT_SECRET / AZURE_TENANT_ID for the stream-key lookup
+# (or netdata_stream_api_key passed in).
+- name: Apply Netdata
+  hosts: physical
+  become: true
+  roles:
+    - netdata

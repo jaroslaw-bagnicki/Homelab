@@ -111,6 +111,15 @@
     label: "tier {{ tier_index }} size = {{ tier.size }}"
   notify: Restart netdata
 
+- name: Configure CPU idle-state (C-state) charts
+  community.general.ini_file:
+    path: /etc/netdata/netdata.conf
+    section: plugin:proc:/proc/stat
+    option: cpu idle states
+    value: "{{ 'yes' if netdata_cpu_idle_states | bool else 'no' }}"
+    mode: "0644"
+  notify: Restart netdata
+
 # The kickstart install already creates /etc/netdata/ssl; only the certificate is ours.
 - name: Generate a self-signed certificate for the Netdata listeners
   when: netdata_tls | bool
