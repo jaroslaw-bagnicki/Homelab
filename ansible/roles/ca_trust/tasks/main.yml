@@ -1,0 +1,83 @@
+---
+- name: Assert Azure controller credentials are set for the CA root
+  when: ca_trust_cert | length == 0
+  ansible.builtin.assert:
+    that:
+      - lookup('ansible.builtin.env', 'AZURE_CLIENT_ID', default='') | length > 0
+      - lookup('ansible.builtin.env', 'AZURE_CLIENT_SECRET', default='') | length > 0
+      - lookup('ansible.builtin.env', 'AZURE_TENANT_ID', default='') | length > 0
+    fail_msg: >-
+      AZURE_CLIENT_ID, AZURE_CLIENT_SECRET and AZURE_TENANT_ID must be set on the
+      Ansible controller for the CA root-certificate Key Vault lookup.
+  delegate_to: localhost
+
+- name: Fetch the fleet CA root certificate from Key Vault
+  when: ca_trust_cert | length == 0
+  vars:
+    ca_trust_vault_url: "https://{{ ca_trust_keyvault_name }}.vault.azure.net"
+    ca_trust_azure_client_id: "{{ lookup('ansible.builtin.env', 'AZURE_CLIENT_ID') }}"
+    ca_trust_azure_secret: "{{ lookup('ansible.builtin.env', 'AZURE_CLIENT_SECRET') }}"
+    ca_trust_azure_tenant_id: "{{ lookup('ansible.builtin.env', 'AZURE_TENANT_ID') }}"
+  ansible.builtin.set_fact:
+    ca_trust_cert: >-
+      {{ lookup('azure.azcollection.azure_keyvault_secret',
+      ca_trust_secret_name, vault_url=ca_trust_vault_url,
+      client_id=ca_trust_azure_client_id, secret=ca_trust_azure_secret,
+      tenant=ca_trust_azure_tenant_id) }}
+  delegate_to: localhost
+  no_log: true
+
+- name: Read the fetched root certificate fingerprint
+  when: ca_trust_root_sha256 | length > 0
+  ansible.builtin.command:
+    cmd: openssl x509 -noout -fingerprint -sha256
+    stdin: "{{ ca_trust_cert }}"
+  register: ca_trust_fetched_fingerprint
+  changed_when: false
+  delegate_to: localhost
+
+- name: Assert the fetched certificate is the pinned fleet root
+  when: ca_trust_root_sha256 | length > 0
+  ansible.builtin.assert:
+    that:
+      - ca_trust_fetched_fingerprint.stdout.split('=')[-1] | trim | upper == ca_trust_root_sha256 | upper
+    fail_msg: >-
+      The Key Vault secret '{{ ca_trust_secret_name }}' is not the pinned fleet root (expected
+      SHA-256 {{ ca_trust_root_sha256 }}, got
+      {{ ca_trust_fetched_fingerprint.stdout.split('=')[-1] | trim }}). Re-publish the issued root
+      with Set-HomelabCaRootCert.ps1; change the pin only if the root was re-issued.
+
+- name: Install trust-store prerequisites
+  ansible.builtin.apt:
+    name:
+      - ca-certificates
+      - openssl
+    state: present
+    update_cache: true
+
+- name: Ensure the local CA certificate directory exists
+  ansible.builtin.file:
+    path: "{{ ca_trust_file | dirname }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Install the fleet CA root certificate
+  ansible.builtin.copy:
+    content: "{{ ca_trust_cert }}\n"
+    dest: "{{ ca_trust_file }}"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Update the system CA certificate store
+
+- name: Rebuild the system CA certificate store
+  ansible.builtin.meta: flush_handlers
+
+- name: Verify the fleet root is present in the system trust store
+  ansible.builtin.command:
+    cmd: "openssl verify -CAfile {{ ca_trust_bundle }} {{ ca_trust_file }}"
+  register: ca_trust_verify
+  changed_when: false
+  failed_when: ca_trust_verify.rc != 0
