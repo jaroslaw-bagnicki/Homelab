@@ -36,3 +36,8 @@ caddy_sites:
   - name: proxmox.internal
     upstream: "https://192.168.2.201:8006"
     tls_skip_verify: true
+  # OMV's nginx serves its workbench with a self-signed `nas.local` certificate;
+  # the NAS host identity stays `nas.internal` → .202.
+  - name: omv.internal
+    upstream: "https://192.168.2.202:443"
+    tls_skip_verify: true

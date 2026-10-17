@@ -29,9 +29,10 @@
   exposed to the internet. Technitium's admin API binds `127.0.0.1:5380` only, and Caddy publishes
   the console at `https://dns.internal` — plaintext HTTP never reaches the LAN
   ([ADR 34](../decisions/34-lan-tls-only.md)).
-- **Published sites** — `dns.internal` (console), `netdata.internal`, `logs.internal` (VictoriaLogs)
-  and `proxmox.internal` (UI on `:8006`), all behind the single `:443` listener. `pve.internal` stays
-  the host record (`.201`) so Ansible, NUT and Netdata keep reaching the node itself.
+- **Published sites** — `dns.internal` (console), `netdata.internal`, `logs.internal` (VictoriaLogs),
+  `proxmox.internal` (UI on `:8006`) and `omv.internal` (NAS workbench on `:443`), all behind the
+  single `:443` listener. `pve.internal` (`.201`) and `nas.internal` (`.202`) stay the host records so
+  Ansible, NUT and Netdata keep reaching the nodes themselves.
 - **CA prerequisite** — the `ca` guest (LXC 215) uses `192.168.2.240` so `step-ca` can resolve
   `netdata.internal` during challenge validation.
 - **No new guest**; the hostname stays `edge` ([ADR 33](../decisions/33-fleet-node-hostnames.md)).
@@ -181,10 +182,11 @@ through Technitium and trusts the fleet root. Plaintext HTTP is never exposed: T
 | `https://netdata.internal` | `https://192.168.2.201:19999` | backend self-signed, verify skipped (#143) |
 | `https://logs.internal` | `https://192.168.2.214:9428` | VictoriaLogs; basic auth passes through |
 | `https://proxmox.internal` | `https://192.168.2.201:8006` | Proxmox UI (the host stays `pve.internal` → `.201`) |
+| `https://omv.internal` | `https://192.168.2.202:443` | OMV workbench; the host stays `nas.internal` → `.202` |
 
 ```sh
 # Same check as the browser, from a client that trusts the root
-for n in dns netdata logs proxmox; do
+for n in dns netdata logs proxmox omv; do
   curl --resolve $n.internal:443:192.168.2.240 --cacert root_ca.crt \
     -sS -o /dev/null -w "$n.internal: %{http_code}\n" https://$n.internal/
 done

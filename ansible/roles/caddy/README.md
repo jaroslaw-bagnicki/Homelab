@@ -18,7 +18,7 @@ Extracted from `edge_host` so the routing layer can run wherever it is needed (e
 | `caddy_keyvault_name` | `homelab-bysxdb-kv` | Vault holding the CA root. |
 | `caddy_ca_root_secret_name` | `ca-root-cert` | Secret name. |
 | `caddy_ca_root` | `""` | Override to skip the AKV lookup (tests). |
-| `caddy_sites` | `dns`, `netdata`, `logs`, `proxmox` | `name` + `upstream`, optional `tls_skip_verify`. |
+| `caddy_sites` | `dns`, `netdata`, `logs`, `proxmox`, `omv` | `name` + `upstream`, optional `tls_skip_verify`. |
 | `caddy_after_service` | `dns.service` | Systemd unit Caddy starts after. |
 | `caddy_require_technitium` | `true` | Refuse to run when the local resolver role is absent. |
 
