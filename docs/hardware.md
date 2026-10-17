@@ -10,7 +10,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | **Lab** | main workload host | Lenovo ThinkCentre M910q Tiny | i5-7500T (4C/4T, 35 W) | 16 GB DDR4 | 256 GB NVMe (+ free 2.5" bay) | 1× GbE `enp0s31f6` |
 | **OMV NAS** | OpenMediaVault server, backup target | HP ProLiant ML110 G5 | Pentium E2160 (2C/2T, 65 W) | 4 GB DDR2 | Goodram 120 GB SSD + RAID1 arrays | 1× GbE BCM5722 |
 | **Beetle NAS** | OMV NAS backup target (successor to ML110) | Wincor Beetle M-III | Pentium G4400 (2C/2T, 3.3 GHz) | 8 GB DDR4 (1×, 1 free slot) | SanDisk 128 GB SSD + 2× Seagate 1 TB 2.5" | 1× GbE Intel I219-V |
-| **Edge Ingress** | public ingress | Dell Wyse 3040 | Atom x5-Z8350 (2 W TDP) | 2 GB DDR3L | 8 GB eMMC | 1× GbE |
+| **Edge Ingress** | LAN DNS + reverse proxy (public ingress held) | Dell Wyse 3040 | Atom x5-Z8350 (2 W TDP) | 2 GB DDR3L | 8 GB eMMC | 1× GbE |
 | **Proxmox VE** | virtualisation host — smart-home + always-on services | Dell Wyse 5070 | Celeron J4105 (10 W) | 8 GB DDR4 (2× 4 GB) | M.2 SATA SK hynix 128 GB | 1× GbE + WiFi |
 | **OPNsense Router** | LAN edge router / firewall | Fujitsu Futro S930 | GX-424CC (4C/4T, 25 W TDP) | 4 GB DDR3 (1×, 1 free slot) | Innodisk 7.99 GB mSATA | 3× GbE (BCM5720 2× + Realtek 1×) |
 | **Cloudlab VPS** | staging / playground | Contabo Cloud VPS 10 | 4 vCPU (cloud — no TDP) | 8 GB | 75 GB NVMe | public IP |
@@ -69,8 +69,8 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Network | 1× GbE Realtek RTL8111/8168 (`enp1s0`, MAC `8c:ec:4b:6d:6f:4f`) · static `192.168.2.240/24` |
 | OS | Debian 13 minimal (netinst on eMMC, no desktop) |
 | Cooling | Fanless · ~2–3 W idle |
-| Role | Public ingress appliance |
-| Docs | [runbook 24](runbooks/24-edge-appliance.md) · [ADR 24](decisions/24-edge-ingress-appliance.md) · [research 25](research/25-edge-ingress-sbc.md) · [idea 04](ideas/04-edge-device-tunnel-caddy.md) |
+| Role | LAN DNS + reverse proxy (Technitium DNS + Caddy); public ingress held |
+| Docs | [runbook 24](runbooks/24-edge-appliance.md) · [runbook 37](runbooks/37-deploy-internal-access-stack.md) · [ADR 24](decisions/24-edge-ingress-appliance.md) · [ADR 40](decisions/40-internal-dns-proxy-edge.md) · [research 25](research/25-edge-ingress-sbc.md) |
 
 ### Proxmox VE — Dell Wyse 5070
 

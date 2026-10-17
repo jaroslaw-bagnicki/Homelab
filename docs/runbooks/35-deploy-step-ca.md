@@ -162,9 +162,10 @@ pct create 215 local:vztmpl/<template> \
 - **`--onboot 1`** — the CA must return on its own after a host reboot.
 - `--rootfs local-lvm:8` is a starting estimate; `step-ca` and its state are small, re-check after
   deployment.
-- DNS is **not** pinned at build time — the guest inherits the host resolvers for now. [ADR 40](../decisions/40-internal-dns-proxy-edge.md)
-  makes the resolver a prerequisite for ACME: once the `.internal` stack runs on `edge`, point this
-  guest at `192.168.2.240` so `step-ca` can resolve service names during challenge validation.
+- DNS is pinned by `playbook-ca.yml` once the `.internal` stack is live: the `ca` guest uses
+  `192.168.2.240` (Technitium on `edge`) so `step-ca` can resolve service names during ACME
+  challenge validation. The playbook verifies the resolver before changing `/etc/resolv.conf`
+  ([runbook 37](37-deploy-internal-access-stack.md)).
 
 Append the TPM passthrough to `/etc/pve/lxc/215.conf`:
 
@@ -449,8 +450,8 @@ a renewed intermediate would otherwise stay unused until the next restart.
 and the provisioner-password file are `0600 root:root`, so a plain `fleetadm` shell cannot read them):
 
 ```sh
-# `ca.internal` must resolve on the client — add a hosts entry until idea 10 provides the resolver. The
-# CA serves a self-issued leaf for that name and no IP SAN, so the IP fails hostname verification.
+# `ca.internal` resolves through Technitium on `edge` (runbook 37). The CA serves a
+# self-issued leaf for that name and no IP SAN, so the IP fails hostname verification.
 CA=https://ca.internal:9000
 ROOT=/etc/step-ca/certs/root_ca.crt
 
@@ -469,7 +470,7 @@ step certificate inspect /etc/step-ca/certs/intermediate_ca.crt --format json \
 # JWK-provisioner smoke test — issues a leaf and chain-verifies it. Naming the provisioner is required:
 # without --provisioner, `step` opens an interactive menu and dies with "error allocating terminal" in a
 # script, and it also asks for a private-key passphrase — hence the empty --password-file. This is NOT an
-# ACME check: real ACME enrolment is exercised by the reverse proxy in #142.
+# ACME check: real ACME enrolment is exercised by the Caddy stack in [runbook 37](37-deploy-internal-access-stack.md).
 step ca certificate test.internal test.crt test.key --ca-url "$CA" --root "$ROOT" \
   --provisioner admin@internal \
   --provisioner-password-file /etc/step-ca/secrets/password \
@@ -535,10 +536,9 @@ must report no changes.
 - **PTT key-loss hazard** — a BIOS update, `Clear PTT`, or NVRAM reset destroys the sealed key. Run the
   workload with `-e step_ca_reset=true` to clear the stale blob/CSR/certificate, sign the fresh CSR
   offline ([runbook 36 §2](36-private-ca-init.md)), then re-run §7. The root is unaffected.
-- **Name resolution** — nothing resolves `ca.internal` yet (resolver is
-  [idea 10](../ideas/10-internal-ca-dns-stack.md)); add a hosts entry on each client until it does. The
-  IP is not a substitute: the CA's server certificate carries `ca.internal` and no IP SAN, so a verifying
-  client rejects `https://192.168.2.215:9000`.
+- **Name resolution** — Technitium on `edge` serves `ca.internal` → `.215` ([runbook 37](37-deploy-internal-access-stack.md));
+  the CA guest itself uses that resolver. The IP is not a substitute: the CA's server certificate carries
+  `ca.internal` and no IP SAN, so a verifying client rejects `https://192.168.2.215:9000`.
 - **Out of scope** — proxy wiring [#142](https://github.com/jaroslaw-bagnicki/Homelab/issues/142),
   first service [#143](https://github.com/jaroslaw-bagnicki/Homelab/issues/143), root distribution
   [#144](https://github.com/jaroslaw-bagnicki/Homelab/issues/144).
@@ -563,10 +563,10 @@ observed output.
 ## Follow-ups
 
 - **Offline ceremony** — [runbook 36](36-private-ca-init.md), between §6 and §7.
-- **Proxy wiring** — [#142](https://github.com/jaroslaw-bagnicki/Homelab/issues/142).
-- **First service** — [#143](https://github.com/jaroslaw-bagnicki/Homelab/issues/143) (`https://netdata.internal`).
+- **Proxy wiring** — delivered by the Caddy stack in [runbook 37](37-deploy-internal-access-stack.md) ([#142](https://github.com/jaroslaw-bagnicki/Homelab/issues/142)).
+- **First service** — `https://netdata.internal` is the canary site in [runbook 37](37-deploy-internal-access-stack.md) ([#143](https://github.com/jaroslaw-bagnicki/Homelab/issues/143)).
 - **Root distribution** — [#144](https://github.com/jaroslaw-bagnicki/Homelab/issues/144).
-- **Name resolution** — [idea 10](../ideas/10-internal-ca-dns-stack.md); `ca.internal` is unresolved until then.
+- **Name resolution** — Technitium on `edge`, [runbook 37](37-deploy-internal-access-stack.md).
 
 ## References
 
