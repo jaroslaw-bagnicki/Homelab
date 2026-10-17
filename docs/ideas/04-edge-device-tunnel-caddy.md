@@ -5,7 +5,7 @@
 > One device owns all inbound routing for the LAN; backends (M910q, ML110 OMV, future
 > gear) stay plain and cluster churn never drops external access.
 
-**Status**: 🔨 Implementing  
+**Status**: 🚧 On Hold — public ingress is on hold pending the remote-access decision; the Wyse 3040 is provisioned, but `cloudflared` + Caddy are not migrated
 **Date**: 2026-08-09  
 **Research**: [Research 25 — Edge ingress SBC, PL market](../research/25-edge-ingress-sbc.md)  
 **Decision**: [ADR 24 — Edge ingress on a dedicated thin-client appliance](../decisions/24-edge-ingress-appliance.md) — Dell Wyse 3040, bare-metal cloudflared + Caddy  

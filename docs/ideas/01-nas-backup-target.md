@@ -1,6 +1,6 @@
 # Idea 01 — Homelab NAS
 
-**Status**: 🧠 Idea
+**Status**: 🪦 Retired — superseded by [idea 01c](01c-nas-backup-target-wincor-beetle.md)
 **Date**: 2026-08-02
 **Sources**:
 - [Gemini thread 1](https://share.gemini.google/IT4sMLWoypH6) — hardware selection, Unraid vs OMV, disk/RAM config

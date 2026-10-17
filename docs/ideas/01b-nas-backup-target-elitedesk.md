@@ -1,6 +1,6 @@
 # Idea 01b — Homelab NAS: HP EliteDesk 800 G1 SFF (Unraid)
 
-**Status**: 🧠 Idea  
+**Status**: 🪦 Retired — superseded by [idea 01c](01c-nas-backup-target-wincor-beetle.md)  
 **Date**: 2026-08-17  
 **Sources**:
 - [Gemini thread 3](https://share.gemini.google/U5zpt2ypVual) — HP EliteDesk 800 G1 SFF (Variant B): platform limits, CPU/RAM, power, fan control, SATA/NVMe controllers, link aggregation
