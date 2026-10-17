@@ -13,6 +13,7 @@ Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month 
 
 ## 2026‑10
 
+- **(fix)** Replace the failed `md0` mirror disk on the Beetle NAS (`WDEPBVR3` → `WL10C3NG`), restoring `[2/2] [UU]` — [runbook 38](docs/runbooks/38-nas-disk-replacement.md)
 - **(feat)** Serve `.internal` from the `edge` node — Technitium DNS + Caddy with short-lived `step-ca` leaves — [runbook 37](docs/runbooks/37-deploy-internal-access-stack.md)
 - **(docs)** Add idea 11 — Authentik as the lab identity provider — [idea 11](docs/ideas/11-authentik-idp.md)
 - **(feat)** Move the NUT server host-native on `pve` under Ansible, retiring LXC 213, and widen the NUT fail-safe window to 120 s — [ADR 39](docs/decisions/39-nut-host-native.md) · [runbook 29](docs/runbooks/29-nut-ups-shutdown.md)
