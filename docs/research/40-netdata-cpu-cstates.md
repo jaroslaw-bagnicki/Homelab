@@ -127,10 +127,10 @@ curl -sk https://192.168.2.201:19999/host/<host>/api/v1/charts | grep -o 'cpu[0-
 ```
 
 Implemented in the same PR — `netdata_cpu_idle_states` (role default `true`), documented here, in the
-role README and in [runbook 31](../runbooks/31-deploy-netdata.md). Outstanding: the live playbook runs
-and the per-core chart count (4 / 4 / 2 / 4); the runbook checklist row stays open until then. The
-Observability table in [overview](../overview.md) needs no new row — this extends the existing
-"Node metrics" signal.
+role README and in [runbook 31](../runbooks/31-deploy-netdata.md). Deployed 2026-10-17 through the
+targeted `playbook-netdata.yml`; the parent API reports one `cpuN_cpuidle` chart per core — 4 / 4 / 2 / 4
+across `pve` / `lab` / `nas` / `edge`. The Observability table in [overview](../overview.md) needs no
+new row — this extends the existing "Node metrics" signal.
 
 ## §6 — What appears
 

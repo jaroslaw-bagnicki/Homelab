@@ -237,6 +237,9 @@ sudo grep -E 'tier [0-2] retention' /etc/netdata/netdata.conf   # per-tier time 
 du -sh /var/cache/netdata/dbengine                              # actual DB size vs the caps
 ```
 
+Targeted re-apply: `ansible-playbook ansible/playbooks/playbook-netdata.yml --diff` — `hosts: physical`,
+so `pve`, `lab`, `nas` and `edge` get the `netdata` role only and nothing else re-runs.
+
 Check the C-state charts on every host — one `cpuN_cpuidle` chart per core:
 
 ```sh
@@ -297,7 +300,7 @@ Executed 2026-09-19 (install and configuration) and 2026-09-20 (§5 updates) —
 - [x] §3 Edge child streams to the Parent; `netdata.conf` `mode = ram`
 - [x] §4 `dbengine tier 0/1/2 retention time = 7d` + `retention size` present (1 GiB per tier on the parent); `du -sh /var/cache/netdata/dbengine` → `512K` on a fresh install — *superseded 2026-09-26 by the per-tier row below*
 - [x] §4 retention is now **per-tier** (role-owned) — `netdata_retention_tiers` renders **`14d`/`3GiB`**, **`30d`/`2GiB`**, **`365d`/`2GiB`** on the Parent (verified live in `netdata.conf` 2026-09-26 — the 21 d first cut ran `ok=45 changed=3 failed=0`, the trim to 14 d ran `ok=45 changed=2 failed=0`; `netdata` active, DB 993 MB); children stay at 7 d / 256 MiB — **tier-0 cap raised `3GiB` → `5GiB` 2026-10-10** (the 3 GiB cap bound at ~9 d of the 14 d target)
-- [ ] §4 C-state charts present on all four hosts — one `cpuN_cpuidle` chart per core (4 / 4 / 2 / 4), enabled by `netdata_cpu_idle_states` ([research 40](../research/40-netdata-cpu-cstates.md))
+- [x] §4 C-state charts present on all four hosts — `pve` 4 / `lab` 4 / `nas` 2 / `edge` 4 `cpuN_cpuidle` charts from the parent API (2026-10-17, targeted `playbook-netdata.yml`: `ok=11–18 changed=2 failed=0` per host — the option plus the restart), enabled by `netdata_cpu_idle_states` ([research 40](../research/40-netdata-cpu-cstates.md))
 - [ ] §4 per-tier retention **effective** values confirmed as the tiers fill — the console storage view should show `effective` = `configured` for tiers 1 and 2 once 30 d / 365 d of data exist (weeks out)
 - [x] §4 no validation command printed the shared key
 - [x] Idempotent — a re-run reports **`changed=0`** for this role on all three nodes (`pve` `ok=38 changed=0`, `edge` `ok=40 changed=0`; `lab` `changed=1`, that one being `azure_arc`'s Arc-connect task, unrelated)
