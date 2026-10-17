@@ -319,11 +319,11 @@ test → `mdadm --add` → resync → verify). Lessons from the first failure (2
 - **The decisive tests** are the **extended self-test** (`smartctl -t long`) and a **destructive
   write pass** (`badblocks -w`). In a degraded mirror, a bad sector on the surviving disk is an I/O
   error to the filesystem — never resync from an unverified source.
-- **OMV only tracks what it recorded.** `Storage | Multiple Device` manages arrays stored in
-  `/etc/openmediavault/config.xml`; an array with no `<mdadm>` block is managed purely by `mdadm`
-  (shell) — check the UI before choosing GUI vs shell. The **S.M.A.R.T. monitor list**
-  (`<smart><monitor><device>`) is separate and must be updated by hand after a replacement — on
-  2026-10-17 it still polled the retired `WDEPBVR3`.
+- **The OMV RAID UI lists live arrays.** `Storage | Multiple Device` shows `md0` even though
+  `config.xml` carries no `<mdadm>` block (verified 2026-10-17), so use its **Recover** action for a
+  degraded array — it runs `mdadm --add` underneath. The **S.M.A.R.T. monitor list**
+  (`<smart><monitor><device>`) is a separate record: it keeps stale serials in `config.xml` and lists
+  only *detected* disks in the UI, so enable monitoring for the new disk after fitting it.
 
 ### Filesystem
 
