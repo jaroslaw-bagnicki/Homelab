@@ -7,6 +7,11 @@
 > **First run:** 2026-10-11 → 2026-10-17 — `WDEPBVR3` failed under the monthly scrub and was replaced
 > by `WL10C3NG`. Array design and the OMV build: [runbook 32](32-beetle-m3-omv-setup.md);
 > decision: [ADR 29](../decisions/29-nas-backup-target-beetle-m3-omv.md).
+>
+> ✅ **Executed 2026-10-17 — succeeded.** Source `WDES3KB7` extended self-test clean; the replacement
+> passed a full destructive `badblocks -w` write+verify over 1 TB (**0/0/0 errors**, 5 h 28 m); added
+> to `md0`; resync completed to **`[2/2] [UU]`, `State : clean`**, XFS mounted, both members SMART
+> PASSED.
 
 ## When to use
 
@@ -137,6 +142,19 @@ new serial.
 > Retired serials linger there but drop out of the UI once the disk is gone — so **enable monitoring
 > for the new disk** (select it → edit → monitored ✓). On 2026-10-17 `WL10C3NG` was listed but
 > unchecked, while the dead `WDEPBVR3` was still in `config.xml`.
+
+### First run — verified 2026-10-17
+
+Executed end to end on the Beetle:
+
+| Stage | Result |
+|---|---|
+| Source `WDES3KB7` extended self-test | completed without error (~2.5 h) |
+| Replacement `WL10C3NG` `badblocks -w` | 5 h 28 m · **0/0/0 errors** · bad-block log empty |
+| `mdadm --add` → resync | ~2 h 16 m at ~120 MB/s (`finish=135.6min` at start) |
+| Final | **`[2/2] [UU]`** · `State : clean` · XFS mounted (18 G used, unchanged) · both disks SMART PASSED |
+
+The array went `[2/1] [U_]` → `[2/2] [UU]` with no intervention.
 
 ## 6. Record it
 

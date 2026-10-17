@@ -62,7 +62,7 @@ No out-of-band management — all steps run from a **keyboard + monitor** attach
 | `sda` | SanDisk X600 `SD9SB8W-128G` 128 GB SSD | `191702804011` | **OMV OS** (SMART PASSED) |
 | `sdb` | Seagate ST1000VT001-1RE172 1 TB 2.5" | `WDES3KB7` | `md0` member (0 reallocated) |
 | `sdc` | Seagate ST1000VT001-1RE172 1 TB 2.5" | `WL10C3NG` | `md0` mirror — fitted **2026-10-17** (0 reallocated, 11 head-flying hours) |
-| — | Seagate ST1000VT001-1RE172 1 TB 2.5" | `WDEPBVR3` | 🪦 **retired 2026-10-11** — failed under the monthly scrub; replaced by `WL10C3NG` ([runbook 37](37-nas-disk-replacement.md)) |
+| — | Seagate ST1000VT001-1RE172 1 TB 2.5" | `WDEPBVR3` | 🪦 **retired 2026-10-11** — failed under the monthly scrub; replaced by `WL10C3NG` ([runbook 38](38-nas-disk-replacement.md)) |
 
 > **Device letters are a snapshot, not an identity.** They rotate between boots and across servicing
 > (§5); the serial is the only stable handle.
@@ -306,7 +306,7 @@ portable to any Linux box, with per-disk SMART intact.
 
 ### Replacing a failed member
 
-Replacing a member is [runbook 37](37-nas-disk-replacement.md) (identify by serial → destructive
+Replacing a member is [runbook 38](38-nas-disk-replacement.md) (identify by serial → destructive
 test → `mdadm --add` → resync → verify). Lessons from the first failure (2026-10-11, `WDEPBVR3`):
 
 - **SMART "PASSED" is not a health verdict.** The drive died under the monthly scrub with

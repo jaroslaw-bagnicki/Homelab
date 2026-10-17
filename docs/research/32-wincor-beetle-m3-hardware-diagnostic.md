@@ -261,7 +261,7 @@ not prove a drive is sound — `WDEPBVR3` passed both on 2026-09-26 and died two
 the counters, the self-test result, and the **bus behaviour**; a drive that drops off the bus under
 load is failing regardless of SMART flags.
 
-Procedure: [runbook 37](../runbooks/37-nas-disk-replacement.md).
+Procedure: [runbook 38](../runbooks/38-nas-disk-replacement.md).
 
 ### Drive provenance & recording type (2× Seagate)
 
