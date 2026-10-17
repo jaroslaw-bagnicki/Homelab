@@ -5,6 +5,7 @@
   roles:
     - common
     - security
+    - ca_trust
     - nut_server
     - nut_client
     - netdata

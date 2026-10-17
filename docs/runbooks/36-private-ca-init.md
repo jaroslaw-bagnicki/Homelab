@@ -10,8 +10,8 @@
 > [§7](35-deploy-step-ca.md), which installs the signed certificate. Steps 1 and 2 are carried out by
 > the [offline signing kit](../private-ca-offline-signing/README.md). The one command that needs a
 > network is publishing the root to Key Vault at the end of step 1 — it runs on the controller,
-> deliberately away from the signing machine. Installing the root on the fleet is
-> [#144](https://github.com/jaroslaw-bagnicki/Homelab/issues/144), not covered here.
+deliberately away from the signing machine. Installing the root on the fleet and on personal
+devices is [runbook 39](39-trust-private-ca.md), not covered here.
 
 ## Why
 
