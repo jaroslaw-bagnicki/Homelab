@@ -43,9 +43,11 @@ sudo smartctl -l selftest $D
 > - **SMART "PASSED" is not a health verdict.** The failed drive climbed
 >   `Reallocated_Sector_Ct 0 → 40 → 56` with `8 / 8` pending / offline-uncorrectable and still read
 >   **PASSED**.
-> - **Attribute 9 `Power_On_Hours` is bogus** on this model (`smartctl`: *not in smartctl database*) —
->   every unit reports ~65.5 k. Read **Head_Flying_Hours (240)** and the LBA counters **(241/242)**
->   instead.
+> - **Attribute 9 `Power_On_Hours` carries a +65,536 offset** on this model (`smartctl`: *not in
+>   smartctl database*): every unit reports ~65.5 k. The true hours are **`raw mod 65,536`** —
+>   65,547 → 11 h, 65,637 → 101 h — and that matches **Head_Flying_Hours (240)** (11 / 100). The
+>   **self-test log's `Lifetime(hours)` is correct**. Use the LBA counters (241/242) for total bytes
+>   written/read.
 > - A drive that drops off the bus under load (`hardreset failed` → `disable device`) or fails its
 >   **extended self-test** is dead, whatever the flag says.
 
@@ -82,6 +84,8 @@ sudo systemd-run --unit=badblocks-<SN> \
 - `-w -t 0x00` = one destructive pass (write zeros across the disk, read back).
 - Run it as a **transient systemd unit** so it survives an SSH drop; poll `systemctl is-active`.
 - ~4–5 h for a 1 TB 5400 rpm drive.
+- **Sanity-check the drive's history first**: true POH = `raw mod 65,536` and `Head_Flying_Hours`
+  should be low for a new unit; a large `Total_LBAs_Written` (241) means a used drive (see §1).
 
 Afterwards the bad-block log **must be empty** and the counters still clean:
 
@@ -149,7 +153,7 @@ new serial.
 | `mdadm --add` → *"not large enough"* | replacement smaller than the array's used device size — use ≥ the member size |
 | Resync restarts or the member turns `faulty` | the new disk is failing under write load — `mdadm --manage /dev/md0 --remove <dev>` and replace it |
 | Drive won't enumerate on any machine (`hardreset failed`) | hardware-dead → RMA; test on a second box to rule out the port |
-| `Power_On_Hours` looks impossibly high | known misparse on the ST1000VT001 — see §1 |
+| `Power_On_Hours` (~65.5 k) looks impossibly high | attribute 9 has a **+65,536 offset** on the ST1000VT001 — true hours = `raw mod 65,536`; cross-check Head_Flying_Hours (240). See §1 |
 
 ## References
 
