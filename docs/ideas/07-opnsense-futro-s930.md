@@ -6,7 +6,7 @@
 > Tenda Nova mesh/LAN, adding NGFW features (Suricata IDS/IPS, Zenarmor, VLANs,
 > WireGuard/IPsec VPN, Unbound DNS) that the current flat mesh gateway lacks.
 
-**Status**: 🧠 Idea — Gemini discovery thread, no hardware acquired  
+**Status**: 🔨 Implementing — runbooks in review on the open PR  
 **Date**: 2026-08-21  
 **Updated**: 2026-08-24 — NIC comparison; Multi-WAN failover split out to idea 08  
 **Source**: [Gemini discussion — OPNsense firewall i router](https://share.gemini.google/k8PVbnk90fuo) (published 2026-08-21)
