@@ -1,0 +1,10 @@
+---
+# The DNS server role owns the host resolver and the server itself; the split
+# from `edge_host` keeps Caddy free to run anywhere (ADR 20/40).
+- name: Install and configure Technitium DNS
+  ansible.builtin.import_tasks: technitium.yml
+  when: technitium_enabled | bool
+
+- name: Point the host at the local resolver
+  when: technitium_enabled | bool and technitium_manage_host_resolver | bool
+  ansible.builtin.import_tasks: resolver.yml

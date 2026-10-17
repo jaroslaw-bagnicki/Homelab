@@ -1,0 +1,23 @@
+{
+    auto_https disable_redirects
+}
+
+{% for site in caddy_sites %}
+{{ site.name }} {
+    tls {
+        issuer acme {
+            dir {{ caddy_ca_url }}
+            test_dir {{ caddy_ca_url }}
+            trusted_roots {{ caddy_ca_root_path }}
+            disable_http_challenge
+        }
+    }
+
+    reverse_proxy {{ site.upstream }}{% if site.tls_skip_verify | default(false) %} {
+        transport http {
+            tls_insecure_skip_verify
+        }
+    }{% endif %}
+
+}
+{% endfor %}

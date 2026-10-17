@@ -1,0 +1,24 @@
+---
+# Role-internal constants. `vars/` outranks `defaults/` and `host_vars/` by design,
+# so only values that no node may override belong here — structural paths, service
+# identity and the loopback API endpoint. Anything a host or environment could
+# legitimately change stays in defaults/.
+technitium_user: dns-server
+technitium_group: dns-server
+technitium_service: dns
+technitium_api_url: "http://127.0.0.1:5380"
+technitium_dotnet_dir: /opt/dotnet
+technitium_install_dir: /opt/technitium/dns
+technitium_config_dir: /etc/dns
+technitium_log_dir: /var/log/technitium/dns
+technitium_cache_dir: /var/cache/technitium
+
+# Host resolver managed by this role: the node resolves through Technitium itself.
+technitium_host_nameservers:
+  - 127.0.0.1
+technitium_host_search: "{{ technitium_zone }}"
+# Transient upstream used only between stopping systemd-resolved and the API
+# coming up, so a failed first run does not leave the box unreachable.
+technitium_bootstrap_nameservers:
+  - 1.1.1.1
+  - 8.8.8.8

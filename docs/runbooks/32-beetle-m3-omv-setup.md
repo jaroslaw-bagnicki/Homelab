@@ -40,6 +40,7 @@ Authored 2026-09-20, before execution — the checklist fills in as the install 
 - [x] `md0` (2× Seagate 1 TB → XFS) online and mounted — 2026‑09‑21; **reboot-survival test
       passed** 2026‑09‑22 (§6)
 - [x] Web UI reachable at `https://192.168.2.202` (HTTPS-only) — 2026‑09‑21
+  - the fleet name is `https://omv.internal` behind the edge proxy ([runbook 37](37-deploy-internal-access-stack.md)); `nas.internal` stays the host record
 - [x] `fleetadm` created at the CLI (key-only, password locked) — 2026‑09‑21; SSH hardening landed
       with the `security` role in §8
 - [x] `playbook-nas.yml` applied — `nut-monitor` active, Netdata child streaming and **visible on

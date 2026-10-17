@@ -6,6 +6,8 @@
     - common
     - security
     - edge_host
+    - technitium
+    - caddy
     - nut_client
     - netdata
     - fluentbit

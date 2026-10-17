@@ -17,9 +17,11 @@ Baseline network and access hardening for every managed host: UFW (default-deny 
 | `security_ufw_allow_ssh_from` | `0.0.0.0/0` | Source range for SSH; set to the LAN in `host_vars`. |
 | `security_ufw_allow_tcp_from` | `0.0.0.0/0` | Source range for the extra ports below. |
 | `security_ufw_allow_tcp_ports` | `[]` | Extra inbound TCP ports (e.g. Proxmox UI `8006` on `pve`). |
+| `security_ufw_allow_udp_from` | `0.0.0.0/0` | Source range for the extra UDP ports below. |
+| `security_ufw_allow_udp_ports` | `[]` | Extra inbound UDP ports (e.g. DNS `53` on `edge`). |
 | `security_ufw_deny_inbound_tcp_80` | `true` | Block direct HTTP — ingress is via the edge appliance. |
-| `fail2ban_max_retries` | `3` | Failed SSH attempts before a ban. |
-| `fail2ban_ban_time` | `1h` | Ban duration. |
+| `security_fail2ban_max_retries` | `3` | Failed SSH attempts before a ban. |
+| `security_fail2ban_ban_time` | `1h` | Ban duration. |
 
 ## Notes
 

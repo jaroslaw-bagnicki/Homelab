@@ -13,7 +13,7 @@ hardware detail see [Hardware Inventory](hardware.md); for change history see
 | **Lab** | main workload host (Docker → k3s) | Lenovo M910q Tiny · Ubuntu 24.04 LTS · Azure Arc | `lab` | `192.168.2.200` | 🔨 |
 | **OMV NAS** | backup target | HP ProLiant ML110 G5 · OMV 8.3 | `omv` | `192.168.2.210` | 🪦 |
 | **Beetle NAS** | backup target (successor to ML110) | Wincor Beetle M-III · OMV 8.5 | `nas` | `192.168.2.202` | 🔨 |
-| **Edge Ingress** | public ingress (cloudflared + Caddy) | Dell Wyse 3040 · Debian 13 minimal | `edge` | `192.168.2.240` | 🔨 |
+| **Edge Ingress** | LAN DNS + reverse proxy (public ingress held) | Dell Wyse 3040 · Debian 13 minimal | `edge` | `192.168.2.240` | ✅ |
 | **Proxmox VE** | virtualisation host — smart-home + always-on services | Dell Wyse 5070 | `pve` | `192.168.2.201` · guests `.210`–`.212`, `.214` | ✅ |
 | **LLM server** | local LLM inference | Minisforum X1 Lite | — | TBD | 🧠 |
 | **Cloudlab VPS** | staging for Lab (Ansible + Docker/k3s workloads) | Contabo VPS 10 · Ubuntu 24.04 | `cloudlab` | `173.249.27.13` | ✅ |
@@ -50,6 +50,7 @@ Current state — what's running or in progress. Planned work is under [What's N
 | **VictoriaLogs** | `pve` (LXC 214 `vtstack`) | Tier B log store | [ADR 35](decisions/35-log-store-victorialogs.md) · [runbook 33](runbooks/33-deploy-victorialogs.md) | ✅ |
 | **Private CA** (`step-ca`) | `pve` (LXC 215 `ca`) | fleet trust anchor — ACME issuance, intermediate sealed in the `pve` TPM | [ADR 38](decisions/38-private-ca-hierarchy-and-custody.md) · [runbook 35](runbooks/35-deploy-step-ca.md) | ✅ |
 | **Fluent Bit** | every LAN node (`pve`, `edge`, `lab`, `nas`, `vtstack`) | Tier B log collector — ships journald + Docker logs to VictoriaLogs | [ADR 36](decisions/36-log-collector-fluentbit.md) · [runbook 34](runbooks/34-deploy-fluentbit.md) | ✅ |
+| **Internal access stack** (Technitium DNS + Caddy) | `edge` | authoritative `internal.` DNS + LAN reverse proxy with short-lived `step-ca` leaves | [ADR 40](decisions/40-internal-dns-proxy-edge.md) · [runbook 37](runbooks/37-deploy-internal-access-stack.md) | ✅ |
 
 ## Observability
 
@@ -88,16 +89,15 @@ once it is ready to start — a row leaves the table with the PR that completes 
 
 | Item | Effort | Next step | Refs |
 |---|---|---|---|
-| **Internal access stack (`.internal`)** | ⭐⭐ | Technitium DNS + Caddy natively on the `edge` node; wildcard `*.internal` → `.240`, then Caddy sites on `step-ca` certificates — the front of the private CA chain | [#151](https://github.com/jaroslaw-bagnicki/Homelab/issues/151) · [ADR 40](decisions/40-internal-dns-proxy-edge.md) |
 | **Power monitoring (Zigbee/Z2M)** | ⭐⭐ | Zigbee energy plugs → Prometheus, bootstrapped standalone on the M910q (ADR 26 — independent of Home Assistant) — sequenced **before** k3s | [#73](https://github.com/jaroslaw-bagnicki/Homelab/issues/73) · [ADR 26](decisions/26-zigbee-energy-monitoring.md) |
 | **YUMI multiboot USB standard** | ⭐ | Author the YUMI ADR (number on landing) + manage-YUMI runbook; de-conflate the Ventoy references | [#107](https://github.com/jaroslaw-bagnicki/Homelab/issues/107) · [research 12](research/12-first-boot-setup.md) |
-| **Private CA — proxy TLS issuance** | ⭐⭐ | **Running** — `step-ca` on LXC 215 `ca` serves ACME with a TPM-sealed intermediate, signed offline by a 10-year root ([35 deploy](runbooks/35-deploy-step-ca.md), [36 init/re-sign](runbooks/36-private-ca-init.md)); next: wire the Caddy in the [#151](https://github.com/jaroslaw-bagnicki/Homelab/issues/151) stack to it ([#142](https://github.com/jaroslaw-bagnicki/Homelab/issues/142)), migrate the first service ([#143](https://github.com/jaroslaw-bagnicki/Homelab/issues/143)), then distribute the root ([#144](https://github.com/jaroslaw-bagnicki/Homelab/issues/144)) | [#126](https://github.com/jaroslaw-bagnicki/Homelab/issues/126) · [#151](https://github.com/jaroslaw-bagnicki/Homelab/issues/151) · [ADR 38](decisions/38-private-ca-hierarchy-and-custody.md) |
+| **Private CA — proxy TLS issuance** | ⭐⭐ | **Running** — `step-ca` on LXC 215 `ca` serves ACME with a TPM-sealed intermediate, signed offline by a 10-year root ([35 deploy](runbooks/35-deploy-step-ca.md), [36 init/re-sign](runbooks/36-private-ca-init.md)); Caddy on `edge` issues 24 h leaves for `netdata.internal`, `dns.internal`, `logs.internal` and `proxmox.internal` ([runbook 37](runbooks/37-deploy-internal-access-stack.md)); next: verify renewal and distribute the root ([#144](https://github.com/jaroslaw-bagnicki/Homelab/issues/144)) | [#126](https://github.com/jaroslaw-bagnicki/Homelab/issues/126) · [#151](https://github.com/jaroslaw-bagnicki/Homelab/issues/151) · [ADR 38](decisions/38-private-ca-hierarchy-and-custody.md) |
 
 ### Held
 
 | Item | Waiting on | Refs |
 |---|---|---|
-| **Edge Ingress — service migration** | remote-access decision — public ingress is on hold (VPN / Tailscale under consideration), so cloudflared + Caddy are not moved to the Wyse 3040 | [#65](https://github.com/jaroslaw-bagnicki/Homelab/issues/65) · [#81](https://github.com/jaroslaw-bagnicki/Homelab/issues/81) · [ADR 24](decisions/24-edge-ingress-appliance.md) · [ADR 40](decisions/40-internal-dns-proxy-edge.md) |
+| **Edge Ingress — service migration** | remote-access decision — public ingress is on hold (VPN / Tailscale under consideration), so cloudflared and the public plane are not moved to the Wyse 3040; the LAN Caddy/DNS stack is live ([runbook 37](runbooks/37-deploy-internal-access-stack.md)) | [#65](https://github.com/jaroslaw-bagnicki/Homelab/issues/65) · [#81](https://github.com/jaroslaw-bagnicki/Homelab/issues/81) · [ADR 24](decisions/24-edge-ingress-appliance.md) · [ADR 40](decisions/40-internal-dns-proxy-edge.md) |
 | **OPNsense router (Futro S930)** | power cable for the replacement SSD — order it, then install (the fitted 7.99 GB mSATA is undersized) | [#96](https://github.com/jaroslaw-bagnicki/Homelab/issues/96) · [research 31](research/31-futro-s930-hardware-diagnostic.md) |
 | **k3s migration** | deliberate sequencing — largest item, gates the Longhorn backup target and #48 | [#44](https://github.com/jaroslaw-bagnicki/Homelab/issues/44) · [ADR 22](decisions/22-k3s-arc-homelab.md) |
 | **Beetle on battery — modified-sine re-test** | replacement UPS unit — OMV now runs on the Beetle ([#98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98)) and its `nut_client` secondary is live (runbook 32 §8), so the active-PFC supply can finally be tested on a real load | [#117](https://github.com/jaroslaw-bagnicki/Homelab/issues/117) · [runbook 29](runbooks/29-nut-ups-shutdown.md) §7 · [report](reports/260919-nut-shutdown-drill.md) |

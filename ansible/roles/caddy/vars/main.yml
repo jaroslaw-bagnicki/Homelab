@@ -1,0 +1,4 @@
+---
+# Role-internal constants — not an override surface (vars/ outranks host_vars/).
+caddy_file: /etc/caddy/Caddyfile
+caddy_ca_root_path: /etc/caddy/step-ca-root.pem
