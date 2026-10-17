@@ -13,6 +13,8 @@ Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month 
 
 ## 2026‑10
 
+- **(feat)** Serve `.internal` from the `edge` node — Technitium DNS + Caddy with short-lived `step-ca` leaves — [runbook 37](docs/runbooks/37-deploy-internal-access-stack.md)
+- **(docs)** Add idea 11 — Authentik as the lab identity provider — [idea 11](docs/ideas/11-authentik-idp.md)
 - **(feat)** Move the NUT server host-native on `pve` under Ansible, retiring LXC 213, and widen the NUT fail-safe window to 120 s — [ADR 39](docs/decisions/39-nut-host-native.md) · [runbook 29](docs/runbooks/29-nut-ups-shutdown.md)
 - **(feat)** Private CA — offline signing kit, root and TPM-sealed intermediate issued, `step-ca` serving ACME on the `ca` guest — [runbook 35](docs/runbooks/35-deploy-step-ca.md)
 

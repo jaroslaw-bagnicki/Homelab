@@ -1,0 +1,9 @@
+---
+# Targeted run for the DNS server and the host resolver only — same role the edge
+# playbook applies, without re-running Caddy, NUT, Netdata or Fluent Bit.
+# Needs AZURE_CLIENT_ID / AZURE_CLIENT_SECRET / AZURE_TENANT_ID for the admin-password lookup.
+- name: Apply Technitium DNS
+  hosts: edge
+  become: true
+  roles:
+    - technitium
