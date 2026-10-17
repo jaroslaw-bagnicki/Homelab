@@ -8,6 +8,7 @@ Workloads are a separate concern: self-contained recipes run on demand (see [`..
 |---|---|---|---|
 | `common` | Hostname, `/etc/hosts`, UTC, NTP service selection, optional Avahi, fleet SSH key | all playbooks | [README](common/README.md) |
 | `security` | UFW, fail2ban, sshd hardening | all playbooks | [README](security/README.md) |
+| `ca_trust` | Fleet CA root into the system trust store — Key Vault → `/usr/local/share/ca-certificates`, `update-ca-certificates`, store verified | `playbook.yml`, `playbook-lab.yml`, `playbook-pve.yml`, `playbook-edge.yml`, `playbook-nas.yml`, `playbook-logs.yml`, `playbook-ca-trust.yml` | [README](ca_trust/README.md) |
 | `azure_arc` | `azcmagent` install + Azure Arc enrolment | `playbook.yml`, `playbook-lab.yml` | [README](azure_arc/README.md) |
 | `docker_host` | Docker Engine from the official repository (Debian/Ubuntu) + json-file log rotation | `playbook.yml`, `playbook-lab.yml`, `playbook-logs.yml` | [README](docker_host/README.md) |
 | `docker_services` | Portainer, Caddy, cloudflared, shared Docker networks | `playbook.yml` | [README](docker_services/README.md) |

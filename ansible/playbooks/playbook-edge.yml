@@ -5,6 +5,7 @@
   roles:
     - common
     - security
+    - ca_trust
     - edge_host
     - technitium
     - caddy

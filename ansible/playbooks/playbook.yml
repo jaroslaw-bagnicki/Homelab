@@ -11,6 +11,7 @@
   roles:
     - common
     - security
+    - ca_trust
     - azure_arc
     - docker_host
     - docker_services

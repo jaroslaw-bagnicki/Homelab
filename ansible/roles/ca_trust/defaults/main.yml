@@ -1,0 +1,9 @@
+---
+# Fleet CA trust — install the private CA root into the system trust store.
+ca_trust_keyvault_name: homelab-bysxdb-kv
+ca_trust_secret_name: ca-root-cert
+# Public SHA-256 fingerprint of the fleet root (certificate 02:83:B2:6B:…:2C:E0, CN=Homelab Internal CA).
+# The Key Vault value must match it; set "" to skip the pin in tests. Update only if the root is re-issued.
+ca_trust_root_sha256: "02:83:B2:6B:C2:0C:E7:64:23:FE:23:77:5E:4D:61:98:9F:1D:51:F0:41:5C:6D:75:1D:12:C2:33:B6:74:2C:E0"
+# Override to skip the Key Vault lookup (tests).
+ca_trust_cert: ""
