@@ -1,4 +1,14 @@
 ---
+- name: Assert Caddy has a local resolver
+  when: caddy_require_technitium | bool
+  ansible.builtin.assert:
+    that:
+      - technitium_enabled | default(false) | bool
+    fail_msg: >-
+      caddy_require_technitium is set but the technitium role is not enabled on
+      this host: Caddy's ca.internal lookups rely on the local resolver. Set
+      caddy_require_technitium: false when the resolver is managed elsewhere.
+
 - name: Install Caddy prerequisites
   ansible.builtin.apt:
     name:
@@ -34,7 +44,7 @@
     update_cache: true
 
 - name: Assert Azure controller credentials are set for the CA root
-  when: edge_host_caddy_ca_root | length == 0
+  when: caddy_ca_root | length == 0
   ansible.builtin.assert:
     that:
       - lookup('ansible.builtin.env', 'AZURE_CLIENT_ID', default='') | length > 0
@@ -46,25 +56,25 @@
   delegate_to: localhost
 
 - name: Fetch the fleet CA root certificate from Key Vault
-  when: edge_host_caddy_ca_root | length == 0
+  when: caddy_ca_root | length == 0
   vars:
-    edge_host_caddy_vault_url: "https://{{ edge_host_caddy_keyvault_name }}.vault.azure.net"
-    edge_host_caddy_azure_client_id: "{{ lookup('ansible.builtin.env', 'AZURE_CLIENT_ID') }}"
-    edge_host_caddy_azure_secret: "{{ lookup('ansible.builtin.env', 'AZURE_CLIENT_SECRET') }}"
-    edge_host_caddy_azure_tenant_id: "{{ lookup('ansible.builtin.env', 'AZURE_TENANT_ID') }}"
+    caddy_vault_url: "https://{{ caddy_keyvault_name }}.vault.azure.net"
+    caddy_azure_client_id: "{{ lookup('ansible.builtin.env', 'AZURE_CLIENT_ID') }}"
+    caddy_azure_secret: "{{ lookup('ansible.builtin.env', 'AZURE_CLIENT_SECRET') }}"
+    caddy_azure_tenant_id: "{{ lookup('ansible.builtin.env', 'AZURE_TENANT_ID') }}"
   ansible.builtin.set_fact:
-    edge_host_caddy_ca_root: >-
+    caddy_ca_root: >-
       {{ lookup('azure.azcollection.azure_keyvault_secret',
-      edge_host_caddy_ca_root_secret_name, vault_url=edge_host_caddy_vault_url,
-      client_id=edge_host_caddy_azure_client_id, secret=edge_host_caddy_azure_secret,
-      tenant=edge_host_caddy_azure_tenant_id) }}
+      caddy_ca_root_secret_name, vault_url=caddy_vault_url,
+      client_id=caddy_azure_client_id, secret=caddy_azure_secret,
+      tenant=caddy_azure_tenant_id) }}
   delegate_to: localhost
   no_log: true
 
 - name: Install the CA root certificate for the ACME client
   ansible.builtin.copy:
-    content: "{{ edge_host_caddy_ca_root }}\n"
-    dest: "{{ edge_host_caddy_ca_root_path }}"
+    content: "{{ caddy_ca_root }}\n"
+    dest: "{{ caddy_ca_root_path }}"
     owner: root
     group: root
     mode: "0644"
@@ -73,7 +83,7 @@
 - name: Deploy the Caddyfile
   ansible.builtin.template:
     src: Caddyfile.j2
-    dest: "{{ edge_host_caddyfile }}"
+    dest: "{{ caddy_file }}"
     owner: root
     group: root
     mode: "0644"
@@ -92,8 +102,8 @@
   ansible.builtin.copy:
     content: |
       [Unit]
-      After=dns.service
-      Wants=dns.service
+      After={{ caddy_after_service }}
+      Wants={{ caddy_after_service }}
     dest: /etc/systemd/system/caddy.service.d/10-after-dns.conf
     owner: root
     group: root

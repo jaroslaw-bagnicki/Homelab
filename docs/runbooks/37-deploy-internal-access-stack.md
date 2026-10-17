@@ -98,7 +98,7 @@ chmod 755 /workspaces/Homelab /workspaces/Homelab/ansible
 ansible-playbook ansible/playbooks/playbook-edge.yml --diff
 ```
 
-The `edge_host` role:
+The `technitium` and `caddy` roles (split out of `edge_host`, which now only carries the host hygiene):
 
 1. installs the .NET 10 ASP.NET runtime and the Technitium portable app;
 2. starts `dns.service` and waits for `http://127.0.0.1:5380/api/status`;
@@ -107,7 +107,8 @@ The `edge_host` role:
 5. switches `/etc/resolv.conf` and `/etc/network/interfaces` to `127.0.0.1` / `internal`;
 6. installs Caddy from its official apt repository, installs the fleet root from AKV, renders the
    Caddyfile and order Caddy after `dns.service`;
-7. opens UFW `53/tcp+udp` and `443/tcp` from the LAN, keeps TCP/80 closed, and leaves the Technitium API loopback-only.
+7. the `security` role opens UFW `53/tcp+udp` and `443/tcp` from the LAN, keeps TCP/80 closed, and
+   leaves the Technitium API loopback-only.
 
 ## 4. Verify DNS
 
@@ -256,14 +257,14 @@ survive a reboot.
 
 - **Technitium console** — `https://dns.internal` over TLS via Caddy. Technitium itself only
   listens on `127.0.0.1:5380`; that port is never opened and plaintext HTTP is not a supported path.
-- **Add a service** — add an `edge_host_caddy_sites` entry (name + upstream) and, if the name should not
-  use the wildcard, an `edge_host_technitium_records` entry; re-run `playbook-edge.yml`. The wildcard already
+- **Add a service** — add a `caddy_sites` entry (name + upstream) and, if the name should not
+  use the wildcard, a `technitium_records` entry; re-run `playbook-edge.yml`. The wildcard already
   points every other `.internal` name at the proxy.
 - **Rotate the Technitium admin password** — change it through the API, update
   `technitium-admin-password` in AKV, then re-run the edge playbook.
 - **Upgrade Technitium** — review the upstream changelog, bump
-  `edge_host_technitium_portable_sha256` (and `edge_host_technitium_dotnet_install_sha256` when the
-  runtime changes), then re-run with `-e edge_host_technitium_upgrade=true`. Caddy follows the apt
+  `technitium_portable_sha256` (and `technitium_dotnet_install_sha256` when the
+  runtime changes), then re-run with `-e technitium_upgrade=true`. Caddy follows the apt
   repository and unattended upgrades.
 - **eMMC watch** — `journalctl --disk-usage` (volatile), `du -sh /etc/dns /var/lib/caddy`,
   `systemctl --failed`. Query logging and disk stats must stay off.

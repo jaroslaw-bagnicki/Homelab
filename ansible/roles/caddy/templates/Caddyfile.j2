@@ -2,13 +2,13 @@
     auto_https disable_redirects
 }
 
-{% for site in edge_host_caddy_sites %}
+{% for site in caddy_sites %}
 {{ site.name }} {
     tls {
         issuer acme {
-            dir {{ edge_host_caddy_ca_url }}
-            test_dir {{ edge_host_caddy_ca_url }}
-            trusted_roots {{ edge_host_caddy_ca_root_path }}
+            dir {{ caddy_ca_url }}
+            test_dir {{ caddy_ca_url }}
+            trusted_roots {{ caddy_ca_root_path }}
             disable_http_challenge
         }
     }

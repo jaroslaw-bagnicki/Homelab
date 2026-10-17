@@ -5,16 +5,16 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User={{ edge_host_technitium_user }}
-Group={{ edge_host_technitium_group }}
+User={{ technitium_user }}
+Group={{ technitium_group }}
 SyslogIdentifier=dns-server
 
-WorkingDirectory={{ edge_host_technitium_install_dir }}
-ReadWritePaths={{ edge_host_technitium_config_dir }} {{ edge_host_technitium_log_dir }}
+WorkingDirectory={{ technitium_install_dir }}
+ReadWritePaths={{ technitium_config_dir }} {{ technitium_log_dir }}
 
 Environment="OPENSSL_ENABLE_SHA1_SIGNATURES=1"
 
-ExecStart=/usr/bin/dotnet {{ edge_host_technitium_install_dir }}/DnsServerApp.dll {{ edge_host_technitium_config_dir }}
+ExecStart=/usr/bin/dotnet {{ technitium_install_dir }}/DnsServerApp.dll {{ technitium_config_dir }}
 
 Restart=always
 RestartSec=10

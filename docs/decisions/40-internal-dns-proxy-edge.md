@@ -66,7 +66,7 @@ routing entry point.**
   the trap already recorded for the VictoriaLogs workload) — so a container adds a daemon and a boot
   ordering dependency without adding isolation. On this box it also keeps the write path off the eMMC.
 - **The node's own resolver is Technitium** — `127.0.0.1` in `/etc/resolv.conf`, with `internal` as
-  the search suffix (`edge_host_dns_search` carries the suffix, not the nameserver). **The CA guest is
+  the search suffix (`technitium_host_search` carries the suffix, not the nameserver). **The CA guest is
   pointed at the same resolver** (`192.168.2.240`) before issuance: `step-ca` must resolve
   `netdata.internal` to validate a challenge. [Runbook 35](../runbooks/35-deploy-step-ca.md)
   initially left LXC 215 on the host resolvers; the CA playbook now points it at the edge resolver

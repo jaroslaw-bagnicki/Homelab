@@ -8,32 +8,32 @@
     name: systemd-resolved
     enabled: false
     state: stopped
-  register: edge_host_resolved_stop
+  register: technitium_resolved_stop
 
 - name: Read the resolv.conf metadata before starting Technitium
   ansible.builtin.stat:
     path: /etc/resolv.conf
     follow: false
-  register: edge_host_resolv_conf_prepare
+  register: technitium_resolv_conf_prepare
 
 - name: Remove a systemd-resolved resolv.conf symlink before starting Technitium
-  when: edge_host_resolv_conf_prepare.stat.islnk | default(false)
+  when: technitium_resolv_conf_prepare.stat.islnk | default(false)
   ansible.builtin.file:
     path: /etc/resolv.conf
     state: absent
 
 - name: Decide whether a temporary resolver is needed
   ansible.builtin.set_fact:
-    edge_host_resolver_bootstrap: >-
-      {{ edge_host_resolved_stop.changed | default(false) or
-      (edge_host_resolv_conf_prepare.stat.islnk | default(false)) }}
+    technitium_resolver_bootstrap: >-
+      {{ technitium_resolved_stop.changed | default(false) or
+      (technitium_resolv_conf_prepare.stat.islnk | default(false)) }}
 
 - name: Keep a working resolver while Technitium starts
-  when: edge_host_resolver_bootstrap | bool
+  when: technitium_resolver_bootstrap | bool
   ansible.builtin.copy:
     content: |
       # Temporary resolver while Technitium starts; replaced by the local resolver below.
-      {% for nameserver in edge_host_bootstrap_nameservers %}
+      {% for nameserver in technitium_bootstrap_nameservers %}
       nameserver {{ nameserver }}
       {% endfor %}
     dest: /etc/resolv.conf

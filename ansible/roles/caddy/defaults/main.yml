@@ -1,0 +1,38 @@
+---
+# Caddy (ADR 20) — the LAN routing layer and ACME client for the private CA
+# (ADR 40). Tunables only; structural paths live in vars/main.yml.
+
+caddy_enabled: true
+
+# The CA the ACME client talks to; `ca.internal` resolves through Technitium.
+caddy_ca_url: "https://ca.internal:9000/acme/acme/directory"
+caddy_keyvault_name: homelab-bysxdb-kv
+caddy_ca_root_secret_name: ca-root-cert
+# Set to skip the Key Vault lookup (tests).
+caddy_ca_root: ""
+
+# Fail fast when the CA hostname cannot be resolved locally: on the edge box the
+# resolver is Technitium. Set false on a host whose resolver is managed elsewhere.
+caddy_require_technitium: true
+
+# Start Caddy after the local resolver so `ca.internal` is resolvable at boot.
+caddy_after_service: dns.service
+
+caddy_sites:
+  - name: netdata.internal
+    upstream: "https://192.168.2.201:19999"
+    # Netdata still serves its own self-signed certificate; the client-facing
+    # leg is the step-ca leaf. #143 removes this backend-self-signed hop.
+    tls_skip_verify: true
+  # The Technitium console is plaintext on loopback only; Caddy is the sole
+  # LAN-facing listener and serves it over TLS (ADR 34).
+  - name: dns.internal
+    upstream: "http://127.0.0.1:5380"
+  # VictoriaLogs and the Proxmox UI still serve their own self-signed
+  # certificates; the client-facing leg is the step-ca leaf.
+  - name: logs.internal
+    upstream: "https://192.168.2.214:9428"
+    tls_skip_verify: true
+  - name: proxmox.internal
+    upstream: "https://192.168.2.201:8006"
+    tls_skip_verify: true

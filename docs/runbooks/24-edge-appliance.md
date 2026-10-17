@@ -201,10 +201,11 @@ reuse — see §3a). The LAN access stack is being deployed in
   SSH allow from `192.168.2.0/24` (`security_ufw_allow_ssh_from`), DNS `53/tcp+udp`, HTTPS
   `443` (the Technitium console included — `5380` stays on loopback), fail2ban, sshd key-only
   hardening; TCP/80 stays closed (`security_ufw_deny_inbound_tcp_80: true`)
-- `ansible/roles/edge_host` — `unattended-upgrades`, `logrotate`, journald `Storage=volatile`,
-  **Technitium DNS** (authoritative `internal.`, DoT upstreams, API-driven zone/records) and
-  **Caddy** (LAN reverse proxy, per-service leaves from `step-ca`), plus the `127.0.0.1` /
-  `internal` resolver. Details: [runbook 37](37-deploy-internal-access-stack.md)
+- `ansible/roles/edge_host` — `unattended-upgrades`, `logrotate`, journald `Storage=volatile`
+- `ansible/roles/technitium` — **Technitium DNS** (authoritative `internal.`, DoT upstreams,
+  API-driven zone/records) and the `127.0.0.1` / `internal` host resolver
+- `ansible/roles/caddy` — **Caddy** LAN reverse proxy, per-service leaves from `step-ca`
+- Details: [runbook 37](37-deploy-internal-access-stack.md)
 - `ansible/host_vars/edge.yml` + `inventory.ini` (`edge` → `192.168.2.240`)
 
 ---
