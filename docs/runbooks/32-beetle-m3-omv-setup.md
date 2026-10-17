@@ -61,7 +61,11 @@ No out-of-band management — all steps run from a **keyboard + monitor** attach
 |---|---|---|---|
 | `sda` | SanDisk X600 `SD9SB8W-128G` 128 GB SSD | `191702804011` | **OMV OS** (SMART PASSED) |
 | `sdb` | Seagate ST1000VT001-1RE172 1 TB 2.5" | `WDES3KB7` | `md0` member (0 reallocated) |
-| `sdc` | Seagate ST1000VT001-1RE172 1 TB 2.5" | `WDEPBVR3` | `md0` mirror (1,056 reallocated, **released to 0** by the resync — **kept + SMART-monitored**) |
+| `sdc` | Seagate ST1000VT001-1RE172 1 TB 2.5" | `WL10C3NG` | `md0` mirror — fitted **2026-10-17** (0 reallocated, 11 head-flying hours) |
+| — | Seagate ST1000VT001-1RE172 1 TB 2.5" | `WDEPBVR3` | 🪦 **retired 2026-10-11** — failed under the monthly scrub; replaced by `WL10C3NG` ([runbook 37](37-nas-disk-replacement.md)) |
+
+> **Device letters are a snapshot, not an identity.** They rotate between boots and across servicing
+> (§5); the serial is the only stable handle.
 
 > **Confirm on the unit** — the values below are research 32's audit; verify the LAN interface name
 > at the console.
@@ -282,12 +286,39 @@ portable to any Linux box, with per-disk SMART intact.
 > and mdadm records members by UUID — the array assembles identically whichever letters the kernel
 > hands out. **Measured:** Boot C came up fully rotated and `md0` still assembled as
 > `sdb[1] sdc[0]` → `[2/2] [UU]`, i.e. slot 0 (`WDES3KB7`) moved `sda → sdc` with no effect at all.
-> **Physical anchor:** the degraded drive is the one on the **black** connector — the one
-> to pull when it eventually needs replacing.
+>
+> **Physical anchor — identify by SERIAL, never by connector colour.** The colours moved during the
+> 2026-10-11 replacement: `WL10C3NG` was fitted on **blue** and `WDES3KB7` now sits on **black**
+> (measured `by-path`, 2026-10-17):
+>
+> | `by-path` | Connector | Serial | Disk |
+> |---|---|---|---|
+> | `ata-1` | *white* | `191702804011` | SanDisk SSD — the OS disk |
+> | `ata-2` | *blue* | `WL10C3NG` | Seagate — `md0` mirror |
+> | `ata-3` | *black* | `WDES3KB7` | Seagate — `md0` mirror |
+>
+> (The Boot A/B/C columns above record the 2026-09-21/22 pair `WDES3KB7` (blue) + `WDEPBVR3`
+> (black), before that replacement.) Pick the member to pull from `Storage | Disks`, by serial.
 3. Wait for the initial resync. Optionally speed it up:
    ```sh
    echo 50000 > /proc/sys/dev/raid/speed_limit_min
    ```
+
+### Replacing a failed member
+
+Replacing a member is [runbook 37](37-nas-disk-replacement.md) (identify by serial → destructive
+test → `mdadm --add` → resync → verify). Lessons from the first failure (2026-10-11, `WDEPBVR3`):
+
+- **SMART "PASSED" is not a health verdict.** The drive died under the monthly scrub with
+  `Reallocated_Sector_Ct` climbing `0 → 40 → 56` and `8 / 8` pending / offline-uncorrectable — while
+  the overall-health flag still read **PASSED**. Judge by the counters and the self-test.
+- **Attribute 9 `Power_On_Hours` is bogus on the ST1000VT001** (`smartctl` "not in database"):
+  every unit reports ~65.5 k, which cannot be real. Read **Head_Flying_Hours (240)** and the LBA
+  counters (**241/242**) instead — a genuinely unused drive showed **11 h** head-flying and
+  **~3.5 GB** written.
+- **The decisive tests** are the **extended self-test** (`smartctl -t long`) and a **destructive
+  write pass** (`badblocks -w`). In a degraded mirror, a bad sector on the surviving disk is an I/O
+  error to the filesystem — never resync from an unverified source.
 
 ### Filesystem
 
@@ -391,8 +422,8 @@ lever**: it does not set the ATA automatic acoustic management feature bit, so *
 
 ```sh
 sudo apt-get install -y hdparm     # not present on a stock OMV 8 — without it AAM is undetectable
-sudo hdparm -M /dev/sda            # WDES3KB7 → acoustic = not supported
-sudo hdparm -M /dev/sdb            # WDEPBVR3 → acoustic = not supported
+sudo hdparm -M /dev/sdX            # WDES3KB7 / WL10C3NG → acoustic = not supported
+                                   # (WDEPBVR3 is retired 2026-10-11)
 ```
 
 `hdparm -I` lists a *Recommended acoustic management value: 128*, but never the
