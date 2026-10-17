@@ -106,6 +106,12 @@ watch -n 60 cat /proc/mdstat
 - **Never reboot mid-resync** — wait for `[UU]` with no progress line.
 - Optionally raise rebuild speed: `echo 50000 | sudo tee /proc/sys/dev/raid/speed_limit_min`.
 
+> **GUI or shell?** OMV's `Storage | Multiple Device` is a wrapper over `mdadm`, but it only manages
+> arrays recorded in `/etc/openmediavault/config.xml`. **Check the UI first:** if `md0` is listed,
+> prefer its **Recover** action so OMV records the change; if it is *not* listed (this NAS carried no
+> `<mdadm>` block on 2026-10-17 — the array lives only in `mdadm.conf` + the kernel), add from the
+> shell as above — there is no OMV record to conflict with. Either way the array is plain `mdadm`.
+
 ## 5. Verify
 
 ```sh
@@ -118,6 +124,10 @@ sudo smartctl -H /dev/disk/by-id/ata-<MODEL>_<NEW-SERIAL>   # PASSED
 
 Then confirm OMV: `Storage | Multiple Device` shows the array clean, and `Storage | Disks` lists the
 new serial.
+
+> **Fix OMV's S.M.A.R.T. monitoring separately.** `Storage | S.M.A.R.T. | Devices` keeps its own
+> per-disk list in `config.xml` (`<smart><monitor><device>`): **disable/remove the retired serial and
+> enable the new one**. On 2026-10-17 OMV was still polling the dead `WDEPBVR3`.
 
 ## 6. Record it
 
