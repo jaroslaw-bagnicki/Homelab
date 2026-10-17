@@ -57,6 +57,7 @@ ansible-playbook ansible/workloads/step-ca/step-ca-playbook.yml
 | `playbooks/playbook-edge.yml` | Wyse 3040 edge base provision: common → security → ca_trust → edge_host → technitium → caddy → nut_client → netdata → fluentbit (bare-metal, no Docker/Arc — ADR 24) |
 | `playbooks/playbook-technitium.yml` | Targeted: the `technitium` role only — DNS server and host resolver (runbook 37) |
 | `playbooks/playbook-caddy.yml` | Targeted: the `caddy` role only — LAN reverse proxy and ACME (runbook 37) |
+| `playbooks/playbook-ca-trust.yml` | Targeted: the `ca_trust` role only — fleet CA root into the system trust store, `ca` excluded (runbook 39) |
 | `playbooks/playbook-netdata.yml` | Targeted: the `netdata` role only — parent + children on all four LAN nodes (runbook 31) |
 | `playbooks/playbook-pve.yml` | Wyse 5070 Proxmox host base provision: common → security → ca_trust → nut_server → nut_client → netdata → fluentbit (UFW LAN allow for SSH + NUT 3493 + Proxmox UI 8006 + Netdata dashboard 19999 / streaming 19996, both TLS-only) |
 | `playbooks/playbook-nas.yml` | Beetle M-III OMV NAS base provision: common → security → ca_trust → nut_client → netdata → fluentbit (UFW LAN allow for SSH + OMV web `443`, `80` denied per ADR 34; Netdata child streaming to `pve`) |

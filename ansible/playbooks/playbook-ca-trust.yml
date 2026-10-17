@@ -1,0 +1,12 @@
+---
+# Targeted run for the fleet CA root only — the same role the node playbooks apply,
+# without re-running the base, security, NUT, Netdata or Fluent Bit roles.
+# Needs AZURE_CLIENT_ID / AZURE_CLIENT_SECRET / AZURE_TENANT_ID for the CA root lookup.
+# `ca` is excluded: the CA guest installs root + intermediate for its own TLS (runbook 35 §7).
+# Control node per host: `cloudlab` from the dev container (`--limit cloudlab`), the LAN nodes
+# from a workstation (`--limit 'physical:proxmox_guests'`).
+- name: Apply the fleet CA root trust
+  hosts: all:!ca
+  become: true
+  roles:
+    - ca_trust

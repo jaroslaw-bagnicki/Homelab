@@ -51,6 +51,15 @@ chmod 755 /workspaces/Homelab /workspaces/Homelab/ansible
 ansible-playbook ansible/playbooks/playbook-pve.yml --diff
 ```
 
+To apply **only** the trust role, without re-running the rest of a node's base playbook:
+
+```sh
+ansible-playbook ansible/playbooks/playbook-ca-trust.yml --diff \
+  --limit 'physical:proxmox_guests'       # LAN nodes, from a workstation
+ansible-playbook ansible/playbooks/playbook-ca-trust.yml --diff \
+  --limit cloudlab                        # VPS, from the dev container
+```
+
 Run each playbook **twice**: the first run installs the root and fires
 `update-ca-certificates`; the second must report `changed=0` for the `ca_trust` tasks.
 
