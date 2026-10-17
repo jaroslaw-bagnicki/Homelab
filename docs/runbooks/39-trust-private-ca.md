@@ -24,7 +24,9 @@
 
 - [ ] `ca-root-cert` published to AKV `homelab-bysxdb-kv` ([runbook 36](36-private-ca-init.md) step 1).
 - [ ] Controller has `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID` exported — the
-      `ca_trust` role fails hard without them.
+      `ca_trust` role fails hard without them. In a plain dev container they are not pre-set: load
+      them from the vault in the shell that runs the playbook (Az PowerShell, `codespaces-sp-*`
+      secrets) and never print them.
 - [ ] Fleet key loaded in `ssh-agent` (`fleet-connect` skill).
 - [ ] DNS from [runbook 37](37-deploy-internal-access-stack.md) live on the nodes you verify
       end-to-end (otherwise use `--resolve`, §2).
@@ -60,8 +62,8 @@ ansible-playbook ansible/playbooks/playbook-ca-trust.yml --diff \
   --limit cloudlab                        # VPS, from the dev container
 ```
 
-Run each playbook **twice**: the first run installs the root and fires
-`update-ca-certificates`; the second must report `changed=0` for the `ca_trust` tasks.
+Run the rollout **twice** (base playbook or the targeted one): the first run installs the root and
+fires `update-ca-certificates`; the second must report `changed=0` for the `ca_trust` tasks.
 
 ## 2. Verify a node trusts the root
 
@@ -80,7 +82,10 @@ curl --resolve netdata.internal:443:192.168.2.240 -sS -o /dev/null -w '%{http_co
 ```
 
 A non-zero exit with *unable to get local issuer certificate* means the store rebuild did not run —
-re-run the playbook and check `journalctl`-free output of `update-ca-certificates`.
+re-run the playbook and read the output of `update-ca-certificates`.
+
+`cloudlab` has no route to `.internal`: there the role's own store assertion
+(`openssl verify -CAfile /etc/ssl/certs/ca-certificates.crt`) is the verification.
 
 ## 3. Workstations and phones
 
@@ -157,6 +162,6 @@ environment:
 |---|---|
 | `curl` still reports an untrusted certificate | Store not rebuilt — rerun the playbook; confirm `update-ca-certificates` ran (handler fires only on content change) |
 | Browser still warns, `curl` is fine | Browser-specific store — Firefox (NSS) or the iOS *full trust* toggle |
-| `ca_trust` fails the `openssl verify` task | The AKV entry is not the issued root — re-publish with `Set-HomelabCaRootCert.ps1` |
+| `ca_trust` fails the pinned-fingerprint assertion | The AKV entry is not the issued root — re-publish with `Set-HomelabCaRootCert.ps1` |
 | Everything works on nodes, fails in a container | Host store does not propagate — §4 |
 | `curl` cannot resolve `netdata.internal` | The client does not use the edge resolver yet — use `--resolve`, or finish [runbook 37](37-deploy-internal-access-stack.md) §5 |
