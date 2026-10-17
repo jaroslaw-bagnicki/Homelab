@@ -266,17 +266,17 @@ The full eMMC image already contains `/etc/dns`, but the `internal.` zone is the
 edge box that is worth exporting separately — it survives an image loss and can be re-imported into a
 fresh Technitium install ([runbook 37](37-deploy-internal-access-stack.md)).
 
-The console and the API are served over TLS by Caddy at `https://technitium.internal` — plaintext
-`5380` stays on loopback. Run this from a client that resolves `technitium.internal` to
+The console and the API are served over TLS by Caddy at `https://dns.internal` — plaintext
+`5380` stays on loopback. Run this from a client that resolves `dns.internal` to
 `192.168.2.240` through Technitium and trusts the fleet root ([#144](https://github.com/jaroslaw-bagnicki/Homelab/issues/144));
 `edge` itself satisfies both. The password is never written to disk:
 
 ```powershell
 $pw = Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name technitium-admin-password -AsPlainText
-$session = Invoke-RestMethod -Method Post -Uri https://technitium.internal/api/user/login `
+$session = Invoke-RestMethod -Method Post -Uri https://dns.internal/api/user/login `
     -Body @{ user = 'admin'; pass = $pw }
 Invoke-RestMethod -Headers @{ Authorization = "Bearer $($session.token)" } `
-    -Uri 'https://technitium.internal/api/zones/export?zone=internal' `
+    -Uri 'https://dns.internal/api/zones/export?zone=internal' `
     -OutFile .\internal.zone
 ```
 

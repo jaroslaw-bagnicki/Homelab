@@ -89,5 +89,13 @@ edge_host_caddy_sites:
     tls_skip_verify: true
   # The Technitium console is plaintext on loopback only; Caddy is the sole
   # LAN-facing listener and serves it over TLS (ADR 34).
-  - name: technitium.internal
+  - name: dns.internal
     upstream: "http://127.0.0.1:5380"
+  # VictoriaLogs and the Proxmox UI still serve their own self-signed
+  # certificates; the client-facing leg is the step-ca leaf.
+  - name: logs.internal
+    upstream: "https://192.168.2.214:9428"
+    tls_skip_verify: true
+  - name: proxmox.internal
+    upstream: "https://192.168.2.201:8006"
+    tls_skip_verify: true

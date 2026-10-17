@@ -27,8 +27,11 @@
   happens only after Technitium answers.
 - **UFW** — `53/tcp+udp` and `443/tcp` from `192.168.2.0/24`; TCP/80 stays closed and nothing is
   exposed to the internet. Technitium's admin API binds `127.0.0.1:5380` only, and Caddy publishes
-  the console at `https://technitium.internal` — plaintext HTTP never reaches the LAN
+  the console at `https://dns.internal` — plaintext HTTP never reaches the LAN
   ([ADR 34](../decisions/34-lan-tls-only.md)).
+- **Published sites** — `dns.internal` (console), `netdata.internal`, `logs.internal` (VictoriaLogs)
+  and `proxmox.internal` (UI on `:8006`), all behind the single `:443` listener. `pve.internal` stays
+  the host record (`.201`) so Ansible, NUT and Netdata keep reaching the node itself.
 - **CA prerequisite** — the `ca` guest (LXC 215) uses `192.168.2.240` so `step-ca` can resolve
   `netdata.internal` during challenge validation.
 - **No new guest**; the hostname stays `edge` ([ADR 33](../decisions/33-fleet-node-hostnames.md)).
@@ -160,18 +163,29 @@ step ca health --ca-url https://ca.internal:9000 --root /etc/step-ca/certs/root_
 
 ## 6. Verify Caddy, ACME and TLS
 
-The Technitium console is published by Caddy over TLS — open `https://technitium.internal` from a
-client that resolves it through Technitium and trusts the fleet root. Plaintext HTTP is never exposed:
-Technitium listens on `127.0.0.1:5380` and nothing opens that port to the LAN.
+Every admin surface is published by Caddy over TLS — open the name from a client that resolves it
+through Technitium and trusts the fleet root. Plaintext HTTP is never exposed: Technitium listens on
+`127.0.0.1:5380` and nothing opens that port to the LAN.
+
+| Site | Upstream | Notes |
+|---|---|---|
+| `https://dns.internal` | `http://127.0.0.1:5380` | Technitium console; loopback-only hop |
+| `https://netdata.internal` | `https://192.168.2.201:19999` | backend self-signed, verify skipped (#143) |
+| `https://logs.internal` | `https://192.168.2.214:9428` | VictoriaLogs; basic auth passes through |
+| `https://proxmox.internal` | `https://192.168.2.201:8006` | Proxmox UI (the host stays `pve.internal` → `.201`) |
 
 ```sh
 # Same check as the browser, from a client that trusts the root
-curl --resolve technitium.internal:443:192.168.2.240 --cacert root_ca.crt \
-  -sS -o /dev/null -w '%{http_code}\n' https://technitium.internal/
+for n in dns netdata logs proxmox; do
+  curl --resolve $n.internal:443:192.168.2.240 --cacert root_ca.crt \
+    -sS -o /dev/null -w "$n.internal: %{http_code}\n" https://$n.internal/
+done
 ```
 
-Expected: `200` and the `step-ca` leaf — `openssl s_client` must show `DNS:technitium.internal`. A
-`502` means Technitium is not listening on loopback (`systemctl status dns`).
+Expected: `200` for every site (VictoriaLogs answers `401` without credentials — that still proves the
+TLS leg) and the `step-ca` leaf — `openssl s_client` must show the matching `DNS:<name>.internal`. A
+`502` means the backend is not listening; check `systemctl status dns` on `edge`, `victoria-logs` on
+`vtstack`, `pveproxy` on `pve`.
 
 The CA resolver from §5 must be live before this section: without it `step-ca` cannot resolve
 `netdata.internal` to validate a challenge, and Caddy will keep retrying issuance.
@@ -240,7 +254,7 @@ survive a reboot.
 
 ## 9. Operations
 
-- **Technitium console** — `https://technitium.internal` over TLS via Caddy. Technitium itself only
+- **Technitium console** — `https://dns.internal` over TLS via Caddy. Technitium itself only
   listens on `127.0.0.1:5380`; that port is never opened and plaintext HTTP is not a supported path.
 - **Add a service** — add an `edge_host_caddy_sites` entry (name + upstream) and, if the name should not
   use the wildcard, an `edge_host_technitium_records` entry; re-run `playbook-edge.yml`. The wildcard already

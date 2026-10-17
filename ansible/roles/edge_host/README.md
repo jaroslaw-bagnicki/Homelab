@@ -41,7 +41,8 @@ Extras for the Edge Wyse 3040 ingress appliance ([ADR 24](../../../docs/decision
 - **eMMC discipline** — journald is volatile, Technitium query logging is off, stats stay in memory, the cache is not saved to disk, and logs go to journald. The zone database is the only meaningful write path.
 - **ADRs 34/40** — Caddy validates through TLS-ALPN-01 on `443`; HTTP-01 is disabled and TCP/80 stays closed.
 - **Certificates** — every Caddy site obtains a short-lived leaf from `step-ca` in LXC 215 through `ca.internal`; the ACME client trusts the fleet root from AKV and restarts Caddy when that root changes.
-- **Admin console** — Technitium binds its web/API service to `127.0.0.1:5380`; Caddy publishes it as `https://technitium.internal`. Plaintext HTTP never reaches the LAN and `5380` never leaves loopback ([ADR 34](../../../docs/decisions/34-lan-tls-only.md)).
+- **Admin console** — Technitium binds its web/API service to `127.0.0.1:5380`; Caddy publishes it as `https://dns.internal`. Plaintext HTTP never reaches the LAN and `5380` never leaves loopback ([ADR 34](../../../docs/decisions/34-lan-tls-only.md)).
+- **Published sites** — `dns.internal` (console), `netdata.internal`, `logs.internal` (VictoriaLogs) and `proxmox.internal` (UI on `:8006`); all on one `:443` listener with step-ca leaves. `pve.internal` stays the host record.
 - **Bootstrap** — the host resolver is switched to Technitium only after the service answers, so the play does not cut its own DNS during provisioning.
 - **Backend hop** — the `netdata.internal` site currently reaches Netdata's self-signed HTTPS backend with `tls_insecure_skip_verify`; the client-facing leg is already the step-ca leaf. [#143](https://github.com/jaroslaw-bagnicki/Homelab/issues/143) removes the backend self-signed hop.
 - Applied by `playbook-edge.yml`; hostname/UTC/Avahi come from `common`, UFW/fail2ban/sshd from `security`.
