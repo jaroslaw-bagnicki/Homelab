@@ -26,9 +26,11 @@ are settled. Pending: Memtest86+ ([Pending checks](#pending-checks)).
 > Beetle M-III is the homelab NAS backup target running OpenMediaVault, succeeding the ML110.
 > This research doc is the Phase 0 hardware audit output that grounds that decision. It confirms
 > the platform — **Skylake / H110 / LGA1151 / DDR4, Pentium G4400, AES-NI, QuickSync H.264+HEVC
-> decode**, 8 GiB DDR4; the **BIOS walk is done** ([BIOS walk](#bios-walk)), and the `sdc`
-> reallocated-sector finding is resolved — **keep + monitor** (long self-test clean; the 1,056
-> reallocated count has since been **released to 0** by the RAID1 resync — [re-read](#sdc-re-read-2026-09-26)).
+> decode**, 8 GiB DDR4; the **BIOS walk is done** ([BIOS walk](#bios-walk)).
+>
+> ⚠ **Superseded 2026-10-11 (final outcome):** the earlier `sdc` "keep + monitor" call did not hold
+> — `WDEPBVR3` failed under the monthly scrub and was scrapped, then replaced by `WL10C3NG` on
+> 2026-10-17 — see [final outcome](#final-outcome--wdepbvr3-failure-and-replacement-2026-10-11--17).
 
 | Decision | Outcome (as of 2026-09-12) |
 |---|---|
@@ -40,7 +42,8 @@ are settled. Pending: Memtest86+ ([Pending checks](#pending-checks)).
 | SATA | Intel 100/C230 **SATA Controller [AHCI]** (`00:17.0`) — H110; **5 ports** (3 standard + mSATA + M.2), and **no BIOS SATA-mode setting** (AHCI-only) |
 | Disk 0 | **SanDisk X600** `SD9SB8W-128G` 128 GB 2.5" SATA SSD (`sda`) — **SMART PASSED** (41,802 POH) — cache |
 | Disk 1 | **Seagate ST1000VT001-1RE172** 1 TB 2.5" (`sdb`, `WDES3KB7`) — **PASSED**, 0 reallocated, 65,545 POH |
-| Disk 2 | **Seagate ST1000VT001-1RE172** 1 TB 2.5" (`sdc`, `WDEPBVR3`) — **PASSED**, **0 reallocated** (1,056 after the audit's 09-12 long test, released by the RAID1 resync — see [Storage](#storage-sata--smart)) |
+| Disk 2 | **Seagate ST1000VT001-1RE172** 1 TB 2.5" (`sdc`, `WDEPBVR3`) — PASSED at audit (0 reallocated, 1,056 released by the resync) — **🪦 FAILED 2026-10-11**, scrapped; see [final outcome](#final-outcome--wdepbvr3-failure-and-replacement-2026-10-11--17) |
+| Disk 3 | **Seagate ST1000VT001-1RE172** 1 TB 2.5" (`WL10C3NG`) — replacement fitted **2026-10-17**; PASSED, **0 reallocated**, 11 head-flying hours |
 | USB | Kingston DataTraveler 3.0 64 GB (`sdd`) = Ventoy live USB, **not** a data drive |
 | PSU | **AcBel `POF001-280G`** (UPS-integrated `PSU UPS BEETLE/M-III`, DN P/N `01750279900`, S/N `5421CP10JW`) — **250 W** (225 W @50 °C), **80 Plus Gold** |
 | Dynamic IP | `192.168.2.158` (DHCP via mesh `192.168.2.1`) |
@@ -132,7 +135,8 @@ Inventoried **3 SATA devices + 1 USB boot stick** on 2026-09-12, occupying **SAT
 |---|---|---|---|---|---|---|
 | `sda` | SanDisk **X600** (`SD9SB8W-128G`) | `191702804011` | 128 GB (119.2 GiB) | 6.0 Gb/s | ✅ **PASSED** | 2.5" SSD, FW `X6107000` — **cache / boot** |
 | `sdb` | Seagate **ST1000VT001-1RE172** | `WDES3KB7` | 1.00 TB | 6.0 Gb/s | ✅ **PASSED** | FW `SDC2`, 5400 rpm, 512e, **0 reallocated** — clean |
-| `sdc` | Seagate **ST1000VT001-1RE172** | `WDEPBVR3` | 1.00 TB | 6.0 Gb/s | ⚠️ **PASSED** | FW `SDC1`, 5400 rpm, 512e, **0 reallocated** (1,056 released 2026-09-26) — see below |
+| ~~`sdc`~~ | Seagate **ST1000VT001-1RE172** | `WDEPBVR3` | 1.00 TB | 6.0 Gb/s | 🪦 **FAILED 2026-10-11** | FW `SDC1`, 5400 rpm, 512e — 0 reallocated at audit, failed under the monthly scrub; see [final outcome](#final-outcome--wdepbvr3-failure-and-replacement-2026-10-11--17) |
+| *repl.* | Seagate **ST1000VT001-1RE172** | `WL10C3NG` | 1.00 TB | 6.0 Gb/s | ✅ **PASSED** | FW `SDC2`, 5400 rpm, 512e, **0 reallocated**, 11 head-flying hours — fitted 2026-10-17 |
 | `sdd` | Kingston DataTraveler 3.0 | `E0D55EA573F0E791494E0C5F` | 57.8 GiB | USB | n/a | Ventoy live medium — not a data drive |
 
 SMART detail:
@@ -142,11 +146,13 @@ SMART detail:
   **41,802 POH** (~4.8 yr) / 5,324 power cycles; temp 26 °C (min 18 / max 41); no error log;
   short self-test passed. **Healthy — reuse as the OMV cache / boot SSD.**
 - **Seagate `sdb`** — overall **PASSED**; **0** reallocated / 0 pending / 0 uncorrectable;
-  **65,545 POH** (~7.5 yr continuous); Start_Stop / Load_Cycle **9** each (always-on recorder
-  signature); temp 28 °C; short self-test passed. **Clean — keep as a mirror member.**
+  **~9 POH** (attr 9 raw 65,545 − 65,536; the "~7.5 yr" reading was the offset — see
+  [final outcome](#final-outcome--wdepbvr3-failure-and-replacement-2026-10-11--17)); Start_Stop /
+  Load_Cycle **9** each; temp 28 °C; short self-test passed. **Clean — keep as a mirror member.**
 - **Seagate `sdc` — ⚠️ past media event, count since released** — overall **PASSED**;
   `Reallocated_Sector_Ct` was **1,056** on 2026-09-12 (normalised **98** / threshold 10), **0** pending,
-  **0** reallocation candidates, **65,545 POH**, temp 26–33 °C, short self-test passed. On
+  **0** reallocation candidates, **~9 POH** (attr 9 raw 65,545 − 65,536), temp 26–33 °C, short
+  self-test passed. On
   2026-09-26 the count is back to **0** — see the [re-read](#sdc-re-read-2026-09-26).
   `smartctl -l error` + `smartctl -x` (2026-09-12):
   - **SMART error log: empty** (comprehensive + extended); Device Statistics show
@@ -208,9 +214,54 @@ own background scan remains off (`Offline data collection: never started`).
 pending sectors, or a rising uncorrectable count, is real degradation; a raw of 0 alone is not
 proof of health.
 
-Incidental: the self-test log's `Lifetime(hours)` column is a **16-bit wrap** (entries at 5 / 9 /
-12 h = POH 65,541 / 65,545 / 65,548), so the #1 `Extended offline` ran ~3 POH after the audit; and
+Incidental: the self-test log's `Lifetime(hours)` column is **correct** — it is attribute 9 that
+carries a **+65,536 offset** on this model (see the POH correction under
+[final outcome](#final-outcome--wdepbvr3-failure-and-replacement-2026-10-11--17)). The entries at
+5 / 9 / 12 h put the #1 `Extended offline` ~3 h after the audit, and
 only ~20 POH have been logged since 09-12 — the NAS has barely been powered.
+
+#### Final outcome — `WDEPBVR3` failure and replacement (2026-10-11 → 17)
+
+The "keep + monitor" call above **did not hold** — the drive failed fifteen days later, under a
+routine load.
+
+| Time (UTC) | Event |
+|---|---|
+| 08:08 | Monthly `mdcheck` scrub starts on `md0` (sustained read load) |
+| 09:35 | Drive stops answering reads — `READ FPDMA QUEUED` timeouts (`Emask 0x4`), `ata2: hard resetting link` |
+| 09:37 | `ata2: hardreset failed` → `reset failed, giving up` → `disable device`; `md/raid1:md0: Disk failure …, disabling device` |
+| 10:22 | Reboot: re-enumerates as `/dev/sda` — still defective |
+| 11:41 / 11:55 | Extended self-test **twice**: `Completed: read failure`, **same LBA 954316728** |
+| 13:04 | Goes offline mid-write-test (`DID_BAD_TARGET`, `INQUIRY failed`, reads 0 bytes); 222,292,080 bad blocks logged, 443 I/O errors |
+| 13:24 / 13:30 / 18:44 | Further reboots and a **cold power-cycle + cable reseat** — **never detected again** (`ata2: hardreset failed`) |
+| 19:03 | Fitted in a second machine (Lenovo M910q) — **not detected**, same `ata1: hardreset failed` |
+
+**SMART trajectory:** `Reallocated_Sector_Ct` **0 → 40 → 56**, `Current_Pending_Sector` **0 → 8**,
+`Offline_Uncorrectable` **0 → 8** — while overall health still read **PASSED**.
+
+**Verdict:** hardware-dead — a reproducible self-test failure at one LBA, then total loss of the
+SATA link, confirmed on a **second, independent controller** (which rules out the NAS port/cable).
+Not recoverable; RMA'd and replaced.
+
+**Replacement `WL10C3NG`** (same model, FW `SDC2`, fitted 2026-10-17): PASSED, **0**
+reallocated/pending/uncorrectable, **11 head-flying hours**, **~3.5 GB written**. A full destructive
+`badblocks -w` pass completed with **0 errors** before it joined `md0`.
+
+**⚠ Power-On-Hours correction (found during the replacement).** Attribute 9's raw value on these
+ST1000VT001s is offset by **+65,536**: raw `65,547` → **11 h** (`WL10C3NG`, matching its
+Head_Flying_Hours **11**), raw `65,637` → **101 h** (`WDES3KB7`, matching Head_Flying **100**),
+raw `65,636` → **100 h** (`WDEPBVR3`, matching Head_Flying **100**). The self-test log's
+`Lifetime(hours)` entries (5 / 9 / 12 / 100 / 103) are therefore the **correct** hours — the
+earlier "~7.5 yr / always-on recorder" reading was the offset, and these drives were in fact
+**nearly new** (~0–103 h). Read POH as `raw mod 65,536` on this model, cross-checked against
+**Head_Flying_Hours (240)**.
+
+**Lesson for the audit method:** a clean extended self-test and a *released* reallocation count do
+not prove a drive is sound — `WDEPBVR3` passed both on 2026-09-26 and died two weeks later. Judge by
+the counters, the self-test result, and the **bus behaviour**; a drive that drops off the bus under
+load is failing regardless of SMART flags.
+
+Procedure: [runbook 37](../runbooks/37-nas-disk-replacement.md).
 
 ### Drive provenance & recording type (2× Seagate)
 
@@ -391,7 +442,7 @@ log so future events are unambiguous.
 | RAM | **8 GiB DDR4** (1×8, 1 slot free, ≤32 GiB) |
 | QuickSync | H.264 + HEVC 8-bit decode |
 | SATA | Intel 100/C230 AHCI-only; **5 ports** — 3 standard (all occupied) + mSATA + M.2 free |
-| Array | **2× Seagate 1 TB** → mdadm RAID1 = 1 TB usable; `sdc` kept + monitored (reallocated count released to 0) |
+| Array | **2× Seagate 1 TB** → mdadm RAID1 = 1 TB usable; `WDEPBVR3` was kept + monitored at audit but **failed 2026-10-11** — replaced by `WL10C3NG` (2026-10-17) |
 | Cache | SanDisk X600 `SD9SB8W-128G` 128 GB SSD, PASSED |
 | NIC | **Intel I219-V** GbE |
 | Expansion | PCIe 3.0 x16 + 2× PCIe 2.0 x1 |
@@ -412,7 +463,9 @@ Phase 1 (OMV install + array) is the working direction
    having been tentative candidates released by the RAID1 resync. See
    [Storage](#storage-sata--smart) and the [re-read](#sdc-re-read-2026-09-26). **Decision: keep
    `sdc` in the RAID1 mirror with `sdb` and monitor via SMART** (replace was the conservative
-   alternative).
+   alternative). **⚠ Superseded 2026-10-11:** `WDEPBVR3` failed under the monthly scrub and was
+   scrapped; replaced by `WL10C3NG` on 2026-10-17 — see
+   [final outcome](#final-outcome--wdepbvr3-failure-and-replacement-2026-10-11--17).
 2. **HDD SMART** — ✅ **done 2026-09-12**: `sdb` clean (0 reallocated); `sdc` anomaly as above;
    CMR confirmed (Seagate Video 2.5 = Perpendicular); both at 6.0 Gb/s.
 3. **PSU label** — ✅ **done 2026-09-12**: **AcBel `POF001-280G`** (UPS-integrated), 250 W
