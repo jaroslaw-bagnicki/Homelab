@@ -162,7 +162,9 @@ pct create 215 local:vztmpl/<template> \
 - **`--onboot 1`** — the CA must return on its own after a host reboot.
 - `--rootfs local-lvm:8` is a starting estimate; `step-ca` and its state are small, re-check after
   deployment.
-- DNS is deliberately **not** pinned — the guest inherits the host resolvers.
+- DNS is **not** pinned at build time — the guest inherits the host resolvers for now. [ADR 40](../decisions/40-internal-dns-proxy-edge.md)
+  makes the resolver a prerequisite for ACME: once the `.internal` stack runs on `edge`, point this
+  guest at `192.168.2.240` so `step-ca` can resolve service names during challenge validation.
 
 Append the TPM passthrough to `/etc/pve/lxc/215.conf`:
 
