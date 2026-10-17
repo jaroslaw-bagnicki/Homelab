@@ -38,17 +38,13 @@
     mode: "0644"
   notify: Restart systemd-journald
 
-- name: Manage DNS search domain in interfaces (DR source of truth)
-  ansible.builtin.lineinfile:
-    path: /etc/network/interfaces
-    regexp: "^\\s*dns-search.*$"
-    line: "    dns-search {{ edge_dns_search }}"
-    insertafter: "^\\s*iface .*inet static"
-    state: "{{ 'present' if edge_dns_search else 'absent' }}"
+- name: Deploy Technitium DNS
+  ansible.builtin.import_tasks: technitium.yml
+  when: edge_host_technitium_enabled | bool
 
-- name: Apply DNS search domain to live resolv.conf
-  ansible.builtin.lineinfile:
-    path: /etc/resolv.conf
-    regexp: "^search\\s+.*$"
-    line: "search {{ edge_dns_search }}"
-    state: "{{ 'present' if edge_dns_search else 'absent' }}"
+- name: Point the host at the local resolver
+  ansible.builtin.import_tasks: resolver.yml
+
+- name: Deploy Caddy
+  ansible.builtin.import_tasks: caddy.yml
+  when: edge_host_caddy_enabled | bool

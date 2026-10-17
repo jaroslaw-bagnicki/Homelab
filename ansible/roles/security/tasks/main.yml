@@ -26,6 +26,15 @@
   loop: "{{ security_ufw_allow_tcp_ports }}"
   when: security_ufw_allow_tcp_ports | length > 0
 
+- name: UFW allow additional UDP ports
+  community.general.ufw:
+    rule: allow
+    proto: udp
+    port: "{{ item }}"
+    from_ip: "{{ security_ufw_allow_udp_from }}"
+  loop: "{{ security_ufw_allow_udp_ports }}"
+  when: security_ufw_allow_udp_ports | length > 0
+
 - name: UFW deny inbound TCP/80
   community.general.ufw:
     rule: deny

@@ -1,0 +1,43 @@
+---
+- name: Read the resolv.conf metadata
+  ansible.builtin.stat:
+    path: /etc/resolv.conf
+    follow: false
+  register: edge_host_resolv_conf
+
+- name: Remove a systemd-resolved resolv.conf symlink
+  when: edge_host_resolv_conf.stat.islnk | default(false)
+  ansible.builtin.file:
+    path: /etc/resolv.conf
+    state: absent
+
+- name: Configure the live resolver
+  ansible.builtin.copy:
+    content: |
+      # Managed by Ansible — Technitium DNS on the edge node (ADR 40).
+      {% for nameserver in edge_host_dns_nameservers %}
+      nameserver {{ nameserver }}
+      {% endfor %}
+      {% if edge_host_dns_search | length > 0 %}
+      search {{ edge_host_dns_search }}
+      {% endif %}
+    dest: /etc/resolv.conf
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Manage the DNS nameservers in interfaces
+  ansible.builtin.lineinfile:
+    path: /etc/network/interfaces
+    regexp: '^\s*dns-nameservers.*$'
+    line: "    dns-nameservers {{ edge_host_dns_nameservers | join(' ') }}"
+    insertafter: '^\s*iface .*inet static'
+    state: "{{ 'present' if edge_host_dns_nameservers | length > 0 else 'absent' }}"
+
+- name: Manage the DNS search domain in interfaces
+  ansible.builtin.lineinfile:
+    path: /etc/network/interfaces
+    regexp: '^\s*dns-search.*$'
+    line: "    dns-search {{ edge_host_dns_search }}"
+    insertafter: '^\s*iface .*inet static'
+    state: "{{ 'present' if edge_host_dns_search else 'absent' }}"
