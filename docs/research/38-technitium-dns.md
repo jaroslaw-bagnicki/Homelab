@@ -12,9 +12,9 @@ space, [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) settles the
 about the DNS server that makes the names resolve, and about the two follow-on questions the thread
 raises: **k3s service registration** and **mDNS-to-unicast bridging**.
 
-**Status**: 📝 Analysis — **leaning Technitium DNS** (operator, 2026-10-17). No ADR yet; the resolver
-is still open in [research 35](35-private-ca-and-lan-naming.md) and in
-[idea 10](../ideas/10-internal-ca-dns-stack.md).
+**Status**: 📝 Analysis — **decided in [ADR 40](../decisions/40-internal-dns-proxy-lxc.md)** (Technitium DNS as
+the resolver, beside Caddy, in one unprivileged LXC on `pve`). This document is the analysis behind
+the decision, not its authority.
 
 > ⚠️ **Verification status**: nothing below was run on the fleet. Every product claim (resource use,
 > plugin names, API paths, package names) is **transcribed from the thread** and is not independently
@@ -222,8 +222,8 @@ stored the same way, not in plain variables.
 
 ## §9 — Open questions
 
-- **Host and packaging** — unprivileged LXC on `pve` (bare metal .NET) vs a Docker container with
-  `network_mode: host`; the CA already lives on `pve` (LXC 215), which keeps `ca.internal` local.
+- **Host and packaging** — settled by [ADR 40](../decisions/40-internal-dns-proxy-lxc.md): unprivileged
+  LXC 216 on `pve`, native systemd (no Compose), both services on the one guest.
 - **One resolver or two** — single LXC is enough for a dozen records; a second LXC + Keepalived only
   if DHCP hands out a single DNS address.
 - **DHCP DNS hand-out** — who advertises the resolver: the mesh gateway today, the OPNsense router
@@ -233,8 +233,9 @@ stored the same way, not in plain variables.
   ([ADR 22](../decisions/22-k3s-arc-homelab.md), [#44](https://github.com/jaroslaw-bagnicki/Homelab/issues/44)).
 - **mDNS bridging** — needed at all, or do static records cover the fleet (all nodes are
   Ansible-managed and statically addressed)?
-- **Authoritative vs recursive** — all-in-one Technitium (scenario A) or Technitium + Unbound
-  (scenario B); this is the decision an ADR has to settle.
+- **Authoritative vs recursive** — settled as **scenario A** (all-in-one Technitium) by
+  [ADR 40](../decisions/40-internal-dns-proxy-lxc.md); scenario B stays a fallback if the resolver ever
+  has to become a pure privacy resolver.
 
 ## References
 

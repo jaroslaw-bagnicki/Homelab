@@ -19,8 +19,8 @@ recorded too (§6, §7).
 issuing tool, the CA hierarchy, key custody and the **host placement** are now decided by
 [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) — §7 and §8 below are the analysis that fed
 that decision, not open questions. The resolver choice is revisited in [research 38](38-technitium-dns.md)
-— leaning **Technitium DNS** — and is still open pending an ADR. This document is the analysis behind
-the decisions, not their authority.
+and **decided in [ADR 40](../decisions/40-internal-dns-proxy-lxc.md)** — Technitium DNS. This document is
+the analysis behind the decisions, not their authority.
 
 > ⚠️ **Verification status**: nothing in this document was run on the fleet. The RFC/ICANN claims are
 > the thread's own citations and are **not independently read** for this document; the `step-ca`
@@ -51,7 +51,7 @@ the decisions, not their authority.
 | CA hierarchy & key custody | **Three-tier** — 10-year root offline, 1-year intermediate in the `pve` TPM (an **Intel PTT firmware TPM**, not a discrete chip — [research 37 §5](37-tpm2-hardware-and-fleet.md)), short-lived leaves ([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md)) |
 | Names issued for | **Short-lived leaves** signed by the intermediate ([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md)); one wildcard on the proxy or per-service leaves remains an implementation choice (§4, §8) |
 | Host placement | **`pve`** — required by the TPM ([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md)); `edge` and `lab` are no longer candidates (§7) |
-| Resolver | **Open** — leaning **Technitium DNS** ([research 38](38-technitium-dns.md)); Unbound, AdGuard Home, CoreDNS and dnsmasq are the alternatives (§6) |
+| Resolver | **Technitium DNS** ([ADR 40](../decisions/40-internal-dns-proxy-lxc.md)) — Unbound, AdGuard Home, CoreDNS and dnsmasq are the rejected alternatives (§6, [research 38](38-technitium-dns.md)) |
 
 ---
 
@@ -550,9 +550,8 @@ its replacement SSD ([idea 07](../ideas/07-opnsense-futro-s930.md), [#96](https:
 - **Wildcard vs per-service leaves.** One `*.‹domain›` on the proxy is operationally simplest but
   puts the same key in front of every service; per-service leaves need `step-ca` to be reachable by
   each service (or a proxy-side automation).
-- **Resolver.** Unbound vs AdGuard Home vs dnsmasq — revisited in [research 38](38-technitium-dns.md),
-  which leans **Technitium DNS** — and whether the resolver belongs in this stack at all now that
-  DNSMasq is retired ([ADR 37](../decisions/37-lan-name-space-internal.md)).
+- **Resolver.** Settled — **Technitium DNS**, in the same LXC as the proxy, native systemd
+  ([ADR 40](../decisions/40-internal-dns-proxy-lxc.md), [research 38](38-technitium-dns.md)).
 - **Client trust rollout.** A managed/corporate workstation may refuse a private root, and Firefox
   keeps a separate trust store from the OS — the same constraint #126 records. This is the argument
   for the public-subdomain option, and it is unmeasured here.
