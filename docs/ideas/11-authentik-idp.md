@@ -44,9 +44,10 @@ pass.
   (group, source IP, request headers).
 - **MFA**: TOTP, **WebAuthn/passkeys** (YubiKey, Windows Hello, Touch ID) and backup codes.
 - **Outposts**: Go sidecars, embedded in the server or run next to the protected app, that handle
-  proxy auth or emulate LDAP without exposing the admin plane.
-- **Shape**: Python/Django server + worker, PostgreSQL, Redis; Docker Compose or the Kubernetes
-  Helm chart.
+  proxy auth or emulate LDAP without exposing the admin plane; the proxy outpost is embedded by
+  default, so it adds no container unless it runs externally.
+- **Shape**: Python/Django server + worker and PostgreSQL — **Redis was removed in 2025.10**, so it
+  is no longer part of the stack; Docker Compose or the Kubernetes Helm chart.
 - **Audit**: events go to stdout — the thread's VictoriaLogs path is a collector, not a native
   integration.
 
@@ -71,7 +72,7 @@ pass.
 
 | Option | Verdict | Reason |
 |---|---|---|
-| **Authentik** | **Leading candidate** | OIDC + SAML + LDAP + forward auth in one; policies and MFA managed in the UI; cost is a four-container stack with PostgreSQL and Redis |
+| **Authentik** | **Leading candidate** | OIDC + SAML + LDAP + forward auth in one; policies and MFA managed in the UI; cost is a server + worker + PostgreSQL stack (Redis removed in 2025.10) |
 | Authelia | Fallback — if forward auth is the only need | Lightest (Go) and quickest to run, but OIDC-first — the thread notes SAML absent or limited — and file-driven with a minimal admin UI, so no directory for Proxmox/OMV |
 | Keycloak | Rejected as overkill | Full enterprise feature set, JVM appetite and operational surface out of proportion to a homelab |
 
@@ -83,7 +84,7 @@ as a candidate for the lab's local identity provider.
 | Host | Shape | Assessment |
 |---|---|---|
 | **`lab`** (M910q) | Docker Compose now; k3s workload later | **Leading candidate** — 16 GB is the fleet's only real headroom, and `lab` is already the workload host; the k3s migration ([ADR 22](../decisions/22-k3s-arc-homelab.md)) lifts it later |
-| `pve` | unprivileged LXC, fits the `.21x` guest scheme | **Tight** — 8 GB already carries Netdata, NUT, VictoriaLogs, `step-ca` and the planned HA VM + two LXCs; authentik adds a server, a worker, PostgreSQL, Redis and an outpost |
+| `pve` | unprivileged LXC, fits the `.21x` guest scheme | **Tight** — 8 GB already carries Netdata, NUT, VictoriaLogs, `step-ca` and the planned HA VM + two LXCs; authentik adds a server, a worker and PostgreSQL (Redis is gone since 2025.10), plus an external outpost only if the embedded one is not used |
 | `edge` | native or Docker beside Caddy | **No room** — 2 GB total ([hardware](../hardware.md)), and the ingress box already has to carry Caddy for the inbound plane ([ADR 24](../decisions/24-edge-ingress-appliance.md)) |
 | `cloudlab` | Compose on the VPS | **Rejected** — an IdP for LAN services must not depend on the WAN, and it would put the admin plane on the public internet |
 
