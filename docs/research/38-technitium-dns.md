@@ -218,7 +218,7 @@ stored the same way, not in plain variables.
   before building the role.
 - The thread's examples use `192.168.1.0/24`; **this fleet is `192.168.2.0/24`**
   ([ADR 31](../decisions/31-static-address-scheme.md)) — `pve` `.201`, `nas` `.202`, `edge` `.240`,
-  `lab` `.200`, CA guest `.215`, next free guest `.216`.
+  `lab` `.200`, CA guest `.215`.
 
 ## §9 — Open questions
 

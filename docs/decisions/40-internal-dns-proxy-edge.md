@@ -42,7 +42,7 @@ routing entry point.**
 
 - **`edge` (`192.168.2.240`)** — the Wyse 3040 already provisioned for ingress
   ([ADR 24](24-edge-ingress-appliance.md), [runbook 24](../runbooks/24-edge-appliance.md)). No new
-  guest is created; LXC 216 is dropped and `.216` stays free.
+  guest is created; the node takes the role it was built for.
 - **The hostname stays `edge`.** [ADR 33](33-fleet-node-hostnames.md) names a node by its role, and the
   role is ingress — the services it runs are named in the zone (`edge.internal`, `*.internal`), not in
   the hostname. Nothing in the inventory, the playbooks or `host_vars` is renamed.
@@ -96,7 +96,7 @@ certificates does not need `pve`.
 - **2 GB of RAM is shared with any future cloudflared and Netdata child.** Technitium + Caddy sit at
   roughly 250–300 MB against ~1.3 GB available today, so the ceiling holds, but it is a ceiling to
   watch.
-- **No new guest** — `.216` stays free and the `21x` block remains available for VMs/LXCs.
+- **No new guest** — the `21x` block remains available for VMs/LXCs.
 - **The CA remains on `pve`** — issuance needs `pve` up; serving does not. A `ca.internal` record
   points at `.215`.
 - **Existing held work is unchanged** — k3s ([ADR 22](22-k3s-arc-homelab.md)) and the OPNsense router
@@ -117,7 +117,7 @@ certificates does not need `pve`.
   would run with host networking (mDNS, client IPs, UFW), so the isolation is nominal while `dockerd`
   and its boot ordering are added. Precedent leans native for a node's own plumbing (`step-ca`,
   NUT, Netdata); on the eMMC it also adds image layers to rewrite and prune.
-- **An LXC on `pve` (LXC 216, `.216`)** — the alternative considered first. Rejected: it couples DNS to
+- **An LXC on `pve`** — the alternative considered first. Rejected: it couples DNS to
   the hypervisor that hosts the CA and is rebooted for Proxmox and HA work, so every `pve` reboot would
   drop naming fleet-wide; it creates a second ingress location that would need migrating back if the
   tunnel returns; and the LXC/PBS boundary buys less than the full-image restore already available on
