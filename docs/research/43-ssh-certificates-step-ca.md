@@ -1,4 +1,4 @@
-# 43 — SSH Access from the Private CA — Certificates Instead of Keys
+# 43 — SSH Access from the Private CA — Certificates Instead of Keys, and What "mTLS" Actually Means for SSH
 
 **Sources**: operator request (2026-10-18) — "after adoption of step-ca as private CA I would like SSH
 connections to be mTLS-based". Verified upstream against Smallstep's
@@ -6,14 +6,14 @@ connections to be mTLS-based". Verified upstream against Smallstep's
 [provisioners](https://smallstep.com/docs/step-ca/provisioners/) and
 [`step ssh certificate`](https://smallstep.com/docs/step-cli/reference/ssh/certificate/) references, the
 `smallstep/certificates` source (`authority/config/config.go` claim defaults), OpenSSH 9.6
-[`sshd_config(5)`](https://man.openbsd.org/sshd_config) / [`ssh_config(5)`](https://man.openbsd.org/ssh_config).
-**Measured** 2026-10-18 with step CLI **v0.31.0** (checksum-verified):
+[`sshd_config(5)`](https://man.openbsd.org/sshd_config) / [`ssh_config(5)`](https://man.openbsd.org/ssh_config)
+and the stunnel 5.68 manual. **Measured** 2026-10-18 with step CLI **v0.31.0** (checksum-verified):
 `step ca init --ssh` into a throwaway `STEPPATH`, then inspection of the generated `ca.json` and SSH CA keys.
 
 **Scope**: whether SSH access to the fleet should move from the static fleet key
 ([ADR 28](../decisions/28-fleet-admin-account-and-key.md)) to credentials issued by the private CA
-([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md)), and what the "mTLS-based SSH" phrasing
-resolves to. Covers fleet nodes, the Ansible control path, the dev container / AI agents, and the
+([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md)), and what a "mTLS-based SSH" request can
+and cannot mean. Covers fleet nodes, the Ansible control path, the dev container / AI agents, and the
 operator's workstation.
 
 **Status**: 📝 Analysis — **decided** by [ADR 41](../decisions/41-ssh-certificates-step-ca.md). ADR 38
@@ -37,7 +37,8 @@ deliberately left "the SSH-certificate use of the same CA" out of scope and park
 
 | Question | Recommendation | Basis |
 |---|---|---|
-| What should "mTLS-based SSH" mean here? | **Certificate-based SSH** — short-lived OpenSSH **user and host certificates** signed by the `step-ca` SSH CA (§1) | §1 |
+| What should "mTLS-based SSH" mean here? | **Certificate-based SSH** — short-lived OpenSSH **user and host certificates** signed by the `step-ca` SSH CA. TLS is a different layer and does not replace SSH authentication (§1) | OpenSSH has no TLS transport; TLS wrapping authenticates a proxy, not `sshd` |
+| Does a literal mTLS tunnel make sense? | **No** — rejected. It adds a TLS terminator per node and still leaves `authorized_keys` in place (§4, option C) | §1, §4 |
 | Which half first? | **Host certificates first** — they need no identity provider and kill `known_hosts` pinning; user certificates once an IdP exists (§6) | §2.2, §6 |
 | Where do user identities come from? | **Decided:** **Authentik** via OIDC — Entra ID rejected ([idea 11](../ideas/11-authentik-idp.md) is the IdP workstream). Until it is deployed, host certificates only | §2.2 |
 | Keep the fleet key? | **Yes, as break-glass only — out of daily use.** A CA outage must not be an SSH outage (§7) | [ADR 41](../decisions/41-ssh-certificates-step-ca.md) |
@@ -46,19 +47,29 @@ deliberately left "the SSH-certificate use of the same CA" out of scope and park
 
 ---
 
-## §1 — What "mTLS-based SSH" resolves to
+## §1 — "mTLS" has two different meanings, and only one of them is an SSH thing
 
-SSH is already mutually authenticated: the server proves a host key and the client proves a user key.
-What is missing today is not a transport layer but three properties a CA provides:
+The request conflates two layers. They solve different problems and only one of them removes SSH keys.
+
+| Approach | What authenticates | What actually changes on the host | Removes `authorized_keys`? |
+|---|---|---|---|
+| **SSH certificates** (OpenSSH cert format, signed by a CA) | `sshd` verifies the **client certificate** against a trusted CA key; the client verifies the **host certificate** against a host CA key | `sshd_config` gains `TrustedUserCAKeys` + `HostCertificate`; the client gains `@cert-authority` in `known_hosts` | **Yes** |
+| **Literal mTLS** (TLS client certificates from step-ca's X.509 chain) | A **TLS terminator** in front of `sshd` verifies a client *X.509* certificate | A new daemon (`stunnel`, optionally behind `sslh` when one port must carry both) on every node, plus client certificates; `sshd` keeps its own auth | **No** — `sshd` still authenticates the user |
+| **Teleport-style** | A proxy terminates TLS and its own SSH server; roles live in Teleport-issued certificates | A Teleport agent on every node, a Teleport CA — **not** step-ca | Yes, but by replacing the SSH stack |
+
+**OpenSSH has no TLS mode.** Neither `sshd_config(5)` nor `ssh_config(5)` defines a TLS option — the
+transport is SSH's own binary protocol, secured by the SSH key-exchange — so "SSH over mTLS" always means
+"TLS in front of SSH", never "SSH speaking TLS" (**verified upstream**).
+
+**SSH is already mutually authenticated.** The server proves a host key and the client proves a user key;
+that *is* mutual authentication. What is actually missing today is not mutuality but three properties a CA
+provides:
 
 - **one trust anchor** instead of one pin per host (`known_hosts`) and one key per user (`authorized_keys`);
 - **short-lived credentials** that expire without a revocation list;
 - **a single audit and policy point** for who may log in where.
 
-`sshd` has no X.509/TLS path — neither `sshd_config(5)` nor `ssh_config(5)` defines a TLS option
-(**verified upstream**). Its certificate mechanism is the **OpenSSH certificate format**, verified against
-a CA key through `TrustedUserCAKeys` (users) and `HostCertificate` (hosts). `step-ca` issues exactly that
-format, so "mTLS-based SSH" lands on **SSH certificates**, which is what this document analyses.
+That is exactly what step-ca's SSH CA gives, and it is what the operator is really asking for.
 
 ---
 
@@ -206,7 +217,25 @@ Removes both treadmills, gives every credential an expiry, and makes the CA the 
 Costs: a hard dependency on `ca` for *issuance* (not for existing sessions), a fleet-wide CA public key
 to distribute, and a decision about where user identities come from (§6).
 
-### C. A bare `ssh-keygen` SSH CA, no CA service (rejected)
+### C. Literal mTLS — TLS-wrapped SSH (`stunnel`) (rejected)
+`stunnel` can do exactly this: a server-side service that `accept`s a TLS port, `connect`s to `127.0.0.1:22`,
+and enforces client certificates with `verifyChain` / `requireCert` against a `CAfile` (**verified
+upstream** in `stunnel(8)`); `sslh` would be added only if one port had to carry both TLS and plain SSH.
+step-ca would issue the X.509 client certificates.
+
+It is rejected because it **does not remove SSH authentication** — `sshd` still asks for a key or a
+certificate, so the fleet keeps `authorized_keys` *and* gains a TLS terminator, a client certificate
+lifecycle, and a second daemon to monitor on every node. What it buys is network-level device
+authentication (something an 802.1X-style control would give) and the ability to expose only TLS via a
+reverse proxy — neither is a current requirement, and the LAN already restricts SSH to `192.168.2.0/24`.
+It also creates a second thing that can lock the fleet out.
+
+### D. Teleport (rejected)
+Solves the same problem, but with its **own** certificate authority, its own SSH proxy and an agent on
+every node — it would replace sshd's auth model rather than extend the CA the lab just built, and it does
+not consume step-ca identities.
+
+### E. A bare `ssh-keygen` SSH CA, no CA service (rejected)
 `ssh-keygen -s ca_key` with `TrustedUserCAKeys` gives certificate-based SSH with no new service. It is the
 smallest possible step, but issuance, expiry, principals and audit stay manual — the exact toil the
 private CA exists to remove. Worth remembering as the **disaster-recovery fallback** if `step-ca` is
@@ -261,6 +290,8 @@ unavailable and certificates must still be issued.
 3. **Keep the fleet key as break-glass only** — the path that still works when `ca` is down, never a daily
    route. It is the `authorized_keys` line Ansible already manages; removing it is a separate, later
    decision.
+4. **Never TLS-wrap SSH** unless a concrete requirement appears (only-443 network, or a device-authentication
+   mandate). Revisit then, with `stunnel` as the known-good mechanism.
 
 ---
 
@@ -338,3 +369,5 @@ until certificate issuance is proven on a bad day.
   [`step ca init`](https://smallstep.com/docs/step-cli/reference/ca/init/)
 - OpenSSH — [`sshd_config(5)`](https://man.openbsd.org/sshd_config) ·
   [`ssh_config(5)`](https://man.openbsd.org/ssh_config)
+- [stunnel 5.68 manual](https://manpages.debian.org/bookworm/stunnel4/stunnel4.8.en.html) — the mTLS tunnel
+  option (`client`, `accept`, `connect`, `cert`, `verifyChain`, `requireCert`)
