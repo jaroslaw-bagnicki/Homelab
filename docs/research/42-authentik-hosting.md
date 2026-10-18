@@ -40,9 +40,10 @@ it does not settle it. Break-glass and backup remain open (§9).
 
 [Idea 11](../ideas/11-authentik-idp.md) settled *what* Authentik is for — SSO, MFA and forward auth for
 LAN services — and left *where it runs* open, with `lab` as the leading candidate. Between that capture and
-this thread the operator added a planned **Docker node for always-on containerised services** (in this
-this fleet, `lab`: the M910q workload host, Docker today → k3s later, [ADR 22](../decisions/22-k3s-arc-homelab.md)),
-and asked whether Authentik belongs there. That question drives the second half of this document.
+this thread the operator added a planned **Docker node for always-on containerised services** — in this
+fleet, `lab`, the M910q workload host, Docker today → k3s later
+([ADR 22](../decisions/22-k3s-arc-homelab.md)) — and asked whether Authentik belongs there. That question
+drives the second half of this document.
 
 ## §1 — What Authentik is, compactly
 
@@ -76,13 +77,24 @@ listens on **9000** (HTTP) / **9443** (HTTPS).
 
 ```caddyfile
 app.internal {
-    forward_auth http://authentik-server:9000 {
-        uri /outpost.goauthentik.io/auth/caddy
-        copy_headers Remote-User Remote-Groups Remote-Name Remote-Email
+    # the outpost answers the login flow on the protected hostname itself
+    handle /outpost.goauthentik.io/* {
+        reverse_proxy http://authentik-server:9000
     }
-    reverse_proxy http://my-internal-app:8080
+    handle {
+        forward_auth http://authentik-server:9000 {
+            uri /outpost.goauthentik.io/auth/caddy
+            copy_headers Remote-User Remote-Groups Remote-Name Remote-Email
+        }
+        reverse_proxy http://my-internal-app:8080
+    }
 }
 ```
+
+Routing that path is part of the mechanism, not an optional extra: the check itself would pass, but the
+redirect issued after it would land on the protected site instead of authentik, so the login flow cannot
+complete (`/outpost.goauthentik.io/*` on the protected hostname must reach the outpost —
+[verified upstream](https://docs.goauthentik.io/add-secure-apps/providers/proxy/forward_auth)).
 
 Caddy's `forward_auth` is a wrapper over `reverse_proxy`: it issues a **GET** to the auth upstream with the
 `uri` rewritten, and on a `2xx` copies the listed response headers onto the original request

@@ -101,22 +101,28 @@ Four candidate designs, judged against OMV's user model:
 | # | Design | How access is authorised | Verdict |
 |---|---|---|---|
 | A | **Samba AD DC + OMV as ADS member** | Domain users resolve via winbind/NSS; OMV share permissions must still name them | Only path with **Windows SSO**; needs OMV users reconciled with AD identities and `idmap` configured — **unverified — validation work** |
-| B | **MIT `krb5-kdc` + per-consumer principals mapped onto OMV users** | One OMV user per consumer (e.g. `backup-pve`), a matching Kerberos principal, a keytab on the client; server verifies with `kerberos method = secrets and keytab` | **Pragmatic for machines** — no domain join, OMV's user model untouched, `kinit -kt` before mount. Humans still need OMV passwords. The same per-identity, per-consumer pattern [ADR 41](../decisions/41-ssh-certificates-step-ca.md) uses for SSH principals |
+| B | **MIT `krb5-kdc` + per-consumer principals mapped onto OMV users** | One OMV user per consumer (e.g. `backup-pve`), a matching Kerberos principal, a keytab on the client; the server *would* verify with `kerberos method = secrets and keytab` | **Candidate — unsupported until proven.** `kerberos method` is an ADS/domain-member setting, and the supported mechanism for verifying another KDC's ticket is a **join**; a standalone `tdbsam` server may reject an arbitrary MIT-KDC ticket rather than map it onto an OMV user. If Experiment 1 fails, this design collapses into A. Humans still need OMV passwords |
 | C | **OMV LDAP plugin + Authentik LDAP outpost** | Directory users enter NSS/PAM; Samba still needs passdb entries | Interesting but the most fragile; community plugin, and Samba's `tdbsam` does not read LDAP passwords — **unverified** |
 | D | **No OMV-side Kerberos** — forward auth for the UI, Restic/PBS for data movement | Per-service | The current state; simplest, but the share stays password-based |
 
-**The insight worth recording**: on this appliance, Kerberos does not replace OMV users — it replaces
-the *password typed by a machine*. Design B therefore delivers the actual goal (unattended, passkey-free,
-keytab-based mounts) **without** touching OMV's user database or its config generation, and without a
-domain join. It is the design that fits the appliance instead of fighting it.
+**The insight worth recording**: on this appliance, Kerberos cannot replace OMV users — whatever verifies the
+ticket still has to resolve to one. Design B reused the per-identity, per-consumer shape
+[ADR 41](../decisions/41-ssh-certificates-step-ca.md) uses for SSH principals, and it was attractive because
+it promised unattended, passkey-free mounts **without** touching OMV's user database or its config
+generation, and **without** a domain join. The difference is who verifies: SSH has a CA that signs and
+checks its own certificates, while SMB has a KDC the server must already belong to. Whether Samba standalone
+will verify a ticket from an arbitrary MIT KDC at all is exactly what Experiment 1 must show, and it is the
+assumption the whole design stands on.
 
-Design A is only justified if a Windows or macOS human must reach the share without typing anything —
-which is a real requirement, but a different one from "no secrets in config files".
+Design A is the supported path — and it is only justified if a Windows or macOS human must reach the share
+without typing anything, which is a real requirement, but a different one from "no secrets in config files".
 
 ## §5 — What is still unverified
 
 - **OMV 8.5 specifics**: whether the Samba settings page exposes *any* domain fields beyond
   `workgroup`, and whether `net ads join` output (`secrets.tdb`, keytab) survives a config regeneration.
+- **Standalone Kerberos**: whether Samba in `security = user` — the mode OMV generates — verifies a ticket
+  from a non-ADS MIT KDC at all. This is the load-bearing assumption of design B (§6, Experiment 1).
 - **Which Samba** Debian 13 ships and whether its `smb.conf` regeneration preserves `security`/`realm`
   when placed in the global **extra options** field — the docs say extra options are possible, not that
   every option is safe there.
@@ -127,10 +133,11 @@ which is a real requirement, but a different one from "no secrets in config file
 
 ## §6 — Recommendation and the two experiments
 
-1. **Experiment 1 (decides Kerberos):** on a scratch OMV share, set the global extra options to
-   `kerberos method = secrets and keytab` + `dedicated keytab file = /etc/krb5.keytab`, put a
-   `cifs/omv.internal@INTERNAL` principal in the keytab, and mount from a test client with
-   `-o sec=krb5i` **as an existing OMV user**. If that works, design B is available and cheap.
+1. **Experiment 1 (decides Kerberos — and whether design B exists at all):** on a scratch OMV share, set
+   the global extra options to `kerberos method = secrets and keytab` + `dedicated keytab file = /etc/krb5.keytab`,
+   put a `cifs/omv.internal@INTERNAL` principal in the keytab, and mount from a test client with
+   `-o sec=krb5i` **as an existing OMV user**. Samba may refuse the ticket outright in standalone mode;
+   that result settles it — design B is withdrawn, and design A (or D) is the answer.
 2. **Experiment 2 (decides OIDC):** put the UI behind the `edge` Caddy with an Authentik proxy provider
    in single-application mode. If the double login is acceptable, stop there; if not, the LDAP plugin is
    the only in-app bridge and needs its own bake-off.

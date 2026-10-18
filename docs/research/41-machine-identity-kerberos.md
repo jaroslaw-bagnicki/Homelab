@@ -115,7 +115,7 @@ node identity, very low; Kerberos = L7 auth, SMB/NFSv4 for machines, **high**.
 The problem Kerberos removes is the password in `/etc/fstab` or a mount script:
 
 ```text
-//omv/backups /mnt/backup cifs username=backup_bot,password=SuperTajneHaslo123
+//omv/backups /mnt/backup cifs username=backup_bot,password=YOUR_SMB_PASSWORD
 ```
 
 A **keytab** replaces it: a binary file holding a symmetric key bound to a machine principal
