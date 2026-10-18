@@ -156,10 +156,14 @@ The directives' exact semantics (**verified upstream** in `sshd_config(5)`):
 **Client side** — trust the host CA once:
 
 ```
-@cert-authority *.internal,192.168.2.* ssh-ed25519 AAAA…   # or the ECDSA CA key
+@cert-authority *.internal,192.168.2.*,173.249.27.13 ssh-ed25519 AAAA…   # or the ECDSA CA key
 ```
 
-and present a user certificate via `CertificateFile` or automatically, because `ssh` loads
+The pattern must cover **every address the inventory connects to**, `cloudlab`'s public address
+`173.249.27.13` included: `@cert-authority` matches the name or IP the client actually dialed, so a
+pattern that stops at the LAN leaves that host untrusted.
+
+A user certificate is presented via `CertificateFile`, or automatically because `ssh` loads
 `<IdentityFile>-cert.pub` when no `CertificateFile` is set (**verified upstream** in `ssh_config(5)`).
 
 Smallstep's own host template (`step ssh config --host`) writes the `sshd_config` snippet and
@@ -168,10 +172,11 @@ Smallstep's own host template (`step ssh config --host`) writes the `sshd_config
 
 ### 2.5 Policy — the CA can restrict what it signs
 
-`authority.policy.ssh` supports `user.allow.email`, `user.allow.dns` and `host.allow.dns`
-(**verified upstream**), e.g. only `@internal` principals, only `*.internal` host names. This is the
-SSH equivalent of an `authorized_keys` allow-list — and the only barrier between "holds any certificate
-this CA signed" and "may log in as `fleetadm`".
+`authority.policy.ssh` supports `email` and `principal` rules for user certificates (strict string match,
+plus a `*` wildcard) and `dns`/`ip` rules for host certificates (**verified upstream**). Self-hosted
+`step-ca` enforces policy **only at authority level** — per-provisioner policy is a Certificate Manager
+feature — so policy is the outer boundary, not a way to scope one provisioner. A per-provisioner SSH
+**template** (`options.ssh.templateFile`) is what fixes a single credential's principal (§5.1).
 
 ---
 
@@ -231,21 +236,33 @@ unavailable and certificates must still be issued.
    `SSHPOP` provisioner named `sshpop`, and set the SSH durations explicitly — `defaultUserSSHCertDuration`
    ≈ `8h`–`16h`, `defaultHostSSHCertDuration` and `maxHostSSHCertDuration` ≤ `7d` to match ADR 38's
    short-lived premise.
-3. Add a `policy.ssh` block (`user.allow.email: ["@internal"]`, `host.allow.dns: ["*.internal"]`) so the
-   CA refuses to sign anything outside the name space.
-4. Restart and validate: `step ca provisioner list` shows `sshpop`; issuing a user certificate through
-   `admin@internal` succeeds.
-5. Do this in the `step_ca` role, not by hand — the role already owns `ca.json` and its `combine()` patch.
+3. Add a `policy.ssh` block (`user.allow.email: ["@internal"]`, `host.allow.dns: ["*.internal"]`, plus a
+   `principal` rule for each `agent-<name>`) so the CA refuses to sign anything outside the name space.
+4. Give every agent provisioner its own **SSH certificate template** (`options.ssh.templateFile`) that
+   hard-codes `"principals": ["agent-<name>"]`. Self-hosted `step-ca` has no per-provisioner policy, so
+   the template is what prevents a provisioner holder from requesting another allowed principal.
+5. Restart and validate: `step ca provisioner list` shows `sshpop`; issuing a user certificate through
+   `admin@internal` succeeds, and an agent certificate carries only its own principal.
+6. Do this in the `step_ca` role, not by hand — the role already owns `ca.json` and its `combine()` patch.
 
 ### 5.2 On every node
 - Distribute the **SSH host/user CA public keys** (a `ca_trust`-style addition — the X.509 root is already
-  there, these are new files) and add `TrustedUserCAKeys` + `HostCertificate` to the existing
-  `security`-role hardening drop-in.
-- Issue a **host certificate whose principals include every name the fleet connects with**:
-  `pve`, `pve.internal`, `192.168.2.201` (and the rest per node). Ansible connects by `ansible_host` **IP**,
-  so an IP-less certificate breaks every playbook at host-key verification.
-- Renew host certificates on a timer (`step ssh renew` via SSHPOP). Until renewal is proven, the plain host
-  key must stay configured so an expired certificate degrades to "unverified host key", not "no SSH".
+  there, these are new files) and add `TrustedUserCAKeys`, `HostCertificate` and
+  `AuthorizedPrincipalsFile /etc/ssh/auth_principals/%u` to the existing `security`-role hardening drop-in.
+- Manage one `/etc/ssh/auth_principals/<account>` file per Unix account (`fleetadm`, later an agent
+  account), listing the principals it accepts — `automation`, the human emails, `agent-<name>` — with the
+  fleet key's `no-port-forwarding,no-agent-forwarding,no-X11-forwarding` caps re-imposed as options on
+  those lines. **Without this directive `sshd` defaults to `none`**, so a certificate principal must equal
+  the Unix username and `automation`/`agent-*` logins fail.
+- Issue a **host certificate whose principals include every name the fleet connects with**: short name,
+  `<node>.internal` and the node's `ansible_host` address — `192.168.2.201` for `pve`, and
+  **`173.249.27.13` for `cloudlab`**. Ansible connects by IP, so an address-less certificate breaks every
+  playbook at host-key verification.
+- Renew host certificates on a timer (`step ssh renew` via SSHPOP), with overlap before expiry and an
+  alert on failure. Keeping the bare `HostKey` is **not** a fallback once clients trust only
+  `@cert-authority`: the raw key is unpinned and verification fails anyway, so a missed renewal is an
+  SSH/Ansible outage. The documented recovery is a pinned `known_hosts` break-glass entry, or the fleet
+  key plus console.
 
 ### 5.3 On clients (workstation and dev container)
 - One `@cert-authority` line in `known_hosts` replaces per-host pins.

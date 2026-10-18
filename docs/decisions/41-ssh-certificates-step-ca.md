@@ -50,8 +50,9 @@ break-glass — outside daily use — and use Authentik as the human identity so
   fallback and this ADR is amended — never left as an undocumented default.
 - **Host certificates first.** Every fleet node presents a host certificate — `HostCertificate` in
   `sshd`, renewed unattended through the **SSHPOP** provisioner. Principals carry the **short hostname,
-  the `.internal` name and the node IP**, because Ansible connects to `ansible_host` by IP with
-  `host_key_checking = True`. Clients trust the host CA once via `@cert-authority` in `known_hosts`.
+  the `.internal` name and the node's `ansible_host` address — `cloudlab`'s public IP included** — because
+  Ansible connects by IP with `host_key_checking = True`. Clients trust the host CA once via a
+  `@cert-authority` line that covers **every** address in the inventory.
   Host lifetime is capped at **7 days** (`defaultHostSSHCertDuration` / `maxHostSSHCertDuration` = `168h`),
   overriding step-ca's 30-day default so SSH honours [ADR 38](38-private-ca-hierarchy-and-custody.md)'s
   short-lived premise.
@@ -65,9 +66,12 @@ break-glass — outside daily use — and use Authentik as the human identity so
 - **Every agent has its own identity.** Each agent (opencode, copilot, …) gets a dedicated principal
   (`agent-<name>`) and its **own issuing credential** — a per-agent JWK provisioner whose password lives
   in Key Vault, with a certificate lifetime of **at most 8 hours**. No agent presents the human's
-  certificate or the fleet key. Because hosts map principal → Unix account in
-  `/etc/ssh/auth_principals/<user>`, an agent can be denied a host or an account by editing that file,
-  and a compromised agent is cut off by deleting its provisioner.
+  certificate or the fleet key. Because self-hosted `step-ca` has **no per-provisioner policy**, each
+  agent provisioner also carries its own **SSH certificate template** fixing
+  `"principals": ["agent-<name>"]`, and every agent principal is enumerated in the authority
+  `policy.ssh` rules — otherwise a provisioner holder could request any principal the authority allows.
+  Hosts map principal → Unix account in `/etc/ssh/auth_principals/<user>`, so an agent can be denied a
+  host or an account by editing that file, and a compromised agent is cut off by deleting its provisioner.
 - **The fleet key survives, but is out of daily use.** `fleetadm`'s key stays installed and managed
   exactly as [ADR 28](28-fleet-admin-account-and-key.md) describes, and is used **only** when a
   certificate cannot be obtained: CA unavailable, certificate lost, or a rebuilt host's first contact.
