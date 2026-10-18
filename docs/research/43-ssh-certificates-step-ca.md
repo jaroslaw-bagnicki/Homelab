@@ -280,21 +280,18 @@ against a live CA. The fleet key stays configured precisely so that "CA down" me
 unavailable", not "no SSH". This mirrors the ADR 38 rule that the root stays offline and the intermediate
 is re-issued rather than restored — availability of the CA is a design input, not an afterthought.
 
-### 7.2 The SSH CA keys are weaker than the X.509 intermediate — measured
-The X.509 intermediate is sealed in the `pve` TPM. The **SSH CA keys are plain, unencrypted PEM files** in
-the `ca` guest (measured: no encryption header on the generated keys; `ca.json` carries no password field
-for them). Anyone who can read `/etc/step-ca/secrets/` can mint a `fleetadm` certificate for every host.
-That is the same blast radius as the fleet key today, but it is **not** the custody level ADR 38 set for
-the TLS chain, so it should be an explicit, recorded trade-off — with `ca`'s file permissions, the LXC
-boundary and `step ssh revoke`/audit as the compensating controls, or TPM/PKCS#11 custody if Smallstep
-ever exposes a KMS path for the `ssh` block (**unverified** — the documented `ssh` block takes file paths
-only).
+### 7.2 SSH CA key custody — the gap the TPM closes
+The X.509 intermediate is sealed in the `pve` TPM, but step-ca's default for the **SSH CA keys** is plain,
+unencrypted PEM files in the `ca` guest (measured: no encryption header on the generated keys; `ca.json`
+carries no password field for them). Anyone who can read `/etc/step-ca/secrets/` can mint a `fleetadm`
+certificate for every host — the same blast radius as the fleet key today.
 
-> **Update 2026-10-18 — settled by [ADR 41](../decisions/41-ssh-certificates-step-ca.md).** Source
-> inspection of `authority/authority.go` shows step-ca creating the SSH signer through its key manager
-> (`CreateSigner` with `SigningKey: config.SSH.HostKey`), the same path the X.509 `key` uses — so a
-> `tpmkms:` URI is the intended form. TPM custody is adopted, with file custody as the amended fallback
-> if the guest cannot serve it.
+The keys do not have to stay there. Source inspection of `authority/authority.go` shows step-ca creating
+the SSH signer through its key manager (`CreateSigner` with `SigningKey: config.SSH.HostKey`), the same
+path the X.509 `key` uses, so a `tpmkms:` URI is the intended form.
+[ADR 41](../decisions/41-ssh-certificates-step-ca.md) therefore puts both SSH CA keys in the `pve` TPM;
+file custody with `ca`'s permissions and the LXC boundary remains the fallback if the guest cannot serve
+them — amended in the ADR, never a silent default.
 
 ### 7.3 `authorized_keys` restrictions are not inherited
 Today the fleet key carries `no-port-forwarding,no-agent-forwarding,no-X11-forwarding`. A CA-signed
