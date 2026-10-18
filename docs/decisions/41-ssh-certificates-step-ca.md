@@ -14,8 +14,7 @@ SSH-certificate use of the same CA" out of scope. SSH access still rests on a si
 operator, Ansible and every AI agent, with no expiry and nothing to revoke but the key itself.
 
 [Research 43](../research/43-ssh-certificates-step-ca.md) established the mechanics: `step-ca` issues
-**short-lived SSH certificates** for users and hosts from the fleet's own CA. Wrapping SSH in TLS would
-not replace SSH authentication and is not adopted (see Alternatives).
+**short-lived SSH certificates** for users and hosts from the fleet's own CA.
 
 The operator has settled the open questions:
 
@@ -115,9 +114,6 @@ break-glass — outside daily use — and use Authentik as the human identity so
 - **Keep the static fleet key as the steady state** ([ADR 28](28-fleet-admin-account-and-key.md)) —
   rejected: one shared, non-expiring, root-equivalent secret for operator, Ansible and every agent, with
   no per-identity revocation.
-- **Literal mTLS — TLS-wrapped SSH (`stunnel`)** — rejected: `sshd` still authenticates the user, so the
-  fleet gains a TLS terminator and a second certificate lifecycle per node without removing
-  `authorized_keys` ([research 43 §4](../research/43-ssh-certificates-step-ca.md)).
 - **Teleport** — rejected: it brings its own CA, proxy and per-node agent and would replace the CA the
   lab just built rather than extend it.
 - **A bare `ssh-keygen` SSH CA, no service** — rejected: issuance, expiry, principals and audit stay
