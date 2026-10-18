@@ -219,7 +219,10 @@ delete its own history) and `--private-repos` — both **verified upstream**.
 The thread's second variant is `restic -r sftp:user@omv:/backups` over **SSH certificates** from
 `step-ca` (`step ssh`), with short-lived host/user certificates generated on the fly and a hardware
 `ed25519-sk` key where a physical key is wanted. Simpler, but loses the rest-server append-only and
-private-repo controls.
+private-repo controls. That certificate model is no longer hypothetical — it is the fleet's SSH design
+([ADR 41](../decisions/41-ssh-certificates-step-ca.md), [research 43](43-ssh-certificates-step-ca.md)):
+host certificates first, Authentik-issued user certificates, a principal per agent, and the fleet key
+demoted to break-glass. The SFTP variant therefore rides on an identity path that will already exist.
 
 ## §5 — Proxmox → Restic through a `vzdump` hook
 
@@ -298,7 +301,7 @@ job and a distinct subject.
 | System | Role | Layer | Typical use |
 |---|---|---|---|
 | **Authentik** | IdP **for people** | L7 (application/SSO) | Passkeys/MFA for OMV, Proxmox, Grafana; OIDC/SAML/forward-auth |
-| **step-ca (mTLS)** | Machine identity in the network and APIs | L4/L7 (transport) | Restic REST server, service-to-service in k3s/Docker, gRPC, Caddy |
+| **step-ca (mTLS)** | Machine identity in the network and APIs | L4/L7 (transport) | Restic REST server, service-to-service in k3s/Docker, gRPC, Caddy, and **SSH host/user certificates** ([ADR 41](../decisions/41-ssh-certificates-step-ca.md)) |
 | **Kerberos** | Machine identity **for file resources** | OS / file protocols | Kernel-level `mount` of SMB/NFS on Proxmox, Linux, Windows |
 
 ```text
@@ -467,7 +470,7 @@ whether SMB Kerberos is even reachable in the intended shape — that gap was re
 
 - [Gemini thread — Kerberos, OMV mTLS, FreeIPA and Proxmox backups](https://gemini.google.com/share/be4663811fbc)
 - [ADR 02 — Backup strategy: Restic to local SATA + Azure Blob](../decisions/02-backup-strategy-restic-blob.md) · [ADR 29 — NAS backup target (OMV)](../decisions/29-nas-backup-target-beetle-m3-omv.md)
-- [ADR 38 — Private CA hierarchy and custody](../decisions/38-private-ca-hierarchy-and-custody.md) · [ADR 37 — `.internal` name space](../decisions/37-lan-name-space-internal.md) · [ADR 40 — Internal DNS and reverse proxy on `edge`](../decisions/40-internal-dns-proxy-edge.md)
-- [Research 36 — step-ca and machine identity](36-step-ca-machine-identity.md) · [research 37 — TPM 2.0 and the fleet](37-tpm2-hardware-and-fleet.md) · [research 42 — Authentik hosting](42-authentik-hosting.md) · [research 44 — OMV identity integration](44-omv-identity-integration.md)
+- [ADR 38 — Private CA hierarchy and custody](../decisions/38-private-ca-hierarchy-and-custody.md) · [ADR 41 — SSH certificates from the private CA](../decisions/41-ssh-certificates-step-ca.md) · [ADR 37 — `.internal` name space](../decisions/37-lan-name-space-internal.md) · [ADR 40 — Internal DNS and reverse proxy on `edge`](../decisions/40-internal-dns-proxy-edge.md)
+- [Research 36 — step-ca and machine identity](36-step-ca-machine-identity.md) · [research 37 — TPM 2.0 and the fleet](37-tpm2-hardware-and-fleet.md) · [research 43 — SSH access from the private CA](43-ssh-certificates-step-ca.md) · [research 42 — Authentik hosting](42-authentik-hosting.md) · [research 44 — OMV identity integration](44-omv-identity-integration.md)
 - [Idea 10 — Internal CA + DNS + proxy stack](../ideas/10-internal-ca-dns-stack.md) · [idea 11 — Authentik IdP](../ideas/11-authentik-idp.md)
 - Upstream: [restic — preparing a repository](https://restic.readthedocs.io/en/stable/030_preparing_a_new_repo.html) · [rest-server](https://github.com/restic/rest-server) · [`vzdump(1)`](https://pve.proxmox.com/pve-docs/vzdump.1.html) · [`pvesm(1)`](https://pve.proxmox.com/pve-docs/pvesm.1.html)

@@ -101,7 +101,7 @@ Four candidate designs, judged against OMV's user model:
 | # | Design | How access is authorised | Verdict |
 |---|---|---|---|
 | A | **Samba AD DC + OMV as ADS member** | Domain users resolve via winbind/NSS; OMV share permissions must still name them | Only path with **Windows SSO**; needs OMV users reconciled with AD identities and `idmap` configured — **unverified — validation work** |
-| B | **MIT `krb5-kdc` + per-consumer principals mapped onto OMV users** | One OMV user per consumer (e.g. `backup-pve`), a matching Kerberos principal, a keytab on the client; server verifies with `kerberos method = secrets and keytab` | **Pragmatic for machines** — no domain join, OMV's user model untouched, `kinit -kt` before mount. Humans still need OMV passwords |
+| B | **MIT `krb5-kdc` + per-consumer principals mapped onto OMV users** | One OMV user per consumer (e.g. `backup-pve`), a matching Kerberos principal, a keytab on the client; server verifies with `kerberos method = secrets and keytab` | **Pragmatic for machines** — no domain join, OMV's user model untouched, `kinit -kt` before mount. Humans still need OMV passwords. The same per-identity, per-consumer pattern [ADR 41](../decisions/41-ssh-certificates-step-ca.md) uses for SSH principals |
 | C | **OMV LDAP plugin + Authentik LDAP outpost** | Directory users enter NSS/PAM; Samba still needs passdb entries | Interesting but the most fragile; community plugin, and Samba's `tdbsam` does not read LDAP passwords — **unverified** |
 | D | **No OMV-side Kerberos** — forward auth for the UI, Restic/PBS for data movement | Per-service | The current state; simplest, but the share stays password-based |
 
