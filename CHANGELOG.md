@@ -13,6 +13,7 @@ Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month 
 
 ## 2026‑10
 
+- **(docs)** Adopt SSH certificates from the private CA — Authentik for humans, per-agent identities, key demoted to break-glass — [ADR 41](docs/decisions/41-ssh-certificates-step-ca.md)
 - **(feat)** Enable per-core CPU C-state residency charts in Netdata across the fleet — [runbook 31](docs/runbooks/31-deploy-netdata.md)
 - **(feat)** Distribute the private CA root across the fleet (`ca_trust`, all six nodes) and document the personal-device trust procedure — [runbook 39](docs/runbooks/39-trust-private-ca.md)
 - **(fix)** Replace the failed `md0` mirror disk on the Beetle NAS (`WDEPBVR3` → `WL10C3NG`), restoring `[2/2] [UU]` — [runbook 38](docs/runbooks/38-nas-disk-replacement.md)
