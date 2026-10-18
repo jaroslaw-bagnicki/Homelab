@@ -114,8 +114,6 @@ break-glass — outside daily use — and use Authentik as the human identity so
 - **Keep the static fleet key as the steady state** ([ADR 28](28-fleet-admin-account-and-key.md)) —
   rejected: one shared, non-expiring, root-equivalent secret for operator, Ansible and every agent, with
   no per-identity revocation.
-- **Teleport** — rejected: it brings its own CA, proxy and per-node agent and would replace the CA the
-  lab just built rather than extend it.
 - **A bare `ssh-keygen` SSH CA, no service** — rejected: issuance, expiry, principals and audit stay
   manual. Kept as the disaster-recovery fallback when `step-ca` is unavailable.
 - **Entra ID as the identity provider** — rejected by the operator: the Homelab does not put a cloud IdP
