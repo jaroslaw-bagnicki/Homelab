@@ -16,14 +16,14 @@ and the stunnel 5.68 manual. **Measured** 2026-10-18 with step CLI **v0.31.0** (
 and cannot mean. Covers fleet nodes, the Ansible control path, the dev container / AI agents, and the
 operator's workstation.
 
-**Status**: 📝 Analysis — **no decision is settled**. ADR 38 deliberately left "the SSH-certificate use of
-the same CA" out of scope and parked it in [idea 10](../ideas/10-internal-ca-dns-stack.md); this document
-is that follow-up. The recommendation in §6 is the operator's to accept or reject, and an ADR is owed
-only once it is accepted.
+**Status**: 📝 Analysis — **decided** by [ADR 41](../decisions/41-ssh-certificates-step-ca.md). ADR 38
+deliberately left "the SSH-certificate use of the same CA" out of scope and parked it in
+[idea 10](../ideas/10-internal-ca-dns-stack.md); this document is the analysis behind the decision.
 
-> **Decision authority:** none yet. When a direction is chosen, the ADR takes precedence over this
-> document, and the live implementation belongs in the `step-ca` workload
-> ([runbook 35](../runbooks/35-deploy-step-ca.md)).
+> **Decision authority:** [ADR 41](../decisions/41-ssh-certificates-step-ca.md) records the settled
+> outcome — certificates instead of keys, host certificates first, **Authentik** as the human IdP,
+> per-agent principals, TPM-held SSH CA keys, fleet key demoted to break-glass. The rows below are the
+> analysis that fed it; where they differ, the ADR wins.
 
 > **Verification status.** Everything below marked **verified upstream** or **measured** was checked
 > against the cited manual/source or executed. Everything marked **unverified** is a design judgement or
@@ -40,9 +40,10 @@ only once it is accepted.
 | What should "mTLS-based SSH" mean here? | **Certificate-based SSH** — short-lived OpenSSH **user and host certificates** signed by the `step-ca` SSH CA. TLS is a different layer and does not replace SSH authentication (§1) | OpenSSH has no TLS transport; TLS wrapping authenticates a proxy, not `sshd` |
 | Does a literal mTLS tunnel make sense? | **No** — rejected. It adds a TLS terminator per node and still leaves `authorized_keys` in place (§4, option C) | §1, §4 |
 | Which half first? | **Host certificates first** — they need no identity provider and kill `known_hosts` pinning; user certificates once an IdP exists (§6) | §2.2, §6 |
-| Where do user identities come from? | Today: the `admin@internal` **JWK** provisioner (password file). Later: **OIDC** — Entra ID now, Authentik ([idea 11](../ideas/11-authentik-idp.md)) when it lands | §2.2 |
-| Keep the fleet key? | **Yes, as break-glass and automation fallback.** A CA outage must not be an SSH outage (§7) | §7.1 |
-| What is the biggest new risk? | The SSH CA keys are **plain files on the `ca` guest** — not TPM-sealed like the X.509 intermediate. Compromising `ca` mints fleet-wide logins (§7.2) | measured §2.1 |
+| Where do user identities come from? | **Decided:** **Authentik** via OIDC — Entra ID rejected ([idea 11](../ideas/11-authentik-idp.md) is the IdP workstream). Until it is deployed, host certificates only | §2.2 |
+| Keep the fleet key? | **Yes, as break-glass and automation fallback.** A CA outage must not be an SSH outage (§7) | [ADR 41](../decisions/41-ssh-certificates-step-ca.md) |
+| Do agents get their own identities? | **Decided:** yes — one principal and one issuing credential per agent, ≤ 8 h certificates, revocable independently | [ADR 41](../decisions/41-ssh-certificates-step-ca.md) |
+| What is the biggest new risk? | SSH CA key custody — step-ca's default is **plain files on `ca`**. **Decided:** hold them in the `pve` TPM (§7.2) | measured §2.1 |
 
 ---
 
@@ -283,9 +284,9 @@ unavailable and certificates must still be issued.
 1. **Host certificates first.** They need no IdP, they remove `known_hosts` churn, and they can renew
    unattended through SSHPOP after the first issuance. They also leave user authentication untouched, so
    nothing about day-to-day access changes if the experiment is rolled back.
-2. **User certificates when an identity provider exists** — Entra ID via OIDC now, or Authentik
-   ([idea 11](../ideas/11-authentik-idp.md)) when it is deployed. Until then, a JWK-issued user certificate
-   is a *shared secret in certificate form*, which adds no identity guarantee over the fleet key.
+2. **User certificates once Authentik is deployed** ([idea 11](../ideas/11-authentik-idp.md)) — the chosen
+   IdP; Entra ID is rejected. Until then, a JWK-issued user certificate is a *shared secret in certificate
+   form*, which adds no identity guarantee over the fleet key.
 3. **Keep the fleet key** as break-glass and as the path that still works when `ca` is down. It is the
    `authorized_keys` line Ansible already manages; removing it is a separate, later decision.
 4. **Never TLS-wrap SSH** unless a concrete requirement appears (only-443 network, or a device-authentication
@@ -310,6 +311,12 @@ the TLS chain, so it should be an explicit, recorded trade-off — with `ca`'s f
 boundary and `step ssh revoke`/audit as the compensating controls, or TPM/PKCS#11 custody if Smallstep
 ever exposes a KMS path for the `ssh` block (**unverified** — the documented `ssh` block takes file paths
 only).
+
+> **Update 2026-10-18 — settled by [ADR 41](../decisions/41-ssh-certificates-step-ca.md).** Source
+> inspection of `authority/authority.go` shows step-ca creating the SSH signer through its key manager
+> (`CreateSigner` with `SigningKey: config.SSH.HostKey`), the same path the X.509 `key` uses — so a
+> `tpmkms:` URI is the intended form. TPM custody is adopted, with file custody as the amended fallback
+> if the guest cannot serve it.
 
 ### 7.3 `authorized_keys` restrictions are not inherited
 Today the fleet key carries `no-port-forwarding,no-agent-forwarding,no-X11-forwarding`. A CA-signed

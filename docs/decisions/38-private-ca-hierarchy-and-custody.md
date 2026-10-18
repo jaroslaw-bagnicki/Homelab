@@ -104,7 +104,8 @@ with the TPM bound through, rather than one all-in-one stack).
 - **Wildcards, if used, need DNS-01 or manual issuance** — never HTTP-01
   ([research 35 §4](../research/35-private-ca-and-lan-naming.md)).
 - **Out of scope here**: the resolver choice (Unbound vs AdGuard Home vs dnsmasq), the wildcard-vs-
-  per-service leaf question, and the SSH-certificate use of the same CA. They remain open in
+  per-service leaf question, and the SSH-certificate use of the same CA — **since decided** by
+  [ADR 41](41-ssh-certificates-step-ca.md). The resolver and wildcard questions remain open in
   [idea 10](../ideas/10-internal-ca-dns-stack.md).
 - **The decision is recorded here; [#126](https://github.com/jaroslaw-bagnicki/Homelab/issues/126) stays open as
   the implementation tracker** for the build.
