@@ -1,7 +1,7 @@
 # SSH Access — step-ca Certificates, Authentik Identity, Per-Agent Principals
 
-**Date:** 2026-10-18
-**Status:** Accepted
+**Date:** 2026-10-18  
+**Status:** Accepted 
 
 ---
 
@@ -13,15 +13,13 @@ SSH-certificate use of the same CA" out of scope. SSH access still rests on a si
 **fleet key** ([ADR 28](28-fleet-admin-account-and-key.md)): root-equivalent on every host, shared by the
 operator, Ansible and every AI agent, with no expiry and nothing to revoke but the key itself.
 
-[Research 43](../research/43-ssh-certificates-step-ca.md) established the mechanics and the distinction
-the original request missed: **OpenSSH has no TLS mode**, so "mTLS-based SSH" cannot be a transport
-change — a TLS terminator in front of `sshd` authenticates a proxy and still leaves `authorized_keys` in
-place. What the request actually asks for is what `step-ca` already provides: **short-lived SSH
-certificates** for users and hosts, signed by the fleet's own CA.
+[Research 43](../research/43-ssh-certificates-step-ca.md) established the mechanics: `step-ca` issues
+**short-lived SSH certificates** for users and hosts from the fleet's own CA. Wrapping SSH in TLS would
+not replace SSH authentication and is not adopted (see Alternatives).
 
 The operator has settled the open questions:
 
-1. the fleet key stays as **break-glass**, but leaves daily use;
+1. the fleet key stays **only** as break-glass and is **out of daily use**;
 2. **Authentik** is the fleet's IdP — **not** Entra ID;
 3. the SSH CA keys should get **TPM custody** if the CA can hold them there;
 4. every **agent gets its own certificate**, as an authorization layer;
@@ -29,8 +27,8 @@ The operator has settled the open questions:
 
 ## Decision
 
-**Adopt `step-ca` SSH certificates as the fleet's SSH authentication, keep the fleet key as break-glass,
-and use Authentik as the human identity source.**
+**Adopt `step-ca` SSH certificates as the fleet's SSH authentication, keep the fleet key strictly as
+break-glass — outside daily use — and use Authentik as the human identity source.**
 
 - **Two SSH CAs, separate from the X.509 chain.** `ca.json` gains the `ssh` block with a user-certificate
   and a host-certificate signing key, and `enableSSHCA` on the provisioners that may sign. ACME stays
@@ -62,12 +60,12 @@ and use Authentik as the human identity source.**
   certificate or the fleet key. Because hosts map principal → Unix account in
   `/etc/ssh/auth_principals/<user>`, an agent can be denied a host or an account by editing that file,
   and a compromised agent is cut off by deleting its provisioner.
-- **The fleet key survives, demoted.** `fleetadm`'s key stays installed and managed exactly as
-  [ADR 28](28-fleet-admin-account-and-key.md) describes, but is used **only** as break-glass: CA
-  unavailable, certificate lost, a rebuilt host's first contact, and the Ansible path while the CA is
-  down. Routine automation runs under its own **`automation` principal** (mapped to `fleetadm` on every
-  host), daily interactive work under the operator's **Authentik** principal, and each agent under its
-  own. A periodic drill keeps the break-glass path proven.
+- **The fleet key survives, but is out of daily use.** `fleetadm`'s key stays installed and managed
+  exactly as [ADR 28](28-fleet-admin-account-and-key.md) describes, and is used **only** when a
+  certificate cannot be obtained: CA unavailable, certificate lost, or a rebuilt host's first contact.
+  It is not part of any daily path — routine automation runs under its own **`automation` principal**
+  (mapped to `fleetadm` on every host), interactive work under the operator's **Authentik** principal,
+  and each agent under its own. A periodic drill keeps the break-glass path proven.
 - **Revocation is by lifetime.** No CRL, no OCSP, no fleet-wide KRL — the same stance as
   [ADR 38](38-private-ca-hierarchy-and-custody.md). Incident response is **delete the identity's
   provisioner** (no re-issue) and wait out the certificate (≤ 8 h user, ≤ 7 d host);
@@ -83,6 +81,10 @@ and use Authentik as the human identity source.**
   user certificates and host renewals need a live `ca`. The fleet key exists precisely so that "CA down"
   means "no new certificates", not "no SSH". Availability of the CA is a design input, as it already is
   for TLS.
+- **"Out of daily use" is an operating rule, not a technical block.** The key stays in `authorized_keys`
+  and remains valid — [ADR 28](28-fleet-admin-account-and-key.md) keeps it as the guaranteed fallback —
+  so only discipline and the `sshd` audit trail keep it out of daily paths. If that drifts, its `from=`
+  and `key_options` can be narrowed without losing break-glass.
 - **A TPM loss now costs both CAs.** Clearing the `pve` TPM (PTT clear, BIOS update, NVRAM reset)
   destroys the SSH CA keys as well as the intermediate. Recovery is bounded by the lifetimes: re-create the
   SSH CA keys, **redistribute their public keys** to hosts (`TrustedUserCAKeys`) and clients
