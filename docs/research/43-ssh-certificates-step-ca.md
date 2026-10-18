@@ -29,7 +29,7 @@ only once it is accepted.
 > against the cited manual/source or executed. Everything marked **unverified** is a design judgement or
 > a mechanic that has not been run on the fleet yet. One assumption was already corrected during this
 > research: `step-ca`'s documented *example* SSH claim values are not the built-in defaults — the code
-> defaults are different (§2.4).
+> defaults are different (§2.3).
 
 ---
 
@@ -53,7 +53,7 @@ The request conflates two layers. They solve different problems and only one of 
 | Approach | What authenticates | What actually changes on the host | Removes `authorized_keys`? |
 |---|---|---|---|
 | **SSH certificates** (OpenSSH cert format, signed by a CA) | `sshd` verifies the **client certificate** against a trusted CA key; the client verifies the **host certificate** against a host CA key | `sshd_config` gains `TrustedUserCAKeys` + `HostCertificate`; the client gains `@cert-authority` in `known_hosts` | **Yes** |
-| **Literal mTLS** (TLS client certificates from step-ca's X.509 chain) | A **TLS terminator** in front of `sshd` verifies a client *X.509* certificate | A new daemon (`stunnel`, `sslh`, …) on every node, plus client certificates; `sshd` keeps its own auth | **No** — `sshd` still authenticates the user |
+| **Literal mTLS** (TLS client certificates from step-ca's X.509 chain) | A **TLS terminator** in front of `sshd` verifies a client *X.509* certificate | A new daemon (`stunnel`, optionally behind `sslh` when one port must carry both) on every node, plus client certificates; `sshd` keeps its own auth | **No** — `sshd` still authenticates the user |
 | **Teleport-style** | A proxy terminates TLS and its own SSH server; roles live in Teleport-issued certificates | A Teleport agent on every node, a Teleport CA — **not** step-ca | Yes, but by replacing the SSH stack |
 
 **OpenSSH has no TLS mode.** Neither `sshd_config(5)` nor `ssh_config(5)` defines a TLS option — the
@@ -140,7 +140,7 @@ Two hard limits (**verified upstream**):
 and justified it with "revocation relies entirely on the short lifetime". The SSH defaults are looser —
 a host certificate lives **30 days** unless overridden. If the fleet adopts SSH certificates under the
 same rationale, `defaultHostSSHCertDuration` / `maxHostSSHCertDuration` must be set explicitly (e.g.
-`24h` / `1680h`), otherwise the "short-lived" premise is only true for user certificates.
+`24h` / `168h` = 7 d), otherwise the "short-lived" premise is only true for user certificates.
 
 ### 2.4 What changes on the server and on the client (verified upstream)
 
@@ -209,17 +209,18 @@ and a `ca.json` section are added.
 Works, is understood, and is already automated. But the fleet key is a **root-equivalent static secret**
 with no expiry: rotation is manual, a stolen copy is valid until someone rotates it, and every new host
 needs the key installed before it can be managed. `known_hosts` pinning is another per-host treadmill
-(mitigated today only because Ansible runs with `host_checking` against IPs that never change).
+(mitigated today only because Ansible runs with `host_key_checking = True` against IPs that never change).
 
 ### B. step-ca **SSH certificates** (recommended)
 Removes both treadmills, gives every credential an expiry, and makes the CA the single audit point.
 Costs: a hard dependency on `ca` for *issuance* (not for existing sessions), a fleet-wide CA public key
 to distribute, and a decision about where user identities come from (§6).
 
-### C. Literal mTLS — TLS-wrapped SSH (`stunnel` / `sslh`) (rejected)
+### C. Literal mTLS — TLS-wrapped SSH (`stunnel`) (rejected)
 `stunnel` can do exactly this: a server-side service that `accept`s a TLS port, `connect`s to `127.0.0.1:22`,
 and enforces client certificates with `verifyChain` / `requireCert` against a `CAfile` (**verified
-upstream** in `stunnel(8)`). step-ca would issue the X.509 client certificates.
+upstream** in `stunnel(8)`); `sslh` would be added only if one port had to carry both TLS and plain SSH.
+step-ca would issue the X.509 client certificates.
 
 It is rejected because it **does not remove SSH authentication** — `sshd` still asks for a key or a
 certificate, so the fleet keeps `authorized_keys` *and* gains a TLS terminator, a client certificate
