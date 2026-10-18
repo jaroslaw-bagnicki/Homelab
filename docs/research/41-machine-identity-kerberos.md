@@ -437,7 +437,8 @@ guest block of [ADR 31](../decisions/31-static-address-scheme.md).
 
 Also worth writing down: the thread's snapshot of the *fleet* is generic (an "always-on Proxmox", a NAS, a
 k3s node). It never checks whether **OMV 8 can join a realm** or only serve principals, which decides
-whether SMB Kerberos is even reachable in the intended shape.
+whether SMB Kerberos is even reachable in the intended shape — that gap was researched separately in
+[research 44](44-omv-identity-integration.md): Samba can do it, **OMV's user database** is the constraint.
 
 ## §13 — Open questions
 
@@ -467,6 +468,6 @@ whether SMB Kerberos is even reachable in the intended shape.
 - [Gemini thread — Kerberos, OMV mTLS, FreeIPA and Proxmox backups](https://gemini.google.com/share/be4663811fbc)
 - [ADR 02 — Backup strategy: Restic to local SATA + Azure Blob](../decisions/02-backup-strategy-restic-blob.md) · [ADR 29 — NAS backup target (OMV)](../decisions/29-nas-backup-target-beetle-m3-omv.md)
 - [ADR 38 — Private CA hierarchy and custody](../decisions/38-private-ca-hierarchy-and-custody.md) · [ADR 37 — `.internal` name space](../decisions/37-lan-name-space-internal.md) · [ADR 40 — Internal DNS and reverse proxy on `edge`](../decisions/40-internal-dns-proxy-edge.md)
-- [Research 36 — step-ca and machine identity](36-step-ca-machine-identity.md) · [research 37 — TPM 2.0 and the fleet](37-tpm2-hardware-and-fleet.md) · [research 42 — Authentik hosting](42-authentik-hosting.md)
+- [Research 36 — step-ca and machine identity](36-step-ca-machine-identity.md) · [research 37 — TPM 2.0 and the fleet](37-tpm2-hardware-and-fleet.md) · [research 42 — Authentik hosting](42-authentik-hosting.md) · [research 44 — OMV identity integration](44-omv-identity-integration.md)
 - [Idea 10 — Internal CA + DNS + proxy stack](../ideas/10-internal-ca-dns-stack.md) · [idea 11 — Authentik IdP](../ideas/11-authentik-idp.md)
 - Upstream: [restic — preparing a repository](https://restic.readthedocs.io/en/stable/030_preparing_a_new_repo.html) · [rest-server](https://github.com/restic/rest-server) · [`vzdump(1)`](https://pve.proxmox.com/pve-docs/vzdump.1.html) · [`pvesm(1)`](https://pve.proxmox.com/pve-docs/pvesm.1.html)

@@ -13,6 +13,7 @@ Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month 
 
 ## 2026‑10
 
+- **(docs)** Answer whether OMV can do Kerberos SMB and OIDC — Samba yes, OMV's user model and missing OIDC provider decide it — [research 44](docs/research/44-omv-identity-integration.md)
 - **(docs)** Extend idea 11 with Authentik hosting — Caddy forward-auth, local-only deployment and `lab` as the host — [research 42](docs/research/42-authentik-hosting.md)
 - **(docs)** Capture the Kerberos and machine-identity research — keytabs, FreeIPA vs `step-ca`, Proxmox→OMV backup paths — [research 41](docs/research/41-machine-identity-kerberos.md)
 - **(feat)** Enable per-core CPU C-state residency charts in Netdata across the fleet — [runbook 31](docs/runbooks/31-deploy-netdata.md)

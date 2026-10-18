@@ -65,8 +65,9 @@ pass.
   ([ADR 35](../decisions/35-log-store-victorialogs.md)). The thread suggests Vector; Fluent Bit is
   already on every node.
 - **Proxmox and OMV are the interesting targets**: Proxmox VE has a native OIDC realm in recent
-  releases (to confirm on 9.2.2), otherwise the LDAP outpost covers it; whether OMV consumes LDAP
-  is unverified.
+  releases (to confirm on 9.2.2), otherwise the LDAP outpost covers it. OMV has **no native OIDC** —
+  OMV 8 added a UI authentication *plugin framework*, not a provider — so today it is forward auth at the
+  `edge` Caddy plus OMV's own login ([research 44](../research/44-omv-identity-integration.md)).
 
 ## Candidates
 
