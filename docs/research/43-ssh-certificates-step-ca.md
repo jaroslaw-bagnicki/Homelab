@@ -206,7 +206,15 @@ Removes both treadmills, gives every credential an expiry, and makes the CA the 
 Costs: a hard dependency on `ca` for *issuance* (not for existing sessions), a fleet-wide CA public key
 to distribute, and a decision about where user identities come from (§6).
 
-### C. A bare `ssh-keygen` SSH CA, no CA service (rejected)
+### C. Literal mTLS — TLS-wrapped SSH (`stunnel`) (rejected)
+`stunnel` can terminate TLS in front of `sshd` and require a client certificate (`verifyChain`,
+`requireCert`, `CAfile`), with certificates from step-ca's X.509 chain. Rejected because it **does not
+remove SSH authentication**: `sshd` still asks for a key or a certificate, so the fleet keeps
+`authorized_keys` *and* gains a TLS terminator plus a client-certificate lifecycle on every node. What it
+buys is network-level device authentication, which is not a current requirement, and the LAN already
+restricts SSH to `192.168.2.0/24`.
+
+### D. A bare `ssh-keygen` SSH CA, no service (rejected)
 `ssh-keygen -s ca_key` with `TrustedUserCAKeys` gives certificate-based SSH with no new service. It is the
 smallest possible step, but issuance, expiry, principals and audit stay manual — the exact toil the
 private CA exists to remove. Worth remembering as the **disaster-recovery fallback** if `step-ca` is

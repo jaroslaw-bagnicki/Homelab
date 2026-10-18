@@ -13,6 +13,15 @@ SSH-certificate use of the same CA" out of scope. SSH access still rests on a si
 **fleet key** ([ADR 28](28-fleet-admin-account-and-key.md)): root-equivalent on every host, shared by the
 operator, Ansible and every AI agent, with no expiry and nothing to revoke but the key itself.
 
+The exposure is concrete: the key is root-equivalent on every host, so one copy taken from a workstation,
+a dev container or an agent's environment yields fleet-wide root — with no expiry, no per-holder
+revocation, and nothing in the authentication log that distinguishes the operator from an AI agent. Every
+holder has the same blast radius for the same, unlimited time.
+
+Strengthening the Homelab's security posture is the point of this decision. One shared permanent secret is
+replaced by **per-identity, expiring, individually revocable** credentials, issued by the CA that already
+anchors the lab's TLS trust, so issuance becomes the single place where access is granted and recorded.
+
 [Research 43](../research/43-ssh-certificates-step-ca.md) established the mechanics: `step-ca` issues
 **short-lived SSH certificates** for users and hosts from the fleet's own CA.
 
@@ -114,6 +123,9 @@ break-glass — outside daily use — and use Authentik as the human identity so
 - **Keep the static fleet key as the steady state** ([ADR 28](28-fleet-admin-account-and-key.md)) —
   rejected: one shared, non-expiring, root-equivalent secret for operator, Ansible and every agent, with
   no per-identity revocation.
+- **Literal mTLS — TLS-wrapped SSH (`stunnel`)** — rejected: a TLS terminator in front of `sshd`
+  authenticates the proxy, not the user, so `authorized_keys` stays and every node gains a second daemon
+  and a client-certificate lifecycle ([research 43 §4](../research/43-ssh-certificates-step-ca.md)).
 - **A bare `ssh-keygen` SSH CA, no service** — rejected: issuance, expiry, principals and audit stay
   manual. Kept as the disaster-recovery fallback when `step-ca` is unavailable.
 - **Entra ID as the identity provider** — rejected by the operator: the Homelab does not put a cloud IdP
