@@ -30,20 +30,24 @@ and host certificates — and the constraints it has to fit:
 **Adopt FreeIPA as the lab's Linux domain, hosted on `pve`, with Technitium remaining authoritative for
 DNS.**
 
-1. **Realm `IPA.INTERNAL`, DNS domain `ipa.internal`** — a sub-domain of the LAN name space. **Amends
-   [ADR 37](37-lan-name-space-internal.md)**: `.internal` stays one authority, with `ipa.internal`
-   delegated inside it; nothing about the rest of the name space changes.
+1. **Realm `IPA.INTERNAL`, DNS domain `ipa.internal`** — a name **inside** the LAN name space, not a
+   delegated zone. **Amends [ADR 37](37-lan-name-space-internal.md)**: `.internal` stays one authority —
+   Technitium serves the `ipa.internal` records in the same zone, with no NS delegation to another server —
+   and nothing about the rest of the name space changes.
 2. **Integrated DNS off.** Technitium on `edge` keeps authority ([ADR 40](40-internal-dns-proxy-edge.md))
    and carries the `_kerberos._tcp` / `_ldap._tcp` SRV records plus forward and reverse records for every
    member.
 3. **Authentik stays the people-facing IdP.** It binds to FreeIPA over LDAPS and stores no passwords.
    FreeIPA is **not** exposed as an OIDC provider — Kerberos and LDAP are what it offers.
 4. **Dogtag serves only IPA's own service certificates**, through `certmonger`, as a sibling under the
-   fleet root installed with `--external-ca` ([ADR 42](42-pki-topology-sibling-cas.md)). LAN TLS and SSH
-   certificates stay with `step-ca`.
+   fleet root installed with `--external-ca` ([ADR 42](42-pki-topology-sibling-cas.md)). Fleet LAN TLS
+   and SSH certificates stay with `step-ca`; the single exception is **this host's own WebUI certificate**
+   (item 5), which Dogtag issues because nothing else consumes it.
 5. **The WebUI is reached directly — `https://ipa.internal/ipa/ui`, never through the `edge` Caddy.**
-   Its certificate is issued by Dogtag and chains to the fleet root, so browsers already trust the name
-   ([ADR 42](42-pki-topology-sibling-cas.md)) — a proxy would buy no trust. Access stays direct because
+   Its certificate is issued by Dogtag; installed with `--external-ca` it **chains to the fleet root**, so
+   browsers that already trust the root need nothing added — a proxy would buy no trust. (In the interim
+   self-signed mode of [ADR 42](42-pki-topology-sibling-cas.md) it does **not** chain, so clients must
+   import the IPA root until re-parenting.) Access stays direct because
    IPA is the **source of identity** (proxying widens the failure chain for the service that issues every
    other login), because the same httpd serves the `ipa` CLI's `/ipa/json` API and client enrolment, and
    because WebUI Kerberos SSO (`Authorization: Negotiate`) and smartcard login want the connection

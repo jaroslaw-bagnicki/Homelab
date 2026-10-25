@@ -13,8 +13,10 @@ chain through FreeIPA — and what each engine is actually good at. It sits on
 [ADR 41](../decisions/41-ssh-certificates-step-ca.md) (SSH certificates), [idea 13](../ideas/13-freeipa-domain-controller.md)
 (the domain) and [research 46 §3.5](46-identity-and-access-stack.md) (whether Vault could replace `step-ca`).
 
-**Status**: 📝 Analysis — **decided** by [ADR 42](../decisions/42-pki-topology-sibling-cas.md) (Proposed). The
-section below is the analysis that decision rests on; the build-time claims remain unverified (§6).
+**Status**: 📝 Analysis — **proposed** in [ADR 42](../decisions/42-pki-topology-sibling-cas.md), which is
+still **Proposed**: a Proposed ADR is not a settled decision, and the decision log stays the source of truth
+once it is accepted. The sections below are the analysis that proposal rests on; the build-time claims
+remain unverified (§6).
 
 > **Verification status.** Everything below is the thread's claim unless marked otherwise (convention from
 > [research 35](35-private-ca-and-lan-naming.md)). Repo facts are treated as established by reference:
@@ -70,9 +72,11 @@ for short-lived workload mTLS**, if and when Vault exists. The thread itself dre
 | **3 — Parallel roots** | two independent chains, both roots distributed by Ansible | total isolation; an IPA outage never blocks ACME | two roots to distribute |
 
 The thread's own recommendation is **1**, then turn 9 argues against the chain that pattern 1 creates —
-see §3. Patterns **1 and 2 combine**: the chain carries trust, the OIDC provisioner carries identity
-("data plane" vs "control plane", in the thread's words), with a `ca.json` that names the IPA root, the
-`step-ca` intermediate, an ACME provisioner for machines and an OIDC provisioner for people.
+see §3. The *identity* half of **2** still applies: an OIDC provisioner maps Authentik claims to
+principals. What does **not** carry over is the trust half — the `ca.json` the thread writes names the IPA
+root as `step-ca`'s parent, which is exactly the chain §3 rejects. In the adopted shape trust comes from
+**the shared root** (both intermediates are its children), and `ca.json` names the fleet root alongside
+`step-ca`'s own intermediate.
 
 Mechanically, pattern 1 needs two things the thread flags as non-default:
 
@@ -90,11 +94,12 @@ The thread's sharpest argument, and the one worth carrying into [idea 13](../ide
   `max_chain_depth` at 2–3 and reject the deeper chain.
 - **Chicken and egg.** With IPA as the intermediate's parent, an IPA/389-DS/DNS outage becomes a `step-ca`
   issuance outage — the ACME endpoint the whole LAN depends on now fails whenever the domain does.
-- **Blast radius — containment, not revocation.** A compromised `step-ca` intermediate cannot mint
-  certificates for anything the IPA CA covers, provided the two are **siblings rather than parent and
-  child**. The containment comes from that layout and from the **1-year intermediate expiry**: ADR 38
-  operates **no CRL or OCSP**, so a compromised intermediate is retired by letting it — and the leaves
-  under it — expire, not by revoking it.
+- **Blast radius — containment only with name constraints.** Sibling intermediates under one root are
+  **each trusted for every name that root covers** unless X.509 **name constraints** restrict them, so the
+  sibling layout by itself does not stop a compromised `step-ca` intermediate from minting for IPA's names.
+  Containment therefore needs name constraints on both intermediates (§6) plus the **1-year intermediate
+  expiry**; ADR 38 operates **no CRL or OCSP**, so a compromised intermediate is retired by letting it and
+  the leaves under it expire, not by revoking it.
 - **Root key handling does not change the chain.** Moving the root onto a YubiKey changes *where the key
   lives*, not the number of certificates: the key is used once to sign the intermediate CSR and returns to
   the safe.
@@ -154,6 +159,7 @@ Two answers worth keeping, both unverified:
 | Vault issues "key + certificate without a CSR" | True of the `pki/issue` API path, not of the ACME flow — do not generalise |
 | `ipa-cacert-manage install` + `ipa-certupdate` makes an external root trusted fleet-wide | The trust-anchor-only variant |
 | `ipa-server-install --external-ca` accepts a CSR signed by an offline root | Already open in [research 46 §6](46-identity-and-access-stack.md) |
+| **Name constraints** on both intermediates (`ca.json` `policy.x509`) actually restrict each CA to its own names | Without them the sibling layout contains nothing — each intermediate can mint for any name the root covers |
 | `max_chain_depth` limits on IoT/older clients | The argument against a three-certificate chain |
 | OPNsense built-in CA has no API, ACME or EST; `os-acme-client` targets a custom directory | The OPNsense integration path |
 | WireGuard "fully integrated since 23.1" | Versions and packaging change |

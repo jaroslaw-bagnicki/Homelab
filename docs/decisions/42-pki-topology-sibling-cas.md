@@ -25,8 +25,9 @@ records the resulting rule.
 
 **One offline root, several sibling subordinates — never a chain between them.**
 
-1. **The [ADR 38](38-private-ca-hierarchy-and-custody.md) root is the only trust anchor.** It signs the
-   intermediate of **every** CA in the lab; no other CA signs another CA's certificate.
+1. **The [ADR 38](38-private-ca-hierarchy-and-custody.md) root is the fleet's trust anchor.** It signs the
+   intermediate of every CA in the lab, and no CA signs another CA's certificate. The single exception is
+   the interim self-signed IPA CA in item 6 — a second, temporary anchor removed by re-parenting.
 2. **`step-ca`'s intermediate stays a direct child of the root** — custody unchanged (TPM 2.0 on `pve`).
    FreeIPA's Dogtag CA, if it is adopted, becomes a **second direct child**, installed with
    `ipa-server-install --external-ca` and its CSR signed in the same offline ceremony
@@ -37,22 +38,27 @@ records the resulting rule.
    nothing.
 4. **A Vault/OpenBao PKI intermediate, if it ever exists, is a third sibling** — never a replacement for
    `step-ca` ([research 46 §3.5](../research/46-identity-and-access-stack.md)).
-5. **Scope follows the engine, not the root.** `step-ca` issues everything the fleet consumes — LAN TLS
-   leaves and SSH host/user certificates. Dogtag issues **only** IPA's own service certificates. IPA must
-   never become a second issuer of LAN TLS or fleet SSH certificates.
+5. **Scope follows the engine, not the root.** `step-ca` issues the fleet's LAN TLS leaves and SSH
+   host/user certificates. Dogtag issues **only** IPA's own service certificates, and IPA must never become
+   a general issuer of LAN TLS or fleet SSH certificates. The one explicit exception is **IPA's own WebUI
+   httpd certificate** for `ipa.internal` — a Dogtag-issued LAN TLS leaf, because that host issues it
+   itself through `certmonger` ([ADR 43](43-freeipa-domain-realm.md) §5) and no other service consumes it.
 6. **If IPA is installed before a root ceremony is practical**, a self-signed IPA CA is the documented
-   interim. Re-parenting it later is a **re-issue of IPA's certificates**, not a trust change at the root,
-   and is bounded by the leaf lifetimes.
+   interim. Re-parenting it later is a **planned trust change for every client that imported the interim
+   IPA root** — they must switch to the fleet root — plus a re-issue of IPA's own certificates. The cutover
+   is bounded by those certificates' own lifetimes (Dogtag defaults, months rather than hours) and by
+   `certmonger` renewing them, not by the short leaf lifetimes `step-ca` issues.
 
 ## Consequences
 
 - **A CA outage cannot cascade.** Neither CA can take the other's issuance path down — the failure that
   made the IPA→`step-ca` chain unattractive ([research 48 §3](../research/48-pki-topology-step-ca-freeipa.md)).
-- **Blast radius stays one level deep.** A compromised intermediate covers only the names it was trusted
-  to issue, and its sibling is untouched; only a root compromise takes the whole hierarchy, which is what
-  offline custody exists for. Containment is by **layout and by expiry**, not by revocation: ADR 38
-  operates no CRL or OCSP, so a compromised intermediate and the leaves under it are retired by running out
-  their lifetimes.
+- **Blast radius needs name constraints to be one level deep.** Sibling intermediates under one root are
+  **each trusted for every name that root covers** unless X.509 **name constraints** restrict them, so the
+  layout alone does not contain a compromised intermediate — that is an open item to prove, not a property
+  to assume. With constraints on each intermediate, containment is layout plus expiry, not revocation:
+  ADR 38 operates no CRL or OCSP, so a compromised intermediate and its leaves are retired by running out
+  their lifetimes. Only a root compromise takes the whole hierarchy.
 - **Root ceremonies batch.** Every new CA needs a signature and therefore an offline session; the practical
   rule is to sign all known CSRs in one sitting rather than per project.
 - **Distribution does not grow per CA.** Hosts trust the **root** (`ca_trust`); the `@cert-authority` lines
@@ -63,8 +69,10 @@ records the resulting rule.
 - **`--external-ca` is unproven here.** The install flow and Dogtag's profile requirements are flagged
   unverified in [research 48 §6](../research/48-pki-topology-step-ca-freeipa.md); the first implementation
   must prove them before IPA's CA is treated as a sibling in production.
-- **IPA's certificate lifetimes stay long.** That is acceptable only because IPA issues nothing the fleet
-  trusts for transport or login — a constraint that has to hold for this decision to stay sound.
+- **IPA's certificate lifetimes stay long.** That is acceptable only because those certificates have
+  **automated renewal (`certmonger`) and monitored expiry** — the WebUI certificate and the LDAPS endpoint
+  Authentik binds to are both trusted by clients, so a silently expired one is an outage, not a cosmetic
+  stale certificate.
 
 ### Alternatives Considered
 
