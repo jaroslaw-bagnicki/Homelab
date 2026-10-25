@@ -45,8 +45,8 @@ replacing it.
 | Fedora / Ubuntu / Debian hosts | ✅ | `ipa-client-install` — SSSD, Kerberos, `certmonger` |
 | System LXC (full OS containers) | ✅ | works; the *privileged* LXC claim from chat 35 is **unverified** — try unprivileged + `nesting`/`keyctl` first |
 | The Linux desktop ([idea 12](12-travel-workstation-arm-linux.md)) | ✅ | the visible client test |
-| OMV NAS (`nas`) | ⚠ | Samba can do `security = ADS`; **OMV's user database is the blocker** ([research 44](../research/44-omv-identity-integration.md)) |
-| OPNsense (`edge`) | ⚠ | no `ipa-client`; SSSD + LDAP by hand, HBAC partial |
+| OMV NAS (`nas`) | ⚠️ | Samba can do `security = ADS`; **OMV's user database is the blocker** ([research 44](../research/44-omv-identity-integration.md)) |
+| OPNsense (`edge`) | ⚠️ | no `ipa-client`; SSSD + LDAP by hand, HBAC partial |
 | **`pve`** (Proxmox VE) | ❌ | it **hosts** the server; it is not a client and not an enrolment target |
 | Windows 11 | ❌ | see the fork below — this decision gates the whole idea |
 
@@ -109,7 +109,7 @@ request-header, service-account key) and rotates it itself. `step-ca` or a chain
 behind **cert-manager** for ingress and workload certificates, with k3s's own CA chained under the fleet
 root ([research 46 §3.6](../research/46-identity-and-access-stack.md)).
 
-## Hosting — on `pve` (operator decision, 2026-10-25)
+## Hosting — on `pve` (operator decision)
 
 | Item | Value |
 |---|---|
@@ -148,9 +148,9 @@ rehearsed restore) and a **break-glass path** for the day `pve` does not boot.
   Keep a documented local break-glass account on every node; never put the management planes (Proxmox UI,
   Caddy admin, Portainer) behind the domain alone.
 - **Two CAs, two renewal paths** — `step-ca` for LAN TLS and SSH, `certmonger`/Dogtag for domain
-  certificates. Losing either stalls renewals without breaking existing certificates, so monitor both SRV records look like a wrong password.
-- **CA migration is a fleet-wide event**, not a config change: new root, new certificates, new trust on
-  personal devices.
+  certificates. Losing either stalls renewals without breaking existing certificates, so monitor both.
+- **Time**: Kerberos tolerates ~5 minutes of skew — chrony everywhere before enrolment.
+- **DNS**: missing SRV records look like a wrong password.
 - **Rebuilt-from-memory loses everything** — HBAC rules, host keys, keytabs, CA chain.
 
 ## Open questions
