@@ -165,6 +165,9 @@ rehearsed restore) and a **break-glass path** for the day `pve` does not boot.
   offline root signs both `step-ca`'s intermediate and IPA's CA (`--external-ca`), rather than chaining IPA
   under `step-ca` or leaving IPA self-signed. Still unverified whether `--external-ca` takes a CSR signed by
   the offline root cleanly, and it needs an ADR.
+- **WebUI access path** — decided ([ADR 43](../decisions/43-freeipa-domain-realm.md)): reached directly at
+  `https://ipa.internal/ipa/ui`, never through Caddy. Still unverified: whether IPA's httpd also serves the
+  ACME endpoint on that vhost, and whether a proxy would in fact break `Negotiate` SSO.
 - **Which servers enrol** — all Linux hosts, or only those whose identity is worth centralising?
 - **Resource budget on `pve`** — 2 GB or 4 GB, and which planned guest gives way if it is 4 GB?
 - **Learning vs production** — a single server rebuilt for fun, or a spine needing a replica, monitoring

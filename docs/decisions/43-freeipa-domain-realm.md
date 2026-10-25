@@ -41,16 +41,23 @@ DNS.**
 4. **Dogtag serves only IPA's own service certificates**, through `certmonger`, as a sibling under the
    fleet root installed with `--external-ca` ([ADR 42](42-pki-topology-sibling-cas.md)). LAN TLS and SSH
    certificates stay with `step-ca`.
-5. **No Windows domain membership.** FreeIPA enrols Linux/UNIX clients only. If a Windows machine ever
+5. **The WebUI is reached directly — `https://ipa.internal/ipa/ui`, never through the `edge` Caddy.**
+   Its certificate is issued by Dogtag and chains to the fleet root, so browsers already trust the name
+   ([ADR 42](42-pki-topology-sibling-cas.md)) — a proxy would buy no trust. Access stays direct because
+   IPA is the **source of identity** (proxying widens the failure chain for the service that issues every
+   other login), because the same httpd serves the `ipa` CLI's `/ipa/json` API and client enrolment, and
+   because WebUI Kerberos SSO (`Authorization: Negotiate`) and smartcard login want the connection
+   end-to-end. A single front door in front of IPA is a new decision, not a routing tweak.
+6. **No Windows domain membership.** FreeIPA enrols Linux/UNIX clients only. If a Windows machine ever
    needs to *be* a member, that is **Samba AD DC** and a new ADR — not a FreeIPA feature to stretch.
-6. **Scope of enrolment**: Linux servers whose login policy is worth centralising, plus the travel
+7. **Scope of enrolment**: Linux servers whose login policy is worth centralising, plus the travel
    workstation as the first visible client ([idea 12](../ideas/12-travel-workstation-arm-linux.md)). OMV
    is best-effort (its user database is the blocker, [research 44](../research/44-omv-identity-integration.md)),
    OPNsense is manual LDAP+SSSD, and **`pve` hosts the server and is not a client**.
-7. **Break-glass is unchanged.** The [ADR 28](28-fleet-admin-account-and-key.md) fleet key and local admin
+8. **Break-glass is unchanged.** The [ADR 28](28-fleet-admin-account-and-key.md) fleet key and local admin
    accounts remain; management planes (Proxmox UI, Caddy admin, Portainer) are never behind the domain
    alone.
-8. **Rollout order**: server → `ipa-backup` and a rehearsed restore → one disposable client → one HBAC rule
+9. **Rollout order**: server → `ipa-backup` and a rehearsed restore → one disposable client → one HBAC rule
    and one `sudo` rule (proving refusal as well as success) → the rest of the fleet.
 
 ## Consequences
@@ -58,6 +65,9 @@ DNS.**
 - **One guest becomes an availability dependency for new logins.** Existing sessions and existing
   certificates keep working through an outage; the break-glass path covers the rest. The restore drill is
   therefore part of the design, not an afterthought.
+- **The WebUI keeps one fewer dependency than the rest of the LAN.** It needs its own guest and Technitium
+  answering `ipa.internal` — not `edge`'s Caddy and not a `step-ca` leaf. That is deliberate: when the
+  domain is what is broken, its UI must still be reachable to fix it.
 - **The node's memory is the binding constraint.** The domain joins `pve`'s 8 GB beside Netdata, NUT,
   VictoriaLogs, the `ca` guest and the planned HA VM — which is why the second-node work
   ([idea 15](../ideas/15-second-proxmox-node.md)) is sequenced alongside, not after.
@@ -84,6 +94,12 @@ of the problem — it centralises passwords but not *who may log in where*.
 
 **Keycloak or Authentik alone.** Rejected for OS identity: they are web SSO. Authentik keeps its role in
 front of FreeIPA rather than replacing it.
+
+**WebUI behind the `edge` Caddy.** Rejected: the certificate already chains to the fleet root, so a proxy
+adds no trust; it puts the identity source behind the routing layer it is meant to survive; and it
+interferes with `Negotiate` SSO and client-certificate login. The Proxmox UI sits behind Caddy
+([ADR 40](40-internal-dns-proxy-edge.md)) because it authenticates against PAM rather than *being* the
+identity source — the difference matters.
 
 **Status quo (per-service accounts + the fleet key).** Rejected as the ADR 41 human path lands: a shared
 root-equivalent key is exactly what the certificate work exists to retire.

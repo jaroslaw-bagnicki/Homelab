@@ -1,7 +1,7 @@
 # PKI Topology — One Offline Root, Sibling Subordinate CAs
 
-**Date:** 2026-10-25
-**Status:** Proposed
+**Date:** 2026-10-25  
+**Status:** Proposed  
 
 ---
 
