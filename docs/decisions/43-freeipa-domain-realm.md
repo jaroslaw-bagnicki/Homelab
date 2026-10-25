@@ -1,7 +1,7 @@
 # FreeIPA as the Lab's Domain — `ipa.internal`, Technitium Keeps DNS
 
-**Date:** 2026-10-25
-**Status:** Proposed
+**Date:** 2026-10-25  
+**Status:** Proposed  
 
 ---
 
