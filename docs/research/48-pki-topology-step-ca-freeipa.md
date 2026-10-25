@@ -13,8 +13,8 @@ chain through FreeIPA — and what each engine is actually good at. It sits on
 [ADR 41](../decisions/41-ssh-certificates-step-ca.md) (SSH certificates), [idea 13](../ideas/13-freeipa-domain-controller.md)
 (the domain) and [research 46 §3.5](46-identity-and-access-stack.md) (whether Vault could replace `step-ca`).
 
-**Status**: 📝 Analysis — **no decision taken**. It settles one open question in spirit (how the two CAs
-relate) but needs an ADR before anything is built.
+**Status**: 📝 Analysis — **decided** by [ADR 42](../decisions/42-pki-topology-sibling-cas.md) (Proposed). The
+section below is the analysis that decision rests on; the build-time claims remain unverified (§6).
 
 > **Verification status.** Everything below is the thread's claim unless marked otherwise (convention from
 > [research 35](35-private-ca-and-lan-naming.md)). Repo facts are treated as established by reference:

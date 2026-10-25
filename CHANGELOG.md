@@ -13,9 +13,9 @@ Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month 
 
 ## 2026‑10
 
-- **(docs)** Map the PKI topology — one offline root signs `step-ca` and FreeIPA as siblings, not a chain through IPA — [research 48](docs/research/48-pki-topology-step-ca-freeipa.md)
+- **(docs)** Decide the PKI topology — one offline root, `step-ca` and FreeIPA's CA as siblings, never a chain — [ADR 42](docs/decisions/42-pki-topology-sibling-cas.md)
 - **(docs)** Weigh a second Proxmox node — `pve` → `pve1`, HA needs a QDevice, storage is ZFS replication, OptiPlex 7040 leading — [idea 15](docs/ideas/15-second-proxmox-node.md)
-- **(docs)** Scope the identity stack — FreeIPA on `pve` beside `step-ca` (its retirement reverted), Authentik for people, Teleport dropped — [idea 13](docs/ideas/13-freeipa-domain-controller.md)
+- **(docs)** Decide FreeIPA as the lab's domain — realm `ipa.internal`, Technitium keeps DNS, `step-ca` keeps TLS and SSH — [ADR 43](docs/decisions/43-freeipa-domain-realm.md)
 - **(docs)** Scope a self-hosted secret store to replace Azure Key Vault — ten-plus consumers, Vault/OpenBao vs Infisical, TPM unseal — [idea 14](docs/ideas/14-self-hosted-secret-store.md)
 - **(docs)** Scope an ARM travel workstation with a Linux desktop — per-model Linux support; a supplement to the Lenovo, not a replacement — [idea 12](docs/ideas/12-travel-workstation-arm-linux.md)
 - **(docs)** Adopt SSH certificates from the private CA — Authentik for humans, per-agent identities, key demoted to break-glass — [ADR 41](docs/decisions/41-ssh-certificates-step-ca.md)
