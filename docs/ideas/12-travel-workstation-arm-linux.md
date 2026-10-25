@@ -8,7 +8,7 @@
 **Status**: 🧠 Idea — no decision taken, nothing purchased
 **Date**: 2026-10-25
 **Sources**: two Gemini threads, both written up in [research 45](../research/45-arm-laptop-linux-travel-workstation.md) — "ASUS Vivobook S14 ARM" ([chat](https://gemini.google.com/share/1f7c0006fa13)) and "Lenovo vs Snapdragon dla Dev" ([chat](https://gemini.google.com/share/095a3510469c))
-**Related**: [research 45](../research/45-arm-laptop-linux-travel-workstation.md) (hardware, Linux support, comparison against the current workstation) · [research 41](../research/41-machine-identity-kerberos.md) (Kerberos / FreeIPA — the client-test angle) · [ADR 41](../decisions/41-ssh-certificates-step-ca.md) (SSH from the CA) · [ADR 37](../decisions/37-lan-name-space-internal.md) / [ADR 40](../decisions/40-internal-dns-proxy-edge.md) (`.internal`, LAN-only) · [ADR 08](../decisions/08-remote-access-cloudflare-tunnel.md) (remote access) · [ADR 28](../decisions/28-fleet-admin-account-and-key.md) (fleet admin identity)
+**Related**: [research 45](../research/45-arm-laptop-linux-travel-workstation.md) (hardware, Linux support, comparison against the current workstation) · [research 41](../research/41-machine-identity-kerberos.md) (Kerberos / FreeIPA — the client-test angle) · [idea 13](13-freeipa-domain-controller.md) (the domain the machine enrols into) · [ADR 41](../decisions/41-ssh-certificates-step-ca.md) (SSH from the CA) · [ADR 37](../decisions/37-lan-name-space-internal.md) / [ADR 40](../decisions/40-internal-dns-proxy-edge.md) (`.internal`, LAN-only) · [ADR 08](../decisions/08-remote-access-cloudflare-tunnel.md) (remote access) · [ADR 28](../decisions/28-fleet-admin-account-and-key.md) (fleet admin identity)
 
 ---
 

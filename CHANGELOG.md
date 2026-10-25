@@ -13,6 +13,7 @@ Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month 
 
 ## 2026‑10
 
+- **(docs)** Scope a FreeIPA-backed lab identity stack — directory, KDC and host policy in FreeIPA, Authentik for people, `step-ca` kept — [idea 13](docs/ideas/13-freeipa-domain-controller.md)
 - **(docs)** Scope an ARM travel workstation with a Linux desktop — per-model Linux support; a supplement to the Lenovo, not a replacement — [idea 12](docs/ideas/12-travel-workstation-arm-linux.md)
 - **(docs)** Adopt SSH certificates from the private CA — Authentik for humans, per-agent identities, key demoted to break-glass — [ADR 41](docs/decisions/41-ssh-certificates-step-ca.md)
 - **(docs)** Answer whether OMV can do Kerberos SMB and OIDC — Samba yes, OMV's user model and missing OIDC provider decide it — [research 44](docs/research/44-omv-identity-integration.md)

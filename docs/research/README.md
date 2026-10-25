@@ -2,6 +2,7 @@
 
 | # | Date | Document | Topic | Source |
 |---|------|----------|-------|--------|
+| 46 | 2026‑10‑25 | [46-identity-and-access-stack.md](46-identity-and-access-stack.md) | Identity and access stack — the layer map across five threads: LDAP vs machine identity, `step-ca` vs Vault (and why the CA should stay), Keycloak vs Authentik, why neither is a KDC for SMB, MIT Kerberos keytabs and zero-downtime rotation, Teleport and Machine ID, FreeIPA's host lifecycle/inventory/ACME/TPM/YubiKey-offline-root, the Proxmox LXC install, and the alternatives (Kanidm, Samba AD DC, NetBox, Foreman) — with a final cross-thread conclusions section | Gemini chats 32–36 |
 | 45 | 2026‑10‑25 | [45-arm-laptop-linux-travel-workstation.md](45-arm-laptop-linux-travel-workstation.md) | ARM travel laptop, a Linux desktop, and the machine it must beat — the Vivobook S14 S3407QA on Snapdragon X X1-26-100 (16 GB soldered, 75 Wh, 1.35 kg) against the lab's Lenovo Slim 7 16IAH7 (i7-12700H 14C/20T, Arc A370M): single-core parity, ~20–30 % multi-core deficit, `amd64` containers under QEMU; the **per-model device-tree** reality (S15 and Zenbook A14 upstream, **no S14 DTB**), the Fedora 44 port of the sibling X1407QA, Snapdragon vs Lunar Lake / Panther Lake, TDP, and why the NPU+Ollama story does not hold up | Gemini chats 30–31 + Notebookcheck + Lenovo PSREF + mainline device trees + the X1407QA port |
 | 44 | 2026‑10‑18 | [44-omv-identity-integration.md](44-omv-identity-integration.md) | OMV as an identity consumer — Samba's `security = ADS` / keytab options against OMV's standalone-mode config generation, why the **OMV user database** (not Kerberos) is the blocker for domain users, the OMV 8 UI authentication **plugin framework** (no OIDC plugin), and the four designs for passwordless SMB with the keytab-to-OMV-user mapping as the candidate still to be validated | Operator request + OMV docs + `smb.conf(5)` + OMV issue #2235 |
 | 43 | 2026‑10‑18 | [43-ssh-certificates-step-ca.md](43-ssh-certificates-step-ca.md) | SSH access from the private CA — **user and host SSH certificates** from `step-ca` (the `ssh` block, `enableSSHCA`, `SSHPOP` host-only renewal, verified 16 h user / 30 d host defaults) instead of the static fleet key — **adopted** by [ADR 41](../decisions/41-ssh-certificates-step-ca.md): host certs first, Authentik for humans, per-agent principals, TPM-held SSH CA keys, fleet key kept as break-glass | Operator request + Smallstep docs and source + OpenSSH manuals; `step ca init --ssh` measured 2026‑10‑18 |
@@ -83,3 +84,8 @@
 | 29 | [Gemini chat 29 — Authentik hosting](https://gemini.google.com/share/df958018b379) | 42 |
 | 30 | [Gemini chat 30 — ASUS Vivobook S14 ARM](https://gemini.google.com/share/1f7c0006fa13) | 45 |
 | 31 | [Gemini chat 31 — Lenovo vs Snapdragon for dev](https://gemini.google.com/share/095a3510469c) | 45 |
+| 32 | [Gemini chat 32 — Keycloak](https://gemini.google.com/share/fcc7862e0b36) | 46 |
+| 33 | [Gemini chat 33 — LDAP and machine identity](https://gemini.google.com/share/5a6ad737f9de) | 46 |
+| 34 | [Gemini chat 34 — Teleport and FreeIPA](https://gemini.google.com/share/586dcfa6a24d) | 46 |
+| 35 | [Gemini chat 35 — FreeIPA in Proxmox](https://gemini.google.com/share/5a002bb058b9) | 46 |
+| 36 | [Gemini chat 36 — FreeIPA alternatives](https://gemini.google.com/share/f2f45e32dde3) | 46 |
