@@ -13,6 +13,10 @@ Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month 
 
 ## 2026‑10
 
+- **(docs)** Weigh a second Proxmox node — `pve` → `pve1`, HA needs a QDevice, storage is ZFS replication, OptiPlex 7040 leading — [idea 15](docs/ideas/15-second-proxmox-node.md)
+- **(docs)** Scope the identity stack — FreeIPA on `pve` beside `step-ca` (its retirement reverted), Authentik for people, Teleport dropped — [idea 13](docs/ideas/13-freeipa-domain-controller.md)
+- **(docs)** Scope a self-hosted secret store to replace Azure Key Vault — ten-plus consumers, Vault/OpenBao vs Infisical, TPM unseal — [idea 14](docs/ideas/14-self-hosted-secret-store.md)
+- **(docs)** Scope an ARM travel workstation with a Linux desktop — per-model Linux support; a supplement to the Lenovo, not a replacement — [idea 12](docs/ideas/12-travel-workstation-arm-linux.md)
 - **(docs)** Adopt SSH certificates from the private CA — Authentik for humans, per-agent identities, key demoted to break-glass — [ADR 41](docs/decisions/41-ssh-certificates-step-ca.md)
 - **(docs)** Answer whether OMV can do Kerberos SMB and OIDC — Samba yes, OMV's user model and missing OIDC provider decide it — [research 44](docs/research/44-omv-identity-integration.md)
 - **(docs)** Extend idea 11 with Authentik hosting — Caddy forward-auth, local-only deployment and `lab` as the leading host candidate — [research 42](docs/research/42-authentik-hosting.md)
