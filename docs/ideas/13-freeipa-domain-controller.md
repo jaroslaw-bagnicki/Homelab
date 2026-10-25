@@ -96,6 +96,11 @@ What it costs — three gaps that are **not** closed by the research:
    regression in short-lived credentials.
 3. **Root migration.** A new root means re-issuing every certificate and re-running root distribution
    ([runbook 39](../runbooks/39-trust-private-ca.md)) across the fleet and personal devices.
+4. **The k3s cluster** does *not* get its CA from Dogtag — k3s owns its internal PKI (API server, kubelet,
+   etcd, request-header, service-account key) and rotates it itself. What Dogtag can back is the layer
+   above: cert-manager issuing ingress and workload certificates from a Dogtag-signed intermediate, with
+   k3s's own CA **chained** under the IPA root ([research 46 §3.6](../research/46-identity-and-access-stack.md)).
+   IPA-issued leaves are also host/service-scoped, so wildcard ingress needs a different answer.
 
 Order of work if this proceeds: prove IPA's ACME on one Caddy site → decide the SSH path → only then
 migrate and decommission `step-ca`.

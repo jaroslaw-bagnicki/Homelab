@@ -330,6 +330,46 @@ closed before that is safe, and neither is answered by the threads:
 3. **Migrating the trust anchor** — a new root means re-issuing every certificate and re-running root
    distribution ([runbook 39](../runbooks/39-trust-private-ca.md)) on the fleet and personal devices.
 
+### 3.6 Would the planned k3s cluster work with Dogtag as its mTLS CA?
+
+**Partly — and the boundary is k3s's own PKI, not the CA.** k3s is not "a cluster with a CA you can
+choose": it generates and owns a set of CAs and leaf certificates under
+`/var/lib/rancher/k3s/server/tls/` — `server-ca` (API server serving cert, kubelet client), `client-ca`
+(kubeconfig/API client auth), `request-header-ca` (aggregation), `etcd/server-ca` (peer/client), plus the
+service-account signing key. It issues, uses and rotates them itself (`k3s certificate rotate`, with a
+cross-sign utility for CA rotation). There is no supported mode in which k3s asks an external CA for
+short-lived leaves on every renewal.
+
+*Verified against the k3s docs repo (`docs/cli/certificate.md` and the kube-apiserver argument dumps in
+`docs/security/self-assessment-*`).*
+
+| Certificate class | Issued by | Dogtag as the CA? |
+|---|---|---|
+| API server serving cert, kubelet client, node join, request-header, etcd, SA key | **k3s itself** | ❌ — only *chainable*: sign k3s's CA(s) with the IPA root so external clients trust both |
+| Ingress TLS (Traefik / cert-manager) | cert-manager → ACME or `ca` Issuer | ✅ with caveats below |
+| Workload mTLS (pods) | cert-manager | ✅ — a Dogtag-issued intermediate in a `ClusterIssuer` |
+| Service-mesh identity (Linkerd trust anchor / Istio `cacerts`) | the mesh, from an external root | ✅ at the **trust-anchor** level; the mesh still drives SVID rotation |
+| Host-level services on cluster nodes | `certmonger` on an IPA client | ✅ if the node is enrolled ([idea 13](../ideas/13-freeipa-domain-controller.md)) |
+
+**The three caveats that make "Dogtag as the k3s CA" more than a config line:**
+
+1. **IPA certificate requests are host/service-scoped.** They are validated against a principal like
+   `HTTP/host.internal@REALM`, so arbitrary SANs — and especially **wildcards** for `*.apps.internal` —
+   are not what IPA was built to issue. Either pre-create service entries per host, or rely on
+   "unknown-host issuance" (unverified, [§6](#6--claims-to-verify-before-anything-is-built)).
+2. **Lifetime defaults are enterprise-shaped.** IPA leaves are long-lived by default; short-lived workload
+   certificates need an explicit profile, and the rotation engine is **cert-manager**, not Dogtag.
+3. **Trust has to travel.** The IPA root must land in every consumer's trust store — kubeconfig CA
+   bundles, ingress clients, pods mounting the CA — which is the same root-distribution problem as
+   [runbook 39](../runbooks/39-trust-private-ca.md), now inside a cluster.
+
+**Recommendation**: do not fight k3s's internal PKI. Let **cert-manager** be the in-cluster issuer with
+**Dogtag behind it** (a `ca` ClusterIssuer with a Dogtag-issued intermediate is less brittle than IPA
+ACME), chain — not replace — k3s's own CA under the IPA root, and treat the CA outage as "renewals stall,
+existing certificates keep working until expiry". This is also why the `step-ca` retirement decision is
+narrower than it looks: for cluster workloads cert-manager does the rotating either way; the choice is
+only *which* CA sits behind it.
+
 ## §4 — Installing the server (chat 35)
 
 | Step | Detail |
