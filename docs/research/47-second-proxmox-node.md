@@ -74,7 +74,9 @@ benefit of a second node is Proxmox's own storage replication instead** — veri
   That is a rebuild/re-pool step, not a checkbox.
 - **HA is allowed, at an RPO cost.** *"High-Availability is allowed in combination with storage
   replication, but there may be some data loss between the last synced time and the time a node failed"* —
-  on a 15-minute schedule that is up to ~15 minutes of writes.
+  and **the RPO is the age of the last *successful* sync, not the interval**: a failed job is suspended and
+  retried every 30 minutes (next bullet), so a 15-minute schedule can still leave a stale replica.
+  Replication job state therefore needs monitoring and alerting, not an assumption that the schedule ran.
 - **Traffic rides the migration network** by default; `Datacenter → Options → Replication Settings` can pin
   it to a subnet (`replication: secure,network=…`), and each job can be rate-limited — relevant on a single
   1 GbE link shared with Corosync.

@@ -56,8 +56,10 @@ like the SFF, not the Micro.
   TCP 5403.
 - **Storage stays local** (`local-lvm`) at first; HA is restart-on-failure until a replica exists.
 - **ZFS replication is the storage step, not a shared datastore** — a `zfspool` storage with the **same ID**
-  on both nodes, replication jobs for the always-on guests, RPO equal to the interval (default 15 min).
-  Getting `pve1` onto ZFS is the disruptive part.
+  on both nodes and replication jobs for the always-on guests. **RPO is the age of the last successful
+  sync, not the interval**: the default schedule is every 15 min, but a failed job is suspended and retried
+  every 30 min, so the replica can be older — job state has to be monitored, not assumed. Getting `pve1`
+  onto ZFS is the disruptive part.
 - **Ceph is not part of this plan** — three nodes, three MONs, ~12 OSDs; revisit only if a third node
   arrives.
 - **No second NIC** on either Micro PC — Corosync shares the 1 GbE link, which is acceptable for two nodes
@@ -74,11 +76,15 @@ like the SFF, not the Micro.
    `pvecm nodes`, and that Corosync is the only traffic on its link.
 4. **Add the QDevice** on the chosen host, then re-check `pvecm status` for `Quorate Qdevice`.
 5. **HA the one workload that needs it** — a restart-on-failure rule for the Home Assistant VM once it
-   exists; verify by pulling power on one node, not by simulating.
-6. **Rebalance memory** — move `vtstack` or `ca` to `pve2` so `pve1` has room for the domain controller.
+   exists. At this point the guest still lives on `local-lvm`, so verify **process-level** recovery on the
+   same node; a node-loss test cannot pass until the disk exists on the survivor (step 7).
+6. **Rebalance memory** — move `vtstack` to `pve2` so `pve1` has room for the domain controller. **`ca`
+   stays on `pve1`**: its step-ca intermediate is sealed to this host's TPM
+   ([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md),
+   [runbook 35](../runbooks/35-deploy-step-ca.md)), so moving the guest would lose key access.
 7. **Only then, storage** — re-pool `pve1` onto ZFS (rebuild or added disk), create the `zfspool` storage
-   with the same ID on both nodes, add replication jobs for the always-on guests, and only then let HA
-   recover from a replica.
+   with the same ID on both nodes, add replication jobs for the always-on guests, and only then run the
+   **node-loss test** (pull power) — the first point at which HA can restart the guest elsewhere.
 
 ## Risks
 

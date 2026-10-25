@@ -32,7 +32,8 @@ replacing it.
 | Central users/groups (LDAP) | ✅ | SSSD clients; Authentik binds over LDAPS |
 | **HBAC** (who logs in where) + central `sudo` | ✅ | the strongest reason to have it |
 | Host lifecycle + registry (FQDN, IPs, MAC, host groups) | ✅ | identity registry, **not** a CMDB |
-| Host certificates (`certmonger`) + **ACME** | ✅ | certificates for the domain's own hosts and services |
+| Host certificates (`certmonger`) | ✅ | certificates for the domain's own hosts and services |
+| **ACME** endpoint | ⚠️ | gating (RHEL-family 8.6+, `ipa-acme-manage`, unknown-host issuance) **unverified** — [research 46 §6](../research/46-identity-and-access-stack.md) |
 | Web SSO / OIDC / SAML / forward auth | ❌ | Authentik's job |
 | Group Policy, SYSVOL | ❌ | Active Directory only |
 | **Windows machine join** | ❌ | FreeIPA enrols Linux/UNIX clients; Windows integration is a *trust* to an AD domain |

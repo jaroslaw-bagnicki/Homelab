@@ -43,7 +43,7 @@ planned** — its capabilities were initially over-read (§3).
 
 | Layer | Where the threads and the operator land | Status |
 |---|---|---|
-| **People → web apps** | **Authentik** ([idea 11](../ideas/11-authentik-idp.md)) | planned |
+| **People → web apps** | **Authentik** ([idea 11](../ideas/11-authentik-idp.md)) | idea 11 — no decision taken |
 | **People → OS login, HBAC, sudo** | **FreeIPA**, hosted on **`pve`** | [idea 13](../ideas/13-freeipa-domain-controller.md) |
 | **Machines → APIs, services, host certs** | **`step-ca`** for LAN TLS and host certificates ([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md)); **Dogtag** only for FreeIPA's own domain certificates | decided — retirement reverted (§3.5) |
 | **Automation → SSH / k8s / DB** | **`step-ca` SSH certificates** ([ADR 41](../decisions/41-ssh-certificates-step-ca.md)); **Teleport not planned** | decided |
