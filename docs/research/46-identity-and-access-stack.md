@@ -318,15 +318,29 @@ passwords; Entra ID B2B federates from Authentik via SAML, not from FreeIPA.
   sessions for a multithreaded signer) and **accepted for an air-gapped root** — slot 9a, RSA 4096 or
   P-384, `ipa-server-install --external-ca` → sign the CSR offline → import the chain.
 
-**Operator leaning (2026-10-25): retire `step-ca` in favour of the integrated CA.** Two gaps must be
-closed before that is safe, and neither is answered by the threads:
+**Operator leaning (2026-10-25): retire `step-ca` in favour of the integrated CA.** Three gaps must be
+closed before that is safe, and none is answered by the threads:
 
 1. **ACME for Caddy** — IPA's ACME module must actually carry the wildcard/`*.internal` sites
    ([ADR 40](../decisions/40-internal-dns-proxy-edge.md)) that `step-ca` serves today.
-2. **SSH certificates** — [ADR 41](../decisions/41-ssh-certificates-step-ca.md) issues *user and host SSH
-   certificates* from `step-ca`. FreeIPA distributes SSH **public keys** and host certs, but is not an SSH
-   CA. Either keep a minimal SSH CA, or migrate to IPA-managed keys — a real regression in short-lived
-   credentials.
+2. **SSH certificates** — [ADR 41](../decisions/41-ssh-certificates-step-ca.md) buys four things from
+   `step-ca`'s **SSH** CA — a separate signing key pair, not the X.509 chain: ~8 h user certificates
+   (revocation by lifetime), 7-day host certificates renewed by SSHPOP, per-identity **principals**
+   (human / `automation` / `agent-<name>`) mapped to Unix accounts via `AuthorizedPrincipalsFile`, and no
+   per-user server state. **Dogtag signs X.509 only — it cannot issue OpenSSH certificates at all**, and
+   FreeIPA is not an SSH CA: it serves SSH *public keys* from LDAP through SSSD
+   (`sss_ssh_authorizedkeys`), publishes host keys as **SSHFP** DNS records, and authenticates humans with
+   **Kerberos/GSSAPI** on the host keytab.
+
+   | Option | What it preserves | What it costs |
+   |---|---|---|
+   | **Split the retirement** — Dogtag takes TLS/X.509, `step-ca`'s `ssh` block stays | everything ADR 41 decided; no new software | the SSH CA key pair and its TPM custody remain (the `ca` guest stays, or shrinks) |
+   | **FreeIPA-native** — GSSAPI for humans, IPA-managed keys for automation, SSHFP for hosts | humans need no keys on hosts; disabling an account revokes access immediately | automation falls back to **static keys** (the thing ADR 41 removed), principals/per-agent identities go away, host verification degrades to `known_hosts` / `VerifyHostKeyDNS` |
+   | **Own OpenSSH CA** — `ssh-keygen -s` with a CA key, issued on demand | host + user certificates with minimal software | you rebuild the issuance, renewal and policy glue `step-ca` already provides |
+
+   The regression is concentrated in **non-interactive identities**: an agent or CI runner can present a
+   provisioner credential and receive an expiring certificate, but cannot hold a Kerberos ticket cache.
+   The cheapest way to keep ADR 41 intact is to read "retire `step-ca`" as **retire it as the TLS CA**.
 3. **Migrating the trust anchor** — a new root means re-issuing every certificate and re-running root
    distribution ([runbook 39](../runbooks/39-trust-private-ca.md)) on the fleet and personal devices.
 

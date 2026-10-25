@@ -91,9 +91,13 @@ What it costs — three gaps that are **not** closed by the research:
    gating (RHEL-family 8.6+, `ipa-acme-manage`, unknown-host issuance) is **unverified**
    ([research 46 §6](../research/46-identity-and-access-stack.md)).
 2. **SSH certificates.** [ADR 41](../decisions/41-ssh-certificates-step-ca.md) issues *user and host SSH
-   certificates* from `step-ca`. FreeIPA distributes SSH **public keys** and host certificates, but it is
-   not an SSH CA. Either keep a minimal SSH CA, or accept long-lived keys managed by IPA — a real
-   regression in short-lived credentials.
+   certificates* from `step-ca`; **Dogtag cannot issue OpenSSH certificates at all**, and FreeIPA's
+   substitutes are different mechanisms (SSH keys from LDAP via SSSD, SSHFP for hosts, Kerberos/GSSAPI for
+   humans). The regression lands on **agents and CI**, which hold a provisioner credential rather than a
+   ticket cache. Three options — split the retirement (`step-ca` keeps only its `ssh` block), go
+   FreeIPA-native (static keys for automation), or run an own OpenSSH CA — are laid out in
+   [research 46 §3.5](../research/46-identity-and-access-stack.md). The cheapest reading of "retire
+   `step-ca`" is **retire it as the TLS CA**.
 3. **Root migration.** A new root means re-issuing every certificate and re-running root distribution
    ([runbook 39](../runbooks/39-trust-private-ca.md)) across the fleet and personal devices.
 4. **The k3s cluster** does *not* get its CA from Dogtag — k3s owns its internal PKI (API server, kubelet,
