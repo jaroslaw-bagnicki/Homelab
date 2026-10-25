@@ -2,12 +2,12 @@
 
 > One directory, one Kerberos realm, one place that answers *who may log in where, with which
 > privileges* — and one registry of the machines themselves. **FreeIPA on `pve`**, with Authentik staying
-> the web-facing IdP, and — leaning — **FreeIPA's own CA taking over from `step-ca`**.
+> the web-facing IdP and **`step-ca` staying the fleet CA** — its retirement was considered and reverted.
 
 **Status**: 🧠 Idea — no decision taken, nothing deployed
 **Date**: 2026-10-25
 **Sources**: five Gemini threads on identity and access — see [research 46](../research/46-identity-and-access-stack.md); the install how-to is chat 35, the alternatives chat 36
-**Related**: [research 46](../research/46-identity-and-access-stack.md) (the analysis) · [research 41](../research/41-machine-identity-kerberos.md) (Kerberos mechanics, keytabs, FreeIPA vs `step-ca`) · [research 42](../research/42-authentik-hosting.md) (Authentik layering) · [research 44](../research/44-omv-identity-integration.md) (OMV as a client) · [idea 11](11-authentik-idp.md) (the people-facing IdP) · [idea 12](12-travel-workstation-arm-linux.md) (the client to enrol) · [idea 14](14-self-hosted-secret-store.md) (the secret store besides it) · [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) / [ADR 41](../decisions/41-ssh-certificates-step-ca.md) (the private CA and SSH certs this may replace) · [ADR 37](../decisions/37-lan-name-space-internal.md) / [ADR 40](../decisions/40-internal-dns-proxy-edge.md) (`.internal`, Technitium on `edge`) · [ADR 28](../decisions/28-fleet-admin-account-and-key.md) (fleet admin account) · [ADR 31](../decisions/31-static-address-scheme.md) (guest addressing)
+**Related**: [research 46](../research/46-identity-and-access-stack.md) (the analysis) · [research 41](../research/41-machine-identity-kerberos.md) (Kerberos mechanics, keytabs, FreeIPA vs `step-ca`) · [research 42](../research/42-authentik-hosting.md) (Authentik layering) · [research 44](../research/44-omv-identity-integration.md) (OMV as a client) · [idea 11](11-authentik-idp.md) (the people-facing IdP) · [idea 12](12-travel-workstation-arm-linux.md) (the client to enrol) · [idea 14](14-self-hosted-secret-store.md) (the secret store besides it) · [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) / [ADR 41](../decisions/41-ssh-certificates-step-ca.md) (the private CA and SSH certs, both unchanged by this idea) · [ADR 37](../decisions/37-lan-name-space-internal.md) / [ADR 40](../decisions/40-internal-dns-proxy-edge.md) (`.internal`, Technitium on `edge`) · [ADR 28](../decisions/28-fleet-admin-account-and-key.md) (fleet admin account) · [ADR 31](../decisions/31-static-address-scheme.md) (guest addressing)
 
 ---
 
@@ -21,8 +21,8 @@ identity it can prove without a password on disk.
 Two adjacent efforts already exist: **Authentik** for people in front of web UIs
 ([idea 11](11-authentik-idp.md)) and **`step-ca`** as the fleet CA
 ([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md)). This idea is the missing third —
-**OS-level accounts, host enrolment and access policy** — and it questions whether the second one should
-stay a separate system at all.
+**OS-level accounts, host enrolment and access policy** — and it sits *beside* the CA rather than
+replacing it.
 
 ## What FreeIPA delivers — and what it does not
 
@@ -32,7 +32,7 @@ stay a separate system at all.
 | Central users/groups (LDAP) | ✅ | SSSD clients; Authentik binds over LDAPS |
 | **HBAC** (who logs in where) + central `sudo` | ✅ | the strongest reason to have it |
 | Host lifecycle + registry (FQDN, IPs, MAC, host groups) | ✅ | identity registry, **not** a CMDB |
-| Host certificates (`certmonger`) + **ACME** | ✅ | the basis of the CA consolidation below |
+| Host certificates (`certmonger`) + **ACME** | ✅ | certificates for the domain's own hosts and services |
 | Web SSO / OIDC / SAML / forward auth | ❌ | Authentik's job |
 | Group Policy, SYSVOL | ❌ | Active Directory only |
 | **Windows machine join** | ❌ | FreeIPA enrols Linux/UNIX clients; Windows integration is a *trust* to an AD domain |
@@ -75,39 +75,39 @@ web apps rather than joining a domain — and a Linux domain is the thing worth 
 - **Teleport is not part of this** — evaluated and dropped ([research 46 §3.2](../research/46-identity-and-access-stack.md)).
   Access stays on SSH certificates/keytabs.
 
-## The CA question — leaning: retire `step-ca`
+## The CA question — closed: `step-ca` stays
 
-The lab currently runs two authorities-to-be: `step-ca` with a TPM-sealed intermediate
-([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md)) and FreeIPA's Dogtag, which arrives whether
-or not it is wanted. **Leaning: let Dogtag be the one CA and retire `step-ca`.**
+An earlier leaning had FreeIPA's integrated Dogtag CA replace the fleet's `step-ca`
+([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md)). **It was reverted on 2026-10-25**: the
+assumption behind it — that Dogtag could also be the SSH CA — is wrong. **Dogtag issues X.509 only**; an
+OpenSSH user or host certificate is a different format (`*-cert-v01@openssh.com`, signed by
+`ssh-keygen -s`), and FreeIPA's SSH story is public keys from LDAP via SSSD, **SSHFP** records and
+Kerberos/GSSAPI. Retiring `step-ca` would have deleted the SSH certificates of
+[ADR 41](../decisions/41-ssh-certificates-step-ca.md) with nothing to replace them — and the regression
+lands on **agents and CI**, which hold a provisioner credential rather than a Kerberos ticket cache.
 
-What it buys: one trust anchor, one root to distribute, one place to audit issuance; certificates for
-joined hosts renewed by `certmonger` without extra plumbing; no second CA guest on `pve`.
+The split is by scope, not duplication:
 
-What it costs — three gaps that are **not** closed by the research:
+| Certificates | Issued by |
+|---|---|
+| `*.internal` TLS for Caddy, fleet host certificates | `step-ca` over ACME ([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md)) |
+| SSH user and host certificates | `step-ca`'s SSH CA ([ADR 41](../decisions/41-ssh-certificates-step-ca.md)) |
+| Domain host/service, LDAP and HTTP certificates, PKINIT | Dogtag via `certmonger` — enrolled IPA clients only |
 
-1. **ACME for Caddy.** `step-ca` issues the `*.internal` certificates today
-   ([ADR 40](../decisions/40-internal-dns-proxy-edge.md)). IPA's ACME module must carry that, and its
-   gating (RHEL-family 8.6+, `ipa-acme-manage`, unknown-host issuance) is **unverified**
-   ([research 46 §6](../research/46-identity-and-access-stack.md)).
-2. **SSH certificates.** [ADR 41](../decisions/41-ssh-certificates-step-ca.md) issues *user and host SSH
-   certificates* from `step-ca`; **Dogtag cannot issue OpenSSH certificates at all**, and FreeIPA's
-   substitutes are different mechanisms (SSH keys from LDAP via SSSD, SSHFP for hosts, Kerberos/GSSAPI for
-   humans). The regression lands on **agents and CI**, which hold a provisioner credential rather than a
-   ticket cache. Three options — split the retirement (`step-ca` keeps only its `ssh` block), go
-   FreeIPA-native (static keys for automation), or run an own OpenSSH CA — are laid out in
-   [research 46 §3.5](../research/46-identity-and-access-stack.md). The cheapest reading of "retire
-   `step-ca`" is **retire it as the TLS CA**.
-3. **Root migration.** A new root means re-issuing every certificate and re-running root distribution
-   ([runbook 39](../runbooks/39-trust-private-ca.md)) across the fleet and personal devices.
-4. **The k3s cluster** does *not* get its CA from Dogtag — k3s owns its internal PKI (API server, kubelet,
-   etcd, request-header, service-account key) and rotates it itself. What Dogtag can back is the layer
-   above: cert-manager issuing ingress and workload certificates from a Dogtag-signed intermediate, with
-   k3s's own CA **chained** under the IPA root ([research 46 §3.6](../research/46-identity-and-access-stack.md)).
-   IPA-issued leaves are also host/service-scoped, so wildcard ingress needs a different answer.
+Dogtag therefore stays what it is: the **domain's own** CA, issuing and renewing certificates for enrolled
+hosts and IPA services without extra plumbing. It is not the fleet's CA, and the `ca` guest stays.
 
-Order of work if this proceeds: prove IPA's ACME on one Caddy site → decide the SSH path → only then
-migrate and decommission `step-ca`.
+**What would change this**: adopting a Vault-class secret store ([idea 14](14-self-hosted-secret-store.md)).
+Vault's **SSH secrets engine** signs client *and* host keys with role-scoped principals and TTLs, and
+Vault's **PKI engine serves ACME** — so one platform could hold both halves. That is a *consequence* of
+the store decision, not a reason for it, and it costs a heavier guest, a renewal path to build (there is
+no SSHPOP equivalent) and the principal mapping moved into Vault policy
+([research 46 §3.5](../research/46-identity-and-access-stack.md)).
+
+**The k3s cluster** is unaffected either way: it owns its internal PKI (API server, kubelet, etcd,
+request-header, service-account key) and rotates it itself. `step-ca` or a chained intermediate can sit
+behind **cert-manager** for ingress and workload certificates, with k3s's own CA chained under the fleet
+root ([research 46 §3.6](../research/46-identity-and-access-stack.md)).
 
 ## Hosting — on `pve` (operator decision, 2026-10-25)
 
@@ -117,13 +117,13 @@ migrate and decommission `step-ca`.
 | Shape | LXC (AlmaLinux 9 / Rocky 9) per [research 46 §4](../research/46-identity-and-access-stack.md), or a small VM |
 | Sizing | **≥ 2 GB RAM (4 GB recommended)**, 10–15 GB disk, 2 vCPU, static IP with A + PTR |
 | Guest address | the `.21x` block of [ADR 31](../decisions/31-static-address-scheme.md) |
-| Freed budget | retiring `step-ca` returns its `ca` guest; the domain and the CA would then be **one** guest instead of two |
+| Budget | an **additional** guest — `step-ca`'s `ca` guest is not returned (the CA stays) |
 
-**The constraint this creates**: `pve` has 8 GB and already carries Netdata, NUT, VictoriaLogs and the
-planned HA VM + two LXCs. The domain controller and — after consolidation — the fleet's trust anchor would
-live on that same node. That does not block the idea, but it makes two things part of the design rather
-than an afterthought: a **restore/rebuild procedure** (`ipa-backup` + rehearsed restore) and a
-**break-glass path** for the day `pve` does not boot.
+**The constraint this creates**: `pve` has 8 GB and already carries Netdata, NUT, VictoriaLogs, the `ca`
+guest and the planned HA VM + two LXCs. The domain controller is added to that budget, and the domain's CA
+then lives on the same node as the fleet's trust anchor. That does not block the idea, but it makes two
+things part of the design rather than an afterthought: a **restore/rebuild procedure** (`ipa-backup` +
+rehearsed restore) and a **break-glass path** for the day `pve` does not boot.
 
 ## Phased plan
 
@@ -134,8 +134,10 @@ than an afterthought: a **restore/rebuild procedure** (`ipa-backup` + rehearsed 
 3. **First clients** — a disposable Debian guest, then the desktop ([idea 12](12-travel-workstation-arm-linux.md));
    prove `ipa-client-install`, SSSD login, host keytab.
 4. **Policy** — one HBAC rule (user → host), one central `sudo` rule; verify refusal as well as success.
-5. **CA consolidation** — prove IPA ACME for Caddy, decide SSH, migrate, decommission `step-ca` (the three
-   gaps above).
+5. **CA boundary** — nothing to migrate: `step-ca` stays the fleet CA
+   ([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) / [ADR 41](../decisions/41-ssh-certificates-step-ca.md)).
+   Optional refinement: install IPA with `--external-ca` and chain its CA under the fleet root, so there is
+   one anchor to distribute ([research 46 §3.5](../research/46-identity-and-access-stack.md)).
 6. **Real fleet, last** — enroll the servers that should follow policy, with the
    [ADR 28](../decisions/28-fleet-admin-account-and-key.md) admin model revisited (who is the emergency
    local account, how does Ansible authenticate now?).
@@ -145,8 +147,8 @@ than an afterthought: a **restore/rebuild procedure** (`ipa-backup` + rehearsed 
 - **A domain makes logins depend on one guest** — and that guest now shares `pve` with everything else.
   Keep a documented local break-glass account on every node; never put the management planes (Proxmox UI,
   Caddy admin, Portainer) behind the domain alone.
-- **Time**: Kerberos tolerates ~5 minutes of skew — chrony everywhere before enrolment.
-- **DNS**: missing SRV records look like a wrong password.
+- **Two CAs, two renewal paths** — `step-ca` for LAN TLS and SSH, `certmonger`/Dogtag for domain
+  certificates. Losing either stalls renewals without breaking existing certificates, so monitor both SRV records look like a wrong password.
 - **CA migration is a fleet-wide event**, not a config change: new root, new certificates, new trust on
   personal devices.
 - **Rebuilt-from-memory loses everything** — HBAC rules, host keys, keytabs, CA chain.
@@ -156,7 +158,9 @@ than an afterthought: a **restore/rebuild procedure** (`ipa-backup` + rehearsed 
 - **Windows membership** — accepted as out of scope, or does it force Samba AD DC instead?
 - **Realm and DNS authority** — sub-domain vs realm named after `.internal`; needs an ADR amending
   [ADR 37](../decisions/37-lan-name-space-internal.md) / [ADR 40](../decisions/40-internal-dns-proxy-edge.md).
-- **Retiring `step-ca`** — confirmed as the direction, and what replaces SSH *certificates*?
+- **One trust anchor?** — install IPA with `--external-ca` and chain its CA under the `step-ca` root, or
+  keep the domain's CA self-signed? (Unverified whether `--external-ca` takes a `step-ca`-signed CSR
+  cleanly.)
 - **Which servers enrol** — all Linux hosts, or only those whose identity is worth centralising?
 - **Resource budget on `pve`** — 2 GB or 4 GB, and which planned guest gives way if it is 4 GB?
 - **Learning vs production** — a single server rebuilt for fun, or a spine needing a replica, monitoring

@@ -19,9 +19,12 @@ Proxmox→OMV backups), [research 42](42-authentik-hosting.md) (Authentik hostin
 [idea 13](../ideas/13-freeipa-domain-controller.md) (the domain) and
 [idea 14](../ideas/14-self-hosted-secret-store.md) (the secret store).
 
-**Status**: 📝 Analysis — **no lab decision taken**. Two operator leanings shape the reading:
-**FreeIPA is hosted on `pve`**, and **`step-ca` leans toward retirement in favour of FreeIPA's integrated
-CA**. **Teleport is evaluated and *not* planned** — its capabilities were initially over-read (§3).
+**Status**: 📝 Analysis — **no lab decision taken**. One operator leaning shapes the reading: **FreeIPA is
+hosted on `pve`**. **`step-ca` stays the fleet CA** — the retirement leaning was reverted on 2026-10-25
+once it turned out Dogtag cannot issue OpenSSH certificates (§3.5), so
+[ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) and
+[ADR 41](../decisions/41-ssh-certificates-step-ca.md) stand unamended. **Teleport is evaluated and *not*
+planned** — its capabilities were initially over-read (§3).
 
 > **Verification status.** Five transcribed threads are claims, not facts (convention from
 > [research 35](35-private-ca-and-lan-naming.md)). Facts established elsewhere in this repo are treated
@@ -42,12 +45,12 @@ CA**. **Teleport is evaluated and *not* planned** — its capabilities were init
 |---|---|---|
 | **People → web apps** | **Authentik** ([idea 11](../ideas/11-authentik-idp.md)) | planned |
 | **People → OS login, HBAC, sudo** | **FreeIPA**, hosted on **`pve`** | [idea 13](../ideas/13-freeipa-domain-controller.md) |
-| **Machines → APIs, services, host certs** | **FreeIPA's integrated Dogtag CA**; **`step-ca` retires** | leaning — amends [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) / [ADR 41](../decisions/41-ssh-certificates-step-ca.md) |
-| **Automation → SSH / k8s / DB** | `step-ca` SSH certificates today; **Teleport not planned** | — |
+| **Machines → APIs, services, host certs** | **`step-ca`** for LAN TLS and host certificates ([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md)); **Dogtag** only for FreeIPA's own domain certificates | decided — retirement reverted (§3.5) |
+| **Automation → SSH / k8s / DB** | **`step-ca` SSH certificates** ([ADR 41](../decisions/41-ssh-certificates-step-ca.md)); **Teleport not planned** | decided |
 | **Secrets / Key Vault replacement** | **self-hosted store** — Vault/OpenBao vs Infisical | [idea 14](../ideas/14-self-hosted-secret-store.md) |
 | **File protocols (SMB/NFS)** | **Kerberos** via FreeIPA for Linux clients; **Samba AD DC** only if a Windows machine must be a member | open fork |
 | **Inventory / IPAM** | **NetBox** (or Ansible dynamic inventory) | not started |
-| **CA custody** | Offline root (PIV token or the existing offline kit) + TPM-bound intermediate, now under Dogtag | constrain by decision |
+| **CA custody** | Offline root (PIV token or the existing offline kit) + TPM-bound intermediate, under `step-ca` | [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) stands |
 
 ## §1 — LDAP, machine identity, and where secrets fit (chat 33)
 
@@ -87,10 +90,9 @@ thread names explicitly.
 | Best at | ACME (Caddy, cert-manager), SSH certs | dynamic credentials, encryption-as-a-service |
 
 The thread's verdict: keep `step-ca` for ACME/Caddy, use Vault only if consolidation or dynamic secrets
-matter. **The operator's leaning now runs the other way for this lab** — see §3.5: one CA inside FreeIPA
-instead of two authorities. The consequence to price in: moving the CA means **re-issuing every
-certificate and re-distributing a new root** ([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md),
-[ADR 41](../decisions/41-ssh-certificates-step-ca.md)).
+matter — **which is where the lab landed too**. An earlier operator leaning to retire `step-ca` in favour
+of FreeIPA's Dogtag was reverted on 2026-10-25 (§3.5); Vault's PKI + SSH engines remain the consolidation
+option *if* [idea 14](../ideas/14-self-hosted-secret-store.md) adopts the platform.
 
 ### 1.4 Key Vault replacement — the thread, and what the repo actually does
 
@@ -305,7 +307,10 @@ Layering the thread endorses (and [research 42](42-authentik-hosting.md) already
 the **single source of truth**; Authentik sits in front, binds over LDAPS at every login and stores no
 passwords; Entra ID B2B federates from Authentik via SAML, not from FreeIPA.
 
-### 3.5 FreeIPA as the CA — the retirement of `step-ca`
+### 3.5 FreeIPA's CA — and why the `step-ca` retirement was reverted
+
+Dogtag arrives with the domain and serves **FreeIPA's own certificates**. Worth knowing, even though it
+is not the fleet CA:
 
 - FreeIPA ships **ACME** (`ipa-acme-manage enable`, endpoint `<fqdn>/acme/directory`) usable by Caddy;
   the thread claims RHEL-family 8.6+ and an "unknown host issuance" toggle — **unverified**.
@@ -318,31 +323,58 @@ passwords; Entra ID B2B federates from Authentik via SAML, not from FreeIPA.
   sessions for a multithreaded signer) and **accepted for an air-gapped root** — slot 9a, RSA 4096 or
   P-384, `ipa-server-install --external-ca` → sign the CSR offline → import the chain.
 
-**Operator leaning (2026-10-25): retire `step-ca` in favour of the integrated CA.** Three gaps must be
-closed before that is safe, and none is answered by the threads:
+**The retirement leaning is reverted (operator, 2026-10-25).** It rested on the assumption that Dogtag
+could also act as the SSH CA. **It cannot**: Dogtag is an X.509 CA — profiles, CRLs, OCSP — while an
+OpenSSH user or host certificate is a signed blob in a different format entirely (`ssh-keygen -s`
+produces `*-cert-v01@openssh.com`, not X.509). FreeIPA's SSH story is a *different* mechanism: public keys
+served from LDAP through SSSD (`sss_ssh_authorizedkeys`), host keys published as **SSHFP** DNS records,
+and **Kerberos/GSSAPI** for interactive humans. Retiring `step-ca` would therefore have deleted the SSH CA
+from [ADR 41](../decisions/41-ssh-certificates-step-ca.md) — its separate signing key pair, ~8 h user
+certificates (revocation by lifetime), 7-day host certificates renewed by SSHPOP, and per-identity
+**principals** (human / `automation` / `agent-<name>`) mapped to Unix accounts via `AuthorizedPrincipalsFile`
+— with nothing to replace it. **[ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) and ADR 41
+stand unamended.**
 
-1. **ACME for Caddy** — IPA's ACME module must actually carry the wildcard/`*.internal` sites
-   ([ADR 40](../decisions/40-internal-dns-proxy-edge.md)) that `step-ca` serves today.
-2. **SSH certificates** — [ADR 41](../decisions/41-ssh-certificates-step-ca.md) buys four things from
-   `step-ca`'s **SSH** CA — a separate signing key pair, not the X.509 chain: ~8 h user certificates
-   (revocation by lifetime), 7-day host certificates renewed by SSHPOP, per-identity **principals**
-   (human / `automation` / `agent-<name>`) mapped to Unix accounts via `AuthorizedPrincipalsFile`, and no
-   per-user server state. **Dogtag signs X.509 only — it cannot issue OpenSSH certificates at all**, and
-   FreeIPA is not an SSH CA: it serves SSH *public keys* from LDAP through SSSD
-   (`sss_ssh_authorizedkeys`), publishes host keys as **SSHFP** DNS records, and authenticates humans with
-   **Kerberos/GSSAPI** on the host keytab.
+What remains is two CAs with two scopes — not the same thing as two competing authorities:
 
-   | Option | What it preserves | What it costs |
-   |---|---|---|
-   | **Split the retirement** — Dogtag takes TLS/X.509, `step-ca`'s `ssh` block stays | everything ADR 41 decided; no new software | the SSH CA key pair and its TPM custody remain (the `ca` guest stays, or shrinks) |
-   | **FreeIPA-native** — GSSAPI for humans, IPA-managed keys for automation, SSHFP for hosts | humans need no keys on hosts; disabling an account revokes access immediately | automation falls back to **static keys** (the thing ADR 41 removed), principals/per-agent identities go away, host verification degrades to `known_hosts` / `VerifyHostKeyDNS` |
-   | **Own OpenSSH CA** — `ssh-keygen -s` with a CA key, issued on demand | host + user certificates with minimal software | you rebuild the issuance, renewal and policy glue `step-ca` already provides |
+| Certificates | Issued by | Who consumes them |
+|---|---|---|
+| LAN TLS for `*.internal` (Caddy), fleet host certificates | **`step-ca`** — offline root + TPM-bound intermediate ([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md)) | every LAN client, the whole fleet |
+| SSH user and host certificates | **`step-ca`'s SSH CA** ([ADR 41](../decisions/41-ssh-certificates-step-ca.md)) | humans, agents, CI, Ansible |
+| Domain host/service certificates, LDAP + HTTP certs, PKINIT | **Dogtag**, via `certmonger` | IPA clients only |
 
-   The regression is concentrated in **non-interactive identities**: an agent or CI runner can present a
-   provisioner credential and receive an expiring certificate, but cannot hold a Kerberos ticket cache.
-   The cheapest way to keep ADR 41 intact is to read "retire `step-ca`" as **retire it as the TLS CA**.
-3. **Migrating the trust anchor** — a new root means re-issuing every certificate and re-running root
-   distribution ([runbook 39](../runbooks/39-trust-private-ca.md)) on the fleet and personal devices.
+The alternatives priced at the time, and why none won: **FreeIPA-native** SSH (GSSAPI for humans,
+IPA-managed keys for automation — automation falls back to **static keys**, the thing ADR 41 removed, and
+per-agent identities disappear); a **hand-rolled `ssh-keygen -s` CA** (you rebuild issuance, renewal and
+policy glue `step-ca` already provides); **splitting the retirement** (Dogtag for TLS, `step-ca`'s `ssh`
+block kept — the fallback if `step-ca` ever has to shrink, but it saves nothing today since the guest and
+its TPM custody stay).
+
+#### Would HashiCorp Vault fill the SSH gap?
+
+Asked by the operator on 2026-10-25, once the reversal was settled. **Technically yes — both halves.**
+
+- **SSH** — Vault's [SSH secrets engine](https://developer.hashicorp.com/vault/docs/secrets/ssh/signed-ssh-certificates)
+  signs **client** keys against a role (`allow_user_certificates`, `allowed_users` / `valid_principals`,
+  `default_extensions`, `ttl`) and **host** keys against a second mount (`allow_host_certificates`,
+  `allowed_domains`, `allow_subdomains`, `cert_type=host`). Same primitive ADR 41 uses: short-lived
+  certificates, per-identity principals, no per-user server state.
+- **TLS** — Vault's [PKI secrets engine serves ACME](https://developer.hashicorp.com/vault/docs/secrets/pki/acme),
+  and HashiCorp documents a Caddy client walkthrough — so one platform could carry `*.internal` too.
+
+Both are verified against the upstream docs (2026-10-25). The costs are what decide it:
+
+| ADR 41 relies on | What it becomes under Vault |
+|---|---|
+| **SSHPOP host renewal** — a host renews its own 7-day certificate by proving possession of the old one | no equivalent: renewal is a token/AppRole credential in cron or Ansible — the **static credential ADR 41 removed**, moved one level up |
+| **Provisioner → principals** — Authentik OIDC claims map to `human` / `automation` / `agent-<name>` per provisioner | you build it: OIDC auth method → templated policy → signing role, with the principal mapping in policy |
+| **TPM-sealed intermediate** ([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md)) | the signing key lives in Vault's encrypted barrier; HSM/managed-key custody is documented as an **Enterprise** feature |
+| one Go daemon on an existing guest, runbooks 35/36 written | unseal + storage backend + RBAC + audit device — the heaviest guest in the lab |
+
+**Verdict**: Vault (or **OpenBao**, the MPL-2.0 fork) is a genuine consolidation route — one platform for
+K/V, PKI/ACME and SSH certificates — but it is a *consequence* of
+[idea 14](../ideas/14-self-hosted-secret-store.md) landing on a Vault-class store, not a reason to move
+the CA. If that happens, re-open this section; until then `step-ca` stays.
 
 ### 3.6 Would the planned k3s cluster work with Dogtag as its mTLS CA?
 
@@ -377,12 +409,12 @@ short-lived leaves on every renewal.
    bundles, ingress clients, pods mounting the CA — which is the same root-distribution problem as
    [runbook 39](../runbooks/39-trust-private-ca.md), now inside a cluster.
 
-**Recommendation**: do not fight k3s's internal PKI. Let **cert-manager** be the in-cluster issuer with
-**Dogtag behind it** (a `ca` ClusterIssuer with a Dogtag-issued intermediate is less brittle than IPA
-ACME), chain — not replace — k3s's own CA under the IPA root, and treat the CA outage as "renewals stall,
-existing certificates keep working until expiry". This is also why the `step-ca` retirement decision is
-narrower than it looks: for cluster workloads cert-manager does the rotating either way; the choice is
-only *which* CA sits behind it.
+**Recommendation**: do not fight k3s's internal PKI. Let **cert-manager** be the in-cluster issuer, chain —
+not replace — k3s's own CA under the fleet root, and treat a CA outage as "renewals stall, existing
+certificates keep working until expiry". The issuer behind cert-manager can be `step-ca` over ACME (already
+running) or a Dogtag-issued intermediate; that choice stays inside the cluster and does not require a
+fleet-wide CA migration either way. If the domain is installed, chaining the domain's CA under the same
+trust anchor is worth it — one root to distribute instead of two.
 
 ## §4 — Installing the server (chat 35)
 
@@ -399,9 +431,10 @@ only *which* CA sits behind it.
 
 **Hosting is on `pve`** (operator, 2026-10-25) — not on `lab`, and the Proxmox node is **not** an
 enrolment target. That makes the resource budget the binding constraint: `pve` has 8 GB and already runs
-Netdata, NUT, VictoriaLogs, the `ca` guest and the planned HA VM. Retiring `step-ca` returns some of it —
-but the domain and the CA would then live on the same 8 GB node as everything else, so a restore/rebuild
-procedure matters more here than in a distributed layout.
+Netdata, NUT, VictoriaLogs, the `ca` guest and the planned HA VM. `step-ca` is **not** being retired
+(§3.5), so the domain is a new guest on that budget rather than a replacement for one — and the domain
+then lives on the same 8 GB node as the trust anchor, so a restore/rebuild procedure matters more here
+than in a distributed layout.
 
 ## §5 — Alternatives, and what "inventory" means (chat 36)
 
@@ -423,18 +456,24 @@ management is actually wanted.
 | Claim | Why it matters |
 |---|---|
 | FreeIPA needs a **privileged** LXC | The install shape on `pve`; unprivileged + `nesting`/`keyctl` is widely reported to work |
-| FreeIPA **ACME** ("RHEL/Rocky/Alma 8.6+", `ipa-acme-manage`, unknown-host issuance) | Blocks the `step-ca` retirement — Caddy needs an ACME endpoint |
+| FreeIPA **ACME** ("RHEL/Rocky/Alma 8.6+", `ipa-acme-manage`, unknown-host issuance) | Only for the domain's own services now — `step-ca` keeps Caddy's ACME endpoint |
 | `ipa-metadata_ca_cert` | Looks invented; `ipa env ca_cert` likely prints a path |
-| Dogtag/NSS initialised on **`tpm2-pkcs11`** | Decides whether the intermediate stays TPM-sealed after the CA move |
+| Dogtag/NSS initialised on **`tpm2-pkcs11`** | Decides whether the domain's CA intermediate can sit in the host TPM |
 | `ipa-server-install --external-ca` flow + two `--external-cert-file` arguments | The offline-root procedure |
 | FreeIPA **TPM 2.0 attestation** at enrolment | Nice-to-have, not load-bearing |
 | Vault CE has no cloud-KMS auto-unseal; TPM unseal via third-party helpers | Operability of a self-hosted store ([idea 14](../ideas/14-self-hosted-secret-store.md)) |
-| "Vault has no native ACME" | May have changed |
+| ~~"Vault has no native ACME"~~ — **false**, Vault PKI serves ACME (verified) | One platform could carry `*.internal`; keeps the consolidation option alive (§3.5) |
 | `ktadd` into a combined keytab preserves the old KVNO | Zero-downtime rotation |
 | "No PVE Kerberos plugin exists"; `--smbversion` vs `vers=` vs `options` | The Proxmox path |
 | Teleport Community limits (moot now, but the reason for the "no") | Confirms the non-adoption was not a licensing accident |
 | `community.general.kerberos_v5` | The shown playbook actually shells out to `kadmin.local` |
 | Keycloak "mDNS / Kerberos" | Almost certainly a typo for Kerberos/SPNEGO — do not repeat |
+
+**Verified upstream in this session (2026-10-25)**: Vault's SSH secrets engine signs **client** keys (role
+with `allow_user_certificates`, `allowed_users`, TTL, extensions) and **host** keys
+(`allow_host_certificates`, `allowed_domains`, `cert_type=host`) from separate mounts; Vault PKI serves
+**ACME**, with a documented Caddy client. **Dogtag is an X.509 CA and has no OpenSSH certificate
+profile** — the reason the `step-ca` retirement was reverted (§3.5).
 
 Inconsistencies *within* the threads: `step-ca` RAM ("< 50 MB" vs "kilkanaście MB"), Kerberos lifetimes
 ("10–24 h", "8–10 h", "24 h + 7 d renewal"), Vault KV paths (`secret/my-app` vs `secret/data/…`).
@@ -447,9 +486,12 @@ Inconsistencies *within* the threads: `step-ca` RAM ("< 50 MB" vs "kilkanaście 
 2. **FreeIPA is the domain, not the front door.** Kerberos, LDAP, HBAC, sudo, host lifecycle and a CA —
    no Web SSO, no GPO, no containers, **no Windows client**. Authentik stays in front; Keycloak is only
    worth it for enterprise features the lab does not need.
-3. **One CA, not two.** The leaning is now to retire `step-ca` and let Dogtag inside FreeIPA be the
-   fleet CA — a genuine simplification, but it costs a root migration and threatens the SSH *certificate*
-   path from [ADR 41](../decisions/41-ssh-certificates-step-ca.md). Neither gap is closed yet.
+3. **One CA per job, not one CA.** `step-ca` stays the fleet CA for LAN TLS and SSH certificates
+   ([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md), [ADR 41](../decisions/41-ssh-certificates-step-ca.md));
+   Dogtag serves only FreeIPA's own domain certificates. The retirement leaning was reverted on
+   2026-10-25 because **Dogtag signs X.509 only** and cannot replace the SSH CA (§3.5). Consolidation
+   waits for [idea 14](../ideas/14-self-hosted-secret-store.md) — Vault/OpenBao could hold both halves,
+   at the cost of a heavier platform and a renewal path to build.
 4. **Windows is the fork in the road.** A Windows machine that must be a *domain member* means **Samba
    AD DC**, not FreeIPA. Windows that only *uses* web apps is Authentik's problem.
 5. **Kerberos earns its keep for file protocols.** For HTTP/APIs, mTLS is simpler; a KDC on five nodes is
@@ -462,9 +504,10 @@ Inconsistencies *within* the threads: `step-ca` RAM ("< 50 MB" vs "kilkanaście 
 8. **The same operational risks recur, none answered**: one guest holding every login; the CA as trust
    anchor; backups capturing LDAP + Kerberos keys + CA material *together*; NTP skew and DNS SRV records
    as silent failure modes.
-9. **Hosting on `pve` raises the stakes.** The domain controller and — after the CA consolidation — the
-   trust anchor would share 8 GB with Netdata, NUT, VictoriaLogs and a planned HA VM. Restore/rebuild
-   procedures become part of the design, not an afterthought.
+9. **Hosting on `pve` raises the stakes.** The domain controller joins a node that already runs Netdata,
+   NUT, VictoriaLogs, the `ca` guest and a planned HA VM inside 8 GB — and `step-ca` stays where it is,
+   so the domain is an *addition* to that budget. Restore/rebuild procedures become part of the design,
+   not an afterthought.
 
 ## References
 
