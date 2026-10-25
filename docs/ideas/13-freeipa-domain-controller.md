@@ -159,9 +159,11 @@ rehearsed restore) and a **break-glass path** for the day `pve` does not boot.
 - **Windows membership** — accepted as out of scope, or does it force Samba AD DC instead?
 - **Realm and DNS authority** — sub-domain vs realm named after `.internal`; needs an ADR amending
   [ADR 37](../decisions/37-lan-name-space-internal.md) / [ADR 40](../decisions/40-internal-dns-proxy-edge.md).
-- **One trust anchor?** — install IPA with `--external-ca` and chain its CA under the `step-ca` root, or
-  keep the domain's CA self-signed? (Unverified whether `--external-ca` takes a `step-ca`-signed CSR
-  cleanly.)
+- **One trust anchor?** — the supplementary thread
+  ([research 48 §3](../research/48-pki-topology-step-ca-freeipa.md)) answers *one root, two siblings*: the
+  offline root signs both `step-ca`'s intermediate and IPA's CA (`--external-ca`), rather than chaining IPA
+  under `step-ca` or leaving IPA self-signed. Still unverified whether `--external-ca` takes a CSR signed by
+  the offline root cleanly, and it needs an ADR.
 - **Which servers enrol** — all Linux hosts, or only those whose identity is worth centralising?
 - **Resource budget on `pve`** — 2 GB or 4 GB, and which planned guest gives way if it is 4 GB?
 - **Learning vs production** — a single server rebuilt for fun, or a spine needing a replica, monitoring
