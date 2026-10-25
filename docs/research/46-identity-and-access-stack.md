@@ -12,247 +12,410 @@ transcribed here in English —
 | 36 | [Alternatywy dla FreeIPA](https://gemini.google.com/share/f2f45e32dde3) | 18:56 | 2 | Alternatives to FreeIPA, and its "inventory" capability |
 
 **Scope**: the lab's **identity and access** design space — who people are, what machines are, how
-either proves it, and which product owns which layer. It sits on top of
+either proves it, which product owns which layer, and where the secrets live. It sits on top of
 [research 41](41-machine-identity-kerberos.md) (Kerberos mechanics, keytabs, FreeIPA vs `step-ca`,
-Proxmox→OMV backups) and [research 44](44-omv-identity-integration.md) (OMV as an identity consumer),
-and it is the analysis behind [idea 13](../ideas/13-freeipa-domain-controller.md).
+Proxmox→OMV backups), [research 42](42-authentik-hosting.md) (Authentik hosting) and
+[research 44](44-omv-identity-integration.md) (OMV as an identity consumer). It is the analysis behind
+[idea 13](../ideas/13-freeipa-domain-controller.md) (the domain) and
+[idea 14](../ideas/14-self-hosted-secret-store.md) (the secret store).
 
-**Status**: 📝 Analysis — **no decision taken**. The threads recommend a shape; they commit to nothing.
+**Status**: 📝 Analysis — **no lab decision taken**. Two operator leanings shape the reading:
+**FreeIPA is hosted on `pve`**, and **`step-ca` leans toward retirement in favour of FreeIPA's integrated
+CA**. **Teleport is evaluated and *not* planned** — its capabilities were initially over-read (§3).
 
 > **Verification status.** Five transcribed threads are claims, not facts (convention from
-> [research 35](35-private-ca-and-lan-naming.md)). Facts already established elsewhere in this repo are
-> treated as verified by reference — FreeIPA's component set and its Linux/UNIX-only client scope
+> [research 35](35-private-ca-and-lan-naming.md)). Facts established elsewhere in this repo are treated
+> as verified by reference — FreeIPA's component set and Linux/UNIX-only client scope
 > ([research 41 §10](41-machine-identity-kerberos.md)), the OMV user-database blocker
-> ([research 44](44-omv-identity-integration.md)), the CA hierarchy and custody
-> ([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md)), the `.internal` name space and
-> Technitium on `edge` ([ADR 37](../decisions/37-lan-name-space-internal.md),
-> [ADR 40](../decisions/40-internal-dns-proxy-edge.md)). **Product-specific claims** — Vault CE auto-unseal,
-> Teleport Community tiers, FreeIPA ACME gating, LXC privilege requirements — are the threads' and are
-> marked **unverified** in §6; an upstream pass was not possible in this session.
+> ([research 44](44-omv-identity-integration.md)), the CA hierarchy ([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md)),
+> the `.internal` name space and Technitium on `edge` ([ADR 37](../decisions/37-lan-name-space-internal.md),
+> [ADR 40](../decisions/40-internal-dns-proxy-edge.md)), and the fleet's Key Vault consumption (§1.4).
+> **Product-specific claims** — Vault CE auto-unseal, Teleport tiers, FreeIPA ACME gating, LXC privilege
+> requirements, Dogtag-on-TPM — are the threads' and are **unverified** (§6); no upstream pass was
+> possible in this session.
 
 ---
 
 ## Decision summary
 
-| Layer | What the five threads converge on | Why |
+| Layer | Where the threads and the operator land | Status |
 |---|---|---|
-| **People → web apps** | **Authentik** ([idea 11](../ideas/11-authentik-idp.md)) | OIDC/SAML/forward-auth and MFA; Keycloak only if enterprise features (UMA 2.0, Java SPI) are wanted |
-| **People → OS login** | **FreeIPA** (SSSD + Kerberos) | HBAC, central `sudo`, host lifecycle — no AD required for Linux/UNIX hosts |
-| **Machines → APIs/services** | **`step-ca`** stays ([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md), [ADR 41](../decisions/41-ssh-certificates-step-ca.md)) | Native ACME for Caddy; the TPM-held intermediate is already in place |
-| **Automation → SSH/K8s/DB** | **Teleport Machine ID** (`tbot`) *or* `step-ca` SSH certs | Short-lived certs, unified audit; `tbot` adds a GUI and DB access |
-| **Secrets** | **Infisical** for plain K/V, **Vault** only if dynamic secrets/Transit are needed | Vault is the heavier, complete platform; Infisical is the low-footprint K/V |
-| **File protocols (SMB/NFS)** | **Kerberos** — FreeIPA for Linux clients, **Samba AD DC** if a Windows machine must be a member | Neither Keycloak nor Authentik is a KDC |
-| **Inventory / IPAM** | **NetBox** (or Ansible dynamic inventory) | FreeIPA's host registry is an identity artefact, not a CMDB |
-| **CA custody** | Offline root (PIV token or the existing offline kit) + TPM-bound intermediate | Compromise of the online CA yields only the intermediate |
+| **People → web apps** | **Authentik** ([idea 11](../ideas/11-authentik-idp.md)) | planned |
+| **People → OS login, HBAC, sudo** | **FreeIPA**, hosted on **`pve`** | [idea 13](../ideas/13-freeipa-domain-controller.md) |
+| **Machines → APIs, services, host certs** | **FreeIPA's integrated Dogtag CA**; **`step-ca` retires** | leaning — amends [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) / [ADR 41](../decisions/41-ssh-certificates-step-ca.md) |
+| **Automation → SSH / k8s / DB** | `step-ca` SSH certificates today; **Teleport not planned** | — |
+| **Secrets / Key Vault replacement** | **self-hosted store** — Vault/OpenBao vs Infisical | [idea 14](../ideas/14-self-hosted-secret-store.md) |
+| **File protocols (SMB/NFS)** | **Kerberos** via FreeIPA for Linux clients; **Samba AD DC** only if a Windows machine must be a member | open fork |
+| **Inventory / IPAM** | **NetBox** (or Ansible dynamic inventory) | not started |
+| **CA custody** | Offline root (PIV token or the existing offline kit) + TPM-bound intermediate, now under Dogtag | constrain by decision |
 
-## §1 — LDAP is a protocol, not a product (chat 33)
+## §1 — LDAP, machine identity, and where secrets fit (chat 33)
 
-- LDAP is a read-optimised directory protocol over a **DIT**, with DNs like
-  `cn=Jan Kowalski,ou=DevOps,dc=firma,dc=com`; ports **389** (plain/STARTTLS) and **636** (LDAPS).
-  Implementations named: Active Directory, OpenLDAP, FreeIPA / Red Hat Directory Server, OpenDJ.
-- **Machine identity is a different discipline from user identity**: X.509/`mTLS`, OAuth2 client
-  credentials, SSH keys and workload identity (`SPIFFE`/`SPIRE`), all with lifetimes measured in
-  minutes-to-hours rather than months. Using LDAP service accounts with static passwords for machines is
-  the anti-pattern the thread names explicitly.
-- Homelab stacks proposed: **Authentik** (LDAP outpost + OIDC + forward auth) or **lldap** for a light
-  directory; **`step-ca`** (ACME/EST/SSH) or **Vault** for machine identity; **FreeIPA** when a real
-  domain is wanted.
+### 1.1 LDAP is a protocol, not a product
 
-### `step-ca` vs Vault — the thread's comparison
+A read-optimised directory protocol over a **DIT** — DNs like `cn=Jan Kowalski,ou=DevOps,dc=firma,dc=com`,
+attributes `dc` / `ou` / `cn` / `uid`, filters like `(&(objectClass=user)(sAMAccountName=jkowalski))`,
+ports **389** (plain or STARTTLS) and **636** (LDAPS). Implementations: Active Directory, OpenLDAP,
+FreeIPA / Red Hat Directory Server, Apache Directory Server / OpenDJ.
+
+### 1.2 Machine identity is a different discipline
+
+| Feature | Human identity (LDAP/Okta) | Machine identity |
+|---|---|---|
+| Verification | password, passkey, biometrics, MFA | X.509 cert, asymmetric key, JWT |
+| Lifetime | months/years | minutes/hours (up to tens of days) |
+| Volume | hundreds–thousands | tens of thousands–millions |
+| Rotation | rare, manual | continuous, automated |
+
+Mechanisms listed: X.509/`mTLS`; OAuth2 client credentials; API keys; secrets/service credentials (DB
+strings, k8s service-account tokens, Azure service principals/managed identities); SSH keys; secret
+managers with dynamic DB accounts (thread example: **TTL = 1 h**); workload identity federation;
+**SPIFFE/SPIRE** (CNCF, short-lived X.509 **SVIDs**); service meshes (Istio/Linkerd) rotating certs every
+few hours. Using *LDAP service accounts with static passwords* for machines is the anti-pattern the
+thread names explicitly.
+
+### 1.3 `step-ca` vs Vault
 
 | | `step-ca` | HashiCorp Vault |
 |---|---|---|
-| Role | Purpose-built private CA | Secrets platform + PKI + Transit |
+| Role | purpose-built private CA | secrets platform + PKI engine + Transit |
 | Footprint | single Go binary, tens of MB RAM | unsealing, storage backend, RBAC |
-| ACME | native | **not out of the box** (needs plugins) |
+| ACME | **native** | not out of the box (plugins) |
+| EST / SSH CA | yes | SSH secrets engine, no native EST |
 | K/V secrets | none | versioned `kv-v2` |
-| Best for | ACME (Caddy, cert-manager), SSH certs | dynamic DB credentials, encryption-as-a-service |
+| Dynamic DB credentials | none | yes |
+| Best at | ACME (Caddy, cert-manager), SSH certs | dynamic credentials, encryption-as-a-service |
 
-**Verdict in the thread**: keep `step-ca` for ACME/Caddy; move the CA into Vault only if consolidation
-matters more than native ACME. The thread also says the **intermediate CA key cannot live in the TPM in
-Vault's `pki` engine** ("natively no" — the key is encrypted by the barrier key), unless the Enterprise
-PKCS#11 integration is used; the recommended substitute is **TPM auto-unseal** so a stolen storage dump
-is useless without the chip. *This is the opposite of what the lab already does — `step-ca` with a
-TPM-held intermediate* ([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md)) — and the thread
-accepts it once the operator says the signing latency is irrelevant on five nodes.
+The thread's verdict: keep `step-ca` for ACME/Caddy, use Vault only if consolidation or dynamic secrets
+matter. **The operator's leaning now runs the other way for this lab** — see §3.5: one CA inside FreeIPA
+instead of two authorities. The consequence to price in: moving the CA means **re-issuing every
+certificate and re-distributing a new root** ([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md),
+[ADR 41](../decisions/41-ssh-certificates-step-ca.md)).
 
-### Key Vault replacement, and Ansible
+### 1.4 Key Vault replacement — the thread, and what the repo actually does
+
+The lab's Azure Key Vault (`homelab-bysxdb-kv`) is not a side note: it is the source of the CA provisioner
+password, VictoriaLogs basic auth, the zot registry credential, Netdata's stream key, NUT `upsmon`
+passwords, the fleet SSH key and the CA root certificate — fetched at playbook time with
+`lookup('azure.azcollection.azure_keyvault_secret', …)` and `AZURE_CLIENT_ID` / `AZURE_CLIENT_SECRET` /
+`AZURE_TENANT_ID` on the controller, and created by the `New-Homelab*` / `Set-Homelab*` PowerShell
+scripts. Replacing it is a workstream, not a swap — [idea 14](../ideas/14-self-hosted-secret-store.md).
 
 | | Vault | Infisical | Bitwarden Secrets Manager |
 |---|---|---|---|
-| Transit / crypto API | yes | none (storage only) | none |
+| Transit / crypto API (AKV *Keys*) | yes | none (storage only) | none |
 | Dynamic DB credentials | yes | none | none |
-| Ansible | `community.hashi_vault` | `infisical.app` or `infisical run -- ansible-playbook` | via `ansible-vault` + CLI |
+| Ansible | `community.hashi_vault` | `infisical.app` collection or `infisical run -- ansible-playbook` | via `ansible-vault` + CLI |
+| Auth for machines | AppRole (RoleID + SecretID), Kubernetes Auth, OIDC | Universal Auth (Client ID + Secret), Kubernetes Auth, OIDC | machine accounts |
 | Footprint | high | low | very low |
 
-**Verdict**: Vault if Azure KV *Keys/Crypto* was in use or dynamic credentials matter; Infisical if it
-was a plain K/V store and GitOps ergonomics matter; `ansible-vault` + a password lookup as the
-zero-infrastructure fallback. Note the lab already evaluated Infisical in [research 22](22-infisical-for-homelab-secret-management.md).
+**Thread verdict**: Vault if Azure KV *Keys/Crypto* (`Transit` equivalence) or dynamic credentials were
+used; Infisical if it was a plain K/V with a good UI; `ansible-vault` with a password lookup as the
+zero-infrastructure fallback. The lab already studied Infisical in
+[research 22](22-infisical-for-homelab-secret-management.md).
 
-### mTLS and the GUI question
+### 1.5 TPM, and what it can and cannot protect
 
-The thread ranks mTLS issuers `step-ca` → SPIRE → Vault → Teleport, notes that **Authentik is not an
-mTLS CA** (only client-cert checking at an ingress), and that **Infisical has no mTLS role**. For a GUI
-over machine identities it offers Infisical's Machine Identities, `spire-ui`, Teleport Machine ID and
-Vault's UI. For *physical machines and Proxmox guests* it prefers **Teleport `tbot`** or **SPIRE** for
-attestation-based bootstrap (TPM EK/AK on bare metal, vTPM or a join token for VMs, token/parent-cert for
-LXC), with `step-ca` as the "fewest new tools" option.
+| Feature | TPM 2.0 (local) | Cloud HSM / KMS |
+|---|---|---|
+| Cost | 0 (on-board chip) | per-request / monthly |
+| Guarantee | bound to the physical node (PCRs) | hardware-independent |
+| Requirement | `/dev/tpm0` or `/dev/tpmrm0` | internet / VPC endpoint |
+| Vault CE support | via external helper/plugin | Enterprise/Cloud only (per the thread) |
 
-## §2 — Keycloak is a web IdP, not a domain controller (chat 32)
+- **Vault `pki`: no TPM for the CA key** — "natively no", the key is encrypted by the **barrier key** in
+  the storage backend. Approach 1 ("95 % of cases"): **TPM auto-unseal** so a stolen storage dump is
+  useless without the chip and the matching PCRs. Approach 2: a non-exportable intermediate in
+  `tpm2-pkcs11`, Vault as issuing CA. Vault **Enterprise** has PKCS#11 HSM integration (YubiHSM2,
+  CloudHSM, Azure Dedicated HSM).
+- Tools named: `vault-plugin-secrets-tpm`, `tpm2-tools`, `vault-tpm-unseal`, `tpm2-pkcs11`; attestation
+  via EK + vendor certificate, AK, challenge-response.
 
-- **Keycloak**: Red Hat-originated IAM server, Quarkus runtime since v17, native OIDC/OAuth2/SAML, fine
-  granularity (realm/client roles, UMA 2.0), MFA/WebAuthn, identity brokering, LDAP/AD federation,
-  PostgreSQL backend, Infinispan clustering.
-- **vs Authentik**: Keycloak = Java enterprise veteran (~0.5–1.5 GB); Authentik = Python + Go,
-  container-native, built-in outposts (forward auth, LDAP, proxy), ~250–600 MB. The thread's split:
-  Keycloak for enterprise/B2B with compliance needs; **Authentik for a homelab** — consistent with
-  [idea 11](../ideas/11-authentik-idp.md).
-- **The load-bearing correction**: for **SMB + Kerberos, neither is the answer.** They issue JWTs and
-  SAML assertions over HTTP; SMB needs a KDC on **port 88**. The only bridge they offer is
-  *browser → IdP → external KDC*, one way. Real options: **Samba AD DC**, **FreeIPA** (SMB via `ipasam`
-  or a trust), or AD DS — with the IdP federating that directory for web SSO.
-- **A KDC does not need a directory**: MIT Kerberos keeps principals in its own DB (`kdb5_util`), so a
-  pure KDC is legitimate — it just has no groups, attributes or GUI.
+**This is the shape the lab already uses for `step-ca`** — a TPM-held intermediate — and the thread's
+objection (signing throughput) is irrelevant at five nodes, which the operator had already argued.
 
-### Practical, and more useful than the theory
+### 1.6 mTLS and the GUI question
 
-- **M2M with keytabs**: `kadmin.local -q "addprinc -randkey HTTP/api.internal@REALM"` → `ktadd` →
-  `chmod 400` → `kinit -kt`; services verify locally (no per-request KDC call);
-  `curl --negotiate -u :` and an Nginx `auth_gss` block are the verification path.
-- **Proxmox cannot be a KDC, and its GUI forces a password.** `pvesm add cifs` writes the username and
-  password into `/etc/pve/storage.cfg`; the Kerberos path is to mount with
-  `-o sec=krb5,cruid=root,multiuser` at the Debian level and register the mountpoint as a **Directory**
-  storage. The thread states there is no Kerberos plugin for PVE at all.
-- **Keytab rotation without dropping SMB sessions**: `ktadd` into a *combined* keytab so both KVNOs are
-  present, replace the file, let Samba re-read it (no `smbd` restart), prune the old KVNO after a
-  24–48 h grace. The failure mode when this is done wrong is `KRB_AP_ERR_BAD_KEYVER`.
-- Ansible: principal creation guarded by `getprinc`/`listprincs`, keytab fetched then deleted from the
-  KDC, `ansible.posix.mount` with `_netdev`, and an 8-hour `kinit` renewal timer.
+| Solution | mTLS | Role in an mTLS architecture | Practical note |
+|---|---|---|---|
+| `step-ca` | yes | CA / ACME / EST issuer | issues and renews X.509 for services, Caddy, nodes |
+| SPIRE | yes | dedicated workload-identity engine | the "gold standard"; SVIDs into process memory |
+| Vault | yes | PKI engine / secrets manager | CA provider; consumers fetch certificates |
+| Teleport | yes | identity-aware proxy / Machine ID | short-lived X.509/SSH to servers, DB, k8s |
+| Authentik | limited | OAuth2/OIDC/LDAP provider | JWT app-layer auth; client-cert only at an ingress |
+| Infisical | **none** | K/V secret store | API secrets and machine identities only |
 
-## §3 — Teleport is access, not identity management (chat 34)
+GUI options for machine identities: **Infisical Machine Identities** (auto-registration via the k8s
+Operator / CLI), **`spire-ui`** (community), **Teleport Machine ID**, **Vault UI** (AppRole/Kubernetes
+Auth), **Keycloak** service accounts + dynamic client registration (RFC 7591), **Authentik** service
+accounts. For *physical machines and Proxmox guests* the thread prefers attestation-based bootstrap —
+TPM EK/AK on bare metal, vTPM or a cloud-init token for VMs, token or parent-cert for LXC — with
+`step-ca` as the "fewest new tools" option and renewal every 24 h via ACME/EST or `tbot`.
 
-- **Teleport**: open-source infrastructure access platform — **Server Access**, **Kubernetes Access**,
-  **Database Access**, **Application Access**, **Desktop Access** (RDP without exposing 3389) and
-  **Machine ID**. Short-lived X.509 + SSH certificates (≈8 h), RBAC, session recording, Access Requests,
-  reverse tunnels instead of a VPN.
-- **Machine ID** = the `tbot` agent for bots, CI runners, cron and services: joins with a cloud identity
-  (GitHub OIDC, AWS, Azure) or a short-lived **join token**, receives a short-TTL cert, renews it in
-  place (thread cites ~20 minutes). This is the interesting part for the lab: Ansible/OpenTofu
-  controllers and k3s API access without static keys.
-- **What it is not**: it does not manage **host lifecycle** (create/retire machines, HBAC, sudo), it is
-  not a PAM/LDAP login source, and it does not replace the Proxmox API (PVE keeps `PVEAPIToken`).
-- **Teleport has its own CA** — an SSH CA and an X.509 CA inside the Auth Service, keys in the encrypted
-  backend (or an HSM), with the option to bring an intermediate from Vault/`step-ca`/YubiHSM.
+## §2 — Keycloak, Authentik, and Kerberos for SMB (chat 32)
 
-### FreeIPA, as the other thread described it
+### 2.1 Keycloak profile
 
-- **Inventory**: the FreeIPA host object carries FQDN, IPs, MAC and free-form attributes
-  (`Description`, `Locality`, `Platform`, `OS`); **host groups** drive HBAC/sudo and double as Ansible
-  inventory. That is an identity registry, **not** a CMDB.
-- **Lifecycle**: pre-create host + OTP → `ipa-client-install --otp` (cloud-init for VMs) → operational
-  (A/AAAA/PTR plus **SSHFP** records, `certmonger` certificates, HBAC/sudo) → `ipa host-disable`
-  (revokes keytab and certs) → uninstall/delete.
-- **Bare metal, VMs and system LXC**: full support. **Containers (OCI)**: explicitly not — use
-  Teleport/SPIRE/Vault there. **OPNsense/FreeBSD**: no `ipa-client`; SSSD + LDAP by hand, HBAC/sudo only
-  partially.
-- **FreeIPA vs the trio** (Kerberos + `step-ca` + Authentik): FreeIPA replaces the first two, **not
-  Authentik** — it has no Web SSO/OIDC/SAML front end. The thread's layering is FreeIPA as source of
-  truth, Authentik in front (bind over LDAPS per login, no passwords stored), Entra ID B2B as a SAML
-  federation from Authentik — matching [research 42](42-authentik-hosting.md).
-- **PKI**: FreeIPA ships ACME (`ipa-acme-manage enable`, endpoint `<fqdn>/acme/directory`, RHEL-family
-  8.6+ claimed) usable by Caddy; the client CA root is fetched at enrolment, and non-domain devices can
-  pull `ca.crt` over HTTP. TPM: leaf keys generated in the chip via `certmonger` + PKCS#11; the
-  **intermediate** — not the root — is the right thing to seal to a TPM.
-- **Offline root on a YubiKey**: rejected for an *online* CA (PIV slot limits, no concurrent PKCS#11
-  sessions for a multithreaded signer), **accepted for an air-gapped root** — generate in slot 9a,
-  `ipa-server-install --external-ca`, sign the CSR on an offline machine, import the chain back.
+Red Hat-originated IAM server, **Quarkus runtime since v17**; native OIDC/OAuth2/SAML 2.0; identity
+federation (LDAP/AD), social brokering, fine-grained authorisation (realm/client roles, **UMA 2.0**),
+MFA/WebAuthn, configurable flows, a relational DB (PostgreSQL/MySQL/Oracle/MSSQL) and **Infinispan** for
+cluster cache/session state.
 
-## §4 — Installing it (chat 35)
+| Feature | Keycloak | Authentik |
+|---|---|---|
+| Core | Java (Quarkus) | Python (Django) + Go outposts |
+| Architecture | monolith/cluster, Infinispan | containers: server, worker, PostgreSQL (+ Redis per the thread) |
+| Outposts/proxy | none built in | forward auth, LDAP, proxy outposts |
+| Flow logic | GUI + Java SPI | flows/stages/policies, Python scripting |
+| Permission model | RBAC, ABAC, UMA 2.0 | RBAC + expression/script policies |
+| RAM | ~0.5–1.5 GB | ~250–600 MB |
+| Fit here | enterprise/B2B, compliance | **homelab** — [idea 11](../ideas/11-authentik-idp.md) |
 
-The single-turn how-to, as given:
+### 2.2 Neither is a KDC
+
+They issue JWTs and SAML assertions over HTTP; SMB needs a **KDC on port 88** with ASN.1/DER tickets.
+The only bridge is one-way: *browser → IdP → external KDC*. Real options: **Samba AD DC** (the thread's
+recommended open-source answer), **FreeIPA** (SMB via `ipasam` or a trust), **AD DS**. Layering: the
+directory+KDC owns identity; the IdP federates it for web SSO.
+
+| | Pure KDC (MIT KDB) | KDC + directory (AD / FreeIPA) |
+|---|---|---|
+| Stored attributes | principal, key, ticket-validity flags | groups, mail, UID/GID, permissions, org tree |
+| Search/hierarchy | flat | LDAP queries, nested groups |
+| Management | `kadmin` CLI | admin UI + API + automation |
+
+A **KDC without a directory is legitimate** (`kdb5_util`, Berkeley DB/LMDB or Heimdal's file backend) —
+it is what [research 41 §11](41-machine-identity-kerberos.md) already recommended for learning the
+mechanics cheaply.
+
+### 2.3 M2M with keytabs
+
+```bash
+kadmin.local -q "addprinc -randkey HTTP/api.internal@IPA.INTERNAL"
+kadmin.local -q "ktadd -k /etc/security/keytabs/api.keytab HTTP/api.internal@IPA.INTERNAL"
+chmod 400 /etc/security/keytabs/api.keytab
+kinit -kt /etc/security/keytabs/api.keytab HTTP/api.internal@IPA.INTERNAL
+curl --negotiate -u : http://api.internal/v1/resource
+```
+
+Nginx side: `auth_gss on; auth_gss_keytab …; auth_gss_realm …;`. Services verify tickets **locally** —
+no per-request KDC call. Gotchas: DNS A/AAAA **and PTR** must match the principal, and clock skew beyond
+**5 minutes** yields `KRB_AP_ERR_SKEW`.
+
+### 2.4 Kerberos and mTLS are complementary
+
+| | Kerberos (SPNEGO) | mTLS |
+|---|---|---|
+| Infrastructure | KDC (port 88) | internal CA |
+| Secret | keytab (static) or renewed ticket | cert + private key |
+| Renewal | tickets, KDC-managed | ACME/cert-manager |
+| Verification cost | cheap, no handshake per request | CPU per new connection |
+| Authenticates | user/process/service (L7) | node/container (L4/L6) |
+| Delegation | native | requires re-issuance |
+
+Pattern: terminate mTLS at the edge proxy, forward `Authorization: Negotiate <ticket>`, app sees
+`X-Remote-User`. Caveat: double overhead — keep-alive + TLS session resumption.
+
+### 2.5 Proxmox and OMV, concretely
+
+- **PVE is never a KDC**; it is a client. Its GUI **forces username/password** into
+  `/etc/pve/storage.cfg`, so the Kerberos path is: mount at the Debian level
+  (`-o sec=krb5,cruid=root,multiuser`) and register the mountpoint as a **Directory** storage.
+  The thread states there is **no PVE Kerberos plugin** at all.
+- OMV side: `realm = …`, `kerberos method = dedicated keytab`, `dedicated keytab file = /etc/krb5.keytab`
+  — but **OMV's user database** remains the blocker for *domain users*
+  ([research 44](44-omv-identity-integration.md)).
+- CLI equivalents given: `pvesm add cifs … --smbversion 3.0`; SMB is fine for ISOs/templates/VZDump,
+  NFS or iSCSI preferred for VM disks.
+
+### 2.6 Rotating a keytab without dropping SMB sessions
+
+Mechanism is **KVNO stacking**: `ktadd` into a *combined* keytab so both the old and new key are present,
+replace the file (`chown root:root`, `chmod 600`), let Samba re-read it (no `smbd` restart), prune the old
+entry with `ktutil` after a 24–48 h grace. Done wrong, sessions fail with **`KRB_AP_ERR_BAD_KEYVER`**.
+
+### 2.7 What the client side actually exchanges
+
+`KRB_AS_REQ` (principal, `krbtgt/REALM@REALM`, PA-DATA encrypted timestamp) → `KRB_AS_REP` (TGT + session
+key) → cache in `KRB5CCNAME` → `klist` → `KRB_TGS_REQ` for `cifs/…` or `HTTP/…` → service ticket. Ansible
+automation: create the principal idempotently (`getprinc` guard), `ktadd`, fetch the keytab, delete it from
+the KDC, `ansible.posix.mount` with `_netdev`, and an 8-hour `kinit` timer.
+
+## §3 — Teleport, and FreeIPA as the domain (chat 34)
+
+### 3.1 What Teleport is
+
+Gravitational's open-source **infrastructure access** platform: **Server Access** (`tsh ssh`, session
+recording), **Kubernetes Access** (dynamic `kubeconfig`, RBAC → ServiceAccounts), **Database Access**
+(PostgreSQL/MySQL/MariaDB/MongoDB/Redis/MSSQL/DynamoDB/Snowflake, passwordless TLS, query audit),
+**Application Access** (Grafana/Prometheus/Jenkins/ArgoCD behind SSO+MFA), **Desktop Access** (RDP without
+exposing 3389) and **Machine ID**. Short-lived X.509 + SSH certificates (~8 h), RBAC, Access Requests with
+approval, moderated sessions, reverse tunnels instead of a VPN. **It ships its own SSH and X.509 CA** in the
+Auth Service, with the option to bring an intermediate from Vault/`step-ca`/YubiHSM.
+
+| | Teleport | VPN + static SSH keys | HashiCorp Boundary |
+|---|---|---|---|
+| Model | identity-based (Zero Trust) | network/IP-based | identity-based |
+| Credentials | short-lived certs | static keys/passwords | dynamic / proxied |
+| Session recording | native | bastion + ttyrec | no (L4 focus) |
+| Web UI | yes | no | yes |
+
+### 3.2 Machine ID — the only part that was interesting, and why it is still not planned
+
+`tbot` joins (GitHub OIDC / AWS / Azure identity, or a short-lived **join token** — thread cites ~15 min
+for app tokens), receives a short-TTL cert (~20 min cited), renews in place, writes to disk or memory.
+Ideal for Ansible/OpenTofu controllers, self-hosted CI runners, cron and k8s API access — no static keys
+in a vault.
+
+**Operator decision (2026-10-25): not planned.** Teleport was initially read as an identity/IdM platform;
+it is an *access* layer that assumes an existing identity source, adds its own CA, and brings its own
+licensing and session-recording machinery — weight the lab does not need on five nodes. `step-ca` SSH
+certificates ([ADR 41](../decisions/41-ssh-certificates-step-ca.md)) already remove static keys from
+Ansible. Kept in this document for the record, not as a candidate.
+
+### 3.3 FreeIPA as a host registry — and its limits
+
+- The host object carries FQDN, IPs, MAC and free attributes (`Description`, `Locality`, `Platform`,
+  `OS`); **host groups** drive HBAC/sudo and double as Ansible inventory. It is an identity registry,
+  **not** a CMDB/IPAM.
+- Lifecycle: pre-create host + OTP → `ipa-client-install --otp` (cloud-init for VMs) → operational
+  (A/AAAA/PTR + **SSHFP**, `certmonger` certs, HBAC/sudo) → `ipa host-disable` (revokes keytab and
+  certs) → uninstall/delete.
+
+| Host type | FreeIPA client support |
+|---|---|
+| Bare metal | full — SSH keys, host certs, HBAC |
+| Proxmox/KVM VM | full — OTP via cloud-init |
+| System LXC | full, with DBus/SSSD permissions caveats |
+| OCI/Docker | **not recommended** — use SPIFFE/Vault/mTLS instead |
+| OPNsense/FreeBSD | **no `ipa-client`** — SSSD + LDAP by hand; HBAC partial; DNS via script/API |
+
+### 3.4 FreeIPA vs the parts it would replace
+
+| Component | FreeIPA | The trio: MIT Kerberos + `step-ca` + Authentik |
+|---|---|---|
+| Kerberos KDC | core (MIT KDC on 389-ds) | standalone MIT Kerberos |
+| PKI / mTLS | core (Dogtag + `certmonger`) | `step-ca` (ACME/EST) |
+| User directory | core (389 Directory Server) | Authentik LDAP or OpenLDAP |
+| Web SSO (OIDC/SAML) | **none** | Authentik |
+| MFA / passkeys for web | limited | Authentik |
+| HBAC + central sudo | **core** | — |
+
+Layering the thread endorses (and [research 42](42-authentik-hosting.md) already describes): FreeIPA is
+the **single source of truth**; Authentik sits in front, binds over LDAPS at every login and stores no
+passwords; Entra ID B2B federates from Authentik via SAML, not from FreeIPA.
+
+### 3.5 FreeIPA as the CA — the retirement of `step-ca`
+
+- FreeIPA ships **ACME** (`ipa-acme-manage enable`, endpoint `<fqdn>/acme/directory`) usable by Caddy;
+  the thread claims RHEL-family 8.6+ and an "unknown host issuance" toggle — **unverified**.
+- Certificates for joined hosts are issued and renewed by **`certmonger`** (`ipa-getcert request -K
+  HTTP/host…`), with a `caddy reload` post-rotation hook.
+- **TPM**: leaf keys generated in the chip via `certmonger` + PKCS#11 (`tpm2-pkcs11`); the
+  **intermediate**, not the root, is what belongs in a TPM; FreeIPA 4.x also has TPM 2.0 *attestation*
+  at enrolment (EK-based) — **unverified**.
+- **Offline root**: a YubiKey is rejected for an *online* CA (PIV slot limits, no concurrent PKCS#11
+  sessions for a multithreaded signer) and **accepted for an air-gapped root** — slot 9a, RSA 4096 or
+  P-384, `ipa-server-install --external-ca` → sign the CSR offline → import the chain.
+
+**Operator leaning (2026-10-25): retire `step-ca` in favour of the integrated CA.** Two gaps must be
+closed before that is safe, and neither is answered by the threads:
+
+1. **ACME for Caddy** — IPA's ACME module must actually carry the wildcard/`*.internal` sites
+   ([ADR 40](../decisions/40-internal-dns-proxy-edge.md)) that `step-ca` serves today.
+2. **SSH certificates** — [ADR 41](../decisions/41-ssh-certificates-step-ca.md) issues *user and host SSH
+   certificates* from `step-ca`. FreeIPA distributes SSH **public keys** and host certs, but is not an SSH
+   CA. Either keep a minimal SSH CA, or migrate to IPA-managed keys — a real regression in short-lived
+   credentials.
+3. **Migrating the trust anchor** — a new root means re-issuing every certificate and re-running root
+   distribution ([runbook 39](../runbooks/39-trust-private-ca.md)) on the fleet and personal devices.
+
+## §4 — Installing the server (chat 35)
 
 | Step | Detail |
 |---|---|
-| Guest | Proxmox **LXC** (recommended) or VM, **AlmaLinux 9** / Rocky 9 template |
+| Guest | Proxmox **LXC** (thread's recommendation) or VM, **AlmaLinux 9** / Rocky 9 |
 | Sizing | **≥ 2 GB RAM (4 GB recommended)**, 10–15 GB disk, 2 vCPU |
-| Container | **privileged** in the thread's version, **nesting** and **keyctl** enabled |
-| Network | static IP, FQDN hostname, matching **A and PTR** records |
-| Prepare | `hostnamectl set-hostname`, `/etc/hosts` entry pointing at the real IP, `dnf update`, timezone |
+| Container | **privileged** in the thread's version, plus `nesting` and `keyctl` (**unverified** — try unprivileged first) |
+| Network | static IP, FQDN hostname, matching **A and PTR** |
+| Prepare | `hostnamectl set-hostname`, `/etc/hosts` pointing at the real IP, `dnf update`, timezone |
 | Packages | `dnf module enable idm:DL1` + `dnf install @idm:DL1` |
-| Install | `ipa-server-install` — integrated DNS yes/no (no when Technitium is authoritative), realm in upper case, Directory Manager + admin passwords, forwarders |
+| Install | `ipa-server-install` — integrated DNS **no** (Technitium is authoritative), realm upper-case, Directory Manager + admin passwords |
 | Verify | `kinit admin`, `klist`, web UI at the FQDN (self-signed warning expected) |
 
-Two things this how-to **does not** address, both of which matter here: the realm/domain must fit the
-`.internal` name space ([ADR 37](../decisions/37-lan-name-space-internal.md)) without giving IPA a second
-DNS authority, and a privileged container is a security concession on a node that also holds the CA.
+**Hosting is on `pve`** (operator, 2026-10-25) — not on `lab`, and the Proxmox node is **not** an
+enrolment target. That makes the resource budget the binding constraint: `pve` has 8 GB and already runs
+Netdata, NUT, VictoriaLogs, the `ca` guest and the planned HA VM. Retiring `step-ca` returns some of it —
+but the domain and the CA would then live on the same 8 GB node as everything else, so a restore/rebuild
+procedure matters more here than in a distributed layout.
 
 ## §5 — Alternatives, and what "inventory" means (chat 36)
 
 | Need | Alternatives offered |
 |---|---|
-| Light identity + SSH/sudo | **OpenLDAP + LTB + SSSD**, **Kanidm** (Rust; native SSH/OIDC), **Authentik/Keycloak/Authelia** as LDAP sources |
+| Light identity + SSH/sudo | **OpenLDAP + LTB + SSSD**, **Kanidm** (Rust; native SSH, OIDC), **Authentik/Keycloak/Authelia** as LDAP sources |
 | SSH access + audit only | **Teleport CE**, **`step-ca` SSH certificates** |
 | No stateful identity at all | **Ansible-managed local accounts/keys** (no single point of failure), **NixOS/Colmena/Agenix** |
 | Windows in the fleet | **Samba 4 AD DC** — "in a purely Linux fleet FreeIPA usually wins" |
 | Inventory / IPAM / DCIM | **NetBox** (standard), **Nautobot** (fork, automation-first) |
 | Lifecycle + provisioning | **The Foreman** (Satellite's upstream), **AWX/Semaphore**, Ansible dynamic inventory |
 
-The thread's own summary: Kanidm or OpenLDAP+SSSD for a light IAM, **Teleport** for the best daily SSH
-experience, Ansible for the KISS route; NetBox as source of truth, Foreman only if PXE-to-OS lifecycle
+The thread's own summary: Kanidm or OpenLDAP+SSSD for a light IAM, Teleport for the best daily SSH
+experience, Ansible for the KISS route; NetBox as source of truth; Foreman only if PXE-to-OS lifecycle
 management is actually wanted.
 
 ## §6 — Claims to verify before anything is built
 
 | Claim | Why it matters |
 |---|---|
-| FreeIPA needs a **privileged** LXC | The whole install shape; unprivileged + `nesting` + `keyctl` is widely reported to work and is the safer default |
-| FreeIPA **ACME** gating ("RHEL/Rocky/Alma 8.6+", `ipa-acme-manage`, unknown-host issuance) | Decides whether Caddy can use IPA as its ACME server instead of `step-ca` |
-| `ipa-metadata_ca_cert` as a command | Looks invented; `ipa env ca_cert` likely prints a path |
-| Vault **CE** has no cloud-KMS auto-unseal; TPM unseal via third-party helpers | Purchase/operability decision |
-| "Vault has **no** native ACME" | May have changed; affects the Caddy path |
-| `ktadd` into a combined keytab preserves the old KVNO | Load-bearing for zero-downtime rotation |
-| "No PVE Kerberos plugin exists" | Absolute claim; also `vers=` vs `--smbversion` vs `options` |
-| Teleport **Community** includes Machine ID and the web UI, and at what limits | The access-layer recommendation depends on it |
-| `community.general.kerberos_v5` for principal creation | The shown playbook actually shells out to `kadmin.local` |
-| Keycloak "mDNS / Kerberos" in its feature list | Almost certainly a typo for Kerberos/SPNEGO; don't repeat it |
-| Infisical: collection name, "no dynamic secrets", operator name | Determines the secrets pick |
+| FreeIPA needs a **privileged** LXC | The install shape on `pve`; unprivileged + `nesting`/`keyctl` is widely reported to work |
+| FreeIPA **ACME** ("RHEL/Rocky/Alma 8.6+", `ipa-acme-manage`, unknown-host issuance) | Blocks the `step-ca` retirement — Caddy needs an ACME endpoint |
+| `ipa-metadata_ca_cert` | Looks invented; `ipa env ca_cert` likely prints a path |
+| Dogtag/NSS initialised on **`tpm2-pkcs11`** | Decides whether the intermediate stays TPM-sealed after the CA move |
+| `ipa-server-install --external-ca` flow + two `--external-cert-file` arguments | The offline-root procedure |
+| FreeIPA **TPM 2.0 attestation** at enrolment | Nice-to-have, not load-bearing |
+| Vault CE has no cloud-KMS auto-unseal; TPM unseal via third-party helpers | Operability of a self-hosted store ([idea 14](../ideas/14-self-hosted-secret-store.md)) |
+| "Vault has no native ACME" | May have changed |
+| `ktadd` into a combined keytab preserves the old KVNO | Zero-downtime rotation |
+| "No PVE Kerberos plugin exists"; `--smbversion` vs `vers=` vs `options` | The Proxmox path |
+| Teleport Community limits (moot now, but the reason for the "no") | Confirms the non-adoption was not a licensing accident |
+| `community.general.kerberos_v5` | The shown playbook actually shells out to `kadmin.local` |
+| Keycloak "mDNS / Kerberos" | Almost certainly a typo for Kerberos/SPNEGO — do not repeat |
 
-Also inconsistent *within* the threads: step-ca RAM ("< 50 MB" vs "kilkanaście MB"), Kerberos ticket
-lifetimes ("10–24 h", "8–10 h", "24 h + 7 d renewal"), and Vault KV paths (`secret/my-app` vs
-`secret/data/…`).
+Inconsistencies *within* the threads: `step-ca` RAM ("< 50 MB" vs "kilkanaście MB"), Kerberos lifetimes
+("10–24 h", "8–10 h", "24 h + 7 d renewal"), Vault KV paths (`secret/my-app` vs `secret/data/…`).
 
 ## §7 — Final conclusions across all five threads
 
-1. **There is no single product.** Five threads, one answer: *people* → an IdP, *machines* → a CA,
-   *OS accounts* → a directory + KDC, *access* → a certificate-based gateway, *secrets* → a secret
-   store, *inventory* → an IPAM/CMDB. Every attempt in the threads to make one tool do two of these ends
-   in an exception table.
-2. **FreeIPA is the domain, not the front door.** It owns Kerberos, LDAP, HBAC, sudo, host lifecycle and
-   a CA; it has no Web SSO, no GPO, no container support and **no Windows client**. The threads never
-   claim otherwise — the drift toward "FreeIPA replaces everything" is the reader's, not the model's.
-3. **Keep `step-ca`.** Moving the CA into Vault costs native ACME and buys a heavier platform; the
-   TPM-held intermediate stays the right custody model. Vault is only justified by *dynamic secrets* or
-   Transit, not by PKI.
-4. **Windows is the fork in the road.** If a Windows machine must be a *domain member*, the answer is
-   **Samba AD DC**, not FreeIPA. If Windows only needs to *use* web apps, Authentik covers it and FreeIPA
-   is unaffected. This is the one decision that changes the whole stack.
-5. **Kerberos earns its keep only for file protocols.** For HTTP and APIs, mTLS/`step-ca` is simpler;
-   the threads agree that a KDC for a five-node lab is justified by *learning and SMB*, not by API auth.
-6. **Teleport is additive.** It solves the "no static keys in Ansible/CI" problem with a GUI and audit,
-   and it composes with FreeIPA (identities) and `step-ca` (nested CA) rather than replacing either.
-7. **Secrets are a separate decision.** Vault if you need dynamic credentials or Transit; Infisical if
-   you need a good UI over K/V. Neither is urgent compared with the identity layers.
-8. **The operational risks are the same in all five threads**, and none is fully answered: a domain or
-   IdP makes logins depend on one guest; the CA is the trust anchor; backups must capture LDAP + Kerberos
-   keys + CA material *together*; NTP skew and DNS SRV records are silent failure modes.
-9. **Sizing keeps pointing at `lab`, not `pve`.** FreeIPA is 2–4 GB, Vault wants similar, Teleport less —
-   and `pve` already carries Netdata, NUT, VictoriaLogs, `step-ca` and a planned HA VM. See
-   [idea 13](../ideas/13-freeipa-domain-controller.md).
+1. **There is no single product.** *People* → an IdP, *machines* → a CA, *OS accounts* → a directory +
+   KDC, *access* → a certificate gateway, *secrets* → a secret store, *inventory* → an IPAM/CMDB. Every
+   attempt to make one tool own two layers ends in an exception table.
+2. **FreeIPA is the domain, not the front door.** Kerberos, LDAP, HBAC, sudo, host lifecycle and a CA —
+   no Web SSO, no GPO, no containers, **no Windows client**. Authentik stays in front; Keycloak is only
+   worth it for enterprise features the lab does not need.
+3. **One CA, not two.** The leaning is now to retire `step-ca` and let Dogtag inside FreeIPA be the
+   fleet CA — a genuine simplification, but it costs a root migration and threatens the SSH *certificate*
+   path from [ADR 41](../decisions/41-ssh-certificates-step-ca.md). Neither gap is closed yet.
+4. **Windows is the fork in the road.** A Windows machine that must be a *domain member* means **Samba
+   AD DC**, not FreeIPA. Windows that only *uses* web apps is Authentik's problem.
+5. **Kerberos earns its keep for file protocols.** For HTTP/APIs, mTLS is simpler; a KDC on five nodes is
+   justified by SMB and by learning.
+6. **Teleport was a misread, not a candidate.** It is an access layer that assumes an identity source and
+   brings its own CA; the lab's SSH needs are already met by `step-ca` certificates. Recorded as
+   evaluated and not planned.
+7. **Secrets are the next real workstream.** Key Vault is load-bearing across ten-plus consumers, so the
+   replacement is a migration — [idea 14](../ideas/14-self-hosted-secret-store.md).
+8. **The same operational risks recur, none answered**: one guest holding every login; the CA as trust
+   anchor; backups capturing LDAP + Kerberos keys + CA material *together*; NTP skew and DNS SRV records
+   as silent failure modes.
+9. **Hosting on `pve` raises the stakes.** The domain controller and — after the CA consolidation — the
+   trust anchor would share 8 GB with Netdata, NUT, VictoriaLogs and a planned HA VM. Restore/rebuild
+   procedures become part of the design, not an afterthought.
 
 ## References
 
 - Chats: [33 — LDAP](https://gemini.google.com/share/5a6ad737f9de) · [32 — Keycloak](https://gemini.google.com/share/fcc7862e0b36) · [34 — Teleport](https://gemini.google.com/share/586dcfa6a24d) · [35 — FreeIPA in Proxmox](https://gemini.google.com/share/5a002bb058b9) · [36 — FreeIPA alternatives](https://gemini.google.com/share/f2f45e32dde3)
-- [Research 41 — Kerberos and machine identity](41-machine-identity-kerberos.md) · [research 44 — OMV identity integration](44-omv-identity-integration.md) · [research 42 — Authentik hosting](42-authentik-hosting.md) · [research 22 — Infisical](22-infisical-for-homelab-secret-management.md)
-- [Idea 13 — FreeIPA domain controller](../ideas/13-freeipa-domain-controller.md) · [idea 11 — Authentik IdP](../ideas/11-authentik-idp.md) · [idea 12 — travel workstation](../ideas/12-travel-workstation-arm-linux.md)
+- [Research 41 — Kerberos and machine identity](41-machine-identity-kerberos.md) · [research 42 — Authentik hosting](42-authentik-hosting.md) · [research 44 — OMV identity integration](44-omv-identity-integration.md) · [research 22 — Infisical](22-infisical-for-homelab-secret-management.md)
+- [Idea 13 — FreeIPA domain controller](../ideas/13-freeipa-domain-controller.md) · [idea 14 — self-hosted secret store](../ideas/14-self-hosted-secret-store.md) · [idea 11 — Authentik IdP](../ideas/11-authentik-idp.md) · [idea 12 — travel workstation](../ideas/12-travel-workstation-arm-linux.md)
 - [ADR 38 — private CA hierarchy and custody](../decisions/38-private-ca-hierarchy-and-custody.md) · [ADR 41 — SSH certificates](../decisions/41-ssh-certificates-step-ca.md) · [ADR 37 — `.internal`](../decisions/37-lan-name-space-internal.md) · [ADR 40 — DNS and proxy on `edge`](../decisions/40-internal-dns-proxy-edge.md) · [ADR 28 — fleet admin account](../decisions/28-fleet-admin-account-and-key.md)
-- Upstream: [FreeIPA docs](https://freeipa.readthedocs.io/en/latest/) · [Teleport](https://goteleport.com/docs/) · [Keycloak](https://www.keycloak.org/documentation) · [Vault PKI](https://developer.hashicorp.com/vault/docs/secrets/pki) · [NetBox](https://docs.netbox.dev/)
+- Upstream: [FreeIPA docs](https://freeipa.readthedocs.io/en/latest/) · [Vault PKI](https://developer.hashicorp.com/vault/docs/secrets/pki) · [OpenBao](https://openbao.org/) · [Infisical](https://infisical.com/docs) · [Keycloak](https://www.keycloak.org/documentation) · [NetBox](https://docs.netbox.dev/)
