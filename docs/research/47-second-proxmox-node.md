@@ -205,8 +205,9 @@ Verified by full-text search of both conversations — these terms appear **zero
 3. **ZFS replication — not Ceph — is what a second node unlocks for storage.** Proxmox replicates guest
    volumes node-to-node, snapshot-based and incremental (default 15 min), so HA recovery needs no shared
    datastore; the price is a **`zfspool`** storage with the same ID on both nodes (so `pve1` moves to ZFS
-   first) and an RPO equal to the replication interval. Ceph's own minimum — three nodes, three MONs, ~12
-   OSDs, 10 GbE — keeps it out of a two-Micro-PC plan.
+   first) and an RPO equal to the **age of the last successful sync**, not the nominal interval. Ceph's
+   requirements — three nodes, three MONs, with ~12 evenly distributed OSDs as a *recommendation* on 10 GbE
+   — keep it out of a two-Micro-PC plan.
 4. **OptiPlex 7040 Micro with an i5‑6500T is the best fit of the four options** — 32 GB ceiling, NVMe +
    2.5″, and vPro/AMT for headless recovery, at ~10 W idle. A Wyse 5070 would be the *cheapest* node but
    repeats the incumbent's constraints (SATA-only M.2, 8 GB official); the OptiPlex 3000 TC is the best

@@ -29,7 +29,7 @@ to say so explicitly for numbered roles.
 |---|---|
 | **More capacity** | ✅ — a second host for guests and for the growing "always-on" set |
 | **HA unblocked** | ⚠️ **with a third vote** — Proxmox requires three nodes *or* two nodes + `corosync-qdevice` on an independent host; plus a low-latency link and watchdog timing under the 60 s fence |
-| **Storage unblocked — as ZFS replication** | ✅ **with a ZFS pool on both nodes** — Proxmox replicates guest volumes node-to-node (snapshot-based, default every 15 min), so HA recovery needs no shared datastore; `local-lvm` cannot be replicated, so `pve1` must move to `zfspool` first. Ceph stays out: **three nodes, three MONs, ~12 OSDs, 10 GbE** |
+| **Storage unblocked — as ZFS replication** | ✅ **with a ZFS pool on both nodes** — Proxmox replicates guest volumes node-to-node (snapshot-based, default every 15 min), so HA recovery needs no shared datastore; `local-lvm` cannot be replicated, so `pve1` must move to `zfspool` first. Ceph stays out: **three nodes, three MONs**, with ~12 OSDs only a sizing recommendation |
 
 The GA is therefore: **capacity now, HA with a QDevice, ZFS replication once both nodes run a `zfspool`** —
 a third node would only remove the QDevice and make Ceph plausible.
@@ -60,8 +60,8 @@ like the SFF, not the Micro.
   sync, not the interval**: the default schedule is every 15 min, but a failed job is suspended and retried
   every 30 min, so the replica can be older — job state has to be monitored, not assumed. Getting `pve1`
   onto ZFS is the disruptive part.
-- **Ceph is not part of this plan** — three nodes, three MONs, ~12 OSDs; revisit only if a third node
-  arrives.
+- **Ceph is not part of this plan** — three nodes and three MONs, with ~12 OSDs a sizing recommendation;
+  revisit only if a third node arrives.
 - **No second NIC** on either Micro PC — Corosync shares the 1 GbE link, which is acceptable for two nodes
   but rules out a dedicated low-latency network.
 

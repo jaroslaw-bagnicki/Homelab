@@ -83,7 +83,7 @@ thread names explicitly.
 |---|---|---|
 | Role | purpose-built private CA | secrets platform + PKI engine + Transit |
 | Footprint | single Go binary, tens of MB RAM | unsealing, storage backend, RBAC |
-| ACME | **native** | not out of the box (plugins) |
+| ACME | **native** | **yes** — the PKI engine serves ACME (verified, §3.5) |
 | EST / SSH CA | yes | SSH secrets engine, no native EST |
 | K/V secrets | none | versioned `kv-v2` |
 | Dynamic DB credentials | none | yes |
