@@ -374,7 +374,8 @@ Both are verified against the upstream docs (2026-10-25). The costs are what dec
 **Verdict**: Vault (or **OpenBao**, the MPL-2.0 fork) is a genuine consolidation route — one platform for
 K/V, PKI/ACME and SSH certificates — but it is a *consequence* of
 [idea 14](../ideas/14-self-hosted-secret-store.md) landing on a Vault-class store, not a reason to move
-the CA. If that happens, re-open this section; until then `step-ca` stays.
+the CA. If that happens, re-open this section; until then `step-ca` stays. How the CA and FreeIPA's CA
+should relate is analysed separately in [research 48](48-pki-topology-step-ca-freeipa.md).
 
 ### 3.6 Would the planned k3s cluster work with Dogtag as its mTLS CA?
 
