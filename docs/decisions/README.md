@@ -13,6 +13,8 @@ Significant architectural and technology choices recorded in
 
 | # | Date | ADR | Status |
 |---|------|-----|--------|
+| 43 | 2026-10-25 | [FreeIPA as the Lab's Domain — `ipa.internal`, Technitium Keeps DNS](43-freeipa-domain-realm.md) | Proposed |
+| 42 | 2026-10-25 | [PKI Topology — One Offline Root, Sibling Subordinate CAs](42-pki-topology-sibling-cas.md) | Proposed |
 | 41 | 2026-10-18 | [SSH Access — step-ca Certificates, Authentik Identity, Per-Agent Principals](41-ssh-certificates-step-ca.md) | Accepted |
 | 40 | 2026-10-17 | [Internal DNS and Reverse Proxy — Technitium + Caddy on the Edge Node](40-internal-dns-proxy-edge.md) | Accepted |
 | 39 | 2026-10-11 | [NUT Server Host-Native on the pve Node](39-nut-host-native.md) | Accepted |

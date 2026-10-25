@@ -4,7 +4,8 @@
 > privileges* — and one registry of the machines themselves. **FreeIPA on `pve`**, with Authentik staying
 > the web-facing IdP and **`step-ca` staying the fleet CA** — its retirement was considered and reverted.
 
-**Status**: 🧠 Idea — no decision taken, nothing deployed
+**Status**: 🧠 Idea — **direction proposed** by [ADR 43](../decisions/43-freeipa-domain-realm.md) (Proposed);
+nothing deployed
 **Date**: 2026-10-25
 **Sources**: five Gemini threads on identity and access — see [research 46](../research/46-identity-and-access-stack.md); the install how-to is chat 35, the alternatives chat 36
 **Related**: [research 46](../research/46-identity-and-access-stack.md) (the analysis) · [research 41](../research/41-machine-identity-kerberos.md) (Kerberos mechanics, keytabs, FreeIPA vs `step-ca`) · [research 42](../research/42-authentik-hosting.md) (Authentik layering) · [research 44](../research/44-omv-identity-integration.md) (OMV as a client) · [idea 11](11-authentik-idp.md) (the people-facing IdP) · [idea 12](12-travel-workstation-arm-linux.md) (the client to enrol) · [idea 14](14-self-hosted-secret-store.md) (the secret store besides it) · [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) / [ADR 41](../decisions/41-ssh-certificates-step-ca.md) (the private CA and SSH certs, both unchanged by this idea) · [ADR 37](../decisions/37-lan-name-space-internal.md) / [ADR 40](../decisions/40-internal-dns-proxy-edge.md) (`.internal`, Technitium on `edge`) · [ADR 28](../decisions/28-fleet-admin-account-and-key.md) (fleet admin account) · [ADR 31](../decisions/31-static-address-scheme.md) (guest addressing)
@@ -159,9 +160,14 @@ rehearsed restore) and a **break-glass path** for the day `pve` does not boot.
 - **Windows membership** — accepted as out of scope, or does it force Samba AD DC instead?
 - **Realm and DNS authority** — sub-domain vs realm named after `.internal`; needs an ADR amending
   [ADR 37](../decisions/37-lan-name-space-internal.md) / [ADR 40](../decisions/40-internal-dns-proxy-edge.md).
-- **One trust anchor?** — install IPA with `--external-ca` and chain its CA under the `step-ca` root, or
-  keep the domain's CA self-signed? (Unverified whether `--external-ca` takes a `step-ca`-signed CSR
-  cleanly.)
+- **One trust anchor?** — proposed in [ADR 42](../decisions/42-pki-topology-sibling-cas.md) (Proposed): one
+  offline root signs `step-ca`'s intermediate **and** IPA's CA (`--external-ca`) as **siblings**. What is
+  rejected is the thread's own first shape — **IPA as the parent of `step-ca`**
+  ([research 48 §3](../research/48-pki-topology-step-ca-freeipa.md)) — and a permanently self-signed IPA CA.
+  Still unverified whether `--external-ca` takes a CSR signed by the offline root cleanly.
+- **WebUI access path** — proposed ([ADR 43](../decisions/43-freeipa-domain-realm.md)): reached directly at
+  `https://ipa.internal/ipa/ui`, never through Caddy. Still unverified: whether IPA's httpd also serves the
+  ACME endpoint on that vhost, and whether a proxy would in fact break `Negotiate` SSO.
 - **Which servers enrol** — all Linux hosts, or only those whose identity is worth centralising?
 - **Resource budget on `pve`** — 2 GB or 4 GB, and which planned guest gives way if it is 4 GB?
 - **Learning vs production** — a single server rebuilt for fun, or a spine needing a replica, monitoring
