@@ -48,7 +48,7 @@ purpose — a *client* to enrol into a domain, trust a CA, use SSH certificates 
 | Single-thread responsiveness (VS Code, LSP, typing) | **Parity** — ~2 250 vs ~2 120 Geekbench 6 single |
 | Sustained multi-threaded builds | **Lenovo wins** — ~12 100 vs ~9 900–10 300 GB6 multi, ~920 vs ~688 Cinebench 2024 |
 | Containers | **Lenovo wins on compatibility** — native `amd64`; the Snapdragon needs QEMU for amd64 images |
-| Local LLM / agent inference | **Snapdragon nominally wins** (NPU, 135 GB/s); see §9 — the practical gap is far smaller |
+| Local LLM / agent inference | **Snapdragon nominally wins** (NPU, 135 GB/s) — but **moot for this purchase**: inference stays external (Copilot, DeepSeek subscription), no local LLM planned |
 | Mobility, battery, noise | **Snapdragon wins decisively** — 1.35 kg / 75 Wh vs a 16-inch 45–115 W machine |
 | Verdict | **Supplement, not replace**: Vivobook for travel, Lenovo for heavy local builds |
 
@@ -179,6 +179,12 @@ but "ARM or the x86 variant of the same laptop".
 - **Local inference**: both threads give the Snapdragon the edge on NPU + bandwidth. The mechanisms are
   real; the *user experience* is not the drop-in path either thread describes — §9.
 
+**Operator constraint (2026-10-25)**: both modes are required — a **local** agent runner against the
+repo *and* **remote** sessions — but **inference always comes from an external service** (GitHub Copilot,
+DeepSeek subscription). **No locally hosted LLM is planned on this workstation**, so NPU/TOPS and memory
+bandwidth drop out of the purchase criteria; what remains is the editor and agent client being native
+and the container toolchain working.
+
 **The framing the second thread misses**: with agents running remotely, local throughput is rarely the
 bottleneck. Battery, mass, screen, keyboard and SSH quality dominate — which is the Vivobook's case, and
 also the reason the incumbent is not automatically "better" just because it builds faster.
@@ -248,8 +254,9 @@ numbers are not a property of the chip alone.
 
 ## §10 — Open questions
 
-- **Which model, exactly?** S14 (wanted, no DTB) vs S15 or Zenbook A14 (upstream DTB, different price and
-  weight) vs the x86 variant of the same chassis. This is the decision that matters, and it is not taken.
+- **Which model, exactly?** S14 (wanted, no DTB) vs Zenbook A14 (upstream DTB, lighter) vs the x86
+  variant of the same chassis; the Vivobook S15 carries the DTB but is 15.6″, so it falls outside a 14″
+  requirement. This is the decision that matters, and it is not taken.
 - **Replace or supplement?** Both threads and [idea 12](../ideas/12-travel-workstation-arm-linux.md) land
   on **supplement** — is a second machine worth it at that price, given the incumbent does the heavy work?
 - **How much of the day is local vs remote?** If most agent work is remote, the compute deficit stops

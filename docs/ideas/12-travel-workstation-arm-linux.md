@@ -30,19 +30,29 @@ Linux verdict: **model-specific and unresolved** ([research 45 §2](../research/
 | Requirement | Why | Weight in the decision |
 |---|---|---|
 | Run a **real Linux desktop** on bare metal | the actual learning goal — a VM teaches drivers and boot nothing | **must** |
-| **Smooth VS Code with agentic AI** | the daily driver — responsive editor/LSP, native ARM64 extensions, cloud agents unaffected | **must** |
+| **Smooth VS Code with agentic AI — local *and* remote agents** | the daily driver: responsive editor/LSP, native ARM64 extensions, a local agent runner **and** remote sessions; inference is always external | **must** |
 | **Containers for dev work** | Docker/Podman builds and runs are part of every task, not an extra — including `amd64` images ([research 45 §6](../research/45-arm-laptop-linux-travel-workstation.md)) | **must** |
-| ≤ ~1.4 kg, all-day battery, quiet | travel | **must** |
+| **≤ 1.5 kg** | travel | **must** |
+| **8 h+ of real working time** | a working day away from a socket | **must** |
+| **14″ screen** | the travel format — a 16″ desk machine is exactly what this one is for leaving behind | **must** |
+| Quiet under light load | café / train work | should |
+| **2.5K (2560 × 1600) panel** | sharp text for code | should |
 | Windows / x86 compatibility when needed | work artefacts, ARM-hostile tools | nice to have |
 | Join a lab domain ([research 41](../research/41-machine-identity-kerberos.md)) | the client-test role | should |
 | Reach `.internal` services, SSH with CA certificates | working from the road ([ADR 41](../decisions/41-ssh-certificates-step-ca.md)) | should |
+
+> **Agent scope** (operator, 2026-10-25): both agent modes must work — a local runner against the repo
+> *and* remote sessions on Codespaces / `cloudlab` — but **inference always comes from an external
+> service** (GitHub Copilot, DeepSeek subscription). **No locally hosted LLM is planned on this
+> machine**, so NPU/TOPS and memory bandwidth are not purchase criteria; the editor, agent client and
+> container toolchain being native is what matters.
 
 ## Candidates
 
 | Option | Verdict | Reason |
 |---|---|---|
 | **Vivobook S14 S3407QA** (Snapdragon X) | The thread's pick — **hardware yes, Linux risk high** | Compelling travel machine, but **no upstream device tree for this model**; the working reference is a community port of a *sibling* chassis ([research 45](../research/45-arm-laptop-linux-travel-workstation.md)) |
-| **Vivobook S15 / Zenbook A14** (`x1p42100`, same SoC) | **Leading alternative** | Both have **upstream DTBs**, including `-el2` variants for KVM; Zenbook A14 is lighter. Same SoC, solved software story |
+| **Zenbook A14** (`x1p42100`, same SoC) | **Leading alternative** | 14″ and lighter, with an **upstream DTB** (plus an `-lcd` variant and `-el2` for KVM) — same SoC, solved software story. The **Vivobook S15** has the DTB too but is 15.6″, so it **fails the 14″ bar** |
 | **x86 variant of the same chassis** (Vivobook 14 X1407AA — Ultra 5 325; or the Ryzen AI 7 445 S14) | Strong fallback | Native Linux, native amd64 containers, no DTB tax — at the cost of battery and silence |
 | Used x86 thin-and-light (ThinkPad-class) | Cheapest and lowest risk | Full Linux support, but no ARM battery story and no "new machine" feel |
 | Snapdragon X2 laptops (2026 wave) | Too early | Ubuntu's X2 support is a *preview*; buying first-generation support is the same bet as the S14, with less community work behind it |
@@ -53,7 +63,8 @@ The machine it has to justify itself against is the **Lenovo Slim 7 16IAH7** —
 Arc A370M, 16″ 2560 × 1600 120 Hz. On paper
 ([research 45 §3](../research/45-arm-laptop-linux-travel-workstation.md)): single-core **parity**, roughly
 **20–30 % less** multi-threaded throughput, native `amd64` containers on the Lenovo versus QEMU on the
-Vivobook — and a 2 kg desk-replacement that simply does not travel.
+Vivobook — and a desk machine that fails the travel bar outright: **16″ rather than 14″**, and ~3–5 h on
+battery rather than 8 h+.
 
 That lands on **supplement, not replace**: the Lenovo stays the heavy local build box, the Vivobook the
 travel client. The uncomfortable version of the question — worth asking before spending — is whether a
@@ -70,7 +81,7 @@ local build box is needed at all when agents run on Codespaces
 | Linux on an **x86** machine | the same, without DTB hunting | — |
 
 **Leaning**: dual-boot, **Linux first in the boot order**, on a machine whose Linux support is proven —
-which points at the S15 / Zenbook A14 / x86 variant rather than the S14 unless the S14's DTB situation
+which points at the Zenbook A14 or the x86 variant rather than the S14, unless the S14's DTB situation
 changes before purchase. With containers and the full VS Code workflow now **must-haves**, the `amd64`
 emulation tax argues the same way: **x86 removes it outright, every ARM option pays it permanently**.
 
@@ -91,8 +102,6 @@ emulation tax argues the same way: **x86 removes it outright, every ARM option p
 - **`amd64` containers pay a QEMU tax** — now that containers are a must-have, note that `amd64` images
   (most of the lab's build tooling) run emulated on ARM64: slower, heavier on battery, and some x86-only
   images run not at all ([research 45 §6](../research/45-arm-laptop-linux-travel-workstation.md)).
-- **Local inference is not drop-in** — VS Code with *cloud* agents is unaffected, but the 45 TOPS NPU
-  needs Qualcomm's QNN stack rather than Ollama/llama.cpp ([research 45 §9](../research/45-arm-laptop-linux-travel-workstation.md)).
 - **16 GB soldered**: no upgrade path for a dual-boot machine running containers.
 - **Bus factor one**: the only known working configuration for this SoC family is one maintainer's
   patched ISO and local kernel patches.
