@@ -13,8 +13,7 @@ Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month 
 
 ## 2026‑10
 
-- **(docs)** Weigh a second Proxmox node against cluster reality — HA needs a QDevice, Ceph needs three nodes — [research 47](docs/research/47-second-proxmox-node.md)
-
+- **(docs)** Weigh a second Proxmox node — `pve` → `pve1`, HA needs a QDevice, storage is ZFS replication, OptiPlex 7040 leading — [idea 15](docs/ideas/15-second-proxmox-node.md)
 - **(docs)** Scope the identity stack — FreeIPA on `pve` beside `step-ca` (its retirement reverted), Authentik for people, Teleport dropped — [idea 13](docs/ideas/13-freeipa-domain-controller.md)
 - **(docs)** Scope a self-hosted secret store to replace Azure Key Vault — ten-plus consumers, Vault/OpenBao vs Infisical, TPM unseal — [idea 14](docs/ideas/14-self-hosted-secret-store.md)
 - **(docs)** Scope an ARM travel workstation with a Linux desktop — per-model Linux support; a supplement to the Lenovo, not a replacement — [idea 12](docs/ideas/12-travel-workstation-arm-linux.md)

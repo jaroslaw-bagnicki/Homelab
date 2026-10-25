@@ -2,11 +2,11 @@
 
 > The fleet's virtualisation host is one 8 GB Wyse 5070 running four guests, the monitoring parent, the NUT
 > server and the CA. A second node would add capacity, make Proxmox **HA** reachable with a quorum device,
-> and put the lab on the path to shared storage — but not, on its own, to Ceph.
+> and unlock **ZFS replication** as the two-node substitute for shared storage.
 
 **Status**: 🧠 Idea — no decision taken, nothing purchased
 **Date**: 2026-10-25
-**Sources**: two Gemini hardware threads — see [research 47](../research/47-second-proxmox-node.md); cluster, quorum, HA and Ceph figures in that doc are verified against the Proxmox VE 9.2 documentation
+**Sources**: two Gemini hardware threads — see [research 47](../research/47-second-proxmox-node.md); cluster, quorum, HA and replication figures in that doc are verified against the Proxmox VE 9.2 documentation  
 **Related**: [research 47](../research/47-second-proxmox-node.md) (the analysis) · [research 29](../research/29-wyse5070-hardware-diagnostic.md) (the incumbent `pve`) · [ADR 01](../decisions/01-hardware-selection-m910q.md) · [ADR 22](../decisions/22-k3s-arc-homelab.md) (the k3s path that also wants three nodes) · [ADR 25](../decisions/25-home-assistant-thin-client.md) (the first HA candidate) · [ADR 31](../decisions/31-static-address-scheme.md) (address block) · [ADR 33](../decisions/33-fleet-node-hostnames.md) (hostname policy — needs an amendment) · [ADR 41](../decisions/41-ssh-certificates-step-ca.md) (host certificates that would inherit the new name) · [idea 13](13-freeipa-domain-controller.md) (the extra guest that makes `pve` memory tight)
 
 ---
@@ -29,10 +29,10 @@ to say so explicitly for numbered roles.
 |---|---|
 | **More capacity** | ✅ — a second host for guests and for the growing "always-on" set |
 | **HA unblocked** | ⚠️ **with a third vote** — Proxmox requires three nodes *or* two nodes + `corosync-qdevice` on an independent host; plus a low-latency link and watchdog timing under the 60 s fence |
-| **Ceph unblocked** | ❌ — Proxmox's minimum is **three nodes, three MONs, ~12 OSDs, 10 GbE and 4–8 GiB per OSD**; two Micro PCs with one M.2 and one 2.5″ bay are compute nodes, not OSD hosts |
+| **Storage unblocked — as ZFS replication** | ✅ **with a ZFS pool on both nodes** — Proxmox replicates guest volumes node-to-node (snapshot-based, default every 15 min), so HA recovery needs no shared datastore; `local-lvm` cannot be replicated, so `pve1` must move to `zfspool` first. Ceph stays out: **three nodes, three MONs, ~12 OSDs, 10 GbE** |
 
-The GA is therefore: **capacity now, HA with a QDevice, Ceph only after a third node** — or never, if the
-NAS's NFS export is enough for shared storage.
+The GA is therefore: **capacity now, HA with a QDevice, ZFS replication once both nodes run a `zfspool`** —
+a third node would only remove the QDevice and make Ceph plausible.
 
 ## Device options
 
@@ -54,9 +54,12 @@ like the SFF, not the Micro.
   and `/etc/pve` is overwritten on join).
 - **HA only after the QDevice exists** — `corosync-qnetd` on an always-on fleet host (`edge` or `lab`),
   TCP 5403.
-- **Storage stays local** (`local-lvm`) at first; HA is restart-on-failure, not live migration. Shared
-  storage is a separate decision (NAS NFS export vs ZFS + `pve-zsync`/replication after a reinstall).
-- **Ceph explicitly out of scope** until a third node exists.
+- **Storage stays local** (`local-lvm`) at first; HA is restart-on-failure until a replica exists.
+- **ZFS replication is the storage step, not a shared datastore** — a `zfspool` storage with the **same ID**
+  on both nodes, replication jobs for the always-on guests, RPO equal to the interval (default 15 min).
+  Getting `pve1` onto ZFS is the disruptive part.
+- **Ceph is not part of this plan** — three nodes, three MONs, ~12 OSDs; revisit only if a third node
+  arrives.
 - **No second NIC** on either Micro PC — Corosync shares the 1 GbE link, which is acceptable for two nodes
   but rules out a dedicated low-latency network.
 
@@ -73,7 +76,9 @@ like the SFF, not the Micro.
 5. **HA the one workload that needs it** — a restart-on-failure rule for the Home Assistant VM once it
    exists; verify by pulling power on one node, not by simulating.
 6. **Rebalance memory** — move `vtstack` or `ca` to `pve2` so `pve1` has room for the domain controller.
-7. **Only then, storage** — decide NFS-from-NAS vs ZFS/replication vs a third node + Ceph.
+7. **Only then, storage** — re-pool `pve1` onto ZFS (rebuild or added disk), create the `zfspool` storage
+   with the same ID on both nodes, add replication jobs for the always-on guests, and only then let HA
+   recover from a replica.
 
 ## Risks
 
@@ -83,6 +88,11 @@ like the SFF, not the Micro.
   runbook. Do it as one scoped change with a `--check` run, before the cluster.
 - **Heterogeneous CPUs** — Gemini Lake vs Skylake under live migration; set a conservative CPU type or
   accept restarts.
+- **Replication is asynchronous.** A failover restores the guest as of the last sync — up to one interval of
+  writes lost (15 min by default). It is not a backup, and it shares the single 1 GbE link with Corosync
+  and migration traffic unless pinned to a subnet and rate-limited.
+- **`local-lvm` has to go for any of this.** Re-pooling `pve1` onto ZFS is the real cost of the storage
+  benefit: guests must be moved, and the replica is only as good as the ZFS pool on a used Micro PC.
 - **8 GB incumbent plus a new node is not a memory plan.** Two nodes make placement possible; sizing the
   guests is still the actual fix.
 - **vPro is a supply-chain gamble** on used hardware: verify the CPU generation and that AMT is enabled in
@@ -90,16 +100,20 @@ like the SFF, not the Micro.
 
 ## Open questions
 
-- **Two nodes or save for three?** Three removes the QDevice and is the only honest route to Ceph.
+- **Two nodes or save for three?** Three removes the QDevice and would make Ceph plausible; two nodes +
+  QDevice + ZFS replication covers HA now.
 - **QDevice host** — `edge` (single-purpose, eMMC) or `lab`?
-- **Shared storage** — NAS NFS as a VM datastore, or reinstall one node on ZFS for replication?
+- **Storage route** — re-pool `pve1` onto ZFS for replication, or keep guests on `local-lvm` and accept
+  restart-only HA (NAS NFS stays for backups and ISOs)?
+- **Replication scope** — which guests replicate (only the HA candidates?) and at what interval and rate
+  limit on a shared 1 GbE link?
 - **Does k3s change the plan?** [ADR 22](../decisions/22-k3s-arc-homelab.md) wants three nodes too; one
   third box could serve both.
 - **Budget** — is the 399 zł 7040 still available, and with which CPU?
 
 ## References
 
-- [Research 47 — second Proxmox node](../research/47-second-proxmox-node.md) — the hardware comparison, the HA/QDevice case and the Ceph minimums
+- [Research 47 — second Proxmox node](../research/47-second-proxmox-node.md) — the hardware comparison, the HA/QDevice case and what ZFS replication requires
 - Chats: [37 — Wyse 5070 vs OptiPlex 3000](https://share.gemini.google/XvMCIZlMCC3d) · [38 — OptiPlex comparison](https://share.gemini.google/Q1nb6iTr0YzJ)
-- Proxmox VE 9.2 — [Cluster Manager](https://pve.proxmox.com/pve-docs/chapter-pvecm.html) · [Ceph](https://pve.proxmox.com/pve-docs/chapter-pveceph.html)
+- Proxmox VE 9.2 — [Cluster Manager](https://pve.proxmox.com/pve-docs/chapter-pvecm.html) · [Storage Replication](https://pve.proxmox.com/pve-docs/chapter-pvesr.html) · [Ceph](https://pve.proxmox.com/pve-docs/chapter-pveceph.html)
 - [Idea 13 — FreeIPA domain controller](13-freeipa-domain-controller.md) (the next guest) · [idea 05 — Home Assistant on a thin client](05-home-assistant-thin-client.md) (the HA candidate)
