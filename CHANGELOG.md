@@ -13,7 +13,7 @@ Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month 
 
 ## 2026‑10
 
-- **(docs)** Add ideas 12–13 — an ARM travel workstation with a Linux desktop, and FreeIPA as the lab's domain controller — [idea 12](docs/ideas/12-travel-workstation-arm-linux.md)
+- **(docs)** Scope an ARM travel workstation with a Linux desktop — per-model Linux support; a supplement to the Lenovo, not a replacement — [idea 12](docs/ideas/12-travel-workstation-arm-linux.md)
 - **(docs)** Adopt SSH certificates from the private CA — Authentik for humans, per-agent identities, key demoted to break-glass — [ADR 41](docs/decisions/41-ssh-certificates-step-ca.md)
 - **(docs)** Answer whether OMV can do Kerberos SMB and OIDC — Samba yes, OMV's user model and missing OIDC provider decide it — [research 44](docs/research/44-omv-identity-integration.md)
 - **(docs)** Extend idea 11 with Authentik hosting — Caddy forward-auth, local-only deployment and `lab` as the leading host candidate — [research 42](docs/research/42-authentik-hosting.md)

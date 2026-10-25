@@ -2,13 +2,13 @@
 
 > A **second workstation** for working away from home: light enough to carry, quiet, with battery for a
 > working day — and a **real Linux desktop** on it, not a VM, because the goal is hands-on fluency with
-> a Linux distro. The machine then doubles as the *client* the lab's domain is tested against
-> ([idea 13](13-freeipa-domain-controller.md)).
+> a Linux distro. The machine then doubles as the *client* a lab domain is eventually tested against —
+> the Kerberos/FreeIPA ground work is [research 41](../research/41-machine-identity-kerberos.md).
 
 **Status**: 🧠 Idea — no decision taken, nothing purchased
 **Date**: 2026-10-25
-**Sources**: Gemini thread "ASUS Vivobook S14 ARM" — [chat](https://gemini.google.com/share/1f7c0006fa13), written up as [research 45](../research/45-arm-laptop-linux-travel-workstation.md)
-**Related**: [idea 13](13-freeipa-domain-controller.md) (the thing the machine is a test client for) · [ADR 41](../decisions/41-ssh-certificates-step-ca.md) (SSH from the CA) · [ADR 37](../decisions/37-lan-name-space-internal.md) / [ADR 40](../decisions/40-internal-dns-proxy-edge.md) (`.internal`, LAN-only) · [ADR 08](../decisions/08-remote-access-cloudflare-tunnel.md) (remote access) · [ADR 28](../decisions/28-fleet-admin-account-and-key.md) (fleet admin identity)
+**Sources**: Gemini threads — "ASUS Vivobook S14 ARM" ([chat](https://gemini.google.com/share/1f7c0006fa13)), written up as [research 45](../research/45-arm-laptop-linux-travel-workstation.md); "Lenovo vs Snapdragon dla Dev" ([chat](https://gemini.google.com/share/095a3510469c)), written up as [research 46](../research/46-current-workstation-vs-vivobook-s14.md)
+**Related**: [research 41](../research/41-machine-identity-kerberos.md) (Kerberos / FreeIPA — the client-test angle) · [research 46](../research/46-current-workstation-vs-vivobook-s14.md) (against the current workstation) · [ADR 41](../decisions/41-ssh-certificates-step-ca.md) (SSH from the CA) · [ADR 37](../decisions/37-lan-name-space-internal.md) / [ADR 40](../decisions/40-internal-dns-proxy-edge.md) (`.internal`, LAN-only) · [ADR 08](../decisions/08-remote-access-cloudflare-tunnel.md) (remote access) · [ADR 28](../decisions/28-fleet-admin-account-and-key.md) (fleet admin identity)
 
 ---
 
@@ -18,7 +18,8 @@ The lab has one workstation and a fleet of always-on nodes; travel means either 
 workstation or not working. A second, cheap, low-power laptop covers the travel case and — more
 importantly for the lab — gives a **throwaway client** to experiment with: a desktop distro, a domain
 join, a CA root, SSH certificates. Today every lab machine is a *server*; there is no client to test
-against, which is exactly what [idea 13](13-freeipa-domain-controller.md) needs.
+against, which is exactly the case a domain — the Kerberos/FreeIPA ground work in
+[research 41](../research/41-machine-identity-kerberos.md) — is built for.
 
 The thread picked the **ASUS Vivobook S14 S3407QA** — Snapdragon X X1-26-100, 16 GB, 512 GB, 14″ 2.5K
 IPS, 75 Wh, **1.35 kg** — and asked whether Ubuntu/Fedora would run on it. Hardware verdict: compelling.
@@ -31,7 +32,7 @@ Linux verdict: **model-specific and unresolved** ([research 45 §2](../research/
 | Run a **real Linux desktop** on bare metal | the actual learning goal — a VM teaches drivers and boot nothing | must |
 | Windows / x86 compatibility when needed | work artefacts, ARM-hostile tools | nice to have |
 | ≤ ~1.4 kg, all-day battery, quiet | travel | must |
-| Join the lab domain ([idea 13](13-freeipa-domain-controller.md)) | the client-test role | should |
+| Join a lab domain ([research 41](../research/41-machine-identity-kerberos.md)) | the client-test role | should |
 | Reach `.internal` services, SSH with CA certificates | working from the road ([ADR 41](../decisions/41-ssh-certificates-step-ca.md)) | should |
 | Containers for dev work | consistent with the lab's stack | should |
 
@@ -44,6 +45,19 @@ Linux verdict: **model-specific and unresolved** ([research 45 §2](../research/
 | **x86 variant of the same chassis** (Vivobook 14 X1407AA — Ultra 5 325; or the Ryzen AI 7 445 S14) | Strong fallback | Native Linux, native amd64 containers, no DTB tax — at the cost of battery and silence |
 | Used x86 thin-and-light (ThinkPad-class) | Cheapest and lowest risk | Full Linux support, but no ARM battery story and no "new machine" feel |
 | Snapdragon X2 laptops (2026 wave) | Too early | Ubuntu's X2 support is a *preview*; buying first-generation support is the same bet as the S14, with less community work behind it |
+
+## Versus the current workstation
+
+The machine it has to justify itself against is the **Lenovo Slim 7 16IAH7** — i7-12700H (14C/20T),
+Arc A370M, 16″ 2560 × 1600 120 Hz. On paper
+([research 46](../research/46-current-workstation-vs-vivobook-s14.md)): single-core **parity**, roughly
+**20–30 % less** multi-threaded throughput, native `amd64` containers on the Lenovo versus QEMU on the
+Vivobook — and a 2 kg desk-replacement that simply does not travel.
+
+That lands on **supplement, not replace**: the Lenovo stays the heavy local build box, the Vivobook the
+travel client. The uncomfortable version of the question — worth asking before spending — is whether a
+local build box is needed at all when agents run on Codespaces
+([ADR 14](../decisions/14-codespaces-adoption.md)) and `cloudlab` ([ADR 13](../decisions/13-cloudlab-staging.md)).
 
 ## Install shape — pick one deliberately
 
@@ -91,11 +105,11 @@ changes before purchase.
 - **Disk split** — how much of 512 GB goes to Linux, given a second ESP question on ARM Windows.
 - **Fedora or Ubuntu** — Fedora has the working reference build; Ubuntu has the concept ISO and the
   lab's server-side familiarity.
-- **Which client role first** — domain join ([idea 13](13-freeipa-domain-controller.md)), CA root trust
+- **Which client role first** — domain join, CA root trust
   ([runbook 39](../runbooks/39-trust-private-ca.md)), or SSH certificates ([ADR 41](../decisions/41-ssh-certificates-step-ca.md))?
 
 ## References
 
 - [Research 45 — ARM laptop for travel and a Linux desktop](../research/45-arm-laptop-linux-travel-workstation.md) — thread write-up, spec table, device-tree coverage, port status
 - [Gemini thread — ASUS Vivobook S14 ARM](https://gemini.google.com/share/1f7c0006fa13)
-- [Idea 13 — FreeIPA domain controller](13-freeipa-domain-controller.md) · [idea 11 — Authentik IdP](11-authentik-idp.md) · [idea 07 — OPNsense router](07-opnsense-futro-s930.md)
+- [Idea 11 — Authentik IdP](11-authentik-idp.md) · [idea 07 — OPNsense router](07-opnsense-futro-s930.md)

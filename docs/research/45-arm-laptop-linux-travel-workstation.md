@@ -10,7 +10,7 @@ S3407QA** (Snapdragon X X1-26-100) — and running a Linux desktop next to Windo
 covers the machine's identity, Linux support for the Snapdragon X platform, a comparison against two
 Intel parts, TDP and passive cooling, and Docker/virtualisation on ARM64. The lab-side use of the
 machine (a client to enrol into a domain) is [idea 12](../ideas/12-travel-workstation-arm-linux.md);
-the domain itself is [idea 13](../ideas/13-freeipa-domain-controller.md).
+the domain side is [research 41](41-machine-identity-kerberos.md).
 
 **Status**: 📝 Analysis — **no decision taken**, nothing purchased.
 
@@ -186,4 +186,4 @@ desktop; it assumes it.
 - Upstream device trees: [`arch/arm64/boot/dts/qcom` Makefile](https://github.com/torvalds/linux/blob/master/arch/arm64/boot/dts/qcom/Makefile) · [`x1p42100-asus-vivobook-s15.dts`](https://github.com/torvalds/linux/blob/master/arch/arm64/boot/dts/qcom/x1p42100-asus-vivobook-s15.dts)
 - [Community port — Fedora 44 on the Vivobook 14 X1407QA](https://github.com/pir0c0pter0/fedora-vivobook-x1407q)
 - [Phoronix — Ubuntu 26.10 Snapdragon Concept ISO](https://www.phoronix.com/news/Ubuntu-26.10-Snapdragon-Concept) · [OMG! Ubuntu — Ubuntu 26.10 and Snapdragon laptops](https://www.omgubuntu.co.uk/2026/09/ubuntu-2610-snapdragon-x2)
-- [Idea 12 — travel workstation](../ideas/12-travel-workstation-arm-linux.md) · [idea 13 — FreeIPA domain](../ideas/13-freeipa-domain-controller.md)
+- [Idea 12 — travel workstation](../ideas/12-travel-workstation-arm-linux.md) · [research 46 — current workstation vs the Vivobook S14](46-current-workstation-vs-vivobook-s14.md)
