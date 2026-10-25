@@ -33,7 +33,7 @@ section below is the analysis that decision rests on; the build-time claims rema
 | Is a CA the same thing as a PKI engine? | No — a CA is a *role*, Vault PKI is a *secrets engine* that mints X.509 through an API | conceptual — §1 |
 | `step-ca` or Vault PKI? | `step-ca` for ACME/EST/SSH; Vault only if the store lands and mTLS leaves are wanted from the same RBAC plane | agrees with [research 46 §3.5](46-identity-and-access-stack.md) |
 | How do `step-ca` and FreeIPA relate? | **Two subordinates under one offline root** — not a chain through IPA | **leaning** — §3 |
-| Where does the root live? | YubiKey PIV (slot 9a), used once per 5–10 years; only the intermediates stay online | aligns with [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) |
+| Where does the root live? | **Offline, as [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) sets it** — on the IronKey today, **YubiKey PIV as the planned upgrade**; with a 1-year intermediate the root signs roughly **annually**, not once per 5–10 years | aligns with ADR 38 |
 | Who issues SSH certificates? | `step-ca` (host **and** user), with FreeIPA as identity and Authentik as the OIDC front | corroborates [ADR 41](../decisions/41-ssh-certificates-step-ca.md) — §4 |
 
 ## §1 — "CA" vs "PKI engine"
@@ -56,9 +56,10 @@ endpoint for Proxmox, ingress and appliances, plus short-lived SSH certificates.
 if it is *already* the secrets store ([idea 14](../ideas/14-self-hosted-secret-store.md)), at which point an
 **intermediate in Vault for in-cluster mTLS leaves** is the natural division rather than a replacement.
 
-That is the "hybrid" pattern the thread calls best practice: **offline root → `step-ca` as the
-infrastructure intermediate (Proxmox, ingresses, SSH, appliances) → Vault PKI as a second intermediate for
-short-lived workload mTLS**, if and when Vault exists.
+That is the "hybrid" pattern the thread calls best practice — **the offline root signs `step-ca`'s
+infrastructure intermediate (Proxmox, ingresses, SSH, appliances) and, separately, a Vault PKI intermediate
+for short-lived workload mTLS**, if and when Vault exists. The thread itself drew this as a chain
+(root → `step-ca` → Vault); §3 rejects that shape, so here the two intermediates are **siblings**.
 
 ## §2 — The three ways `step-ca` and FreeIPA can relate
 
@@ -83,24 +84,28 @@ Mechanically, pattern 1 needs two things the thread flags as non-default:
 
 The thread's sharpest argument, and the one worth carrying into [idea 13](../ideas/13-freeipa-domain-controller.md):
 
-- **Chain length.** A two-tier chain is three certificates on the wire (leaf, intermediate, root); adding
-  FreeIPA in the middle makes it four. Some IoT and older stacks cap `max_chain_depth` at 2–3 and reject
-  the handshake.
+- **Chain length.** Count what the server actually sends: **two** certificates on the wire for a sibling
+  layout (leaf + intermediate — the root stays in the client's trust store and is not transmitted,
+  RFC 8446 §4.4.2), **three** once FreeIPA sits in the middle. Some IoT and older stacks cap
+  `max_chain_depth` at 2–3 and reject the deeper chain.
 - **Chicken and egg.** With IPA as the intermediate's parent, an IPA/389-DS/DNS outage becomes a `step-ca`
   issuance outage — the ACME endpoint the whole LAN depends on now fails whenever the domain does.
-- **Blast radius and revocation.** A compromised `step-ca` intermediate is revoked at the root and the rest
-  of the hierarchy is untouched — provided it is a *sibling* of the IPA CA, not its child.
+- **Blast radius — containment, not revocation.** A compromised `step-ca` intermediate cannot mint
+  certificates for anything the IPA CA covers, provided the two are **siblings rather than parent and
+  child**. The containment comes from that layout and from the **1-year intermediate expiry**: ADR 38
+  operates **no CRL or OCSP**, so a compromised intermediate is retired by letting it — and the leaves
+  under it — expire, not by revoking it.
 - **Root key handling does not change the chain.** Moving the root onto a YubiKey changes *where the key
   lives*, not the number of certificates: the key is used once to sign the intermediate CSR and returns to
   the safe.
 
-**The recommended shape**: one offline YubiKey root signing **two parallel intermediates** — `step-ca`'s and
+**The recommended shape**: one offline root signing **two parallel intermediates** — `step-ca`'s and
 FreeIPA's (`ipa-server-install --external-ca`). One root to distribute, two independent issuers, no
 domain-shaped dependency in the TLS path. That directly answers the "one trust anchor?" question left open in
 [idea 13](../ideas/13-freeipa-domain-controller.md): the answer is *one root, two siblings* — not FreeIPA
 as the parent (turn 3's model) and not a self-signed IPA CA (the current default).
 
-The alternative the thread also offers is **import the YubiKey root into IPA as a trust anchor only**
+The alternative the thread also offers is **import the fleet root into IPA as a trust anchor only**
 (`ipa-cacert-manage install …` + `ipa-certupdate`), leaving Dogtag self-signed for its own service
 certificates. It gives the trust benefit without the `--external-ca` install ceremony, at the price of two
 roots in the store.
@@ -149,17 +154,17 @@ Two answers worth keeping, both unverified:
 | Vault issues "key + certificate without a CSR" | True of the `pki/issue` API path, not of the ACME flow — do not generalise |
 | `ipa-cacert-manage install` + `ipa-certupdate` makes an external root trusted fleet-wide | The trust-anchor-only variant |
 | `ipa-server-install --external-ca` accepts a CSR signed by an offline root | Already open in [research 46 §6](46-identity-and-access-stack.md) |
-| `max_chain_depth` limits on IoT/older clients | The argument against a four-certificate chain |
+| `max_chain_depth` limits on IoT/older clients | The argument against a three-certificate chain |
 | OPNsense built-in CA has no API, ACME or EST; `os-acme-client` targets a custom directory | The OPNsense integration path |
 | WireGuard "fully integrated since 23.1" | Versions and packaging change |
 
 ## §7 — Conclusions
 
-1. **One root, two siblings.** The offline YubiKey root signs `step-ca`'s intermediate **and** FreeIPA's CA;
+1. **One root, two siblings.** The offline root signs `step-ca`'s intermediate **and** FreeIPA's CA;
    neither is the other's parent. This keeps the LAN's ACME endpoint independent of the domain and keeps
-   the TLS chain at three certificates.
-2. **Chain depth is a real constraint, not pedantry.** Four-certificate chains break on some clients, and
-   an IPA-in-the-middle design turns every domain outage into a certificate-issuance outage.
+   the wire chain at **two** certificates.
+2. **Chain depth is a real constraint, not pedantry.** A three-certificate wire chain breaks on some
+   clients, and an IPA-in-the-middle design turns every domain outage into a certificate-issuance outage.
 3. **`step-ca` stays the leaf issuer.** Dogtag's role is IPA's own service certificates; short-lived leaves,
    ACME and SSH certificates are `step-ca`'s job — the same division
    [research 46 §3.5](46-identity-and-access-stack.md) reached.

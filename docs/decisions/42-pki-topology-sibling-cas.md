@@ -31,8 +31,10 @@ records the resulting rule.
    FreeIPA's Dogtag CA, if it is adopted, becomes a **second direct child**, installed with
    `ipa-server-install --external-ca` and its CSR signed in the same offline ceremony
    ([ADR 43](43-freeipa-domain-realm.md)).
-3. **The chain on the wire is three certificates** — leaf, intermediate, root. A four-certificate chain is
-   rejected as a design goal: older and IoT clients cap chain depth, and the extra hop buys nothing.
+3. **The chain on the wire is two certificates** — leaf and intermediate; the root stays in the client's
+   trust store and is never transmitted (RFC 8446 §4.4.2). A three-certificate chain — a second CA in the
+   middle — is rejected as a design goal: older and IoT clients cap chain depth, and the extra hop buys
+   nothing.
 4. **A Vault/OpenBao PKI intermediate, if it ever exists, is a third sibling** — never a replacement for
    `step-ca` ([research 46 §3.5](../research/46-identity-and-access-stack.md)).
 5. **Scope follows the engine, not the root.** `step-ca` issues everything the fleet consumes — LAN TLS
@@ -46,8 +48,11 @@ records the resulting rule.
 
 - **A CA outage cannot cascade.** Neither CA can take the other's issuance path down — the failure that
   made the IPA→`step-ca` chain unattractive ([research 48 §3](../research/48-pki-topology-step-ca-freeipa.md)).
-- **Blast radius stays one level deep.** A compromised intermediate is revoked at the root and its sibling
-  is untouched; only a root compromise takes the whole hierarchy, which is what offline custody exists for.
+- **Blast radius stays one level deep.** A compromised intermediate covers only the names it was trusted
+  to issue, and its sibling is untouched; only a root compromise takes the whole hierarchy, which is what
+  offline custody exists for. Containment is by **layout and by expiry**, not by revocation: ADR 38
+  operates no CRL or OCSP, so a compromised intermediate and the leaves under it are retired by running out
+  their lifetimes.
 - **Root ceremonies batch.** Every new CA needs a signature and therefore an offline session; the practical
   rule is to sign all known CSRs in one sitting rather than per project.
 - **Distribution does not grow per CA.** Hosts trust the **root** (`ca_trust`); the `@cert-authority` lines
@@ -63,9 +68,9 @@ records the resulting rule.
 
 ### Alternatives Considered
 
-**FreeIPA as the parent of `step-ca`** (the shape the source thread first proposed). Rejected: it makes the
-TLS chain four certificates, turns every IPA/389-DS/DNS outage into an ACME outage for the whole LAN, and
-makes revocation cascade from the domain into the certificate path.
+**FreeIPA as the parent of `step-ca`** (the shape the source thread first proposed). Rejected: it pushes the
+wire chain to three certificates, turns every IPA/389-DS/DNS outage into an ACME outage for the whole LAN,
+and makes the domain's CA the parent whose loss or compromise reaches everything `step-ca` issues.
 
 **Self-signed FreeIPA CA, permanently.** Rejected as a target state: two roots to distribute to every
 client and personal device, and no single anchor for "does this machine belong to my lab". Kept as the

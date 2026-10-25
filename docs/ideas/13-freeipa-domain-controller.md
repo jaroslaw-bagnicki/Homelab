@@ -160,11 +160,11 @@ rehearsed restore) and a **break-glass path** for the day `pve` does not boot.
 - **Windows membership** — accepted as out of scope, or does it force Samba AD DC instead?
 - **Realm and DNS authority** — sub-domain vs realm named after `.internal`; needs an ADR amending
   [ADR 37](../decisions/37-lan-name-space-internal.md) / [ADR 40](../decisions/40-internal-dns-proxy-edge.md).
-- **One trust anchor?** — the supplementary thread
-  ([research 48 §3](../research/48-pki-topology-step-ca-freeipa.md)) answers *one root, two siblings*: the
-  offline root signs both `step-ca`'s intermediate and IPA's CA (`--external-ca`), rather than chaining IPA
-  under `step-ca` or leaving IPA self-signed. Still unverified whether `--external-ca` takes a CSR signed by
-  the offline root cleanly, and it needs an ADR.
+- **One trust anchor?** — proposed in [ADR 42](../decisions/42-pki-topology-sibling-cas.md) (Proposed): one
+  offline root signs `step-ca`'s intermediate **and** IPA's CA (`--external-ca`) as **siblings**. What is
+  rejected is the thread's own first shape — **IPA as the parent of `step-ca`**
+  ([research 48 §3](../research/48-pki-topology-step-ca-freeipa.md)) — and a permanently self-signed IPA CA.
+  Still unverified whether `--external-ca` takes a CSR signed by the offline root cleanly.
 - **WebUI access path** — decided ([ADR 43](../decisions/43-freeipa-domain-realm.md)): reached directly at
   `https://ipa.internal/ipa/ui`, never through Caddy. Still unverified: whether IPA's httpd also serves the
   ACME endpoint on that vhost, and whether a proxy would in fact break `Negotiate` SSO.
