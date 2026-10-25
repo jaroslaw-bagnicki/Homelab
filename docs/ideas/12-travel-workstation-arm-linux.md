@@ -7,8 +7,8 @@
 
 **Status**: 🧠 Idea — no decision taken, nothing purchased
 **Date**: 2026-10-25
-**Sources**: Gemini threads — "ASUS Vivobook S14 ARM" ([chat](https://gemini.google.com/share/1f7c0006fa13)), written up as [research 45](../research/45-arm-laptop-linux-travel-workstation.md); "Lenovo vs Snapdragon dla Dev" ([chat](https://gemini.google.com/share/095a3510469c)), written up as [research 46](../research/46-current-workstation-vs-vivobook-s14.md)
-**Related**: [research 41](../research/41-machine-identity-kerberos.md) (Kerberos / FreeIPA — the client-test angle) · [research 46](../research/46-current-workstation-vs-vivobook-s14.md) (against the current workstation) · [ADR 41](../decisions/41-ssh-certificates-step-ca.md) (SSH from the CA) · [ADR 37](../decisions/37-lan-name-space-internal.md) / [ADR 40](../decisions/40-internal-dns-proxy-edge.md) (`.internal`, LAN-only) · [ADR 08](../decisions/08-remote-access-cloudflare-tunnel.md) (remote access) · [ADR 28](../decisions/28-fleet-admin-account-and-key.md) (fleet admin identity)
+**Sources**: two Gemini threads, both written up in [research 45](../research/45-arm-laptop-linux-travel-workstation.md) — "ASUS Vivobook S14 ARM" ([chat](https://gemini.google.com/share/1f7c0006fa13)) and "Lenovo vs Snapdragon dla Dev" ([chat](https://gemini.google.com/share/095a3510469c))
+**Related**: [research 45](../research/45-arm-laptop-linux-travel-workstation.md) (hardware, Linux support, comparison against the current workstation) · [research 41](../research/41-machine-identity-kerberos.md) (Kerberos / FreeIPA — the client-test angle) · [ADR 41](../decisions/41-ssh-certificates-step-ca.md) (SSH from the CA) · [ADR 37](../decisions/37-lan-name-space-internal.md) / [ADR 40](../decisions/40-internal-dns-proxy-edge.md) (`.internal`, LAN-only) · [ADR 08](../decisions/08-remote-access-cloudflare-tunnel.md) (remote access) · [ADR 28](../decisions/28-fleet-admin-account-and-key.md) (fleet admin identity)
 
 ---
 
@@ -29,12 +29,13 @@ Linux verdict: **model-specific and unresolved** ([research 45 §2](../research/
 
 | Requirement | Why | Weight in the decision |
 |---|---|---|
-| Run a **real Linux desktop** on bare metal | the actual learning goal — a VM teaches drivers and boot nothing | must |
+| Run a **real Linux desktop** on bare metal | the actual learning goal — a VM teaches drivers and boot nothing | **must** |
+| **Smooth VS Code with agentic AI** | the daily driver — responsive editor/LSP, native ARM64 extensions, cloud agents unaffected | **must** |
+| **Containers for dev work** | Docker/Podman builds and runs are part of every task, not an extra — including `amd64` images ([research 45 §6](../research/45-arm-laptop-linux-travel-workstation.md)) | **must** |
+| ≤ ~1.4 kg, all-day battery, quiet | travel | **must** |
 | Windows / x86 compatibility when needed | work artefacts, ARM-hostile tools | nice to have |
-| ≤ ~1.4 kg, all-day battery, quiet | travel | must |
 | Join a lab domain ([research 41](../research/41-machine-identity-kerberos.md)) | the client-test role | should |
 | Reach `.internal` services, SSH with CA certificates | working from the road ([ADR 41](../decisions/41-ssh-certificates-step-ca.md)) | should |
-| Containers for dev work | consistent with the lab's stack | should |
 
 ## Candidates
 
@@ -50,7 +51,7 @@ Linux verdict: **model-specific and unresolved** ([research 45 §2](../research/
 
 The machine it has to justify itself against is the **Lenovo Slim 7 16IAH7** — i7-12700H (14C/20T),
 Arc A370M, 16″ 2560 × 1600 120 Hz. On paper
-([research 46](../research/46-current-workstation-vs-vivobook-s14.md)): single-core **parity**, roughly
+([research 45 §3](../research/45-arm-laptop-linux-travel-workstation.md)): single-core **parity**, roughly
 **20–30 % less** multi-threaded throughput, native `amd64` containers on the Lenovo versus QEMU on the
 Vivobook — and a 2 kg desk-replacement that simply does not travel.
 
@@ -70,7 +71,8 @@ local build box is needed at all when agents run on Codespaces
 
 **Leaning**: dual-boot, **Linux first in the boot order**, on a machine whose Linux support is proven —
 which points at the S15 / Zenbook A14 / x86 variant rather than the S14 unless the S14's DTB situation
-changes before purchase.
+changes before purchase. With containers and the full VS Code workflow now **must-haves**, the `amd64`
+emulation tax argues the same way: **x86 removes it outright, every ARM option pays it permanently**.
 
 ## The purchase is a test — sequence it
 
@@ -86,6 +88,11 @@ changes before purchase.
 ## Risks worth naming
 
 - **Model, not SoC, is the unit of support** — the single most expensive misunderstanding available here.
+- **`amd64` containers pay a QEMU tax** — now that containers are a must-have, note that `amd64` images
+  (most of the lab's build tooling) run emulated on ARM64: slower, heavier on battery, and some x86-only
+  images run not at all ([research 45 §6](../research/45-arm-laptop-linux-travel-workstation.md)).
+- **Local inference is not drop-in** — VS Code with *cloud* agents is unaffected, but the 45 TOPS NPU
+  needs Qualcomm's QNN stack rather than Ollama/llama.cpp ([research 45 §9](../research/45-arm-laptop-linux-travel-workstation.md)).
 - **16 GB soldered**: no upgrade path for a dual-boot machine running containers.
 - **Bus factor one**: the only known working configuration for this SoC family is one maintainer's
   patched ISO and local kernel patches.
@@ -110,6 +117,6 @@ changes before purchase.
 
 ## References
 
-- [Research 45 — ARM laptop for travel and a Linux desktop](../research/45-arm-laptop-linux-travel-workstation.md) — thread write-up, spec table, device-tree coverage, port status
-- [Gemini thread — ASUS Vivobook S14 ARM](https://gemini.google.com/share/1f7c0006fa13)
+- [Research 45 — ARM laptop, Linux desktop, and the machine it must beat](../research/45-arm-laptop-linux-travel-workstation.md) — both threads, spec tables, device-tree coverage, port status, comparison with the Lenovo
+- [Gemini thread — ASUS Vivobook S14 ARM](https://gemini.google.com/share/1f7c0006fa13) · [Gemini thread — Lenovo vs Snapdragon for dev](https://gemini.google.com/share/095a3510469c)
 - [Idea 11 — Authentik IdP](11-authentik-idp.md) · [idea 07 — OPNsense router](07-opnsense-futro-s930.md)
