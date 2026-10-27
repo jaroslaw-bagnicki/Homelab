@@ -63,6 +63,12 @@ DNS.**
    alone.
 9. **Rollout order**: server → `ipa-backup` and a rehearsed restore → one disposable client → one HBAC rule
    and one `sudo` rule (proving refusal as well as success) → the rest of the fleet.
+10. **Non-person workload identities live in this directory too.** A workload that needs a lab-service
+    identity is a `svc-<workload>` user — `/sbin/nologin`, no usable password, no MFA enrolment, member of
+    **`workloads`** — never an Authentik-local account and never an enrolled container
+    ([ADR 45](45-workload-identity.md)). A host object may exist purely to parent service principals: it is
+    a **naming shell**, created with `--no-reverse`, granted no `host/` keytab, and never enrolled as a
+    client. The `workloads` group never appears in an HBAC or `sudo` rule.
 
 ## Consequences
 
@@ -82,6 +88,9 @@ DNS.**
 - **Automation stays certificate-based.** Ansible keeps authenticating with `step-ca` certificates under
   the `automation` principal ([ADR 41](41-ssh-certificates-step-ca.md)); keytabs are for file protocols and
   Kerberos-aware services, not for playbook transport.
+- **The directory now holds machines as well as people.** `svc-` objects share the user namespace with
+  humans, so a naming convention plus group scoping is what keeps HBAC rules and `ipa user-find` sane —
+  and a naming-shell host object must not be mistaken for an enrolled client in the host registry.
 - **Backups must capture LDAP, Kerberos keys and CA material together.** Restoring one without the others
   leaves a domain nobody can authenticate against.
 - **HBAC and sudo rules are only trustworthy once refusal is tested.** Granting is easy to verify;

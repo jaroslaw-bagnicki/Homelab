@@ -41,7 +41,9 @@ through, and [idea 11](../ideas/11-authentik-idp.md) carries the product compari
    HTTPS on a stable FQDN.
 4. **FreeIPA over LDAPS is the only user source** ([ADR 43](43-freeipa-domain-realm.md)). No local accounts
    beyond the bootstrap `akadmin`. People are directory objects; Authentik authenticates them and holds
-   their MFA enrolment.
+   their MFA enrolment. **Workload identities are directory objects too** — `svc-` users in the
+   `workloads` group, synced the same way ([ADR 45](45-workload-identity.md), [ADR 43](43-freeipa-domain-realm.md)
+   item 10). Authentik-local service accounts are not created.
 5. **Two integration patterns, never both for one service.** `forward_auth` to the proxy outpost for
    services with no login of their own; plain proxying for services that speak OIDC and redirect
    themselves. Stacking `forward_auth` in front of an app that already authenticates buys a double login.
@@ -60,6 +62,12 @@ through, and [idea 11](../ideas/11-authentik-idp.md) carries the product compari
 10. **Scope: LAN-only.** Nothing is published to the WAN, no cloud IdP is federated (an Entra ID guest
     pattern is a B2B feature this lab has no use for), and no local-account tree grows in parallel with
     the directory.
+11. **PostgreSQL is a configuration store, not a second identity database.** The directory remains the
+    only source of identities ([ADR 43](43-freeipa-domain-realm.md)); the database holds flows, stages,
+    policies, providers, outposts and a **projection** of the synced users. Configuration is declared as
+    **blueprints in Git** rather than clicked in the UI, so the guest can be rebuilt from the repository.
+    The database is backed up for what blueprints cannot regenerate — provider signing keys, human MFA
+    enrolment and consents — together with `AUTHENTIK_SECRET_KEY` (item 7).
 
 ## Consequences
 
@@ -83,6 +91,10 @@ through, and [idea 11](../ideas/11-authentik-idp.md) carries the product compari
   makes `step-ca`'s lack of per-provisioner policy acceptable.
 - Two secrets to protect instead of one (database password and `AUTHENTIK_SECRET_KEY`), both in Key Vault
   until the secret-store workstream changes that.
+- **The database cannot be removed by making FreeIPA the identity source.** Blueprints make the
+  configuration reproducible and the guest rebuildable, but human MFA enrolment and the provider signing
+  keys exist only there — so Postgres stays a small, single-tenant, restored-as-a-pair component, and a
+  "db-less Authentik" is not a design option.
 - **Carried as implementation gates, unverified upstream:** the Proxmox OIDC realm on the running version,
   the outpost's HTTPS listener, and the current spelling and scope of `AUTHENTIK_INSECURE`.
 
@@ -114,6 +126,6 @@ through, and [idea 11](../ideas/11-authentik-idp.md) carries the product compari
 ## References
 
 - [Idea 11 — Authentik as the lab identity provider](../ideas/11-authentik-idp.md) · [research 42 — Authentik hosting](../research/42-authentik-hosting.md)
-- [ADR 41 — SSH certificates](41-ssh-certificates-step-ca.md) · [ADR 43 — FreeIPA domain](43-freeipa-domain-realm.md) · [ADR 42 — PKI topology](42-pki-topology-sibling-cas.md)
+- [ADR 41 — SSH certificates](41-ssh-certificates-step-ca.md) · [ADR 43 — FreeIPA domain](43-freeipa-domain-realm.md) · [ADR 42 — PKI topology](42-pki-topology-sibling-cas.md) · [ADR 45 — workload identity](45-workload-identity.md)
 - [ADR 38 — private CA](38-private-ca-hierarchy-and-custody.md) · [ADR 40 — DNS and proxy on `edge`](40-internal-dns-proxy-edge.md) · [ADR 34 — LAN TLS only](34-lan-tls-only.md) · [ADR 36 — Fluent Bit](36-log-collector-fluentbit.md) · [ADR 35 — VictoriaLogs](35-log-store-victorialogs.md) · [ADR 29 — NAS backup target](29-nas-backup-target-beetle-m3-omv.md) · [ADR 22 — k3s](22-k3s-arc-homelab.md)
 - Implementation: [#165](https://github.com/jaroslaw-bagnicki/Homelab/issues/165) · [plan 01](../plans/01-identity-and-access-stack.md) · [idea 15 — second Proxmox node](../ideas/15-second-proxmox-node.md)

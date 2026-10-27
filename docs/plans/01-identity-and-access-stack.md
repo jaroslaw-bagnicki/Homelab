@@ -3,8 +3,8 @@
 **Status**: 🔨 Active — stage 1 (SSH CA foundation) is the only stage unblocked
 **Date**: 2026-10-27
 
-**Workstreams**: [SSH host + agent certs #161](https://github.com/jaroslaw-bagnicki/Homelab/issues/161) · [SSH human certs #166](https://github.com/jaroslaw-bagnicki/Homelab/issues/166) · [FreeIPA #164](https://github.com/jaroslaw-bagnicki/Homelab/issues/164) · [Authentik #165](https://github.com/jaroslaw-bagnicki/Homelab/issues/165)
-**Decisions**: [ADR 41](../decisions/41-ssh-certificates-step-ca.md) (Accepted) · [ADR 42](../decisions/42-pki-topology-sibling-cas.md) (Accepted) · [ADR 43](../decisions/43-freeipa-domain-realm.md) (Accepted) · [ADR 44](../decisions/44-authentik-identity-provider.md) (Accepted)
+**Workstreams**: [SSH host + agent certs #161](https://github.com/jaroslaw-bagnicki/Homelab/issues/161) · [SSH human certs #166](https://github.com/jaroslaw-bagnicki/Homelab/issues/166) · [FreeIPA #164](https://github.com/jaroslaw-bagnicki/Homelab/issues/164) · [Authentik #165](https://github.com/jaroslaw-bagnicki/Homelab/issues/165) · [Workload identity #168](https://github.com/jaroslaw-bagnicki/Homelab/issues/168)
+**Decisions**: [ADR 41](../decisions/41-ssh-certificates-step-ca.md) (Accepted) · [ADR 42](../decisions/42-pki-topology-sibling-cas.md) (Accepted) · [ADR 43](../decisions/43-freeipa-domain-realm.md) (Accepted) · [ADR 44](../decisions/44-authentik-identity-provider.md) (Accepted) · [ADR 45](../decisions/45-workload-identity.md) (Accepted)
 **Analysis**: [research 41](../research/41-machine-identity-kerberos.md) · [research 42](../research/42-authentik-hosting.md) · [research 43](../research/43-ssh-certificates-step-ca.md) · [research 46](../research/46-identity-and-access-stack.md) · [research 48](../research/48-pki-topology-step-ca-freeipa.md)
 **Ideas**: [11 Authentik](../ideas/11-authentik-idp.md) · [13 FreeIPA](../ideas/13-freeipa-domain-controller.md) · [15 second Proxmox node](../ideas/15-second-proxmox-node.md)
 
@@ -27,6 +27,7 @@ disagree, the ADR wins and this document is corrected.
 | May this user log in on *this* host, with *these* sudo rights? | FreeIPA HBAC + central `sudo` | 2 |
 | Which web services may this person open? | Authentik OIDC / forward auth | 3 |
 | Which Unix *agent* (opencode, copilot) is acting? | Its own `agent-<name>` principal and provisioner | 1 |
+| Which **workload** is acting, and with which credential? | [ADR 45](../decisions/45-workload-identity.md) — one mechanism per protocol | 5 |
 
 ## Stage sequence
 
@@ -37,10 +38,11 @@ disagree, the ADR wins and this document is corrected.
 | **2** | **FreeIPA domain** — server on `pve`, backup + restore drill, first client, HBAC + `sudo`, LDAPS for Authentik, fleet enrolment | [#164](https://github.com/jaroslaw-bagnicki/Homelab/issues/164) | ADR 43/42; `pve` memory headroom | `ipa-backup` restore rehearsed **before** the first client enrols; HBAC **refusal** proven, not just success |
 | **3** | **Authentik IdP** — LXC on `pve`, `auth.internal`, FreeIPA as LDAPS source (no local users), group-gated OIDC, first protected services, backup pair | [#165](https://github.com/jaroslaw-bagnicki/Homelab/issues/165) | stage 2 (LDAPS + service account) | A group-less user is refused by the OIDC application; PostgreSQL dump + `AUTHENTIK_SECRET_KEY` restored together |
 | **4** | **Human certificates** — OIDC provisioner, `admin@internal` `enableSSHCA: false`, principals on final names, runbook, close-out (split out of #161) | [#166](https://github.com/jaroslaw-bagnicki/Homelab/issues/166) | stage 3 | A non-member **cannot** obtain a certificate; no human-held JWK path can mint an SSH certificate |
+| **5** | **Workload identity** — dev container and agent workloads: `svc-` directory users, Authentik client credentials, per-agent certificates, keytab only if a non-HTTP consumer appears | [#168](https://github.com/jaroslaw-bagnicki/Homelab/issues/168) | stages 1, 2, 3 — one slice attaches to each | A workload obtains a token with no credential in git, the image or a persistent volume; a deactivated identity stops issuing; an agent cannot obtain another agent's principal |
 
 ## Stage 0 — Decisions
 
-> ✅ **Complete 2026-10-27** — ADR 42 and ADR 43 accepted, [ADR 44](../decisions/44-authentik-identity-provider.md) written.
+> ✅ **Complete 2026-10-27** — ADR 42 and ADR 43 accepted, [ADR 44](../decisions/44-authentik-identity-provider.md) written, and [ADR 45](../decisions/45-workload-identity.md) added for stage 5.
 
 - **Accept ADR 43 and ADR 42.** A realm cannot be built on a *Proposed* ADR, and ADR 42 is the rule
   that governs IPA's CA at install time.
@@ -104,6 +106,38 @@ Between stage 1 and this one, **humans stay on the fleet key**. That is ADR 41's
 is the honest interim — [research 43 §6.2](../research/43-ssh-certificates-step-ca.md) is right that a
 JWK-issued user certificate is a shared secret in certificate form and adds no identity guarantee.
 
+## Stage 5 — Workload identity (#168)
+
+The first stage that answers "which *workload* is acting" instead of "which person". It owns no artefact
+of its own: every slice attaches to the stage that already delivers its prerequisite, and this stage is
+where they are proven together.
+
+| Slice | Attaches to | Delivers |
+|---|---|---|
+| `svc-<workload>` users in `workloads` | stage 2 (#164) | the directory identity — `/sbin/nologin`, no usable password, no MFA |
+| Authentik client-credentials provider | stage 3 (#165) | the HTTP identity, secret in Key Vault |
+| `agent-<name>` certificates (opencode, Copilot, Hermes) | stage 1 (#161 M5) | the SSH identity, template-fixed principals |
+| Dev-container credential flow | stages 1, 3, 4 | fleet root trusted in-container, device flow for the operator, `client_credentials` when unattended |
+| Keytab — **conditional** | stage 2 | built only when a non-HTTP consumer exists |
+
+The boundaries the stage exists to hold ([ADR 45](../decisions/45-workload-identity.md)):
+
+- **Mechanism per protocol, one per service** — SMB/NFS and GSSAPI LDAP → keytab; HTTP → Authentik;
+  SSH → `step-ca`; Azure → Entra ([ADR 16](../decisions/16-agent-identity-pattern.md)); pod internals →
+  k3s service-account token.
+- **Directory before IdP** — the identity is created once in FreeIPA and Authentik only projects it. No
+  local service accounts, so there is no second authority to reconcile.
+- **A keytab only for a consumer that exists.** The lab has none today — OMV blocks `sec=krb5`
+  ([research 44](../research/44-omv-identity-integration.md)) — so the keytab slice follows a consumer
+  rather than anticipating one.
+- **A credential never rests** in git, the image, `devcontainer.json` or a persistent volume; it is fetched
+  at start from Key Vault, as [ADR 16](../decisions/16-agent-identity-pattern.md) already does.
+
+Exit gates: a workload obtains a token with no credential on disk; a user outside the required group is
+refused (stage 3's gate, re-run against the workload application); a deactivated `svc-` identity stops
+issuing after one sync interval; an agent cannot obtain another agent's principal (stage 1's gate, re-run
+for every agent, Hermes included).
+
 ## Ordering rationale
 
 **Why the SSH CA is first.** It is the only stage with no external dependency, and it is the only one
@@ -120,6 +154,11 @@ means every identity is created once, in one direction.
 **Why human certificates are last.** It is the only stage that consumes the whole chain — certificate →
 OIDC → Authentik → LDAP → FreeIPA. Running it earlier would issue certificates against interim names and
 require a fleet-wide principals rewrite afterwards, for a few weeks' gain.
+
+**Why workload identity is last.** Every slice consumes an earlier stage — a `svc-` user needs the
+directory, a client credential needs the IdP, an agent certificate needs the CA — so running it earlier
+would create workload identities against interim names and re-issue them. It is also the only stage whose
+scope is **conditional**: the keytab half exists only when a non-HTTP consumer does.
 
 **Why OIDC and not Kerberos for `step-ca`.** `step-ca` has no Kerberos provisioner and cannot have one:
 it validates a bearer token (OIDC) or a shared secret (JWK), while Kerberos is a KDC ticket exchange with
@@ -145,6 +184,8 @@ supplied. Only one engine answers each question, which is why both ADRs can stan
 | Principal naming contract — IPA username as the principal | before stage 4 | IPA username |
 | Authentik outpost placement and the cross-LAN hop | stage 3 | embedded outpost over TLS, else an ADR 34 exception row |
 | Which hosts enrol as FreeIPA clients | stage 2 M6 | Linux hosts whose login policy is worth centralising; `pve` never ([ADR 43](../decisions/43-freeipa-domain-realm.md) item 7) |
+| Authentik LDAP-source scoping — group-scoped sync for `workloads`, or a documented service-account exception | stage 5 M1 | group-scoped sync; if the pinned version cannot, amend [ADR 45](../decisions/45-workload-identity.md) rather than improvise |
+| When the keytab slice is built — with the first non-HTTP consumer, or never | after stage 5 | not built; no consumer exists |
 | Whether the fleet key is ever removed from `authorized_keys` | after stage 4 | it stays as break-glass |
 
 ## Documentation rules for every stage
@@ -154,4 +195,5 @@ supplied. Only one engine answers each question, which is why both ADRs can stan
 - A `CHANGELOG.md` entry lands with each completed stage, linking the stage's runbook.
 - A runbook per stage: SSH CA, FreeIPA install and restore, Authentik deployment.
 - ADR amendments where reality diverges: ADR 41 if TPM custody falls back or a milestone changes shape;
-  ADR 43 if the realm, DNS authority or CA shape moves.
+  ADR 43 if the realm, DNS authority or CA shape moves; ADR 45 if the mechanism map or the `svc-`
+  convention moves.
