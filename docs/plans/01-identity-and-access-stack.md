@@ -12,7 +12,7 @@
 
 ## Why this document
 
-Three workstreams answer one question — *who is this, and what may they do?* Each can be built in
+The workstreams below answer one question — *who is this, and what may they do?* Each can be built in
 isolation, but the **order** decides whether an artefact is built once or twice: a principal, an
 Authentik user, a CA signature. This plan fixes the order and names each stage's exit gate, so an
 implementation session can enter at any stage without re-deriving the dependency graph.

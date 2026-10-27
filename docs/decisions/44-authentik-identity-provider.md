@@ -30,9 +30,10 @@ through, and [idea 11](../ideas/11-authentik-idp.md) carries the product compari
    will consume it: the cluster authenticates *against* the IdP, and the IdP must not ride the migration
    that reshapes the platform. `edge` has 2 GB and cannot carry it
    ([ADR 24](24-edge-ingress-appliance.md)); a small VM on `pve` is the documented fallback if
-   Docker-in-LXC proves unstable. The memory cost is accepted because the **second Proxmox node**
-   ([idea 15](../ideas/15-second-proxmox-node.md)) is being built now — until it lands, `pve` is the binding
-   constraint and the stack ships with explicit container memory limits.
+   Docker-in-LXC proves unstable. The memory cost is accepted against the **second Proxmox node**
+   ([idea 15](../ideas/15-second-proxmox-node.md)) — planned, **not yet decided or purchased** — so `pve`
+   remains the binding constraint and the container limits are a current requirement; that node relieves
+   the pressure, not the need for limits.
 2. **Server + worker + PostgreSQL.** Redis is not part of the stack — 2025.10 removed it — and the release
    is pinned to a current tag, not the older Compose shape recorded in the research thread.
 3. **`auth.internal`, proxied by the `edge` Caddy ([ADR 40](40-internal-dns-proxy-edge.md)) with a

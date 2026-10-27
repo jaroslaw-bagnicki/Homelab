@@ -164,7 +164,7 @@ rehearsed restore) and a **break-glass path** for the day `pve` does not boot.
 - **Windows membership** — accepted as out of scope, or does it force Samba AD DC instead?
 - **Realm and DNS authority** — sub-domain vs realm named after `.internal`; needs an ADR amending
   [ADR 37](../decisions/37-lan-name-space-internal.md) / [ADR 40](../decisions/40-internal-dns-proxy-edge.md).
-- **One trust anchor?** — proposed in [ADR 42](../decisions/42-pki-topology-sibling-cas.md) (Accepted): one
+- **One trust anchor?** — recorded in [ADR 42](../decisions/42-pki-topology-sibling-cas.md) (Accepted): one
   offline root signs `step-ca`'s intermediate **and** IPA's CA (`--external-ca`) as **siblings**. What is
   rejected is the thread's own first shape — **IPA as the parent of `step-ca`**
   ([research 48 §3](../research/48-pki-topology-step-ca-freeipa.md)) — and a permanently self-signed IPA CA.

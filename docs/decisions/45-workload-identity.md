@@ -21,8 +21,8 @@ no stable FQDN, no PTR, ephemeral lifetime.
 
 ## Decision
 
-**Adopt protocol-driven mechanism selection, with one workload identity per workload created in the
-directory.**
+**Adopt protocol-driven mechanism selection, with one identity per workload created in the directory for
+every access to a lab service.**
 
 1. **The mechanism is chosen by protocol, never by fashion** — one mechanism per protocol, and no service
    accepts two mechanisms for the same access:
@@ -38,7 +38,9 @@ directory.**
 2. **One identity per workload, and it lives in the directory.** `svc-<workload>` is a non-person user in
    FreeIPA — `/sbin/nologin`, no usable password, no MFA enrolment — and a member of **`workloads`**. That
    group is the only scope the Authentik LDAP source syncs for workloads, and it never appears in an
-   HBAC or `sudo` rule. Authentik-local service accounts are **not** created: the no-local-accounts rule
+   HBAC or `sudo` rule. The Entra and k3s rows of the table above are **not** directory identities — a
+   service principal and a service-account token stay with the platform that manages them (item 7), so no
+   `svc-` user is created for them. Authentik-local service accounts are **not** created: the no-local-accounts rule
    of [ADR 44](44-authentik-identity-provider.md) binds human identities, and a workload identity is not
    an exemption from the directory — it is the case that makes the directory the single registry.
 

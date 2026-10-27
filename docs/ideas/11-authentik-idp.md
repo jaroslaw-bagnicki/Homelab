@@ -117,7 +117,8 @@ Hosting follow-up ([research 42](../research/42-authentik-hosting.md)): [ADR 40]
 - **First protected services** — start with what cannot authenticate itself (Netdata) and what has
   native OIDC (Proxmox, Grafana later); leave basic-auth services alone until proven.
 - **Federation scope** — GitHub/Entra ID as upstream IdP is possible; the thread's Entra
-  guest-account mapping is a B2B feature the lab has no use for. Local accounts + passkeys first.
+  guest-account mapping is a B2B feature the lab has no use for. Directory accounts + passkeys first; the
+  only local account is the bootstrap `akadmin` ([ADR 44](../decisions/44-authentik-identity-provider.md) item 4).
 - **Claims to verify upstream** — Proxmox OIDC realm, OMV LDAP support, and the outpost's HTTPS listener; the
   follow-up thread's Compose file is from 2024 and its env-var spellings are unverified (the Redis removal it
   predates is confirmed — [research 42](../research/42-authentik-hosting.md)).
