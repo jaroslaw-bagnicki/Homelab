@@ -13,7 +13,7 @@ Significant architectural and technology choices recorded in
 
 | # | Date | ADR | Status |
 |---|------|-----|--------|
-| 44 | 2026-10-27 | [Authentik as the Fleet Identity Provider — `lab`, FreeIPA Source, SSO-Exempt Management Planes](44-authentik-identity-provider.md) | Accepted |
+| 44 | 2026-10-27 | [Authentik as the Fleet Identity Provider — an LXC on `pve`, FreeIPA Source, SSO-Exempt Management Planes](44-authentik-identity-provider.md) | Accepted |
 | 43 | 2026-10-25 | [FreeIPA as the Lab's Domain — `ipa.internal`, Technitium Keeps DNS](43-freeipa-domain-realm.md) | Accepted |
 | 42 | 2026-10-25 | [PKI Topology — One Offline Root, Sibling Subordinate CAs](42-pki-topology-sibling-cas.md) | Accepted |
 | 41 | 2026-10-18 | [SSH Access — step-ca Certificates, Authentik Identity, Per-Agent Principals](41-ssh-certificates-step-ca.md) | Accepted |

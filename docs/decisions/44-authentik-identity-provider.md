@@ -1,4 +1,4 @@
-# Authentik as the Fleet Identity Provider — `lab`, FreeIPA Source, SSO-Exempt Management Planes
+# Authentik as the Fleet Identity Provider — an LXC on `pve`, FreeIPA Source, SSO-Exempt Management Planes
 
 **Date:** 2026-10-27
 **Status:** Accepted
@@ -19,13 +19,20 @@ through, and [idea 11](../ideas/11-authentik-idp.md) carries the product compari
 
 ## Decision
 
-**Adopt Authentik as the fleet's identity provider — self-hosted on `lab`, reached at `auth.internal` over
-a `step-ca` leaf, with FreeIPA as its only user source and management planes permanently outside SSO.**
+**Adopt Authentik as the fleet's identity provider — a guest on `pve`, reached at `auth.internal` over a
+`step-ca` leaf, with FreeIPA as its only user source and management planes permanently outside SSO.**
 
-1. **Host `lab`**, as a Docker Compose stack beside the always-on services. The k3s migration
-   ([ADR 22](22-k3s-arc-homelab.md)) will move it later and that second migration is accepted rather than
-   waited out. `edge` has 2 GB and cannot carry it ([ADR 24](24-edge-ingress-appliance.md)); `pve` already
-   hosts the domain and the CA and is the fleet's tightest memory budget.
+1. **Host `pve`**, as an unprivileged LXC running the Compose stack (server, worker and PostgreSQL inside
+   the guest). The always-on tier already lives there — the domain ([ADR 43](43-freeipa-domain-realm.md)),
+   the CA ([ADR 38](38-private-ca-hierarchy-and-custody.md)) and VictoriaLogs
+   ([ADR 35](35-log-store-victorialogs.md)) — so the IdP shares one lifecycle with the things it
+   authenticates. It stays deliberately **outside the k3s cluster** ([ADR 22](22-k3s-arc-homelab.md)) that
+   will consume it: the cluster authenticates *against* the IdP, and the IdP must not ride the migration
+   that reshapes the platform. `edge` has 2 GB and cannot carry it
+   ([ADR 24](24-edge-ingress-appliance.md)); a small VM on `pve` is the documented fallback if
+   Docker-in-LXC proves unstable. The memory cost is accepted because the **second Proxmox node**
+   ([idea 15](../ideas/15-second-proxmox-node.md)) is being built now — until it lands, `pve` is the binding
+   constraint and the stack ships with explicit container memory limits.
 2. **Server + worker + PostgreSQL.** Redis is not part of the stack — 2025.10 removed it — and the release
    is pinned to a current tag, not the older Compose shape recorded in the research thread.
 3. **`auth.internal`, proxied by the `edge` Caddy ([ADR 40](40-internal-dns-proxy-edge.md)) with a
@@ -47,7 +54,7 @@ a `step-ca` leaf, with FreeIPA as its only user source and management planes per
 8. **Audit and application logs leave as JSON on stdout** through the existing Fluent Bit
    ([ADR 36](36-log-collector-fluentbit.md)) into VictoriaLogs ([ADR 35](35-log-store-victorialogs.md)).
    No second collector.
-9. **The embedded proxy outpost is the shape that runs.** The `edge` → `lab` hop is TLS
+9. **The embedded proxy outpost is the shape that runs.** The `edge` → `pve` hop is TLS
    ([ADR 34](34-lan-tls-only.md)); if the outpost's HTTPS listener proves unusable, an external proxy
    outpost on `edge` is the fallback and earns an ADR 34 exception row — never a plaintext path.
 10. **Scope: LAN-only.** Nothing is published to the WAN, no cloud IdP is federated (an Entra ID guest
@@ -60,13 +67,17 @@ a `step-ca` leaf, with FreeIPA as its only user source and management planes per
   with is closed for the services that are gated, not for the fleet by decree.
 - **The IdP becomes an availability dependency for every gated service.** That is what item 6 and the
   break-glass path bound: existing sessions and existing SSH certificates survive an outage, and new
-  logins do not.
-- **`lab` inherits a stack that must not be starved.** Container resource limits are part of the decision,
-  not tuning — every login in the lab queues behind it.
-- The k3s migration gains a passenger with an availability role; the Helm move is a planned step rather
-  than a surprise.
-- **The worker mounts the Docker socket** to manage local outposts — root-equivalent on `lab`. The socket
-  stays on that host and is never shared across hosts.
+  logins do not. The domain and the IdP now share one node, so a `pve` failure costs **both** kinds of new
+  login at once — and these two guests are the first candidates for the second node's ZFS replication
+  ([idea 15](../ideas/15-second-proxmox-node.md)).
+- **`pve` inherits a stack that must not be starved.** Container resource limits are part of the decision,
+  not tuning — every login in the lab queues behind it. The node now carries the domain, the CA, the log
+  store and the IdP on 8 GB, which is what makes the second node load-bearing rather than optional.
+- **The k3s migration loses a passenger but gains a dependency.** Authentik no longer moves with `lab`; in
+  exchange the cluster's identity comes from a guest on `pve`, so that node's availability now gates
+  cluster logins as well as LAN ones.
+- **The worker mounts a Docker socket** to manage local outposts — root-equivalent **inside that guest**.
+  The socket is the LXC's own and is never mounted from the host or shared across hosts.
 - [ADR 41](41-ssh-certificates-step-ca.md)'s OIDC provisioner and [ADR 43](43-freeipa-domain-realm.md)'s
   LDAPS bind now have a concrete target, and claim/group gating lives in the Authentik UI — which is what
   makes `step-ca`'s lack of per-provisioner policy acceptable.
@@ -77,10 +88,17 @@ a `step-ca` leaf, with FreeIPA as its only user source and management planes per
 
 ### Alternatives Considered
 
-- **An LXC on `pve` instead of `lab`** — keeps the IdP off the workload node and off its k3s migration, but
-  adds a guest to the fleet's tightest memory budget beside the domain and the CA. `lab` has the headroom
-  and already runs the always-on stacks, and the risk placement would have bought — self-dependency — is
-  addressed by item 6 either way.
+- **Docker on `lab`** — the earlier leaning: 16 GB of headroom and the always-on Compose stacks already
+  there. Rejected because `lab` is the node in motion (Docker today, k3s next) and the IdP would ride the
+  migration that reshapes the platform it protects; headroom does not buy a stable lifecycle.
+- **A VM on `pve` instead of an LXC** — heavier: an extra kernel and a fixed RAM reservation on the fleet's
+  tightest node. Kept as the fallback if Docker-in-LXC misbehaves, not as the default.
+- **Inside the k3s cluster** — rejected: the IdP must not be reconciled by the platform whose access it
+  governs, and a cluster re-arrangement would remove every login needed to fix it
+  ([research 42 §6](../research/42-authentik-hosting.md) calls this self-dependency the risk that matters).
+- **Waiting for the second Proxmox node before deploying** — rejected: it would gate SSO, and behind it the
+  human certificate path, on cluster build-out. The guest is small, and it can be replicated once the pool
+  exists.
 - **Authelia** — lighter, and enough if forward auth were the only need, but OIDC-first with no directory
   for Proxmox/OMV, file-driven, and no admin UI.
 - **Keycloak** — the full enterprise surface, a JVM and an operational model out of proportion to five
@@ -98,4 +116,4 @@ a `step-ca` leaf, with FreeIPA as its only user source and management planes per
 - [Idea 11 — Authentik as the lab identity provider](../ideas/11-authentik-idp.md) · [research 42 — Authentik hosting](../research/42-authentik-hosting.md)
 - [ADR 41 — SSH certificates](41-ssh-certificates-step-ca.md) · [ADR 43 — FreeIPA domain](43-freeipa-domain-realm.md) · [ADR 42 — PKI topology](42-pki-topology-sibling-cas.md)
 - [ADR 38 — private CA](38-private-ca-hierarchy-and-custody.md) · [ADR 40 — DNS and proxy on `edge`](40-internal-dns-proxy-edge.md) · [ADR 34 — LAN TLS only](34-lan-tls-only.md) · [ADR 36 — Fluent Bit](36-log-collector-fluentbit.md) · [ADR 35 — VictoriaLogs](35-log-store-victorialogs.md) · [ADR 29 — NAS backup target](29-nas-backup-target-beetle-m3-omv.md) · [ADR 22 — k3s](22-k3s-arc-homelab.md)
-- Implementation: [#165](https://github.com/jaroslaw-bagnicki/Homelab/issues/165) · [plan 01](../plans/01-identity-and-access-stack.md)
+- Implementation: [#165](https://github.com/jaroslaw-bagnicki/Homelab/issues/165) · [plan 01](../plans/01-identity-and-access-stack.md) · [idea 15 — second Proxmox node](../ideas/15-second-proxmox-node.md)

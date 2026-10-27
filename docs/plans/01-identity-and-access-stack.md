@@ -35,7 +35,7 @@ disagree, the ADR wins and this document is corrected.
 | **0** | Decisions | — | — | ADR 42 + 43 **Accepted**; ADR 44 written |
 | **1** | **SSH CA foundation** — #161 M1–M5: `ssh` block in `ca.json` with TPM-held keys, trust distribution, host certificates, `automation` principal, per-agent identities | [#161](https://github.com/jaroslaw-bagnicki/Homelab/issues/161) | nothing — no IdP, no directory | `tpmkms:` signers proven on `ca` (else ADR 41 amended to file custody); host certificates live on every node; fleet key out of daily paths; every playbook green |
 | **2** | **FreeIPA domain** — server on `pve`, backup + restore drill, first client, HBAC + `sudo`, LDAPS for Authentik, fleet enrolment | [#164](https://github.com/jaroslaw-bagnicki/Homelab/issues/164) | ADR 43/42; `pve` memory headroom | `ipa-backup` restore rehearsed **before** the first client enrols; HBAC **refusal** proven, not just success |
-| **3** | **Authentik IdP** — stack on `lab`, `auth.internal`, FreeIPA as LDAPS source (no local users), group-gated OIDC, first protected services, backup pair | [#165](https://github.com/jaroslaw-bagnicki/Homelab/issues/165) | stage 2 (LDAPS + service account) | A group-less user is refused by the OIDC application; PostgreSQL dump + `AUTHENTIK_SECRET_KEY` restored together |
+| **3** | **Authentik IdP** — LXC on `pve`, `auth.internal`, FreeIPA as LDAPS source (no local users), group-gated OIDC, first protected services, backup pair | [#165](https://github.com/jaroslaw-bagnicki/Homelab/issues/165) | stage 2 (LDAPS + service account) | A group-less user is refused by the OIDC application; PostgreSQL dump + `AUTHENTIK_SECRET_KEY` restored together |
 | **4** | **Human certificates** — OIDC provisioner, `admin@internal` `enableSSHCA: false`, principals on final names, runbook, close-out (split out of #161) | [#166](https://github.com/jaroslaw-bagnicki/Homelab/issues/166) | stage 3 | A non-member **cannot** obtain a certificate; no human-held JWK path can mint an SSH certificate |
 
 ## Stage 0 — Decisions
@@ -44,7 +44,7 @@ disagree, the ADR wins and this document is corrected.
 
 - **Accept ADR 43 and ADR 42.** A realm cannot be built on a *Proposed* ADR, and ADR 42 is the rule
   that governs IPA's CA at install time.
-- **Write ADR 44 — Authentik.** Idea 11 has no decision yet. It must settle: host (`lab`), name
+- **Write ADR 44 — Authentik.** Idea 11 has no decision yet. It must settle: host (`pve`), name
   (`auth.internal`), forward-auth scope, outpost placement, break-glass path, and the backup pair
   (PostgreSQL dump **with** `AUTHENTIK_SECRET_KEY` — MFA secrets and encrypted fields depend on it).
 - ADR 44 lands before stage 2 starts, not before stage 1 — stage 1 touches no identity.

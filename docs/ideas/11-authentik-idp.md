@@ -80,11 +80,16 @@ pass.
 Entra ID appears in the thread only as a **federation source** (its guest-account scenario) — not
 as a candidate for the lab's local identity provider.
 
-## Placement — open
+## Placement — decided
+
+**Decided by [ADR 44](../decisions/44-authentik-identity-provider.md): an unprivileged LXC on `pve`** —
+outside the k3s cluster that will consume it, sharing one lifecycle with the domain and the CA, with the
+second Proxmox node ([idea 15](15-second-proxmox-node.md)) absorbing the memory cost. The table below is the
+analysis that fed the decision.
 
 | Host | Shape | Assessment |
 |---|---|---|
-| **`lab`** (M910q) | Docker Compose now; k3s workload later | **Leading candidate** — 16 GB is the fleet's only real headroom, and `lab` is already the workload host; the k3s migration ([ADR 22](../decisions/22-k3s-arc-homelab.md)) lifts it later. The follow-up thread endorses it: the IdP beside the always-on stacks shortens the auth hop and local outpost management |
+| `lab` (M910q) | Docker Compose now; k3s workload later | **Runner-up** — 16 GB is the fleet's only real headroom, and `lab` is already the workload host; the k3s migration ([ADR 22](../decisions/22-k3s-arc-homelab.md)) lifts it later. The follow-up thread endorses it: the IdP beside the always-on stacks shortens the auth hop and local outpost management |
 | `pve` | unprivileged LXC, fits the `.21x` guest scheme | **Tight** — 8 GB already carries Netdata, NUT, VictoriaLogs, `step-ca` and the planned HA VM + two LXCs; authentik adds a server, a worker and PostgreSQL (Redis is gone since 2025.10), plus an external outpost only if the embedded one is not used |
 | `edge` | native or Docker beside Caddy | **No room** — 2 GB total ([hardware](../hardware.md)), and the ingress box already has to carry Caddy for the inbound plane ([ADR 24](../decisions/24-edge-ingress-appliance.md)) |
 | `cloudlab` | Compose on the VPS | **Rejected** — an IdP for LAN services must not depend on the WAN, and it would put the admin plane on the public internet |
@@ -106,9 +111,9 @@ Hosting follow-up ([research 42](../research/42-authentik-hosting.md)): [ADR 40]
   `edge` Caddy call it across the LAN; that hop must be TLS or earn a row in the
   [ADR 34](../decisions/34-lan-tls-only.md) exception table, and a proxy outpost on the proxy host
   may be the cleaner shape. Verify the outpost's HTTPS listener.
-- **Placement vs k3s timing** — if authentik lands on `lab` as a Compose stack it moves again when
-  [ADR 22](../decisions/22-k3s-arc-homelab.md) executes; decide whether to wait, or to accept the
-  second migration (Helm chart, or the Compose stack left beside k3s).
+- **Placement vs k3s timing** — settled: the IdP runs on `pve`, **outside** the cluster
+  ([ADR 44](../decisions/44-authentik-identity-provider.md)), so there is no second migration to absorb and
+  no Helm move to plan.
 - **First protected services** — start with what cannot authenticate itself (Netdata) and what has
   native OIDC (Proxmox, Grafana later); leave basic-auth services alone until proven.
 - **Federation scope** — GitHub/Entra ID as upstream IdP is possible; the thread's Entra
