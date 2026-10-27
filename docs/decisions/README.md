@@ -17,7 +17,7 @@ Significant architectural and technology choices recorded in
 | 44 | 2026-10-27 | [Authentik as the Fleet Identity Provider — an LXC on `pve`, FreeIPA Source, SSO-Exempt Management Planes](44-authentik-identity-provider.md) | Accepted |
 | 43 | 2026-10-25 | [FreeIPA as the Lab's Domain — `ipa.internal`, Technitium Keeps DNS](43-freeipa-domain-realm.md) | Accepted |
 | 42 | 2026-10-25 | [PKI Topology — One Offline Root, Sibling Subordinate CAs](42-pki-topology-sibling-cas.md) | Accepted |
-| 41 | 2026-10-18 | [SSH Access — step-ca Certificates, Authentik Identity, Per-Agent Principals](41-ssh-certificates-step-ca.md) | Accepted |
+| 41 | 2026-10-18 | [SSH Access — step-ca Certificates, Authentik Identity, Shared AI-Agent Identity](41-ssh-certificates-step-ca.md) | Accepted |
 | 40 | 2026-10-17 | [Internal DNS and Reverse Proxy — Technitium + Caddy on the Edge Node](40-internal-dns-proxy-edge.md) | Accepted |
 | 39 | 2026-10-11 | [NUT Server Host-Native on the pve Node](39-nut-host-native.md) | Accepted |
 | 38 | 2026-10-04 | [Private CA — 10-Year Offline Root, TPM-Bound Intermediate, Short-Lived Leaves](38-private-ca-hierarchy-and-custody.md) | Accepted |

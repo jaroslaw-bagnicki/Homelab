@@ -9,3 +9,24 @@ security_fail2ban_max_retries: 3
 security_fail2ban_ban_time: 1h
 
 security_ufw_deny_inbound_tcp_80: true
+
+# ── SSH certificates (ADR 41) ────────────────────────────────────────────────
+# `cloudlab` is outside SSH CA scope (no LAN route to ca.internal) and sets this
+# false in host_vars.
+security_ssh_certs_enabled: true
+security_ssh_ca_url: "https://ca.internal:9000"
+security_ssh_ca_root_file: /usr/local/share/ca-certificates/homelab-root-ca.crt
+security_ssh_ca_root_fallback: /etc/step-ca/certs/root_ca.crt
+security_ssh_host_key: /etc/ssh/ssh_host_ed25519_key
+security_ssh_host_cert: /etc/ssh/ssh_host_ed25519_key-cert.pub
+security_ssh_user_ca_key: /etc/ssh/ssh_user_ca_key.pub
+security_ssh_host_provisioner: hosts@internal
+security_ssh_host_provisioner_secret: step-ca-ssh-hosts-password
+# Override to skip the Key Vault lookup (tests).
+security_ssh_host_provisioner_password: ""
+security_ssh_renew_before_seconds: 172800
+security_ssh_authorized_principals_options: "no-port-forwarding,no-agent-forwarding,no-X11-forwarding"
+security_ssh_authorized_principals:
+  fleetadm:
+    - automation
+    - agent-ai

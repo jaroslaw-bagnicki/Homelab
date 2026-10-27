@@ -63,3 +63,22 @@ if ($env:SSH_AUTH_SOCK -and (Get-AzContext -ErrorAction SilentlyContinue)) {
     }
   }
 }
+
+# ── SSH host CA trust ─────────────────────────────────────────────
+# The fleet's @cert-authority line replaces per-host known_hosts pins for the
+# LAN nodes. The SSH host CA public key is published to Key Vault by the CA
+# workload; cloudlab is out of scope and keeps its pinned host key.
+if ($env:SSH_AUTH_SOCK -and (Get-AzContext -ErrorAction SilentlyContinue)) {
+  $caKey = Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name ssh-host-ca-pub -AsPlainText -ErrorAction SilentlyContinue 2>$null
+  if ($caKey) {
+    $sshDir = Join-Path $HOME '.ssh'
+    if (-not (Test-Path $sshDir)) { New-Item -ItemType Directory -Path $sshDir -Force | Out-Null }
+    $knownHosts = Join-Path $sshDir 'known_hosts'
+    $pattern = '*.internal,192.168.2.*'
+    $line = "@cert-authority $pattern $($caKey.Trim())"
+    $existing = if (Test-Path $knownHosts) { @(Get-Content -LiteralPath $knownHosts) } else { @() }
+    $filtered = $existing | Where-Object { $_ -notmatch '^@cert-authority\s+.*\*\.internal' }
+    [System.IO.File]::WriteAllLines($knownHosts, @($filtered) + $line)
+    if ($IsLinux) { & chmod 600 $knownHosts }
+  }
+}

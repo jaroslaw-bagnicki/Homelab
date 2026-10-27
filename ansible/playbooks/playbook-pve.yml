@@ -4,8 +4,8 @@
   become: true
   roles:
     - common
-    - security
     - ca_trust
+    - security
     - nut_server
     - nut_client
     - netdata

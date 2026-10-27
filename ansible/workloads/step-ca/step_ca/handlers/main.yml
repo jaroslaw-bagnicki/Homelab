@@ -9,3 +9,8 @@
     state: restarted
     daemon_reload: true
   when: step_ca_cert is defined and step_ca_cert.stat.exists
+
+- name: Reload sshd
+  ansible.builtin.systemd:
+    name: ssh
+    state: reloaded

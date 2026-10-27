@@ -1,7 +1,13 @@
-# SSH Access — step-ca Certificates, Authentik Identity, Per-Agent Principals
+# SSH Access — step-ca Certificates, Authentik Identity, Shared AI-Agent Identity
 
 **Date:** 2026-10-18  
-**Status:** Accepted 
+**Status:** Accepted
+
+> **Amended 2026-10-27.** The AI-agent half is now **one shared `agent-ai` principal and one
+> `agent-ai@internal` JWK credential**, with the per-agent key ID (`agent-copilot`, `agent-opencode`)
+> preserved by the SSH template. A broker is the target holder of the shared credential; until it lands
+> the agents self-issue. `cloudlab` is outside SSH CA scope because it has no LAN route to
+> `ca.internal`; it keeps the pinned host key and the fleet key.
 
 ---
 
@@ -30,7 +36,7 @@ The operator has settled the open questions:
 1. the fleet key stays **only** as break-glass and is **out of daily use**;
 2. **Authentik** is the fleet's IdP — **not** Entra ID;
 3. the SSH CA keys should get **TPM custody** if the CA can hold them there;
-4. every **agent gets its own certificate**, as an authorization layer;
+4. the AI-agent class gets **one `agent-ai` certificate identity**, with a per-agent key ID for audit;
 5. revocation is left at the ADR's discretion for now.
 
 ## Decision
@@ -48,14 +54,15 @@ break-glass — outside daily use — and use Authentik as the human identity so
   source**, not yet run on the guest. The runbook must prove it on `pve`; if the guest cannot serve the
   SSH CA from the TPM, **file custody** (`0600 root:root` in `/etc/step-ca/secrets/`) is the explicit
   fallback and this ADR is amended — never left as an undocumented default.
-- **Host certificates first.** Every fleet node presents a host certificate — `HostCertificate` in
-  `sshd`, renewed unattended through the **SSHPOP** provisioner. Principals carry the **short hostname,
-  the `.internal` name and the node's `ansible_host` address — `cloudlab`'s public IP included** — because
-  Ansible connects by IP with `host_key_checking = True`. Clients trust the host CA once via a
-  `@cert-authority` line that covers **every** address in the inventory.
-  Host lifetime is capped at **7 days** (`defaultHostSSHCertDuration` / `maxHostSSHCertDuration` = `168h`),
-  overriding step-ca's 30-day default so SSH honours [ADR 38](38-private-ca-hierarchy-and-custody.md)'s
-  short-lived premise.
+- **Host certificates first.** Every **LAN** fleet node presents a host certificate — `HostCertificate`
+  in `sshd`, renewed unattended through the **SSHPOP** provisioner; initial issuance uses the
+  machine-held `hosts@internal` JWK. Principals carry the **short hostname, the `.internal` name and the
+  node's `ansible_host` address** because Ansible connects by IP with `host_key_checking = True`.
+  Clients trust the host CA once via a `@cert-authority` line that covers the LAN names and addresses.
+  **`cloudlab` is deliberately excluded**: it has no route to `ca.internal`, so it keeps the pinned host
+  key and the fleet key until a LAN↔VPS path exists. Host lifetime is capped at **7 days**
+  (`defaultHostSSHCertDuration` / `maxHostSSHCertDuration` = `168h`), overriding step-ca's 30-day default
+  so SSH honours [ADR 38](38-private-ca-hierarchy-and-custody.md)'s short-lived premise.
 - **Humans authenticate through Authentik.** The OIDC provisioner points at Authentik, and
   `step ssh login` issues a short-lived **user certificate** (default ~8 h, never above step-ca's 24 h
   ceiling) whose principal is the Authentik identity. Authentik group membership decides **whether** a
@@ -63,29 +70,34 @@ break-glass — outside daily use — and use Authentik as the human identity so
   accepts that principal. Entra ID is rejected for the Homelab — no cloud IdP sits in the SSH path.
   Until Authentik is deployed, **only host certificates** run and interactive access stays on the fleet
   key; that is a transition state, not the target.
-- **Every agent has its own identity.** Each agent (opencode, copilot, …) gets a dedicated principal
-  (`agent-<name>`) and its **own issuing credential** — a per-agent JWK provisioner whose password lives
-  in Key Vault, with a certificate lifetime of **at most 8 hours**. No agent presents the human's
-  certificate or the fleet key. Because self-hosted `step-ca` has **no per-provisioner policy**, each
-  agent provisioner also carries its own **SSH certificate template** fixing
-  `"principals": ["agent-<name>"]`, and every agent principal is enumerated in the authority
-  `policy.ssh` rules — otherwise a provisioner holder could request any principal the authority allows.
-  Hosts map principal → Unix account in `/etc/ssh/auth_principals/<user>`, so an agent can be denied a
-  host or an account by editing that file, and a compromised agent is cut off by deleting its provisioner.
+- **One AI-agent class identity.** All AI agents (opencode, Copilot, Hermes) share the principal
+  `agent-ai` and one JWK provisioner `agent-ai@internal` whose password lives in Key Vault, with a
+  certificate lifetime of **at most 8 hours**. The provisioner's **SSH certificate template** fixes
+  `"principals": ["agent-ai"]` and preserves the requested **key ID** (`agent-copilot`,
+  `agent-opencode`), so the certificate is class-scoped for authorization and per-agent for audit.
+  A **broker** is the target holder of the shared JWK password; until it lands, agents self-issue with
+  the credential and the key ID is best-effort. Deleting `agent-ai@internal` revokes the class; a
+  per-agent revocation is a broker-layer control. Hosts map principal → Unix account in
+  `/etc/ssh/auth_principals/<user>`; the shared principal means a host can deny the AI class, not one
+  agent, unless per-agent principals return.
 - **The fleet key survives, but is out of daily use.** `fleetadm`'s key stays installed and managed
   exactly as [ADR 28](28-fleet-admin-account-and-key.md) describes, and is used **only** when a
   certificate cannot be obtained: CA unavailable, certificate lost, or a rebuilt host's first contact.
   It is not part of any daily path — routine automation runs under its own **`automation` principal**
   (mapped to `fleetadm` on every host), interactive work under the operator's **Authentik** principal,
-  and each agent under its own. A periodic drill keeps the break-glass path proven.
+  and AI agents under the shared **`agent-ai`** principal. A periodic drill keeps the break-glass path
+  proven.
 - **Revocation is by lifetime.** No CRL, no OCSP, no fleet-wide KRL — the same stance as
   [ADR 38](38-private-ca-hierarchy-and-custody.md). Incident response is **delete the identity's
   provisioner** (no re-issue) and wait out the certificate (≤ 8 h user, ≤ 7 d host);
-  `step ssh revoke` records the certificate at the CA. Distributing a `RevokedKeys` KRL is the documented
-  escalation if a certificate must die faster than its lifetime.
+  `step ssh revoke` records the certificate at the CA. For the shared AI-agent credential this is a
+  **class-level** revocation; the broker, when deployed, is the per-agent revocation point.
+  Distributing a `RevokedKeys` KRL is the documented escalation if a single certificate must die faster
+  than its lifetime.
 - **The CA signs only fleet names.** `authority.policy.ssh` restricts user principals to the Authentik
-  domain and host names to `*.internal`, so the CA cannot be used to mint credentials outside the fleet's
-  name space.
+  email domain plus `automation` and `agent-ai`, and host principals to `*.internal`, the short inventory
+  names and the inventory addresses — `*.internal` alone rejects both a bare hostname and an IP. The CA
+  cannot be used to mint credentials outside the fleet's name space.
 
 ## Consequences
 
@@ -113,7 +125,13 @@ break-glass — outside daily use — and use Authentik as the human identity so
 - **Identity is not privilege.** Distinct principals separate **identity, audit and revocation**; the
   agents still land on `fleetadm`'s NOPASSWD sudo at first. Because the mapping is per host and per
   account, narrowing agents onto an unprivileged account later needs no re-issuance — that follow-up is
-  enabled by this decision, not part of it.
+  enabled by this decision, not part of it. The shared `agent-ai` principal narrows the *identity*
+  granularity, not the privilege: the per-agent key ID is an audit hint, and the broker is where
+  per-agent authorization belongs.
+- **One AI-agent credential is a class secret.** The JWK password is a bearer credential for every AI
+  agent until the broker lands; deleting it revokes all agents, and a compromised agent can mint
+  `agent-ai` certificates with any key ID. Eight-hour certificates bound the exposure, and the broker
+  is the intended custody point. `cloudlab` remains on the fleet key and is outside this identity.
 - **Authentik becomes an availability dependency for new human logins.** If Authentik is down, existing
   user certificates keep working until they expire; the break-glass path covers the gap.
 - **Every host gains a trust file.** The SSH CA public keys are distributed the way the X.509 root
@@ -136,6 +154,10 @@ break-glass — outside daily use — and use Authentik as the human identity so
   in its SSH path.
 - **JWK-issued user certificates instead of an IdP** — rejected: a shared provisioner password is a
   secret, not an identity, and would give every holder the same principal.
+- **Per-agent principals and one JWK per agent** — the original design. Rejected after the credential
+  review: one broker-held credential is simpler to rotate, while per-agent key IDs keep the audit trail
+  and the broker restores per-agent revocation at the auth layer. Revisit if per-agent host denial is
+  required.
 - **File-held SSH CA keys** (step-ca's default) — not adopted, but recorded as the fallback if the TPM
   path fails on the guest. Measured behaviour: `step ca init --ssh` writes the SSH CA keys **unencrypted**
   ([research 43 §2.1](../research/43-ssh-certificates-step-ca.md)), which is exactly the custody gap this

@@ -4,7 +4,7 @@
   become: true
   roles:
     - common
-    - security
     - ca_trust
+    - security
     - docker_host
     - fluentbit

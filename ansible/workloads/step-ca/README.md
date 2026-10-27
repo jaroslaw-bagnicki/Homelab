@@ -12,7 +12,10 @@ CA private key held in the host's **TPM 2.0**. Decision:
 
 `step-ca` is a **native service, not a container** — the TPM KMS is pure Go on the stock binary, so
 there is no image to build and the CA keeps the smallest possible attack surface
-([research 36 §5](../../../docs/research/36-step-ca-machine-identity.md)).
+([research 36 §5](../../../docs/research/36-step-ca-machine-identity.md)). It also serves the fleet
+SSH CA: two SSH signing keys in the same TPM, host certificates, the `automation` control path and the
+shared `agent-ai` AI-agent identity ([ADR 41](../../../docs/decisions/41-ssh-certificates-step-ca.md),
+[runbook 40](../../../docs/runbooks/40-deploy-ssh-certificates.md)).
 
 ## Two-phase recipe (one idempotent run)
 
@@ -36,6 +39,10 @@ sealed key or clobber a CSR awaiting signing.
 - **Native systemd service** — enabled, `restart=on-failure`; no Docker.
 - **ACME provisioner** — added to `ca.json` so the reverse proxy ([#142](https://github.com/jaroslaw-bagnicki/Homelab/issues/142))
   and LAN services renew short-lived leaves automatically.
+- **SSH CA** — host and user signing keys in the TPM, `sshpop` for host renewal, `hosts@internal` for
+  initial host issuance, `automation@internal` for non-agent playbooks and `agent-ai@internal` for the
+  AI-agent class. The SSH templates fix each principal and preserve the requested key ID; the authority
+  policy allows only the fleet names and addresses.
 - **Checksum-verified tooling** — the current upstream release, verified against the release
   `checksums.txt` (gate #141: a truncated download produced a false "step-ca is broken" result).
 - **Provisioner password from AKV** — written to a root-only `file://` path, never in the unit's
@@ -62,6 +69,8 @@ sealed key or clobber a CSR awaiting signing.
 └── db/                     # badgerv2 database
 /var/lib/step-ca/tpm/key-homelab-intermediate-ca.tpmobj   # TPM sealed blob — NOT a key file
 /usr/local/bin/{step,step-ca,step-kms-plugin}
+/etc/step-ca/config/templates/ssh/{hosts,automation,agent-ai}.tpl
+/etc/step-ca/certs/ssh_{host,user}_ca_key.pub
 ```
 
 The `.tpmobj` is the **sealed blob** the TPM key lives in — it is useless off this TPM and required on
@@ -79,7 +88,10 @@ name and the ACME provisioner name are **hardcoded in the tasks/templates**. Onl
 | `step_ca_password_secret_name` | `step-ca-provisioner-password` | secret name |
 | `step_ca_password` | `""` | override to skip the Key Vault lookup (tests) |
 | `step_ca_csr_force` | `false` | regenerate the CSR from the existing TPM key (annual re-sign) |
-| `step_ca_reset` | `false` | recovery: clear the stale blob/CSR/public key/cert before recreating (e.g. after a PTT clear) |
+| `step_ca_reset` | `false` | recovery: clear the stale blob/CSR/public key/cert and SSH CA artefacts before recreating (e.g. after a PTT clear) |
+| `step_ca_ssh_key_custody` | `tpm` | `tpm` for both SSH CA keys; `file` is the documented fallback and requires an ADR 41 amendment |
+| `step_ca_ssh_hosts` | inventory minus `cloudlab` | Hosts allowed to receive host certificates |
+| `step_ca_ssh_provisioner_passwords` | `{}` | Override the Key Vault lookups (tests) |
 
 The repos to install are in `vars/main.yml` (`step_ca_releases`); the exact archive + checksums are
 resolved from the GitHub release API at run time (the `step-kms-plugin` asset is versioned), so the
@@ -88,9 +100,15 @@ current release is installed without pinning. Upgrades follow normal package pra
 
 ## Secrets
 
-- `step-ca-provisioner-password` — the CA provisioner password (`step_ca_password_secret_name`) in
+- `step-ca-provisioner-password` — the CA admin password (`step_ca_password_secret_name`) in
   `homelab-bysxdb-kv`. Written to `/etc/step-ca/secrets/password` (mode `0600`); the service
   reads it with `--password-file`.
+- `step-ca-ssh-hosts-password`, `step-ca-ssh-automation-password`, `step-ca-ssh-agent-ai-password` —
+  the SSH JWK provisioner passwords, seeded by
+  [`scripts/New-HomelabSshProvisionerPasswords.ps1`](../../../scripts/New-HomelabSshProvisionerPasswords.ps1).
+  The role uses them only to create the provisioners; per-identity passwords are not left on the guest.
+- `ssh-host-ca-pub`, `ssh-user-ca-pub` — the SSH CA public keys, published by
+  [`scripts/Set-HomelabSshCaKeys.ps1`](../../../scripts/Set-HomelabSshCaKeys.ps1) after the CA starts.
 
 ## Deploy
 

@@ -1,0 +1,326 @@
+---
+# SSH CA (ADR 41): two signing keys in the pve TPM, authority policy, and the
+# only three SSH identities — hosts, the control-node automation path, and the
+# shared AI-agent class. Per-agent key IDs are preserved by the templates.
+
+- name: Compute the SSH host policy names and addresses
+  ansible.builtin.set_fact:
+    step_ca_ssh_host_policy_dns: "{{ ['*.internal'] + step_ca_ssh_hosts }}"
+    step_ca_ssh_host_policy_ip: "{{ step_ca_ssh_hosts | map('extract', hostvars, 'ansible_host') | list }}"
+    step_ca_ssh_host_key_uri: >-
+      {{ 'tpmkms:name=' ~ step_ca_ssh_host_key_name if step_ca_ssh_key_custody == 'tpm'
+         else '/etc/step-ca/secrets/ssh_host_ca_key' }}
+    step_ca_ssh_user_key_uri: >-
+      {{ 'tpmkms:name=' ~ step_ca_ssh_user_key_name if step_ca_ssh_key_custody == 'tpm'
+         else '/etc/step-ca/secrets/ssh_user_ca_key' }}
+
+- name: Create the SSH host CA key in the TPM
+  when: step_ca_ssh_key_custody == 'tpm'
+  ansible.builtin.command:
+    argv:
+      - step
+      - kms
+      - create
+      - --json
+      - "tpmkms:name={{ step_ca_ssh_host_key_name }};storage-directory=/var/lib/step-ca/tpm"
+    creates: "/var/lib/step-ca/tpm/key-{{ step_ca_ssh_host_key_name }}.tpmobj"
+  environment:
+    STEPPATH: /etc/step-ca
+
+- name: Create the SSH user CA key in the TPM
+  when: step_ca_ssh_key_custody == 'tpm'
+  ansible.builtin.command:
+    argv:
+      - step
+      - kms
+      - create
+      - --json
+      - "tpmkms:name={{ step_ca_ssh_user_key_name }};storage-directory=/var/lib/step-ca/tpm"
+    creates: "/var/lib/step-ca/tpm/key-{{ step_ca_ssh_user_key_name }}.tpmobj"
+  environment:
+    STEPPATH: /etc/step-ca
+
+- name: Create the SSH host CA key file (documented fallback)
+  when: step_ca_ssh_key_custody == 'file'
+  ansible.builtin.command:
+    argv:
+      - step
+      - crypto
+      - keypair
+      - /etc/step-ca/secrets/ssh_host_ca_key.pub
+      - /etc/step-ca/secrets/ssh_host_ca_key
+      - --no-password
+      - --insecure
+    creates: /etc/step-ca/secrets/ssh_host_ca_key
+  environment:
+    STEPPATH: /etc/step-ca
+
+- name: Create the SSH user CA key file (documented fallback)
+  when: step_ca_ssh_key_custody == 'file'
+  ansible.builtin.command:
+    argv:
+      - step
+      - crypto
+      - keypair
+      - /etc/step-ca/secrets/ssh_user_ca_key.pub
+      - /etc/step-ca/secrets/ssh_user_ca_key
+      - --no-password
+      - --insecure
+    creates: /etc/step-ca/secrets/ssh_user_ca_key
+  environment:
+    STEPPATH: /etc/step-ca
+
+- name: Ensure the SSH certificate template directory exists
+  ansible.builtin.file:
+    path: /etc/step-ca/config/templates/ssh
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Install the SSH certificate templates
+  ansible.builtin.copy:
+    src: "ssh/{{ item.template }}"
+    dest: "/etc/step-ca/config/templates/ssh/{{ item.template }}"
+    owner: root
+    group: root
+    mode: "0600"
+  loop: "{{ step_ca_ssh_provisioners }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Read the live CA configuration before the SSH merge
+  ansible.builtin.slurp:
+    src: /etc/step-ca/config/ca.json
+  register: step_ca_ssh_live_raw
+
+- name: Record the CA configuration checksum before the SSH merge
+  ansible.builtin.stat:
+    path: /etc/step-ca/config/ca.json
+  register: step_ca_ssh_config_before
+
+- name: Parse the live CA configuration
+  ansible.builtin.set_fact:
+    step_ca_live_config: "{{ step_ca_ssh_live_raw.content | b64decode | from_json }}"
+    step_ca_existing_provisioners: "{{ (step_ca_ssh_live_raw.content | b64decode | from_json).authority.provisioners | default([]) }}"
+
+- name: Identify the admin and existing provisioners
+  ansible.builtin.set_fact:
+    step_ca_admin_provisioner: "{{ step_ca_existing_provisioners | selectattr('name', 'equalto', 'admin@internal') | first }}"
+    step_ca_ssh_existing_names: "{{ step_ca_existing_provisioners | map(attribute='name') | list }}"
+    step_ca_ssh_missing: "{{ step_ca_ssh_provisioners | rejectattr('name', 'in', step_ca_existing_provisioners | map(attribute='name') | list) | list }}"
+
+- name: Build the SSH duration claims
+  ansible.builtin.set_fact:
+    step_ca_ssh_durations:
+      minUserSSHCertDuration: 5m
+      defaultUserSSHCertDuration: "{{ step_ca_ssh_user_default_duration }}"
+      maxUserSSHCertDuration: "{{ step_ca_ssh_user_max_duration }}"
+      minHostSSHCertDuration: 5m
+      defaultHostSSHCertDuration: "{{ step_ca_ssh_host_default_duration }}"
+      maxHostSSHCertDuration: "{{ step_ca_ssh_host_max_duration }}"
+
+- name: Build the SSH authority policy and admin claims
+  ansible.builtin.set_fact:
+    step_ca_ssh_admin_claims: >-
+      {{ {} | combine(step_ca_ssh_durations) | combine({'enableSSHCA': true}) }}
+    step_ca_ssh_policy:
+      user:
+        allow:
+          email: "{{ step_ca_ssh_email_domains }}"
+          principal: "{{ step_ca_ssh_user_principals }}"
+      host:
+        allow:
+          dns: "{{ step_ca_ssh_host_policy_dns }}"
+          ip: "{{ step_ca_ssh_host_policy_ip }}"
+
+- name: Build the provisioner list with the SSH CA enabled
+  ansible.builtin.set_fact:
+    step_ca_ssh_merged_provisioners: >-
+      {{
+        (step_ca_existing_provisioners
+         | rejectattr('name', 'equalto', 'admin@internal')
+         | rejectattr('name', 'equalto', 'sshpop')
+         | list)
+        + [ step_ca_admin_provisioner
+            | combine({'claims': (step_ca_admin_provisioner.claims | default({})) | combine(step_ca_ssh_admin_claims)}) ]
+        + [{'type': 'SSHPOP', 'name': 'sshpop', 'claims': {'enableSSHCA': true}}]
+      }}
+
+- name: Build the SSH CA configuration
+  ansible.builtin.set_fact:
+    step_ca_ssh_merged_config: >-
+      {{
+        step_ca_live_config
+        | combine({
+            'ssh': {'hostKey': step_ca_ssh_host_key_uri, 'userKey': step_ca_ssh_user_key_uri},
+            'authority': step_ca_live_config.authority | combine({
+              'claims': (step_ca_live_config.authority.claims | default({})) | combine(step_ca_ssh_durations),
+              'policy': (step_ca_live_config.authority.policy | default({})) | combine({'ssh': step_ca_ssh_policy}, recursive=True),
+              'provisioners': step_ca_ssh_merged_provisioners
+            }, recursive=True)
+          }, recursive=True)
+      }}
+
+- name: Write the SSH CA configuration
+  ansible.builtin.copy:
+    content: "{{ step_ca_ssh_merged_config | to_nice_json }}"
+    dest: /etc/step-ca/config/ca.json
+    owner: root
+    group: root
+    mode: "0600"
+
+- name: Assert Azure controller credentials are set for the SSH provisioner passwords
+  when:
+    - step_ca_ssh_missing | length > 0
+    - step_ca_ssh_provisioner_passwords | length == 0
+  ansible.builtin.assert:
+    that:
+      - lookup('ansible.builtin.env', 'AZURE_CLIENT_ID', default='') | length > 0
+      - lookup('ansible.builtin.env', 'AZURE_CLIENT_SECRET', default='') | length > 0
+      - lookup('ansible.builtin.env', 'AZURE_TENANT_ID', default='') | length > 0
+    fail_msg: >-
+      AZURE_CLIENT_ID, AZURE_CLIENT_SECRET and AZURE_TENANT_ID must be set on the
+      Ansible controller for the SSH provisioner Key Vault lookups.
+  delegate_to: localhost
+
+- name: Fetch the SSH provisioner passwords from Key Vault
+  when: step_ca_ssh_missing | length > 0
+  vars:
+    step_ca_ssh_vault_url: "https://{{ step_ca_keyvault_name }}.vault.azure.net"
+    step_ca_ssh_azure_client_id: "{{ lookup('ansible.builtin.env', 'AZURE_CLIENT_ID') }}"
+    step_ca_ssh_azure_secret: "{{ lookup('ansible.builtin.env', 'AZURE_CLIENT_SECRET') }}"
+    step_ca_ssh_azure_tenant_id: "{{ lookup('ansible.builtin.env', 'AZURE_TENANT_ID') }}"
+  ansible.builtin.set_fact:
+    step_ca_ssh_provisioner_passwords: >-
+      {{ step_ca_ssh_provisioner_passwords | combine({
+           item.secret: lookup('azure.azcollection.azure_keyvault_secret',
+             item.secret, vault_url=step_ca_ssh_vault_url,
+             client_id=step_ca_ssh_azure_client_id,
+             secret=step_ca_ssh_azure_secret,
+             tenant=step_ca_ssh_azure_tenant_id)
+         }) }}
+  loop: "{{ step_ca_ssh_missing }}"
+  loop_control:
+    label: "{{ item.secret }}"
+  delegate_to: localhost
+  no_log: true
+
+- name: Configure the missing SSH JWK provisioners
+  when: step_ca_ssh_missing | length > 0
+  block:
+    - name: Assert the SSH provisioner passwords are available
+      ansible.builtin.assert:
+        that:
+          - step_ca_ssh_provisioner_passwords[item.secret] | default('') | length > 0
+        fail_msg: >-
+          Missing Key Vault secret '{{ item.secret }}'. Run
+          scripts/New-HomelabSshProvisionerPasswords.ps1 first.
+      loop: "{{ step_ca_ssh_missing }}"
+      loop_control:
+        label: "{{ item.secret }}"
+      no_log: true
+
+    - name: Create the temporary SSH provisioner password directory
+      ansible.builtin.file:
+        path: /run/step-ca-ssh
+        state: directory
+        owner: root
+        group: root
+        mode: "0700"
+
+    - name: Write the temporary SSH provisioner password files
+      ansible.builtin.copy:
+        content: "{{ step_ca_ssh_provisioner_passwords[item.secret] }}"
+        dest: "/run/step-ca-ssh/{{ item.name | replace('@', '_') }}.password"
+        owner: root
+        group: root
+        mode: "0600"
+      loop: "{{ step_ca_ssh_missing }}"
+      loop_control:
+        label: "{{ item.name }}"
+      no_log: true
+
+    - name: Add the missing SSH JWK provisioners
+      ansible.builtin.command:
+        argv:
+          - step
+          - ca
+          - provisioner
+          - add
+          - "{{ item.name }}"
+          - --type
+          - JWK
+          - --create
+          - --password-file
+          - "/run/step-ca-ssh/{{ item.name | replace('@', '_') }}.password"
+          - --ca-config
+          - /etc/step-ca/config/ca.json
+      loop: "{{ step_ca_ssh_missing }}"
+      loop_control:
+        label: "{{ item.name }}"
+      changed_when: true
+      environment:
+        STEPPATH: /etc/step-ca
+  always:
+    - name: Remove the temporary SSH provisioner password files
+      ansible.builtin.file:
+        path: /run/step-ca-ssh
+        state: absent
+
+- name: Enforce the SSH CA provisioner settings
+  ansible.builtin.command:
+    argv:
+      - step
+      - ca
+      - provisioner
+      - update
+      - "{{ item.name }}"
+      - --ssh
+      - --ssh-user-default-dur
+      - "{{ item.user_default }}"
+      - --ssh-user-max-dur
+      - "{{ item.user_max }}"
+      - --ssh-host-default-dur
+      - "{{ item.host_default }}"
+      - --ssh-host-max-dur
+      - "{{ item.host_max }}"
+      - --ssh-template
+      - "/etc/step-ca/config/templates/ssh/{{ item.template }}"
+      - --ca-config
+      - /etc/step-ca/config/ca.json
+  loop: "{{ step_ca_ssh_provisioners }}"
+  loop_control:
+    label: "{{ item.name }}"
+  changed_when: false
+  environment:
+    STEPPATH: /etc/step-ca
+
+- name: Record the CA configuration checksum after the SSH merge
+  ansible.builtin.stat:
+    path: /etc/step-ca/config/ca.json
+  register: step_ca_ssh_config_after
+
+- name: Determine whether the SSH CA configuration changed
+  ansible.builtin.set_fact:
+    step_ca_ssh_config_changed: >-
+      {{
+        step_ca_ssh_config_before.stat.checksum | default('')
+        != step_ca_ssh_config_after.stat.checksum | default('')
+      }}
+
+- name: Check for the certificates needed to start step-ca
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  register: step_ca_ssh_cert_files
+  loop:
+    - /etc/step-ca/certs/intermediate_ca.crt
+    - /etc/step-ca/certs/root_ca.crt
+
+- name: Restart step-ca with the SSH CA configuration
+  when:
+    - step_ca_ssh_cert_files.results | selectattr('stat.exists', 'equalto', true) | list | length == 2
+    - step_ca_ssh_config_changed | bool
+  ansible.builtin.systemd:
+    name: step-ca
+    state: restarted

@@ -22,7 +22,7 @@ deliberately left "the SSH-certificate use of the same CA" out of scope and park
 
 > **Decision authority:** [ADR 41](../decisions/41-ssh-certificates-step-ca.md) records the settled
 > outcome — certificates instead of keys, host certificates first, **Authentik** as the human IdP,
-> per-agent principals, TPM-held SSH CA keys, fleet key out of daily use (break-glass only). The rows below are the
+> one shared `agent-ai` identity with per-agent key IDs, TPM-held SSH CA keys, fleet key out of daily use (break-glass only). The rows below are the
 > analysis that fed it; where they differ, the ADR wins.
 
 > **Verification status.** Everything below marked **verified upstream** or **measured** was checked
@@ -41,7 +41,7 @@ deliberately left "the SSH-certificate use of the same CA" out of scope and park
 | Which half first? | **Host certificates first** — they need no identity provider and kill `known_hosts` pinning; user certificates once an IdP exists (§6) | §2.2, §6 |
 | Where do user identities come from? | **Decided:** **Authentik** via OIDC — Entra ID rejected ([idea 11](../ideas/11-authentik-idp.md) is the IdP workstream). Until it is deployed, host certificates only | §2.2 |
 | Keep the fleet key? | **Yes, as break-glass only — out of daily use.** A CA outage must not be an SSH outage (§7) | [ADR 41](../decisions/41-ssh-certificates-step-ca.md) |
-| Do agents get their own identities? | **Decided:** yes — one principal and one issuing credential per agent, ≤ 8 h certificates, revocable independently | [ADR 41](../decisions/41-ssh-certificates-step-ca.md) |
+| Do agents get their own identities? | **Decided:** one shared `agent-ai` principal and one JWK credential, with per-agent key IDs; ≤ 8 h certificates, class-level revocation, broker planned | [ADR 41](../decisions/41-ssh-certificates-step-ca.md) |
 | What is the biggest new risk? | SSH CA key custody — step-ca's default is **plain files on `ca`**. **Decided:** hold them in the `pve` TPM (§7.2) | measured §2.1 |
 
 ---
