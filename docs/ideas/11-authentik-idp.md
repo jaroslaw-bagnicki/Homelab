@@ -7,7 +7,7 @@
 > [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md)); what remains is **who** is
 > calling.
 
-**Status**: 🧠 Idea — no lab decision taken yet  
+**Status**: ✅ Decided — [ADR 44](../decisions/44-authentik-identity-provider.md) (Accepted 2026-10-27); implementation tracked in [#165](https://github.com/jaroslaw-bagnicki/Homelab/issues/165)  
 **Date**: 2026-10-17 (hosting follow-up 2026-10-18)  
 **Sources**: [Gemini — what Authentik is, Caddy/VictoriaLogs integration, local-only deployment](https://share.gemini.google/hybMZLfvSa85) (published 2026-10-17) · [Gemini — Authentik hosting and integration](https://gemini.google.com/share/df958018b379) (published 2026-10-18), written up as [research 42](../research/42-authentik-hosting.md)  
 **Related**: [ADR 34](../decisions/34-lan-tls-only.md) (transport, not users) · [idea 10](10-internal-ca-dns-stack.md) (the access stack this sits on) · [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) / [ADR 37](../decisions/37-lan-name-space-internal.md) (TLS and names) · [ADR 36](../decisions/36-log-collector-fluentbit.md) / [ADR 35](../decisions/35-log-store-victorialogs.md) (log shipping) · [ADR 31](../decisions/31-static-address-scheme.md) (guest addressing) · [ADR 22](../decisions/22-k3s-arc-homelab.md) (k3s platform)
@@ -92,6 +92,10 @@ as a candidate for the lab's local identity provider.
 Hosting follow-up ([research 42](../research/42-authentik-hosting.md)): [ADR 40](../decisions/40-internal-dns-proxy-edge.md)'s `edge` Caddy gates each site with `forward_auth` ([`copy_headers`](https://caddyserver.com/docs/caddyfile/directives/forward_auth)), native-OIDC apps skip it, and audit goes out as JSON through the existing Fluent Bit ([ADR 36](../decisions/36-log-collector-fluentbit.md)). The IdP beside the always-on stacks is sound **only** with three guards: management planes stay reachable without SSO, resource limits keep logins fast, and the PostgreSQL dump ships **together** with `AUTHENTIK_SECRET_KEY`.
 
 ## Open questions
+
+> Placement, break-glass, backup, logging, integration patterns and scope are settled by
+> [ADR 44](../decisions/44-authentik-identity-provider.md), which owns those decisions; what remains open
+> below is implementation detail tracked in [#165](https://github.com/jaroslaw-bagnicki/Homelab/issues/165).
 
 - **Single point of failure** — authentik down means every forward-auth service is down. What is
   the break-glass path (Caddy site bypass, local Proxmox realm) and the acceptable RTO? Portainer/

@@ -4,7 +4,7 @@
 **Date**: 2026-10-27
 
 **Workstreams**: [SSH host + agent certs #161](https://github.com/jaroslaw-bagnicki/Homelab/issues/161) · [SSH human certs #166](https://github.com/jaroslaw-bagnicki/Homelab/issues/166) · [FreeIPA #164](https://github.com/jaroslaw-bagnicki/Homelab/issues/164) · [Authentik #165](https://github.com/jaroslaw-bagnicki/Homelab/issues/165)
-**Decisions**: [ADR 41](../decisions/41-ssh-certificates-step-ca.md) (Accepted) · [ADR 42](../decisions/42-pki-topology-sibling-cas.md) (Proposed) · [ADR 43](../decisions/43-freeipa-domain-realm.md) (Proposed) · **ADR 44 — Authentik** (not yet written)
+**Decisions**: [ADR 41](../decisions/41-ssh-certificates-step-ca.md) (Accepted) · [ADR 42](../decisions/42-pki-topology-sibling-cas.md) (Accepted) · [ADR 43](../decisions/43-freeipa-domain-realm.md) (Accepted) · [ADR 44](../decisions/44-authentik-identity-provider.md) (Accepted)
 **Analysis**: [research 41](../research/41-machine-identity-kerberos.md) · [research 42](../research/42-authentik-hosting.md) · [research 43](../research/43-ssh-certificates-step-ca.md) · [research 46](../research/46-identity-and-access-stack.md) · [research 48](../research/48-pki-topology-step-ca-freeipa.md)
 **Ideas**: [11 Authentik](../ideas/11-authentik-idp.md) · [13 FreeIPA](../ideas/13-freeipa-domain-controller.md) · [15 second Proxmox node](../ideas/15-second-proxmox-node.md)
 
@@ -39,6 +39,8 @@ disagree, the ADR wins and this document is corrected.
 | **4** | **Human certificates** — OIDC provisioner, `admin@internal` `enableSSHCA: false`, principals on final names, runbook, close-out (split out of #161) | [#166](https://github.com/jaroslaw-bagnicki/Homelab/issues/166) | stage 3 | A non-member **cannot** obtain a certificate; no human-held JWK path can mint an SSH certificate |
 
 ## Stage 0 — Decisions
+
+> ✅ **Complete 2026-10-27** — ADR 42 and ADR 43 accepted, [ADR 44](../decisions/44-authentik-identity-provider.md) written.
 
 - **Accept ADR 43 and ADR 42.** A realm cannot be built on a *Proposed* ADR, and ADR 42 is the rule
   that governs IPA's CA at install time.
