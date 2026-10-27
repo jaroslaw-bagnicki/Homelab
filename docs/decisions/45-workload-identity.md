@@ -35,8 +35,9 @@ every access to a lab service.**
    | Azure resources | Entra service principal, or UAMI Workload Identity on k3s | [ADR 16](16-agent-identity-pattern.md) |
    | Pod → API server and in-cluster services | k3s projected service-account token | [ADR 22](22-k3s-arc-homelab.md) |
 
-2. **One identity per workload, and it lives in the directory.** `svc-<workload>` is a non-person user in
-   FreeIPA — `/sbin/nologin`, no usable password, no MFA enrolment — and a member of **`workloads`**. That
+2. **One identity per workload, and for lab-service access it lives in the directory.** `svc-<workload>` is
+   a non-person user in FreeIPA — `/sbin/nologin`, no usable password, no MFA enrolment — and a member of
+   **`workloads`**. That
    group is the only scope the Authentik LDAP source syncs for workloads, and it never appears in an
    HBAC or `sudo` rule. The Entra and k3s rows of the table above are **not** directory identities — a
    service principal and a service-account token stay with the platform that manages them (item 7), so no
