@@ -78,7 +78,8 @@ like the SFF, not the Micro.
 5. **HA the one workload that needs it** — a restart-on-failure rule for the Home Assistant VM once it
    exists. At this point the guest still lives on `local-lvm`, so verify **process-level** recovery on the
    same node; a node-loss test cannot pass until the disk exists on the survivor (step 7).
-6. **Rebalance memory** — move `vtstack` to `pve2` so `pve1` has room for the domain controller. **`ca`
+6. **Rebalance memory** — move `vtstack` to `pve2` so `pve1` has room for the domain controller and the
+   Authentik LXC ([ADR 44](../decisions/44-authentik-identity-provider.md)). **`ca`
    stays on `pve1`**: its step-ca intermediate is sealed to this host's TPM
    ([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md),
    [runbook 35](../runbooks/35-deploy-step-ca.md)), so moving the guest would lose key access.

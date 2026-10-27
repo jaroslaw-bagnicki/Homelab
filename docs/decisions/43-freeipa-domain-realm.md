@@ -1,7 +1,7 @@
 # FreeIPA as the Lab's Domain — `ipa.internal`, Technitium Keeps DNS
 
 **Date:** 2026-10-25  
-**Status:** Proposed  
+**Status:** Accepted  
 
 ---
 
@@ -63,6 +63,12 @@ DNS.**
    alone.
 9. **Rollout order**: server → `ipa-backup` and a rehearsed restore → one disposable client → one HBAC rule
    and one `sudo` rule (proving refusal as well as success) → the rest of the fleet.
+10. **Non-person workload identities live in this directory too.** A workload that needs a lab-service
+    identity is a `svc-<workload>` user — `/sbin/nologin`, no usable password, no MFA enrolment, member of
+    **`workloads`** — never an Authentik-local account and never an enrolled container
+    ([ADR 45](45-workload-identity.md)). A host object may exist purely to parent service principals: it is
+    a **naming shell**, created with `--no-reverse`, granted no `host/` keytab, and never enrolled as a
+    client. The `workloads` group never appears in an HBAC or `sudo` rule.
 
 ## Consequences
 
@@ -73,7 +79,8 @@ DNS.**
   answering `ipa.internal` — not `edge`'s Caddy and not a `step-ca` leaf. That is deliberate: when the
   domain is what is broken, its UI must still be reachable to fix it.
 - **The node's memory is the binding constraint.** The domain joins `pve`'s 8 GB beside Netdata, NUT,
-  VictoriaLogs, the `ca` guest and the planned HA VM — which is why the second-node work
+  VictoriaLogs, the `ca` guest, the Authentik guest ([ADR 44](44-authentik-identity-provider.md)) and the
+  planned HA VM — which is why the second-node work
   ([idea 15](../ideas/15-second-proxmox-node.md)) is sequenced alongside, not after.
 - **Time and DNS become silent failure modes.** Kerberos tolerates ~5 minutes of skew (chrony everywhere
   before enrolment); a missing SRV record presents as a wrong password.
@@ -82,6 +89,9 @@ DNS.**
 - **Automation stays certificate-based.** Ansible keeps authenticating with `step-ca` certificates under
   the `automation` principal ([ADR 41](41-ssh-certificates-step-ca.md)); keytabs are for file protocols and
   Kerberos-aware services, not for playbook transport.
+- **The directory now holds machines as well as people.** `svc-` objects share the user namespace with
+  humans, so a naming convention plus group scoping is what keeps HBAC rules and `ipa user-find` sane —
+  and a naming-shell host object must not be mistaken for an enrolled client in the host registry.
 - **Backups must capture LDAP, Kerberos keys and CA material together.** Restoring one without the others
   leaves a domain nobody can authenticate against.
 - **HBAC and sudo rules are only trustworthy once refusal is tested.** Granting is easy to verify;
