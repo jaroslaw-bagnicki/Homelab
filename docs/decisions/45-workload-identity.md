@@ -24,8 +24,8 @@ no stable FQDN, no PTR, ephemeral lifetime.
 **Adopt protocol-driven mechanism selection, with one workload identity per workload created in the
 directory.**
 
-1. **The mechanism is chosen by protocol, never by fashion** — one mechanism per consumer, and no service
-   accepts two:
+1. **The mechanism is chosen by protocol, never by fashion** — one mechanism per protocol, and no service
+   accepts two mechanisms for the same access:
 
    | Consumer | Mechanism | Owner |
    |---|---|---|

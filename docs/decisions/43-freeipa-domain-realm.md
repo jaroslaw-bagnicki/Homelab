@@ -79,7 +79,8 @@ DNS.**
   answering `ipa.internal` — not `edge`'s Caddy and not a `step-ca` leaf. That is deliberate: when the
   domain is what is broken, its UI must still be reachable to fix it.
 - **The node's memory is the binding constraint.** The domain joins `pve`'s 8 GB beside Netdata, NUT,
-  VictoriaLogs, the `ca` guest and the planned HA VM — which is why the second-node work
+  VictoriaLogs, the `ca` guest, the Authentik guest ([ADR 44](44-authentik-identity-provider.md)) and the
+  planned HA VM — which is why the second-node work
   ([idea 15](../ideas/15-second-proxmox-node.md)) is sequenced alongside, not after.
 - **Time and DNS become silent failure modes.** Kerberos tolerates ~5 minutes of skew (chrony everywhere
   before enrolment); a missing SRV record presents as a wrong password.
