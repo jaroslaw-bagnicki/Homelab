@@ -12,6 +12,7 @@
 | [Ideas](ideas/README.md) | Pre-decision brainstorming — ideas, possibilities, and early-stage exploration |
 | [Research](research/README.md) | Exploratory research — topic investigations, comparisons, trade-off analyses |
 | [Runbooks](runbooks/README.md) | Step-by-step implementation and operational guides |
+| [Plans](plans/README.md) | Multi-stage rollout plans — the order workstreams are built in, and each stage's exit gate |
 | [Reports](reports/README.md) | Project quality assessments — point-in-time reviews of process, docs, and IaC |
 | [Workloads](workloads.md) | Self-contained Ansible workload recipes — index, conventions, and deployment references |
 | [Private CA offline signing](private-ca-offline-signing/README.md) | The air-gapped signing kit — create the offline root and sign the intermediate CA |
