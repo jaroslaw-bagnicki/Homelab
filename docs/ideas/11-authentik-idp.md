@@ -7,7 +7,7 @@
 > [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md)); what remains is **who** is
 > calling.
 
-**Status**: 🧠 Idea — no lab decision taken yet  
+**Status**: ✅ Decided — [ADR 44](../decisions/44-authentik-identity-provider.md) (Accepted 2026-10-27); implementation tracked in [#165](https://github.com/jaroslaw-bagnicki/Homelab/issues/165)  
 **Date**: 2026-10-17 (hosting follow-up 2026-10-18)  
 **Sources**: [Gemini — what Authentik is, Caddy/VictoriaLogs integration, local-only deployment](https://share.gemini.google/hybMZLfvSa85) (published 2026-10-17) · [Gemini — Authentik hosting and integration](https://gemini.google.com/share/df958018b379) (published 2026-10-18), written up as [research 42](../research/42-authentik-hosting.md)  
 **Related**: [ADR 34](../decisions/34-lan-tls-only.md) (transport, not users) · [idea 10](10-internal-ca-dns-stack.md) (the access stack this sits on) · [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) / [ADR 37](../decisions/37-lan-name-space-internal.md) (TLS and names) · [ADR 36](../decisions/36-log-collector-fluentbit.md) / [ADR 35](../decisions/35-log-store-victorialogs.md) (log shipping) · [ADR 31](../decisions/31-static-address-scheme.md) (guest addressing) · [ADR 22](../decisions/22-k3s-arc-homelab.md) (k3s platform)
@@ -80,11 +80,16 @@ pass.
 Entra ID appears in the thread only as a **federation source** (its guest-account scenario) — not
 as a candidate for the lab's local identity provider.
 
-## Placement — open
+## Placement — decided
+
+**Decided by [ADR 44](../decisions/44-authentik-identity-provider.md): an unprivileged LXC on `pve`** —
+outside the k3s cluster that will consume it, sharing one lifecycle with the domain and the CA, with the
+second Proxmox node ([idea 15](15-second-proxmox-node.md)) absorbing the memory cost. The table below is the
+analysis that fed the decision.
 
 | Host | Shape | Assessment |
 |---|---|---|
-| **`lab`** (M910q) | Docker Compose now; k3s workload later | **Leading candidate** — 16 GB is the fleet's only real headroom, and `lab` is already the workload host; the k3s migration ([ADR 22](../decisions/22-k3s-arc-homelab.md)) lifts it later. The follow-up thread endorses it: the IdP beside the always-on stacks shortens the auth hop and local outpost management |
+| `lab` (M910q) | Docker Compose now; k3s workload later | **Runner-up** — 16 GB is the fleet's only real headroom, and `lab` is already the workload host; the k3s migration ([ADR 22](../decisions/22-k3s-arc-homelab.md)) lifts it later. The follow-up thread endorses it: the IdP beside the always-on stacks shortens the auth hop and local outpost management |
 | `pve` | unprivileged LXC, fits the `.21x` guest scheme | **Tight** — 8 GB already carries Netdata, NUT, VictoriaLogs, `step-ca` and the planned HA VM + two LXCs; authentik adds a server, a worker and PostgreSQL (Redis is gone since 2025.10), plus an external outpost only if the embedded one is not used |
 | `edge` | native or Docker beside Caddy | **No room** — 2 GB total ([hardware](../hardware.md)), and the ingress box already has to carry Caddy for the inbound plane ([ADR 24](../decisions/24-edge-ingress-appliance.md)) |
 | `cloudlab` | Compose on the VPS | **Rejected** — an IdP for LAN services must not depend on the WAN, and it would put the admin plane on the public internet |
@@ -92,6 +97,10 @@ as a candidate for the lab's local identity provider.
 Hosting follow-up ([research 42](../research/42-authentik-hosting.md)): [ADR 40](../decisions/40-internal-dns-proxy-edge.md)'s `edge` Caddy gates each site with `forward_auth` ([`copy_headers`](https://caddyserver.com/docs/caddyfile/directives/forward_auth)), native-OIDC apps skip it, and audit goes out as JSON through the existing Fluent Bit ([ADR 36](../decisions/36-log-collector-fluentbit.md)). The IdP beside the always-on stacks is sound **only** with three guards: management planes stay reachable without SSO, resource limits keep logins fast, and the PostgreSQL dump ships **together** with `AUTHENTIK_SECRET_KEY`.
 
 ## Open questions
+
+> Placement, break-glass, backup, logging, integration patterns and scope are settled by
+> [ADR 44](../decisions/44-authentik-identity-provider.md), which owns those decisions; what remains open
+> below is implementation detail tracked in [#165](https://github.com/jaroslaw-bagnicki/Homelab/issues/165).
 
 - **Single point of failure** — authentik down means every forward-auth service is down. What is
   the break-glass path (Caddy site bypass, local Proxmox realm) and the acceptable RTO? Portainer/
@@ -102,13 +111,14 @@ Hosting follow-up ([research 42](../research/42-authentik-hosting.md)): [ADR 40]
   `edge` Caddy call it across the LAN; that hop must be TLS or earn a row in the
   [ADR 34](../decisions/34-lan-tls-only.md) exception table, and a proxy outpost on the proxy host
   may be the cleaner shape. Verify the outpost's HTTPS listener.
-- **Placement vs k3s timing** — if authentik lands on `lab` as a Compose stack it moves again when
-  [ADR 22](../decisions/22-k3s-arc-homelab.md) executes; decide whether to wait, or to accept the
-  second migration (Helm chart, or the Compose stack left beside k3s).
+- **Placement vs k3s timing** — settled: the IdP runs on `pve`, **outside** the cluster
+  ([ADR 44](../decisions/44-authentik-identity-provider.md)), so there is no second migration to absorb and
+  no Helm move to plan.
 - **First protected services** — start with what cannot authenticate itself (Netdata) and what has
   native OIDC (Proxmox, Grafana later); leave basic-auth services alone until proven.
 - **Federation scope** — GitHub/Entra ID as upstream IdP is possible; the thread's Entra
-  guest-account mapping is a B2B feature the lab has no use for. Local accounts + passkeys first.
+  guest-account mapping is a B2B feature the lab has no use for. Directory accounts + passkeys first; the
+  only local account is the bootstrap `akadmin` ([ADR 44](../decisions/44-authentik-identity-provider.md) item 4).
 - **Claims to verify upstream** — Proxmox OIDC realm, OMV LDAP support, and the outpost's HTTPS listener; the
   follow-up thread's Compose file is from 2024 and its env-var spellings are unverified (the Redis removal it
   predates is confirmed — [research 42](../research/42-authentik-hosting.md)).
