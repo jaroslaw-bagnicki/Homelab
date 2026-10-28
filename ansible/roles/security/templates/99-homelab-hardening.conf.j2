@@ -4,9 +4,11 @@ PermitRootLogin prohibit-password
 {% if security_ssh_certs_enabled | bool %}
 TrustedUserCAKeys {{ security_ssh_user_ca_key }}
 AuthorizedPrincipalsFile /etc/ssh/auth_principals/%u
-HostKeyAlgorithms ssh-ed25519-cert-v01@openssh.com,ssh-ed25519
-{% if security_ssh_host_cert_final.stat.exists | default(false) %}
+{% if security_ssh_host_cert_final is defined and security_ssh_host_cert_final.stat.exists %}
 HostCertificate {{ security_ssh_host_cert }}
+HostKeyAlgorithms ssh-ed25519-cert-v01@openssh.com
+{% else %}
+HostKeyAlgorithms ssh-ed25519
 {% endif %}
 {% endif %}
 Match Address 192.168.2.0/24

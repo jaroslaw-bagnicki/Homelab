@@ -24,7 +24,7 @@ security_ssh_host_provisioner: hosts@internal
 security_ssh_host_provisioner_secret: step-ca-ssh-hosts-password
 # Override to skip the Key Vault lookup (tests).
 security_ssh_host_provisioner_password: ""
-security_ssh_renew_before_seconds: 172800
+security_ssh_renew_before_seconds: 176400
 security_ssh_authorized_principals_options: "no-port-forwarding,no-agent-forwarding,no-X11-forwarding"
 security_ssh_authorized_principals:
   fleetadm:

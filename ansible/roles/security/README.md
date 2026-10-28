@@ -37,7 +37,7 @@ timer, and manages the principal → Unix-account mapping
 | `security_ssh_ca_root_fallback` | `/etc/step-ca/certs/root_ca.crt` | Root on the `ca` guest. |
 | `security_ssh_host_provisioner` | `hosts@internal` | Provisioner for initial host issuance. |
 | `security_ssh_host_provisioner_secret` | `step-ca-ssh-hosts-password` | Key Vault secret for that provisioner. |
-| `security_ssh_renew_before_seconds` | `172800` | Renew when less than 48 h remain. |
+| `security_ssh_renew_before_seconds` | `176400` | Renew when less than 49 h remain. |
 | `security_ssh_authorized_principals` | `fleetadm: [automation, agent-ai]` | Per-account principal allow-list; override per host to deny a principal. |
 
 ## Notes
@@ -50,8 +50,9 @@ timer, and manages the principal → Unix-account mapping
   uses the current certificate through SSHPOP; no JWK password is stored on the host.
 - **The drop-in** sets `PermitRootLogin prohibit-password`, allows password auth only from
   `192.168.2.0/24` for non-root accounts, and is validated with `sshd -t` before install. When a host
-  certificate exists it adds `HostCertificate` and restricts `HostKeyAlgorithms` to the ed25519
-  certificate and plain ed25519 key so clients cannot fall back to an uncertified host key.
+  certificate exists it adds `HostCertificate` and restricts `HostKeyAlgorithms` to the certificate
+  algorithm only, so clients cannot fall back to an uncertified host key. Without a certificate it uses
+  plain `ssh-ed25519` for first contact.
 - **`AuthorizedPrincipalsFile`** is only consulted for certificates signed by a CA in
   `TrustedUserCAKeys`. The fleet key still uses `authorized_keys` and remains the break-glass path.
 - **Failure visibility**: the renewal service is a failed systemd unit on error; the stock Netdata

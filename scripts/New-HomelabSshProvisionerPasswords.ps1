@@ -8,12 +8,23 @@ $vault = 'homelab-bysxdb-kv'
 $secrets = 'step-ca-ssh-hosts-password', 'step-ca-ssh-automation-password', 'step-ca-ssh-agent-ai-password'
 
 foreach ($name in $secrets) {
-    $existing = Get-AzKeyVaultSecret -VaultName $vault -Name $name -ErrorAction SilentlyContinue
+    $existing = $null
+    try {
+        $existing = Get-AzKeyVaultSecret -VaultName $vault -Name $name -ErrorAction Stop
+    } catch {
+        $missing = $_.Exception.Message -match 'SecretNotFound|not found'
+        if (-not $missing -and $_.Exception.Response) {
+            $missing = $_.Exception.Response.StatusCode.value__ -eq 404
+        }
+        if (-not $missing) { throw }
+    }
+
     if ($existing) {
         Write-Warning "Secret '${name}' already exists - nothing written."
         Write-Host "  Rotate by removing/re-adding the provisioner, not by overwriting this secret."
         continue
     }
+
     $alphabet = [char[]]((48..57) + (65..90) + (97..122))
     [string]$pw = -join (1..32 | ForEach-Object { $alphabet[[Security.Cryptography.RandomNumberGenerator]::GetInt32(0, $alphabet.Length)] })
     Set-AzKeyVaultSecret -VaultName $vault -Name $name `

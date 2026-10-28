@@ -23,8 +23,8 @@ is **not** part of this runbook; until it lands, agents self-issue with the shar
 - [ ] `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID` exported on the controller.
 - [ ] Fleet key in `ssh-agent` (`ssh-add -l` shows `fleetadm@homelab`) and the LAN workstation/control
       node can reach `ca.internal:9000`.
-- [ ] `step` CLI on the controller. The dev container installs it in
-      `.devcontainer/scripts/setup-step.sh`; on a LAN workstation install smallstep/cli.
+- [ ] `step` CLI and OpenSSH (`ssh-keygen`, `ssh-add`) on the controller. The dev container installs
+      `step` in `.devcontainer/scripts/setup-step.ps1`; on a LAN workstation install smallstep/cli.
 - [ ] From the dev container only: `chmod 755 /workspaces/Homelab /workspaces/Homelab/ansible`.
 - [ ] The LAN workstation resolves `ca.internal` (Technitium or a hosts-file entry). The deploy adds
       `ca.internal` to `/etc/hosts` on every managed host.
@@ -90,8 +90,7 @@ The `ca_trust` role now fetches `ssh-host-ca-pub` / `ssh-user-ca-pub` from Key V
 `/etc/ssh/ssh_host_ca_key.pub` and `/etc/ssh/ssh_user_ca_key.pub`. `cloudlab` opts out in `host_vars`.
 
 ```powershell
-ansible-playbook ansible/playbooks/playbook-ca-trust.yml --diff \
-  --limit 'physical:proxmox_guests'
+ansible-playbook ansible/playbooks/playbook-ca-trust.yml --diff --limit 'physical:proxmox_guests'
 # cloudlab is intentionally untouched; running it there only re-verifies the X.509 root.
 ```
 
@@ -120,7 +119,9 @@ The `security` role now:
 - installs the `step` CLI on non-CA nodes;
 - issues the initial host certificate through `hosts@internal` **on the controller** — the password is
   fetched from Key Vault there, the host's public key is signed, and only the certificate is copied back;
-- deploys an SSHPOP renewal timer (`homelab-ssh-host-cert-renew.timer`) that renews when less than 48 h
+- on every run checks the remaining lifetime and reissues through `hosts@internal` when the certificate
+  is missing or within 49 h of expiry, so an expired certificate is not stuck;
+- deploys an SSHPOP renewal timer (`homelab-ssh-host-cert-renew.timer`) that renews when less than 49 h
   remain and reloads `sshd`;
 - writes `AuthorizedPrincipalsFile /etc/ssh/auth_principals/%u` with `automation` and `agent-ai`;
 - adds `TrustedUserCAKeys`, `HostCertificate` and an ed25519-only `HostKeyAlgorithms` to the hardening
@@ -147,7 +148,7 @@ ansible-playbook ansible/playbooks/playbook-ca.yml --diff
 sudo ssh-keygen -L -f /etc/ssh/ssh_host_ed25519_key-cert.pub
 sudo sshd -T | grep -E 'hostcertificate|trustedusercakeys|authorizedprincipalsfile|hostkeyalgorithms'
 sudo systemctl list-timers homelab-ssh-host-cert-renew.timer
-sudo /usr/local/sbin/homelab-ssh-host-cert-renew   # exits 0 when >48 h remain
+sudo /usr/local/sbin/homelab-ssh-host-cert-renew   # exits 0 when >49 h remain
 ```
 
 The certificate must list the short hostname, `<node>.internal` and the node's inventory address.
@@ -159,8 +160,7 @@ Fluent Bit ships to VictoriaLogs. Alarm delivery remains deferred per ADR 27.
 treated as near expiry, run the role once, then restore the normal threshold:
 
 ```powershell
-ansible-playbook ansible/playbooks/playbook-lab.yml --diff --limit lab \
-  -e security_ssh_renew_before_seconds=999999
+ansible-playbook ansible/playbooks/playbook-lab.yml --diff --limit lab -e security_ssh_renew_before_seconds=999999
 ansible-playbook ansible/playbooks/playbook-lab.yml --diff --limit lab
 ```
 

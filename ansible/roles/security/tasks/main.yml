@@ -140,11 +140,43 @@
          else (security_ssh_ca_root_fallback if security_ssh_stat_files.results[1].stat.exists else '') }}
     security_ssh_host_cert_stat: "{{ security_ssh_stat_files.results[2] }}"
 
+- name: Check whether the host certificate is within the renewal window
+  when:
+    - security_ssh_certs_enabled | bool
+    - security_ssh_host_cert_stat is defined
+    - security_ssh_host_cert_stat.stat.exists
+  ansible.builtin.shell:
+    cmd: |
+      set -eo pipefail
+      expires=$(ssh-keygen -L -f "{{ security_ssh_host_cert }}" | awk '/Valid:/{print $NF}')
+      now=$(date +%s)
+      expires_epoch=$(date -d "$expires" +%s)
+      remaining=$((expires_epoch - now))
+      if [ "$remaining" -le "{{ security_ssh_renew_before_seconds }}" ]; then
+        echo needs-issue
+      else
+        echo valid
+      fi
+    executable: /bin/bash
+  register: security_ssh_host_cert_validity
+  changed_when: false
+  failed_when: false
+
+- name: Decide whether the host certificate must be issued
+  when: security_ssh_certs_enabled | bool
+  ansible.builtin.set_fact:
+    security_ssh_host_cert_needs_issue: >-
+      {{
+        not (security_ssh_host_cert_stat.stat.exists | default(false))
+        or not (security_ssh_host_cert_validity is defined
+                and (security_ssh_host_cert_validity.stdout | default('') | trim) == 'valid')
+      }}
+
 - name: Read the host public key for controller-side signing
   when:
     - security_ssh_certs_enabled | bool
     - security_ssh_host_cert_stat is defined
-    - not security_ssh_host_cert_stat.stat.exists
+    - security_ssh_host_cert_needs_issue | default(false)
     - security_ssh_resolved_root is defined
     - security_ssh_resolved_root | length > 0
   ansible.builtin.slurp:
@@ -155,7 +187,7 @@
   when:
     - security_ssh_certs_enabled | bool
     - security_ssh_host_cert_stat is defined
-    - not security_ssh_host_cert_stat.stat.exists
+    - security_ssh_host_cert_needs_issue | default(false)
     - security_ssh_resolved_root is defined
     - security_ssh_resolved_root | length > 0
   ansible.builtin.slurp:
@@ -166,7 +198,7 @@
   when:
     - security_ssh_certs_enabled | bool
     - security_ssh_host_cert_stat is defined
-    - not security_ssh_host_cert_stat.stat.exists
+    - security_ssh_host_cert_needs_issue | default(false)
     - security_ssh_resolved_root is defined
     - security_ssh_resolved_root | length > 0
   block:
@@ -266,6 +298,8 @@
       become: false
       no_log: true
 
+    # `step ssh certificate --sign` strips the `.pub` suffix from the input key
+    # and writes `<base>-cert.pub`; the slurp below intentionally uses that name.
     - name: Sign the host public key on the controller
       when:
         - security_ssh_controller_step.rc == 0

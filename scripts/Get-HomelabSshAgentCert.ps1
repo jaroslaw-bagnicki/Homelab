@@ -6,12 +6,15 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+if (Test-Path variable:PSNativeCommandArgumentPassing) { $PSNativeCommandArgumentPassing = 'Standard' }
 $vault = 'homelab-bysxdb-kv'
 $passwordSecret = 'step-ca-ssh-agent-ai-password'
 $keyId = "agent-$Agent"
 
-if (-not (Get-Command step -ErrorAction SilentlyContinue)) {
-    throw "step CLI not found. Install smallstep/cli before issuing the agent certificate."
+foreach ($command in 'step', 'ssh-keygen', 'ssh-add') {
+    if (-not (Get-Command $command -ErrorAction SilentlyContinue)) {
+        throw "$command not found. Install the Smallstep CLI and OpenSSH client."
+    }
 }
 if ($IsLinux -and -not $env:SSH_AUTH_SOCK) {
     throw "SSH_AUTH_SOCK is not set; start ssh-agent before loading the agent certificate."
@@ -41,13 +44,21 @@ try {
         $RootPath = $rootFile
     }
 
-    & step ssh certificate $keyId $keyFile `
+    & ssh-keygen -t ed25519 -f $keyFile -N '' -q
+    if ($LASTEXITCODE -ne 0) { throw "ssh-keygen failed with exit code $LASTEXITCODE" }
+
+    & step ssh certificate `
+        --sign `
         --provisioner 'agent-ai@internal' `
         --provisioner-password-file $passwordFile `
         --ca-url $CaUrl `
         --root $RootPath `
-        --no-password --insecure
+        $keyId "$keyFile.pub"
     if ($LASTEXITCODE -ne 0) { throw "step ssh certificate failed with exit code $LASTEXITCODE" }
+    if (-not (Test-Path "$keyFile-cert.pub")) { throw "step did not write $keyFile-cert.pub" }
+
+    & ssh-add $keyFile
+    if ($LASTEXITCODE -ne 0) { throw "ssh-add failed with exit code $LASTEXITCODE" }
 
     Write-Host "AI-agent certificate loaded into ssh-agent (principal agent-ai, key ID $keyId)."
     Write-Host "The shared agent-ai JWK remains the bearer credential; the broker will replace it."
