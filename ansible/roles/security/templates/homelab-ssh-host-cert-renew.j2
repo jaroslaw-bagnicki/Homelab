@@ -5,7 +5,6 @@ CERT="{{ security_ssh_host_cert }}"
 KEY="{{ security_ssh_host_key }}"
 ROOT="{{ security_ssh_resolved_root }}"
 CA_URL="{{ security_ssh_ca_url }}"
-TRUSTED_CA_KEY="{{ security_ssh_host_ca_key }}"
 THRESHOLD="{{ security_ssh_renew_before_seconds }}"
 TAG="homelab-ssh-host-cert"
 
@@ -18,17 +17,6 @@ if ! EXPIRES_EPOCH=$(date -d "$EXPIRES" +%s); then
   exit 1
 fi
 NOW=$(date +%s)
-
-# A rotated CA (TPM-loss recovery) cannot be fixed by SSHPOP renewal - the new CA did
-# not sign this certificate. Leave the re-issue to the security playbook.
-if [ -f "$TRUSTED_CA_KEY" ]; then
-  SIGNING_CA=$(ssh-keygen -L -f "$CERT" | awk -F'SHA256:' '/Signing CA/{split($2, s, " "); print "SHA256:" s[1]}')
-  TRUSTED_CA=$(ssh-keygen -lf "$TRUSTED_CA_KEY" | awk '{print $2}')
-  if [ "$SIGNING_CA" != "$TRUSTED_CA" ]; then
-    logger -t "$TAG" -p user.warn "host certificate not signed by $TRUSTED_CA_KEY - run the security playbook to re-issue"
-    exit 0
-  fi
-fi
 
 if [ $((EXPIRES_EPOCH - NOW)) -gt "$THRESHOLD" ]; then
   exit 0
