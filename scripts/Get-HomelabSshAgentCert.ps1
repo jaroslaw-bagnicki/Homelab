@@ -19,6 +19,10 @@ foreach ($command in 'step', 'ssh-keygen', 'ssh-add') {
 if ($IsLinux -and -not $env:SSH_AUTH_SOCK) {
     throw "SSH_AUTH_SOCK is not set; start ssh-agent before loading the agent certificate."
 }
+$loaded = @(& ssh-add -L 2>$null)
+if ($loaded -match 'fleetadm@homelab') {
+    throw "The fleetadm break-glass key is already loaded; ssh would offer it before $keyId. Run 'ssh-add -D' (or start a fresh shell) and retry."
+}
 if (-not (Get-AzContext)) {
     Connect-AzAccount -UseDeviceAuthentication -Tenant cloud5.ovh | Out-Null
 }

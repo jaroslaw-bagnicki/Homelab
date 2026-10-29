@@ -42,12 +42,12 @@ if (-not (Get-AzContext)) {
   Write-Host ":: Reusing existing Azure context: $((Get-AzContext).Account.Id)" -ForegroundColor DarkGray
 }
 
-# Load fleet + VPS keys from Key Vault (ssh-add is idempotent — run every
-# session so fleetadm-key-priv is always present, even when the agent already
-# holds other keys)
+# Load the cloudlab VPS key from Key Vault. The fleetadm key is deliberately NOT
+# loaded here: it is root-equivalent break-glass (ADR 41) and is imported on
+# demand by scripts/Import-HomelabFleetKey.ps1. Agents and Ansible authenticate
+# with the agent-ai or automation certificate instead.
 $keyNames = [ordered]@{
-  'fleetadm-key-priv'     = 'fleetadm SSH key (fleetadm@homelab)'
-  'cloudlab-vps-key-priv' = 'legacy cloudlab VPS SSH key'
+  'cloudlab-vps-key-priv' = 'legacy cloudlab VPS key'
 }
 if ($env:SSH_AUTH_SOCK -and (Get-AzContext -ErrorAction SilentlyContinue)) {
   foreach ($secret in $keyNames.Keys) {

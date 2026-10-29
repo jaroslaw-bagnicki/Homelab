@@ -190,8 +190,8 @@ playbook, then restore the fleet key:
 ssh-add -D
 ./scripts/Get-HomelabSshAutomationCert.ps1
 ansible-playbook ansible/playbooks/playbook-lab.yml --diff
-# restore the fleet key from Key Vault for break-glass
-Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name fleetadm-key-priv -AsPlainText | ssh-add -
+# break-glass only: import the fleet key explicitly
+./scripts/Import-HomelabFleetKey.ps1
 ```
 
 **Break-glass drill.** Stop the CA, prove the fleet key still logs in, then restore:
