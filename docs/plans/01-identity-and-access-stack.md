@@ -63,8 +63,9 @@ signers, ADR 41 is amended to file custody **before** any host depends on the re
 
 **Identity loading (#170).** The dev-container profile loads no SSH key by default. `ssh-agent` starts
 empty; Ansible authenticates only with the identity placed there by the operator, the broker, or the
-agent. An AI agent may load the fleet key from Key Vault or use the `agent-ai` JWK to issue its
-certificate; the fleet key remains break-glass. No Ansible wrapper is introduced. The
+agent. An AI agent issues its certificate with the shared `agent-ai` JWK, and reaches for the fleet key
+only by running `scripts/Import-HomelabFleetKey.ps1` — break-glass, never a default. No Ansible wrapper
+is introduced. The
 `ControlMaster`/`ControlPersist` interaction must be resolved so a switch of agent identity cannot
 reuse an old connection.
 
