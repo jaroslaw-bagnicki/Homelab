@@ -25,6 +25,11 @@ security_ssh_host_provisioner_secret: step-ca-ssh-hosts-password
 # Override to skip the Key Vault lookup (tests).
 security_ssh_host_provisioner_password: ""
 security_ssh_renew_before_seconds: 176400
+# The CA whose key must have signed the host certificate. A mismatch means the CA was
+# rotated (TPM-loss recovery) and the certificate has to be re-issued, not renewed.
+security_ssh_host_ca_key: /etc/ssh/ssh_host_ca_key.pub
+# Re-issue regardless of remaining lifetime - the CA-rotation drill.
+security_ssh_host_cert_force_reissue: false
 security_ssh_authorized_principals_options: "no-port-forwarding,no-agent-forwarding,no-X11-forwarding"
 security_ssh_authorized_principals:
   fleetadm:

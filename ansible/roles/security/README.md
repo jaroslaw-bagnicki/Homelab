@@ -38,6 +38,8 @@ timer, and manages the principal → Unix-account mapping
 | `security_ssh_host_provisioner` | `hosts@internal` | Provisioner for initial host issuance. |
 | `security_ssh_host_provisioner_secret` | `step-ca-ssh-hosts-password` | Key Vault secret for that provisioner. |
 | `security_ssh_renew_before_seconds` | `176400` | Renew when less than 49 h remain. |
+| `security_ssh_host_ca_key` | `/etc/ssh/ssh_host_ca_key.pub` | The host CA whose signature the certificate must carry; a mismatch forces re-issue. |
+| `security_ssh_host_cert_force_reissue` | `false` | Re-issue regardless of remaining lifetime — the CA-rotation drill. |
 | `security_ssh_authorized_principals` | `fleetadm: [automation, agent-ai]` | Per-account principal allow-list; override per host to deny a principal. |
 
 ## Notes

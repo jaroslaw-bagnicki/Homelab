@@ -140,7 +140,7 @@
          else (security_ssh_ca_root_fallback if security_ssh_stat_files.results[1].stat.exists else '') }}
     security_ssh_host_cert_stat: "{{ security_ssh_stat_files.results[2] }}"
 
-- name: Check whether the host certificate is within the renewal window
+- name: Check the host certificate against the trusted CA and the renewal window
   when:
     - security_ssh_certs_enabled | bool
     - security_ssh_host_cert_stat is defined
@@ -152,6 +152,15 @@
       now=$(date +%s)
       expires_epoch=$(date -d "$expires" +%s)
       remaining=$((expires_epoch - now))
+      if [ -f "{{ security_ssh_host_ca_key }}" ]; then
+        signing_ca=$(ssh-keygen -L -f "{{ security_ssh_host_cert }}" \
+          | awk -F'SHA256:' '/Signing CA/{split($2, s, " "); print "SHA256:" s[1]}')
+        trusted_ca=$(ssh-keygen -lf "{{ security_ssh_host_ca_key }}" | awk '{print $2}')
+        if [ "$signing_ca" != "$trusted_ca" ]; then
+          echo ca-changed
+          exit 0
+        fi
+      fi
       if [ "$remaining" -le "{{ security_ssh_renew_before_seconds }}" ]; then
         echo needs-issue
       else
@@ -162,12 +171,23 @@
   changed_when: false
   failed_when: false
 
+- name: Report a host certificate signed by a previous CA
+  when:
+    - security_ssh_certs_enabled | bool
+    - security_ssh_host_cert_validity is defined
+    - (security_ssh_host_cert_validity.stdout | default('') | trim) == 'ca-changed'
+  ansible.builtin.debug:
+    msg: >-
+      The host certificate was not signed by {{ security_ssh_host_ca_key }} - re-issuing
+      under the current host CA (CA rotation, ADR 41 TPM-loss recovery).
+
 - name: Decide whether the host certificate must be issued
   when: security_ssh_certs_enabled | bool
   ansible.builtin.set_fact:
     security_ssh_host_cert_needs_issue: >-
       {{
-        not (security_ssh_host_cert_stat.stat.exists | default(false))
+        (security_ssh_host_cert_force_reissue | bool)
+        or not (security_ssh_host_cert_stat.stat.exists | default(false))
         or not (security_ssh_host_cert_validity is defined
                 and (security_ssh_host_cert_validity.stdout | default('') | trim) == 'valid')
       }}
