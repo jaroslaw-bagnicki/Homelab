@@ -24,12 +24,13 @@ if ($IsLinux) { chmod 700 $work }
 try {
     $key = Join-Path $work 'identity'
     $passwordFile = Join-Path $work 'password'
-
-    $password = Get-AzKeyVaultSecret -VaultName $vault -Name 'step-ca-ssh-agent-ai-password' -AsPlainText
-    Set-Content -LiteralPath $passwordFile -Value $password -NoNewline
-
     $rootFile = Join-Path $work 'root.crt'
+
+    # Fetch the provisioner password and the CA root from Key Vault.
+    $password = Get-AzKeyVaultSecret -VaultName $vault -Name 'step-ca-ssh-agent-ai-password' -AsPlainText
     $root = Get-AzKeyVaultSecret -VaultName $vault -Name 'ca-root-cert' -AsPlainText
+
+    Set-Content -LiteralPath $passwordFile -Value $password -NoNewline
     Set-Content -LiteralPath $rootFile -Value $root
 
     ssh-keygen -t ed25519 -f $key -N '' -q
