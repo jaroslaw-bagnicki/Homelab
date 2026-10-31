@@ -21,7 +21,7 @@ if (-not (Get-AzContext)) {
 }
 
 $password = Get-AzKeyVaultSecret -VaultName $vault -Name 'step-ca-ssh-automation-password' -AsPlainText -ErrorAction Stop
-if (-not $password) { throw "Secret '$passwordSecret' is empty or missing." }
+if (-not $password) { throw "Secret 'step-ca-ssh-automation-password' is empty or missing." }
 
 $work = Join-Path ([IO.Path]::GetTempPath()) 'homelab-ssh-automation'
 [System.IO.Directory]::CreateDirectory($work) | Out-Null
@@ -54,7 +54,7 @@ try {
     & ssh-add $keyFile
     if ($LASTEXITCODE -ne 0) { throw "ssh-add failed with exit code $LASTEXITCODE" }
 
-    Write-Host "Automation certificate loaded into ssh-agent (principal automation, key ID $keyId)."
+    Write-Host 'Automation certificate loaded into ssh-agent (principal automation).'
     Write-Host "Run 'ssh-add -L' to verify; the private key file is removed when this script exits."
 }
 finally {
