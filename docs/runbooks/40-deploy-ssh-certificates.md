@@ -7,9 +7,12 @@
 > 2026-10-27) and [ADR 45](../decisions/45-workload-identity.md) (SSH exception); issue
 > [#161](https://github.com/jaroslaw-bagnicki/Homelab/issues/161).
 
-**Status:** � In progress — M1 (SSH CA) and M2 (key distribution) complete 2026-10-31; M3 rolling out.
-Every section carries a verification gate; record the observed output under **Execution record** when
-it runs.
+**Status:** ✅ Delivered 2026-10-31 — §1–§6 executed against the fleet; each carries the observed output
+under **Execution record**. The operations section at the end is reference material for later changes,
+not part of the delivery sequence.
+
+The **delivery steps are §1–§6**; each carries a verification gate. §7 is not a delivery step and has no
+gate — it documents revocation, rotation and recovery for when the stack is already live.
 
 **Scope.** `pve`, `lab`, `edge`, `nas`, `vtstack` and `ca`. **`cloudlab` is deliberately excluded** — it
 has no LAN route to `ca.internal`, so it keeps the pinned host key and the fleet key. The AI-agent broker
@@ -301,18 +304,28 @@ revocation and should be the only holder of `step-ca-ssh-agent-ai-password`.
 > with the requested key ID preserved. Ansible ran over that identity alone:
 > `playbook-lab.yml` `ok=102 changed=1 failed=0`, with 4 certificate logins logged.
 
-## 7. Operations
+## Operations (reference — not part of this runbook's delivery)
+
+> **Not actionable for delivery.** Nothing in this section is executed to deliver §1–§6, and none of it
+> has a verification gate. It is kept here because it is the only place these procedures are written
+> down — reach for it when a credential must be revoked, rotated, or the CA rebuilt, not when rolling the
+> change out.
 
 - **Revoke the AI class:** remove `agent-ai@internal`; existing certificates remain valid until they
-  expire (≤ 8 h). Re-add it with a new password and update Key Vault.
-- **Revoke one agent:** not possible at the CA with a shared principal. Disable the agent's future
-  issuance at the broker when it lands; until then use the `RevokedKeys` KRL escalation for a single
-  certificate, or rotate the class.
+  expire (≤ 8 h). Re-add it with a new password and update Key Vault. The `step_ca` role recreates any
+  missing provisioner from its Key Vault password, so a removal that is meant to stick must also delete
+  `step-ca-ssh-agent-ai-password` — otherwise the next playbook run re-adds it.
+- **Revoke one agent:** not possible at the CA with a shared principal. The `RevokedKeys` KRL path is
+  **not wired**: the hardening drop-in sets `TrustedUserCAKeys` and `HostCertificate` but not
+  `RevokedKeys`, so a KRL is never consulted (confirmed: `sshd -T` reports `revokedkeys none`). Until
+  that is added and the broker lands, revoking one agent means rotating the whole class above.
 - **Rotate a JWK password:** remove and re-add the provisioner with a new password, update Key Vault,
   then re-issue the affected certificates. Removing the provisioner does not revoke existing certs.
 - **TPM loss:** run the step-ca workload with `-e step_ca_reset=true`, repeat the offline ceremony
   ([runbook 36](36-private-ca-init.md)), publish the new SSH CA public keys, re-run `ca_trust` and the
-  `security` role, then re-issue host certificates. The X.509 root is unaffected.
+  `security` role, then re-issue host certificates. The X.509 root is unaffected. The reset clears
+  `.active-intermediate.sha256` but not `.active-ca-config.sha256` — remove that file too, so the
+  rebuilt CA is treated as a configuration change.
 - **`cloudlab`:** stays on the fleet key and the pinned host key. A LAN↔VPS path (tunnel/VPN) is a
   prerequisite for including it; do not add its IP to `@cert-authority` until then.
 
