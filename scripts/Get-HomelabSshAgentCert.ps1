@@ -6,7 +6,7 @@ $ErrorActionPreference = 'Stop'
 $PSNativeCommandArgumentPassing = 'Standard'
 
 $vault = 'homelab-bysxdb-kv'
-$keyId = 'agent-' + $Agent
+$keyId = "agent-$Agent"
 
 if (-not $env:SSH_AUTH_SOCK) {
     throw 'SSH_AUTH_SOCK is not set; start ssh-agent first.'
@@ -24,10 +24,9 @@ if (-not (Get-AzContext)) {
 # Make ssh, ssh-keygen and step fail loudly instead of being checked one by one.
 $PSNativeCommandUseErrorActionPreference = $true
 
-$work = '/tmp/homelab-ssh-agent'
-Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
-New-Item -ItemType Directory -Path $work | Out-Null
-chmod 700 $work
+$work = Join-Path ([IO.Path]::GetTempPath()) 'homelab-ssh-agent'
+New-Item -ItemType Directory -Path $work -Force | Out-Null
+if ($IsLinux) { chmod 700 $work }
 
 try {
     $key = Join-Path $work 'identity'
@@ -52,7 +51,7 @@ try {
 
     ssh-add $key
 
-    Write-Host ('agent-ai certificate loaded into ssh-agent (key ID ' + $keyId + ', principal agent-ai).')
+    Write-Host "agent-ai certificate loaded into ssh-agent (key ID $keyId, principal agent-ai)."
 }
 finally {
     Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue

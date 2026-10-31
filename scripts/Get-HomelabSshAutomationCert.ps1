@@ -23,7 +23,7 @@ if (-not (Get-AzContext)) {
 $password = Get-AzKeyVaultSecret -VaultName $vault -Name 'step-ca-ssh-automation-password' -AsPlainText -ErrorAction Stop
 if (-not $password) { throw "Secret '$passwordSecret' is empty or missing." }
 
-$work = Join-Path ([IO.Path]::GetTempPath()) "homelab-automation-$(New-Guid)"
+$work = Join-Path ([IO.Path]::GetTempPath()) 'homelab-ssh-automation'
 [System.IO.Directory]::CreateDirectory($work) | Out-Null
 if ($IsLinux) { & chmod 700 $work }
 $passwordFile = Join-Path $work 'provisioner-password'
