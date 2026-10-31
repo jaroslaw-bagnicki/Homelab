@@ -1,0 +1,31 @@
+#!/bin/sh
+set -eu
+
+CERT="{{ security_ssh_host_cert }}"
+KEY="{{ security_ssh_host_key }}"
+ROOT="{{ security_ssh_resolved_root }}"
+CA_URL="{{ security_ssh_ca_url }}"
+THRESHOLD="{{ security_ssh_renew_before_seconds }}"
+TAG="homelab-ssh-host-cert"
+
+[ -f "$CERT" ] || { logger -t "$TAG" -p user.err "host certificate missing"; exit 1; }
+[ -n "$ROOT" ] && [ -f "$ROOT" ] || { logger -t "$TAG" -p user.err "CA root missing"; exit 1; }
+
+EXPIRES=$(ssh-keygen -L -f "$CERT" | awk '/Valid:/{print $NF}')
+if ! EXPIRES_EPOCH=$(date -d "$EXPIRES" +%s); then
+  logger -t "$TAG" -p user.err "cannot parse certificate expiry: $EXPIRES"
+  exit 1
+fi
+NOW=$(date +%s)
+
+if [ $((EXPIRES_EPOCH - NOW)) -gt "$THRESHOLD" ]; then
+  exit 0
+fi
+
+if ! step ssh renew -f "$CERT" "$KEY" --ca-url "$CA_URL" --root "$ROOT"; then
+  logger -t "$TAG" -p user.crit "host certificate renewal failed"
+  exit 1
+fi
+
+systemctl reload ssh
+logger -t "$TAG" -p user.info "host certificate renewed"

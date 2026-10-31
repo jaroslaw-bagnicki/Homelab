@@ -3,7 +3,7 @@
 **Status**: 🔨 Active — stage 1 (SSH CA foundation) is the only stage unblocked
 **Date**: 2026-10-27
 
-**Workstreams**: [SSH host + agent certs #161](https://github.com/jaroslaw-bagnicki/Homelab/issues/161) · [SSH human certs #166](https://github.com/jaroslaw-bagnicki/Homelab/issues/166) · [FreeIPA #164](https://github.com/jaroslaw-bagnicki/Homelab/issues/164) · [Authentik #165](https://github.com/jaroslaw-bagnicki/Homelab/issues/165) · [Workload identity #168](https://github.com/jaroslaw-bagnicki/Homelab/issues/168)
+**Workstreams**: [SSH host + agent certs #161](https://github.com/jaroslaw-bagnicki/Homelab/issues/161) · [SSH identity loading #170](https://github.com/jaroslaw-bagnicki/Homelab/issues/170) · [SSH human certs #166](https://github.com/jaroslaw-bagnicki/Homelab/issues/166) · [FreeIPA #164](https://github.com/jaroslaw-bagnicki/Homelab/issues/164) · [Authentik #165](https://github.com/jaroslaw-bagnicki/Homelab/issues/165) · [Workload identity #168](https://github.com/jaroslaw-bagnicki/Homelab/issues/168)
 **Decisions**: [ADR 41](../decisions/41-ssh-certificates-step-ca.md) (Accepted) · [ADR 42](../decisions/42-pki-topology-sibling-cas.md) (Accepted) · [ADR 43](../decisions/43-freeipa-domain-realm.md) (Accepted) · [ADR 44](../decisions/44-authentik-identity-provider.md) (Accepted) · [ADR 45](../decisions/45-workload-identity.md) (Accepted)
 **Analysis**: [research 41](../research/41-machine-identity-kerberos.md) · [research 42](../research/42-authentik-hosting.md) · [research 43](../research/43-ssh-certificates-step-ca.md) · [research 46](../research/46-identity-and-access-stack.md) · [research 48](../research/48-pki-topology-step-ca-freeipa.md)
 **Ideas**: [11 Authentik](../ideas/11-authentik-idp.md) · [13 FreeIPA](../ideas/13-freeipa-domain-controller.md) · [15 second Proxmox node](../ideas/15-second-proxmox-node.md)
@@ -26,7 +26,7 @@ disagree, the ADR wins and this document is corrected.
 | Which Unix account accepts that identity? | `AuthorizedPrincipalsFile`, principal → account | 1, 4 |
 | May this user log in on *this* host, with *these* sudo rights? | FreeIPA HBAC + central `sudo` | 2 |
 | Which web services may this person open? | Authentik OIDC / forward auth | 3 |
-| Which Unix *agent* (opencode, copilot) is acting? | Its own `agent-<name>` principal and provisioner | 1 |
+| Which Unix *agent* (opencode, copilot) is acting? | Shared `agent-ai` principal with a per-agent key ID | 1 |
 | Which **workload** is acting, and with which credential? | [ADR 45](../decisions/45-workload-identity.md) — one mechanism per protocol | 5 |
 
 ## Stage sequence
@@ -34,11 +34,11 @@ disagree, the ADR wins and this document is corrected.
 | # | Stage | Owner issue | Depends on | Exit gate |
 |---|---|---|---|---|
 | **0** | Decisions | — | — | ADR 42 + 43 **Accepted**; ADR 44 + 45 written |
-| **1** | **SSH CA foundation** — #161 M1–M5: `ssh` block in `ca.json` with TPM-held keys, trust distribution, host certificates, `automation` principal, per-agent identities | [#161](https://github.com/jaroslaw-bagnicki/Homelab/issues/161) | nothing — no IdP, no directory | `tpmkms:` signers proven on `ca` (else ADR 41 amended to file custody); host certificates live on every node; fleet key out of daily paths; every playbook green |
+| **1** | **SSH CA foundation** — #161 M1–M5: `ssh` block in `ca.json` with TPM-held keys, trust distribution, host certificates, `hosts@internal` issuance, `automation` principal, shared `agent-ai` identity; explicit identity loading | [#161](https://github.com/jaroslaw-bagnicki/Homelab/issues/161) · [#170](https://github.com/jaroslaw-bagnicki/Homelab/issues/170) | nothing — no IdP, no directory | `tpmkms:` signers proven on `ca` (else ADR 41 amended to file custody); host certificates live on every LAN node (`cloudlab` excepted); fleet key out of daily LAN paths; agent starts empty and loads an explicit identity; every playbook green |
 | **2** | **FreeIPA domain** — server on `pve`, backup + restore drill, first client, HBAC + `sudo`, LDAPS for Authentik, fleet enrolment | [#164](https://github.com/jaroslaw-bagnicki/Homelab/issues/164) | ADR 43/42; `pve` memory headroom | `ipa-backup` restore rehearsed **before** the first client enrols; HBAC **refusal** proven, not just success |
 | **3** | **Authentik IdP** — LXC on `pve`, `auth.internal`, FreeIPA as LDAPS source (no local users), group-gated OIDC, first protected services, backup pair | [#165](https://github.com/jaroslaw-bagnicki/Homelab/issues/165) | stage 2 (LDAPS + service account) | A group-less user is refused by the OIDC application; PostgreSQL dump + `AUTHENTIK_SECRET_KEY` restored together |
 | **4** | **Human certificates** — OIDC provisioner, `admin@internal` `enableSSHCA: false`, principals on final names, runbook, close-out (split out of #161) | [#166](https://github.com/jaroslaw-bagnicki/Homelab/issues/166) | stage 3 | A non-member **cannot** obtain a certificate; no human-held JWK path can mint an SSH certificate |
-| **5** | **Workload identity** — dev container and agent workloads: `svc-` directory users, Authentik client credentials, per-agent certificates, keytab only if a non-HTTP consumer appears | [#168](https://github.com/jaroslaw-bagnicki/Homelab/issues/168) | stages 1, 2, 3, 4 — one slice attaches to each | A workload obtains a token with no credential in git, the image or a persistent volume; a deactivated identity stops issuing; an agent cannot obtain another agent's principal |
+| **5** | **Workload identity** — dev container and agent workloads: `svc-` directory users, Authentik client credentials, shared `agent-ai` certificates with per-agent key IDs, keytab only if a non-HTTP consumer appears | [#168](https://github.com/jaroslaw-bagnicki/Homelab/issues/168) | stages 1, 2, 3, 4 — one slice attaches to each | A workload obtains a token with no credential in git, the image or a persistent volume; a deactivated identity stops issuing; the shared `agent-ai` principal carries a per-agent key ID |
 
 ## Stage 0 — Decisions
 
@@ -54,12 +54,20 @@ disagree, the ADR wins and this document is corrected.
 ## Stage 1 — SSH CA foundation (#161 M1–M5)
 
 The only stage that shrinks the current exposure, and it needs neither an IdP nor a directory. Host
-certificates authenticate the **machines**; `automation` and `agent-<name>` are fixed principals that
+certificates authenticate the **machines**; `automation` and `agent-ai` are fixed principals that
 live outside any directory, so nothing here can be invalidated by a later identity decision.
 
 Order inside the stage: TPM custody proof → trust distribution → host certificates → `automation`
-principal → per-agent identities. The TPM proof is the gate — if the guest cannot serve `tpmkms:`
+principal → the shared AI-agent identity. The TPM proof is the gate — if the guest cannot serve `tpmkms:`
 signers, ADR 41 is amended to file custody **before** any host depends on the result.
+
+**Identity loading (#170).** The dev-container profile loads no SSH key by default. `ssh-agent` starts
+empty; Ansible authenticates only with the identity placed there by the operator, the broker, or the
+agent. An AI agent issues its certificate with the shared `agent-ai` JWK, and reaches for the fleet key
+only by running `scripts/Import-HomelabFleetKey.ps1` — break-glass, never a default. No Ansible wrapper
+is introduced. The
+`ControlMaster`/`ControlPersist` interaction must be resolved so a switch of agent identity cannot
+reuse an old connection.
 
 Deliberately **not** in this stage: human user certificates. See "Why human certificates are last".
 
@@ -98,9 +106,9 @@ exception row; Authentik's audit stdout ships through the existing Fluent Bit
 
 `step ssh login` issues short-lived user certificates whose principal is the directory identity.
 Enforcement is technical, not procedural: **`admin@internal` loses `enableSSHCA`**, so the human-held CA
-password can no longer mint an SSH certificate at all. Host issuance moves to a machine-held JWK
-provisioner (`hosts@internal`, password in Key Vault); host renewal stays on SSHPOP; agents keep their
-own provisioners and template-fixed principals.
+password can no longer mint an SSH certificate at all. Host issuance already uses the machine-held
+`hosts@internal` JWK introduced in stage 1; host renewal stays on SSHPOP; agents keep the shared
+`agent-ai` credential and template-fixed principal with per-agent key IDs.
 
 Between stage 1 and this one, **humans stay on the fleet key**. That is ADR 41's transition state, and it
 is the honest interim — [research 43 §6.2](../research/43-ssh-certificates-step-ca.md) is right that a
@@ -116,7 +124,7 @@ where they are proven together.
 |---|---|---|
 | `svc-<workload>` users in `workloads` | stage 2 (#164) | the directory identity — `/sbin/nologin`, no usable password, no MFA |
 | Authentik client-credentials provider | stage 3 (#165) | the HTTP identity, secret in Key Vault |
-| `agent-<name>` certificates (opencode, Copilot, Hermes) | stage 1 (#161 M5) | the SSH identity, template-fixed principals |
+| `agent-ai` certificate (opencode, Copilot, Hermes) | stage 1 (#161 M5) | the shared SSH identity; per-agent key ID for audit |
 | Dev-container credential flow | stages 1, 3, 4 | fleet root trusted in-container, device flow for the operator, `client_credentials` when unattended |
 | Keytab — **conditional** | stage 2 | built only when a non-HTTP consumer exists |
 
@@ -135,8 +143,8 @@ The boundaries the stage exists to hold ([ADR 45](../decisions/45-workload-ident
 
 Exit gates: a workload obtains a token with no credential on disk; a user outside the required group is
 refused (stage 3's gate, re-run against the workload application); a deactivated `svc-` identity stops
-issuing after one sync interval; an agent cannot obtain another agent's principal (stage 1's gate, re-run
-for every agent, Hermes included).
+issuing after one sync interval; the shared `agent-ai` principal carries the issuing agent's key ID and
+the broker (when deployed) is the per-agent revocation point.
 
 ## Ordering rationale
 
