@@ -10,7 +10,7 @@ if (-not $env:SSH_AUTH_SOCK) {
 
 # ── Azure Key Vault ───────────────────────────────────────────────
 if (-not (Get-AzContext)) {
-    throw 'No Azure context.'
+    throw 'Azure context is not set; establish one first.'
 }
 
 $vault = 'homelab-bysxdb-kv'
@@ -47,7 +47,7 @@ try {
 
     ssh-add $key
 
-    Write-Host 'agent-ai certificate loaded into ssh-agent (principal agent-ai).'
+    Write-Host 'agent-ai certificate loaded into ssh-agent.'
 }
 finally {
     Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
