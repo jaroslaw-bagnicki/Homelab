@@ -5,7 +5,6 @@ param(
 $ErrorActionPreference = 'Stop'
 
 $vault = 'homelab-bysxdb-kv'
-$keyId = "agent-$Agent"
 
 if (-not $env:SSH_AUTH_SOCK) {
     throw 'SSH_AUTH_SOCK is not set; start ssh-agent first.'
@@ -41,11 +40,11 @@ try {
         --provisioner-password-file $passwordFile `
         --ca-url 'https://ca.internal:9000' `
         --root $rootFile `
-        $keyId "$key.pub"
+        "agent-$Agent" "$key.pub"
 
     ssh-add $key
 
-    Write-Host "agent-ai certificate loaded into ssh-agent (key ID $keyId, principal agent-ai)."
+    Write-Host 'agent-ai certificate loaded into ssh-agent (principal agent-ai).'
 }
 finally {
     Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
