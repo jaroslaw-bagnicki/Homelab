@@ -10,10 +10,7 @@ if (-not $env:SSH_AUTH_SOCK) {
 
 # ── Azure Key Vault ───────────────────────────────────────────────
 if (-not (Get-AzContext)) {
-    if (-not ($env:AZURE_TENANT_ID -and $env:AZURE_CLIENT_ID -and $env:AZURE_CLIENT_SECRET)) {
-        throw 'No Azure context. Export AZURE_TENANT_ID, AZURE_CLIENT_ID and AZURE_CLIENT_SECRET.'
-    }
-    Connect-AzAccount -ServicePrincipal -Tenant $env:AZURE_TENANT_ID | Out-Null
+    throw 'No Azure context.'
 }
 
 $vault = 'homelab-bysxdb-kv'
