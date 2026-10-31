@@ -35,6 +35,7 @@ try {
     # Make ssh, ssh-keygen and step fail loudly instead of being checked one by one.
     $PSNativeCommandUseErrorActionPreference = $true
 
+    # ── Issue the agent certificate ──────────────────────────────────
     ssh-keygen -t ed25519 -f $key -N '' -q
 
     step ssh certificate `
