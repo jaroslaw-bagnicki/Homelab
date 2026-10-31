@@ -27,5 +27,6 @@ if ! step ssh renew -f "$CERT" "$KEY" --ca-url "$CA_URL" --root "$ROOT"; then
   exit 1
 fi
 
-systemctl reload ssh
+# A SIGHUP re-exec fails where ssh.socket owns the port, so restart the unit.
+systemctl restart ssh
 logger -t "$TAG" -p user.info "host certificate renewed"

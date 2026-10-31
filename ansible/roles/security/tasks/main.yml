@@ -264,8 +264,19 @@
       delegate_to: localhost
       become: false
 
-    - name: Warn when the controller lacks the step CLI or ca.internal
+    - name: Fail when the controller cannot issue host certificates
       when:
+        - security_ssh_issue_require_controller | bool
+        - security_ssh_controller_step.rc != 0 or (security_ssh_ca_health is defined and security_ssh_ca_health.rc != 0)
+      ansible.builtin.fail:
+        msg: >-
+          The control node cannot issue a host certificate: the step CLI is missing or
+          {{ security_ssh_ca_url }} is unreachable. Install step and resolve ca.internal,
+          or set security_ssh_issue_require_controller=false while bootstrapping the CA.
+
+    - name: Warn when host certificate issuance is skipped on purpose
+      when:
+        - not (security_ssh_issue_require_controller | bool)
         - security_ssh_controller_step.rc != 0 or (security_ssh_ca_health is defined and security_ssh_ca_health.rc != 0)
       ansible.builtin.debug:
         msg: >-
@@ -296,7 +307,16 @@
           become: false
           no_log: true
       rescue:
+        - name: Fail when the SSH CA provisioner secret is unavailable
+          when: security_ssh_issue_require_controller | bool
+          ansible.builtin.fail:
+            msg: >-
+              Key Vault secret '{{ security_ssh_host_provisioner_secret }}' is not available, so no
+              host certificate can be issued. Run the SSH CA workload and publish the secret, or set
+              security_ssh_issue_require_controller=false while bootstrapping the CA.
+
         - name: Warn that host certificate issuance is waiting for the SSH CA secret
+          when: not (security_ssh_issue_require_controller | bool)
           ansible.builtin.debug:
             msg: >-
               Key Vault secret '{{ security_ssh_host_provisioner_secret }}' is not available;

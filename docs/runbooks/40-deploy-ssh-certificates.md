@@ -331,7 +331,10 @@ revocation and should be the only holder of `step-ca-ssh-agent-ai-password`.
   ([runbook 36](36-private-ca-init.md)), publish the new SSH CA public keys, re-run `ca_trust` and the
   `security` role, then re-issue host certificates. The X.509 root is unaffected. The reset clears
   `.active-intermediate.sha256` but not `.active-ca-config.sha256` — remove that file too, so the
-  rebuilt CA is treated as a configuration change.
+  rebuilt CA is treated as a configuration change. `ca_trust` writes the new `TrustedUserCAKeys`
+  content but does **not** reload `sshd` (a `ssh.socket` re-exec fails with `Cannot bind any address`),
+  so finish with `systemctl restart ssh` on every host — otherwise hosts keep trusting the old CA key
+  until their next restart.
 - **`cloudlab`:** stays on the fleet key and the pinned host key. A LAN↔VPS path (tunnel/VPN) is a
   prerequisite for including it; do not add its IP to `@cert-authority` until then.
 
@@ -343,7 +346,7 @@ revocation and should be the only holder of `step-ca-ssh-agent-ai-password`.
 - [x] A client accepts a host certificate via `@cert-authority` without per-host `known_hosts`
 - [x] Host certificates carry short name, `.internal` and inventory IP on every LAN node
 - [x] `sshd -T` shows `HostCertificate`, `TrustedUserCAKeys`, `AuthorizedPrincipalsFile`
-- [x] Renewal timer runs; a near-expiry certificate renews and reloads `sshd`
+- [x] Renewal timer runs; a near-expiry certificate renews and restarts `sshd`
 - [x] `automation` certificate runs a playbook with the fleet key removed from the agent
 - [x] Break-glass drill: CA stopped, fleet key still logs in
 - [x] `agent-ai` certificate carries principal `agent-ai` and key ID `agent-<name>`

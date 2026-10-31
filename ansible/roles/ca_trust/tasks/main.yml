@@ -109,7 +109,6 @@
     - { dest: /etc/ssh/ssh_user_ca_key.pub, content: "{{ ca_trust_ssh_user_key }}" }
   loop_control:
     label: "{{ item.dest }}"
-  notify: Reload sshd
 
 - name: Install trust-store prerequisites
   ansible.builtin.apt:

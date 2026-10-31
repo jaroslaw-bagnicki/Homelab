@@ -14,6 +14,9 @@ security_ufw_deny_inbound_tcp_80: true
 # `cloudlab` is outside SSH CA scope (no LAN route to ca.internal) and sets this
 # false in host_vars.
 security_ssh_certs_enabled: true
+# Fail rather than skip when the control node cannot issue a host certificate. Turn this
+# off only while bootstrapping the CA itself.
+security_ssh_issue_require_controller: true
 security_ssh_ca_url: "https://ca.internal:9000"
 security_ssh_ca_root_file: /usr/local/share/ca-certificates/homelab-root-ca.crt
 security_ssh_ca_root_fallback: /etc/step-ca/certs/root_ca.crt
