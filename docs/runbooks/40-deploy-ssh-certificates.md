@@ -7,8 +7,9 @@
 > 2026-10-27) and [ADR 45](../decisions/45-workload-identity.md) (SSH exception); issue
 > [#161](https://github.com/jaroslaw-bagnicki/Homelab/issues/161).
 
-**Status:** 📋 Prepared — not yet executed. Every section carries a verification gate; record the
-observed output under **Execution record** when it runs.
+**Status:** � In progress — M1 (SSH CA) and M2 (key distribution) complete 2026-10-31; M3 rolling out.
+Every section carries a verification gate; record the observed output under **Execution record** when
+it runs.
 
 **Scope.** `pve`, `lab`, `edge`, `nas`, `vtstack` and `ca`. **`cloudlab` is deliberately excluded** — it
 has no LAN route to `ca.internal`, so it keeps the pinned host key and the fleet key. The AI-agent broker
@@ -61,7 +62,7 @@ ansible-playbook ansible/workloads/step-ca/step-ca-playbook.yml --diff
 
 ```sh
 ssh fleetadm@192.168.2.215 'sudo -i'
-step ca provisioner list --ca-config /etc/step-ca/config/ca.json
+step ca provisioner list --ca-url https://ca.internal:9000 --root /etc/step-ca/certs/root_ca.crt
 journalctl -u step-ca --no-pager -o cat | grep -E '^SSH (Host|User) CA Key:'
 ls -l /etc/step-ca/certs/ssh_*_key.pub /etc/ssh/ssh_*_key.pub
 ```
@@ -82,7 +83,30 @@ ssh fleetadm@192.168.2.215 'sudo cat /etc/step-ca/certs/ssh_user_ca_key.pub' > s
 Remove-Item ./ssh_host_ca_key.pub, ./ssh_user_ca_key.pub
 ```
 
-> **Execution record:** _(not yet run)_
+> **Execution record:** 2026-10-31 — **TPM gate passed.** `ca.json` carries
+> `ssh.hostKey: tpmkms:name=homelab-ssh-host-ca` and `ssh.userKey: tpmkms:name=homelab-ssh-user-ca`;
+> `step-ca` is `active` and logged both `SSH Host CA Key:` / `SSH User CA Key:` (ECDSA P-256) after the
+> restart. Provisioners: `acme` (ACME), `admin@internal` (JWK, `enableSSHCA: true`), `sshpop` (SSHPOP,
+> `enableSSHCA: true`), `hosts@internal`, `automation@internal`, `agent-ai@internal` (JWK, SSH enabled).
+> Published: host CA `256 SHA256:j6/pAzp9vAKjm7njR1Khkyq0ZWCtv2p6KJgi0v7Zg9c`, user CA
+> `256 SHA256:cTbpT2fsQgyZ3Db8EvJs2VxdiJV9HcfjQ+bw6pZRItU`.
+>
+> Four defects surfaced on the live run and were fixed in the same change:
+>
+> 1. **Provisioner creation is an online admin call.** step CLI 0.31 dropped the offline `--ca-config`
+>    write: `provisioner add` requires `--ca-url`, `--root`, `--admin-provisioner` and
+>    `--admin-password-file`. The role now writes the merged config, restarts `step-ca`, and only then
+>    creates/updates the provisioners against `https://ca.internal:9000`.
+> 2. **Activated-config checksum.** `ca.json` is rewritten by the CA itself on every admin-API change, so
+>    the "did the config change?" checksum is now recorded last, after the provisioner calls.
+> 3. **SSH templates must start with `{`.** `CustomSSHTemplateOptions` treats any template that does not
+>    begin with `{` as base64 JSON — the `{{ if … }}` guard at position 0 failed every signature with
+>    `error parsing template`. Templates now open with a literal brace; the type guard follows as an
+>    action. A template change also needs a `step-ca` restart: the running authority keeps the template
+>    it loaded at start.
+> 4. **No `sshd` reload.** `ssh.socket` holds port 22 on `ca`, so a SIGHUP re-exec fails with
+>    `fatal: Cannot bind any address`. The CA-key publication only writes public-key files, so the
+>    handler was dropped; `security` restarts sshd where a config change needs it.
 
 ## 3. M2 — Distribute the SSH CA public keys
 
@@ -110,7 +134,16 @@ pinned LAN entries:
 ssh-keygen -R pve.internal; ssh-keygen -R 192.168.2.201
 ```
 
-> **Execution record:** _(not yet run)_
+> **Execution record:** 2026-10-31 — `ca_trust` applied to `pve`, `lab`, `nas`, `edge`, `vtstack`
+> (5/5 `ok=14 changed=2 failed=0`): `/etc/ssh/ssh_host_ca_key.pub` and `/etc/ssh/ssh_user_ca_key.pub`
+> installed from Key Vault on every node, root still verified against the pinned fingerprint.
+> `./scripts/Set-HomelabSshKnownHosts.ps1` wrote
+> `@cert-authority *.internal,192.168.2.* <host-CA-public-key>` to the workstation `known_hosts`.
+> `cloudlab` untouched, as intended.
+>
+> Controller prerequisite worth recording: the dev container had **no** `ca.internal` mapping (the
+> issuance step silently skipped, printing an advisory). It needs
+> `192.168.2.215 ca.internal` in `/etc/hosts` before M3.
 
 ## 4. M3 — Host certificates on every LAN node
 
@@ -169,7 +202,34 @@ sudo ssh-keygen -L -f /etc/ssh/ssh_host_ed25519_key-cert.pub   # fresh 7-day win
 sudo journalctl -u homelab-ssh-host-cert-renew -n 20
 ```
 
-> **Execution record:** _(not yet run)_
+> **Execution record:** 2026-10-31 — **complete across all six nodes.**
+>
+> | Node | Playbook | First run | Re-run |
+> |---|---|---|---|
+> | `lab` (canary) | `playbook-lab.yml` | `ok=114 changed=10 failed=0` | — |
+> | `pve` | `playbook-pve.yml` | `ok=126 changed=19 failed=0` | — |
+> | `edge` | `playbook-edge.yml` | `ok=150 changed=19 failed=0` | `changed=0` |
+> | `nas` | `playbook-nas.yml` | `ok=67 changed=17 failed=0` (1 transient unreachable) | `ok=83 changed=0` |
+> | `vtstack` | `playbook-logs.yml` | `ok=97 changed=20 failed=0` | `changed=1` |
+> | `ca` | `playbook-ca.yml` | `ok=64 changed=15 failed=0` | `changed=1` |
+>
+> Every node: `ssh-ed25519-cert-v01@openssh.com host certificate`, signing CA
+> `ECDSA SHA256:j6/pAzp9…` (the published host CA), the node's inventory address among the principals, and
+> `homelab-ssh-host-cert-renew.timer` **active**. Canary detail as recorded above; `sshd -T` on `lab`
+> reports `hostcertificate`, `trustedusercakeys /etc/ssh/ssh_user_ca_key.pub`,
+> `authorizedprincipalsfile /etc/ssh/auth_principals/%u`,
+> `hostkeyalgorithms ssh-ed25519-cert-v01@openssh.com`; a manual renewal run exits 0.
+>
+> Two operational notes:
+>
+> - **`ca` and `vtstack` run no time daemon** (`systemd-timesyncd`, `chrony`, `ntpsec` all inactive) and
+>   inherit the host clock through the container. The CA was ~6 h behind during the first issuances, so
+>   the `pve`/`lab`/`edge`/`nas` certificates carry a `notBefore` 6 h in the past and a slightly short
+>   7-day window. Harmless — the clocks are consistent again — but the CA guest should get time sync
+>   before certificates become load-bearing, and §5's break-glass drill is the natural place to confirm.
+> - **Losing `ssh-agent` mid-run** costs a playbook: every task fails `Permission denied (publickey)`.
+>   Start the agent on a fixed socket (`ssh-agent -a /tmp/fleet-ssh-agent.sock`) so it survives terminal
+>   churn, and export `SSH_AUTH_SOCK` in each new shell.
 
 ## 5. M4 — `automation` principal
 
@@ -204,7 +264,11 @@ ssh fleetadm@192.168.2.215 'sudo systemctl start step-ca'
 
 Record the drill. The fleet key is the only path that survives a CA outage.
 
-> **Execution record:** _(not yet run)_
+> **Execution record:** 2026-10-31 — **drill passed.** `step-ca` stopped on `ca` (`inactive`), the fleet
+> key logged into `lab` (`hostname` → `lab`, `sudo -n whoami` → `root`) with no certificate involved, and
+> the CA came back `active` with `step ca health … → ok`. The `automation` certificate path itself was
+> not exercised end-to-end: nothing in the fleet runs Ansible as `automation` yet, and the agent-identity
+> equivalent was proven in §6.
 
 ## 6. M5 — Shared `agent-ai` identity
 
@@ -229,7 +293,13 @@ principal is what `auth_principals` checks.
 key IDs; until it lands, the agent script fetches the shared secret. The broker will restore per-agent
 revocation and should be the only holder of `step-ca-ssh-agent-ai-password`.
 
-> **Execution record:** _(not yet run)_
+> **Execution record:** 2026-10-31 — **`agent-ai` works.** `Get-HomelabSshAgentCert.ps1 -Agent copilot`
+> issued a certificate into a dedicated agent socket (the script refuses while the fleet key is loaded —
+> that is the intended guard). `ssh-add -L` shows the certificate with key ID `agent-copilot`; the `lab`
+> sshd log records
+> `Accepted publickey … ED25519-CERT … ID agent-copilot … CA ECDSA SHA256:cTbpT2fs…` — the **user** CA,
+> with the requested key ID preserved. Ansible ran over that identity alone:
+> `playbook-lab.yml` `ok=102 changed=1 failed=0`, with 4 certificate logins logged.
 
 ## 7. Operations
 
@@ -248,16 +318,16 @@ revocation and should be the only holder of `step-ca-ssh-agent-ai-password`.
 
 ## Verification checklist
 
-- [ ] SSH CA keys created in the TPM; `step-ca` serves both; public keys published to Key Vault
-- [ ] `sshpop`, `hosts@internal`, `automation@internal` and `agent-ai@internal` present
-- [ ] `ca_trust` installs the SSH CA keys on the LAN nodes; `cloudlab` untouched
-- [ ] A client accepts a host certificate via `@cert-authority` without per-host `known_hosts`
-- [ ] Host certificates carry short name, `.internal` and inventory IP on every LAN node
-- [ ] `sshd -T` shows `HostCertificate`, `TrustedUserCAKeys`, `AuthorizedPrincipalsFile`
-- [ ] Renewal timer runs; a near-expiry certificate renews and reloads `sshd`
+- [x] SSH CA keys created in the TPM; `step-ca` serves both; public keys published to Key Vault
+- [x] `sshpop`, `hosts@internal`, `automation@internal` and `agent-ai@internal` present
+- [x] `ca_trust` installs the SSH CA keys on the LAN nodes; `cloudlab` untouched
+- [x] A client accepts a host certificate via `@cert-authority` without per-host `known_hosts`
+- [x] Host certificates carry short name, `.internal` and inventory IP on every LAN node
+- [x] `sshd -T` shows `HostCertificate`, `TrustedUserCAKeys`, `AuthorizedPrincipalsFile`
+- [x] Renewal timer runs; a near-expiry certificate renews and reloads `sshd`
 - [ ] `automation` certificate runs a playbook with the fleet key removed from the agent
-- [ ] Break-glass drill: CA stopped, fleet key still logs in
-- [ ] `agent-ai` certificate carries principal `agent-ai` and key ID `agent-<name>`
+- [x] Break-glass drill: CA stopped, fleet key still logs in
+- [x] `agent-ai` certificate carries principal `agent-ai` and key ID `agent-<name>`
 - [ ] Deleting `agent-ai@internal` stops new AI-agent issuance; existing certs expire
 
 ## References

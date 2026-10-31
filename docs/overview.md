@@ -84,7 +84,7 @@ once it is ready to start — a row leaves the table with the PR that completes 
 |---|---|---|---|
 | **Beetle NAS** | ⭐⭐⭐ | **Phase 1 done** — OMV 8.5 on `nas`, `md0` RAID1 clean + reboot-verified (a failed member was replaced 2026-10-17, [runbook 38](runbooks/38-nas-disk-replacement.md)), fleet-enrolled with the Netdata child and NUT secondary; next: create the share and move the backup target, then retire the ML110 and release `.210` (Memtest86+ and the RTC coin cell stay deferred — [research 32](research/32-wincor-beetle-m3-hardware-diagnostic.md)) | [#98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98) · [ADR 29](decisions/29-nas-backup-target-beetle-m3-omv.md) · [runbook 32](runbooks/32-beetle-m3-omv-setup.md) |
 | **Home Assistant VM + LXCs** | ⭐⭐⭐ | VM 210 (HA OS) + LXC 211/212 (Mosquitto, Zigbee2MQTT) on the `pve` node (the base from runbook 28), then point HA's NUT integration at `192.168.2.201` for UPS status + power-loss notifications | [#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68) · [#85](https://github.com/jaroslaw-bagnicki/Homelab/issues/85) · [ADR 25](decisions/25-home-assistant-thin-client.md) · [#122](https://github.com/jaroslaw-bagnicki/Homelab/issues/122) |
-| **SSH certificates** | ⭐⭐ | Implementation on PR #169; next: prove the TPM SSH CA signers on `ca`, then roll host certificates plus `automation`/`agent-ai` across the LAN ([runbook 40](runbooks/40-deploy-ssh-certificates.md)) | [#161](https://github.com/jaroslaw-bagnicki/Homelab/issues/161) · [#170](https://github.com/jaroslaw-bagnicki/Homelab/issues/170) · [ADR 41](decisions/41-ssh-certificates-step-ca.md) |
+
 
 ### Planned
 
