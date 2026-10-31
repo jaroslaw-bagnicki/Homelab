@@ -43,6 +43,11 @@ sealed key or clobber a CSR awaiting signing.
   initial host issuance, `automation@internal` for non-agent playbooks and `agent-ai@internal` for the
   AI-agent class. The SSH templates fix each principal and preserve the requested key ID; the authority
   policy allows only the fleet names and addresses.
+- **SSH provisioners via the admin API** — step CLI 0.31 dropped the offline `--ca-config` write, so the
+  service is restarted with the merged configuration (tracked in `.active-ca-config.sha256`) before
+  `hosts@internal`, `automation@internal` and `agent-ai@internal` are created against `ca.internal:9000`
+  with the admin password. A failed run therefore leaves `ca.json` ahead of the running service, and the
+  next run restarts it once.
 - **Checksum-verified tooling** — the current upstream release, verified against the release
   `checksums.txt` (gate #141: a truncated download produced a false "step-ca is broken" result).
 - **Provisioner password from AKV** — written to a root-only `file://` path, never in the unit's

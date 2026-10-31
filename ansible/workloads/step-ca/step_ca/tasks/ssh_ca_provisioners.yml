@@ -1,0 +1,152 @@
+---
+# SSH JWK provisioners (ADR 41). step CLI 0.31 creates them through the CA's
+# admin API, so this runs after the service is up with the merged configuration
+# — main.yml restarts step-ca, records the active checksum, then includes this.
+
+- name: Wait for the CA to serve the admin API
+  ansible.builtin.command:
+    argv:
+      - step
+      - ca
+      - health
+      - --ca-url
+      - "{{ step_ca_ssh_ca_url }}"
+      - --root
+      - /etc/step-ca/certs/root_ca.crt
+  register: step_ca_ssh_health
+  until: step_ca_ssh_health.rc == 0
+  retries: 15
+  delay: 2
+  changed_when: false
+  environment:
+    STEPPATH: /etc/step-ca
+
+- name: Configure the missing SSH JWK provisioners
+  when: step_ca_ssh_missing | length > 0
+  block:
+    - name: Assert the SSH provisioner passwords are available
+      ansible.builtin.assert:
+        that:
+          - step_ca_ssh_provisioner_passwords[item.secret] | default('') | length > 0
+        fail_msg: >-
+          Missing Key Vault secret '{{ item.secret }}'. Run
+          scripts/New-HomelabSshProvisionerPasswords.ps1 first.
+      loop: "{{ step_ca_ssh_missing }}"
+      loop_control:
+        label: "{{ item.secret }}"
+      no_log: true
+
+    - name: Create the temporary SSH provisioner password directory
+      ansible.builtin.file:
+        path: /run/step-ca-ssh
+        state: directory
+        owner: root
+        group: root
+        mode: "0700"
+
+    - name: Write the temporary SSH provisioner password files
+      ansible.builtin.copy:
+        content: "{{ step_ca_ssh_provisioner_passwords[item.secret] }}"
+        dest: "/run/step-ca-ssh/{{ item.name | replace('@', '_') }}.password"
+        owner: root
+        group: root
+        mode: "0600"
+      loop: "{{ step_ca_ssh_missing }}"
+      loop_control:
+        label: "{{ item.name }}"
+      no_log: true
+
+    - name: Add the missing SSH JWK provisioners
+      ansible.builtin.command:
+        argv:
+          - step
+          - ca
+          - provisioner
+          - add
+          - "{{ item.name }}"
+          - --type
+          - JWK
+          - --create
+          - --password-file
+          - "/run/step-ca-ssh/{{ item.name | replace('@', '_') }}.password"
+          - --ca-url
+          - "{{ step_ca_ssh_ca_url }}"
+          - --root
+          - /etc/step-ca/certs/root_ca.crt
+          - --admin-provisioner
+          - admin@internal
+          - --admin-password-file
+          - /etc/step-ca/secrets/password
+      loop: "{{ step_ca_ssh_missing }}"
+      loop_control:
+        label: "{{ item.name }}"
+      register: step_ca_ssh_added
+      changed_when: true
+      environment:
+        STEPPATH: /etc/step-ca
+  always:
+    - name: Remove the temporary SSH provisioner password files
+      ansible.builtin.file:
+        path: /run/step-ca-ssh
+        state: absent
+
+- name: Enforce the SSH CA provisioner settings
+  ansible.builtin.command:
+    argv:
+      - step
+      - ca
+      - provisioner
+      - update
+      - "{{ item.name }}"
+      - --ssh
+      - --ssh-user-default-dur
+      - "{{ item.user_default }}"
+      - --ssh-user-max-dur
+      - "{{ item.user_max }}"
+      - --ssh-host-default-dur
+      - "{{ item.host_default }}"
+      - --ssh-host-max-dur
+      - "{{ item.host_max }}"
+      - --ssh-template
+      - "/etc/step-ca/config/templates/ssh/{{ item.template }}"
+      - --ca-url
+      - "{{ step_ca_ssh_ca_url }}"
+      - --root
+      - /etc/step-ca/certs/root_ca.crt
+      - --admin-provisioner
+      - admin@internal
+      - --admin-password-file
+      - /etc/step-ca/secrets/password
+  loop: "{{ step_ca_ssh_provisioners }}"
+  loop_control:
+    label: "{{ item.name }}"
+  changed_when: false
+  environment:
+    STEPPATH: /etc/step-ca
+
+# The running authority keeps the provisioner template it loaded at start, so a
+# template change needs a restart even though the admin API already persisted it
+# in ca.json. Same for a freshly created provisioner.
+- name: Restart step-ca to activate the SSH provisioner changes
+  when: >-
+    (step_ca_ssh_templates is defined and step_ca_ssh_templates is changed)
+    or (step_ca_ssh_added is defined and step_ca_ssh_added is changed)
+  ansible.builtin.systemd:
+    name: step-ca
+    state: restarted
+
+# The provisioner calls persist ca.json through the admin API, so the activated
+# checksum is recorded last — recording it earlier would leave it stale and
+# restart the CA on every run.
+- name: Read the CA configuration written by the last provisioner call
+  ansible.builtin.stat:
+    path: /etc/step-ca/config/ca.json
+  register: step_ca_ssh_config_activated
+
+- name: Record the activated CA configuration
+  ansible.builtin.copy:
+    content: "{{ step_ca_ssh_config_activated.stat.checksum }}\n"
+    dest: /etc/step-ca/.active-ca-config.sha256
+    owner: root
+    group: root
+    mode: "0600"

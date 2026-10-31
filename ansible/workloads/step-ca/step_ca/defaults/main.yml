@@ -25,6 +25,10 @@ step_ca_reset: false
 step_ca_ssh_key_custody: tpm
 step_ca_ssh_host_key_name: homelab-ssh-host-ca
 step_ca_ssh_user_key_name: homelab-ssh-user-ca
+# The provisioners are created through the CA's admin API (step CLI 0.31 dropped
+# the offline --ca-config write). The certificate's SANs are `ca.internal` and
+# the guest address, so loopback would fail validation.
+step_ca_ssh_ca_url: https://ca.internal:9000
 
 step_ca_ssh_user_default_duration: 8h
 step_ca_ssh_user_max_duration: 24h

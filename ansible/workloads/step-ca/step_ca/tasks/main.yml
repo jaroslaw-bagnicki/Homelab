@@ -354,6 +354,20 @@
     group: root
     mode: "0600"
 
+# step CLI 0.31 creates the SSH provisioners through the admin API, so the
+# service must be running this exact configuration before they are added.
+- name: Restart step-ca to load the SSH CA configuration
+  when:
+    - step_ca_cert.stat.exists and step_ca_root.stat.exists
+    - step_ca_ssh_config_changed | default(false) | bool
+  ansible.builtin.systemd:
+    name: step-ca
+    state: restarted
+
+- name: Configure the SSH JWK provisioners
+  when: step_ca_cert.stat.exists and step_ca_root.stat.exists
+  ansible.builtin.include_tasks: ssh_ca_provisioners.yml
+
 - name: Publish the SSH CA public keys
   when: step_ca_cert.stat.exists and step_ca_root.stat.exists
   ansible.builtin.include_tasks: ssh_ca_publish.yml
