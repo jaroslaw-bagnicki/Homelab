@@ -46,15 +46,13 @@ try {
 
     ssh-keygen -t ed25519 -f $key -N '' -q
 
-    $request = @(
-        'ssh', 'certificate', '--sign'
-        '--provisioner', 'agent-ai@internal'
-        '--provisioner-password-file', $passwordFile
-        '--ca-url', $CaUrl
-        '--root', $RootPath
-        $keyId, "$key.pub"
-    )
-    step @request
+    step ssh certificate `
+        --sign `
+        --provisioner 'agent-ai@internal' `
+        --provisioner-password-file $passwordFile `
+        --ca-url $CaUrl `
+        --root $RootPath `
+        $keyId "$key.pub"
 
     ssh-add $key
 
