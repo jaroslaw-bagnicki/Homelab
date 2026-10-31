@@ -3,18 +3,12 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$PSNativeCommandArgumentPassing = 'Standard'
 
 $vault = 'homelab-bysxdb-kv'
 $keyId = "agent-$Agent"
 
 if (-not $env:SSH_AUTH_SOCK) {
     throw 'SSH_AUTH_SOCK is not set; start ssh-agent first.'
-}
-
-$loaded = ssh-add -L 2>$null
-if ($loaded -match 'fleetadm@homelab') {
-    throw 'The fleetadm break-glass key is loaded, so ssh would offer it before this certificate. Run ssh-add -D and retry.'
 }
 
 if (-not (Get-AzContext)) {
