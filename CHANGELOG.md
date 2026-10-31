@@ -13,6 +13,7 @@ Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month 
 
 ## 2026‑10
 
+- **(feat)** SSH certificates — TPM SSH CA, host certs on LAN nodes, `automation` and shared `agent-ai`; `cloudlab` stays on the fleet key — [runbook 40](docs/runbooks/40-deploy-ssh-certificates.md)
 - **(docs)** Decide workload identity — mechanism per protocol, one `svc-` directory identity per workload, keytabs only for non-HTTP consumers — [ADR 45](docs/decisions/45-workload-identity.md)
 - **(docs)** Decide Authentik as the fleet identity provider — an LXC on `pve`, FreeIPA as its user source, management planes never behind SSO — [ADR 44](docs/decisions/44-authentik-identity-provider.md)
 - **(docs)** Decide the PKI topology — one offline root, `step-ca` and FreeIPA's CA as siblings, never a chain — [ADR 42](docs/decisions/42-pki-topology-sibling-cas.md)

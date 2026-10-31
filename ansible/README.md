@@ -51,22 +51,22 @@ ansible-playbook ansible/workloads/step-ca/step-ca-playbook.yml
 | `inventory.ini` | Target hosts (`cloudlab` → `173.249.27.13`, `lab` → `192.168.2.200`) |
 | `ansible.cfg` | Inventory path, role path, SSH options |
 | `requirements.yml` | Required Ansible Galaxy collections (`ansible.posix`, `community.docker`, `community.general`, `azure.azcollection`) |
-| `playbooks/playbook.yml` | Base provision: common → security → ca_trust → azure_arc → docker_host → docker_services; pre_tasks declares `opencode_net` |
+| `playbooks/playbook.yml` | Base provision: common → security → ca_trust → azure_arc → docker_host → docker_services; pre_tasks declares `opencode_net` (`cloudlab` keeps the fleet key and SSH CA is disabled) |
 | `playbooks/playbook-arc.yml` | Arc enrolment only (for already-configured hosts) |
-| `playbooks/playbook-lab.yml` | M910q base provision: common → security → ca_trust → docker_host → azure_arc → nut_client → netdata → fluentbit (no `docker_services` — see below) |
-| `playbooks/playbook-edge.yml` | Wyse 3040 edge base provision: common → security → ca_trust → edge_host → technitium → caddy → nut_client → netdata → fluentbit (bare-metal, no Docker/Arc — ADR 24) |
+| `playbooks/playbook-lab.yml` | M910q base provision: common → ca_trust → security → docker_host → azure_arc → nut_client → netdata → fluentbit (no `docker_services` — see below) |
+| `playbooks/playbook-edge.yml` | Wyse 3040 edge base provision: common → ca_trust → security → edge_host → technitium → caddy → nut_client → netdata → fluentbit (bare-metal, no Docker/Arc — ADR 24) |
 | `playbooks/playbook-technitium.yml` | Targeted: the `technitium` role only — DNS server and host resolver (runbook 37) |
 | `playbooks/playbook-caddy.yml` | Targeted: the `caddy` role only — LAN reverse proxy and ACME (runbook 37) |
-| `playbooks/playbook-ca-trust.yml` | Targeted: the `ca_trust` role only — fleet CA root into the system trust store, `ca` excluded (runbook 39) |
+| `playbooks/playbook-ca-trust.yml` | Targeted: the `ca_trust` role only — fleet CA root and SSH CA public keys, `ca` excluded (runbooks 39/40) |
 | `playbooks/playbook-netdata.yml` | Targeted: the `netdata` role only — parent + children on all four LAN nodes (runbook 31) |
-| `playbooks/playbook-pve.yml` | Wyse 5070 Proxmox host base provision: common → security → ca_trust → nut_server → nut_client → netdata → fluentbit (UFW LAN allow for SSH + NUT 3493 + Proxmox UI 8006 + Netdata dashboard 19999 / streaming 19996, both TLS-only) |
-| `playbooks/playbook-nas.yml` | Beetle M-III OMV NAS base provision: common → security → ca_trust → nut_client → netdata → fluentbit (UFW LAN allow for SSH + OMV web `443`, `80` denied per ADR 34; Netdata child streaming to `pve`) |
-| `playbooks/playbook-logs.yml` | Victoria stack guest (`vtstack`, LXC 214) base provision: common → security → ca_trust → docker_host → fluentbit (Docker from the official repo, Debian) |
-| `playbooks/playbook-ca.yml` | Private CA guest (`ca`, LXC 215) base provision: common → security → fluentbit (Debian LXC on `pve`, no Docker) |
+| `playbooks/playbook-pve.yml` | Wyse 5070 Proxmox host base provision: common → ca_trust → security → nut_server → nut_client → netdata → fluentbit (UFW LAN allow for SSH + NUT 3493 + Proxmox UI 8006 + Netdata dashboard 19999 / streaming 19996, both TLS-only) |
+| `playbooks/playbook-nas.yml` | Beetle M-III OMV NAS base provision: common → ca_trust → security → nut_client → netdata → fluentbit (UFW LAN allow for SSH + OMV web `443`, `80` denied per ADR 34; Netdata child streaming to `pve`) |
+| `playbooks/playbook-logs.yml` | Victoria stack guest (`vtstack`, LXC 214) base provision: common → ca_trust → security → docker_host → fluentbit (Docker from the official repo, Debian) |
+| `playbooks/playbook-ca.yml` | Private CA guest (`ca`, LXC 215) base provision: common → security → fluentbit (Debian LXC on `pve`, no Docker; rerun after the CA starts so the host certificate and SSH CA trust are applied) |
 | `playbooks/playbook-ca-resolver.yml` | Later-phase migration of the CA guest to the Technitium resolver on `edge` (runbook 37) |
 | `workloads/` | Self-contained workload recipes — playbook entrypoint, role recipes, ansible-side README, all co-located per workload |
 | `workloads/opencode/` | OpenCode per-project server workload (see [README](workloads/opencode/README.md)) |
-| `workloads/step-ca/` | Private CA — `step-ca` native service on the `ca` guest, TPM-bound intermediate (see [README](workloads/step-ca/README.md)) |
+| `workloads/step-ca/` | Private CA — `step-ca` native service on the `ca` guest, TPM-bound intermediate and SSH CA keys (see [README](workloads/step-ca/README.md)) |
 | `roles/` | Base shared roles — see the [roles index](roles/README.md) |
 
 ## Workloads
@@ -83,20 +83,20 @@ Base shared roles live in [`roles/`](roles/README.md). The [roles index](roles/R
 
 | Playbook | Roles | When to use |
 |---|---|---|
-| `playbook.yml` | common → security → azure_arc → docker_host → docker_services | First-time VPS provision after initial SSH hardening (see [runbook 10](../docs/runbooks/10-vps-playground.md)) |
+| `playbook.yml` | common → security → ca_trust → azure_arc → docker_host → docker_services | First-time VPS provision after initial SSH hardening; `cloudlab` keeps the fleet key and SSH CA is disabled (see [runbook 10](../docs/runbooks/10-vps-playground.md)) |
 | `playbook-arc.yml` | azure_arc | Adding Arc to an already-configured host |
-| `playbook-lab.yml` | common → security → docker_host → azure_arc → nut_client → netdata → fluentbit | M910q base provision after the 24.04 reinstall (see [runbook 25](../docs/runbooks/25-m910q-os-refresh.md)) |
-| `playbook-edge.yml` | common → security → edge_host → technitium → caddy → nut_client → netdata → fluentbit | Wyse 3040 edge base provision (see [runbook 24](../docs/runbooks/24-edge-appliance.md)) |
+| `playbook-lab.yml` | common → ca_trust → security → docker_host → azure_arc → nut_client → netdata → fluentbit | M910q base provision after the 24.04 reinstall (see [runbook 25](../docs/runbooks/25-m910q-os-refresh.md)) |
+| `playbook-edge.yml` | common → ca_trust → security → edge_host → technitium → caddy → nut_client → netdata → fluentbit | Wyse 3040 edge base provision (see [runbook 24](../docs/runbooks/24-edge-appliance.md)) |
 | `playbook-technitium.yml` | technitium | Re-apply only the DNS server and host resolver on `edge` (see [runbook 37](../docs/runbooks/37-deploy-internal-access-stack.md)) |
 | `playbook-caddy.yml` | caddy | Re-apply only the reverse proxy and its sites on `edge` (see [runbook 37](../docs/runbooks/37-deploy-internal-access-stack.md)) |
 | `playbook-netdata.yml` | netdata | Re-apply only Netdata on `pve`, `lab`, `nas`, `edge` (see [runbook 31](../docs/runbooks/31-deploy-netdata.md)) |
-| `playbook-pve.yml` | common → security → nut_server → nut_client → netdata → fluentbit | Wyse 5070 Proxmox host base provision + NUT server + Netdata Parent (see [runbook 28](../docs/runbooks/28-pve-proxmox-node.md) / [runbook 29](../docs/runbooks/29-nut-ups-shutdown.md) / [runbook 31](../docs/runbooks/31-deploy-netdata.md)) |
-| `playbook-nas.yml` | common → security → nut_client → netdata → fluentbit | Beetle M-III OMV NAS base provision + Netdata child (see [runbook 32](../docs/runbooks/32-beetle-m3-omv-setup.md)) |
-| `playbook-logs.yml` | common → security → docker_host → fluentbit | Victoria stack guest (`vtstack`, LXC 214) base provision — Debian 13 LXC on `pve` (see [runbook 33](../docs/runbooks/33-deploy-victorialogs.md)) |
-| `playbook-ca.yml` | common → security → fluentbit | Private CA guest (`ca`, LXC 215) base provision — Debian 13 LXC on `pve` (see [runbook 35](../docs/runbooks/35-deploy-step-ca.md)) |
+| `playbook-pve.yml` | common → ca_trust → security → nut_server → nut_client → netdata → fluentbit | Wyse 5070 Proxmox host base provision + NUT server + Netdata Parent (see [runbook 28](../docs/runbooks/28-pve-proxmox-node.md) / [runbook 29](../docs/runbooks/29-nut-ups-shutdown.md) / [runbook 31](../docs/runbooks/31-deploy-netdata.md)) |
+| `playbook-nas.yml` | common → ca_trust → security → nut_client → netdata → fluentbit | Beetle M-III OMV NAS base provision + Netdata child (see [runbook 32](../docs/runbooks/32-beetle-m3-omv-setup.md)) |
+| `playbook-logs.yml` | common → ca_trust → security → docker_host → fluentbit | Victoria stack guest (`vtstack`, LXC 214) base provision — Debian 13 LXC on `pve` (see [runbook 33](../docs/runbooks/33-deploy-victorialogs.md)) |
+| `playbook-ca.yml` | common → security → fluentbit | Private CA guest (`ca`, LXC 215) base provision — Debian 13 LXC on `pve`; rerun after the CA starts for the host certificate (see [runbook 35](../docs/runbooks/35-deploy-step-ca.md) / [runbook 40](../docs/runbooks/40-deploy-ssh-certificates.md)) |
 | `playbook-ca-resolver.yml` | none (tasks only) | Later-phase resolver migration for the CA guest — requires Technitium on `edge` (see [runbook 37](../docs/runbooks/37-deploy-internal-access-stack.md)) |
 | `workloads/opencode/opencode-playbook.yml` | docker_opencode_ingress → docker_opencode_instances | Deploy the OpenCode per-project server workload (see [runbook 17](../docs/runbooks/17-deploy-opencode-on-cloudlab.md)) |
-| `workloads/step-ca/step-ca-playbook.yml` | step_ca | Deploy the private CA (`step-ca`) with a TPM-bound intermediate (see [runbook 35](../docs/runbooks/35-deploy-step-ca.md) / [runbook 36](../docs/runbooks/36-private-ca-init.md)) |
+| `workloads/step-ca/step-ca-playbook.yml` | step_ca | Deploy the private CA (`step-ca`) with a TPM-bound intermediate and SSH CA (see [runbook 35](../docs/runbooks/35-deploy-step-ca.md) / [runbook 36](../docs/runbooks/36-private-ca-init.md) / [runbook 40](../docs/runbooks/40-deploy-ssh-certificates.md)) |
 
 ## Inventory
 
@@ -121,7 +121,7 @@ All hosts use the generic **`fleetadm`** operator account (key-only SSH, no pass
 
 `fleetadm` is a dedicated, non-interactive fleet administration account, not a human login:
 
-- **Key-only login** — SSH public key, no password. The **fleet key** (`fleetadm@homelab`, ADR 28) is the single SSH credential: the breaking-glass account installs it into `fleetadm` at bootstrap (runbooks 24/25), and the `common` role re-arms it on every host (restrictive `key_options`: no port/agent forwarding, no X11); its private key lives in `homelab-bysxdb-kv/fleetadm-key-priv` and is loaded into `ssh-agent` by `profile.ps1` each session — it is also the **agent-access path** for AI tooling (OpenCode, Copilot) in the dev container.
+- **Key-only login** — SSH public key, no password. The **fleet key** (`fleetadm@homelab`, ADR 28) is the break-glass credential: the breaking-glass account installs it into `fleetadm` at bootstrap (runbooks 24/25), and the `common` role re-arms it on every host (restrictive `key_options`: no port/agent forwarding, no X11); its private key lives in `homelab-bysxdb-kv/fleetadm-key-priv` and is imported on demand by `scripts/Import-HomelabFleetKey.ps1`. Daily automation and AI tooling authenticate with a short-lived `automation` / `agent-ai` **certificate** from step-ca instead — `profile.ps1` loads no fleet key ([ADR 41](../docs/decisions/41-ssh-certificates-step-ca.md)).
 - **`NOPASSWD` sudo** (or a scoped sudoers rule) — required for Ansible `become: true`.
 - **`docker_users: []` on both hosts** — deliberately *not* in the `docker` group. The `docker` group is passwordless root-equivalent via the daemon socket, and Ansible reaches Docker through `become` anyway; a compromised agent key must not also grant instant root. Interactive `docker` commands on a host are run via `sudo`.
 

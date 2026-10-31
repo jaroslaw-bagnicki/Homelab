@@ -42,12 +42,12 @@ if (-not (Get-AzContext)) {
   Write-Host ":: Reusing existing Azure context: $((Get-AzContext).Account.Id)" -ForegroundColor DarkGray
 }
 
-# Load fleet + VPS keys from Key Vault (ssh-add is idempotent — run every
-# session so fleetadm-key-priv is always present, even when the agent already
-# holds other keys)
+# Load the cloudlab VPS key from Key Vault. The fleetadm key is deliberately NOT
+# loaded here: it is root-equivalent break-glass (ADR 41) and is imported on
+# demand by scripts/Import-HomelabFleetKey.ps1. Agents and Ansible authenticate
+# with the agent-ai or automation certificate instead.
 $keyNames = [ordered]@{
-  'fleetadm-key-priv'     = 'fleetadm SSH key (fleetadm@homelab)'
-  'cloudlab-vps-key-priv' = 'legacy cloudlab VPS SSH key'
+  'cloudlab-vps-key-priv' = 'legacy cloudlab VPS key'
 }
 if ($env:SSH_AUTH_SOCK -and (Get-AzContext -ErrorAction SilentlyContinue)) {
   foreach ($secret in $keyNames.Keys) {
@@ -61,5 +61,24 @@ if ($env:SSH_AUTH_SOCK -and (Get-AzContext -ErrorAction SilentlyContinue)) {
     if ($LASTEXITCODE -ne 0) {
       Write-Warning ":: ssh-add failed for $($keyNames[$secret])"
     }
+  }
+}
+
+# ── SSH host CA trust ─────────────────────────────────────────────
+# The fleet's @cert-authority line replaces per-host known_hosts pins for the
+# LAN nodes. The SSH host CA public key is published to Key Vault by the CA
+# workload; cloudlab is out of scope and keeps its pinned host key.
+if ($env:SSH_AUTH_SOCK -and (Get-AzContext -ErrorAction SilentlyContinue)) {
+  $caKey = Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name ssh-host-ca-pub -AsPlainText -ErrorAction SilentlyContinue 2>$null
+  if ($caKey) {
+    $sshDir = Join-Path $HOME '.ssh'
+    if (-not (Test-Path $sshDir)) { New-Item -ItemType Directory -Path $sshDir -Force | Out-Null }
+    $knownHosts = Join-Path $sshDir 'known_hosts'
+    $pattern = '*.internal,192.168.2.*'
+    $line = "@cert-authority $pattern $($caKey.Trim())"
+    $existing = if (Test-Path $knownHosts) { @(Get-Content -LiteralPath $knownHosts) } else { @() }
+    $filtered = $existing | Where-Object { $_ -notmatch '^@cert-authority\s+.*\*\.internal' }
+    [System.IO.File]::WriteAllLines($knownHosts, @($filtered) + $line)
+    if ($IsLinux) { & chmod 600 $knownHosts }
   }
 }

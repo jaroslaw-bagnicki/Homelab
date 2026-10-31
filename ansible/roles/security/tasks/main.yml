@@ -70,15 +70,391 @@
     state: started
     enabled: true
 
+- name: Install the step CLI for SSH certificate operations
+  when: security_ssh_certs_enabled | bool
+  ansible.builtin.include_tasks: step_cli.yml
+
+- name: Resolve ca.internal locally for certificate operations
+  when: security_ssh_certs_enabled | bool
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    regexp: '^\S+\s+ca\.internal(\s|$)'
+    line: "{{ hostvars['ca'].ansible_host | default('192.168.2.215') }} ca.internal"
+
+- name: Ensure the user CA key file exists before sshd validation
+  when: security_ssh_certs_enabled | bool
+  ansible.builtin.file:
+    path: "{{ security_ssh_user_ca_key }}"
+    state: touch
+    owner: root
+    group: root
+    mode: "0644"
+    modification_time: preserve
+    access_time: preserve
+
+- name: Ensure the authorized principals directory exists
+  when: security_ssh_certs_enabled | bool
+  ansible.builtin.file:
+    path: /etc/ssh/auth_principals
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Deploy SSH authorized principals files
+  when: security_ssh_certs_enabled | bool
+  ansible.builtin.template:
+    src: auth_principals.j2
+    dest: "/etc/ssh/auth_principals/{{ item.key }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ security_ssh_authorized_principals | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"
+  notify: Restart ssh
+
+- name: Ensure the SSH host keys exist
+  when: security_ssh_certs_enabled | bool
+  ansible.builtin.command:
+    cmd: ssh-keygen -A
+  changed_when: false
+
+- name: Check the CA root and host certificate files
+  when: security_ssh_certs_enabled | bool
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  register: security_ssh_stat_files
+  loop:
+    - "{{ security_ssh_ca_root_file }}"
+    - "{{ security_ssh_ca_root_fallback }}"
+    - "{{ security_ssh_host_cert }}"
+  loop_control:
+    label: "{{ item }}"
+
+- name: Resolve the CA root and current host certificate state
+  when: security_ssh_certs_enabled | bool
+  ansible.builtin.set_fact:
+    security_ssh_resolved_root: >-
+      {{ security_ssh_ca_root_file if security_ssh_stat_files.results[0].stat.exists
+         else (security_ssh_ca_root_fallback if security_ssh_stat_files.results[1].stat.exists else '') }}
+    security_ssh_host_cert_stat: "{{ security_ssh_stat_files.results[2] }}"
+
+- name: Check the host certificate against the trusted CA and the renewal window
+  when:
+    - security_ssh_certs_enabled | bool
+    - security_ssh_host_cert_stat is defined
+    - security_ssh_host_cert_stat.stat.exists
+  ansible.builtin.shell:
+    cmd: |
+      set -eo pipefail
+      expires=$(ssh-keygen -L -f "{{ security_ssh_host_cert }}" | awk '/Valid:/{print $NF}')
+      now=$(date +%s)
+      expires_epoch=$(date -d "$expires" +%s)
+      remaining=$((expires_epoch - now))
+      if [ -f "{{ security_ssh_host_ca_key }}" ]; then
+        signing_ca=$(ssh-keygen -L -f "{{ security_ssh_host_cert }}" \
+          | awk -F'SHA256:' '/Signing CA/{split($2, s, " "); print "SHA256:" s[1]}')
+        trusted_ca=$(ssh-keygen -lf "{{ security_ssh_host_ca_key }}" | awk '{print $2}')
+        if [ "$signing_ca" != "$trusted_ca" ]; then
+          echo ca-changed
+          exit 0
+        fi
+      fi
+      if [ "$remaining" -le "{{ security_ssh_renew_before_seconds }}" ]; then
+        echo needs-issue
+      else
+        echo valid
+      fi
+    executable: /bin/bash
+  register: security_ssh_host_cert_validity
+  changed_when: false
+  failed_when: false
+
+- name: Report a host certificate signed by a previous CA
+  when:
+    - security_ssh_certs_enabled | bool
+    - security_ssh_host_cert_validity is defined
+    - (security_ssh_host_cert_validity.stdout | default('') | trim) == 'ca-changed'
+  ansible.builtin.debug:
+    msg: >-
+      The host certificate was not signed by {{ security_ssh_host_ca_key }} - re-issuing
+      under the current host CA (CA rotation, ADR 41 TPM-loss recovery).
+
+- name: Decide whether the host certificate must be issued
+  when: security_ssh_certs_enabled | bool
+  ansible.builtin.set_fact:
+    security_ssh_host_cert_needs_issue: >-
+      {{
+        (security_ssh_host_cert_force_reissue | bool)
+        or not (security_ssh_host_cert_stat.stat.exists | default(false))
+        or not (security_ssh_host_cert_validity is defined
+                and (security_ssh_host_cert_validity.stdout | default('') | trim) == 'valid')
+      }}
+
+- name: Read the host public key for controller-side signing
+  when:
+    - security_ssh_certs_enabled | bool
+    - security_ssh_host_cert_stat is defined
+    - security_ssh_host_cert_needs_issue | default(false)
+    - security_ssh_resolved_root is defined
+    - security_ssh_resolved_root | length > 0
+  ansible.builtin.slurp:
+    src: "{{ security_ssh_host_key }}.pub"
+  register: security_ssh_host_pub
+
+- name: Read the CA root for controller-side signing
+  when:
+    - security_ssh_certs_enabled | bool
+    - security_ssh_host_cert_stat is defined
+    - security_ssh_host_cert_needs_issue | default(false)
+    - security_ssh_resolved_root is defined
+    - security_ssh_resolved_root | length > 0
+  ansible.builtin.slurp:
+    src: "{{ security_ssh_resolved_root }}"
+  register: security_ssh_host_root
+
+- name: Issue the host certificate from the control node
+  when:
+    - security_ssh_certs_enabled | bool
+    - security_ssh_host_cert_stat is defined
+    - security_ssh_host_cert_needs_issue | default(false)
+    - security_ssh_resolved_root is defined
+    - security_ssh_resolved_root | length > 0
+  block:
+    - name: Create the controller-side certificate workspace
+      ansible.builtin.file:
+        path: "/tmp/homelab-ssh-issue-{{ inventory_hostname }}"
+        state: directory
+        mode: "0700"
+      delegate_to: localhost
+      become: false
+
+    - name: Write the host public key and CA root on the controller
+      ansible.builtin.copy:
+        content: "{{ item.content }}"
+        dest: "{{ item.dest }}"
+        mode: "0600"
+      loop:
+        - dest: "/tmp/homelab-ssh-issue-{{ inventory_hostname }}/{{ security_ssh_host_key | basename }}.pub"
+          content: "{{ security_ssh_host_pub.content | b64decode }}"
+        - dest: "/tmp/homelab-ssh-issue-{{ inventory_hostname }}/root_ca.crt"
+          content: "{{ security_ssh_host_root.content | b64decode }}"
+      loop_control:
+        label: "{{ item.dest }}"
+      delegate_to: localhost
+      become: false
+
+    - name: Check the controller step CLI
+      ansible.builtin.command:
+        cmd: step version
+      register: security_ssh_controller_step
+      changed_when: false
+      failed_when: false
+      delegate_to: localhost
+      become: false
+
+    - name: Check the CA health from the controller
+      when: security_ssh_controller_step.rc == 0
+      ansible.builtin.command:
+        cmd: "step ca health --ca-url {{ security_ssh_ca_url }} --root /tmp/homelab-ssh-issue-{{ inventory_hostname }}/root_ca.crt"
+      register: security_ssh_ca_health
+      changed_when: false
+      failed_when: false
+      delegate_to: localhost
+      become: false
+
+    - name: Fail when the controller cannot issue host certificates
+      when:
+        - security_ssh_issue_require_controller | bool
+        - security_ssh_controller_step.rc != 0 or (security_ssh_ca_health is defined and security_ssh_ca_health.rc != 0)
+      ansible.builtin.fail:
+        msg: >-
+          The control node cannot issue a host certificate: the step CLI is missing or
+          {{ security_ssh_ca_url }} is unreachable. Install step and resolve ca.internal,
+          or set security_ssh_issue_require_controller=false while bootstrapping the CA.
+
+    - name: Warn when host certificate issuance is skipped on purpose
+      when:
+        - not (security_ssh_issue_require_controller | bool)
+        - security_ssh_controller_step.rc != 0 or (security_ssh_ca_health is defined and security_ssh_ca_health.rc != 0)
+      ansible.builtin.debug:
+        msg: >-
+          Host certificate issuance skipped: the control node needs the step CLI and
+          a working ca.internal resolution. Install step and re-run this playbook.
+      changed_when: false
+
+    - name: Fetch the host provisioner password from Key Vault
+      when:
+        - security_ssh_controller_step.rc == 0
+        - security_ssh_ca_health is defined
+        - security_ssh_ca_health.rc == 0
+        - security_ssh_host_provisioner_password | length == 0
+      block:
+        - name: Look up the host provisioner password
+          vars:
+            security_ssh_vault_url: "https://{{ ca_trust_keyvault_name | default('homelab-bysxdb-kv') }}.vault.azure.net"
+            security_ssh_azure_client_id: "{{ lookup('ansible.builtin.env', 'AZURE_CLIENT_ID') }}"
+            security_ssh_azure_secret: "{{ lookup('ansible.builtin.env', 'AZURE_CLIENT_SECRET') }}"
+            security_ssh_azure_tenant_id: "{{ lookup('ansible.builtin.env', 'AZURE_TENANT_ID') }}"
+          ansible.builtin.set_fact:
+            security_ssh_host_provisioner_password: >-
+              {{ lookup('azure.azcollection.azure_keyvault_secret',
+              security_ssh_host_provisioner_secret, vault_url=security_ssh_vault_url,
+              client_id=security_ssh_azure_client_id, secret=security_ssh_azure_secret,
+              tenant=security_ssh_azure_tenant_id) }}
+          delegate_to: localhost
+          become: false
+          no_log: true
+      rescue:
+        - name: Fail when the SSH CA provisioner secret is unavailable
+          when: security_ssh_issue_require_controller | bool
+          ansible.builtin.fail:
+            msg: >-
+              Key Vault secret '{{ security_ssh_host_provisioner_secret }}' is not available, so no
+              host certificate can be issued. Run the SSH CA workload and publish the secret, or set
+              security_ssh_issue_require_controller=false while bootstrapping the CA.
+
+        - name: Warn that host certificate issuance is waiting for the SSH CA secret
+          when: not (security_ssh_issue_require_controller | bool)
+          ansible.builtin.debug:
+            msg: >-
+              Key Vault secret '{{ security_ssh_host_provisioner_secret }}' is not available;
+              skipping host certificate issuance. Run the SSH CA workload, publish the secret
+              and re-run this playbook.
+          changed_when: false
+
+    - name: Write the host provisioner password on the controller
+      when:
+        - security_ssh_controller_step.rc == 0
+        - security_ssh_ca_health is defined
+        - security_ssh_ca_health.rc == 0
+        - security_ssh_host_provisioner_password | length > 0
+      ansible.builtin.copy:
+        content: "{{ security_ssh_host_provisioner_password }}"
+        dest: /tmp/homelab-ssh-issue-{{ inventory_hostname }}/provisioner-password
+        mode: "0600"
+      delegate_to: localhost
+      become: false
+      no_log: true
+
+    # `step ssh certificate --sign` strips the `.pub` suffix from the input key
+    # and writes `<base>-cert.pub`; the slurp below intentionally uses that name.
+    - name: Sign the host public key on the controller
+      when:
+        - security_ssh_controller_step.rc == 0
+        - security_ssh_ca_health is defined
+        - security_ssh_ca_health.rc == 0
+        - security_ssh_host_provisioner_password | length > 0
+      ansible.builtin.command:
+        argv:
+          - step
+          - ssh
+          - certificate
+          - --host
+          - --sign
+          - --force
+          - --principal
+          - "{{ inventory_hostname }}"
+          - --principal
+          - "{{ inventory_hostname }}.internal"
+          - --principal
+          - "{{ ansible_host }}"
+          - --provisioner
+          - "{{ security_ssh_host_provisioner }}"
+          - --provisioner-password-file
+          - /tmp/homelab-ssh-issue-{{ inventory_hostname }}/provisioner-password
+          - --ca-url
+          - "{{ security_ssh_ca_url }}"
+          - --root
+          - /tmp/homelab-ssh-issue-{{ inventory_hostname }}/root_ca.crt
+          - "{{ inventory_hostname }}"
+          - "/tmp/homelab-ssh-issue-{{ inventory_hostname }}/{{ security_ssh_host_key | basename }}.pub"
+      delegate_to: localhost
+      become: false
+      changed_when: true
+
+    - name: Read the signed host certificate on the controller
+      when:
+        - security_ssh_controller_step.rc == 0
+        - security_ssh_ca_health is defined
+        - security_ssh_ca_health.rc == 0
+        - security_ssh_host_provisioner_password | length > 0
+      ansible.builtin.slurp:
+        src: "/tmp/homelab-ssh-issue-{{ inventory_hostname }}/{{ security_ssh_host_key | basename }}-cert.pub"
+      register: security_ssh_signed_cert
+      delegate_to: localhost
+      become: false
+
+    - name: Install the signed host certificate
+      when:
+        - security_ssh_signed_cert is defined
+        - security_ssh_signed_cert.content is defined
+      ansible.builtin.copy:
+        content: "{{ security_ssh_signed_cert.content | b64decode }}"
+        dest: "{{ security_ssh_host_cert }}"
+        owner: root
+        group: root
+        mode: "0644"
+      notify: Restart ssh
+  always:
+    - name: Remove the controller-side certificate workspace
+      ansible.builtin.file:
+        path: "/tmp/homelab-ssh-issue-{{ inventory_hostname }}"
+        state: absent
+      delegate_to: localhost
+      become: false
+
+- name: Re-check the host certificate after issuance
+  when: security_ssh_certs_enabled | bool
+  ansible.builtin.stat:
+    path: "{{ security_ssh_host_cert }}"
+  register: security_ssh_host_cert_final
+
+- name: Install the host certificate renewal script
+  when: security_ssh_certs_enabled | bool
+  ansible.builtin.template:
+    src: homelab-ssh-host-cert-renew.j2
+    dest: /usr/local/sbin/homelab-ssh-host-cert-renew
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Install the host certificate renewal units
+  when: security_ssh_certs_enabled | bool
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "/etc/systemd/system/{{ item }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - homelab-ssh-host-cert-renew.service
+    - homelab-ssh-host-cert-renew.timer
+    - homelab-ssh-host-cert-renew-alert.service
+  notify: Reload systemd
+
+- name: Enable the host certificate renewal timer
+  when:
+    - security_ssh_certs_enabled | bool
+    - security_ssh_host_cert_final is defined and security_ssh_host_cert_final.stat.exists
+  ansible.builtin.systemd:
+    name: homelab-ssh-host-cert-renew.timer
+    enabled: true
+    state: started
+    daemon_reload: true
+
+- name: Run the host certificate renewal check
+  when:
+    - security_ssh_certs_enabled | bool
+    - security_ssh_host_cert_final is defined and security_ssh_host_cert_final.stat.exists
+  ansible.builtin.command:
+    cmd: /usr/local/sbin/homelab-ssh-host-cert-renew
+  changed_when: false
+
 - name: Harden SSH — key-only, LAN password for non-root accounts
-  ansible.builtin.copy:
-    content: |
-      PasswordAuthentication no
-      KbdInteractiveAuthentication no
-      PermitRootLogin prohibit-password
-      Match Address 192.168.2.0/24
-          PasswordAuthentication yes
-      Match all
+  ansible.builtin.template:
+    src: 99-homelab-hardening.conf.j2
     dest: /etc/ssh/sshd_config.d/99-homelab-hardening.conf
     owner: root
     group: root

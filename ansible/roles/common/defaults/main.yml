@@ -1,4 +1,8 @@
 ---
 common_enable_avahi: false
+# Containers share the host's kernel clock and cannot set it: systemd-timesyncd refuses to run
+# inside one (ConditionVirtualization=!container) and an unprivileged guest holds no capabilities
+# to call clock_settime. Time sync belongs to the host, so guests skip it.
+common_time_sync_enabled: "{{ ansible_virtualization_type | default('none') not in ['lxc', 'docker', 'podman', 'container'] }}"
 # ssh authorized_keys restrictions for the fleet key — automation only needs exec + sftp/scp
 common_ssh_fleet_key_options: "no-port-forwarding,no-agent-forwarding,no-X11-forwarding"

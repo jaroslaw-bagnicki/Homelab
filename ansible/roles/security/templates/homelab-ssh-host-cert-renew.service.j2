@@ -1,0 +1,9 @@
+[Unit]
+Description=Renew the fleet SSH host certificate
+After=network-online.target
+Wants=network-online.target
+OnFailure=homelab-ssh-host-cert-renew-alert.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/homelab-ssh-host-cert-renew
