@@ -1,6 +1,4 @@
-[CmdletBinding()]
 param(
-    [Parameter(Mandatory)]
     [string]$Agent
 )
 
