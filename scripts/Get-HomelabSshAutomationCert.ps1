@@ -1,15 +1,8 @@
-[CmdletBinding()]
-param(
-    [string]$CaUrl = 'https://ca.internal:9000',
-    [string]$RootPath,
-    [string]$Provisioner = 'automation@internal',
-    [string]$KeyId = 'automation'
-)
-
 $ErrorActionPreference = 'Stop'
-if (Test-Path variable:PSNativeCommandArgumentPassing) { $PSNativeCommandArgumentPassing = 'Standard' }
+$PSNativeCommandArgumentPassing = 'Standard'
+
 $vault = 'homelab-bysxdb-kv'
-$passwordSecret = 'step-ca-ssh-automation-password'
+$keyId = 'automation'
 
 foreach ($command in 'step', 'ssh-keygen', 'ssh-add') {
     if (-not (Get-Command $command -ErrorAction SilentlyContinue)) {
@@ -21,13 +14,13 @@ if ($IsLinux -and -not $env:SSH_AUTH_SOCK) {
 }
 $loaded = @(& ssh-add -L 2>$null)
 if ($loaded -match 'fleetadm@homelab') {
-    throw "The fleetadm break-glass key is already loaded; ssh would offer it before $KeyId. Run 'ssh-add -D' (or start a fresh shell) and retry."
+    throw "The fleetadm break-glass key is already loaded; ssh would offer it before $keyId. Run 'ssh-add -D' (or start a fresh shell) and retry."
 }
 if (-not (Get-AzContext)) {
     Connect-AzAccount -UseDeviceAuthentication -Tenant cloud5.ovh | Out-Null
 }
 
-$password = Get-AzKeyVaultSecret -VaultName $vault -Name $passwordSecret -AsPlainText -ErrorAction Stop
+$password = Get-AzKeyVaultSecret -VaultName $vault -Name 'step-ca-ssh-automation-password' -AsPlainText -ErrorAction Stop
 if (-not $password) { throw "Secret '$passwordSecret' is empty or missing." }
 
 $work = Join-Path ([System.IO.Path]::GetTempPath()) ("homelab-ssh-automation-" + [guid]::NewGuid().ToString('N'))
@@ -41,30 +34,27 @@ try {
     Set-Content -LiteralPath $passwordFile -Value $password -NoNewline -Encoding ascii
     if ($IsLinux) { & chmod 600 $passwordFile }
 
-    if (-not $RootPath) {
-        $root = Get-AzKeyVaultSecret -VaultName $vault -Name 'ca-root-cert' -AsPlainText -ErrorAction Stop
-        if (-not $root) { throw "Secret 'ca-root-cert' is empty or missing." }
-        Set-Content -LiteralPath $rootFile -Value $root -Encoding ascii
-        $RootPath = $rootFile
-    }
+    $root = Get-AzKeyVaultSecret -VaultName $vault -Name 'ca-root-cert' -AsPlainText -ErrorAction Stop
+    if (-not $root) { throw "Secret 'ca-root-cert' is empty or missing." }
+    Set-Content -LiteralPath $rootFile -Value $root -Encoding ascii
 
     & ssh-keygen -t ed25519 -f $keyFile -N '' -q
     if ($LASTEXITCODE -ne 0) { throw "ssh-keygen failed with exit code $LASTEXITCODE" }
 
     & step ssh certificate `
         --sign `
-        --provisioner $Provisioner `
+        --provisioner 'automation@internal' `
         --provisioner-password-file $passwordFile `
-        --ca-url $CaUrl `
-        --root $RootPath `
-        $KeyId "$keyFile.pub"
+        --ca-url 'https://ca.internal:9000' `
+        --root $rootFile `
+        $keyId "$keyFile.pub"
     if ($LASTEXITCODE -ne 0) { throw "step ssh certificate failed with exit code $LASTEXITCODE" }
     if (-not (Test-Path "$keyFile-cert.pub")) { throw "step did not write $keyFile-cert.pub" }
 
     & ssh-add $keyFile
     if ($LASTEXITCODE -ne 0) { throw "ssh-add failed with exit code $LASTEXITCODE" }
 
-    Write-Host "Automation certificate loaded into ssh-agent (principal automation, key ID $KeyId)."
+    Write-Host "Automation certificate loaded into ssh-agent (principal automation, key ID $keyId)."
     Write-Host "Run 'ssh-add -L' to verify; the private key file is removed when this script exits."
 }
 finally {

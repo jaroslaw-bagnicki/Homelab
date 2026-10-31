@@ -1,8 +1,7 @@
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory)][ValidatePattern('^[a-z0-9-]+$')][string]$Agent,
-    [string]$CaUrl = 'https://ca.internal:9000',
-    [string]$RootPath
+    [Parameter(Mandatory)]
+    [string]$Agent
 )
 
 $ErrorActionPreference = 'Stop'
@@ -24,6 +23,9 @@ if (-not (Get-AzContext)) {
     Connect-AzAccount -UseDeviceAuthentication -Tenant cloud5.ovh | Out-Null
 }
 
+# Make ssh, ssh-keygen and step fail loudly instead of being checked one by one.
+$PSNativeCommandUseErrorActionPreference = $true
+
 $work = Join-Path ([System.IO.Path]::GetTempPath()) "homelab-$keyId-$([guid]::NewGuid().ToString('N'))"
 New-Item -ItemType Directory -Path $work | Out-Null
 if ($IsLinux) { chmod 700 $work }
@@ -35,26 +37,21 @@ try {
     $password = Get-AzKeyVaultSecret -VaultName $vault -Name 'step-ca-ssh-agent-ai-password' -AsPlainText
     Set-Content -LiteralPath $passwordFile -Value $password -NoNewline
 
-    if (-not $RootPath) {
-        $RootPath = Join-Path $work 'root.crt'
-        $root = Get-AzKeyVaultSecret -VaultName $vault -Name 'ca-root-cert' -AsPlainText
-        Set-Content -LiteralPath $RootPath -Value $root
-    }
+    $rootFile = Join-Path $work 'root.crt'
+    $root = Get-AzKeyVaultSecret -VaultName $vault -Name 'ca-root-cert' -AsPlainText
+    Set-Content -LiteralPath $rootFile -Value $root
 
     ssh-keygen -t ed25519 -f $key -N '' -q
-    if ($LASTEXITCODE -ne 0) { throw 'ssh-keygen could not create the identity key.' }
 
     step ssh certificate `
         --sign `
         --provisioner 'agent-ai@internal' `
         --provisioner-password-file $passwordFile `
-        --ca-url $CaUrl `
-        --root $RootPath `
+        --ca-url 'https://ca.internal:9000' `
+        --root $rootFile `
         $keyId "$key.pub"
-    if ($LASTEXITCODE -ne 0) { throw 'step could not issue the certificate.' }
 
     ssh-add $key
-    if ($LASTEXITCODE -ne 0) { throw 'ssh-add could not load the certificate into the agent.' }
 
     Write-Host "agent-ai certificate loaded into ssh-agent (key ID $keyId, principal agent-ai)."
 }
