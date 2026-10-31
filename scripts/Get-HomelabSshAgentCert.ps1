@@ -10,7 +10,7 @@ if (-not $env:SSH_AUTH_SOCK) {
 
 # ── Azure Key Vault ───────────────────────────────────────────────
 if (-not (Get-AzContext)) {
-    throw 'Azure context is not set; establish one first.'
+    throw 'Azure context is not set; run Connect-AzAccount first.'
 }
 
 $vault = 'homelab-bysxdb-kv'
