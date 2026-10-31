@@ -10,15 +10,12 @@ if (-not $env:SSH_AUTH_SOCK) {
 
 # ── Azure Key Vault ───────────────────────────────────────────────
 if (-not (Get-AzContext)) {
-    Connect-AzAccount -UseDeviceAuthentication -Tenant cloud5.ovh | Out-Null
+    throw 'Not signed in to Azure. Run Connect-AzAccount -Tenant cloud5.ovh first.'
 }
 
 $vault = 'homelab-bysxdb-kv'
 $password = Get-AzKeyVaultSecret -VaultName $vault -Name 'step-ca-ssh-agent-ai-password' -AsPlainText
 $root = Get-AzKeyVaultSecret -VaultName $vault -Name 'ca-root-cert' -AsPlainText
-
-# Make ssh, ssh-keygen and step fail loudly instead of being checked one by one.
-$PSNativeCommandUseErrorActionPreference = $true
 
 # step only accepts a file for --root and the password, so the workspace lives on
 # tmpfs where possible: the CA root never reaches the disk.
@@ -34,6 +31,9 @@ try {
 
     Set-Content -LiteralPath $passwordFile -Value $password -NoNewline
     Set-Content -LiteralPath $rootFile -Value $root
+
+    # Make ssh, ssh-keygen and step fail loudly instead of being checked one by one.
+    $PSNativeCommandUseErrorActionPreference = $true
 
     ssh-keygen -t ed25519 -f $key -N '' -q
 
