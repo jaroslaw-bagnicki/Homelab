@@ -16,6 +16,8 @@ Implementation is out of scope: no role, template or host change is proposed her
 
 **Status**: 📝 Reference — **no decision, no ADR**. Two open follow‑ups consume it: the TLS‑trust gap ADR 27 records ("pinning it via `CAfile` is a tracked follow‑up") and any future Cloud adoption question.
 
+> **Operator intent (2026‑10‑31).** The operator intends to evaluate moving the Parent into the **`monitor` guest** (LXC 214, currently `vtstack`; planned for `pve2`), with **host-native Netdata children on `pve1` and `pve2`**. This document is the input: §3's warning is satisfied by those children, §6/§7 are the rename and migration procedures, and [ADR 46](../decisions/46-grafana-logs-ui-victorialogs.md) records the intent as **deferred**. A future **ADR 47** makes the decision and amends [ADR 27](../decisions/27-monitoring-strategy.md); §9 describes the current configuration, not that intent.
+
 > **Verification status.** Every config snippet is **as the thread gave it**. None of it was checked against the Netdata **v2.12.1** documentation or source actually running on the fleet ([research 40](40-netdata-cpu-cstates.md) pinned that version), and pricing was not confirmed on the vendor's own page. §8 lists the claims that decide whether anything here is adoptable — treat §3, §5 and §7 as **unconfirmed syntax**, not recipes.
 
 ---
@@ -29,7 +31,7 @@ Implementation is out of scope: no role, template or host change is proposed her
 | **Business** | **$4.50/node/month** billed annually ($54/node/year) or **$6.00/node/month** monthly | per node | Commercial terms and enterprise surface — SSO/SCIM, RBAC, longer cloud event history, support |
 | **Self‑hosted, no Cloud** | $0 | none | The Agent is **GPLv3+**; limits above apply to the Cloud device registry, not to the agent |
 
-**The free tier is not the binding constraint today.** The LAN fleet is **four** Netdata nodes — Parent `pve` plus children `lab`, `nas`, `edge` (`cloudlab` is never a Netdata target, ADR 27) — so Community's five‑node cap only bites when guests or a second Proxmox node become agents ([research 47](47-second-proxmox-node.md)).
+**The free tier is not the binding constraint today.** The LAN fleet is **four** Netdata nodes — Parent `pve` plus children `lab`, `nas`, `edge` (`cloudlab` is never a Netdata target, ADR 27) — so Community's five‑node cap only bites when guests or a second Proxmox node become agents ([research 47](47-second-proxmox-node.md)). The intended `monitor` topology — a containerised Parent plus `pve1`, `pve2`, `lab`, `nas` and `edge` children — would be **six**, so Cloud's free tier would no longer cover the fleet if Cloud were ever adopted.
 
 **Paid plans buy the Cloud plane, not monitoring.** The locked historical store, dashboard and alarms are already local — the local Parent serves the full fleet UI for nothing. Paying would buy a browser‑reachable view, longer cloud‑side event history and (in Business) federation controls, not the monitoring itself.
 
@@ -70,7 +72,9 @@ The thread's proposal: run the Parent in an **unprivileged LXC** and strip its c
 
 With that, the agent starts no probes and reads nothing from the container or the host — CPU and RAM go to receiving streams, writing `dbengine`, and serving UI/API. The thread's sizing for a Parent aggregating 5–15 children is **0.1–0.3 CPU** and **1–2 GiB RAM** depending on retention, plus a **separate volume for `dbengine`** so metric rotation never fills the rootfs.
 
-**This does not fit this fleet, by design.** ADR 27 (revised 2026‑09‑12) deliberately places the Parent **host‑native on the `pve` Proxmox host, not in an LXC or VM**, precisely so it can read VM/CT cgroups and `/etc/pve` names — the Proxmox host integration is the reason the Parent sits there at all. An aggregator‑only container would collect the fleet and **lose the Proxmox view**.
+**This does not fit this fleet as deployed.** ADR 27 (revised 2026‑09‑12) deliberately places the Parent **host‑native on the `pve` Proxmox host, not in an LXC or VM**, precisely so it can read VM/CT cgroups and `/etc/pve` names — the Proxmox host integration is the reason the Parent sits there at all. An aggregator‑only container with **no host child** would collect the fleet and **lose the Proxmox view**.
+
+The operator's intended design answers this by keeping a **host-native child on each Proxmox node** (`pve1`, `pve2`); the containerised Parent then aggregates and serves the pane, while the children retain the Proxmox view. That is a different topology from "aggregator-only with no host child", and it is what [ADR 46](../decisions/46-grafana-logs-ui-victorialogs.md) records as the deferred intent.
 
 The pattern stays useful in two narrower roles:
 
@@ -212,6 +216,8 @@ The thread's procedure for relocating the historical store to a new Parent:
 
 Prerequisites: the new Parent on the **same or newer** Netdata version, and the **same memory engine** (`dbengine`).
 
+> **Identity warning for converting the old host into a child.** Do not copy the old Parent's `registry/netdata_random_unique_id` to the new Parent if `pve`/`pve1` is then reconfigured as a child: both would present the same `machine_guid`, and the Parent would see the child as itself. Copy `dbengine` for the children's history, **mint a fresh GUID for the new Parent**, or accept a fresh start; verify on a scratch container before cutover.
+
 **Relevance**: the fleet's Parent is host‑native on `pve`, and `pve` is also the node that would be renamed and clustered ([research 47](47-second-proxmox-node.md)). If the Parent ever has to move — new node, rebuilt host, template migration — this is the checklist, and it is the only procedure in the thread that maps onto a host‑native (systemd) Parent without qualification.
 
 ---
@@ -232,7 +238,7 @@ Prerequisites: the new Parent on the **same or newer** Netdata version, and the 
 
 ## §9 — Conclusions
 
-1. **Nothing here changes ADR 27.** The Parent stays host‑native on the `pve` Proxmox host; §3's aggregator‑only LXC is recorded as a pattern for a *different* role, not a replacement.
+1. **Nothing here changes ADR 27 by itself.** The Parent stays host‑native on the `pve` Proxmox host until a separate decision; §3's aggregator‑only LXC is a pattern, not the current design. The operator's intent to move it to `monitor` with host‑native `pve1`/`pve2` children is recorded in the banner above; a future ADR 47 makes that decision.
 2. **The one upgrade worth pursuing is stream identity**: per‑host `step-ca` leaves in place of the shared API key would close the ADR 27 TLS‑trust residual in both directions and fold streaming into the fleet's existing certificate lifecycle. It is gated on §8's first four rows.
 3. **The Cloud is optional and not currently needed.** It is reachable outbound‑only (§2), the free tier covers four nodes (§1), and the paid plans buy the Cloud plane rather than monitoring. Cloud adoption is a convenience question, not an architecture one.
 4. **History survives renames and migrations for one reason** — `machine_guid` in `/var/lib/netdata/`. §6 and §7 are the two procedures that depend on it, and both are directly relevant to the planned `pve` → `pve1` work.

@@ -1,4 +1,4 @@
-# Grafana as the Log Pane — VictoriaLogs Retained, Grafana Added on the `vtstack` Guest
+# Grafana as the Log Pane — VictoriaLogs Retained, Grafana on the `monitor` Guest
 
 **Date:** 2026-10-31
 **Status:** Proposed
@@ -7,7 +7,7 @@
 
 ## Context
 
-VictoriaLogs is the Tier B log store — a single binary on the `vtstack` guest (LXC 214) with 30-day
+VictoriaLogs is the Tier B log store — a single binary on LXC 214 (currently `vtstack`) with 30-day
 retention, native TLS, HTTP basic auth, an in-LXC LAN rule and a TLS syslog listener
 ([ADR 35](35-log-store-victorialogs.md)). It works, but its built-in `/select/vmui` UI is too thin for
 the exploration the operator actually wants: field/value discovery, patterns, dashboards and saved
@@ -16,23 +16,35 @@ views. The complaint is the **pane**, not the engine.
 Grafana was considered and deferred when the store was chosen — [ADR 35](35-log-store-victorialogs.md)
 records "Grafana is not a prerequisite", and [ADR 27](27-monitoring-strategy.md) leaves the dashboard
 component to a future ADR. The operator now wants Grafana, running as a Docker Compose service **inside
-the `vtstack` LXC**, beside the store.
+LXC 214**.
 
-Three paths exist, analysed in [research 49](../research/49-grafana-logs-ui-victorialogs-vs-loki.md):
+The guest is scheduled to change before Grafana lands: it moves to the new **`pve2`** (OptiPlex 7040,
+8 GB, 256 GB) and is renamed **`monitor`**, keeping `192.168.2.214` ([Idea 15](../ideas/15-second-proxmox-node.md)).
+The operator also intends the guest to become the central **metrics** store by moving the Netdata Parent
+into it; that is a separate, deferred decision (research 50).
+
+Three pane paths exist, analysed in [research 49](../research/49-grafana-logs-ui-victorialogs-vs-loki.md):
 the official VictoriaLogs Grafana plugin; a community Loki-API proxy that enables Grafana's Logs
 Drilldown without Loki; and migrating the store to Loki. Fixed constraints: TLS-only on the LAN
-([ADR 34](34-lan-tls-only.md)), no host-firewall coverage for container traffic, an 8 GB Celeron host,
+([ADR 34](34-lan-tls-only.md)), no host-firewall coverage for container traffic, an 8 GB Proxmox host,
 and a collector contract that already works ([ADR 36](36-log-collector-fluentbit.md)).
 
 ## Decision
 
-**Keep VictoriaLogs. Adopt Grafana as the log pane, running as a Docker Compose service on the
-`vtstack` guest, with the official `victoriametrics-logs-datasource` plugin.**
+**Keep VictoriaLogs. Adopt Grafana as the log pane on the `monitor` guest, with the official
+`victoriametrics-logs-datasource` plugin.**
 
 - **Store unchanged** — no migration to Loki, no change to the Fluent Bit output contract, no change
   to the `:6514` syslog listener. Loki is rejected: it would reverse [ADR 35](35-log-store-victorialogs.md),
   replace a cardinality-safe engine with label discipline, require an authentication proxy, lose the
   router's syslog path or add a relay, and weaken the disk safety valve — all for a UI preference.
+- **Host: LXC 214, `monitor`** — rename `vtstack` → `monitor` before deployment and move the guest to
+  `pve2`, keeping `.214` so the collector and datasource need no change. The on-disk path stays
+  `/opt/vtstack` — the runbook made it stable so the store can be reorganised without moving data.
+- **Resources: 6 GiB RAM / 64 GiB rootfs** on `pve2` (256 GB), up from 2 GiB / 16 GiB. The 16 GiB
+  volume cannot carry VictoriaLogs, Grafana and the intended Netdata Parent's ~10 GiB dbengine; 64 GiB
+  does, with room for VictoriaMetrics/Traces later. The 6 GiB ceiling is measured before build and
+  must leave `pve2` itself usable.
 - **Grafana OSS** (`grafana/grafana`, explicit tag) in `/opt/vtstack/grafana`, `restart:
   unless-stopped`, `network_mode: host` on `:3000` so the **in-LXC UFW** filters it; allow `3000/tcp`
   from `192.168.2.0/24` only.
@@ -50,19 +62,32 @@ and a collector contract that already works ([ADR 36](36-log-collector-fluentbit
 - **Secrets from Azure Key Vault** — the existing `victorialogs-basic-auth-password`, plus
   `grafana-admin-password` and `grafana-secret-key`, written to root-only files and read via
   `GF_*__FILE`. Grafana encrypts datasource credentials with `secret_key`, so it must be stable.
-- **Memory: raise LXC 214 from 2 GiB to 3 GiB**, subject to `pve` headroom. Grafana's documented floor
-  is 512 MB, and VictoriaLogs already reserves 60 % of a 2 GiB ceiling; 3 GiB keeps the store at
-  `-memory.allowedPercent=60` (~1.8 GiB) with Grafana and the OS bounded above it. **This is a
-  `pve`-level trade-off against the planned Home Assistant VM and must be measured before deployment.**
 - **Datasource and dashboards provisioned from the repo** — reproducible; the embedded SQLite database
   holds only users and preferences. Local `admin` is break-glass; Authentik OIDC is the planned normal
   path ([ADR 44](44-authentik-identity-provider.md)), not a day-one dependency.
 - **`vmui` stays** as the break-glass UI. Grafana is the preferred pane, not a prerequisite — the store
   remains independently queryable.
 
-**Amendments.** [ADR 35](35-log-store-victorialogs.md): Grafana is no longer merely optional — it is
-the preferred pane, while the store's independence from it stands. [ADR 27](27-monitoring-strategy.md):
-Grafana is adopted for **logs only**; metrics dashboards remain a future decision.
+### Deferred — the Netdata Parent on `monitor`
+
+The operator intends `monitor` to also host the **Netdata Parent** as a container, making it the central
+metrics store beside VictoriaLogs and Grafana. **This is an intent, not a decision in this ADR.** It
+requires a separate ADR (47) and one structural condition: **`pve1` and `pve2` must each run a
+host-native Netdata child** that streams to the containerised Parent, because a Parent in an LXC cannot
+read the Proxmox hosts' VM/CT cgroups or `/etc/pve` names ([research 50](../research/50-netdata-cloud-costs-and-stream-identity.md) §3).
+
+- Research 50 sizes a Parent aggregating 5–15 children at **1–2 GiB RAM**; the 6 GiB ceiling therefore
+  drops VictoriaLogs to `-memory.allowedPercent=50` (3 GiB) when the Parent lands, not the current 60 %.
+- Research 50 §7 is the dbengine/registry migration procedure; **do not copy the old Parent's
+  `machine_guid`** if `pve1` becomes a child — copy `dbengine` for the children's history and mint a
+  fresh GUID for the new Parent, or accept a fresh start.
+- The move is gated on the 6 GiB/64 GiB guest, the host-native children, and a scratch migration test.
+  Until ADR 47, the Parent stays host-native on `pve1` and [ADR 27](27-monitoring-strategy.md) stands.
+
+**Amendments.** [ADR 35](35-log-store-victorialogs.md): the store's guest is renamed `monitor` and moved
+to `pve2`, and its resource envelope grows — the store choice itself is unchanged. [ADR 27](27-monitoring-strategy.md):
+Grafana is adopted for **logs only**; the Netdata Parent move is recorded as intent, to be decided by
+ADR 47.
 
 **Not adopted now:** the community LogQL→LogsQL proxy that would enable Grafana's Loki-only Logs
 Drilldown app ([research 49](../research/49-grafana-logs-ui-victorialogs-vs-loki.md) §4) — v0.1.0, a
@@ -73,8 +98,11 @@ proves insufficient; it is not the fleet's log pane today.
 
 - **The pane improves without touching the pipeline.** Every node's Fluent Bit output, the store's
   retention and the router's syslog path stay exactly as deployed.
-- **One more always-on service on an 8 GB Celeron** — Grafana plus a +1 GiB LXC competes with Home
-  Assistant, Netdata and the CA. The memory ceiling bounds it; it does not remove the contention.
+- **The guest moves to the stronger node.** `pve2`'s 256 GB disk and 8 GB RAM absorb the 64 GiB volume
+  and the 6 GiB ceiling; `pve1` keeps its capacity for Home Assistant, the CA and identity services.
+- **6 GiB is a ceiling, not a promise** — Grafana + VictoriaLogs + the deferred Netdata Parent share
+  it. The Parent's RSS must be measured; if it runs at 2 GiB, VictoriaLogs drops to 40 % or `pve2`
+  gains RAM (the 7040 supports 32 GB).
 - **Not the literal Loki experience.** The official plugin gives Explore, histogram, live tail, levels,
   patterns, dashboards, alerting, correlations and its own Drilldown drawer — but **not** Grafana's
   Logs Drilldown app and **not** LogQL. Dashboards are new LogsQL work; Loki dashboards do not port.
@@ -84,8 +112,8 @@ proves insufficient; it is not the fleet's log pane today.
   route; local admin until Authentik OIDC lands.
 - **Reversible** — stopping and removing the Grafana Compose project restores the previous state; the
   store is unaffected.
-- **Disk is still shared** — Grafana's image and database are small, but the 16 GiB rootfs and the
-  store's 80 % cap must be checked before the LXC size is left unchanged.
+- **Two deferred dependencies remain visible** — the Netdata Parent move needs ADR 47, and the guest's
+  Proxmox view stays with host-native children rather than the Parent.
 
 ### Alternatives Considered
 
@@ -103,17 +131,21 @@ proves insufficient; it is not the fleet's log pane today.
 - **Grafana's built-in Loki datasource pointed at VictoriaLogs** — impossible: the Loki datasource
   calls `/loki/api/v1/query*`, and VictoriaLogs serves only `/select/logsql/*` (it accepts Loki
   **push** ingest, not Loki queries).
+- **Move the Netdata Parent in this ADR** — rejected as scope creep: the Parent move reverses ADR 27's
+  host-native placement and needs host-native children, a dbengine migration test and its own ADR.
 
 ---
 
 ## References
 
-- [Research 49 — Grafana as the Log Pane: VictoriaLogs with the Plugin, or a Loki Migration](../research/49-grafana-logs-ui-victorialogs-vs-loki.md) — the analysis behind this decision
+- [Research 49 — Grafana as the Log Pane: VictoriaLogs with the Plugin, or a Loki Migration](../research/49-grafana-logs-ui-victorialogs-vs-loki.md) — the pane analysis
+- [Research 50 — Netdata Cloud costs, stream identity and Parent migration](../research/50-netdata-cloud-costs-and-stream-identity.md) — the deferred metrics-store intent
+- [Idea 15 — a second Proxmox node (`pve2`)](../ideas/15-second-proxmox-node.md) — the move and rename
 - [ADR 35](35-log-store-victorialogs.md) — the store, its host, retention, TLS/auth and LAN rule
 - [ADR 36](36-log-collector-fluentbit.md) — the collector contract that stays unchanged
 - [ADR 34](34-lan-tls-only.md) — TLS-only LAN; host UFW does not filter container traffic
-- [ADR 27](27-monitoring-strategy.md) — Tier B monitoring, future dashboard component
+- [ADR 27](27-monitoring-strategy.md) — Tier B monitoring, host-native Parent, future dashboard component
 - [ADR 40](40-internal-dns-proxy-edge.md) — `.internal` DNS and the edge reverse proxy
 - [ADR 44](44-authentik-identity-provider.md) — Authentik as the future OIDC path for Grafana
-- [Research 33](../research/33-centralized-logging-victorialogs.md) · [runbook 33](../runbooks/33-deploy-victorialogs.md)
+- [Runbook 33](../runbooks/33-deploy-victorialogs.md) — the deployed store
 - Upstream: [VictoriaLogs Grafana integration](https://docs.victoriametrics.com/victorialogs/integrations/grafana/) · [plugin catalog](https://grafana.com/grafana/plugins/victoriametrics-logs-datasource/) · [Grafana Docker](https://grafana.com/docs/grafana/latest/setup-grafana/installation/docker/) · [Grafana sizing](https://grafana.com/docs/grafana/latest/setup-grafana/installation/) · [Loki retention](https://grafana.com/docs/loki/latest/operations/storage/retention/) · [Loki authentication](https://grafana.com/docs/loki/latest/operations/authentication/)
