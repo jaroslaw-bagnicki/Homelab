@@ -47,6 +47,69 @@
       {{ ca_trust_fetched_fingerprint.stdout.split('=')[-1] | trim }}). Re-publish the issued root
       with Set-HomelabCaRootCert.ps1; change the pin only if the root was re-issued.
 
+- name: Assert Azure controller credentials are set for the SSH CA keys
+  when:
+    - ca_trust_ssh_enabled | bool
+    - ca_trust_ssh_host_key | length == 0 or ca_trust_ssh_user_key | length == 0
+  ansible.builtin.assert:
+    that:
+      - lookup('ansible.builtin.env', 'AZURE_CLIENT_ID', default='') | length > 0
+      - lookup('ansible.builtin.env', 'AZURE_CLIENT_SECRET', default='') | length > 0
+      - lookup('ansible.builtin.env', 'AZURE_TENANT_ID', default='') | length > 0
+    fail_msg: >-
+      AZURE_CLIENT_ID, AZURE_CLIENT_SECRET and AZURE_TENANT_ID must be set on the
+      Ansible controller for the SSH CA public-key Key Vault lookups.
+  delegate_to: localhost
+
+- name: Fetch the SSH host CA public key from Key Vault
+  when:
+    - ca_trust_ssh_enabled | bool
+    - ca_trust_ssh_host_key | length == 0
+  vars:
+    ca_trust_vault_url: "https://{{ ca_trust_keyvault_name }}.vault.azure.net"
+    ca_trust_azure_client_id: "{{ lookup('ansible.builtin.env', 'AZURE_CLIENT_ID') }}"
+    ca_trust_azure_secret: "{{ lookup('ansible.builtin.env', 'AZURE_CLIENT_SECRET') }}"
+    ca_trust_azure_tenant_id: "{{ lookup('ansible.builtin.env', 'AZURE_TENANT_ID') }}"
+  ansible.builtin.set_fact:
+    ca_trust_ssh_host_key: >-
+      {{ lookup('azure.azcollection.azure_keyvault_secret',
+      ca_trust_ssh_host_secret_name, vault_url=ca_trust_vault_url,
+      client_id=ca_trust_azure_client_id, secret=ca_trust_azure_secret,
+      tenant=ca_trust_azure_tenant_id) }}
+  delegate_to: localhost
+
+- name: Fetch the SSH user CA public key from Key Vault
+  when:
+    - ca_trust_ssh_enabled | bool
+    - ca_trust_ssh_user_key | length == 0
+  vars:
+    ca_trust_vault_url: "https://{{ ca_trust_keyvault_name }}.vault.azure.net"
+    ca_trust_azure_client_id: "{{ lookup('ansible.builtin.env', 'AZURE_CLIENT_ID') }}"
+    ca_trust_azure_secret: "{{ lookup('ansible.builtin.env', 'AZURE_CLIENT_SECRET') }}"
+    ca_trust_azure_tenant_id: "{{ lookup('ansible.builtin.env', 'AZURE_TENANT_ID') }}"
+  ansible.builtin.set_fact:
+    ca_trust_ssh_user_key: >-
+      {{ lookup('azure.azcollection.azure_keyvault_secret',
+      ca_trust_ssh_user_secret_name, vault_url=ca_trust_vault_url,
+      client_id=ca_trust_azure_client_id, secret=ca_trust_azure_secret,
+      tenant=ca_trust_azure_tenant_id) }}
+  delegate_to: localhost
+
+- name: Install the SSH CA public keys
+  when: ca_trust_ssh_enabled | bool
+  ansible.builtin.copy:
+    content: "{{ item.content }}
+"
+    dest: "{{ item.dest }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - { dest: /etc/ssh/ssh_host_ca_key.pub, content: "{{ ca_trust_ssh_host_key }}" }
+    - { dest: /etc/ssh/ssh_user_ca_key.pub, content: "{{ ca_trust_ssh_user_key }}" }
+  loop_control:
+    label: "{{ item.dest }}"
+
 - name: Install trust-store prerequisites
   ansible.builtin.apt:
     name:

@@ -12,8 +12,8 @@
       when: ansible_facts['lvm']['vgs'] is defined and 'ubuntu-vg' in ansible_facts['lvm']['vgs']
   roles:
     - common
-    - security
     - ca_trust
+    - security
     - docker_host
     - azure_arc
     - nut_client

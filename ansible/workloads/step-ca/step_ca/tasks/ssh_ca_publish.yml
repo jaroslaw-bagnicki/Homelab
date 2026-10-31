@@ -1,0 +1,56 @@
+---
+# The SSH CA public keys are only printed by step-ca at startup. Capture the
+# journal lines, write the OpenSSH-format keys locally on the CA, and leave the
+# operator-facing copies ready for the Key Vault publication script.
+
+- name: Ensure step-ca is running before reading the SSH CA keys
+  ansible.builtin.systemd:
+    name: step-ca
+    state: started
+
+- name: Read the SSH CA public keys from the step-ca journal
+  ansible.builtin.shell: |
+    set -o pipefail
+    journalctl -u step-ca --no-pager -o cat \
+      | grep -E 'SSH (Host|User) CA Key: ' \
+      | tail -n 2
+  register: step_ca_ssh_log
+  changed_when: false
+  retries: 15
+  delay: 2
+  until: >-
+    step_ca_ssh_log.stdout is search('SSH Host CA Key:') and
+    step_ca_ssh_log.stdout is search('SSH User CA Key:')
+
+# step-ca writes its own syslog-style timestamp ahead of every message, so the
+# keys are matched anywhere in the line and the prefix is stripped.
+- name: Extract the SSH CA public keys
+  ansible.builtin.set_fact:
+    step_ca_ssh_host_pub: >-
+      {{ step_ca_ssh_log.stdout_lines
+         | select('search', 'SSH Host CA Key: ')
+         | map('regex_replace', '^.*SSH Host CA Key: ', '')
+         | map('trim') | first }}
+    step_ca_ssh_user_pub: >-
+      {{ step_ca_ssh_log.stdout_lines
+         | select('search', 'SSH User CA Key: ')
+         | map('regex_replace', '^.*SSH User CA Key: ', '')
+         | map('trim') | first }}
+
+# The files are data for the security/ca_trust roles, which own the sshd
+# configuration and restart sshd themselves — a reload here would fail on hosts
+# where ssh.socket holds port 22 (the SIGHUP re-exec cannot bind).
+- name: Write the SSH CA public keys on the CA guest
+  ansible.builtin.copy:
+    content: "{{ item.content }}\n"
+    dest: "{{ item.dest }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - { dest: /etc/step-ca/certs/ssh_host_ca_key.pub, content: "{{ step_ca_ssh_host_pub }}" }
+    - { dest: /etc/step-ca/certs/ssh_user_ca_key.pub, content: "{{ step_ca_ssh_user_pub }}" }
+    - { dest: /etc/ssh/ssh_host_ca_key.pub, content: "{{ step_ca_ssh_host_pub }}" }
+    - { dest: /etc/ssh/ssh_user_ca_key.pub, content: "{{ step_ca_ssh_user_pub }}" }
+  loop_control:
+    label: "{{ item.dest }}"

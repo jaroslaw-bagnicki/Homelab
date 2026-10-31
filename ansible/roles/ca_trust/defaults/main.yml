@@ -7,3 +7,13 @@ ca_trust_secret_name: ca-root-cert
 ca_trust_root_sha256: "02:83:B2:6B:C2:0C:E7:64:23:FE:23:77:5E:4D:61:98:9F:1D:51:F0:41:5C:6D:75:1D:12:C2:33:B6:74:2C:E0"
 # Override to skip the Key Vault lookup (tests).
 ca_trust_cert: ""
+
+# SSH CA public keys (ADR 41) — a separate trust artefact from the X.509 root.
+# Published to Key Vault by scripts/Set-HomelabSshCaKeys.ps1 after the SSH CA keys
+# are created on the ca guest. `cloudlab` is outside SSH CA scope.
+ca_trust_ssh_enabled: true
+ca_trust_ssh_host_secret_name: ssh-host-ca-pub
+ca_trust_ssh_user_secret_name: ssh-user-ca-pub
+# Override to skip the Key Vault lookups (tests).
+ca_trust_ssh_host_key: ""
+ca_trust_ssh_user_key: ""

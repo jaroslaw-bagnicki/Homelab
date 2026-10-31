@@ -10,3 +10,8 @@ opencode_instances:
     gh_pat: true
   - name: prospera
   - name: test
+
+# cloudlab is outside SSH CA scope: no LAN route to ca.internal, so it keeps the
+# fleet key and the pinned host key (ADR 41 amendment, issue #161).
+ca_trust_ssh_enabled: false
+security_ssh_certs_enabled: false

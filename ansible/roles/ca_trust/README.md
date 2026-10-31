@@ -1,16 +1,18 @@
 # ca_trust
 
-Installs the fleet `step-ca` **root** certificate into a node's system trust store, so the
-`.internal` leaves Caddy serves verify without warnings
+Installs the fleet `step-ca` **root** certificate into a node's system trust store, and the **SSH CA
+public keys** that make host certificates and `@cert-authority` verification work
 ([ADR 38](../../../docs/decisions/38-private-ca-hierarchy-and-custody.md),
-[ADR 40](../../../docs/decisions/40-internal-dns-proxy-edge.md)).
+[ADR 40](../../../docs/decisions/40-internal-dns-proxy-edge.md),
+[ADR 41](../../../docs/decisions/41-ssh-certificates-step-ca.md)).
 
 Only the **root** is distributed: the intermediate is re-signed yearly and reaches clients the
 ordinary way, inside the TLS handshake — shipping it to clients would force an update on every
 re-sign.
 
 - `tasks/main.yml` — Key Vault fetch, `/usr/local/share/ca-certificates/homelab-root-ca.crt`,
-  store rebuild, `openssl verify` against the resulting bundle.
+  store rebuild, `openssl verify` against the resulting bundle; then the SSH host/user CA public keys
+  at `/etc/ssh/ssh_host_ca_key.pub` and `/etc/ssh/ssh_user_ca_key.pub`.
 - `handlers/main.yml` — `update-ca-certificates`, fired only when the certificate content changes.
 - `vars/main.yml` — role constants (certificate path, bundle path).
 
@@ -22,6 +24,10 @@ re-sign.
 | `ca_trust_secret_name` | `ca-root-cert` | Secret name — PEM value, `Expires` mirrors the root's `notAfter`. |
 | `ca_trust_root_sha256` | `02:83:B2:6B:…:2C:E0` | Pinned SHA-256 fingerprint of the fleet root; the Key Vault value must match. `""` skips the pin (tests). |
 | `ca_trust_cert` | `""` | Override to skip the Key Vault lookup (tests). |
+| `ca_trust_ssh_enabled` | `true` | Install the SSH CA public keys; `cloudlab` sets `false`. |
+| `ca_trust_ssh_host_secret_name` | `ssh-host-ca-pub` | Key Vault secret for the SSH host CA public key. |
+| `ca_trust_ssh_user_secret_name` | `ssh-user-ca-pub` | Key Vault secret for the SSH user CA public key. |
+| `ca_trust_ssh_host_key` / `..._user_key` | `""` | Override to skip the Key Vault lookups (tests). |
 
 ## Behaviour
 

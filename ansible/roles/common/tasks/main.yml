@@ -25,6 +25,7 @@
          else 'systemd-timesyncd' }}
 
 - name: Ensure NTP service is running
+  when: common_time_sync_enabled | bool
   ansible.builtin.service:
     name: "{{ common_ntp_service }}"
     state: started

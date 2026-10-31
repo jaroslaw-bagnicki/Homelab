@@ -31,11 +31,15 @@ every access to a lab service.**
    |---|---|---|
    | SMB/NFS `sec=krb5`, GSSAPI LDAP, kernel-level file access | FreeIPA **keytab** | [ADR 43](43-freeipa-domain-realm.md) |
    | HTTP APIs and web services | Authentik **OIDC** — device flow when a human is present, `client_credentials` when unattended | [ADR 44](44-authentik-identity-provider.md) |
-   | SSH to the fleet | `step-ca` certificate under `agent-<name>` | [ADR 41](41-ssh-certificates-step-ca.md) |
+   | SSH to the fleet | `step-ca` certificate under the shared `agent-ai` principal, per-agent key ID | [ADR 41](41-ssh-certificates-step-ca.md) |
    | Azure resources | Entra service principal, or UAMI Workload Identity on k3s | [ADR 16](16-agent-identity-pattern.md) |
    | Pod → API server and in-cluster services | k3s projected service-account token | [ADR 22](22-k3s-arc-homelab.md) |
 
-2. **One identity per workload, and for lab-service access it lives in the directory.** `svc-<workload>` is
+2. **One identity per workload, with one SSH exception.** For lab-service access the identity lives in
+   the directory. The SSH half of the AI agents uses the shared `agent-ai` principal from
+   [ADR 41](41-ssh-certificates-step-ca.md); the per-agent key ID (`agent-copilot`,
+   `agent-opencode`) preserves the audit trail, while the Authentik/HTTP `svc-<workload>` identities
+   remain separate. `svc-<workload>` is
    a non-person user in FreeIPA — `/sbin/nologin`, no usable password, no MFA enrolment — and a member of
    **`workloads`**. That
    group is the only scope the Authentik LDAP source syncs for workloads, and it never appears in an
@@ -86,6 +90,10 @@ every access to a lab service.**
   HBAC and `ipa user-find` sane; it is enforced, not assumed.
 - **Workload identity is not privilege**: the workload gets the rights its service ACLs grant, never the
   operator's.
+- **The SSH AI-agent identity is class-scoped, not per workload.** One `agent-ai` credential is shared
+  by opencode, Copilot and Hermes; the per-agent key ID is the audit hint and a broker is the target
+  custody/per-agent revocation point. The HTTP identities stay `svc-<workload>`, so the exception does
+  not collapse the directory model.
 
 ### Alternatives Considered
 

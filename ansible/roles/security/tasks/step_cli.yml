@@ -1,0 +1,89 @@
+---
+# Install the stock smallstep CLI on a managed host. The CA guest gets it from
+# the step_ca workload; this path covers every other node that renews a host
+# certificate or issues a user certificate.
+
+- name: Check for the step CLI
+  ansible.builtin.stat:
+    path: /usr/local/bin/step
+  register: security_step_cli_stat
+
+- name: Resolve the latest step CLI release
+  when: not security_step_cli_stat.stat.exists
+  ansible.builtin.uri:
+    url: https://api.github.com/repos/smallstep/cli/releases/latest
+    return_content: true
+    headers:
+      Accept: application/vnd.github+json
+  register: security_step_cli_release
+  changed_when: false
+
+- name: Build the step CLI asset plan
+  when: not security_step_cli_stat.stat.exists
+  ansible.builtin.set_fact:
+    security_step_cli_asset: >-
+      {{ security_step_cli_release.json.assets
+         | selectattr('name', 'search', '_linux_amd64[.]tar[.]gz$') | first }}
+    security_step_cli_sums: >-
+      {{ security_step_cli_release.json.assets
+         | selectattr('name', 'equalto', 'checksums.txt') | first }}
+
+- name: Create the step CLI install directory
+  when: not security_step_cli_stat.stat.exists
+  ansible.builtin.file:
+    path: /var/tmp/step-cli-install
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Download the step CLI archive
+  when: not security_step_cli_stat.stat.exists
+  ansible.builtin.get_url:
+    url: "{{ security_step_cli_asset.browser_download_url }}"
+    dest: "/var/tmp/step-cli-install/{{ security_step_cli_asset.name }}"
+    mode: "0644"
+
+- name: Download the step CLI checksums
+  when: not security_step_cli_stat.stat.exists
+  ansible.builtin.get_url:
+    url: "{{ security_step_cli_sums.browser_download_url }}"
+    dest: /var/tmp/step-cli-install/checksums.txt
+    mode: "0644"
+
+- name: Verify the step CLI archive
+  when: not security_step_cli_stat.stat.exists
+  ansible.builtin.shell:
+    cmd: >-
+      set -o pipefail &&
+      grep -E ' +{{ security_step_cli_asset.name | regex_escape }}$' checksums.txt
+      | sha256sum -c -
+    chdir: /var/tmp/step-cli-install
+    executable: /bin/bash
+  changed_when: false
+
+- name: Extract the step CLI archive
+  when: not security_step_cli_stat.stat.exists
+  ansible.builtin.unarchive:
+    src: "/var/tmp/step-cli-install/{{ security_step_cli_asset.name }}"
+    dest: /var/tmp/step-cli-install
+    remote_src: true
+
+- name: Locate the step CLI binary
+  when: not security_step_cli_stat.stat.exists
+  ansible.builtin.find:
+    paths: /var/tmp/step-cli-install
+    patterns: step
+    file_type: file
+    recurse: true
+  register: security_step_cli_found
+
+- name: Install the step CLI binary
+  when: not security_step_cli_stat.stat.exists
+  ansible.builtin.copy:
+    src: "{{ security_step_cli_found.files[0].path }}"
+    dest: /usr/local/bin/step
+    remote_src: true
+    owner: root
+    group: root
+    mode: "0755"

@@ -1,5 +1,5 @@
 ---
-# Private CA (step-ca) — ADR 38, gate #141, runbooks 35/36.
+# Private CA (step-ca) — ADR 38/41, gate #141, runbooks 35/36/40.
 # Single-host, single-purpose role: paths, URLs, CA identity and provisioner
 # names are hardcoded in the tasks/templates. Only genuine knobs live here.
 
@@ -17,3 +17,57 @@ step_ca_csr_force: false
 # Recovery only: clear the stale TPM blob, CSR, public key and intermediate
 # certificate before recreating them (e.g. after a PTT clear destroyed the key).
 step_ca_reset: false
+
+# ── SSH CA (ADR 41) ──────────────────────────────────────────────────────────
+# Both SSH CA keys live in the pve TPM by default. `file` is the documented
+# fallback only when the guest cannot serve tpmkms: signers for SSH; it requires
+# an ADR 41 amendment and 0600 root:root custody.
+step_ca_ssh_key_custody: tpm
+step_ca_ssh_host_key_name: homelab-ssh-host-ca
+step_ca_ssh_user_key_name: homelab-ssh-user-ca
+# The provisioners are created through the CA's admin API (step CLI 0.31 dropped
+# the offline --ca-config write). The certificate's SANs are `ca.internal` and
+# the guest address, so loopback would fail validation.
+step_ca_ssh_ca_url: https://ca.internal:9000
+
+step_ca_ssh_user_default_duration: 8h
+step_ca_ssh_user_max_duration: 24h
+step_ca_ssh_host_default_duration: 168h
+step_ca_ssh_host_max_duration: 168h
+
+# Principal allow-list. `cloudlab` is deliberately outside the SSH CA scope
+# (no LAN route to ca.internal); it stays on the fleet key.
+step_ca_ssh_hosts: "{{ groups['all'] | difference(['cloudlab']) }}"
+step_ca_ssh_user_principals:
+  - automation
+  - agent-ai
+step_ca_ssh_email_domains:
+  - "@internal"
+
+# One JWK per identity class/role. Passwords live in Key Vault; the role only
+# uses them to create the provisioner and never leaves them on the host.
+step_ca_ssh_provisioners:
+  - name: hosts@internal
+    secret: step-ca-ssh-hosts-password
+    template: hosts.tpl
+    user_default: 5m
+    user_max: 5m
+    host_default: 168h
+    host_max: 168h
+  - name: automation@internal
+    secret: step-ca-ssh-automation-password
+    template: automation.tpl
+    user_default: 8h
+    user_max: 8h
+    host_default: 168h
+    host_max: 168h
+  - name: agent-ai@internal
+    secret: step-ca-ssh-agent-ai-password
+    template: agent-ai.tpl
+    user_default: 8h
+    user_max: 8h
+    host_default: 168h
+    host_max: 168h
+
+# Override to skip the Key Vault lookups (tests); normally left empty.
+step_ca_ssh_provisioner_passwords: {}
