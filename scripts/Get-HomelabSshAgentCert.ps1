@@ -24,9 +24,6 @@ if (-not (Get-AzContext)) {
     Connect-AzAccount -UseDeviceAuthentication -Tenant cloud5.ovh | Out-Null
 }
 
-# Make ssh, ssh-keygen and step fail loudly instead of being checked one by one.
-$PSNativeCommandUseErrorActionPreference = $true
-
 $work = Join-Path ([System.IO.Path]::GetTempPath()) "homelab-$keyId-$([guid]::NewGuid().ToString('N'))"
 New-Item -ItemType Directory -Path $work | Out-Null
 if ($IsLinux) { chmod 700 $work }
@@ -45,6 +42,7 @@ try {
     }
 
     ssh-keygen -t ed25519 -f $key -N '' -q
+    if ($LASTEXITCODE -ne 0) { throw 'ssh-keygen could not create the identity key.' }
 
     step ssh certificate `
         --sign `
@@ -53,8 +51,10 @@ try {
         --ca-url $CaUrl `
         --root $RootPath `
         $keyId "$key.pub"
+    if ($LASTEXITCODE -ne 0) { throw 'step could not issue the certificate.' }
 
     ssh-add $key
+    if ($LASTEXITCODE -ne 0) { throw 'ssh-add could not load the certificate into the agent.' }
 
     Write-Host "agent-ai certificate loaded into ssh-agent (key ID $keyId, principal agent-ai)."
 }
