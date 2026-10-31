@@ -20,15 +20,17 @@ $root = Get-AzKeyVaultSecret -VaultName $vault -Name 'ca-root-cert' -AsPlainText
 # Make ssh, ssh-keygen and step fail loudly instead of being checked one by one.
 $PSNativeCommandUseErrorActionPreference = $true
 
-# step only takes file paths for --root and the password; keep them in RAM.
-$work = '/dev/shm/homelab-ssh-agent'
+# step only accepts a file for --root and the password, so the workspace lives on
+# tmpfs where possible: the CA root never reaches the disk.
+$tmp = if ($IsLinux) { '/dev/shm' } else { [IO.Path]::GetTempPath() }
+$work = "$tmp/homelab-ssh-agent"
 New-Item -ItemType Directory -Path $work -Force | Out-Null
-chmod 700 $work
+if ($IsLinux) { chmod 700 $work }
 
 try {
-    $key = Join-Path $work 'identity'
-    $passwordFile = Join-Path $work 'password'
-    $rootFile = Join-Path $work 'root.crt'
+    $key = "$work/identity"
+    $passwordFile = "$work/password"
+    $rootFile = "$work/root.crt"
 
     Set-Content -LiteralPath $passwordFile -Value $password -NoNewline
     Set-Content -LiteralPath $rootFile -Value $root
