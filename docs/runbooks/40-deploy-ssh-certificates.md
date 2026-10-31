@@ -269,9 +269,15 @@ Record the drill. The fleet key is the only path that survives a CA outage.
 
 > **Execution record:** 2026-10-31 — **drill passed.** `step-ca` stopped on `ca` (`inactive`), the fleet
 > key logged into `lab` (`hostname` → `lab`, `sudo -n whoami` → `root`) with no certificate involved, and
-> the CA came back `active` with `step ca health … → ok`. The `automation` certificate path itself was
-> not exercised end-to-end: nothing in the fleet runs Ansible as `automation` yet, and the agent-identity
-> equivalent was proven in §6.
+> the CA came back `active` with `step ca health … → ok`.
+>
+> **2026-10-31 (follow-up) — the `automation` path ran a playbook.** A fresh agent on
+> `/tmp/automation-gate.sock` held the `automation` certificate and no fleet key
+> (`ssh-add -l` → one `ED25519-CERT`), and `ansible-playbook ansible/playbooks/playbook-ca.yml
+> --check` connected as that principal: `ok=35 changed=4 failed=1`. The single failure is a check-mode
+> artifact, not a defect — `security : Fetch the issued host certificate` reads
+> `/tmp/homelab-ssh-issue-ca/ssh_host_ed25519_key-cert.pub`, which check mode never creates because
+> the issuance task is skipped.
 
 ## 6. M5 — Shared `agent-ai` identity
 
@@ -338,7 +344,7 @@ revocation and should be the only holder of `step-ca-ssh-agent-ai-password`.
 - [x] Host certificates carry short name, `.internal` and inventory IP on every LAN node
 - [x] `sshd -T` shows `HostCertificate`, `TrustedUserCAKeys`, `AuthorizedPrincipalsFile`
 - [x] Renewal timer runs; a near-expiry certificate renews and reloads `sshd`
-- [ ] `automation` certificate runs a playbook with the fleet key removed from the agent
+- [x] `automation` certificate runs a playbook with the fleet key removed from the agent
 - [x] Break-glass drill: CA stopped, fleet key still logs in
 - [x] `agent-ai` certificate carries principal `agent-ai` and key ID `agent-<name>`
 - [ ] Deleting `agent-ai@internal` stops new AI-agent issuance; existing certs expire
