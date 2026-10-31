@@ -225,11 +225,14 @@ sudo journalctl -u homelab-ssh-host-cert-renew -n 20
 >
 > Two operational notes:
 >
-> - **`ca` and `vtstack` run no time daemon** (`systemd-timesyncd`, `chrony`, `ntpsec` all inactive) and
->   inherit the host clock through the container. The CA was ~6 h behind during the first issuances, so
->   the `pve`/`lab`/`edge`/`nas` certificates carry a `notBefore` 6 h in the past and a slightly short
->   7-day window. Harmless — the clocks are consistent again — but the CA guest should get time sync
->   before certificates become load-bearing, and §5's break-glass drill is the natural place to confirm.
+> - **`ca` and `vtstack` run no time daemon, and that is correct.** Inside an LXC the clock *is* the
+>   host's kernel clock; `systemd-timesyncd` is skipped there by its own `ConditionVirtualization=!container`
+>   check, and root in the container holds no capabilities (`sudo capsh --print` → `Current: =ep`), so
+>   nothing could call `clock_settime` even if it ran. The `common` role therefore no longer claims to
+>   start a time daemon on container guests. The CA was ~6 h behind during the first issuances — a
+>   **host-side** fault, not a guest one — so the `pve`/`lab`/`edge`/`nas` certificates carry a `notBefore`
+>   6 h in the past and a slightly short 7-day window. Harmless now; the check that matters is
+>   `timedatectl` on `pve` (chrony active, `System clock synchronized: yes`), never inside the CA guest.
 > - **Losing `ssh-agent` mid-run** costs a playbook: every task fails `Permission denied (publickey)`.
 >   Start the agent on a fixed socket (`ssh-agent -a /tmp/fleet-ssh-agent.sock`) so it survives terminal
 >   churn, and export `SSH_AUTH_SOCK` in each new shell.
