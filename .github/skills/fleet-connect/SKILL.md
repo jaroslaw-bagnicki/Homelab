@@ -205,14 +205,15 @@ container:
 192.168.2.215 ca.internal
 ```
 
-### ❌ `pwsh -File scripts/Import-HomelabFleetKey.ps1` loses env vars
+### ❌ `pwsh -File scripts/Import-HomelabFleetKey.ps1` loses the key
 
-The script `scripts/Import-HomelabFleetKey.ps1` starts `ssh-agent` and sets
-`SSH_AUTH_SOCK` / `SSH_AGENT_PID` as PowerShell environment variables.
-When run via `pwsh -File`, these variables are set in a **child process**
-that exits immediately — the parent terminal never gets them.
+The script loads the key into the agent named by `SSH_AUTH_SOCK` and throws when that variable is
+unset — it never starts an agent and never exports `SSH_AUTH_SOCK` / `SSH_AGENT_PID`. Started as a
+child process (`pwsh -File …`), it therefore either throws or loads the key into an agent the parent
+shell cannot reach.
 
-**Fix:** Run it dot-sourced in the active terminal, or copy-paste the sequence from
+**Fix:** start the agent in the active terminal first (`ssh-agent -a /tmp/fleet-ssh-agent.sock`, then
+export `SSH_AUTH_SOCK` to that socket) and only then run the script there — see
 [Break-glass](#break-glass-the-fleet-key).
 
 ### ❌ `host_key_checking = True` blocks first connection
