@@ -2,7 +2,6 @@ $ErrorActionPreference = 'Stop'
 $PSNativeCommandArgumentPassing = 'Standard'
 
 $vault = 'homelab-bysxdb-kv'
-$keyId = 'automation'
 
 foreach ($command in 'step', 'ssh-keygen', 'ssh-add') {
     if (-not (Get-Command $command -ErrorAction SilentlyContinue)) {
@@ -14,7 +13,7 @@ if ($IsLinux -and -not $env:SSH_AUTH_SOCK) {
 }
 $loaded = @(& ssh-add -L 2>$null)
 if ($loaded -match 'fleetadm@homelab') {
-    throw "The fleetadm break-glass key is already loaded; ssh would offer it before $keyId. Run 'ssh-add -D' (or start a fresh shell) and retry."
+    throw "The fleetadm break-glass key is already loaded; ssh would offer it before the automation certificate. Run 'ssh-add -D' (or start a fresh shell) and retry."
 }
 if (-not (Get-AzContext)) {
     Connect-AzAccount -UseDeviceAuthentication -Tenant cloud5.ovh | Out-Null
@@ -47,7 +46,7 @@ try {
         --provisioner-password-file $passwordFile `
         --ca-url 'https://ca.internal:9000' `
         --root $rootFile `
-        $keyId "$keyFile.pub"
+        'automation' "$keyFile.pub"
     if ($LASTEXITCODE -ne 0) { throw "step ssh certificate failed with exit code $LASTEXITCODE" }
     if (-not (Test-Path "$keyFile-cert.pub")) { throw "step did not write $keyFile-cert.pub" }
 
