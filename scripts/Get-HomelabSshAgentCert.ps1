@@ -46,7 +46,7 @@ try {
         --root $rootFile `
         "agent-$Agent" "$key.pub"
 
-    ssh-add $key
+    ssh-add -t 8h $key
 
     Write-Host 'agent-ai certificate loaded into ssh-agent.'
 }
