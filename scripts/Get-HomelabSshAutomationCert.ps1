@@ -42,7 +42,7 @@ try {
         --root $rootFile `
         'automation' "$key.pub"
 
-    ssh-add $key
+    ssh-add -t 8h $key
 
     Write-Host 'Automation certificate loaded into ssh-agent.'
 }
