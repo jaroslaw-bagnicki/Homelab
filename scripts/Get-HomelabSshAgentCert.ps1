@@ -24,7 +24,7 @@ if (-not (Get-AzContext)) {
 # Make ssh, ssh-keygen and step fail loudly instead of being checked one by one.
 $PSNativeCommandUseErrorActionPreference = $true
 
-$work = Join-Path ([System.IO.Path]::GetTempPath()) "homelab-$keyId-$([guid]::NewGuid().ToString('N'))"
+$work = Join-Path ([IO.Path]::GetTempPath()) "homelab-$keyId-$(New-Guid)"
 New-Item -ItemType Directory -Path $work | Out-Null
 if ($IsLinux) { chmod 700 $work }
 
