@@ -49,24 +49,32 @@ and a collector contract that already works ([ADR 36](36-log-collector-fluentbit
   (ADR 47), not before. Measure `pve2` headroom and Grafana RSS before build.
 - **Grafana OSS** (`grafana/grafana`, explicit tag) in `/opt/vtstack/grafana`, `restart:
   unless-stopped`, `network_mode: host` on `:3000` so the **in-LXC UFW** filters it; allow `3000/tcp`
-  from `192.168.2.0/24` only.
+  from **`edge` (`192.168.2.240`) only**.
 - **Native TLS** (`GF_SERVER_PROTOCOL=https`), a self-signed certificate initially — the same residual
-  the store accepts — moving to a `step-ca` leaf once root distribution
-  ([#144](https://github.com/jaroslaw-bagnicki/Homelab/issues/144)) is complete.
-- **`grafana.internal`** resolves to `192.168.2.214` as a **static A record** and is served directly.
-  Routing it through the edge Caddy remains an option, not a requirement — the store and Netdata
-  already serve native TLS directly ([ADR 40](40-internal-dns-proxy-edge.md)).
+  the store accepts — moving to a `step-ca` leaf once issued. Root distribution is already complete
+  ([#144](https://github.com/jaroslaw-bagnicki/Homelab/issues/144), [PR #157](https://github.com/jaroslaw-bagnicki/Homelab/pull/157));
+  the remaining work is Grafana's leaf and client trust.
+- **`grafana.internal` through the edge Caddy** — the `*.internal` wildcard already points at `edge`;
+  add one Caddy route to `https://192.168.2.214:3000` and keep
+  [ADR 40](40-internal-dns-proxy-edge.md) as the single LAN routing authority. Do **not** add a static
+  A record to `.214`. Grafana still serves native TLS on the backend hop; Caddy verifies a `step-ca`
+  leaf or uses the accepted self-signed residual.
 - **Plugin pinned** — `GF_PLUGINS_PREINSTALL=victoriametrics-logs-datasource@0.33.1`; the plugin
   requires Grafana ≥ 10.4.0, and the store's `v1.52.0` satisfies the plugin Drilldown's ≥ 1.21 / ≥ 1.33
   requirements. Image and plugin are upgraded together.
 - **Datasource over loopback** — `https://127.0.0.1:9428`, basic auth `vlogs`, verification skipped or
   pinned to the store's certificate. The query travels inside the LXC; the store's TLS and auth remain.
 - **Secrets from Azure Key Vault** — the existing `victorialogs-basic-auth-password`, plus
-  `grafana-admin-password` and `grafana-secret-key`, written to root-only files and read via
-  `GF_*__FILE`. Grafana encrypts datasource credentials with `secret_key`, so it must be stable.
-- **Datasource and dashboards provisioned from the repo** — reproducible; the embedded SQLite database
-  holds only users and preferences. Local `admin` is break-glass; Authentik OIDC is the planned normal
-  path ([ADR 44](44-authentik-identity-provider.md)), not a day-one dependency.
+  `grafana-admin-password` and `grafana-secret-key`, written to root-owned files with **group 472** and
+  mode **0440**, mounted read-only. The official image runs as UID/GID **472**, so `GF_*__FILE` can read
+  them without making the secrets world-readable. Grafana encrypts datasource credentials with
+  `secret_key`, so it must be stable.
+- **Datasource and dashboards provisioned from the repo** — the repo files are authoritative for the
+  datasource and dashboard definitions, but Grafana still stores users, preferences, datasource records
+  (including the encrypted `vlogs` credential) and provisioned dashboard state in its SQLite database.
+  Persist and back up `/var/lib/grafana` together with `secret_key`. Local `admin` is break-glass;
+  Authentik OIDC is the planned normal path ([ADR 44](44-authentik-identity-provider.md)), not a
+  day-one dependency.
 - **`vmui` stays** as the break-glass UI. Grafana is the preferred pane, not a prerequisite — the store
   remains independently queryable.
 
@@ -88,10 +96,10 @@ read the Proxmox hosts' VM/CT cgroups or `/etc/pve` names ([research 50](../rese
   children, and a scratch migration test. Until ADR 47, the Parent stays host-native on `pve1` and
   [ADR 27](27-monitoring-strategy.md) stands.
 
-**Amendments.** [ADR 35](35-log-store-victorialogs.md): the store's guest is renamed `monitor` and moved
-to `pve2`, and its resource envelope grows — the store choice itself is unchanged. [ADR 27](27-monitoring-strategy.md):
-Grafana is adopted for **logs only**; the Netdata Parent move is recorded as intent, to be decided by
-ADR 47.
+**On acceptance.** [ADR 35](35-log-store-victorialogs.md) and [ADR 27](27-monitoring-strategy.md) stay
+Accepted and unchanged while this ADR is Proposed. If ADR 46 is accepted, ADR 35 gets the rename/move and
+resource-envelope amendment — the store choice itself is unchanged — and ADR 27 gets the logs-only
+Grafana note; the Netdata Parent move stays deferred to ADR 47.
 
 **Not adopted now:** the community LogQL→LogsQL proxy that would enable Grafana's Loki-only Logs
 Drilldown app ([research 49](../research/49-grafana-logs-ui-victorialogs-vs-loki.md) §4) — v0.1.0, a
@@ -102,6 +110,8 @@ proves insufficient; it is not the fleet's log pane today.
 
 - **The pane improves without touching the pipeline.** Every node's Fluent Bit output, the store's
   retention and the router's syslog path stay exactly as deployed.
+- **The pane joins ADR 40's single proxy** — `grafana.internal` goes through `edge`, so an edge outage
+  hides the pane; UFW on `monitor` allows `:3000` only from `edge`, not the whole LAN.
 - **The guest moves to the stronger node with 4 GiB, not 6.** `pve2`'s 256 GB disk takes the 64 GiB
   volume, and 4 GiB is enough for VictoriaLogs + Grafana today; `pve1` and the rest of `pve2` keep the
   remaining RAM. The guest rises to 6 GiB only when the Netdata Parent lands (ADR 47).
@@ -114,7 +124,7 @@ proves insufficient; it is not the fleet's log pane today.
   Logs Drilldown app and **not** LogQL. Dashboards are new LogsQL work; Loki dashboards do not port.
 - **Plugin/image coupling** — a Grafana upgrade can outrun the plugin; both are pinned, and plugin
   installation needs egress to grafana.com at container start.
-- **A second authenticated LAN web app** — two new Key Vault secrets, UFW `:3000` LAN-only, no public
+- **A second authenticated LAN web app** — two new Key Vault secrets, UFW `:3000` edge-only, no public
   route; local admin until Authentik OIDC lands.
 - **Reversible** — stopping and removing the Grafana Compose project restores the previous state; the
   store is unaffected.

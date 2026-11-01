@@ -64,20 +64,22 @@ Both options share the Grafana deployment; only the datasource and its translato
 | Concern | Design | Why |
 |---|---|---|
 | **Packaging** | Separate Compose project under `/opt/vtstack/grafana` (`grafana/grafana`, explicit tag), `restart: unless-stopped` | Keeps Grafana independent of the store's lifecycle. The **path stays `/opt/vtstack`** through the rename and move — the runbook made it stable so the store can be reorganised without moving data; `monitor` names the host, not the directory |
-| **Networking** | `network_mode: host`, Grafana on `:3000`, UFW allows `3000/tcp` from `192.168.2.0/24` | A Docker-published port traverses Docker's iptables path and **bypasses UFW** — the trap already recorded for VictoriaLogs ([ADR 35](../decisions/35-log-store-victorialogs.md)) |
-| **TLS** | Native TLS (`GF_SERVER_PROTOCOL=https`, `GF_SERVER_CERT_FILE`, `GF_SERVER_CERT_KEY`) | [ADR 34](../decisions/34-lan-tls-only.md); the first certificate can be self-signed like VictoriaLogs', then a `step-ca` leaf once the root distribution ([#144](https://github.com/jaroslaw-bagnicki/Homelab/issues/144)) is complete |
-| **Name** | `grafana.internal` as a **static A record → `192.168.2.214`**, served directly; the edge Caddy remains an optional second front | Matches how VictoriaLogs and Netdata are reached; avoids making a UI depend on the edge proxy. Routing it through Caddy is also valid but adds a hop and a second TLS leg |
+| **Networking** | `network_mode: host`, Grafana on `:3000`, UFW allows `3000/tcp` **from `edge` only** | A Docker-published port traverses Docker's iptables path and **bypasses UFW** — the trap already recorded for VictoriaLogs ([ADR 35](../decisions/35-log-store-victorialogs.md)). Only the edge Caddy needs the backend port |
+| **TLS** | Native TLS (`GF_SERVER_PROTOCOL=https`, `GF_SERVER_CERT_FILE`, `GF_SERVER_CERT_KEY`) | [ADR 34](../decisions/34-lan-tls-only.md); the first certificate can be self-signed like VictoriaLogs', then a `step-ca` leaf once issued. Root distribution is complete ([#144](https://github.com/jaroslaw-bagnicki/Homelab/issues/144), [PR #157](https://github.com/jaroslaw-bagnicki/Homelab/pull/157)); only Grafana's leaf and client trust remain |
+| **Name** | `grafana.internal` through the **edge Caddy** → `https://192.168.2.214:3000`; the `*.internal` wildcard already points at `edge` | [ADR 40](../decisions/40-internal-dns-proxy-edge.md) keeps Caddy as the single LAN routing authority. No static A record to `.214`; Caddy verifies a `step-ca` backend leaf or uses the self-signed residual |
 | **Auth** | Local `admin` from Azure Key Vault; sign-up disabled; anonymous disabled. Authentik generic OAuth comes later ([ADR 44](../decisions/44-authentik-identity-provider.md)) | One operator, no SSO dependency on day one; the Authentik path is already decided fleet-wide |
-| **Secrets** | `GF_SECURITY_ADMIN_PASSWORD__FILE` and `GF_SECURITY_SECRET_KEY__FILE` from root-only files, populated from Key Vault | Grafana encrypts datasource credentials with `secret_key`; a stable secret is required or stored datasource passwords become unreadable across recreations. `__FILE` keeps values out of the Compose environment |
-| **Persistence** | Bind `/var/lib/grafana`; datasource and dashboards **provisioned from the repo** | Dashboards are reproducible; the SQLite database holds only users/preferences. Grafana documents SQLite as unsuitable for production, but this is a single-user lab and the dashboards are code |
+| **Secrets** | `GF_SECURITY_ADMIN_PASSWORD__FILE` and `GF_SECURITY_SECRET_KEY__FILE` from **root:472, mode 0440** files, populated from Key Vault | Grafana runs as UID/GID 472; group-read lets it load the files without world-readable secrets. A stable `secret_key` is required or stored datasource passwords become unreadable across recreations. `__FILE` keeps values out of the Compose environment |
+| **Persistence** | Bind `/var/lib/grafana`; datasource and dashboards **provisioned from the repo** | The repo files are authoritative for definitions, but SQLite still holds users, preferences, datasource records (including the encrypted `vlogs` credential) and provisioned dashboard state. Persist and back up `/var/lib/grafana` with `secret_key`. Grafana documents SQLite as unsuitable for production, but this is a single-user lab |
 | **Plugin install** | `GF_PLUGINS_PREINSTALL=victoriametrics-logs-datasource@0.33.1` | Pins the plugin with the image tag; installation happens at container start and needs egress to grafana.com |
 | **Datasource** | A1: `victoriametrics-logs-datasource` → `https://127.0.0.1:9428`, basic auth `vlogs`, TLS verification skipped or pinned to the store's CA. A2: built-in `loki` datasource → the proxy | Loopback avoids a second LAN hop and the self-signed trust problem; the store still speaks TLS |
 | **Resources** | Grafana is a **512 MB / 1 core floor** and a "Small" deployment baseline of **2 cores / 2–4 GB** (Grafana sizing docs); plan **512–768 MB** for this single-user instance | Grafana's floor is not zero; the 4 GiB guest covers Grafana + VictoriaLogs, and 6 GiB is reserved for the deferred Netdata Parent |
 | **Monitoring** | Later: Netdata `httpcheck` / `x509check` against `https://grafana.internal:3000` | [ADR 34](../decisions/34-lan-tls-only.md)'s enforcement pattern; not part of this decision |
 
-### 2.1 Direct TLS versus the edge Caddy
+### 2.1 LAN entrypoint: the edge Caddy
 
-Both are compliant. **Direct** (`grafana.internal` → `.214`, native TLS on `:3000`) matches the store and Netdata, keeps the pane available when `edge` is being maintained, and avoids a second TLS termination. **Through Caddy** (`grafana.internal` → `.240` → `https://192.168.2.214:3000`) centralises certificates and matches [ADR 40](../decisions/40-internal-dns-proxy-edge.md)'s "single proxy" framing, but adds a hop and makes the UI depend on `edge`. This research recommends **direct**, with a Caddy route as a later option if the fleet standardises browser-facing UIs behind it.
+**Caddy is the LAN entrypoint**, per [ADR 40](../decisions/40-internal-dns-proxy-edge.md). The `*.internal` wildcard already resolves to `edge`, so Grafana needs no static A record: add one Caddy site for `grafana.internal` and proxy it to `https://192.168.2.214:3000`. Caddy terminates the browser-facing certificate and keeps the single-proxy rule; Grafana still serves native TLS for the edge→backend hop, verified by a `step-ca` leaf or the accepted self-signed residual.
+
+A direct `grafana.internal` → `.214:3000` static record was considered and rejected: it creates a second routing authority and contradicts ADR 40. The cost is a dependency on `edge` — accepted, because ADR 40 already makes it the LAN naming and proxy entrypoint. UFW on `monitor` allows `:3000` only from `192.168.2.240`, not the whole LAN.
 
 ### 2.2 Memory: 4 GiB now, 6 GiB with the Parent
 
@@ -110,7 +112,7 @@ Grafana adds an image (~0.5–1 GiB) and a SQLite database plus plugins (well un
 
 ### 2.4 What Grafana adds to the security surface
 
-- A second LAN-facing authenticated web app — UFW `:3000` from the LAN only, no public route.
+- A second LAN-facing authenticated web app — UFW `:3000` from `edge` only, reached through Caddy; no public route.
 - Two new secrets (admin password, `secret_key`) beside the existing store password.
 - The plugin proxies LogsQL queries to the store over loopback, so the store's own basic auth remains the second line.
 - Grafana's local admin is a break-glass account; Authentik OIDC is the planned normal path ([ADR 44](../decisions/44-authentik-identity-provider.md)), not a day-one dependency.
@@ -287,11 +289,11 @@ Scoring notes: A1 loses on portability (LogsQL, not LogQL) and on the missing Lo
 **A1 (recommended)** — additive, so rollback is "stop and remove the Grafana Compose project":
 
 1. Move LXC 214 to `pve2`, rename it `monitor`, and size it **4 GiB / 64 GiB** after measuring the host and store (§8); raise to 6 GiB only with the Netdata Parent (ADR 47).
-2. Add the Grafana Compose service, UFW `3000/tcp` from `192.168.2.0/24`, native TLS, `network_mode: host`.
-3. Create `grafana-admin-password` and `grafana-secret-key` in Key Vault; write root-only files; wire `__FILE` variables.
+2. Add the Grafana Compose service, UFW `3000/tcp` from `edge` only, native TLS, `network_mode: host`; add the `grafana.internal` Caddy route on `edge`.
+3. Create `grafana-admin-password` and `grafana-secret-key` in Key Vault; write **root:472, mode 0440** files; wire `__FILE` variables.
 4. Provision the datasource (`victoriametrics-logs-datasource` → `https://127.0.0.1:9428`, basic auth `vlogs`) and the dashboards from the repo.
-5. Verify: `https://grafana.internal:3000` answers, datasource "Save & test" passes, Explore returns journald records, histogram and live tail work, the Drilldown drawer opens, UFW blocks a non-LAN source.
-6. Rollback: `docker compose down` + remove the UFW rule and DNS record. VictoriaLogs, Fluent Bit and the syslog path are untouched.
+5. Verify: `https://grafana.internal` answers through Caddy, datasource "Save & test" passes, Explore returns journald records, histogram and live tail work, the Drilldown drawer opens, and a non-edge source is refused on `:3000`.
+6. Rollback: `docker compose down`, remove the UFW rule and the Caddy site. VictoriaLogs, Fluent Bit, the wildcard DNS and the syslog path are untouched.
 
 **A2** — same Grafana base, plus the proxy container and a Loki datasource; keep it out of the primary path until the proxy's known issues close. Rollback removes the proxy and the Loki datasource.
 
@@ -309,10 +311,10 @@ Scoring notes: A1 loses on portability (LogsQL, not LogQL) and on the missing Lo
 | **Current VictoriaLogs data size** and daily ingest rate | Confirms the 64 GiB rootfs and the 80 % cap still leave room for Grafana and Netdata |
 | **Plugin/Grafana version pair** — latest Grafana release compatible with `victoriametrics-logs-datasource@0.33.1` | Both are pinned; a mismatch is a failed datasource |
 | **`GF_PLUGINS_PREINSTALL` egress** from `monitor` to grafana.com | The plugin installs at container start |
-| **Grafana `__FILE` secrets and native-TLS env names** on the pinned image | Confirmed in current docs, but the image version must be checked |
+| **Grafana `__FILE` secrets and native-TLS env names** on the pinned image | Confirmed in current docs, but the image version must be checked. Verify the files are `root:472`, mode `0440`, and readable by the container's UID/GID 472 |
 | **Datasource provisioning with `$ENV` password and `tlsSkipVerify`** | Avoids a plaintext secret in the provisioning file; the self-signed store needs either skip-verify or the CA |
-| **`grafana.internal` record type** — static A to `.214` versus the `*.internal` wildcard to `.240` | Direct TLS only works with the static record; the alternative is the edge Caddy |
-| **Step-ca leaf issuance for Grafana** and root distribution ([#144](https://github.com/jaroslaw-bagnicki/Homelab/issues/144)) | Self-signed is acceptable initially, but the fleet CA is the target |
+| **Caddy route and backend TLS** — `grafana.internal` via the `*.internal` wildcard → `edge` → `https://192.168.2.214:3000` | ADR 40 remains the single proxy; no static A record. Caddy must verify a `step-ca` backend leaf or use the accepted self-signed residual |
+| **Step-ca leaf issuance for Grafana and client trust** — root distribution is complete ([#144](https://github.com/jaroslaw-bagnicki/Homelab/issues/144), [PR #157](https://github.com/jaroslaw-bagnicki/Homelab/pull/157)) | Root distribution is no longer a gate; only Grafana's leaf and client trust remain |
 | **Loki has no syslog listener** | Inferred from the HTTP API's ingest endpoints (`/loki/api/v1/push`, `/otlp/v1/logs`); confirm before treating B's syslog gap as real |
 | **A2 proxy** — release cadence, issue closure, and whether its `drilldown-limits` covers Grafana's current Drilldown version | It is the only literal-Loki-UI path without Loki |
 
