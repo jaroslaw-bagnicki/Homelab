@@ -1,0 +1,8 @@
+[Unit]
+Description=Check the private CA health and the leaves Caddy serves
+Wants=network-online.target {{ caddy_after_service }}
+After=network-online.target {{ caddy_after_service }}
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/homelab-leaf-expiry-check
