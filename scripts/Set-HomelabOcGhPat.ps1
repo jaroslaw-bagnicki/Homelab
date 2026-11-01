@@ -8,9 +8,11 @@
 #
 # Pre-requisites:
 #   Az PowerShell module, signed into Azure (Connect-AzAccount)
-#   A fine-grained PAT with repo-scoped permissions:
+#   A fine-grained PAT created in the GitHub UI (the only supported creation path)
+#   with repo-scoped permissions:
 #     Contents: Read/Write, Issues: Read/Write, Pull requests: Read/Write,
-#     Metadata: Read, Workflows: Read/Write
+#     Metadata: Read, Commit statuses: Read (optional)
+#   Docs: docs/opencode-customization/mcp/github-mcp.md
 
 param(
     [string]$InstanceName = 'homelab',
@@ -38,12 +40,12 @@ if ($existing) {
 Write-Host "Opening GitHub PAT creation page..."
 Write-Host "  $TokenUrl"
 Write-Host ""
-Write-Host "Create a fine-grained PAT with these scopes:"
+Write-Host "Create a fine-grained PAT in the GitHub UI with these scopes:"
 Write-Host "  - Contents: Read and Write"
 Write-Host "  - Issues: Read and Write"
 Write-Host "  - Pull requests: Read and Write"
 Write-Host "  - Metadata: Read (mandatory)"
-Write-Host "  - Workflows: Read and Write"
+Write-Host "  - Commit statuses: Read (optional)"
 Write-Host ""
 try {
   Start-Process $TokenUrl
