@@ -87,7 +87,9 @@ Decided at install time, not later:
   ceremony (`--external-ca`), or install self-signed as the documented interim and re-parent later.
   Batching matters: every known CSR in one offline session is cheaper than two.
 - **DNS** — integrated DNS off; Technitium carries `_kerberos._tcp`, `_ldap._tcp` and forward/reverse
-  for every member. A missing SRV record presents as a wrong password.
+  for every member. The `ipa_host` role also pins the VM's `/etc/resolv.conf` to Technitium, following
+  the host-owned resolver rule from [ADR 40](../decisions/40-internal-dns-proxy-edge.md) (#174). A
+  missing SRV record presents as a wrong password.
 - **SSHFP stays unmanaged.** FreeIPA can publish SSHFP records for hosts; with `@cert-authority` +
   `TrustedUserCAKeys` from stage 1 that is a second, redundant trust path — leave it off.
 

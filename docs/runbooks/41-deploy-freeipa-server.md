@@ -35,6 +35,8 @@ the server, the realm, the DNS glue and the CA chain before anything depends on 
 
 - [ ] ADR 42 and ADR 43 **Accepted** (done, 2026-10-25).
 - [ ] `pve` base-provisioned ([runbook 28](28-pve-proxmox-node.md)); `pve` chrony healthy.
+- [ ] Technitium on `edge` reachable — `ipa_host` probes it on `:53` and fails before pointing the VM
+      at a resolver that is not there ([runbook 37](37-deploy-internal-access-stack.md), ADR 40/#174).
 - [ ] `pve` has ≥ 2.5 GB free RAM and ≥ 20 GB free `local-lvm`; if not, stop — [idea 15](../ideas/15-second-proxmox-node.md)
       is the prerequisite.
 - [ ] AlmaLinux 9 GenericCloud image downloaded and checksum-verified on `pve`.
@@ -116,6 +118,10 @@ qm status 216
 qm guest cmd 216 network-get-interfaces || true
 ```
 
+The `--nameserver` above is the cloud-init bootstrap only. `ipa_host` owns the durable pin: it probes
+Technitium on `:53` and writes `/etc/resolv.conf` (`nameserver 192.168.2.240`, `search internal`),
+following the host-owned resolver rule from [ADR 40](../decisions/40-internal-dns-proxy-edge.md) / #174.
+
 Verify from the LAN workstation:
 
 ```sh
@@ -136,7 +142,11 @@ Verify:
 ```sh
 ssh fleetadm@192.168.2.216 'hostname -f; sudo -n whoami'
 ssh fleetadm@192.168.2.216 'sudo firewall-cmd --list-rich-rules; sudo systemctl is-active chronyd firewalld'
+ssh fleetadm@192.168.2.216 'cat /etc/resolv.conf; getent hosts ipa.internal'
 ```
+
+`/etc/resolv.conf` must be the Ansible-managed file — `nameserver 192.168.2.240`, `search internal` —
+not the cloud-init placeholder and not a `systemd-resolved` symlink.
 
 ## 4. Add the DNS records in Technitium
 

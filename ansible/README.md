@@ -34,9 +34,6 @@ ansible-playbook ansible/playbooks/playbook-logs.yml
 # ca private CA guest base provision (from a LAN workstation, runbook 35)
 ansible-playbook ansible/playbooks/playbook-ca.yml
 
-# ca resolver migration to Technitium on edge (later phase, runbook 37)
-ansible-playbook ansible/playbooks/playbook-ca-resolver.yml
-
 # ipa FreeIPA server VM base provision (from a LAN workstation, runbook 41)
 ansible-playbook ansible/playbooks/playbook-ipa.yml
 
@@ -69,8 +66,7 @@ ansible-playbook ansible/workloads/freeipa/freeipa-playbook.yml
 | `playbooks/playbook-nas.yml` | Beetle M-III OMV NAS base provision: common → ca_trust → security → nut_client → netdata → fluentbit (UFW LAN allow for SSH + OMV web `443`, `80` denied per ADR 34; Netdata child streaming to `pve`) |
 | `playbooks/playbook-logs.yml` | Victoria stack guest (`vtstack`, LXC 214) base provision: common → ca_trust → security → docker_host → fluentbit (Docker from the official repo, Debian) |
 | `playbooks/playbook-ca.yml` | Private CA guest (`ca`, LXC 215) base provision: common → security → fluentbit (Debian LXC on `pve`, no Docker; rerun after the CA starts so the host certificate and SSH CA trust are applied) |
-| `playbooks/playbook-ca-resolver.yml` | Later-phase migration of the CA guest to the Technitium resolver on `edge` (runbook 37) |
-| `playbooks/playbook-ipa.yml` | FreeIPA server VM (`ipa`, VM 216) base provision: ipa_host — EL hostname/FQDN, chrony, firewalld, fleet key (runbook 41) |
+| `playbooks/playbook-ipa.yml` | FreeIPA server VM (`ipa`, VM 216) base provision: ipa_host — EL hostname/FQDN, chrony, firewalld, fleet key, fleet resolver (runbook 41) |
 | `workloads/` | Self-contained workload recipes — playbook entrypoint, role recipes, ansible-side README, all co-located per workload |
 | `workloads/opencode/` | OpenCode per-project server workload (see [README](workloads/opencode/README.md)) |
 | `workloads/step-ca/` | Private CA — `step-ca` native service on the `ca` guest, TPM-bound intermediate and SSH CA keys (see [README](workloads/step-ca/README.md)) |
@@ -102,8 +98,7 @@ Base shared roles live in [`roles/`](roles/README.md). The [roles index](roles/R
 | `playbook-nas.yml` | common → ca_trust → security → nut_client → netdata → fluentbit | Beetle M-III OMV NAS base provision + Netdata child (see [runbook 32](../docs/runbooks/32-beetle-m3-omv-setup.md)) |
 | `playbook-logs.yml` | common → ca_trust → security → docker_host → fluentbit | Victoria stack guest (`vtstack`, LXC 214) base provision — Debian 13 LXC on `pve` (see [runbook 33](../docs/runbooks/33-deploy-victorialogs.md)) |
 | `playbook-ca.yml` | common → security → fluentbit | Private CA guest (`ca`, LXC 215) base provision — Debian 13 LXC on `pve`; rerun after the CA starts for the host certificate (see [runbook 35](../docs/runbooks/35-deploy-step-ca.md) / [runbook 40](../docs/runbooks/40-deploy-ssh-certificates.md)) |
-| `playbook-ca-resolver.yml` | none (tasks only) | Later-phase resolver migration for the CA guest — requires Technitium on `edge` (see [runbook 37](../docs/runbooks/37-deploy-internal-access-stack.md)) |
-| `playbook-ipa.yml` | ipa_host | FreeIPA server VM (`ipa`, VM 216) base provision — EL hostname/FQDN, chrony, firewalld, fleet key (see [runbook 41](../docs/runbooks/41-deploy-freeipa-server.md)) |
+| `playbook-ipa.yml` | ipa_host | FreeIPA server VM (`ipa`, VM 216) base provision — EL hostname/FQDN, chrony, firewalld, fleet key, fleet resolver (see [runbook 41](../docs/runbooks/41-deploy-freeipa-server.md)) |
 | `workloads/opencode/opencode-playbook.yml` | docker_opencode_ingress → docker_opencode_instances | Deploy the OpenCode per-project server workload (see [runbook 17](../docs/runbooks/17-deploy-opencode-on-cloudlab.md)) |
 | `workloads/step-ca/step-ca-playbook.yml` | step_ca | Deploy the private CA (`step-ca`) with a TPM-bound intermediate and SSH CA (see [runbook 35](../docs/runbooks/35-deploy-step-ca.md) / [runbook 36](../docs/runbooks/36-private-ca-init.md) / [runbook 40](../docs/runbooks/40-deploy-ssh-certificates.md)) |
 | `workloads/freeipa/freeipa-playbook.yml` | freeipa_server | Install the FreeIPA server with an external CA (see [runbook 41](../docs/runbooks/41-deploy-freeipa-server.md)) |

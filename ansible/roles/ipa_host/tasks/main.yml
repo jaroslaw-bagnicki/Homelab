@@ -18,6 +18,30 @@
     line: "{{ ipa_host_ip }} {{ ipa_host_fqdn }} {{ ipa_host_short_name }}"
     state: present
 
+- name: Check the fleet resolver is reachable
+  when:
+    - ipa_host_dns_server | length > 0
+    - ansible_virtualization_type | default('none') not in ['lxc', 'docker', 'podman', 'container']
+  ansible.builtin.wait_for:
+    host: "{{ ipa_host_dns_server }}"
+    port: 53
+    timeout: 3
+
+- name: Point the host at the fleet resolver
+  when:
+    - ipa_host_dns_server | length > 0
+    - ansible_virtualization_type | default('none') not in ['lxc', 'docker', 'podman', 'container']
+  ansible.builtin.copy:
+    content: |
+      # Managed by Ansible — fleet resolver, Technitium on the edge node (ADR 40, #174).
+      nameserver {{ ipa_host_dns_server }}
+      search {{ ipa_host_dns_search }}
+    dest: /etc/resolv.conf
+    owner: root
+    group: root
+    mode: "0644"
+    follow: false
+
 - name: Set the timezone
   community.general.timezone:
     name: "{{ ipa_host_timezone }}"

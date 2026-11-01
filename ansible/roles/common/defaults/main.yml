@@ -1,5 +1,10 @@
 ---
 common_enable_avahi: false
+# Fleet resolver (ADR 40) — Technitium on `edge`. Empty disables the pin (cloudlab has
+# no LAN route; edge owns its own resolver). Only the host writes it: guest containers
+# inherit it, because PVE rewrites their /etc/resolv.conf from this file at every start.
+common_dns_server: "192.168.2.240"
+common_dns_search: internal
 # Containers share the host's kernel clock and cannot set it: systemd-timesyncd refuses to run
 # inside one (ConditionVirtualization=!container) and an unprivileged guest holds no capabilities
 # to call clock_settime. Time sync belongs to the host, so guests skip it.

@@ -18,6 +18,11 @@ caddy_require_technitium: true
 # Start Caddy after the local resolver so `ca.internal` is resolvable at boot.
 caddy_after_service: dns.service
 
+# A >24 h outage expires every leaf and Caddy can only log the renewal failure, so the
+# served leaves and the CA behind them are checked hourly (issue #171).
+caddy_ca_health_url: https://ca.internal:9000/health
+caddy_leaf_expiry_check_min_remaining_seconds: 21600
+
 caddy_sites:
   - name: netdata.internal
     upstream: "https://192.168.2.201:19999"
