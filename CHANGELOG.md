@@ -13,7 +13,7 @@ Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month 
 
 ## 2026‑11
 
-- **(docs)** Add the FreeIPA TPM/Dogtag spike runbook — decide the Dogtag CA key custody and restore model before M1 — [runbook 41](docs/runbooks/41-freeipa-tpm-dogtag-spike.md)
+- **(docs)** Research FreeIPA Dogtag key custody — the host TPM is not a supported HSM path and would break `ipa-backup` restore — [research 51](docs/research/51-freeipa-dogtag-tpm-custody.md)
 - **(feat)** Load SSH identities explicitly — empty agent by default, loaders for `automation`, `agent-ai` and break-glass — [ADR 41](docs/decisions/41-ssh-certificates-step-ca.md)
 
 ## 2026‑10
