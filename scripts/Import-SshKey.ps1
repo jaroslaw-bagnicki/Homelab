@@ -1,9 +1,11 @@
 <#
 .SYNOPSIS
-    Starts ssh-agent, maps env vars to PowerShell, and loads the VPS SSH key from Key Vault.
+    Loads the cloudlab VPS key from Key Vault into ssh-agent. Explicit loader - the
+    dev-container profile loads no identity.
 .DESCRIPTION
-    Run this once per session before connecting to cloudlab. Handles the bash-to-PowerShell
-    translation that raw ssh-agent output requires.
+    Run this before an Ansible run against cloudlab, the one node that is not
+    certificate-enabled. Handles the bash-to-PowerShell translation that raw ssh-agent
+    output requires.
 #>
 
 # Step 0: Ensure authenticated Az session
@@ -28,6 +30,7 @@ Write-Host "ssh-agent started (pid $env:SSH_AGENT_PID)" -ForegroundColor Green
 Write-Host "SSH_AUTH_SOCK = $env:SSH_AUTH_SOCK" -ForegroundColor Gray
 
 # Step 2: Load the SSH key from Key Vault
+& "$PSScriptRoot/Reset-HomelabSshIdentity.ps1"
 Write-Host "Loading key 'cloudlab-vps-key-priv' from 'homelab-bysxdb-kv'..." -ForegroundColor Yellow
 Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name cloudlab-vps-key-priv -AsPlainText | ssh-add -
 

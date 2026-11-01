@@ -129,23 +129,19 @@ az version              # Azure CLI
 
 ## SSH to the VPS from the DevContainer
 
-The dev container includes the SSH key for `cloudlab` (the Contabo VPS). Run this
-**once per session** to start `ssh-agent` and load the key:
-
-### Start ssh-agent and load the SSH key
+The dev container starts `ssh-agent` but loads **no** SSH identity: an `ssh` call or an Ansible run
+fails until you load one deliberately. `cloudlab` (the Contabo VPS) is not certificate-enabled, so it
+keeps its own key:
 
 ```powershell
-./scripts/Import-SshKey.ps1
+./scripts/Import-HomelabCloudlabKey.ps1
 ```
 
-> Alternatively, the manual steps are:
-> ```powershell
-> ssh-agent | ForEach-Object {
->     if ($_ -match 'SSH_AUTH_SOCK=(.*?);') { $env:SSH_AUTH_SOCK = $Matches[1] }
->     if ($_ -match 'SSH_AGENT_PID=(.*?);') { $env:SSH_AGENT_PID = $Matches[1] }
-> }
-> Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name cloudlab-vps-key-priv -AsPlainText | ssh-add -
-> ```
+Everything else on the fleet takes a step-ca certificate instead — `automation` for operator
+automation, `agent-ai` for an AI agent, and the fleet key only for break-glass. The
+[`fleet-connect` skill](../../.github/skills/fleet-connect/SKILL.md) lists the loaders; each one runs
+`Reset-HomelabSshIdentity.ps1` first, so a new identity replaces the previous one instead of
+stacking on top of it.
 
 ### Create SSH config (one-time setup)
 

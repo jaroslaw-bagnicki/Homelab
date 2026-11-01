@@ -25,8 +25,9 @@ is **not** part of this runbook; until it lands, agents self-issue with the shar
 
 - [ ] `step-ca` workload deployed and healthy ([runbook 35](35-deploy-step-ca.md)).
 - [ ] `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID` exported on the controller.
-- [ ] Fleet key in `ssh-agent` (`ssh-add -l` shows `fleetadm@homelab`) and the LAN workstation/control
-      node can reach `ca.internal:9000`.
+- [ ] An SSH identity in `ssh-agent` — the break-glass fleet key (`Import-HomelabFleetKey.ps1`) on a
+      first run, the `automation` certificate afterwards — and the LAN workstation/control node can
+      reach `ca.internal:9000`.
 - [ ] `step` CLI and OpenSSH (`ssh-keygen`, `ssh-add`) on the controller. The dev container installs
       `step` in `.devcontainer/scripts/setup-step.ps1`; on a LAN workstation install smallstep/cli.
 - [ ] From the dev container only: `chmod 755 /workspaces/Homelab /workspaces/Homelab/ansible`.
@@ -223,7 +224,7 @@ sudo journalctl -u homelab-ssh-host-cert-renew -n 20
 > `authorizedprincipalsfile /etc/ssh/auth_principals/%u`,
 > `hostkeyalgorithms ssh-ed25519-cert-v01@openssh.com`; a manual renewal run exits 0.
 >
-> Two operational notes:
+> Three operational notes:
 >
 > - **`ca` and `vtstack` run no time daemon, and that is correct.** Inside an LXC the clock *is* the
 >   host's kernel clock; `systemd-timesyncd` is skipped there by its own `ConditionVirtualization=!container`
@@ -236,6 +237,10 @@ sudo journalctl -u homelab-ssh-host-cert-renew -n 20
 > - **Losing `ssh-agent` mid-run** costs a playbook: every task fails `Permission denied (publickey)`.
 >   Start the agent on a fixed socket (`ssh-agent -a /tmp/fleet-ssh-agent.sock`) so it survives terminal
 >   churn, and export `SSH_AUTH_SOCK` in each new shell.
+> - **Switching identity mid-session is safe.** `ControlPersist=60s` in `ansible.cfg` keeps one
+>   authenticated connection per host alive, so every loader runs `Reset-HomelabSshIdentity.ps1`
+>   first — it empties the agent and clears `~/.ansible/cp`, so only the newly loaded identity can
+>   authenticate: no stacked keys, no reused master.
 
 ## 5. M4 — `automation` principal
 

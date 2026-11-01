@@ -185,7 +185,7 @@ feature — so policy is the outer boundary, not a way to scope one provisioner.
 | Piece | Current state | Implication |
 |---|---|---|
 | SSH auth | One static Ed25519 **fleet key** for `fleetadm`, installed by `common` role with `exclusive: true` and `key_options: no-port-forwarding,no-agent-forwarding,no-X11-forwarding` ([ADR 28](../decisions/28-fleet-admin-account-and-key.md)) | Rotation is a KV secret rewrite plus a fleet-wide playbook run |
-| Private key handling | `fleetadm-key-priv` in AKV, loaded into `ssh-agent` each session; agents inherit it but cannot read it | Any CA-based flow must keep the "unreadable but usable" property |
+| Private key handling | `fleetadm-key-priv` in AKV, loaded into `ssh-agent` on demand for break-glass only; any agent that can read the vault can load it, and the key never touches disk | A CA-based flow cannot rely on the key being unreadable — daily use needs short-lived certificates (ADR 41) |
 | `sshd` hardening | `security` role: `PasswordAuthentication no` globally, LAN `Match` block re-enables password for break-glass, UFW SSH from `192.168.2.0/24` | Adding `TrustedUserCAKeys` does not change these; the break-glass path must survive |
 | Ansible connection | `inventory.ini` addresses hosts **by IP** (`ansible_host=192.168.2.20x`) with `host_key_checking = True` | A host certificate **must carry the IP as a principal**, or every playbook fails host-key verification (§5.2) |
 | `step-ca` (LXC 215 `ca`) | `admin@internal` **JWK** + **ACME** provisioners, TPM-sealed intermediate, offline root, leaves 24 h/7 d ([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md), [runbook 35](../runbooks/35-deploy-step-ca.md)) | **No `ssh` block and no SSH provisioner** — SSH issuance is off today |

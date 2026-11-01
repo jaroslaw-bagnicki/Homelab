@@ -22,7 +22,7 @@
 ## Prerequisites
 
 - [ ] Replacement disk: **1 TB+ SATA 2.5"** (≥ the array's used device size).
-- [ ] Fleet key in `ssh-agent` ([fleet-connect skill](../../.opencode/skills/fleet-connect/SKILL.md)).
+- [ ] An SSH identity in `ssh-agent` ([fleet-connect skill](../../.opencode/skills/fleet-connect/SKILL.md)).
 - [ ] Confirmation that the replacement holds nothing needed — **§3 erases it completely**.
 
 ## 1. Identify the failed member — by serial
