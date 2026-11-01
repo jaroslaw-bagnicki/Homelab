@@ -66,7 +66,7 @@ authenticates only with the identity placed there by the operator, the broker, o
 issues its certificate with the shared `agent-ai` JWK, and reaches for the fleet key only by running
 `scripts/Import-HomelabFleetKey.ps1` (1 h) — break-glass, never a default. `cloudlab` keeps its own
 loader (`Import-HomelabCloudlabKey.ps1`). No Ansible wrapper exists. Multiplexing stays on with
-`ControlPersist=5m`, and every loader runs `Reset-HomelabSshIdentity.ps1` first — emptying the agent
+`ControlPersist=60s`, and every loader runs `Reset-HomelabSshIdentity.ps1` first — emptying the agent
 and clearing `~/.ansible/cp` — so a switch of identity neither stacks credentials nor reuses a
 connection opened under the previous one.
 

@@ -237,7 +237,7 @@ sudo journalctl -u homelab-ssh-host-cert-renew -n 20
 > - **Losing `ssh-agent` mid-run** costs a playbook: every task fails `Permission denied (publickey)`.
 >   Start the agent on a fixed socket (`ssh-agent -a /tmp/fleet-ssh-agent.sock`) so it survives terminal
 >   churn, and export `SSH_AUTH_SOCK` in each new shell.
-> - **Switching identity mid-session is safe.** `ControlPersist=5m` in `ansible.cfg` keeps one
+> - **Switching identity mid-session is safe.** `ControlPersist=60s` in `ansible.cfg` keeps one
 >   authenticated connection per host alive, so every loader runs `Reset-HomelabSshIdentity.ps1`
 >   first — it empties the agent and clears `~/.ansible/cp`, so only the newly loaded identity can
 >   authenticate: no stacked keys, no reused master.

@@ -195,7 +195,7 @@ certificate — one shared principal, a per-agent key ID:
 
 ### ❌ An identity swap still connects as the old identity
 
-Ansible keeps one authenticated SSH connection per host for `ControlPersist=5m` (`ansible.cfg`), and
+Ansible keeps one authenticated SSH connection per host for `ControlPersist=60s` (`ansible.cfg`), and
 `ssh-agent` keeps every key loaded into it. A second loader adds its identity *alongside* the first,
 and ssh may offer the older key first — while a connection opened under the previous identity is
 reused outright. Either way the host can keep seeing the old principal.
