@@ -8,9 +8,9 @@
 > [#151](https://github.com/jaroslaw-bagnicki/Homelab/issues/151).
 >
 > ⚠ **Run order.** Deploy the edge stack and verify DNS; Caddy may still be waiting on a certificate.
-> Then point the `ca` guest at `192.168.2.240` with `playbook-ca-resolver.yml`, restart Caddy, and verify TLS.
-> The resolver playbook verifies the edge resolver before changing `/etc/resolv.conf`, so a missing
-> edge stack fails safely.
+> Then point the fleet at `192.168.2.240` ([§5](#5-point-the-fleet-at-technitium): the `common`
+> role writes each host's `/etc/resolv.conf`, and PVE copies it into its containers), restart Caddy, and
+> verify TLS.
 >
 > ⚠ **Snapshot first.** This changes the edge's resolver, firewall and listening services. Take the
 > full eMMC image from [runbook 27](27-edge-backup-restore.md) before the first live run.
@@ -145,22 +145,32 @@ dig @127.0.0.1 netdata.internal +short
 getent hosts ca.internal
 ```
 
-## 5. Point the CA guest at Technitium
+## 5. Point the fleet at Technitium
 
-Only after §4 passes:
+The `common` role does it, on the **host** — guests are skipped and inherit the file PVE writes at
+container start ([ADR 40](../decisions/40-internal-dns-proxy-edge.md) amendment):
 
 ```powershell
-ansible-playbook ansible/playbooks/playbook-ca-resolver.yml --diff
+ansible-playbook ansible/playbooks/playbook-pve.yml --diff --limit pve
 ```
 
-The resolver playbook installs `dig`, verifies `dig @192.168.2.240 netdata.internal` returns `.240`, then
-writes `nameserver 192.168.2.240` and `search internal` to the CA guest and disables
-`systemd-resolved` if it was the active resolver. If the check fails, the play stops before touching
-`/etc/resolv.conf`.
+`pve` gets `/etc/resolv.conf` pointing at Technitium (`nameserver 192.168.2.240`, `search internal`).
+PVE writes a container's `/etc/resolv.conf` at every start and, with no `nameserver:` key in
+`/etc/pve/lxc/<vmid>.conf`, takes it from the **host's** own file — so the guest inherits the pin on
+its next start. A guest-side write alone is not durable, which is how a >24 h outage left every leaf
+expired ([#171](https://github.com/jaroslaw-bagnicki/Homelab/issues/171)).
 
-Caddy may already be running but unable to validate `netdata.internal` while the CA still uses the
-host resolvers — that is expected. Once this section is done, restart the CA to pick up the resolver
-and Caddy to trigger issuance immediately:
+```sh
+ssh fleetadm@192.168.2.201 'sudo pct reboot 215'
+ssh fleetadm@192.168.2.215 'cat /etc/resolv.conf; getent hosts ca.internal'
+```
+
+Expected: `nameserver 192.168.2.240` in the guest's `/etc/resolv.conf`, with **no Ansible run on the
+guest** — PVE wrote it from the host's own file.
+
+Caddy may already be running but unable to validate `netdata.internal` while the CA still used the
+host resolvers — that is expected. Restart `step-ca` so it re-reads the resolver and Caddy to trigger
+issuance immediately:
 
 ```sh
 ssh fleetadm@192.168.2.215 'sudo systemctl restart step-ca'
@@ -173,6 +183,16 @@ Verify from the CA guest:
 dig +short netdata.internal          # 192.168.2.240
 getent hosts ca.internal             # 192.168.2.215
 step ca health --ca-url https://ca.internal:9000 --root /etc/step-ca/certs/root_ca.crt
+```
+
+One timer watches the CA and the leaves it serves, from `edge`: `homelab-leaf-expiry-check.timer`
+probes the CA's `/health` over `ca.internal`, and reads the certificate each site actually serves on
+`127.0.0.1:443`, failing below 6 h of remaining lifetime. A failed unit raises the stock Netdata
+`systemd_service_unit_failed_state` alarm (the pattern from [runbook 40](40-deploy-ssh-certificates.md)):
+
+```sh
+systemctl list-timers homelab-leaf-expiry-check.timer
+sudo /usr/local/sbin/homelab-leaf-expiry-check   # silent, exit 0 when healthy
 ```
 
 ## 6. Verify Caddy, ACME and TLS
@@ -244,10 +264,11 @@ curl -sS --connect-timeout 5 -o /dev/null -w '%{http_code}\n' http://192.168.2.2
 
 ```powershell
 ansible-playbook ansible/playbooks/playbook-edge.yml --diff
-ansible-playbook ansible/playbooks/playbook-ca-resolver.yml --diff
+ansible-playbook ansible/playbooks/playbook-pve.yml --diff --limit pve
+ansible-playbook ansible/playbooks/playbook-ca.yml --diff
 ```
 
-Both must end with `changed=0` (after the first run). Then reboot `edge` and verify:
+All three must end with `changed=0` (after the first run). Then reboot `edge` and verify:
 
 ```sh
 systemctl is-active dns caddy
@@ -260,7 +281,9 @@ done
 ```
 
 Technitium's zone database, the Caddy certificates under `/var/lib/caddy`, and the systemd units all
-survive a reboot.
+survive a reboot. The CA guest's resolver does too: PVE rewrites it from the host's file at every
+start, so the check in [§5](#5-point-the-fleet-at-technitium) is the one to re-run after a
+`pve` reboot.
 
 ## 8. Backup and restore
 
@@ -291,6 +314,8 @@ survive a reboot.
 
 | Symptom | Check |
 |---|---|
+| All `.internal` leaves expired after an outage | The CA guest lost name resolution. On `ca`: `getent hosts ca.internal`, `cat /etc/resolv.conf`; on `pve`: `cat /etc/resolv.conf` — PVE rewrites the guest from it at every start. If the host points elsewhere, re-run `playbook-pve.yml --limit pve`, then `pct reboot 215` (PVE rewrites the guest file and `step-ca` comes back with it), then restart `caddy` |
+| `homelab-leaf-expiry-check` fails on `edge` | A site serves no certificate, a leaf has <6 h left, or the CA's `/health` is down: `journalctl -u homelab-leaf-expiry-check -n 20`, `journalctl -u caddy -n 50` for the ACME order, and `systemctl reset-failed homelab-leaf-expiry-check` once renewal succeeds |
 | `dns.service` does not start | `journalctl -u dns -n 50`; `ss -lntp \| grep :53`; ensure `systemd-resolved` is stopped; confirm `libicu76` and the ASP.NET runtime are installed |
 | Technitium API login fails | From `edge`: `curl -s http://127.0.0.1:5380/api/status` shows `hasDefaultCredentials`; verify the AKV secret matches the password on the appliance |
 | `ca.internal` resolves to `.240` | The explicit `ca.internal` record is missing — re-run the edge playbook; delete the bad record first if it was created manually |

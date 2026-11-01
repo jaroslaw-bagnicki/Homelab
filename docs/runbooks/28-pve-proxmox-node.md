@@ -163,6 +163,10 @@ Vault, so the controller needs `AZURE_CLIENT_ID` / `AZURE_CLIENT_SECRET` / `AZUR
 [runbook 31](31-deploy-netdata.md) prerequisites).
 - **`common`** — hostname `pve`, `Etc/UTC`, Avahi (`pve.local`, `common_enable_avahi: true`), and re-arms
   the fleet key on `fleetadm` ([ADR 28](../decisions/28-fleet-admin-account-and-key.md)). Time sync is left to Proxmox's **`chrony`**.
+- **Fleet resolver** — `common` probes `192.168.2.240:53` and then points `/etc/resolv.conf` at it, so
+  the run **fails** while `edge`/Technitium is unreachable. Deploy the edge stack first
+  ([runbook 37](37-deploy-internal-access-stack.md) §1–§4), or pass `-e common_dns_server=` for a
+  bootstrap before `edge` exists.
 - **`security`** — UFW default-deny + allow from `192.168.2.0/24`: SSH `22` and Proxmox UI **`8006`**
   (`security_ufw_allow_tcp_ports`), fail2ban, sshd key-only hardening (LAN password auth applies to
   **non-root** accounts only — `root` SSH stays key-only via `PermitRootLogin prohibit-password`).

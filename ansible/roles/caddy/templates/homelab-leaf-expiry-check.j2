@@ -1,0 +1,30 @@
+#!/bin/sh
+# Fails when a leaf this proxy serves is missing or near expiry, or when the CA behind
+# it is unhealthy. Caddy can only log a failed renewal, so the failed unit is the alert:
+# the stock Netdata `systemd_service_unit_failed_state` alarm raises (runbook 40).
+set -u
+
+THRESHOLD="{{ caddy_leaf_expiry_check_min_remaining_seconds }}"
+TAG="homelab-leaf-expiry"
+failed=0
+
+for name in {{ caddy_sites | map(attribute='name') | join(' ') }}; do
+  if ! leaf=$(openssl s_client -connect 127.0.0.1:443 -servername "$name" </dev/null 2>/dev/null \
+      | openssl x509 2>/dev/null); then
+    logger -t "$TAG" -p user.crit "no certificate served for $name on 127.0.0.1:443"
+    failed=1
+    continue
+  fi
+  if ! printf '%s\n' "$leaf" | openssl x509 -noout -checkend "$THRESHOLD" >/dev/null 2>&1; then
+    expires=$(printf '%s\n' "$leaf" | openssl x509 -noout -enddate | cut -d= -f2)
+    logger -t "$TAG" -p user.crit "$name leaf expires $expires with less than $THRESHOLD s remaining"
+    failed=1
+  fi
+done
+
+if ! curl -sf --cacert {{ caddy_ca_root_path }} {{ caddy_ca_health_url }} >/dev/null; then
+  logger -t "$TAG" -p user.crit "step-ca health check failed at {{ caddy_ca_health_url }}"
+  failed=1
+fi
+
+exit "$failed"

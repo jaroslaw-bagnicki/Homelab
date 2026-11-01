@@ -66,11 +66,11 @@ routing entry point.**
   the trap already recorded for the VictoriaLogs workload) — so a container adds a daemon and a boot
   ordering dependency without adding isolation. On this box it also keeps the write path off the eMMC.
 - **The node's own resolver is Technitium** — `127.0.0.1` in `/etc/resolv.conf`, with `internal` as
-  the search suffix (`technitium_host_search` carries the suffix, not the nameserver). **The CA guest is
-  pointed at the same resolver** (`192.168.2.240`) before issuance: `step-ca` must resolve
+  the search suffix (`technitium_host_search` carries the suffix, not the nameserver). **The CA guest
+  uses the same resolver** (`192.168.2.240`) before issuance: `step-ca` must resolve
   `netdata.internal` to validate a challenge. [Runbook 35](../runbooks/35-deploy-step-ca.md)
-  initially left LXC 215 on the host resolvers; the CA playbook now points it at the edge resolver
-  ([runbook 37](../runbooks/37-deploy-internal-access-stack.md)).
+  initially left LXC 215 on the host resolvers; the pin now lives in the **host's own
+  `/etc/resolv.conf`**, which PVE copies into the guest (amendment below).
 - **UFW** allows `53`/`443` from `192.168.2.0/24`; nothing is opened to the internet — the public
   plane stays closed until the remote-access decision. The Technitium admin API binds
   **`127.0.0.1:5380` only**; the console and zone export are reached through an SSH tunnel, so the
@@ -113,6 +113,39 @@ certificates does not need `pve`.
 - **Existing held work is unchanged** — k3s ([ADR 22](22-k3s-arc-homelab.md)) and the OPNsense router
   ([#96](https://github.com/jaroslaw-bagnicki/Homelab/issues/96)) still land later and slot into this
   design (ingress VIP record; DHCP DNS hand-out).
+
+### Amendment — 2026-11-01
+
+**One resolver, enforced by Ansible on every host — and guests inherit it from the hypervisor.** Two
+facts overturn the original wording ("the CA playbook points it at the edge resolver"):
+
+- **Inside a container, `/etc/resolv.conf` belongs to the hypervisor.** `pve` regenerates the file on
+  **every container start** from the `nameserver:` / `searchdomain:` keys in `/etc/pve/lxc/<vmid>.conf`,
+  falling back to the host resolvers when those keys are absent. A guest-side write is a cache with
+  the lifetime of the current boot, nothing more.
+- **A per-guest, hand-run pin is how the failure hid.** The CA guest was the only node pinned that
+  way, and the pin evaporated at the next restart ([#171](https://github.com/jaroslaw-bagnicki/Homelab/issues/171)).
+
+So the `common` role owns it:
+
+- **Every host writes its own** `/etc/resolv.conf` — `nameserver 192.168.2.240`, `search internal`;
+  the write replaces a `systemd-resolved` symlink rather than writing through it. The resolver is probed
+  first, and an unreachable one **fails the run** before the file is replaced — no host is pointed at a
+  resolver that is not there, so `edge` comes first on a rebuild (runbook 37 §1–§4).
+- **Guests are skipped and inherit it from the hypervisor.** PVE writes a container's
+  `/etc/resolv.conf` at every start and, with no `nameserver:` key in the container config, takes it
+  from the **host's own file** — during the outage the CA guest fell back to `pve`'s
+  `1.1.1.1`/`8.8.8.8`. So pinning the host covers every guest on it, with no per-guest key, no creation
+  flag and no second mechanism — the same host-vs-guest split as the clock.
+- **Two exceptions, each a `host_vars` line:** `common_dns_server: ""` on `edge` (it *is* the resolver;
+  the `technitium` role owns its `127.0.0.1`) and on `cloudlab` (no LAN route).
+  `playbook-ca-resolver.yml` is gone — there is no separate later-phase resolver step
+  ([runbook 37 §5](../runbooks/37-deploy-internal-access-stack.md)).
+- **The loss is watched, not discovered.** A >24 h outage left every `.internal` leaf expired for
+  roughly 3.5 days with nothing raised: nothing asserted the resolver, and Caddy could only log a
+  renewal that kept failing. `homelab-leaf-expiry-check.timer` on `edge` now fails its unit below 6 h
+  of leaf lifetime or when the CA's `/health` stops answering
+  ([runbook 39 §5](../runbooks/39-trust-private-ca.md)).
 
 ### Alternatives Considered
 

@@ -1,0 +1,9 @@
+[Unit]
+Description=Hourly check of the private CA health and the leaves Caddy serves
+
+[Timer]
+OnCalendar=hourly
+Persistent=true
+
+[Install]
+WantedBy=timers.target

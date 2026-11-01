@@ -19,6 +19,7 @@
       - curl
       - debian-archive-keyring
       - debian-keyring
+      - openssl
     state: present
     update_cache: true
 
@@ -117,3 +118,31 @@
     name: caddy
     enabled: true
     state: started
+
+# Expiry monitor — checks the leaf each site actually serves plus the CA behind it, so an
+# unrenewed or missing certificate fails the unit instead of only logging a warning.
+- name: Install the CA monitor script
+  ansible.builtin.template:
+    src: homelab-leaf-expiry-check.j2
+    dest: /usr/local/sbin/homelab-leaf-expiry-check
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Install the CA monitor units
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "/etc/systemd/system/{{ item }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - homelab-leaf-expiry-check.service
+    - homelab-leaf-expiry-check.timer
+
+- name: Enable the CA monitor timer
+  ansible.builtin.systemd:
+    name: homelab-leaf-expiry-check.timer
+    enabled: true
+    state: started
+    daemon_reload: true

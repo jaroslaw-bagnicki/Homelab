@@ -162,7 +162,7 @@ environment:
 | Event | Client action |
 |---|---|
 | Intermediate re-signed (yearly, [runbook 36](36-private-ca-init.md) step 3) | none — it travels in the handshake |
-| Leaf renewal (24 h, Caddy) | none |
+| Leaf renewal (24 h, Caddy) | none — `homelab-leaf-expiry-check.timer` on `edge` fails when a served leaf has <6 h left, so an unrenewed or missing certificate raises instead of passing silently ([runbook 37 §5](37-deploy-internal-access-stack.md)) |
 | **Root replaced** (not expected before 2036-10-08) | redo §1 and §3 everywhere |
 
 ## Troubleshooting

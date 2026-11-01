@@ -90,9 +90,10 @@ pct create 214 local:vztmpl/<template> \
   disk caps in §5 are sized against it. **The size is an estimate** — no collector ships yet, so
   re-check it against the measured ingest rate once [#84](https://github.com/jaroslaw-bagnicki/Homelab/issues/84)
   lands.
-- DNS is deliberately **not** pinned with `--nameserver` — the container inherits the host's
-  resolvers, so it keeps following the LAN (`pve.local` / the planned `.internal` name space,
-  [ADR 37](../decisions/37-lan-name-space-internal.md)).
+- **DNS is not passed here.** `playbook-pve.yml` points `pve` at the fleet resolver (`192.168.2.240`,
+  `search internal`) and PVE writes that same file into every container on start, so `vtstack` inherits
+  it with no creation flag ([ADR 40](../decisions/40-internal-dns-proxy-edge.md) amendment). Until then
+  the guest follows the host's current resolvers, which is enough for the installs in §3.
 - Keep the Proxmox network **Firewall** flag at `0` (`pct create` does). The LAN-only rule is a
   UFW rule inside the container (§5), not the Proxmox firewall.
 

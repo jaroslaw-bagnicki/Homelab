@@ -1,6 +1,10 @@
 ---
 common_enable_avahi: true
 
+# This node *is* the fleet resolver: the technitium role owns /etc/resolv.conf here
+# (127.0.0.1, search `internal`) — the same resolver every other node is pinned to.
+common_dns_server: ""
+
 # LAN DNS + reverse proxy (ADR 40). TCP/80 stays closed — Caddy validates through
 # TLS-ALPN-01 on 443, and Technitium serves DNS on 53/tcp+udp. Its admin API is
 # loopback-only; use an SSH tunnel rather than opening 5380 to the LAN.

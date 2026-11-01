@@ -15,3 +15,6 @@ opencode_instances:
 # fleet key and the pinned host key (ADR 41 amendment, issue #161).
 ca_trust_ssh_enabled: false
 security_ssh_certs_enabled: false
+
+# No LAN route to the fleet resolver — cloudlab keeps its own resolvers.
+common_dns_server: ""

@@ -6,8 +6,3 @@ security_ufw_allow_ssh_from: "192.168.2.0/24"
 security_ufw_allow_tcp_from: "192.168.2.0/24"
 security_ufw_allow_tcp_ports:
   - 9000
-
-# ACME TLS-ALPN-01 validation resolves service names through the edge resolver
-# (ADR 40), so the CA guest uses Technitium rather than the pve host resolvers.
-ca_dns_nameserver: "192.168.2.240"
-ca_dns_search: "internal"
