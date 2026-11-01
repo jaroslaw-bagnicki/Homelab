@@ -41,10 +41,12 @@ and a collector contract that already works ([ADR 36](36-log-collector-fluentbit
 - **Host: LXC 214, `monitor`** — rename `vtstack` → `monitor` before deployment and move the guest to
   `pve2`, keeping `.214` so the collector and datasource need no change. The on-disk path stays
   `/opt/vtstack` — the runbook made it stable so the store can be reorganised without moving data.
-- **Resources: 6 GiB RAM / 64 GiB rootfs** on `pve2` (256 GB), up from 2 GiB / 16 GiB. The 16 GiB
-  volume cannot carry VictoriaLogs, Grafana and the intended Netdata Parent's ~10 GiB dbengine; 64 GiB
-  does, with room for VictoriaMetrics/Traces later. The 6 GiB ceiling is measured before build and
-  must leave `pve2` itself usable.
+- **Resources: 4 GiB RAM / 64 GiB rootfs** on `pve2` (256 GB), up from 2 GiB / 16 GiB. Four GiB is
+  the initial envelope for VictoriaLogs + Grafana: the store keeps `-memory.allowedPercent=60`
+  (~2.4 GiB), leaving ~1.6 GiB for Grafana, Docker and the OS. The 16 GiB volume cannot carry the
+  store, Grafana and the future Netdata Parent's ~10 GiB dbengine; 64 GiB does, with room for
+  VictoriaMetrics/Traces later. **The guest rises to 6 GiB only when the Netdata Parent lands**
+  (ADR 47), not before. Measure `pve2` headroom and Grafana RSS before build.
 - **Grafana OSS** (`grafana/grafana`, explicit tag) in `/opt/vtstack/grafana`, `restart:
   unless-stopped`, `network_mode: host` on `:3000` so the **in-LXC UFW** filters it; allow `3000/tcp`
   from `192.168.2.0/24` only.
@@ -76,13 +78,15 @@ requires a separate ADR (47) and one structural condition: **`pve1` and `pve2` m
 host-native Netdata child** that streams to the containerised Parent, because a Parent in an LXC cannot
 read the Proxmox hosts' VM/CT cgroups or `/etc/pve` names ([research 50](../research/50-netdata-cloud-costs-and-stream-identity.md) §3).
 
-- Research 50 sizes a Parent aggregating 5–15 children at **1–2 GiB RAM**; the 6 GiB ceiling therefore
-  drops VictoriaLogs to `-memory.allowedPercent=50` (3 GiB) when the Parent lands, not the current 60 %.
+- Research 50 sizes a Parent aggregating 5–15 children at **1–2 GiB RAM**; when it lands, the guest
+  rises from 4 GiB to **6 GiB** and VictoriaLogs drops to `-memory.allowedPercent=50` (3 GiB), leaving
+  room for the Parent, Grafana and the OS.
 - Research 50 §7 is the dbengine/registry migration procedure; **do not copy the old Parent's
   `machine_guid`** if `pve1` becomes a child — copy `dbengine` for the children's history and mint a
   fresh GUID for the new Parent, or accept a fresh start.
-- The move is gated on the 6 GiB/64 GiB guest, the host-native children, and a scratch migration test.
-  Until ADR 47, the Parent stays host-native on `pve1` and [ADR 27](27-monitoring-strategy.md) stands.
+- The move is gated on the 6 GiB guest (raised from the initial 4 GiB), the 64 GiB disk, the host-native
+  children, and a scratch migration test. Until ADR 47, the Parent stays host-native on `pve1` and
+  [ADR 27](27-monitoring-strategy.md) stands.
 
 **Amendments.** [ADR 35](35-log-store-victorialogs.md): the store's guest is renamed `monitor` and moved
 to `pve2`, and its resource envelope grows — the store choice itself is unchanged. [ADR 27](27-monitoring-strategy.md):
@@ -98,11 +102,13 @@ proves insufficient; it is not the fleet's log pane today.
 
 - **The pane improves without touching the pipeline.** Every node's Fluent Bit output, the store's
   retention and the router's syslog path stay exactly as deployed.
-- **The guest moves to the stronger node.** `pve2`'s 256 GB disk and 8 GB RAM absorb the 64 GiB volume
-  and the 6 GiB ceiling; `pve1` keeps its capacity for Home Assistant, the CA and identity services.
-- **6 GiB is a ceiling, not a promise** — Grafana + VictoriaLogs + the deferred Netdata Parent share
-  it. The Parent's RSS must be measured; if it runs at 2 GiB, VictoriaLogs drops to 40 % or `pve2`
-  gains RAM (the 7040 supports 32 GB).
+- **The guest moves to the stronger node with 4 GiB, not 6.** `pve2`'s 256 GB disk takes the 64 GiB
+  volume, and 4 GiB is enough for VictoriaLogs + Grafana today; `pve1` and the rest of `pve2` keep the
+  remaining RAM. The guest rises to 6 GiB only when the Netdata Parent lands (ADR 47).
+- **4 GiB is the initial ceiling, not the final one** — VictoriaLogs at 60 % (~2.4 GiB) plus Grafana,
+  Docker and the OS fits with ~0.5 GiB of burst margin. When the Parent arrives, the 6 GiB envelope and
+  VictoriaLogs' 50 % cap replaces it; the Parent's RSS decides whether 6 GiB is enough (the 7040
+  supports 32 GB if not).
 - **Not the literal Loki experience.** The official plugin gives Explore, histogram, live tail, levels,
   patterns, dashboards, alerting, correlations and its own Drilldown drawer — but **not** Grafana's
   Logs Drilldown app and **not** LogQL. Dashboards are new LogsQL work; Loki dashboards do not port.
