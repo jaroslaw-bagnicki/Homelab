@@ -87,9 +87,9 @@ What is **not** established: that `[plugins]` still accepts these keys in v2.x, 
 
 ---
 
-## §4 — Child → Parent authorization: shared API key + IP ACL
+## §4 — Child → Parent authorization: shared API key + proposed IP ACL
 
-The thread's model matches what the fleet already runs ([`stream.conf.j2`](../../ansible/roles/netdata/templates/stream.conf.j2)):
+The fleet currently runs the **shared API key and TLS destination only** ([`stream.conf.j2`](../../ansible/roles/netdata/templates/stream.conf.j2)); the thread adds an optional `allow from` ACL, which is a **proposed extension**, not existing configuration.
 
 **Parent** — one section per API key, optionally narrowed by source network:
 
@@ -99,7 +99,7 @@ The thread's model matches what the fleet already runs ([`stream.conf.j2`](../..
     enabled = yes
     default history = 3600
     default memory mode = dbengine
-    allow from = 192.168.1.* 10.0.0.*
+    allow from = 192.168.2.0/24    # proposed; not in the current role
 ```
 
 **Child** — destination, key, and (for this fleet) TLS:
@@ -116,7 +116,7 @@ The thread's model matches what the fleet already runs ([`stream.conf.j2`](../..
 
 **Verification order on the Parent** — the thread's summary, and the mental model worth keeping:
 
-1. **IP check** — the peer address must match `allow from` for that key.
+1. **IP check** — *when `allow from` is configured*, the peer address must match it for that key. The current role does not render this ACL.
 2. **API‑key match** — the key sent in the `STREAM` header must exist as a section.
 3. **Machine GUID match** — the child's `machine_guid` (from `/var/lib/netdata/registry/netdata_random_unique_id`) selects or creates that node's metric namespace.
 
@@ -124,7 +124,7 @@ Per‑node overrides are possible by sectioning on the **machine GUID** instead 
 
 Two consequences for this repo:
 
-- **The join between §4 and §5 is the interesting one.** In this model the API key is a *shared secret* — every child holds the same value, so one compromised child reads as any other child. The Parent's `allow from` is the only per‑host discrimination, and it is IP‑based.
+- **The join between §4 and §5 is the interesting one.** In this model the API key is a *shared secret* — every child holds the same value, so one compromised child reads as any other child. Without the proposed `allow from` ACL, the fleet has no per-host discrimination at all; with it, the discrimination is IP-based.
 - **The `destination …:SSL` + `ssl skip certificate verification = yes` shape** already in the role means the hop is encrypted but the Parent's identity is unverified — the residual ADR 27 records. §5 is exactly the fix for that residual.
 
 ---
@@ -150,7 +150,7 @@ The thread's answer to "can authorization rest on mTLS alone, without an API key
     enabled = yes
     default history = 3600
     default memory mode = dbengine
-    allow from = 10.0.0.* 192.168.1.*
+    allow from = 192.168.2.0/24
 ```
 
 **Child** — its own leaf plus the CA, and an arbitrary key value:
@@ -159,7 +159,7 @@ The thread's answer to "can authorization rest on mTLS alone, without an API key
 # /etc/netdata/stream.conf (Child)
 [stream]
     enabled = yes
-    destination = parent.internal:19999
+    destination = parent.internal:19996:SSL   # stream receiver; :19999 is the dashboard
     api key = mtls-auth          # placeholder — the Parent's [*] ignores it
     ssl CA = /etc/netdata/ssl/rootCA.crt
     ssl certificate = /etc/netdata/ssl/child.crt
