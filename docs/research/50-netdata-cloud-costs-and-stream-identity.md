@@ -14,9 +14,9 @@
 
 Implementation is out of scope: no role, template or host change is proposed here.
 
-**Status**: 📝 Reference — **no decision, no ADR**. Two open follow‑ups consume it: the TLS‑trust gap ADR 27 records ("pinning it via `CAfile` is a tracked follow‑up") and any future Cloud adoption question.
+**Status**: 📝 Reference — **fed into ADR 46**, which decides the Parent move. Two open follow‑ups consume it: the TLS‑trust gap ADR 27 records ("pinning it via `CAfile` is a tracked follow‑up") and any future Cloud adoption question.
 
-> **Operator intent (2026‑10‑31).** The operator intends to evaluate moving the Parent into the **`monitor` guest** (LXC 214, currently `vtstack`; planned for `pve2`), with **host-native Netdata children on `pve1` and `pve2`**. This document is the input: §3's warning is satisfied by those children, §6/§7 are the rename and migration procedures, and [ADR 46](../decisions/46-grafana-logs-ui-victorialogs.md) records the intent as **deferred**. A future **ADR 47** makes the decision and amends [ADR 27](../decisions/27-monitoring-strategy.md); §9 describes the current configuration, not that intent.
+> **Decision (2026‑10‑31).** The Parent moves into the **`monitor` guest** (LXC 214, currently `vtstack`; first on `pve1`, later `pve2`), with **host-native Netdata children on `pve1` and `pve2`**. This document is the input: §3's warning is satisfied by those children, §6/§7 are the rename and migration procedures, and [ADR 46](../decisions/46-grafana-logs-ui-victorialogs.md) records the decision. The Parent moves **before Grafana** and keeps its own LXC/Docker collection; the measured ~500 MB fits the 1 GiB cap.
 
 > **Verification status.** Every config snippet is **as the thread gave it**. None of it was checked against the Netdata **v2.12.1** documentation or source actually running on the fleet ([research 40](40-netdata-cpu-cstates.md) pinned that version), and pricing was not confirmed on the vendor's own page. §8 lists the claims that decide whether anything here is adoptable — treat §3, §5 and §7 as **unconfirmed syntax**, not recipes.
 
@@ -70,11 +70,11 @@ The thread's proposal: run the Parent in an **unprivileged LXC** and strip its c
     diskspace = no
 ```
 
-With that, the agent starts no probes and reads nothing from the container or the host — CPU and RAM go to receiving streams, writing `dbengine`, and serving UI/API. The thread's sizing for a Parent aggregating 5–15 children is **0.1–0.3 CPU** and **1–2 GiB RAM** depending on retention, plus a **separate volume for `dbengine`** so metric rotation never fills the rootfs.
+With that, the agent starts no probes and reads nothing from the container or the host — CPU and RAM go to receiving streams, writing `dbengine`, and serving UI/API. The thread's sizing for a Parent aggregating 5–15 children is **0.1–0.3 CPU** and **1–2 GiB RAM** depending on retention, plus a **separate volume for `dbengine`** so metric rotation never fills the rootfs. The fleet's measured Parent is **~500 MB**, so ADR 46 caps it at **1 GiB** and keeps its collection enabled.
 
 **This does not fit this fleet as deployed.** ADR 27 (revised 2026‑09‑12) deliberately places the Parent **host‑native on the `pve` Proxmox host, not in an LXC or VM**, precisely so it can read VM/CT cgroups and `/etc/pve` names — the Proxmox host integration is the reason the Parent sits there at all. An aggregator‑only container with **no host child** would collect the fleet and **lose the Proxmox view**.
 
-The operator's intended design answers this by keeping a **host-native child on each Proxmox node** (`pve1`, `pve2`); the containerised Parent then aggregates and serves the pane, while the children retain the Proxmox view. That is a different topology from "aggregator-only with no host child", and it is what [ADR 46](../decisions/46-grafana-logs-ui-victorialogs.md) records as the deferred intent.
+The decision in [ADR 46](../decisions/46-grafana-logs-ui-victorialogs.md) answers this by keeping a **host-native child on each Proxmox node** (`pve1`, `pve2`); the containerised Parent then aggregates and serves the pane, while the children retain the Proxmox view. That is a different topology from "aggregator-only with no host child" — the Parent also keeps its own LXC/Docker collection.
 
 The pattern stays useful in two narrower roles:
 
@@ -238,9 +238,9 @@ Prerequisites: the new Parent on the **same or newer** Netdata version, and the 
 
 ## §9 — Conclusions
 
-1. **Nothing here changes ADR 27 by itself.** The Parent stays host‑native on the `pve` Proxmox host until a separate decision; §3's aggregator‑only LXC is a pattern, not the current design. The operator's intent to move it to `monitor` with host‑native `pve1`/`pve2` children is recorded in the banner above; a future ADR 47 makes that decision.
+1. **ADR 46 changes the placement.** The Parent moves from host‑native `pve1` into `monitor`, with host‑native `pve1`/`pve2` children keeping the Proxmox view; this research supplies the migration procedure, not the decision.
 2. **The one upgrade worth pursuing is stream identity**: per‑host `step-ca` leaves in place of the shared API key would close the ADR 27 TLS‑trust residual in both directions and fold streaming into the fleet's existing certificate lifecycle. It is gated on §8's first four rows.
-3. **The Cloud is optional and not currently needed.** It is reachable outbound‑only (§2), the free tier covers four nodes (§1), and the paid plans buy the Cloud plane rather than monitoring. Cloud adoption is a convenience question, not an architecture one.
+3. **The Cloud is optional and not currently needed.** It is reachable outbound‑only (§2), the free tier covers four nodes today (six after the host children land), and the paid plans buy the Cloud plane rather than monitoring. Cloud adoption is a convenience question, not an architecture one.
 4. **History survives renames and migrations for one reason** — `machine_guid` in `/var/lib/netdata/`. §6 and §7 are the two procedures that depend on it, and both are directly relevant to the planned `pve` → `pve1` work.
 
 ## References

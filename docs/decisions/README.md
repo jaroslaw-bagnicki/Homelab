@@ -13,7 +13,7 @@ Significant architectural and technology choices recorded in
 
 | # | Date | ADR | Status |
 |---|------|-----|--------|
-| 46 | 2026-10-31 | [Grafana as the Log Pane — VictoriaLogs Retained, Grafana on the `monitor` Guest](46-grafana-logs-ui-victorialogs.md) | Proposed |
+| 46 | 2026-10-31 | [Observability Host — VictoriaLogs, Netdata Parent and Grafana in One LXC](46-grafana-logs-ui-victorialogs.md) | Proposed |
 | 45 | 2026-10-27 | [Workload Identity — One Mechanism per Protocol, Workloads as Directory Users](45-workload-identity.md) | Accepted |
 | 44 | 2026-10-27 | [Authentik as the Fleet Identity Provider — an LXC on `pve`, FreeIPA Source, SSO-Exempt Management Planes](44-authentik-identity-provider.md) | Accepted |
 | 43 | 2026-10-25 | [FreeIPA as the Lab's Domain — `ipa.internal`, Technitium Keeps DNS](43-freeipa-domain-realm.md) | Accepted |
