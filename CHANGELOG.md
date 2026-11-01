@@ -15,7 +15,7 @@ Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month 
 
 - **(fix)** Serve the fleet resolver from the hosts and alert when a `.internal` leaf nears expiry — [ADR 40](docs/decisions/40-internal-dns-proxy-edge.md)
 - **(feat)** Deploy the FreeIPA server on `pve` — external-ca under the fleet root, M1 verified; TPM-backed Dogtag custody parked — [runbook 41](docs/runbooks/41-deploy-freeipa-server.md)
-- **(feat)** Load SSH identities explicitly — empty agent by default, loaders for `automation`, `agent-ai` and break-glass — [ADR 41](docs/decisions/41-ssh-certificates-step-ca.md)
+- **(feat)** Load SSH identities explicitly — empty agent by default, loaders for `automation`, `agent-ai` and break-glass, one preflight that establishes the session — [ADR 41](docs/decisions/41-ssh-certificates-step-ca.md)
 
 ## 2026‑10
 
