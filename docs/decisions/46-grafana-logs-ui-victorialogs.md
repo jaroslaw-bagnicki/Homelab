@@ -49,9 +49,13 @@ the Netdata Parent migrated first. Move the guest to `pve2` and expand the disk 
   Expand to **64 GiB** when the guest moves to `pve2`.
 - **Budget:** VictoriaLogs cap **1.5 GiB** (measured 250–300 MB), Netdata Parent cap **1.0 GiB**
   (measured ~500 MB), Grafana cap **0.75 GiB**, OS/Docker/Fluent Bit **0.5 GiB** — **3.75 GiB of
-  caps**, ~1.3–1.6 GiB actual. The headroom covers LogsQL scans, Grafana renders and query spikes.
-- **32 GiB is enough for now:** VictoriaLogs data, the Netdata dbengine (current retention caps total
-  ~9 GiB), Grafana and the OS. 64 GiB is deferred to `pve2`, not needed on `pve`.
+  caps**, ~1.3–1.6 GiB actual. The role currently uses `-memory.allowedPercent=60`; set
+  `victorialogs_memory_allowed_percent: 37` (≈1.48 GiB on 4 GiB) — or an explicit
+  `-memory.allowedBytes=1536MiB` — in the same resize, otherwise the unchanged setting allows ~2.4 GiB.
+- **32 GiB is provisional.** Before the resize, measure VictoriaLogs data size and ingest rate, the
+  Netdata dbengine (current retention caps total ~9 GiB), Grafana and the OS. Confirm 32 GiB from that
+  budget, or lower the store cap/add a separate volume; do not treat 32 GiB as proven. 64 GiB remains
+  deferred to `pve2`.
 - If a component exceeds its cap, tune **within** the 4 GiB budget first — reduce Parent retention,
   dashboard scope or the VictoriaLogs cap — and only revisit the guest size with measurements.
 

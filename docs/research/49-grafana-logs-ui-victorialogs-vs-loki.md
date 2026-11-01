@@ -73,7 +73,7 @@ Both pane options share the Grafana deployment; only the datasource and its tran
 | **Plugin install** | `GF_PLUGINS_PREINSTALL=victoriametrics-logs-datasource@0.33.1` | Pins the plugin with the image tag; installation happens at container start and needs egress to grafana.com |
 | **Datasource** | A1: `victoriametrics-logs-datasource` → `https://127.0.0.1:9428`, basic auth `vlogs`, TLS verification skipped or pinned to the store's CA. A2: built-in `loki` datasource → the proxy | Loopback avoids a second LAN hop and the self-signed trust problem; the store still speaks TLS |
 | **Resources** | Grafana is a **512 MB / 1 core floor** and a "Small" deployment baseline of **2 cores / 2–4 GB** (Grafana sizing docs); plan **512–768 MB** for this single-user instance | Grafana's floor is not zero; the 4 GiB guest covers Grafana + VictoriaLogs + the Netdata Parent |
-| **Monitoring** | Later: Netdata `httpcheck` / `x509check` against `https://grafana.internal:3000` | [ADR 34](../decisions/34-lan-tls-only.md)'s enforcement pattern; not part of this decision |
+| **Monitoring** | Later: Netdata `httpcheck` / `x509check` against `https://grafana.internal` (Caddy); optionally probe `https://127.0.0.1:3000` from `monitor` | `:3000` is the edge-only backend, not a LAN browser URL; [ADR 34](../decisions/34-lan-tls-only.md)'s enforcement pattern |
 
 ### 2.1 LAN entrypoint: the edge Caddy
 
@@ -93,11 +93,11 @@ VictoriaLogs currently uses **250–300 MB**; the Netdata Parent uses **~500 MB*
 | OS, Docker, Fluent Bit | ~300 MB | **0.5 GiB** |
 | **Total** | **~1.3–1.6 GiB** | **3.75 GiB** |
 
-That is ~0.25 GiB of cap margin and ~2.4 GiB of actual headroom for LogsQL scans, Grafana renders and query spikes. No 6 GiB phase; if the Parent's Docker collection or retention grows, tune inside the 4 GiB budget first.
+That is ~0.25 GiB of cap margin and ~2.4 GiB of actual headroom for LogsQL scans, Grafana renders and query spikes. The role currently sets `-memory.allowedPercent=60`; change it to **37%** (≈1.48 GiB on 4 GiB) or use `-memory.allowedBytes=1536MiB` in the same deploy. No 6 GiB phase; if the Parent's Docker collection or retention grows, tune inside the 4 GiB budget first.
 
 ### 2.3 Disk: 32 GiB now, 64 GiB on `pve2`
 
-`pve`'s `local-lvm` is ~68 GiB. Today `vtstack` uses 16 GiB and `ca` 8 GiB; a **32 GiB** guest makes 40 GiB used, leaving ~28 GiB. A 64 GiB guest would make 72 GiB and overcommit the pool. **32 GiB is enough** for VictoriaLogs, the ~10 GiB Netdata dbengine, Grafana and the OS. The 64 GiB expansion waits for `pve2`'s 256 GB disk, in the same scope as the guest move ([Idea 15](../ideas/15-second-proxmox-node.md)).
+`pve`'s `local-lvm` is ~68 GiB. Today `vtstack` uses 16 GiB and `ca` 8 GiB; a **32 GiB** guest makes 40 GiB used, leaving ~28 GiB. A 64 GiB guest would make 72 GiB and overcommit the pool. **32 GiB is provisional**, not proven: the store's 80% cap, the ~10 GiB Netdata dbengine, Grafana and the OS share the rootfs. Measure VictoriaLogs data size and ingest rate before the resize; confirm 32 GiB or lower the store cap/add a separate volume. The 64 GiB expansion waits for `pve2`'s 256 GB disk, in the same scope as the guest move ([Idea 15](../ideas/15-second-proxmox-node.md)).
 
 ### 2.4 What Grafana adds to the security surface
 
@@ -274,7 +274,7 @@ Scoring notes: A1 loses on portability (LogsQL, not LogQL) and on the missing Lo
 
 **A1 (recommended)** — the parent moves first; Grafana follows:
 
-1. On `pve`, resize/rename LXC 214 to `monitor`: **4 GiB / 32 GiB**; lower VictoriaLogs to a **1.5 GiB** cap.
+1. On `pve`, resize/rename LXC 214 to `monitor`: **4 GiB / 32 GiB**; lower VictoriaLogs to a **1.5 GiB** cap by setting `victorialogs_memory_allowed_percent: 37` (or `-memory.allowedBytes=1536MiB`) — the current 60% would allow ~2.4 GiB. Gate the 32 GiB resize on the measured disk budget.
 2. **Netdata Parent first:** deploy the container; copy `dbengine` and mint a new Parent GUID; stop the old Parent, convert `pve` to a child, re-point `lab`/`nas`/`edge` to `monitor:19996:SSL`; verify Proxmox names, streams, UPS and history. Keep the old Parent data until the new one is stable.
 3. Add the Grafana Compose service, UFW `3000/tcp` from `edge` only, native TLS, `network_mode: host`; add the `grafana.internal` Caddy route on `edge`.
 4. Create `grafana-admin-password` and `grafana-secret-key` in Key Vault; write **root:472, mode 0440** files; wire `__FILE` variables.
@@ -297,7 +297,7 @@ Scoring notes: A1 loses on portability (LogsQL, not LogQL) and on the missing Lo
 | **Netdata Parent RSS** at the fleet's retention and 5–15 children | Measured ~500 MB today; confirms the 1.0 GiB cap and 4 GiB total |
 | **Netdata Docker collection** — cgroup namespace host + read-only cgroup mount + GET-only socket proxy | Decides whether the Parent sees VictoriaLogs/Grafana/Netdata container charts without mounting the raw Docker socket |
 | **Parent history migration** — `dbengine` copy + new Parent GUID | Preserves child history without colliding with `pve`'s child identity |
-| **Current VictoriaLogs data size** and daily ingest rate | Confirms the 32 GiB rootfs and the 80 % cap still leave room for Grafana and Netdata |
+| **Current VictoriaLogs data size** and daily ingest rate — **pre-resize gate** | Confirms 32 GiB from the real budget, or forces a lower store cap/separate volume before the resize |
 | **Plugin/Grafana version pair** — latest Grafana release compatible with `victoriametrics-logs-datasource@0.33.1` | Both are pinned; a mismatch is a failed datasource |
 | **`GF_PLUGINS_PREINSTALL` egress** from `monitor` to grafana.com | The plugin installs at container start |
 | **Grafana `__FILE` secrets and native-TLS env names** on the pinned image | Confirmed in current docs, but the image version must be checked. Verify the files are `root:472`, mode `0440`, and readable by the container's UID/GID 472 |
