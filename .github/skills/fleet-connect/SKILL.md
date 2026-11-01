@@ -63,8 +63,16 @@ loaded by default and is not a daily path.
 Three separate things fail in three different ways: an unset socket throws
 `SSH_AUTH_SOCK is not set`, an expired certificate shows `Permission denied (publickey)`, and a
 missing `AZURE_*` principal fails a playbook **halfway through** with a Key Vault assertion
-(after the host has already been changed). Establish all three up front instead of discovering
-them by exception:
+(after the host has already been changed). One script establishes all three:
+
+```powershell
+./scripts/Initialize-HomelabFleetSession.ps1                 # automation certificate (Ansible)
+./scripts/Initialize-HomelabFleetSession.ps1 -Agent copilot  # agent-ai certificate (AI agent)
+./scripts/Initialize-HomelabFleetSession.ps1 -Force          # re-issue even if one is loaded
+```
+
+It prints one line — `fleet session: AKV=True sock=… cert=True principal=automation` — and is
+idempotent: with a certificate already in the agent it changes nothing. The same by hand:
 
 ```powershell
 $env:SSH_AUTH_SOCK = (bash -c 'eval $(ssh-agent -s) >/dev/null 2>&1; echo $SSH_AUTH_SOCK').Trim()
@@ -72,15 +80,16 @@ $env:SSH_AUTH_SOCK = (bash -c 'eval $(ssh-agent -s) >/dev/null 2>&1; echo $SSH_A
 $env:AZURE_TENANT_ID     = Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name codespaces-sp-tenant-id     -AsPlainText
 $env:AZURE_CLIENT_ID     = Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name codespaces-sp-client-id     -AsPlainText
 $env:AZURE_CLIENT_SECRET = Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name codespaces-sp-client-secret -AsPlainText
-"preflight: AKV=$([bool]$env:AZURE_CLIENT_ID) sock=$env:SSH_AUTH_SOCK"
 ```
 
 - **One shell for the whole rollout** — `SSH_AUTH_SOCK` and the `AZURE_*` variables are session
   state. A command that lands in another terminal has none of it, which is how an agent that just
   connected "suddenly" cannot.
-- **Idempotent** — an `(ED25519-CERT)` line from `ssh-add -l` means the certificate is already
-  loaded; a non-empty `$env:AZURE_CLIENT_ID` means the principal is set. Skip the step in that case
-  rather than re-issuing a certificate on every command.
+- **Idempotent, but principal-aware** — it re-issues only when the loaded certificate is not for
+  the requested principal, so `-Agent copilot` over an `automation` certificate replaces it instead
+  of reporting success. A stale `SSH_AUTH_SOCK` (dead agent) is replaced by a fresh one.
+- **`AZURE_*` needs all three** — tenant, client id and secret form one principal; a partial set
+  authenticates nothing, so any gap refills the whole set.
 - **`AZURE_*` is the controller service principal**, `codespaces-sp-*` in `homelab-bysxdb-kv` — not
   the interactive account. The `azure.azcollection` lookups inside the roles read it from the
   environment, and each role asserts it before doing anything.
@@ -315,7 +324,7 @@ read `ansible.cfg` from world-writable directories as a security measure.
 | Client trust | `@cert-authority *.internal,192.168.2.*` in `~/.ssh/known_hosts` |
 | Break-glass key | `homelab-bysxdb-kv/fleetadm-key-priv` (comment `fleetadm@homelab`), 1 h lifetime |
 | `cloudlab` key | `homelab-bysxdb-kv/cloudlab-vps-key-priv` — `scripts/Import-HomelabCloudlabKey.ps1` |
-| Identity loaders | `Get-HomelabSshAutomationCert.ps1` · `Get-HomelabSshAgentCert.ps1 -Agent <name>` · `Import-HomelabFleetKey.ps1` · `Import-HomelabCloudlabKey.ps1` |
+| Identity loaders | `Initialize-HomelabFleetSession.ps1` (preflight — agent + certificate + AKV principal) · `Get-HomelabSshAutomationCert.ps1` · `Get-HomelabSshAgentCert.ps1 -Agent <name>` · `Import-HomelabFleetKey.ps1` · `Import-HomelabCloudlabKey.ps1` |
 | Identity reset | `scripts/Reset-HomelabSshIdentity.ps1` — empties the agent and clears `~/.ansible/cp` on every load |
 | Key Vault | `homelab-bysxdb-kv` |
 | Ansible inventory | `ansible/inventory.ini` |
