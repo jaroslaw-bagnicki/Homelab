@@ -46,12 +46,23 @@ if ($depCheck -match '^OK') {
   Fail "azure.azcollection deps missing" "Run: pip install --break-system-packages -r /home/vscode/.ansible/collections/ansible_collections/azure/azcollection/requirements.txt"
 }
 
-# 4. SSH to cloudlab
+# 4. An SSH identity is loaded - the agent starts empty, so a playbook fails closed without one
+$identities = @(ssh-add -l 2>&1)
+$hasIdentity = $LASTEXITCODE -eq 0
+$hasCert = $hasIdentity -and @(ssh-add -L 2>$null | Select-String '-cert-v01@openssh.com').Count -gt 0
+if ($hasIdentity) {
+  $kind = if ($hasCert) { 'certificate' } else { 'plain key' }
+  Ok "$($identities.Count) SSH identity in ssh-agent ($kind)"
+} else {
+  Fail "No SSH identity in ssh-agent" "LAN nodes: scripts/Get-HomelabSshAutomationCert.ps1 or scripts/Get-HomelabSshAgentCert.ps1 -Agent <name>. cloudlab: scripts/Import-HomelabCloudlabKey.ps1 or scripts/Import-HomelabFleetKey.ps1 (no certificate works there)"
+}
+
+# 5. SSH to cloudlab
 $sshTest = ssh cloudlab "hostname" 2>&1
 if ($LASTEXITCODE -eq 0) {
   Ok "SSH to cloudlab ($($sshTest.Trim()))"
 } else {
-  Fail "SSH to cloudlab failed" "Check ssh-agent and ~/.ssh/config"
+  Fail "SSH to cloudlab failed" "Load the cloudlab identity first: scripts/Import-HomelabCloudlabKey.ps1, or the break-glass fleet key"
 }
 
 Write-Host ""

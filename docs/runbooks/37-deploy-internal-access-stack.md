@@ -45,7 +45,7 @@
 - [ ] `technitium-admin-password` provisioned in AKV (§2).
 - [ ] Controller has `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID` exported and the
       Azure lookup packages installed (`azure-identity`, `azure-keyvault-secrets`).
-- [ ] Fleet key loaded in `ssh-agent`.
+- [ ] An SSH identity loaded in `ssh-agent` (see the [`fleet-connect` skill](../../.github/skills/fleet-connect/SKILL.md)).
 - [ ] Full eMMC snapshot taken ([runbook 27](27-edge-backup-restore.md)).
 
 ---

@@ -1,5 +1,5 @@
-# ── Homelab: auto-start ssh-agent, ensure Azure context, load VPS key ─
-# Runs once per session — idempotent, non-interactive.
+# ── Homelab: auto-start ssh-agent, ensure Azure context, trust the SSH host CA ─
+# Runs once per session — idempotent, non-interactive. Loads no SSH identity.
 
 # Opencode
 $env:PATH = "/home/vscode/.opencode/bin:$env:PATH"
@@ -42,27 +42,13 @@ if (-not (Get-AzContext)) {
   Write-Host ":: Reusing existing Azure context: $((Get-AzContext).Account.Id)" -ForegroundColor DarkGray
 }
 
-# Load the cloudlab VPS key from Key Vault. The fleetadm key is deliberately NOT
-# loaded here: it is root-equivalent break-glass (ADR 41) and is imported on
-# demand by scripts/Import-HomelabFleetKey.ps1. Agents and Ansible authenticate
-# with the agent-ai or automation certificate instead.
-$keyNames = [ordered]@{
-  'cloudlab-vps-key-priv' = 'legacy cloudlab VPS key'
-}
-if ($env:SSH_AUTH_SOCK -and (Get-AzContext -ErrorAction SilentlyContinue)) {
-  foreach ($secret in $keyNames.Keys) {
-    Write-Host ":: Loading $($keyNames[$secret]) from Key Vault..." -ForegroundColor Yellow
-    $key = Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name $secret -AsPlainText -ErrorAction SilentlyContinue 2>$null
-    if (-not $key) {
-      Write-Warning ":: Could not read $secret from Key Vault — check Azure context / vault access"
-      continue
-    }
-    $null = $key | ssh-add - 2>$null
-    if ($LASTEXITCODE -ne 0) {
-      Write-Warning ":: ssh-add failed for $($keyNames[$secret])"
-    }
-  }
-}
+# No SSH identity is loaded here (ADR 41, #170): the agent starts empty, so a run cannot
+# silently authenticate with whatever happened to be in it. Load one explicitly before an
+# Ansible run:
+#   scripts/Get-HomelabSshAutomationCert.ps1            operator / non-agent automation
+#   scripts/Get-HomelabSshAgentCert.ps1 -Agent <name>    AI agent (agent-ai principal)
+#   scripts/Import-HomelabFleetKey.ps1                   break-glass fleetadm key
+#   scripts/Import-HomelabCloudlabKey.ps1                cloudlab (not certificate-enabled)
 
 # ── SSH host CA trust ─────────────────────────────────────────────
 # The fleet's @cert-authority line replaces per-host known_hosts pins for the

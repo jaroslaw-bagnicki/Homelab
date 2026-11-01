@@ -59,7 +59,7 @@ built-in `/select/vmui` UI ([ADR 35](../decisions/35-log-store-victorialogs.md))
       (`pip3 install --break-system-packages azure-identity azure-keyvault-secrets`).
 - [ ] `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET` and `AZURE_TENANT_ID` exported on the controller —
       the workload role reads the Key Vault secret through them.
-- [ ] Fleet key in `ssh-agent` (`ssh-add -l` shows `fleetadm@homelab`).
+- [ ] An SSH identity is loaded in `ssh-agent` (`ssh-add -l` is not empty).
 
 ---
 

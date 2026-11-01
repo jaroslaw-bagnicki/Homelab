@@ -11,6 +11,10 @@ entry. Notable changes only: no instruction-file tweaks, typo/link fixes, cross-
 corrections, or changelog bookkeeping.
 Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month and newest entry first.
 
+## 2026‑11
+
+- **(feat)** Load SSH identities explicitly — empty agent by default, loaders for `automation`, `agent-ai` and break-glass — [ADR 41](docs/decisions/41-ssh-certificates-step-ca.md)
+
 ## 2026‑10
 
 - **(docs)** Propose the `monitor` observability host — collocate VictoriaLogs, Netdata Parent and Grafana in one LXC; Parent first, 4 GiB / 32 GiB now — [ADR 46](docs/decisions/46-grafana-logs-ui-victorialogs.md)

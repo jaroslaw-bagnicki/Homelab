@@ -35,8 +35,9 @@ ADR 27 makes Netdata the first component of the local (Tier B) monitoring plane:
 LAN node → a central **Parent** → one dashboard covering the fleet, Arc or not. The Lab (M910q) and
 Edge nodes stream to the Parent on the `pve` node; the NAS joins when it joins the fleet.
 
-> **Execution note.** Run this runbook **from a LAN workstation** (`192.168.2.0/24`) with the
-> fleet key loaded in `ssh-agent` (see the [`fleet-connect` skill](../../.github/skills/fleet-connect/SKILL.md)) —
+> **Execution note.** Run this runbook **from a LAN workstation** (`192.168.2.0/24`) with an identity
+> in `ssh-agent` — the `automation` certificate or the break-glass fleet key (see the
+> [`fleet-connect` skill](../../.github/skills/fleet-connect/SKILL.md)) —
 > `lab`, `edge` and `pve` are LAN-only. The Parent also reads the stream key from Azure Key Vault,
 > so the controller needs `AZURE_CLIENT_ID` / `AZURE_CLIENT_SECRET` / `AZURE_TENANT_ID` set.
 
@@ -85,7 +86,7 @@ Edge nodes stream to the Parent on the `pve` node; the NAS joins when it joins t
       (`pip3 install --break-system-packages azure-identity azure-keyvault-secrets`, see
       [runbook 16](16-docker-services-ansible-role.md)).
 - [ ] Azure Key Vault `homelab-bysxdb-kv` accessible from the controller identity.
-- [ ] Fleet key loaded in `ssh-agent` (`ssh-add -l` shows `fleetadm@homelab`).
+- [ ] An SSH identity is loaded in `ssh-agent` (`ssh-add -l` is not empty).
 
 ---
 

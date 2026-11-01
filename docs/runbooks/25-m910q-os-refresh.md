@@ -34,8 +34,10 @@ The refresh re-aligns the box with ADR 05 and unblocks that track.
   - Ansible + collections: `ansible-galaxy install -r ansible/requirements.yml`
   - `az` CLI **logged in** (`az login`) — the `azure_arc` role fetches the SPN secret
     from Key Vault via the `azure.azcollection` lookup on the control node
-  - The **fleet key** (ADR 28): **private** key loaded into `ssh-agent` (from Key Vault
-    `homelab-bysxdb-kv/fleetadm-key-priv`) so Ansible can connect; the **public** key
+  - An SSH identity in `ssh-agent` for Ansible — the `automation` certificate
+    (`./scripts/Get-HomelabSshAutomationCert.ps1`) or the break-glass fleet key
+    (`./scripts/Import-HomelabFleetKey.ps1`); see the
+    [`fleet-connect` skill](../../.github/skills/fleet-connect/SKILL.md). The **public** fleet key
     (committed `ansible/roles/common/files/ssh/fleetadm.pub`) is installed by the
     bootstrap script
 - **Bootable USB** with Ubuntu Server 24.04 LTS ISO and a **SystemRescue** ISO.

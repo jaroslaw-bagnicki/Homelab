@@ -27,7 +27,7 @@
       `ca_trust` role fails hard without them. In a plain dev container they are not pre-set: load
       them from the vault in the shell that runs the playbook (Az PowerShell, `codespaces-sp-*`
       secrets) and never print them.
-- [ ] Fleet key loaded in `ssh-agent` (`fleet-connect` skill).
+- [ ] An SSH identity loaded in `ssh-agent` (`fleet-connect` skill).
 - [ ] DNS from [runbook 37](37-deploy-internal-access-stack.md) live on the nodes you verify
       end-to-end (otherwise use `--resolve`, §2).
 

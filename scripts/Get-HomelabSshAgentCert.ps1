@@ -1,12 +1,17 @@
 param(
+    [ValidatePattern('^[a-z0-9-]+$')]
     [string]$Agent
 )
 
 $ErrorActionPreference = 'Stop'
 
+if (-not $Agent) { throw 'Specify -Agent <name> (e.g. -Agent copilot); it becomes the agent-ai key ID agent-<name>.' }
+
 if (-not $env:SSH_AUTH_SOCK) {
     throw 'SSH_AUTH_SOCK is not set; start ssh-agent first.'
 }
+
+& "$PSScriptRoot/Reset-HomelabSshIdentity.ps1"
 
 # ── Azure Key Vault ───────────────────────────────────────────────
 if (-not (Get-AzContext)) {

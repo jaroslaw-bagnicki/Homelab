@@ -4,6 +4,8 @@ if (-not $env:SSH_AUTH_SOCK) {
     throw 'SSH_AUTH_SOCK is not set; start ssh-agent first.'
 }
 
+& "$PSScriptRoot/Reset-HomelabSshIdentity.ps1"
+
 # ── Azure Key Vault ───────────────────────────────────────────────
 if (-not (Get-AzContext)) {
     throw 'Azure context is not set; run Connect-AzAccount first.'
