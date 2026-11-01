@@ -30,7 +30,7 @@ Write-Host "ssh-agent started (pid $env:SSH_AGENT_PID)" -ForegroundColor Green
 Write-Host "SSH_AUTH_SOCK = $env:SSH_AUTH_SOCK" -ForegroundColor Gray
 
 # Step 2: Load the SSH key from Key Vault
-& "$PSScriptRoot/Clear-HomelabSshControlMaster.ps1"
+& "$PSScriptRoot/Reset-HomelabSshIdentity.ps1"
 Write-Host "Loading key 'cloudlab-vps-key-priv' from 'homelab-bysxdb-kv'..." -ForegroundColor Yellow
 Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name cloudlab-vps-key-priv -AsPlainText | ssh-add -
 

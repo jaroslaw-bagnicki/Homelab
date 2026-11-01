@@ -238,9 +238,9 @@ sudo journalctl -u homelab-ssh-host-cert-renew -n 20
 >   Start the agent on a fixed socket (`ssh-agent -a /tmp/fleet-ssh-agent.sock`) so it survives terminal
 >   churn, and export `SSH_AUTH_SOCK` in each new shell.
 > - **Switching identity mid-session is safe.** `ControlPersist=5m` in `ansible.cfg` keeps one
->   authenticated connection per host alive, so every loader clears `~/.ansible/cp` first
->   (`scripts/Clear-HomelabSshControlMaster.ps1`) — the next connection authenticates with the newly
->   loaded identity instead of reusing the old one.
+>   authenticated connection per host alive, so every loader runs `Reset-HomelabSshIdentity.ps1`
+>   first — it empties the agent and clears `~/.ansible/cp`, so only the newly loaded identity can
+>   authenticate: no stacked keys, no reused master.
 
 ## 5. M4 — `automation` principal
 

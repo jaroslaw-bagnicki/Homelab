@@ -139,8 +139,9 @@ keeps its own key:
 
 Everything else on the fleet takes a step-ca certificate instead — `automation` for operator
 automation, `agent-ai` for an AI agent, and the fleet key only for break-glass. The
-[`fleet-connect` skill](../../.github/skills/fleet-connect/SKILL.md) lists the loaders, and its
-`Clear-HomelabSshControlMaster.ps1` note covers swapping identity inside one session.
+[`fleet-connect` skill](../../.github/skills/fleet-connect/SKILL.md) lists the loaders; each one runs
+`Reset-HomelabSshIdentity.ps1` first, so a new identity replaces the previous one instead of
+stacking on top of it.
 
 ### Create SSH config (one-time setup)
 

@@ -54,7 +54,7 @@ if ($hasIdentity) {
   $kind = if ($hasCert) { 'certificate' } else { 'plain key' }
   Ok "$($identities.Count) SSH identity in ssh-agent ($kind)"
 } else {
-  Fail "No SSH identity in ssh-agent" "Load one: scripts/Get-HomelabSshAutomationCert.ps1 (operator) | scripts/Get-HomelabSshAgentCert.ps1 -Agent <name> (AI agent) | scripts/Import-HomelabFleetKey.ps1 (break-glass) | scripts/Import-SshKey.ps1 (cloudlab)"
+  Fail "No SSH identity in ssh-agent" "LAN nodes: scripts/Get-HomelabSshAutomationCert.ps1 or scripts/Get-HomelabSshAgentCert.ps1 -Agent <name>. cloudlab: scripts/Import-SshKey.ps1 or scripts/Import-HomelabFleetKey.ps1 (no certificate works there)"
 }
 
 # 5. SSH to cloudlab

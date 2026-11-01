@@ -195,13 +195,14 @@ certificate — one shared principal, a per-agent key ID:
 
 ### ❌ An identity swap still connects as the old identity
 
-Ansible keeps one authenticated SSH connection per host for `ControlPersist=5m` (`ansible.cfg`).
-A connection opened under the previous identity is reused, so the host keeps seeing the old
-principal — and access survives `ssh-add -D` until that socket expires.
+Ansible keeps one authenticated SSH connection per host for `ControlPersist=5m` (`ansible.cfg`), and
+`ssh-agent` keeps every key loaded into it. A second loader adds its identity *alongside* the first,
+and ssh may offer the older key first — while a connection opened under the previous identity is
+reused outright. Either way the host can keep seeing the old principal.
 
-**Fix:** every loader clears the sockets under `~/.ansible/cp` before adding a key. Swapping
-identities by hand bypasses that — run `./scripts/Clear-HomelabSshControlMaster.ps1` first, or
-`ssh -O exit <host>`.
+**Fix:** every loader runs `./scripts/Reset-HomelabSshIdentity.ps1` first — it empties the agent and
+clears `~/.ansible/cp`, so only the identity just loaded can authenticate. Swapping identities by
+hand bypasses that: run the same script, or `ssh -O exit <host>`.
 
 ### ❌ `Permission denied (publickey)` on a node that worked earlier
 
@@ -273,7 +274,7 @@ read `ansible.cfg` from world-writable directories as a security measure.
 | Break-glass key | `homelab-bysxdb-kv/fleetadm-key-priv` (comment `fleetadm@homelab`), 1 h lifetime |
 | `cloudlab` key | `homelab-bysxdb-kv/cloudlab-vps-key-priv` — `scripts/Import-SshKey.ps1` |
 | Identity loaders | `Get-HomelabSshAutomationCert.ps1` · `Get-HomelabSshAgentCert.ps1 -Agent <name>` · `Import-HomelabFleetKey.ps1` · `Import-SshKey.ps1` |
-| Control sockets | `~/.ansible/cp`, cleared by `scripts/Clear-HomelabSshControlMaster.ps1` on every load |
+| Identity reset | `scripts/Reset-HomelabSshIdentity.ps1` — empties the agent and clears `~/.ansible/cp` on every load |
 | Key Vault | `homelab-bysxdb-kv` |
 | Ansible inventory | `ansible/inventory.ini` |
 | Fleet design | [ADR 28](../../../docs/decisions/28-fleet-admin-account-and-key.md) |
