@@ -86,7 +86,7 @@ Apply that playbook deliberately, not as a side effect of this rollout.
 - [ ] Key Vault `homelab-bysxdb-kv/victorialogs-basic-auth-password` exists ([runbook 33 §4](33-deploy-victorialogs.md)).
 - [ ] `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID` exported on the controller.
 - [ ] Ansible collections installed (`ansible-galaxy collection install -r ansible/requirements.yml`).
-- [ ] Fleet key in `ssh-agent` (`ssh-add -l` shows `fleetadm@homelab`).
+- [ ] An SSH identity is loaded in `ssh-agent` (`ssh-add -l` is not empty).
 - [ ] Dev container only: `chmod 755 /workspaces/Homelab /workspaces/Homelab/ansible`.
 
 ---

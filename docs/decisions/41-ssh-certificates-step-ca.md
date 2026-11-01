@@ -87,6 +87,17 @@ break-glass — outside daily use — and use Authentik as the human identity so
   (mapped to `fleetadm` on every host), interactive work under the operator's **Authentik** principal,
   and AI agents under the shared **`agent-ai`** principal. A periodic drill keeps the break-glass path
   proven.
+- **Identities are loaded explicitly, and the agent is the only selector.** No startup path loads a
+  key: `ssh-agent` starts empty, and an Ansible run fails closed until an identity is placed in it —
+  the `automation` certificate for operator automation, `agent-ai`
+  (`Get-HomelabSshAgentCert.ps1 -Agent <name>`) for an AI agent, or `fleetadm-key-priv` for
+  break-glass, loaded for 1 h. `cloudlab` keeps its own `cloudlab-vps-key-priv` loader
+  (`Import-SshKey.ps1`) because it is not certificate-enabled. There is no Ansible wrapper and no
+  key-name selector. Connection multiplexing stays on (`ControlPersist=5m`) for speed, so each
+  loader clears the control sockets under `~/.ansible/cp`
+  (`Clear-HomelabSshControlMaster.ps1`) first — otherwise a master opened under the previous
+  identity would be reused, and the host would keep seeing the old principal, including after
+  `ssh-add -D`.
 - **Revocation is by lifetime.** No CRL, no OCSP, no fleet-wide KRL — the same stance as
   [ADR 38](38-private-ca-hierarchy-and-custody.md). Incident response is **delete the identity's
   provisioner** (no re-issue) and wait out the certificate (≤ 8 h user, ≤ 7 d host);

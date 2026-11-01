@@ -152,8 +152,8 @@ PS> (Get-AzContext).Account
 # Expect: Type=ServicePrincipal, Id=<the SP's appId>
 PS> Get-AzRoleAssignment -ServicePrincipalName (Get-AzContext).Account.Id
 # Expect: RoleDefinitionName=Contributor, Scope ends with /resourceGroups/homelab-rg
-PS> Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name cloudlab-vps-key-priv -AsPlainText | Select-Object -First 1
-# Expect: a multi-line SSH private key, NOT a Forbidden error
+PS> (Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name fleetadm-key-priv -AsPlainText).Length
+# Expect: a number — the SP can read secrets. An access probe; it loads no key into ssh-agent
 ```
 
 ### Opencode + Azure MCP

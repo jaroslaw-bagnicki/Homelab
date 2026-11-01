@@ -76,7 +76,7 @@ dedicated unprivileged LXC keeps it off the Proxmox host and away from the edge 
       `azure-keyvault-secrets` (`pip3 install --break-system-packages azure-identity azure-keyvault-secrets`).
 - [ ] `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET` and `AZURE_TENANT_ID` exported on the controller — the
       role reads the Key Vault secret through them.
-- [ ] Fleet key in `ssh-agent` (`ssh-add -l` shows `fleetadm@homelab`).
+- [ ] An SSH identity is loaded in `ssh-agent` (`ssh-add -l` is not empty).
 - [ ] The secure USB stick and the air-gapped signing machine are needed for the **later** offline step
       ([runbook 36](36-private-ca-init.md)), not for §1–§6.
 

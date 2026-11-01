@@ -61,13 +61,13 @@ Order inside the stage: TPM custody proof → trust distribution → host certif
 principal → the shared AI-agent identity. The TPM proof is the gate — if the guest cannot serve `tpmkms:`
 signers, ADR 41 is amended to file custody **before** any host depends on the result.
 
-**Identity loading (#170).** The dev-container profile loads no SSH key by default. `ssh-agent` starts
-empty; Ansible authenticates only with the identity placed there by the operator, the broker, or the
-agent. An AI agent issues its certificate with the shared `agent-ai` JWK, and reaches for the fleet key
-only by running `scripts/Import-HomelabFleetKey.ps1` — break-glass, never a default. No Ansible wrapper
-is introduced. The
-`ControlMaster`/`ControlPersist` interaction must be resolved so a switch of agent identity cannot
-reuse an old connection.
+**Identity loading (#170) — done.** No startup path loads a key: `ssh-agent` starts empty, and Ansible
+authenticates only with the identity placed there by the operator, the broker, or the agent. An AI agent
+issues its certificate with the shared `agent-ai` JWK, and reaches for the fleet key only by running
+`scripts/Import-HomelabFleetKey.ps1` (1 h) — break-glass, never a default. `cloudlab` keeps its own
+loader (`Import-SshKey.ps1`). No Ansible wrapper exists. Multiplexing stays on with
+`ControlPersist=5m`, and every loader clears `~/.ansible/cp` first, so a switch of identity cannot
+reuse a connection opened under the previous one.
 
 Deliberately **not** in this stage: human user certificates. See "Why human certificates are last".
 
