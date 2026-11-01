@@ -1,0 +1,45 @@
+---
+# FreeIPA server (ADR 42/43, issue #164 M1). Single-host role; the realm,
+# domain, hostname and address are fixed by the lab.
+
+freeipa_keyvault_name: homelab-bysxdb-kv
+freeipa_ds_password_secret: freeipa-directory-manager-password
+freeipa_admin_password_secret: freeipa-admin-password
+freeipa_ds_password: ""
+freeipa_admin_password: ""
+
+freeipa_realm: IPA.INTERNAL
+freeipa_domain: ipa.internal
+freeipa_hostname: ipa.internal
+freeipa_ip: 192.168.2.216
+
+# Shared installer arguments. DNS is intentionally not configured; the
+# Technitium records are verified separately. --no-host-dns keeps the install
+# independent of a resolver hiccup, and --no-hbac-allow leaves M4 to create the
+# first rule.
+freeipa_install_argv:
+  - ipa-server-install
+  - --unattended
+  - "--realm={{ freeipa_realm }}"
+  - "--domain={{ freeipa_domain }}"
+  - "--hostname={{ freeipa_hostname }}"
+  - "--ip-address={{ freeipa_ip }}"
+  - --no-host-dns
+  - --no-ntp
+  - --no-hbac-allow
+  - "--ds-password={{ freeipa_ds_password }}"
+  - "--admin-password={{ freeipa_admin_password }}"
+
+# `external` signs the IPA CA CSR in the offline root ceremony; `selfsigned`
+# is the documented interim fallback and must be re-parented before M3.
+freeipa_ca_mode: external
+freeipa_csr_path: /root/ipa.csr
+freeipa_ipa_ca_cert: /root/ipa-ca.crt
+freeipa_root_cert: /root/root_ca.crt
+# Our own completion marker: external-ca phase 1 may create /etc/ipa/default.conf
+# before the CA is signed, so the file is not a safe “install complete” test.
+freeipa_install_marker: /root/.freeipa-install-complete
+
+# A test user is created for M1 only; its password is set interactively in the
+# runbook because `ipa passwd` has no non-interactive password option here.
+freeipa_test_user: m1test

@@ -193,7 +193,7 @@ supplied. Only one engine answers each question, which is why both ADRs can stan
 | Decision | Needed by | Default if it is not taken |
 |---|---|---|
 | `pve` headroom — 2 GB IPA and accept pressure, or pull [idea 15](../ideas/15-second-proxmox-node.md) forward first | stage 2 | 2 GB guest, accept pressure |
-| CA shape at IPA install — offline ceremony or self-signed interim | stage 2 M1 | self-signed interim, re-parent later ([ADR 42](../decisions/42-pki-topology-sibling-cas.md) item 6) |
+| CA shape at IPA install — offline ceremony or self-signed interim | stage 2 M1 | **external-ca now** ([runbook 41](../runbooks/41-deploy-freeipa-server.md)); self-signed only as the documented fallback, re-parent before M3 ([ADR 42](../decisions/42-pki-topology-sibling-cas.md) item 6) |
 | Principal naming contract — IPA username as the principal | before stage 4 | IPA username |
 | Authentik outpost placement and the cross-LAN hop | stage 3 | embedded outpost over TLS, else an ADR 34 exception row |
 | Which hosts enrol as FreeIPA clients | stage 2 M6 | Linux hosts whose login policy is worth centralising; `pve` never ([ADR 43](../decisions/43-freeipa-domain-realm.md) item 7) |

@@ -1,0 +1,29 @@
+---
+# FreeIPA server workload — self-contained recipe.
+#
+# Installs the FreeIPA server on the `ipa` VM (VMID 216 on the `pve` node),
+# realm IPA.INTERNAL, DNS domain ipa.internal, integrated DNS OFF. The CA is
+# installed with --external-ca and its CSR is signed by the offline fleet root;
+# the second run completes the install once the signed chain is on the guest.
+#
+# The base guest (EL hostname, firewalld, fleet key, chrony) is applied by
+# playbook-ipa.yml — this workload assumes an AlmaLinux 9 guest.
+#
+# Two-phase external-ca run:
+#   1. ansible-playbook .../freeipa-playbook.yml   -> emits /root/ipa.csr
+#   2. sign /root/ipa.csr with the offline root    -> ipa-ca.crt + root_ca.crt
+#   3. copy both to /root on the guest, run again  -> completes the install
+#
+# Run standalone (from a LAN workstation, after CR):
+#   ansible-playbook ansible/workloads/freeipa/freeipa-playbook.yml
+#
+# See:
+#   ansible/workloads/freeipa/README.md             ansible-side facts
+#   docs/workloads.md                               general rules + index
+#   docs/runbooks/41-deploy-freeipa-server.md       operational steps
+#   docs/private-ca-offline-signing/                the root ceremony + IPA CA signing
+- name: Deploy the FreeIPA server on the ipa guest
+  hosts: ipa
+  become: true
+  roles:
+    - role: freeipa_server

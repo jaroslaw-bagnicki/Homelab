@@ -29,10 +29,29 @@ technitium_records:
   - { name: "nas.internal", ip: "192.168.2.202" }
   - { name: "ca.internal", ip: "192.168.2.215" }
   - { name: "vtstack.internal", ip: "192.168.2.214" }
+  - { name: "ipa.internal", ip: "192.168.2.216" }
   # Service names the wildcard cannot cover would go here (the CA must be explicit);
   # everything else under `.internal` resolves to the edge proxy.
   - { name: "netdata.internal", ip: "192.168.2.240" }
   - { name: "*.internal", ip: "192.168.2.240" }
+
+# Reverse DNS for the guest block. FreeIPA clients need forward and reverse
+# records; the installer is run with --no-host-dns, so this is verified with dig.
+technitium_reverse_zones:
+  - "2.168.192.in-addr.arpa"
+technitium_ptr_records:
+  - { name: "216.2.168.192.in-addr.arpa", zone: "2.168.192.in-addr.arpa", target: "ipa.internal" }
+
+# Kerberos/LDAP discovery records for FreeIPA (ADR 43). `_ldap._tcp` points at
+# 389; the port stays closed in the IPA firewall until M3 client enrolment.
+technitium_srv_records:
+  - { name: "_kerberos._tcp.internal", target: "ipa.internal", port: 88, priority: 0, weight: 100 }
+  - { name: "_kerberos._udp.internal", target: "ipa.internal", port: 88, priority: 0, weight: 100 }
+  - { name: "_kerberos-master._tcp.internal", target: "ipa.internal", port: 88, priority: 0, weight: 100 }
+  - { name: "_kerberos-master._udp.internal", target: "ipa.internal", port: 88, priority: 0, weight: 100 }
+  - { name: "_kpasswd._tcp.internal", target: "ipa.internal", port: 464, priority: 0, weight: 100 }
+  - { name: "_kpasswd._udp.internal", target: "ipa.internal", port: 464, priority: 0, weight: 100 }
+  - { name: "_ldap._tcp.internal", target: "ipa.internal", port: 389, priority: 0, weight: 100 }
 
 # Settings applied through the REST API — DoT upstreams, LAN-only recursion and
 # a write-light eMMC.

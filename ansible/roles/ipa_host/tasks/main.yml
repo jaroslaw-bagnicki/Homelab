@@ -1,0 +1,96 @@
+---
+- name: Assert the FreeIPA guest is a RHEL-family system
+  ansible.builtin.assert:
+    that:
+      - ansible_os_family == 'RedHat'
+    fail_msg: >-
+      ipa_host targets AlmaLinux/Rocky 9 only; the FreeIPA server is not supported
+      on Debian/Ubuntu in this lab.
+
+- name: Set the FreeIPA FQDN
+  ansible.builtin.hostname:
+    name: "{{ ipa_host_fqdn }}"
+
+- name: Map the FreeIPA FQDN in /etc/hosts
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    regexp: '^\S+\s+{{ ipa_host_fqdn | regex_escape }}(\s|$)'
+    line: "{{ ipa_host_ip }} {{ ipa_host_fqdn }} {{ ipa_host_short_name }}"
+    state: present
+
+- name: Set the timezone
+  community.general.timezone:
+    name: "{{ ipa_host_timezone }}"
+
+- name: Install the EL base packages
+  ansible.builtin.dnf:
+    name:
+      - chrony
+      - firewalld
+      - python3-firewall
+      - sudo
+      - tar
+    state: present
+    update_cache: true
+
+- name: Enable and start chronyd
+  ansible.builtin.service:
+    name: chronyd
+    state: started
+    enabled: true
+
+- name: Wait for chrony to synchronise
+  ansible.builtin.command:
+    cmd: chronyc waitsync 30 0.1
+  changed_when: false
+  failed_when: false
+
+- name: Ensure the fleet admin account exists
+  ansible.builtin.user:
+    name: fleetadm
+    shell: /bin/bash
+    groups: wheel
+    append: true
+    create_home: true
+
+- name: Grant fleetadm NOPASSWD sudo
+  ansible.builtin.copy:
+    content: "fleetadm ALL=(ALL) NOPASSWD: ALL\n"
+    dest: /etc/sudoers.d/fleetadm
+    owner: root
+    group: root
+    mode: "0440"
+    validate: /usr/sbin/visudo -cf %s
+
+- name: Deploy the fleet key to fleetadm
+  ansible.posix.authorized_key:
+    user: fleetadm
+    state: present
+    exclusive: true
+    key: "{{ lookup('file', role_path ~ '/../common/files/ssh/fleetadm.pub') }}"
+    key_options: "no-port-forwarding,no-agent-forwarding,no-X11-forwarding"
+
+- name: Enable and start firewalld
+  ansible.builtin.service:
+    name: firewalld
+    state: started
+    enabled: true
+
+- name: Allow the FreeIPA ports from the LAN
+  ansible.posix.firewalld:
+    rich_rule: >-
+      rule family="ipv4" source address="{{ ipa_host_lan_cidr }}"
+      port port="{{ item.port }}" protocol="{{ item.proto }}" accept
+    permanent: true
+    immediate: true
+    state: enabled
+  loop: "{{ ipa_host_firewall_ports }}"
+  loop_control:
+    label: "{{ item.port }}/{{ item.proto }}"
+
+- name: Verify the FQDN resolves to the guest address
+  ansible.builtin.command:
+    cmd: "getent hosts {{ ipa_host_fqdn }}"
+  register: ipa_host_fqdn_lookup
+  changed_when: false
+  failed_when: ipa_host_ip not in ipa_host_fqdn_lookup.stdout

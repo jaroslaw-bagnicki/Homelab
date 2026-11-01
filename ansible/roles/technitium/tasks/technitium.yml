@@ -327,3 +327,96 @@
     | select('equalto', item.ip) | list | length == 0)
   changed_when: true
   no_log: true
+
+- name: Read all Technitium zones
+  ansible.builtin.uri:
+    url: "{{ technitium_api_url }}/api/zones/list"
+    headers:
+      Authorization: "Bearer {{ technitium_token }}"
+  register: technitium_all_zones
+  changed_when: false
+  no_log: true
+
+- name: Create the reverse DNS zones
+  ansible.builtin.uri:
+    url: "{{ technitium_api_url }}/api/zones/create"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ technitium_token }}"
+    body_format: form-urlencoded
+    body:
+      zone: "{{ item }}"
+      type: Primary
+  loop: "{{ technitium_reverse_zones }}"
+  when: >-
+    technitium_all_zones.json.response.zones | default([])
+    | selectattr('name', 'equalto', item) | list | length == 0
+  changed_when: true
+  no_log: true
+
+- name: Read the reverse zone records
+  ansible.builtin.uri:
+    url: "{{ technitium_api_url }}/api/zones/records/get?domain={{ item }}&zone={{ item }}&listZone=true"
+    headers:
+      Authorization: "Bearer {{ technitium_token }}"
+  loop: "{{ technitium_reverse_zones }}"
+  register: technitium_reverse_records
+  changed_when: false
+  no_log: true
+
+- name: Add the reverse DNS records
+  ansible.builtin.uri:
+    url: "{{ technitium_api_url }}/api/zones/records/add"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ technitium_token }}"
+    body_format: form-urlencoded
+    body:
+      domain: "{{ item.name }}"
+      zone: "{{ item.zone }}"
+      type: PTR
+      ttl: "{{ technitium_ttl }}"
+      ptrName: "{{ item.target }}"
+      overwrite: "true"
+  loop: "{{ technitium_ptr_records }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: >-
+    (technitium_reverse_records.results
+    | selectattr('item', 'equalto', item.zone)
+    | map(attribute='json') | map(attribute='response') | map(attribute='records')
+    | first | default([])
+    | selectattr('name', 'equalto', item.name) | list | length == 0)
+  changed_when: true
+  no_log: true
+
+- name: Add the FreeIPA SRV records
+  ansible.builtin.uri:
+    url: "{{ technitium_api_url }}/api/zones/records/add"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ technitium_token }}"
+    body_format: form-urlencoded
+    body:
+      domain: "{{ item.name }}"
+      zone: "{{ technitium_zone }}"
+      type: SRV
+      ttl: "{{ technitium_ttl }}"
+      priority: "{{ item.priority }}"
+      weight: "{{ item.weight }}"
+      port: "{{ item.port }}"
+      target: "{{ item.target }}"
+      overwrite: "true"
+  loop: "{{ technitium_srv_records }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: >-
+    (technitium_zone_records.json.response.records | default([])
+    | selectattr('type', 'equalto', 'SRV')
+    | selectattr('name', 'equalto', item.name)
+    | map(attribute='rData')
+    | selectattr('target', 'equalto', item.target)
+    | selectattr('port', 'equalto', item.port)
+    | list | length == 0)
+  changed_when: true
+  no_log: true

@@ -1,0 +1,178 @@
+---
+- name: Assert the FreeIPA workload targets an EL guest
+  ansible.builtin.assert:
+    that:
+      - ansible_os_family == 'RedHat'
+    fail_msg: "freeipa_server targets AlmaLinux/Rocky 9 only."
+
+- name: Install the FreeIPA server packages
+  ansible.builtin.dnf:
+    name: ipa-server
+    state: present
+    update_cache: true
+
+- name: Check whether FreeIPA is already configured
+  ansible.builtin.stat:
+    path: "{{ freeipa_install_marker }}"
+  register: freeipa_installed
+
+- name: Check the external-ca artefacts
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop:
+    - "{{ freeipa_csr_path }}"
+    - "{{ freeipa_ipa_ca_cert }}"
+    - "{{ freeipa_root_cert }}"
+  register: freeipa_ca_files
+
+- name: Fetch the FreeIPA install passwords
+  ansible.builtin.include_tasks: secrets.yml
+
+- name: Create the FreeIPA CA CSR for offline signing
+  when:
+    - not freeipa_installed.stat.exists
+    - freeipa_ca_mode == 'external'
+    - not freeipa_ca_files.results[0].stat.exists
+  ansible.builtin.command:
+    argv: "{{ freeipa_install_argv + ['--external-ca'] }}"
+    creates: "{{ freeipa_csr_path }}"
+  no_log: true
+
+- name: Require the signed IPA CA chain before the second install phase
+  when:
+    - not freeipa_installed.stat.exists
+    - freeipa_ca_mode == 'external'
+    - freeipa_ca_files.results[0].stat.exists
+    - not (freeipa_ca_files.results[1].stat.exists and freeipa_ca_files.results[2].stat.exists)
+  ansible.builtin.fail:
+    msg: >-
+      {{ freeipa_csr_path }} exists but the signed chain is incomplete. Sign it on the
+      offline root (docs/private-ca-offline-signing/sign-ipa-ca.sh), copy
+      {{ freeipa_ipa_ca_cert }} and {{ freeipa_root_cert }} back, then re-run.
+
+- name: Complete the external-ca install
+  when:
+    - not freeipa_installed.stat.exists
+    - freeipa_ca_mode == 'external'
+    - freeipa_ca_files.results[1].stat.exists
+    - freeipa_ca_files.results[2].stat.exists
+  ansible.builtin.command:
+    argv: "{{ freeipa_install_argv + ['--external-cert-file=' ~ freeipa_ipa_ca_cert, '--external-cert-file=' ~ freeipa_root_cert] }}"
+    creates: "{{ freeipa_install_marker }}"
+  no_log: true
+
+- name: Install FreeIPA with a self-signed CA (interim fallback)
+  when:
+    - not freeipa_installed.stat.exists
+    - freeipa_ca_mode == 'selfsigned'
+  ansible.builtin.command:
+    argv: "{{ freeipa_install_argv }}"
+    creates: "{{ freeipa_install_marker }}"
+  no_log: true
+
+- name: Mark the FreeIPA install complete
+  when: not freeipa_installed.stat.exists
+  ansible.builtin.file:
+    path: "{{ freeipa_install_marker }}"
+    state: touch
+    owner: root
+    group: root
+    mode: "0600"
+  changed_when: true
+
+- name: Check the M1 test user
+  ansible.builtin.command:
+    argv: [ipa, user-show, "{{ freeipa_test_user }}"]
+  register: freeipa_test_user_check
+  changed_when: false
+  failed_when: false
+
+- name: Create the M1 test user
+  when: freeipa_test_user_check.rc != 0
+  ansible.builtin.command:
+    argv:
+      - ipa
+      - user-add
+      - "{{ freeipa_test_user }}"
+      - "--first=M1"
+      - "--last=Test"
+      - "--shell=/bin/bash"
+  changed_when: true
+
+- name: Verify the realm with the admin ticket
+  block:
+    - name: Write the admin password for kinit
+      ansible.builtin.copy:
+        content: "{{ freeipa_admin_password }}\n"
+        dest: /root/.ipa-admin-password
+        owner: root
+        group: root
+        mode: "0600"
+      no_log: true
+
+    - name: Acquire an admin Kerberos ticket
+      ansible.builtin.command:
+        argv: [kinit, "--password-file=/root/.ipa-admin-password", admin]
+      changed_when: false
+      no_log: true
+
+    - name: List the Kerberos tickets
+      ansible.builtin.command:
+        cmd: klist
+      changed_when: false
+
+    - name: Ping the IPA API
+      ansible.builtin.command:
+        cmd: ipa ping
+      changed_when: false
+
+    - name: Show the IPA CA
+      ansible.builtin.command:
+        argv: [ipa, ca-show, ipa]
+      changed_when: false
+
+    - name: Check certmonger tracking
+      ansible.builtin.command:
+        cmd: getcert list
+      register: freeipa_getcert
+      changed_when: false
+
+    - name: Assert certmonger is tracking the IPA certificates
+      ansible.builtin.assert:
+        that:
+          - "'MONITORING' in freeipa_getcert.stdout"
+        fail_msg: "getcert list does not show MONITORING certificates."
+
+    - name: Check HBAC rules
+      ansible.builtin.command:
+        cmd: ipa hbacrule-find
+      register: freeipa_hbac
+      changed_when: false
+
+    - name: Assert no allow_all HBAC rule was installed
+      ansible.builtin.assert:
+        that:
+          - "'allow_all' not in freeipa_hbac.stdout"
+        fail_msg: >-
+          The installer created an allow_all HBAC rule despite --no-hbac-allow;
+          remove it before M4 or reinstall.
+
+    - name: Check the IPA service status
+      ansible.builtin.command:
+        cmd: ipactl status
+      changed_when: false
+
+    - name: Check the core IPA services
+      ansible.builtin.command:
+        argv: [systemctl, is-active, "{{ item }}"]
+      loop:
+        - dirsrv@IPA-INTERNAL
+        - krb5kdc
+        - httpd
+        - pki-tomcatd@pki-tomcat
+      changed_when: false
+  always:
+    - name: Remove the admin password file
+      ansible.builtin.file:
+        path: /root/.ipa-admin-password
+        state: absent
