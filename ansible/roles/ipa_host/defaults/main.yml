@@ -1,5 +1,5 @@
 ---
-# FreeIPA VM base (AlmaLinux 9) — EL counterpart to the Debian/Ubuntu
+# FreeIPA VM base (Fedora 45) — RPM-family counterpart to the Debian/Ubuntu
 # common+security roles. The IPA guest is not a normal fleet node: its
 # hostname is the FQDN from ADR 43 and its firewall is firewalld, not UFW.
 

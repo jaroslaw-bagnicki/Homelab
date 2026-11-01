@@ -81,6 +81,9 @@ one HBAC rule and one `sudo` rule → the fleet.
 PKCS#11 keys are parked — see [research 51](../research/51-freeipa-dogtag-tpm-custody.md). Revisit a
 Dogtag-supported HSM only if hardware-backed CA custody becomes a requirement.
 
+**Guest OS:** Fedora 45 Cloud, pinned by build. Fedora's ~13-month lifecycle means a major upgrade
+every 6–12 months; major upgrades wait until **M2** (`ipa-backup` + rehearsed restore) has passed.
+
 Decided at install time, not later:
 
 - **CA shape** ([ADR 42](../decisions/42-pki-topology-sibling-cas.md)) — sign IPA's CSR in the offline

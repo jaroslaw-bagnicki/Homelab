@@ -2,6 +2,10 @@
 # FreeIPA server (ADR 42/43, issue #164 M1). Single-host role; the realm,
 # domain, hostname and address are fixed by the lab.
 
+# Fedora ships the server as `freeipa-server`; RHEL/AlmaLinux use `ipa-server`.
+# The M1 guest is Fedora 45, but the override keeps the role usable on EL.
+freeipa_server_package: freeipa-server
+
 freeipa_keyvault_name: homelab-bysxdb-kv
 freeipa_ds_password_secret: freeipa-directory-manager-password
 freeipa_admin_password_secret: freeipa-admin-password

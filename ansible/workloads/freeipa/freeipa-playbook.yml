@@ -7,7 +7,7 @@
 # the second run completes the install once the signed chain is on the guest.
 #
 # The base guest (EL hostname, firewalld, fleet key, chrony) is applied by
-# playbook-ipa.yml — this workload assumes an AlmaLinux 9 guest.
+# playbook-ipa.yml — this workload assumes a Fedora 45 guest.
 #
 # Two-phase external-ca run:
 #   1. ansible-playbook .../freeipa-playbook.yml   -> emits /root/ipa.csr

@@ -4,7 +4,7 @@
     that:
       - ansible_os_family == 'RedHat'
     fail_msg: >-
-      ipa_host targets AlmaLinux/Rocky 9 only; the FreeIPA server is not supported
+      ipa_host targets Fedora or a RHEL-family host; the FreeIPA server is not supported
       on Debian/Ubuntu in this lab.
 
 - name: Set the FreeIPA FQDN
@@ -17,6 +17,35 @@
     regexp: '^\S+\s+{{ ipa_host_fqdn | regex_escape }}(\s|$)'
     line: "{{ ipa_host_ip }} {{ ipa_host_fqdn }} {{ ipa_host_short_name }}"
     state: present
+
+- name: Check for NetworkManager
+  ansible.builtin.stat:
+    path: /etc/NetworkManager
+  register: ipa_host_networkmanager
+
+- name: Ensure the NetworkManager config directory exists
+  when: ipa_host_networkmanager.stat.exists
+  ansible.builtin.file:
+    path: /etc/NetworkManager/conf.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Stop NetworkManager from managing /etc/resolv.conf
+  when: ipa_host_networkmanager.stat.exists
+  ansible.builtin.copy:
+    content: |
+      [main]
+      dns=none
+    dest: /etc/NetworkManager/conf.d/90-dns-none.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload NetworkManager
+
+- name: Apply the NetworkManager DNS change before writing resolv.conf
+  ansible.builtin.meta: flush_handlers
 
 - name: Check the fleet resolver is reachable
   when:

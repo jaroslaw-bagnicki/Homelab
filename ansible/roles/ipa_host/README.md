@@ -1,12 +1,14 @@
 # ipa_host
 
-EL base for the FreeIPA server VM — the AlmaLinux counterpart to `common` + `security`, which are
-Debian/Ubuntu-only. It sets the FQDN from [ADR 43](../../../docs/decisions/43-freeipa-domain-realm.md),
-maps it in `/etc/hosts`, pins the fleet resolver, installs chrony/firewalld/sudo, re-arms the fleet
-key, and allows only the FreeIPA ports from the LAN.
+Fedora/RHEL-family base for the FreeIPA server VM — the counterpart to `common` + `security`, which
+are Debian/Ubuntu-only. It sets the FQDN from
+[ADR 43](../../../docs/decisions/43-freeipa-domain-realm.md), maps it in `/etc/hosts`, pins the fleet
+resolver (with NetworkManager `dns=none` on Fedora), installs chrony/firewalld/sudo, re-arms the
+fleet key, and allows only the FreeIPA ports from the LAN.
 
-- `tasks/main.yml` — RHEL-family assert, hostname/FQDN, resolver pin, timezone, chrony, `fleetadm` +
-  sudoers + fleet key, firewalld rich rules, FQDN lookup check.
+- `tasks/main.yml` — RHEL-family assert, hostname/FQDN, NetworkManager DNS opt-out, resolver pin,
+  timezone, chrony, `fleetadm` + sudoers + fleet key, firewalld rich rules, FQDN lookup check.
+- `handlers/main.yml` — restart NetworkManager after the `dns=none` change.
 - `defaults/main.yml` — FQDN, address, LAN CIDR, resolver and the port list. Port `389` is intentionally
   closed until M3 client enrolment.
 

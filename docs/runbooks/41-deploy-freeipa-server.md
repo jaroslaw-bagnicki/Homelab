@@ -1,6 +1,6 @@
-# FreeIPA Server — M1 on `pve` (AlmaLinux VM, External CA)
+# FreeIPA Server — M1 on `pve` (Fedora Cloud VM, External CA)
 
-> Deploy the FreeIPA server for the lab's Linux domain: AlmaLinux 9 VM **216** on the `pve` node,
+> Deploy the FreeIPA server for the lab's Linux domain: Fedora 45 Cloud VM **216** on the `pve` node,
 > FQDN **`ipa.internal`**, realm **`IPA.INTERNAL`**, integrated DNS **off**, CA installed with
 > **`--external-ca`** and signed by the offline fleet root. Decision:
 > [ADR 43](../decisions/43-freeipa-domain-realm.md); CA relation:
@@ -23,12 +23,12 @@ the server, the realm, the DNS glue and the CA chain before anything depends on 
 
 ## What changes
 
-- **VM 216 `ipa`** — AlmaLinux 9, 2 vCPU / 2 GB / 16 GB, static `192.168.2.216`, FQDN `ipa.internal`,
+- **VM 216 `ipa`** — Fedora 45, 2 vCPU / 2 GB / 16 GB, static `192.168.2.216`, FQDN `ipa.internal`,
   `onboot 1`.
 - **`ipa_host` role** — EL hostname/FQDN, `/etc/hosts`, chrony, firewalld LAN rules, `fleetadm` + fleet
   key. It replaces `common`/`security`, which are Debian/Ubuntu-only.
 - **Technitium** — `ipa.internal` A, reverse zone + PTR, and the Kerberos/LDAP SRV records.
-- **FreeIPA workload** — `ipa-server`, external CA two-phase install, `admin` + `m1test`.
+- **FreeIPA workload** — `freeipa-server`, external CA two-phase install, `admin` + `m1test`.
 - **Offline kit** — `ipa-ca.tpl` + `sign-ipa-ca.sh` sign the IPA CA CSR with the existing root.
 
 ## Prerequisites
@@ -39,7 +39,7 @@ the server, the realm, the DNS glue and the CA chain before anything depends on 
       at a resolver that is not there ([runbook 37](37-deploy-internal-access-stack.md), ADR 40/#174).
 - [ ] `pve` has ≥ 2.5 GB free RAM and ≥ 20 GB free `local-lvm`; if not, stop — [idea 15](../ideas/15-second-proxmox-node.md)
       is the prerequisite.
-- [ ] AlmaLinux 9 GenericCloud image downloaded and checksum-verified on `pve`.
+- [ ] Fedora 45 Cloud Base Generic image downloaded and checksum-verified on `pve`.
 - [ ] The **secure USB stick** and air-gapped signing machine for the CA ceremony.
 - [ ] Controller has `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID` and Ansible collections.
 - [ ] `automation` certificate (or break-glass fleet key) in `ssh-agent`; `ansible-lint` available.
@@ -64,17 +64,18 @@ ls -l /dev/tpmrm0 2>/dev/null || true
 - `local-lvm` must have room for the 16 GiB disk.
 - The TPM line is informational only — **M1 does not use the TPM**.
 
-## 2. Create the AlmaLinux 9 VM
+## 2. Create the Fedora 45 VM
 
 On `pve` (`ssh fleetadm@192.168.2.201`, then `sudo -i`):
 
 ```sh
 cd /var/lib/vz/template/iso
-# Download the current AlmaLinux 9 GenericCloud qcow2 and its checksum from repo.almalinux.org.
-# Replace the filenames below with the release you verified.
-wget https://repo.almalinux.org/almalinux/9/cloud/x86_64/images/AlmaLinux-9-GenericCloud-latest.x86_64.qcow2
-wget https://repo.almalinux.org/almalinux/9/cloud/x86_64/images/AlmaLinux-9-GenericCloud-latest.x86_64.qcow2.CHECKSUM
-sha256sum -c AlmaLinux-9-GenericCloud-latest.x86_64.qcow2.CHECKSUM
+# Fedora 45 current stable, pinned to build 1.4. Do not use a floating "latest".
+wget https://download.fedoraproject.org/pub/fedora/linux/releases/45/Cloud/x86_64/images/Fedora-Cloud-Base-Generic-45-1.4.x86_64.qcow2
+wget https://download.fedoraproject.org/pub/fedora/linux/releases/45/Cloud/x86_64/images/Fedora-Cloud-45-1.4-x86_64-CHECKSUM
+sed -n 's/^SHA256 (\(Fedora-Cloud-Base-Generic-45-1.4.x86_64.qcow2\)) = \(.*\)$/\2  \1/p' \
+  Fedora-Cloud-45-1.4-x86_64-CHECKSUM \
+  | sha256sum -c -
 
 qm create 216 \
   --name ipa --memory 2048 --cores 2 --cpu host \
@@ -82,11 +83,19 @@ qm create 216 \
   --net0 virtio,bridge=vmbr0 \
   --agent enabled=1 --serial0 socket --vga serial0
 
-qm importdisk 216 /var/lib/vz/template/iso/AlmaLinux-9-GenericCloud-latest.x86_64.qcow2 local-lvm
+qm importdisk 216 /var/lib/vz/template/iso/Fedora-Cloud-Base-Generic-45-1.4.x86_64.qcow2 local-lvm
 qm set 216 --scsi0 local-lvm:vm-216-disk-0 --boot order=scsi0 --ide2 local:cloudinit
 qm resize 216 scsi0 16G
 qm set 216 --onboot 1
 ```
+
+The Fedora Cloud Base Generic image is BIOS-bootable. If this `qm` configuration does not boot it,
+switch the VM to OVMF (`--bios ovmf` plus an EFI disk) rather than changing the image.
+
+> **Fedora lifecycle.** Fedora 45 is supported for roughly 13 months. Minor `dnf upgrade` is routine,
+> but **do not run a Fedora major release upgrade before M2** (`ipa-backup` + a rehearsed restore):
+> an upgrade is a domain-controller downtime event, and the backup is the way back. Plan the Fedora 46
+> upgrade only after M2 passes.
 
 Cloud-init needs a `snippets`-capable storage. If `local` does not already accept snippets:
 **Datacenter → Storage → local → Edit → Content → Snippets**, then create
@@ -118,9 +127,11 @@ qm status 216
 qm guest cmd 216 network-get-interfaces || true
 ```
 
-The `--nameserver` above is the cloud-init bootstrap only. `ipa_host` owns the durable pin: it probes
-Technitium on `:53` and writes `/etc/resolv.conf` (`nameserver 192.168.2.240`, `search internal`),
-following the host-owned resolver rule from [ADR 40](../decisions/40-internal-dns-proxy-edge.md) / #174.
+The `--nameserver` above is the cloud-init bootstrap only. `ipa_host` owns the durable pin: it sets
+NetworkManager `dns=none`, probes Technitium on `:53`, then writes `/etc/resolv.conf`
+(`nameserver 192.168.2.240`, `search internal`), following the host-owned resolver rule from
+[ADR 40](../decisions/40-internal-dns-proxy-edge.md) / #174. Fedora would otherwise rewrite the file
+from NetworkManager at boot.
 
 Verify from the LAN workstation:
 
@@ -190,7 +201,7 @@ The workload reads the first two at install time; the test-user password is used
 ansible-playbook ansible/workloads/freeipa/freeipa-playbook.yml --diff
 ```
 
-This installs `ipa-server`, fetches the passwords, and runs:
+This installs `freeipa-server`, fetches the passwords, and runs:
 
 ```sh
 ipa-server-install --external-ca --unattended \

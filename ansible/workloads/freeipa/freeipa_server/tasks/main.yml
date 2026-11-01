@@ -1,13 +1,13 @@
 ---
-- name: Assert the FreeIPA workload targets an EL guest
+- name: Assert the FreeIPA workload targets a Fedora or RHEL-family guest
   ansible.builtin.assert:
     that:
       - ansible_os_family == 'RedHat'
-    fail_msg: "freeipa_server targets AlmaLinux/Rocky 9 only."
+    fail_msg: "freeipa_server targets Fedora or a RHEL-family host."
 
 - name: Install the FreeIPA server packages
   ansible.builtin.dnf:
-    name: ipa-server
+    name: "{{ freeipa_server_package }}"
     state: present
     update_cache: true
 

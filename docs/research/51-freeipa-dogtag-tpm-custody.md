@@ -165,7 +165,7 @@ failure domains”.
 ## Why not a proof of concept
 
 A POC could show that `ipa-server-install --token-name` accepts a `tpm2-pkcs11` token on one
-AlmaLinux build. It would not change the facts that:
+Fedora build. It would not change the facts that:
 
 - the token is not on Dogtag's supported list;
 - the CA key cannot be backed up in portable form;
@@ -179,7 +179,7 @@ Those are architectural and support-lifecycle constraints, not integration bugs.
 A **new, explicit research task** may test the integration in a throwaway guest with a software TPM
 first. It should answer only what desk research cannot:
 
-- which FreeIPA/Dogtag version accepts `--token-name` / `--token-library-path` on AlmaLinux 9;
+- which FreeIPA/Dogtag version accepts `--token-name` / `--token-library-path` on Fedora 45;
 - whether Dogtag uses the token or silently falls back to NSS;
 - whether `tpm2_ptool init` on the host TPM disturbs `step-ca`;
 - what `ipa-backup` actually captures when the CA key is in a token.

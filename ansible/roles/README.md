@@ -8,7 +8,7 @@ Workloads are a separate concern: self-contained recipes run on demand (see [`..
 |---|---|---|---|
 | `common` | Hostname, `/etc/hosts`, UTC, NTP service selection, optional Avahi, fleet SSH key | all Debian/Ubuntu playbooks | [README](common/README.md) |
 | `security` | UFW, fail2ban, sshd hardening, host certificates and SSHPOP renewal | all Debian/Ubuntu playbooks | [README](security/README.md) |
-| `ipa_host` | EL base for the FreeIPA VM — FQDN, `/etc/hosts`, chrony, firewalld LAN rules, fleet key | `playbook-ipa.yml` | [README](ipa_host/README.md) |
+| `ipa_host` | Fedora/RHEL-family base for the FreeIPA VM — FQDN, `/etc/hosts`, resolver pin, chrony, firewalld LAN rules, fleet key | `playbook-ipa.yml` | [README](ipa_host/README.md) |
 | `ca_trust` | Fleet CA root and SSH CA public keys — Key Vault → system trust store and `/etc/ssh` | `playbook.yml`, `playbook-lab.yml`, `playbook-pve.yml`, `playbook-edge.yml`, `playbook-nas.yml`, `playbook-logs.yml`, `playbook-ca-trust.yml` | [README](ca_trust/README.md) |
 | `azure_arc` | `azcmagent` install + Azure Arc enrolment | `playbook.yml`, `playbook-lab.yml` | [README](azure_arc/README.md) |
 | `docker_host` | Docker Engine from the official repository (Debian/Ubuntu) + json-file log rotation | `playbook.yml`, `playbook-lab.yml`, `playbook-logs.yml` | [README](docker_host/README.md) |
