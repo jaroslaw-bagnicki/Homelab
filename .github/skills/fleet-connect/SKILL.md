@@ -40,6 +40,9 @@ when:
   - "Get-HomelabSshAgentCert"
   - "Get-HomelabSshAutomationCert"
   - "Permission denied publickey"
+  - "SSH_AUTH_SOCK is not set"
+  - "AZURE_CLIENT_ID not set"
+  - "fleet preflight"
 ---
 
 # Fleet SSH Connectivity
@@ -54,6 +57,35 @@ through `AuthorizedPrincipalsFile`.
 The **fleet key** (`fleetadm@homelab`, ADR 28) still exists, but as **break-glass only** —
 when the CA is unreachable, a certificate is lost, or a host is brand new. It is not
 loaded by default and is not a daily path.
+
+## Preflight — do this once per shell, before anything else
+
+Three separate things fail in three different ways: an unset socket throws
+`SSH_AUTH_SOCK is not set`, an expired certificate shows `Permission denied (publickey)`, and a
+missing `AZURE_*` principal fails a playbook **halfway through** with a Key Vault assertion
+(after the host has already been changed). Establish all three up front instead of discovering
+them by exception:
+
+```powershell
+$env:SSH_AUTH_SOCK = (bash -c 'eval $(ssh-agent -s) >/dev/null 2>&1; echo $SSH_AUTH_SOCK').Trim()
+./scripts/Get-HomelabSshAutomationCert.ps1
+$env:AZURE_TENANT_ID     = Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name codespaces-sp-tenant-id     -AsPlainText
+$env:AZURE_CLIENT_ID     = Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name codespaces-sp-client-id     -AsPlainText
+$env:AZURE_CLIENT_SECRET = Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name codespaces-sp-client-secret -AsPlainText
+"preflight: AKV=$([bool]$env:AZURE_CLIENT_ID) sock=$env:SSH_AUTH_SOCK"
+```
+
+- **One shell for the whole rollout** — `SSH_AUTH_SOCK` and the `AZURE_*` variables are session
+  state. A command that lands in another terminal has none of it, which is how an agent that just
+  connected "suddenly" cannot.
+- **Idempotent** — an `(ED25519-CERT)` line from `ssh-add -l` means the certificate is already
+  loaded; a non-empty `$env:AZURE_CLIENT_ID` means the principal is set. Skip the step in that case
+  rather than re-issuing a certificate on every command.
+- **`AZURE_*` is the controller service principal**, `codespaces-sp-*` in `homelab-bysxdb-kv` — not
+  the interactive account. The `azure.azcollection` lookups inside the roles read it from the
+  environment, and each role asserts it before doing anything.
+- **`cloudlab` uses a different preflight** — it is not certificate-enabled: run
+  `./scripts/Import-HomelabCloudlabKey.ps1` in the shell that runs its playbook.
 
 ## Certificate (daily path)
 
@@ -231,6 +263,16 @@ container:
 ```text
 192.168.2.215 ca.internal
 ```
+
+### ❌ `SSH_AUTH_SOCK is not set; start ssh-agent first`
+
+A loader script throws this when the shell it runs in has no agent — usually because the command
+landed in a **different terminal** than the one where the agent was started, or `ssh-agent -s`
+output was never evaluated into the session.
+
+**Fix:** run the **preflight** (top of this skill) in the shell that will run the playbook, and keep
+using that shell for the rest of the rollout. After a shell switch, `ssh-add -l` and
+`$env:AZURE_CLIENT_ID` tell you in one line whether the session state survived.
 
 ### ❌ `pwsh -File scripts/Import-HomelabFleetKey.ps1` loses the key
 
