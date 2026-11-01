@@ -1,6 +1,6 @@
 # Plan 01 — Identity and Access Stack Rollout
 
-**Status**: 🔨 Active — stage 1 delivered; stage 2 starts with the Dogtag key-custody research
+**Status**: 🔨 Active — stage 1 delivered; stage 2 starts with the FreeIPA server (M1)
 **Date**: 2026-10-27
 
 **Workstreams**: [SSH host + agent certs #161](https://github.com/jaroslaw-bagnicki/Homelab/issues/161) · [SSH identity loading #170](https://github.com/jaroslaw-bagnicki/Homelab/issues/170) · [SSH human certs #166](https://github.com/jaroslaw-bagnicki/Homelab/issues/166) · [FreeIPA #164](https://github.com/jaroslaw-bagnicki/Homelab/issues/164) · [Authentik #165](https://github.com/jaroslaw-bagnicki/Homelab/issues/165) · [Workload identity #168](https://github.com/jaroslaw-bagnicki/Homelab/issues/168)
@@ -77,12 +77,9 @@ Deliberately **not** in this stage: human user certificates. See "Why human cert
 ADR 43 item 9 rollout, unchanged: server → `ipa-backup` + rehearsed restore → one disposable client →
 one HBAC rule and one `sudo` rule → the fleet.
 
-**First gate — TPM/Dogtag research spike ([research 51](../research/51-freeipa-dogtag-tpm-custody.md)).**
-The question is whether Dogtag's CA key should sit in the host TPM via `tpm2-pkcs11`. The research
-finding is that this is **not a supported Dogtag/FreeIPA configuration**, the key would be
-non-exportable, and the host TPM is already `step-ca`'s trust anchor. Default: **standard FreeIPA,
-Dogtag key on disk, `ipa-backup` remains restorable**. Hardware-backed custody, if required, is a
-separate spike for a Dogtag-supported HSM — not the host TPM.
+**Key custody:** the Dogtag CA key stays **on disk**; `ipa-backup` is the restore path. TPM-backed
+PKCS#11 keys are parked — see [research 51](../research/51-freeipa-dogtag-tpm-custody.md). Revisit a
+Dogtag-supported HSM only if hardware-backed CA custody becomes a requirement.
 
 Decided at install time, not later:
 
@@ -196,7 +193,6 @@ supplied. Only one engine answers each question, which is why both ADRs can stan
 | Decision | Needed by | Default if it is not taken |
 |---|---|---|
 | `pve` headroom — 2 GB IPA and accept pressure, or pull [idea 15](../ideas/15-second-proxmox-node.md) forward first | stage 2 | 2 GB guest, accept pressure |
-| **Dogtag CA key custody — supported HSM, or disk key + `ipa-backup`** | stage 2 M1 | disk key + `ipa-backup`; the host TPM via `tpm2-pkcs11` is not a supported Dogtag/FreeIPA path ([research 51](../research/51-freeipa-dogtag-tpm-custody.md)) |
 | CA shape at IPA install — offline ceremony or self-signed interim | stage 2 M1 | self-signed interim, re-parent later ([ADR 42](../decisions/42-pki-topology-sibling-cas.md) item 6) |
 | Principal naming contract — IPA username as the principal | before stage 4 | IPA username |
 | Authentik outpost placement and the cross-LAN hop | stage 3 | embedded outpost over TLS, else an ADR 34 exception row |

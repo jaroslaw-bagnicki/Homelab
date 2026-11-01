@@ -1,11 +1,15 @@
 # 51 — FreeIPA Dogtag CA Key Custody — Is the Host TPM a Fit?
 
-**Status**: 📝 Research spike — findings only, no decision, no lab change
+**Status**: 📝 Research — parked, not pursued for M1/M2
 **Date**: 2026-11-01
 **Question**: Can FreeIPA's Dogtag CA private key live in the `pve` host TPM through `tpm2-pkcs11`, and does that improve M1/M2 enough to justify the change?
 **Related**: [ADR 42](../decisions/42-pki-topology-sibling-cas.md) · [ADR 43](../decisions/43-freeipa-domain-realm.md) · [issue #164](https://github.com/jaroslaw-bagnicki/Homelab/issues/164) · [research 46 §6](46-identity-and-access-stack.md) · [research 37](37-tpm2-hardware-and-fleet.md) · [runbook 35](../runbooks/35-deploy-step-ca.md)
 
-> **This is a research spike, not a proof of concept.** The output is a support-and-risk assessment,
+> **Parked 2026-11-01.** TPM-backed PKCS#11 keys in Dogtag are **not pursued** for M1/M2. Standard
+> FreeIPA uses the Dogtag CA key on disk with `ipa-backup`; revisit only if hardware-backed CA-key
+> custody becomes a requirement.
+
+> **This is a research record, not a proof of concept.** The output is a support-and-risk assessment,
 > not a deployment recipe. An earlier draft turned it into an implementation runbook; that was the wrong
 > artefact and has been withdrawn. No live changes were made.
 
