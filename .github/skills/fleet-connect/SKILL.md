@@ -104,7 +104,7 @@ with `ssh-add -D`.
 `cloudlab-vps-key-priv` in `homelab-bysxdb-kv` — loaded explicitly:
 
 ```powershell
-./scripts/Import-SshKey.ps1
+./scripts/Import-HomelabCloudlabKey.ps1
 ```
 
 Run it in the shell that will run the playbook: it starts an `ssh-agent`, exports the socket and
@@ -129,7 +129,7 @@ playbook in the table above.
 
 **`cloudlab` is the exception**: it has no route to `ca.internal`, so it is not
 certificate-enabled — it keeps the pinned host key and authenticates with the
-`cloudlab-vps-key-priv` key (`scripts/Import-SshKey.ps1`), or the break-glass fleet key
+`cloudlab-vps-key-priv` key (`scripts/Import-HomelabCloudlabKey.ps1`), or the break-glass fleet key
 ([ADR 41](../../../docs/decisions/41-ssh-certificates-step-ca.md)). The retired ML110 NAS
 (`omv`, `192.168.2.210`) is not a connection target; `nas` — the Wincor Beetle M-III — is
 its successor
@@ -272,8 +272,8 @@ read `ansible.cfg` from world-writable directories as a security measure.
 | Principal mapping | `/etc/ssh/auth_principals/<user>` on each host |
 | Client trust | `@cert-authority *.internal,192.168.2.*` in `~/.ssh/known_hosts` |
 | Break-glass key | `homelab-bysxdb-kv/fleetadm-key-priv` (comment `fleetadm@homelab`), 1 h lifetime |
-| `cloudlab` key | `homelab-bysxdb-kv/cloudlab-vps-key-priv` — `scripts/Import-SshKey.ps1` |
-| Identity loaders | `Get-HomelabSshAutomationCert.ps1` · `Get-HomelabSshAgentCert.ps1 -Agent <name>` · `Import-HomelabFleetKey.ps1` · `Import-SshKey.ps1` |
+| `cloudlab` key | `homelab-bysxdb-kv/cloudlab-vps-key-priv` — `scripts/Import-HomelabCloudlabKey.ps1` |
+| Identity loaders | `Get-HomelabSshAutomationCert.ps1` · `Get-HomelabSshAgentCert.ps1 -Agent <name>` · `Import-HomelabFleetKey.ps1` · `Import-HomelabCloudlabKey.ps1` |
 | Identity reset | `scripts/Reset-HomelabSshIdentity.ps1` — empties the agent and clears `~/.ansible/cp` on every load |
 | Key Vault | `homelab-bysxdb-kv` |
 | Ansible inventory | `ansible/inventory.ini` |

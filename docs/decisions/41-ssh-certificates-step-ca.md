@@ -92,7 +92,7 @@ break-glass — outside daily use — and use Authentik as the human identity so
   the `automation` certificate for operator automation, `agent-ai`
   (`Get-HomelabSshAgentCert.ps1 -Agent <name>`) for an AI agent, or `fleetadm-key-priv` for
   break-glass, loaded for 1 h. `cloudlab` keeps its own `cloudlab-vps-key-priv` loader
-  (`Import-SshKey.ps1`) because it is not certificate-enabled. There is no Ansible wrapper and no
+  (`Import-HomelabCloudlabKey.ps1`) because it is not certificate-enabled. There is no Ansible wrapper and no
   key-name selector. Connection multiplexing stays on (`ControlPersist=5m`) for speed, so each
   loader runs `Reset-HomelabSshIdentity.ps1` first: it empties the agent and clears the sockets
   under `~/.ansible/cp`, so the identity just loaded is the only one that can authenticate — an

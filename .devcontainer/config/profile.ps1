@@ -48,7 +48,7 @@ if (-not (Get-AzContext)) {
 #   scripts/Get-HomelabSshAutomationCert.ps1            operator / non-agent automation
 #   scripts/Get-HomelabSshAgentCert.ps1 -Agent <name>    AI agent (agent-ai principal)
 #   scripts/Import-HomelabFleetKey.ps1                   break-glass fleetadm key
-#   scripts/Import-SshKey.ps1                            cloudlab (not certificate-enabled)
+#   scripts/Import-HomelabCloudlabKey.ps1                cloudlab (not certificate-enabled)
 
 # ── SSH host CA trust ─────────────────────────────────────────────
 # The fleet's @cert-authority line replaces per-host known_hosts pins for the

@@ -134,7 +134,7 @@ fails until you load one deliberately. `cloudlab` (the Contabo VPS) is not certi
 keeps its own key:
 
 ```powershell
-./scripts/Import-SshKey.ps1
+./scripts/Import-HomelabCloudlabKey.ps1
 ```
 
 Everything else on the fleet takes a step-ca certificate instead — `automation` for operator

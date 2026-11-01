@@ -54,7 +54,7 @@ if ($hasIdentity) {
   $kind = if ($hasCert) { 'certificate' } else { 'plain key' }
   Ok "$($identities.Count) SSH identity in ssh-agent ($kind)"
 } else {
-  Fail "No SSH identity in ssh-agent" "LAN nodes: scripts/Get-HomelabSshAutomationCert.ps1 or scripts/Get-HomelabSshAgentCert.ps1 -Agent <name>. cloudlab: scripts/Import-SshKey.ps1 or scripts/Import-HomelabFleetKey.ps1 (no certificate works there)"
+  Fail "No SSH identity in ssh-agent" "LAN nodes: scripts/Get-HomelabSshAutomationCert.ps1 or scripts/Get-HomelabSshAgentCert.ps1 -Agent <name>. cloudlab: scripts/Import-HomelabCloudlabKey.ps1 or scripts/Import-HomelabFleetKey.ps1 (no certificate works there)"
 }
 
 # 5. SSH to cloudlab
@@ -62,7 +62,7 @@ $sshTest = ssh cloudlab "hostname" 2>&1
 if ($LASTEXITCODE -eq 0) {
   Ok "SSH to cloudlab ($($sshTest.Trim()))"
 } else {
-  Fail "SSH to cloudlab failed" "Load the cloudlab identity first: scripts/Import-SshKey.ps1, or the break-glass fleet key"
+  Fail "SSH to cloudlab failed" "Load the cloudlab identity first: scripts/Import-HomelabCloudlabKey.ps1, or the break-glass fleet key"
 }
 
 Write-Host ""

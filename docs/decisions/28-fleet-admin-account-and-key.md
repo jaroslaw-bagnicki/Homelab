@@ -9,7 +9,7 @@
 
 Ansible manages three hosts today (ADR 10): the `cloudlab` Contabo VPS, the `lab` M910q, and the `edge` Wyse 3040 ingress appliance. The wider fleet also includes the OMV NAS (ADR 23), with a Home Assistant node (Proxmox VM, ADR 25) and an OPNsense router coming next. The Ansible-managed hosts share a generic **`fleetadm`** administration account (key-only SSH, NOPASSWD sudo, created at bootstrap as a new account, separate from the legacy `labadmin`), but SSH keys are distributed **imperatively and per-host**:
 
-- `cloudlab` — the `cloudlab-vps-key-priv` secret in `homelab-bysxdb-kv`, loaded into `ssh-agent` on demand by `scripts/Import-SshKey.ps1`; no session-startup path loads it ([ADR 41](41-ssh-certificates-step-ca.md)).
+- `cloudlab` — the `cloudlab-vps-key-priv` secret in `homelab-bysxdb-kv`, loaded into `ssh-agent` on demand by `scripts/Import-HomelabCloudlabKey.ps1`; no session-startup path loads it ([ADR 41](41-ssh-certificates-step-ca.md)).
 - `lab` and `edge` — a public key pasted manually into `authorized_keys` during base install (runbooks 25 / 24) — the role the fleet key now fills at bootstrap.
 - No role manages `authorized_keys` declaratively, so a fresh Ansible connection depends on keys added by hand outside the playbooks.
 
