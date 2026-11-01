@@ -10,6 +10,37 @@
     regexp: "^127\\.0\\.1\\.1\\s+"
     state: present
 
+# One resolver, every host (ADR 40). Guests are skipped like the clock below: PVE
+# rewrites a container's /etc/resolv.conf from the host's own at every start. The
+# write replaces a systemd-resolved symlink rather than writing through it.
+#
+# The probe fails the run when the fleet resolver is unreachable, so a host is never
+# pointed at a resolver that is not there — raise the edge stack first (runbook 37
+# §1–§4), or pass `-e common_dns_server=` for a bootstrap before `edge` exists.
+- name: Check the fleet resolver is reachable
+  when:
+    - common_dns_server | length > 0
+    - ansible_virtualization_type | default('none') not in ['lxc', 'docker', 'podman', 'container']
+  ansible.builtin.wait_for:
+    host: "{{ common_dns_server }}"
+    port: 53
+    timeout: 3
+
+- name: Point the host at the fleet resolver
+  when:
+    - common_dns_server | length > 0
+    - ansible_virtualization_type | default('none') not in ['lxc', 'docker', 'podman', 'container']
+  ansible.builtin.copy:
+    content: |
+      # Managed by Ansible — fleet resolver, Technitium on the edge node (ADR 40).
+      nameserver {{ common_dns_server }}
+      search {{ common_dns_search }}
+    dest: /etc/resolv.conf
+    owner: root
+    group: root
+    mode: "0644"
+    follow: false
+
 - name: Set timezone to Etc/UTC
   community.general.timezone:
     name: Etc/UTC
