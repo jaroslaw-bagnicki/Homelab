@@ -85,9 +85,11 @@ $env:AZURE_CLIENT_SECRET = Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Na
 - **One shell for the whole rollout** — `SSH_AUTH_SOCK` and the `AZURE_*` variables are session
   state. A command that lands in another terminal has none of it, which is how an agent that just
   connected "suddenly" cannot.
-- **Idempotent** — an `(ED25519-CERT)` line from `ssh-add -l` means the certificate is already
-  loaded; a non-empty `$env:AZURE_CLIENT_ID` means the principal is set. Skip the step in that case
-  rather than re-issuing a certificate on every command.
+- **Idempotent, but principal-aware** — it re-issues only when the loaded certificate is not for
+  the requested principal, so `-Agent copilot` over an `automation` certificate replaces it instead
+  of reporting success. A stale `SSH_AUTH_SOCK` (dead agent) is replaced by a fresh one.
+- **`AZURE_*` needs all three** — tenant, client id and secret form one principal; a partial set
+  authenticates nothing, so any gap refills the whole set.
 - **`AZURE_*` is the controller service principal**, `codespaces-sp-*` in `homelab-bysxdb-kv` — not
   the interactive account. The `azure.azcollection` lookups inside the roles read it from the
   environment, and each role asserts it before doing anything.
