@@ -386,7 +386,11 @@
     | selectattr('item', 'equalto', item.zone)
     | map(attribute='json') | map(attribute='response') | map(attribute='records')
     | first | default([])
-    | selectattr('name', 'equalto', item.name) | list | length == 0)
+    | selectattr('type', 'equalto', 'PTR')
+    | selectattr('name', 'equalto', item.name)
+    | map(attribute='rData')
+    | selectattr('ptrName', 'match', '^' ~ (item.target | regex_escape) ~ '\.?$')
+    | list | length == 0)
   changed_when: true
   no_log: true
 

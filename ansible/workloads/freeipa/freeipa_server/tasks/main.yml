@@ -38,12 +38,21 @@
     creates: "{{ freeipa_csr_path }}"
   no_log: true
 
+- name: Re-read the external-ca artefacts after phase 1
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop:
+    - "{{ freeipa_csr_path }}"
+    - "{{ freeipa_ipa_ca_cert }}"
+    - "{{ freeipa_root_cert }}"
+  register: freeipa_ca_files_after_phase1
+
 - name: Require the signed IPA CA chain before the second install phase
   when:
     - not freeipa_installed.stat.exists
     - freeipa_ca_mode == 'external'
-    - freeipa_ca_files.results[0].stat.exists
-    - not (freeipa_ca_files.results[1].stat.exists and freeipa_ca_files.results[2].stat.exists)
+    - freeipa_ca_files_after_phase1.results[0].stat.exists
+    - not (freeipa_ca_files_after_phase1.results[1].stat.exists and freeipa_ca_files_after_phase1.results[2].stat.exists)
   ansible.builtin.fail:
     msg: >-
       {{ freeipa_csr_path }} exists but the signed chain is incomplete. Sign it on the
@@ -54,11 +63,12 @@
   when:
     - not freeipa_installed.stat.exists
     - freeipa_ca_mode == 'external'
-    - freeipa_ca_files.results[1].stat.exists
-    - freeipa_ca_files.results[2].stat.exists
+    - freeipa_ca_files_after_phase1.results[1].stat.exists
+    - freeipa_ca_files_after_phase1.results[2].stat.exists
   ansible.builtin.command:
     argv: "{{ freeipa_install_argv + ['--external-cert-file=' ~ freeipa_ipa_ca_cert, '--external-cert-file=' ~ freeipa_root_cert] }}"
     creates: "{{ freeipa_install_marker }}"
+  register: freeipa_external_install
   no_log: true
 
 - name: Install FreeIPA with a self-signed CA (interim fallback)
@@ -68,10 +78,14 @@
   ansible.builtin.command:
     argv: "{{ freeipa_install_argv }}"
     creates: "{{ freeipa_install_marker }}"
+  register: freeipa_selfsigned_install
   no_log: true
 
 - name: Mark the FreeIPA install complete
-  when: not freeipa_installed.stat.exists
+  when:
+    - not freeipa_installed.stat.exists
+    - (freeipa_external_install | default({})).changed | default(false)
+      or (freeipa_selfsigned_install | default({})).changed | default(false)
   ansible.builtin.file:
     path: "{{ freeipa_install_marker }}"
     state: touch
@@ -80,41 +94,33 @@
     mode: "0600"
   changed_when: true
 
-- name: Check the M1 test user
-  ansible.builtin.command:
-    argv: [ipa, user-show, "{{ freeipa_test_user }}"]
-  register: freeipa_test_user_check
-  changed_when: false
-  failed_when: false
-
-- name: Create the M1 test user
-  when: freeipa_test_user_check.rc != 0
-  ansible.builtin.command:
-    argv:
-      - ipa
-      - user-add
-      - "{{ freeipa_test_user }}"
-      - "--first=M1"
-      - "--last=Test"
-      - "--shell=/bin/bash"
-  changed_when: true
-
 - name: Verify the realm with the admin ticket
   block:
-    - name: Write the admin password for kinit
-      ansible.builtin.copy:
-        content: "{{ freeipa_admin_password }}\n"
-        dest: /root/.ipa-admin-password
-        owner: root
-        group: root
-        mode: "0600"
-      no_log: true
-
     - name: Acquire an admin Kerberos ticket
       ansible.builtin.command:
-        argv: [kinit, "--password-file=/root/.ipa-admin-password", admin]
+        argv: [kinit, admin]
+        stdin: "{{ freeipa_admin_password }}\n"
       changed_when: false
       no_log: true
+
+    - name: Check the M1 test user
+      ansible.builtin.command:
+        argv: [ipa, user-show, "{{ freeipa_test_user }}"]
+      register: freeipa_test_user_check
+      changed_when: false
+      failed_when: false
+
+    - name: Create the M1 test user
+      when: freeipa_test_user_check.rc != 0
+      ansible.builtin.command:
+        argv:
+          - ipa
+          - user-add
+          - "{{ freeipa_test_user }}"
+          - "--first=M1"
+          - "--last=Test"
+          - "--shell=/bin/bash"
+      changed_when: true
 
     - name: List the Kerberos tickets
       ansible.builtin.command:
@@ -171,8 +177,3 @@
         - httpd
         - pki-tomcatd@pki-tomcat
       changed_when: false
-  always:
-    - name: Remove the admin password file
-      ansible.builtin.file:
-        path: /root/.ipa-admin-password
-        state: absent

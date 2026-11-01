@@ -172,10 +172,10 @@ Verify from a LAN client:
 ```sh
 dig @192.168.2.240 ipa.internal +short                 # 192.168.2.216
 dig @192.168.2.240 -x 192.168.2.216 +short             # ipa.internal.
-dig @192.168.2.240 _kerberos._tcp.internal SRV +short  # 0 100 88 ipa.internal.
-dig @192.168.2.240 _kerberos._udp.internal SRV +short
-dig @192.168.2.240 _kpasswd._tcp.internal SRV +short   # 0 100 464 ipa.internal.
-dig @192.168.2.240 _ldap._tcp.internal SRV +short      # 0 100 389 ipa.internal.
+dig @192.168.2.240 _kerberos._tcp.ipa.internal SRV +short  # 0 100 88 ipa.internal.
+dig @192.168.2.240 _kerberos._udp.ipa.internal SRV +short
+dig @192.168.2.240 _kpasswd._tcp.ipa.internal SRV +short   # 0 100 464 ipa.internal.
+dig @192.168.2.240 _ldap._tcp.ipa.internal SRV +short      # 0 100 389 ipa.internal.
 ```
 
 `_ldap._tcp` is published now, but TCP/389 is intentionally closed on the IPA firewall until M3 client
@@ -193,7 +193,9 @@ Creates in `homelab-bysxdb-kv`:
 - `freeipa-admin-password`
 - `freeipa-test-user-password`
 
-The workload reads the first two at install time; the test-user password is used interactively in §7.
+The workload reads the first two at install time; the test-user password is used interactively in §9.
+The script never overwrites an existing secret — rotating the IPA admin or Directory Manager password
+is a coordinated `ipa`/`kadmin` operation and is not part of M1.
 
 ## 6. External CA — phase 1 (CSR)
 

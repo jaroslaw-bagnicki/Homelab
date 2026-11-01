@@ -1,7 +1,4 @@
 #!/usr/bin/env pwsh
-param(
-    [switch]$Force
-)
 
 $vault = "homelab-bysxdb-kv"
 $secrets = @(
@@ -25,8 +22,8 @@ foreach ($secretName in $secrets) {
         if (-not $missing) { throw }
     }
 
-    if ($exists -and -not $Force) {
-        Write-Warning "Secret '${secretName}' already exists - nothing written. Use -Force to rotate."
+    if ($exists) {
+        Write-Warning "Secret '${secretName}' already exists - nothing written."
         continue
     }
 
@@ -42,3 +39,4 @@ foreach ($secretName in $secrets) {
 
 Write-Host "The freeipa_server role fetches the Directory Manager and admin passwords at install time."
 Write-Host "The test-user password is used interactively for 'ipa passwd m1test' in runbook 41."
+Write-Host "Rotating the IPA admin or Directory Manager password is a coordinated ipa/kadmin operation; this script never overwrites existing secrets."

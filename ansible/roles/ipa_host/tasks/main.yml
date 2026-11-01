@@ -95,8 +95,11 @@
 - name: Wait for chrony to synchronise
   ansible.builtin.command:
     cmd: chronyc waitsync 30 0.1
+  register: ipa_host_chrony
   changed_when: false
-  failed_when: false
+  retries: 2
+  delay: 10
+  until: ipa_host_chrony.rc == 0
 
 - name: Ensure the fleet admin account exists
   ansible.builtin.user:
