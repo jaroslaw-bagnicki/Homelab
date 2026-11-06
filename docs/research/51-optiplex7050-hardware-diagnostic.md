@@ -93,6 +93,12 @@ Both are **pre-OS** numbers, and neither is the node's idle figure:
 
 Two things also worth knowing before blaming the platform: the **research 47 idle figure of ~9–11 W for a 7040 Micro was unsourced model output**, not a measurement, and wireless radios were enabled when these readings were taken (they are now disabled in BIOS).
 
+**Is the adapter responsible?** Only marginally. A 130 W brick at ~20 W output is perhaps **1–2 W worse** in conversion loss than a 65 W unit would be, and that is the whole of the adapter's share. It also cannot inflate the reading the other way: an adapter the firmware cannot identify gets the platform **throttled**, which lowers draw — and no `Unknown AC power adapter` alert was logged for the current boot. The 2018-era 65 W-class CPU with management off is the dominant term, not the brick.
+
+**And the 0 W with the machine off is a fact about the meter, not the adapter.** A plugged-in brick always draws standby power (fractions of a watt to a couple of watts), so a reading of exactly `0 W` means the meter does not resolve the low end — roughly the same instrument limitation that makes sub-5 W readings untrustworthy. Validate it with a **known load at a similar level** (a 60–100 W lamp, a kettle on the low setting) before treating 23.2 W and 19.7 W as precise; the *difference* between states is the more reliable signal than either absolute value.
+
+**Cleanest test of the adapter theory:** repeat the **identical BIOS Setup reading** on a genuine **65 W** Dell brick if one is available. If the number barely moves, the adapter is exonerated; if it drops a few watts, that is the conversion loss you are carrying on every hour the node runs.
+
 ### Firmware settings observed (F2 walk, 2026-11-06)
 
 The BIOS is the 2017-generation layout — relevant because every recent Dell MEBx article assumes the newer one.
