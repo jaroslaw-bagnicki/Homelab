@@ -17,7 +17,7 @@
 | Hardware | Dell **OptiPlex 7050 Micro (MFF)** — serial `3CLD6Q2`, **i5-7500 (4C/4T, 65 W)**, 8 GB (1× 8 GiB, one slot free), SK hynix SC311 **SATA** SSD |
 | CPU vs chassis | ⚠️ **i5-7500 is not a factory Micro SKU** — Dell's 7050 **Micro** list is 35 W T-series only; a 65 W part is a previous-owner swap in a socket the chassis was not thermally designed for |
 | Power adapter | **130 W** — a documented 7050 Micro option and the correct brick for a 65 W CPU; bigger brick ≠ bigger draw |
-| Storage | **M.2 2280 SATA** module (SK hynix SC311 S) in the **M.2 slot**, SATA III over AHCI · the **2.5″ bay is free** · ⚠️ **11 134 power-on hours, wear indicator 4/100 — the module is at the end of its rated endurance**, 128 GB: **not a boot-disk candidate** |
+| Storage | **M.2 2280 SATA** module (SK hynix SC311 S) in the **M.2 slot**, SATA III over AHCI · the **2.5″ bay is free** · 11 134 POH but **~97 % endurance remaining** — sound; **128 GB capacity** is the only argument for a bigger disk |
 | Management | **MEBx not reachable** (Ctrl+P silent, no F12 entry) although CPU, Q270 and the I219-LM all satisfy the AMT platform requirements — the BIOS has **no `Intel AMT Capability` page** and `MEBx Hotkey` is already on, so the answer lies in the ME firmware, not in a setting |
 | Address | DHCP `192.168.2.206` today; `192.168.2.203` is the reserved slot ([idea 15](../ideas/15-second-proxmox-node.md), [ADR 31](../decisions/31-static-address-scheme.md)) |
 
@@ -45,7 +45,7 @@ The 7050 replaces the "OptiPlex 7040 Micro, i5-6500T" that [research 47 §2](47-
 | BIOS | Dell Inc. **1.27.0**, released **2023-09-18** — check whether a later build exists before installing |
 | CPU | Intel **Core i5-7500** (Kaby Lake, 4C/4T), 3.4 GHz base / 3.8 GHz turbo, 6 MB L3, **65 W TDP**, HWCAPS **x86-64-V3** |
 | RAM | **8 GB** — 1× 8 GiB DDR4 SO-DIMM `KMKYF9-MIH`, rated/configured **2400 MT/s**, **DIMM 2 free** |
-| Storage | **M.2 2280 SATA SSD** — SK hynix SC311 SATA 128GB, enumerated as `sda` on the AHCI controller (`00:17.0`); **119.2 GiB, unpartitioned**, **11 134 POH**, **wear indicator 4/100** ([SMART](#the-module-is-worn-out--and-it-is-empty-smart-2026-11-06)) |
+| Storage | **M.2 2280 SATA SSD** — SK hynix SC311 SATA 128GB, enumerated as `sda` on the AHCI controller (`00:17.0`); **119.2 GiB, unpartitioned**, **11 134 POH**, **~97 % endurance remaining** ([SMART](#the-module-is-sound-and-it-is-empty-smart-2026-11-06)) |
 | GPU | Intel **HD Graphics 630** (PCI `00:02.0`, i915) |
 | NIC (GbE) | Intel **I219-LM** (`enp0s31f6`), PCI `00:1f.6` — the AMT-capable NIC |
 | NIC (WiFi) | Intel **Wireless 8265** (`wlp1s0`, PCI `01:00.0` behind root port `00:1c.0`) + Intel Bluetooth |
@@ -189,11 +189,11 @@ The drive is an **M.2 2280 SATA III module sitting in the M.2 slot**, and the **
 
 - The **M.2 slot is occupied** by the SATA module → an NVMe upgrade **replaces** it, it does not sit beside it. An M.2 SATA module cannot be demoted to the 2.5″ bay without an M.2→SATA 2.5″ enclosure.
 - The **2.5″ bay is free** — that is the cheap second disk, and it needs the caddy and ribbon present (pending).
-- So idea 15's `zfspool` has three shapes, but the SMART read below **removes the module from all of them**: **replace it with NVMe** — boot disk in the M.2 slot and the 2.5″ bay left free for the later ZFS disk, the recommendation; **add a 2.5″ SATA SSD** as the boot disk, which needs the caddy and ribbon; or **both** for a mirror — noting that an M.2 + 2.5″ mirror is **one controller and one chassis**, not protection against losing the node.
+- So idea 15's `zfspool` has three shapes: **keep Proxmox on the module** — it is healthy ([SMART read below](#the-module-is-sound-and-it-is-empty-smart-2026-11-06)) — and add a **2.5″ SATA SSD** as the pool, which needs the caddy and ribbon; **replace the module with NVMe** and leave the bay for later; or **both** for a mirror — noting that an M.2 + 2.5″ mirror is **one controller and one chassis**, not protection against losing the node.
 - Capacity is **128 GB** (`SK hynix SC311 SATA 128GB`), confirmed by the BIOS **Drives** page, which also shows `SATA-0` (the 2.5″ bay) and `M.2 PCIe SSD-0` as **(none)** — the module is the only internal disk.
 - **`SATA Operation` is AHCI** — nothing to undo before Proxmox.
 
-#### The module is worn out — and it is empty (SMART, 2026-11-06)
+#### The module is sound, and it is empty (SMART, 2026-11-06)
 
 `smartctl -a /dev/sda`, SystemRescue 13.02:
 
@@ -204,13 +204,15 @@ The drive is an **M.2 2280 SATA III module sitting in the M.2 slot**, and the **
 | Capacity | 128,035,676,160 bytes — **119.2 GiB** |
 | **Power-on hours** | **11 134** — 464 days, ~1.3 years of on-time |
 | **Power-cycle count** | **12 049** — ~1.08 cycles per hour of on-time, against **140 unexpected power losses**: a machine that was restarted constantly |
-| **Media_Wearout_Indicator** | normalized **4 / 100** (worst ever **1**), raw **97** → **~97 % of rated endurance consumed** |
-| Erase counters | `Wear_Leveling_Count` 97 (worst 1) · `Total_Erase_Count` **700 941** · max/min per block **86 / 22** |
+| **Media_Wearout_Indicator** | raw **97** → **~97 % of rated endurance remaining** · normalized reads **4 / 100** (worst 1), which is **not** a life percentage on this firmware — see below |
+| Erase counters | `Wear_Leveling_Count` raw **49** = average erases per block · `Total_Erase_Count` **700 941** · **max/min per block 86 / 22** → **≤ 9 % of block endurance used** |
 | Write / read counters | `Total_Writes_GB` 33 164 791 682 · `Total_Reads_GB` 24 367 235 118 — vendor units, **not** directly mappable to TBW |
 | Health counters | retired / reallocated blocks **0** · `Erase_Fail_Count` 385 · `Soft_ECC_Correction` 368 · `Command_Timeout` 116 · `UDMA_CRC_Error_Count` **0** (link and controller clean) |
 | Self-tests | short tests pass; the extended test was aborted by host at 90 % |
 
-**It is not failing — it is finished.** Zero reallocated events, zero reported uncorrectable errors, zero link CRC errors and a PASSED assessment say the drive is electrically sound; the **wear indicator at 4 %** says the NAND is at the end of its rated life. With **128 GB** of capacity on top, the verdict is easy: **this module is not the boot disk of a 24/7 hypervisor.** A guest-bearing LVM-thin pool or a ZFS pool on a 97 %-worn client SSD is how a node dies in month three, and nothing on it is worth the risk.
+**The wear reading was misread, and the erase counters correct it.** The first pass took `Media_Wearout_Indicator` normalized `4 / 100` as 96 % consumed. It is not — the physical counters cap the wear far below that: `Wear_Leveling_Count` raw **49** is the *average* erase count per block and `Max_Erase_Count` **86** the worst block, against client-TLC endurance of roughly **1 000–1 500 P/E cycles**, so **≤ 9 % is consumed**. A drive that had really spent 97 % of its endurance would show ~970 erases on its worst block, not 86. Raw **97** is therefore the percentage *remaining* — which is also how [research 29](29-wyse5070-hardware-diagnostic.md) reads the identical model in `pve`. The normalized `VALUE 004 / WORST 001` is anomalous on this firmware: the `WORST` column bottoms at 1 on healthy attributes too (`Soft_ECC_Correction` reports `VALUE 100 / WORST 001`), so it is not a life percentage and must not be quoted as one.
+
+**Verdict: the module is sound.** PASSED, zero reallocated or retired blocks, zero reported uncorrectable errors, zero link CRC errors, and **~97 % of its endurance left** at 11 134 hours. **Capacity is the only reason to change it** — 128 GB is workable (the `pve` node runs the same drive with a VM and four LXCs) but tight if guests need real disk; a larger disk is a comfort upgrade, not a rescue.
 
 **And it is empty.** `lsblk` on 2026-11-06 shows `sda` with **no partitions at all** — there is no Windows install left to preserve or wipe. That also corrects the 2026-11-05 reading: the "31.7 MiB ESP + ~57.7 GiB encrypted volume, 36.3 GiB used" was the **Ventoy installer stick**, not this disk — Ventoy's layout is exactly a ~58 GB exFAT data partition plus a 32 MiB `VTOYEFI` partition, and it accounts for every number in that description. The `P4: SK hynix … 128GB` entry under `LEGACY BOOT` is a stale BIOS option pointing at a disk that no longer carries a boot image.
 
@@ -328,7 +330,7 @@ Regardless of the outcome, **record the ME state** in `docs/hardware.md`: an unc
 | OptiPlex **7040** Micro, **i5-6500T** (35 W) | **7050** Micro, **i5-7500** (65 W) | ⚠️ faster CPU, **outside the chassis' 35 W design** — measure thermals |
 | vPro/AMT as the differentiator | CPU + chipset + I219-LM all capable, **MEBx unreachable** | ⚠️ unconfirmed — treat as absent until proven |
 | M.2 NVMe **plus** a 2.5″ bay | **M.2 slot holds a SATA module** (no NVMe drive); **2.5″ bay free** | ⚠️ NVMe means *replacing* the module, not adding — but the bay still gives a second disk |
-| The 128 GB module as the boot disk | **11 134 POH, wear indicator 4/100** — the NAND is at the end of its rated life | ❌ replace with an NVMe disk before the install |
+| The 128 GB module as the boot disk | **~97 % endurance remaining** at 11 134 POH — healthy, merely small | ✅ usable as-is; a larger disk is optional, not a fix |
 | 32 GB RAM ceiling | 8 GB now, **one slot free** | ✅ 16 GB is one stick |
 | Heterogeneous CPUs vs the Wyse (Gemini Lake) | **Kaby Lake, x86-64-v3** — an even wider gap from the J4105 | ⚠️ any cross-node migration needs a conservative VM CPU type, or restarts |
 | Address `.203` | free; box currently on DHCP `.206` | ✅ reserve at install |
@@ -343,7 +345,7 @@ Regardless of the outcome, **record the ME state** in `docs/hardware.md`: an unc
 
 Six items that are either **impossible to recover afterwards** or that **change what gets installed**:
 
-1. **Disk evidence** — ✅ **done 2026-11-06.** 119.2 GiB, **11 134 POH**, **wear indicator 4/100 (≈97 % consumed)** — the module is **finished**, so the boot-disk decision is made for us ([SMART detail](#the-module-is-worn-out--and-it-is-empty-smart-2026-11-06)). Nothing was lost to a wipe either: the disk is **unpartitioned**, there was no install left on it.
+1. **Disk evidence** — ✅ **done 2026-11-06.** 119.2 GiB, **11 134 POH**, **~97 % endurance remaining** — healthy, merely small ([SMART detail](#the-module-is-sound-and-it-is-empty-smart-2026-11-06)). Nothing was lost to a wipe either: the disk is **unpartitioned**, there was no install left on it.
 2. **ePSA diagnostics** (F12 → Diagnostics) — per-test pass/fail for memory, storage and NIC. A failing DIMM shows up later as random VM crashes, not as a failed boot. ✅ **ran clean 2026-11-06** (*no problems found*); let the remaining memory test finish for a full pass.
 3. **Memtest86+** — one to two full passes. It is used hardware, single-channel, and there is one 8 GiB stick: a host that silently corrupts guests is worse than one that does not boot. 🔄 **running 2026-11-06** — Memtest86+ **7.20**, **0 errors** so far (test 42 % of the first pass); let the passes finish and record the total before installing.
 4. **BIOS level** — ✅ **resolved 2026-11-06, nothing to flash.** Dell's [OptiPlex 7050 BIOS page](https://www.dell.com/support/home/en-gb/drivers/driversdetails?driverid=kmhpc) (driver `KMHPC`, priority **Critical**) lists **1.27.0, released 2023-11-15**, as the current release — the build already installed; the `2023-09-18` in the SMBIOS dump is its compile date. The 7050 is also **absent from [DSA-2025-153](https://www.dell.com/support/kbdoc/000300450)** (CVE-2025-36579, weak BIOS password recovery), whose June-2026 affected-platform list ends at the 7090/7490 generation. So there is **no newer build and no open BIOS advisory** — the only firmware gap left is the `intel-microcode` package inside Proxmox.
@@ -352,7 +354,7 @@ Six items that are either **impossible to recover afterwards** or that **change 
 
 **Install-time decisions**, recorded now so the installer is not a guess:
 
-- **Storage layout: replace the worn module first, then `ext4` + LVM-thin, not ZFS** — the 119 GiB module sits at **4 % of its endurance**, so it is not a candidate ([SMART](#the-module-is-worn-out--and-it-is-empty-smart-2026-11-06)); an **NVMe M.2 2280 (500 GB–1 TB)** takes its place and leaves the 2.5″ bay free. **LVM-thin** stays the right layout for 8 GB of RAM; ZFS waits for the pool the bay can hold later, per [idea 15](../ideas/15-second-proxmox-node.md) step 7.
+- **Storage layout: `ext4` + LVM-thin, not ZFS** — 8 GB of RAM and a single 119 GiB module with **~97 % of its endurance left** ([SMART](#the-module-is-sound-and-it-is-empty-smart-2026-11-06)). A larger NVMe disk is a comfort upgrade, not a prerequisite; the 2.5″ bay stays free for the ZFS pool the node can hold later, per [idea 15](../ideas/15-second-proxmox-node.md) step 7.
 - **Proxmox VE 9.x — the same branch as `pve` (currently 9.2.2)** — a later cluster join needs matching versions (*"All nodes should have the same version"* in the [Cluster Manager requirements](https://pve.proxmox.com/pve-docs/chapter-pvecm.html)), so no 8.x and no snapshot ISO; align both nodes to the same point release before the cluster exists.
 - **Hostname `pve2`**, **static `192.168.2.203`** on `enp0s31f6` — record the MAC first for the DHCP reservation and for Wake-on-LAN.
 - **Watch POST for `Unknown AC power adapter`** — if it appears, stop and resolve the brick before building anything.
@@ -374,7 +376,7 @@ Six items that are either **impossible to recover afterwards** or that **change 
 ## Open Questions
 
 1. **Keep the i5-7500 or fit an i7-7700T?** Recommendation: run the 7500 first and judge it on measurements; if sustained load brings fan noise or throttling, the 7700T is the upgrade that respects the 35 W chassis design — and it adds hyper-threading, which the 7500T would not.
-2. **Change the boot medium before the Proxmox install?** **Answered 2026-11-06 — yes, and not for the reason expected.** The measured module is worn to **4 % remaining endurance** with 128 GB total, so it is not a candidate at all; the only question left is *which* new disk. **Recommendation: an NVMe M.2 2280 (500 GB–1 TB)** — it drops into the slot the module vacates, needs no caddy, and leaves the 2.5″ bay free for the later ZFS disk ([idea 15](../ideas/15-second-proxmox-node.md) step 7). The 2.5″ SATA route is the fallback and hinges on the caddy and ribbon actually being present. ZFS vs LVM-thin is then a capacity question, not a wear one.
+2. **Change the boot medium before the Proxmox install?** **Answered 2026-11-06 — not required.** The module is healthy (**~97 % endurance remaining**, [SMART read](#the-module-is-sound-and-it-is-empty-smart-2026-11-06)), so 128 GB of capacity is the only argument — and `pve` runs the identical drive today. **Optional: an NVMe M.2 2280 (500 GB–1 TB)** for headroom; it drops into the slot the module vacates, needs no caddy, and leaves the 2.5″ bay free for the later ZFS disk ([idea 15](../ideas/15-second-proxmox-node.md) step 7). The 2.5″ SATA route hinges on the caddy and ribbon actually being present.
 3. **Is vPro worth chasing at all?** If the ME firmware is not in AMT mode, no BIOS setting will bring MEBx back. Decide between AC Recovery + WoL, an IP-KVM, or accepting manual power.
 4. **Rename first, or build `pve2` standalone?** Unchanged from idea 15: the `pve` → `pve1` rename must land **before** a cluster exists, but it is not a prerequisite for provisioning this node (issue #177 keeps the cluster out of scope).
 

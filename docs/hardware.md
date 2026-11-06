@@ -11,7 +11,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | **OMV NAS** | OpenMediaVault server, backup target | HP ProLiant ML110 G5 | Pentium E2160 (2C/2T, 65 W) | 4 GB DDR2 | Goodram 120 GB SSD + RAID1 arrays | 1× GbE BCM5722 |
 | **Beetle NAS** | OMV NAS backup target (successor to ML110) | Wincor Beetle M-III | Pentium G4400 (2C/2T, 3.3 GHz) | 8 GB DDR4 (1×, 1 free slot) | SanDisk 128 GB SSD + 2× Seagate 1 TB 2.5" | 1× GbE Intel I219-V |
 | **Edge Ingress** | LAN DNS + reverse proxy (public ingress held) | Dell Wyse 3040 | Atom x5-Z8350 (2 W TDP) | 2 GB DDR3L | 8 GB eMMC | 1× GbE |
-| **Proxmox VE** | virtualisation host — smart-home + always-on services | Dell Wyse 5070 | Celeron J4105 (10 W) | 8 GB DDR4 (2× 4 GB) | M.2 SATA SK hynix 128 GB | 1× GbE + WiFi |
+| **Proxmox VE** | virtualisation host — smart-home + always-on services | Dell Wyse 5070 | Celeron J4105 (Gemini Lake, 10 W) | 8 GB DDR4-2400 (2× 4 GB) | M.2 SATA SK hynix 128 GB | 1× GbE + WiFi |
 | **OPNsense Router** | LAN edge router / firewall | Fujitsu Futro S930 | GX-424CC (4C/4T, 25 W TDP) | 4 GB DDR3 (1×, 1 free slot) | Innodisk 7.99 GB mSATA | 3× GbE (BCM5720 2× + Realtek 1×) |
 | **Cloudlab VPS** | staging / playground | Contabo Cloud VPS 10 | 4 vCPU (cloud — no TDP) | 8 GB | 75 GB NVMe | public IP |
 
@@ -77,11 +77,11 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 
 | Item | Spec |
 |---|---|
-| CPU | Intel Celeron J4105 (4C/4T, 2.5 GHz, 10 W TDP) · fanless, ~35 °C idle |
-| RAM | 8 GB DDR4 (2× 4 GiB; both slots populated, 16 GB max with replacement) |
-| Storage | M.2 SATA 2280 SK hynix SC311 128 GB SSD (SMART PASSED, ~97% life remaining) · unused 14.7 GiB eMMC |
-| Firmware | BIOS 1.34.0 (2024-11-08) · board `060J9C` |
-| Network | Realtek GbE (`enp1s0`) · Intel CNVi WiFi/BT (`wlp0s12f0`) |
+| CPU | Intel **Celeron J4105** (**Gemini Lake** / Goldmont Plus, 4C/4T, 800–2500 MHz, 10 W TDP, **x86-64-v2**) · fanless, ~35 °C idle · iGPU UHD Graphics 600 |
+| RAM | 8 GB DDR4 — 2× 4 GiB Micron `4ATF51264HZ-3G2J1` rated **DDR4-3200 (PC4-25600)** but **running at 2400 MT/s**, the Gemini Lake IMC ceiling · both slots populated, so 16 GB means a full 2× 8 GiB swap |
+| Storage | M.2 SATA 2280 SK hynix **SC311 128 GB** (SN `MS8BN03201230BC10`, FW `70000P10`) · SMART **PASSED**, ~97 % endurance remaining · **no NVMe controller** on Gemini Lake — M.2 **SATA / B+M key only** · unused 14.7 GiB eMMC |
+| Firmware | BIOS **1.34.0** (2024-11-08) · board `060J9C` · serial `16474B3` · SKU `080C` |
+| Network | Realtek RTL8111/8168 GbE (`enp1s0`, MAC `c0:25:a5:65:02:67`) · Intel CNVi WiFi + BT (`wlp0s12f0`, MAC `d0:3c:1f:cb:76:9a`) |
 | TPM | **Intel PTT** firmware TPM 2.0 — `/dev/tpm0`, `/dev/tpmrm0` (measured 2026-10-04, [research 37 §5](research/37-tpm2-hardware-and-fleet.md)) · passed into LXC 215, which seals the CA's intermediate key to it |
 | Zigbee | Sonoff ZBDongle-P (CC2652P) · USB coordinator for LXC 212 |
 | OS | Proxmox VE 9.2.2 installed at `192.168.2.201` · base provisioned ([runbook 28](runbooks/28-pve-proxmox-node.md)) |
@@ -94,7 +94,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 |---|---|
 | CPU | Intel **Core i5-7500** (Kaby Lake, 4C/4T, 3.4/3.8 GHz, **65 W TDP**) — not a factory Micro SKU (Dell's Micro list is 35 W T-series only); an i7-7700T swap is the fallback |
 | RAM | 8 GB DDR4-2400 (1× 8 GiB SO-DIMM, **DIMM 2 free**) — 16 GB is one stick, 32 GB with 2× 16 GiB |
-| Storage | **M.2 2280 SATA** module — SK hynix **SC311 SATA 128 GB**, SATA III via AHCI · ⚠️ **11 134 POH, wear indicator 4/100 (≈97 % consumed)** — worn out, not a boot-disk candidate; NVMe replacement planned ([research 52](research/52-optiplex7050-hardware-diagnostic.md)) · 2.5″ bay empty |
+| Storage | **M.2 2280 SATA** module — SK hynix **SC311 SATA 128 GB**, SATA III via AHCI · 11 134 POH, **~97 % endurance remaining** (worst block only 86 erase cycles) — healthy but small; a larger NVMe is optional ([research 52](research/52-optiplex7050-hardware-diagnostic.md)) · 2.5″ bay empty |
 | Firmware | BIOS Dell 1.27.0 — Dell's current release (published 2023-11-15), not on DSA-2025-153, so nothing to flash · board `055H3G` · serial `3CLD6Q2` · asset tag `80006161` |
 | Network | Intel **I219-LM** GbE (`enp0s31f6`) · Intel 8265 WiFi/BT · DHCP `.206`, reserved `.203` ([ADR 31](decisions/31-static-address-scheme.md)) |
 | TPM | **TPM 2.0, enabled** (TPM On, SHA-256, attestation + key storage) — PTT vs discrete pending |
