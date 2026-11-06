@@ -4,7 +4,7 @@
 
 **Scope**: Pre-boot hardware audit of the **Dell OptiPlex 7050 Micro (MFF)** bought on 2026-11-04 and delivered 2026-11-05 — the second Proxmox VE node planned in [idea 15](../ideas/15-second-proxmox-node.md) and [research 47](47-second-proxmox-node.md). Same Phase 0 pattern as the Wyse 3040 ([28](28-wyse3040-hardware-diagnostic.md)), Wyse 5070 ([29](29-wyse5070-hardware-diagnostic.md)), Futro S930 ([31](31-futro-s930-hardware-diagnostic.md)) and Beetle M-III ([32](32-wincor-beetle-m3-hardware-diagnostic.md)) audits: capture the exact specs into `docs/hardware.md` and find the surprises **before** committing an OS to the box.
 
-**Status**: 🔨 In progress — hardinfo2 inventory, the F2 BIOS walk, the F12 boot menu, ePSA, the BIOS-level check, **disk SMART** and **ME firmware** are captured; **TPM vendor, MAC, the AMT verdict, Memtest86+ and a thermal load test are still pending** ([Pending checks](#pending-checks)), and the **live USB has to be rebuilt first** — it failed mid-session with I/O errors.
+**Status**: 🔨 In progress — hardinfo2 inventory, the F2 BIOS walk, the F12 boot menu, ePSA, the BIOS-level check, **disk SMART** and **ME firmware** are captured; **TPM vendor, MAC, the AMT verdict, Memtest86+ and a thermal load run are still pending** ([Pending checks](#pending-checks)).
 
 ---
 
@@ -263,7 +263,7 @@ So the absence of MEBx is **not** a missing-hardware conclusion — it is a **fi
 0:11.8.50.3425
 ```
 
-Two partitions report the running build **11.8.94.4494** (a late CSME 11.8 release, the Kaby-Lake-era branch), the third reports an older **11.8.50.3425** image — the recovery/ROM copy, which keeps its original version. **This is what a healthy ME looks like**, so hypothesis 5 loses most of its weight and the question narrows to one: *is this ME image an AMT (corporate) build?* The version string cannot answer that — `mei-amt-version` can, and it did not run (see the [live-medium failure](#the-live-usb-failed-mid-session-2026-11-06)).
+Two partitions report the running build **11.8.94.4494** (a late CSME 11.8 release, the Kaby-Lake-era branch), the third reports an older **11.8.50.3425** image — the recovery/ROM copy, which keeps its original version. **This is what a healthy ME looks like**, so hypothesis 5 loses most of its weight and the question narrows to one: *is this ME image an AMT (corporate) build?* The version string cannot answer that — `mei-amt-version` can, and it has not been run yet.
 
 ### What Dell's KB says, and what it changed here (2026-11-06)
 
@@ -344,7 +344,7 @@ Six items that are either **impossible to recover afterwards** or that **change 
 3. **Memtest86+** — one to two full passes. It is used hardware, single-channel, and there is one 8 GiB stick: a host that silently corrupts guests is worse than one that does not boot.
 4. **BIOS level** — ✅ **resolved 2026-11-06, nothing to flash.** Dell's [OptiPlex 7050 BIOS page](https://www.dell.com/support/home/en-gb/drivers/driversdetails?driverid=kmhpc) (driver `KMHPC`, priority **Critical**) lists **1.27.0, released 2023-11-15**, as the current release — the build already installed; the `2023-09-18` in the SMBIOS dump is its compile date. The 7050 is also **absent from [DSA-2025-153](https://www.dell.com/support/kbdoc/000300450)** (CVE-2025-36579, weak BIOS password recovery), whose June-2026 affected-platform list ends at the 7090/7490 generation. So there is **no newer build and no open BIOS advisory** — the only firmware gap left is the `intel-microcode` package inside Proxmox.
 5. **ME/AMT verdict** — set `Fastboot = Thorough` + `Extend BIOS POST Time`, then Ctrl+P at the logo, then `mei-amt-version` from the live USB. That decides the remote-power model (**vPro** vs **AC Recovery + Wake-on-LAN**) before the node is carrying anything.
-6. **Thermal + load baseline** — a short all-core load run from SystemRescue (`stress-ng`/`mprime`) with package temperature, fan RPM and wall draw. It is the acceptance test for a 65 W CPU in a 35 W chassis, and it settles whether TurboBoost stays off. ⚠️ **attempted 2026-11-06 and did not run** — the live medium threw I/O errors before a single burner started ([below](#the-live-usb-failed-mid-session-2026-11-06)); only the idle baseline came out (**42 °C package, 2266 RPM**).
+6. **Thermal + load baseline** — a short all-core load run from SystemRescue (`stress-ng`/`mprime`) with package temperature, fan RPM and wall draw. It is the acceptance test for a 65 W CPU in a 35 W chassis, and it settles whether TurboBoost stays off. ⚠️ **not run 2026-11-06** — only the idle baseline came out (**42 °C package, 2266 RPM**); the load run is still owed.
 
 **Install-time decisions**, recorded now so the installer is not a guess:
 
@@ -354,27 +354,15 @@ Six items that are either **impossible to recover afterwards** or that **change 
 
 ### Remaining
 
-#### The live USB failed mid-session (2026-11-06)
-
-The SystemRescue stick is not trustworthy, and it has to be replaced **before the installer runs**:
-
-- **It re-enumerated.** The same stick was `sdb` in the first `lsblk` call and `sdc` in the second, minutes later.
-- **Binaries became unreadable.** `/usr/bin/awk`, `dmesg`, `ip`, `nproc`, `seq`, `sleep` and `pkill` all returned `Input/output error` while shell builtins and page-cached reads (`lsblk`, `smartctl`, `cat` of `/sys`) kept working — the classic signature of a lost squashfs backing store, not of bad RAM.
-- **Consequences.** The thermal test was invalid (`nproc`/`seq` failed, so **zero** burner processes started and `sleep 600` returned at once — the "after" sensors output is the same idle state as the "before"); `dmesg`, `ip` and `mei-amt-version` produced nothing, which is why **TPM vendor and MAC are still open**.
-
-**Fix before the next boot:** re-burn SystemRescue on a different stick and boot it with **`copytoram=y`**, which copies the whole squashfs into RAM and stops the live image depending on the stick after handover. Verify with `dmesg | tail` (no `usb reset` / `I/O error`), a stable `lsblk`, and one binary that was failing above. Do **not** install Proxmox from this stick.
-
----
-
 1. **BIOS walk (F2)** — ✅ **done 2026-11-06** for the MEBx/storage/virtualisation questions: no AMT capability page, `MEBx Hotkey` enabled, **`OROM Keyboard Access` enabled**, admin password set, TPM 2.0 enabled, **AHCI**, **VT-x + VT-d on**, TXT off, ASPM `Auto`, TurboBoost off, wireless radios disabled, UEFI network stack enabled, `SATA-4 = 128 GB SK hynix SC311 SATA`, `SATA-0` and `M.2 PCIe SSD-0` empty. The second pass filled in Power Management (**AC Recovery `Power On`**, **Wake on LAN `LAN Only`**, **Deep Sleep `Disabled`**), POST Behavior (**Fastboot `Thorough`** + non-zero **Extend BIOS POST Time**) and Secure Boot (**off**, per the F12 page). **Still to capture:** SpeedStep / C-States / Multi Core values.
 2. **ME/AMT state** — `mei-amt-version`, `/sys/class/mei/mei0/fw_ver`, `dmesg | grep -i mei`. With the BIOS ruled out and `OROM Keyboard Access` identified, this check runs **after** the retest and only matters if MEBx still will not appear.
 3. **BIOS level** — ✅ **done** — 1.27.0 is Dell's current release (published 2023-11-15, priority Critical) and the 7050 is not on DSA-2025-153, so there is nothing to flash ([gate item 4](#pre-install-gate--do-these-before-the-proxmox-installer-runs)). The `intel-microcode` update inside Proxmox is still outstanding: the live session reports `old_microcode` **Vulnerable**.
 4. **Disk** — ✅ **done 2026-11-06** — model, capacity, POH, wear and health counters recorded ([SMART](#the-module-is-worn-out--and-it-is-empty-smart-2026-11-06)). Verdict: **replace it** rather than plan around it.
 5. **Visual confirmation** — is the **2.5″ caddy + ribbon present** for a later second disk, is a RAM slot free, and is the CPU heatsink the 35 W design or a retrofit?
-6. **TPM identity** — ✅ enabled and active per the F2 walk (TPM On, SHA-256, Attestation/Key Storage on, `Enabled`); **vendor still open** — the `dmesg`/`tpm2_getcap` read was killed by the live-medium failure, so Intel PTT vs a discrete chip is unresolved (the [research 37](37-tpm2-hardware-and-fleet.md) pattern: `TPM_PT_MANUFACTURER` = `INTC` → PTT, `IFX`/`NTC` → discrete). A usable TPM 2.0 keeps the option of a second sealed `step-ca` instance open.
+6. **TPM identity** — ✅ enabled and active per the F2 walk (TPM On, SHA-256, Attestation/Key Storage on, `Enabled`); **vendor still open** — the `dmesg`/`tpm2_getcap` output was not captured in the 2026-11-06 session, so Intel PTT vs a discrete chip is unresolved (the [research 37](37-tpm2-hardware-and-fleet.md) pattern: `TPM_PT_MANUFACTURER` = `INTC` → PTT, `IFX`/`NTC` → discrete). A usable TPM 2.0 keeps the option of a second sealed `step-ca` instance open.
 7. **Thermal + power measurement** — pre-OS baselines are in (**23.2 W BIOS Setup, 19.7 W PXE**); still to measure at the wall, same meter and socket: **OS idle**, **OS idle with a guest**, and **all-core load** — with package temperature and fan RPM alongside, so the 65 W decision rests on numbers rather than on the TDP label.
 8. **ePSA diagnostics** — ✅ **ran clean 2026-11-06** (*no problems found*); the System Health readings are recorded [above](#boot-menu-f12-and-epsa-2026-11-06), the memory test is the item left open under the gate.
-9. **MAC addresses** — record `enp0s31f6` for DHCP reservations / WoL. ⚠️ blocked 2026-11-06: `ip` failed with an I/O error on the failing live medium — read it from the next boot or from the DHCP leases.
+9. **MAC addresses** — record `enp0s31f6` for DHCP reservations / WoL. ⚠️ not captured 2026-11-06 — read it on the next boot or from the DHCP leases.
 
 ---
 
