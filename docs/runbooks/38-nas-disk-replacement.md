@@ -1,6 +1,6 @@
 # NAS — replacing a failed `md0` member
 
-> Replace one half of the Beetle NAS's RAID1 mirror (`md0`, host **`nas`**, `192.168.2.202`): identify
+> Replace one half of the Beetle NAS's RAID1 mirror (`md0`, host **`nas`**, `192.168.2.209`): identify
 > the failed member by **serial**, prove the replacement is sound with a destructive surface test,
 > add it to the array, and let `md0` resync back to `[UU]`.
 >

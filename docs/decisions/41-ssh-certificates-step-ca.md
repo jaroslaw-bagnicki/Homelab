@@ -48,10 +48,10 @@ break-glass — outside daily use — and use Authentik as the human identity so
   and a host-certificate signing key, and `enableSSHCA` on the provisioners that may sign. ACME stays
   X.509-only. Signing happens at the same CA that already issues TLS leaves; nothing in
   [ADR 38](38-private-ca-hierarchy-and-custody.md) is replaced.
-- **Custody: the `pve` TPM.** Both SSH CA keys live in the same TPM as the intermediate
+- **Custody: the `pve1` TPM.** Both SSH CA keys live in the same TPM as the intermediate
   (`tpmkms:` URIs in `ssh.hostKey` / `ssh.userKey`). `step-ca` resolves them through its key manager
   (`CreateSigner`), the path the X.509 `key` already uses — **verified in the `smallstep/certificates`
-  source**, not yet run on the guest. The runbook must prove it on `pve`; if the guest cannot serve the
+  source**, not yet run on the guest. The runbook must prove it on `pve1`; if the guest cannot serve the
   SSH CA from the TPM, **file custody** (`0600 root:root` in `/etc/step-ca/secrets/`) is the explicit
   fallback and this ADR is amended — never left as an undocumented default.
 - **Host certificates first.** Every **LAN** fleet node presents a host certificate — `HostCertificate`
@@ -120,7 +120,7 @@ break-glass — outside daily use — and use Authentik as the human identity so
   and remains valid — [ADR 28](28-fleet-admin-account-and-key.md) keeps it as the guaranteed fallback —
   so only discipline and the `sshd` audit trail keep it out of daily paths. If that drifts, its `from=`
   and `key_options` can be narrowed without losing break-glass.
-- **A TPM loss now costs both CAs.** Clearing the `pve` TPM (PTT clear, BIOS update, NVRAM reset)
+- **A TPM loss now costs both CAs.** Clearing the `pve1` TPM (PTT clear, BIOS update, NVRAM reset)
   destroys the SSH CA keys as well as the intermediate. Recovery is bounded by the lifetimes: re-create the
   SSH CA keys, **redistribute their public keys** to hosts (`TrustedUserCAKeys`) and clients
   (`@cert-authority`), re-issue host certificates and let user certificates re-issue at next login. The

@@ -95,12 +95,12 @@ script with `-Force`, then re-run the playbooks.
 
 ## Hosts
 
-Applied by `playbook-pve.yml`, `playbook-edge.yml`, `playbook-lab.yml`, `playbook-nas.yml` and
+Applied by `playbook-pve1.yml`, `playbook-pve2.yml`, `playbook-edge.yml`, `playbook-lab.yml`, `playbook-nas.yml` and
 `playbook-logs.yml` (`vtstack`). `cloudlab` is never targeted — off-LAN, and Tier A already covers
 it ([ADR 27](../../../docs/decisions/27-monitoring-strategy.md)). The OPNsense router is out of scope
 (FreeBSD, no journald — [research 34 §8](../../../docs/research/34-log-collector-options.md)).
 
-Deploy order: `pve` → `edge` → `lab` → `nas` → `vtstack`, validating each before the next
+Deploy order: `pve1` → `pve2` → `edge` → `lab` → `nas` → `vtstack`, validating each before the next
 ([runbook 34](../../../docs/runbooks/34-deploy-fluentbit.md)).
 
 ## References

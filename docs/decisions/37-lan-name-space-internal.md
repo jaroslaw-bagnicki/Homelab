@@ -46,7 +46,7 @@ guaranteed never to be delegated publicly.
   fleet has no LAN name resolution at all — nodes are reached by static IP
   ([ADR 31](31-static-address-scheme.md)) and by mDNS `.local` names, which is why nothing has broken.
   This is a real gap, not a deferred nicety: it is the reason the stack in idea 10 is worth building.
-- **The host placement of that stack is not decided here** — the candidates are `pve` (Docker Compose in
+- **The host placement of that stack is not decided here** — the candidates are `pve1` (Docker Compose in
   an LXC), `edge` (bare metal) and `lab` (k3s workload, blocked until k3s lands).
 - **Live configuration is repointed with the stack, not before**: the NAS still carries the old domain
   (OMV `nas`, [runbook 32 §3](../runbooks/32-beetle-m3-omv-setup.md)). The `edge_host` role's

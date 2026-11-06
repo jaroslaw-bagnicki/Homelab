@@ -1,5 +1,5 @@
 ---
-- name: Configure vtstack (Victoria stack guest on pve) base
+- name: Configure vtstack (Victoria stack guest on pve1) base
   hosts: vtstack
   become: true
   roles:

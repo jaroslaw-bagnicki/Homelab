@@ -30,3 +30,6 @@ nut_client_account: upsmon-host
 nut_client_password_secret: nut-upsmon-primary-password
 nut_client_hostsync: 30
 nut_client_finaldelay: 30
+
+proxmox_cluster_peer_ips:
+  - 192.168.2.202

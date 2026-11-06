@@ -4,11 +4,12 @@
 > server and the CA. A second node would add capacity, make Proxmox **HA** reachable with a quorum device,
 > and unlock **ZFS replication** as the two-node substitute for shared storage.
 
-**Status**: 🧠 Idea — device acquired (**Dell OptiPlex 7050 MFF**, bought 2026‑11‑04); cluster, QDevice and
-storage path still undecided
+**Status**: 🔨 Implementing — **Dell OptiPlex 7050 MFF** acquired 2026‑11‑04; rename, `pve2` build and the
+two-node cluster + edge QDevice are decided in [ADR 47](../decisions/47-second-proxmox-node-cluster-qdevice.md).
+HA/ZFS replication remain deferred.
 **Date**: 2026-10-25
 **Sources**: two Gemini hardware threads — see [research 47](../research/47-second-proxmox-node.md); cluster, quorum, HA and replication figures in that doc are verified against the Proxmox VE 9.2 documentation  
-**Related**: [research 47](../research/47-second-proxmox-node.md) (the analysis) · [research 29](../research/29-wyse5070-hardware-diagnostic.md) (the incumbent `pve`) · [ADR 01](../decisions/01-hardware-selection-m910q.md) · [ADR 22](../decisions/22-k3s-arc-homelab.md) (the k3s path that also wants three nodes) · [ADR 25](../decisions/25-home-assistant-thin-client.md) (the first HA candidate) · [ADR 31](../decisions/31-static-address-scheme.md) (address block) · [ADR 33](../decisions/33-fleet-node-hostnames.md) (hostname policy — needs an amendment) · [ADR 41](../decisions/41-ssh-certificates-step-ca.md) (host certificates that would inherit the new name) · [idea 13](13-freeipa-domain-controller.md) (the extra guest that makes `pve` memory tight)
+**Related**: [ADR 47](../decisions/47-second-proxmox-node-cluster-qdevice.md) (the decision) · [research 47](../research/47-second-proxmox-node.md) (the analysis) · [research 52](../research/52-optiplex7050-hardware-diagnostic.md) (this unit) · [ADR 31](../decisions/31-static-address-scheme.md) (address block) · [ADR 33](../decisions/33-fleet-node-hostnames.md) (hostname policy, amended for `pve1`/`pve2`) · [ADR 41](../decisions/41-ssh-certificates-step-ca.md) (host certificates) · [idea 13](13-freeipa-domain-controller.md) (the extra guest that makes `pve1` memory tight)
 
 ---
 
@@ -56,8 +57,8 @@ like the SFF, not the Micro.
 
 - **One cluster, two nodes**: `pve1` creates it, `pve2` joins **empty** (a joining node cannot hold guests,
   and `/etc/pve` is overwritten on join).
-- **HA only after the QDevice exists** — `corosync-qnetd` on an always-on fleet host (`edge` or `lab`),
-  TCP 5403.
+- **HA only after the QDevice exists** — `corosync-qnetd` on `edge` (decided in
+  [ADR 47](../decisions/47-second-proxmox-node-cluster-qdevice.md)), TCP 5403.
 - **Storage stays local** (`local-lvm`) at first; HA is restart-on-failure until a replica exists.
 - **ZFS replication is the storage step, not a shared datastore** — a `zfspool` storage with the **same ID**
   on both nodes and replication jobs for the always-on guests. **RPO is the age of the last successful
@@ -72,13 +73,13 @@ like the SFF, not the Micro.
 ## Phased plan
 
 1. **Rename first** — `pve` → `pve1` on the live node *before* any cluster exists (hostnames are frozen once
-   a cluster is created): inventory, `host_vars/pve1.yml`, `playbook-pve.yml`, `hosts: pve` references,
-   `pvecm updatecerts`, and the state docs. Amend [ADR 33](../decisions/33-fleet-node-hostnames.md) and
-   [ADR 31](../decisions/31-static-address-scheme.md) (address `.203`).
-2. **Buy and provision `pve2`** — Proxmox VE, hostname `pve2`, `192.168.2.203`, no guests, final BIOS.
+   a cluster is created): inventory, `host_vars/pve1.yml`, `playbook-pve1.yml`, `hosts: pve1` references,
+   `pvecm updatecerts`, and the state docs ([runbook 28 §6](../runbooks/28-pve1-proxmox-node.md)).
+2. **Provision `pve2`** — Proxmox VE, hostname `pve2`, `192.168.2.202`, no guests, final BIOS
+   ([runbook 42](../runbooks/42-pve2-proxmox-node.md)).
 3. **Create the cluster on `pve1`**, join `pve2` with the IP (not the hostname), verify `pvecm status`,
-   `pvecm nodes`, and that Corosync is the only traffic on its link.
-4. **Add the QDevice** on the chosen host, then re-check `pvecm status` for `Quorate Qdevice`.
+   `pvecm nodes`, and that Corosync is the only traffic on its link ([runbook 43](../runbooks/43-proxmox-cluster-qdevice.md)).
+4. **Add the QDevice on `edge`**, then re-check `pvecm status` for `Quorate Qdevice`.
 5. **HA the one workload that needs it** — a restart-on-failure rule for the Home Assistant VM once it
    exists. At this point the guest still lives on `local-lvm`, so verify **process-level** recovery on the
    same node; a node-loss test cannot pass until the disk exists on the survivor (step 7).

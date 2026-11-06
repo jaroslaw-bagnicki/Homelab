@@ -1,0 +1,14 @@
+---
+# Cluster-node prerequisites shared by the Proxmox VE hosts (ADR 47). The role
+# installs the QDevice client and opens the Corosync link; it does not create or
+# join the cluster — that is the runbook's `pvecm` step.
+proxmox_cluster_peer_ips: []
+proxmox_cluster_corosync_udp_ports:
+  - 5405
+  - 5406
+  - 5407
+  - 5408
+  - 5409
+  - 5410
+  - 5411
+  - 5412

@@ -1,0 +1,17 @@
+---
+- name: Install the Corosync QDevice client
+  ansible.builtin.apt:
+    name: corosync-qdevice
+    state: present
+    update_cache: true
+
+- name: Allow the Corosync link from cluster peers
+  community.general.ufw:
+    rule: allow
+    proto: udp
+    port: "{{ item.1 }}"
+    from_ip: "{{ item.0 }}"
+  loop: "{{ proxmox_cluster_peer_ips | product(proxmox_cluster_corosync_udp_ports) | list }}"
+  loop_control:
+    label: "{{ item.0 }}:{{ item.1 }}/udp"
+  when: proxmox_cluster_peer_ips | length > 0

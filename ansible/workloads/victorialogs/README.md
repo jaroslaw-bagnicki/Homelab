@@ -3,7 +3,7 @@
 ## Purpose
 
 A self-contained Ansible recipe that deploys the Tier B **log store** — **VictoriaLogs** — as a
-Docker Compose service on the `vtstack` guest (LXC 214, `192.168.2.214`) on the `pve` node. Per
+Docker Compose service on the `vtstack` guest (LXC 214, `192.168.2.214`) on the `pve1` node. Per
 [issue #123](https://github.com/jaroslaw-bagnicki/Homelab/issues/123), the store is the dependency the
 collector ([#84](https://github.com/jaroslaw-bagnicki/Homelab/issues/84)) and every node's log path
 wait on; the decision is [ADR 35](../../../docs/decisions/35-log-store-victorialogs.md).
@@ -113,7 +113,7 @@ pinned tag on every run, so a literal `changed=0` recap is not achievable while 
 
 ## Hosts
 
-`vtstack` (LXC 214 on `pve`; base-provisioned by `ansible/playbooks/playbook-logs.yml` — see
+`vtstack` (LXC 214 on `pve1`; base-provisioned by `ansible/playbooks/playbook-logs.yml` — see
 [runbook 33](../../../docs/runbooks/33-deploy-victorialogs.md)). The guest is created and enrolled
 per runbook 33 §1–§3.
 
@@ -138,6 +138,6 @@ For LXC creation, enrollment, deployment, and the verification checklist, see
 
 ## References
 
-- [ADR 35 — Log Store — VictoriaLogs in an LXC on the pve Node](../../../docs/decisions/35-log-store-victorialogs.md)
-- [Research 33 — Centralised Logging — VictoriaLogs Store and Its pve Host](../../../docs/research/33-centralized-logging-victorialogs.md)
+- [ADR 35 — Log Store — VictoriaLogs in an LXC on the pve1 Node](../../../docs/decisions/35-log-store-victorialogs.md)
+- [Research 33 — Centralised Logging — VictoriaLogs Store and Its pve1 Host](../../../docs/research/33-centralized-logging-victorialogs.md)
 - [VictoriaLogs documentation](https://docs.victoriametrics.com/victorialogs/) — flags, ingest endpoints, retention, security posture
