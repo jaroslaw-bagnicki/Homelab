@@ -288,6 +288,25 @@ Regardless of the outcome, **record the ME state** in `docs/hardware.md`: an unc
 
 ## Pending Checks
 
+### Pre-install gate — do these before the Proxmox installer runs
+
+Six items that are either **impossible to recover afterwards** or that **change what gets installed**:
+
+1. **Disk evidence** — `lsblk -o NAME,SIZE,MODEL,TRAN` and `smartctl -a`. The module still carries a previous Windows install and the installer wipes it; capacity, POH and wear are unrecoverable after that, and the second-disk decision hangs off them.
+2. **ePSA diagnostics** (F12 → Diagnostics) — per-test pass/fail for memory, storage and NIC. A failing DIMM shows up later as random VM crashes, not as a failed boot.
+3. **Memtest86+** — one to two full passes. It is used hardware, single-channel, and there is one 8 GiB stick: a host that silently corrupts guests is worse than one that does not boot.
+4. **BIOS level** — compare 1.27.0 with Dell's current release and flash from USB now if there is a newer one. Afterwards it is a reboot of a live node.
+5. **ME/AMT verdict** — set `Fastboot = Thorough` + `Extend BIOS POST Time`, then Ctrl+P at the logo, then `mei-amt-version` from the live USB. That decides the remote-power model (**vPro** vs **AC Recovery + Wake-on-LAN**) before the node is carrying anything.
+6. **Thermal + load baseline** — a short all-core load run from SystemRescue (`stress-ng`/`mprime`) with package temperature, fan RPM and wall draw. It is the acceptance test for a 65 W CPU in a 35 W chassis, and it settles whether TurboBoost stays off.
+
+**Install-time decisions**, recorded now so the installer is not a guess:
+
+- **Storage layout: `ext4` + LVM-thin, not ZFS** — 8 GB of RAM and a single 128 GB SATA module. ZFS belongs on this node when a ZFS pool (the free 2.5″ bay) exists, per [idea 15](../ideas/15-second-proxmox-node.md) step 7.
+- **Hostname `pve2`**, **static `192.168.2.203`** on `enp0s31f6` — record the MAC first for the DHCP reservation and for Wake-on-LAN.
+- **Watch POST for `Unknown AC power adapter`** — if it appears, stop and resolve the brick before building anything.
+
+### Remaining
+
 1. **BIOS walk (F2)** — ✅ **done 2026-11-06** for the MEBx/storage/virtualisation questions: no AMT capability page, `MEBx Hotkey` enabled, **`OROM Keyboard Access` enabled**, admin password set, TPM 2.0 enabled, **AHCI**, **VT-x + VT-d on**, TXT off, ASPM `Auto`, TurboBoost off, wireless radios disabled, UEFI network stack enabled, `SATA-4 = 128 GB SK hynix SC311 SATA`, `SATA-0` and `M.2 PCIe SSD-0` empty. **Still to capture:** Power Management → **AC Recovery**, **Wake on LAN/WLAN**, **Deep Sleep Control**; POST Behavior → **Fastboot** and **Extend BIOS POST Time**; Secure Boot state; SpeedStep / C-States / Multi Core values.
 2. **ME/AMT state** — `mei-amt-version`, `/sys/class/mei/mei0/fw_ver`, `dmesg | grep -i mei`. With the BIOS ruled out and `OROM Keyboard Access` identified, this check runs **after** the retest and only matters if MEBx still will not appear.
 3. **BIOS level** — 1.27.0 is from 2023-09-18; check Dell's current release before installing Proxmox (and expect an `intel-microcode` update: the live session reports `old_microcode` **Vulnerable**).
