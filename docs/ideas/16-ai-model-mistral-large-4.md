@@ -8,7 +8,7 @@
 
 **Status**: 🧠 Idea — no account, no spend, nothing reconfigured
 **Date**: 2026-11-06
-**Sources**: [Mistral pricing](https://mistral.ai/pricing/) · [Mistral Large 4 model card](https://docs.mistral.ai/models/mistral-large-4-0) · [DeepSeek V4.1 Flash 1017 model card](https://docs.mistral.ai/models/deepseek-v4-flash-1017) — all read 2026-11-06
+**Sources**: [Mistral pricing](https://mistral.ai/pricing/) · [Mistral Large 4 model card](https://docs.mistral.ai/models/mistral-large-4-0) · [DeepSeek V4.1 Flash 1017 model card](https://docs.mistral.ai/models/deepseek-v4-flash-1017) · [Subscriptions / included usage](https://docs.mistral.ai/admin/billing-usage/subscriptions) · [Vibe CLI configuration](https://docs.mistral.ai/vibe/code/cli/configuration) — all read 2026-11-06
 **Related**: [ADR 15](../decisions/15-copilot-desktop-agentic.md) (Copilot BYOK provider) · [ADR 17](../decisions/17-adopt-opencode.md) (OpenCode, DeepSeek API + MiniMax plan) · [research 19](../research/19-copilot-desktop-agentic.md) · [docs/opencode-customization](../opencode-customization/README.md) (per-instance LLM key) · [research 02](../research/02-llm-requirements.md) / [research 08](../research/08-llm-server-hardware.md) (why local inference is out of scope)
 
 ---
@@ -67,6 +67,30 @@ That turns the comparison from a project into a config edit:
 - The Cloudlab OpenCode instances already carry a **per-instance LLM key** layer
   ([opencode-customization](../opencode-customization/README.md)), so the winner can be rolled out per
   project rather than fleet-wide.
+
+### Where the A/B bills
+
+Checked because "do I need a separate DeepSeek account to keep the control?" decides whether step 2 is
+one key or two:
+
+- **Plans are global, not per-surface.** "Mistral plans are global: the same plan applies across Vibe,
+  Studio, and API usage", and the plan's **included monthly usage is shared across Studio, API and Vibe
+  Code** — it is consumed first, then prepaid pay-as-you-go credits take over. Pro carries **$15 /mo** of
+  included usage.
+- **No documented plan tier gates third-party models.** They are metered API models like any other, billed
+  from the same allowance — so the A/B is one Mistral account either way.
+- **But the catalogue is not the price sheet.** Vibe's documented chat-capable model list includes
+  **Z.ai GLM 5.3 / 5.2** as its third-party entries — **`DeepSeek V4.1 Flash 1017` is not listed**, and
+  Mistral Large 4 is not either (the table still shows `mistral-large-latest` = Large 3). `/model` lists
+  only models *configured for the account*, so this is a "verify in the account", not a "read the docs".
+- **Not a blocker for this repo:** the daily agent is `opencode` + Copilot BYOK
+  ([ADR 15](../decisions/15-copilot-desktop-agentic.md)), both plain OpenAI-compatible API clients — the
+  Vibe catalogue never enters the picture. Adding a model is a `[[models]]` preset with
+  `provider = "mistral"` and the model ID as `name`; Vibe needs `max_context_length` set for a model it
+  does not know.
+- **Stale number to ignore:** the pricing FAQ quotes "Mistral Large costs $0.5/M in and $1.5/M out" while
+  the [Large 4 model card](https://docs.mistral.ai/models/mistral-large-4-0) states $0.70 / $2.10. The
+  per-model card is authoritative; the FAQ is generic and lags the release.
 
 One caveat that must not be glossed over: on Mistral's platform, DeepSeek V4.1 Flash is marked
 **public preview**, whereas the current setup calls DeepSeek's own API directly. The A/B is a clean
