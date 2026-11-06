@@ -34,7 +34,7 @@ reaches both models in Copilot; plans are global, so BYOK calls draw first from 
    - **Base URL:** `https://api.mistral.ai/v1`
    - **API key:** `${env:MISTRAL_API_KEY}`
 2. Set `MISTRAL_API_KEY` as a Windows **User** environment variable (not a terminal session), restart the app.
-3. **Add custom model** per model ID (`mistral-large-4`, `deepseek-v4-1-flash-1017`): wire model ID = the ID, max prompt ~1M (keep an 840k guardrail against runaway agentic loops, as in runbook 13), max output 128k. **Test** → "Connection OK".
+3. **Add custom model** per model ID (`mistral-large-4`, `deepseek-v4-1-flash-1017`): wire model ID = the ID, max prompt tokens **800000** (see the context-window note in Caveats), max output 128k. **Test** → "Connection OK".
 
 ### Step 3: VS Code (`chatLanguageModels.json`)
 
@@ -77,7 +77,7 @@ reaches both models in Copilot; plans are global, so BYOK calls draw first from 
    | `url` | full endpoint URL for the `chat-completions` API type (not the base URL) |
    | `toolCalling` | must be `true`, otherwise the model is hidden from agent-mode chat |
    | `vision` | `true` for both models (both accept image input) |
-   | `maxInputTokens` / `maxOutputTokens` | 1M context window advertised on the model card; output capped at 128k (prompt + output must fit the context — lower `maxOutputTokens` if a request is rejected) |
+   | `maxInputTokens` / `maxOutputTokens` | card advertises a 1M context window, but Vibe sessions run ML4 with an **800k window** (observed 2026-11-06), so set 800000; output capped at 128k (prompt + output must fit the context — lower `maxOutputTokens` if a request is rejected) |
 
 3. Save; restart VS Code if the models do not appear in the picker immediately.
 
@@ -101,6 +101,7 @@ goes to the OS keychain (DPAPI on Windows). The file lives in `%APPDATA%`, outsi
 
 ## Caveats
 
+- **Context window:** the [model card](https://docs.mistral.ai/models/mistral-large-4-0) advertises 1M tokens, but the Vibe session runs Mistral Large 4 with an **800,000-token context window** (session UI shows `800.000`; observed 2026-11-06). Configure `maxInputTokens: 800000`, and log actual context usage per task in the A/B — cache-hit and compaction behaviour at 800k differ from the advertised 1M.
 - **BYOK changes chat/agent only** — inline (gray-tab) completions still run on Copilot's own infrastructure.
 - On Copilot Business/Enterprise plans, an org/enterprise admin may need to enable custom models / BYOK in policy first.
 - Copilot CLI alternative: configure the provider in the CLI's provider config file (`copilot help providers` for the current schema).
