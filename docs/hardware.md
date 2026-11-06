@@ -87,6 +87,20 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Role | Fleet virtualisation host (Proxmox VE) · hosts LXC 215 `ca`, the fleet trust anchor ([ADR 38](decisions/38-private-ca-hierarchy-and-custody.md)), and VM 216 `ipa`, the Fedora 45 FreeIPA domain ([ADR 43](decisions/43-freeipa-domain-realm.md)) |
 | Docs | [idea 05](ideas/05-home-assistant-thin-client.md) · [ADR 25](decisions/25-home-assistant-thin-client.md) · [research 26](research/26-home-assistant-thin-client.md) · [research 29](research/29-wyse5070-hardware-diagnostic.md) · [runbook 28](runbooks/28-pve-proxmox-node.md) |
 
+### Second Proxmox VE node — Dell OptiPlex 7050 MFF (planned)
+
+| Item | Spec |
+|---|---|
+| CPU | Intel **Core i5-7500** (Kaby Lake, 4C/4T, 3.4/3.8 GHz, **65 W TDP**) — not a factory Micro SKU (Dell's Micro list is 35 W T-series only); an i7-7700T swap is the fallback |
+| RAM | 8 GB DDR4-2400 (1× 8 GiB SO-DIMM, **DIMM 2 free**) — 16 GB is one stick, 32 GB with 2× 16 GiB |
+| Storage | **ATA SK hynix SC311 S — SATA** SSD in the 2.5″ bay (capacity/SMART pending) · **M.2 2280 NVMe slot empty** |
+| Firmware | BIOS Dell 1.27.0 (2023-09-18) · board `055H3G` · serial `3CLD6Q2` · asset tag `80006161` |
+| Network | Intel **I219-LM** GbE (`enp0s31f6`) · Intel 8265 WiFi/BT · DHCP `.206`, reserved `.203` ([ADR 31](decisions/31-static-address-scheme.md)) |
+| Power | **130 W** adapter (the model's documented 65 W / 130 W options) · fan ~2281 RPM at idle |
+| Management | vPro-capable platform (i5-7500 + Q270 + I219-LM) but **MEBx unreachable** — treat remote KVM as absent until proven |
+| Role | Second virtualisation host (planned) — cluster, QDevice and replication are out of scope for now ([idea 15](ideas/15-second-proxmox-node.md)) |
+| Docs | [idea 15](ideas/15-second-proxmox-node.md) · [research 47](research/47-second-proxmox-node.md) · [research 51](research/51-optiplex7050-hardware-diagnostic.md) · [#177](https://github.com/jaroslaw-bagnicki/Homelab/issues/177) |
+
 ### OPNsense Router — Fujitsu Futro S930 (planned)
 
 | Item | Spec |
