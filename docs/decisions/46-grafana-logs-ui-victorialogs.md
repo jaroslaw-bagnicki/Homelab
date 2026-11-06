@@ -33,13 +33,16 @@ The Proxmox host is **`pve1`** (renamed from `pve` on 2026-11-06); the second no
 **`pve1` can host the collocation now.** The Wyse 5070 has 8 GB RAM and the Home Assistant VM is not yet
 provisioned. Today `vtstack` has 2 GB and the CA guest 512 MB; a 4 GiB guest fits. Storage is tighter:
 `local-lvm` is ~68 GiB, with 16 GiB for `vtstack` and 8 GiB for `ca`; **32 GiB** for the guest fits,
-while 64 GiB would overcommit the pool. The OptiPlex 7040 (`pve2`, 256 GB) is planned; the guest moves
-there later and expands to 64 GiB.
+while 64 GiB would overcommit the pool. The OptiPlex 7050 (`pve2`, 128 GB M.2 SATA + free 2.5″ bay) is
+the accepted second node ([ADR 47](47-second-proxmox-node-cluster-qdevice.md)); the guest moves there
+later. The **64 GiB** expansion is not available on the installed 128 GB module — it needs the 2.5″
+disk (or an NVMe replacement) first, so treat it as conditional on that capacity step.
 
 ## Decision
 
 **Collocate VictoriaLogs, the Netdata Parent and Grafana in LXC 214 — `monitor` — on `pve1` now, with
-the Netdata Parent migrated first. Move the guest to `pve2` and expand the disk later.**
+the Netdata Parent migrated first. Move the guest to `pve2` later; the 64 GiB expansion waits for the
+2.5″ disk (or an NVMe replacement).**
 
 ### Host and sizing
 

@@ -124,7 +124,11 @@ Create a throwaway LXC with an ID from the `25x` guest block, start it, check st
 destroy it:
 
 ```sh
-pct create 250 local:vztmpl/debian-13-standard_*.tar.zst \
+pveam update
+TEMPLATE=$(pveam available --section system | awk '/debian-13-standard/ {print $NF}' | head -n1)
+test -n "$TEMPLATE" || { echo "Debian 13 template not found"; exit 1; }
+pveam download local "$TEMPLATE"
+pct create 250 "local:vztmpl/$TEMPLATE" \
   --hostname smoke --rootfs local-lvm:1 --net0 name=eth0,bridge=vmbr0,ip=dhcp
 pct start 250
 pct exec 250 -- ip -4 addr show eth0
