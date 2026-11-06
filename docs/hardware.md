@@ -11,7 +11,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | **OMV NAS** | OpenMediaVault server, backup target | HP ProLiant ML110 G5 | Pentium E2160 (2C/2T, 65 W) | 4 GB DDR2 | Goodram 120 GB SSD + RAID1 arrays | 1× GbE BCM5722 |
 | **Beetle NAS** | OMV NAS backup target (successor to ML110) | Wincor Beetle M-III | Pentium G4400 (2C/2T, 3.3 GHz) | 8 GB DDR4 (1×, 1 free slot) | SanDisk 128 GB SSD + 2× Seagate 1 TB 2.5" | 1× GbE Intel I219-V |
 | **Edge Ingress** | LAN DNS + reverse proxy (public ingress held) | Dell Wyse 3040 | Atom x5-Z8350 (2 W TDP) | 2 GB DDR3L | 8 GB eMMC | 1× GbE |
-| **Proxmox VE** | virtualisation host — smart-home + always-on services | Dell Wyse 5070 | Celeron J4105 (10 W) | 8 GB DDR4 (2× 4 GB) | M.2 SATA SK hynix 128 GB | 1× GbE + WiFi |
+| **Proxmox VE** | virtualisation host — smart-home + always-on services | Dell Wyse 5070 | Celeron J4105 (Gemini Lake, 10 W) | 8 GB DDR4-2400 (2× 4 GB) | M.2 SATA SK hynix 128 GB | 1× GbE + WiFi |
 | **OPNsense Router** | LAN edge router / firewall | Fujitsu Futro S930 | GX-424CC (4C/4T, 25 W TDP) | 4 GB DDR3 (1×, 1 free slot) | Innodisk 7.99 GB mSATA | 3× GbE (BCM5720 2× + Realtek 1×) |
 | **Cloudlab VPS** | staging / playground | Contabo Cloud VPS 10 | 4 vCPU (cloud — no TDP) | 8 GB | 75 GB NVMe | public IP |
 
@@ -26,6 +26,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Storage | 256 GB NVMe — SK hynix BC501 HFM256GDJTNG-8310A · serial `FS85N582310805D30` · FW `80000C00` · SMART **PASSED** (1% used, 16,355 POH — §0 audit 2026-08-16); free 2.5" SATA bay for a secondary/backup disk |
 | Firmware | BIOS LENOVO M1AKT2CA (2017-11-22) · board 310B |
 | Network | 1× Gigabit Ethernet Intel I219-LM (`enp0s31f6`, MAC `6c:4b:90:40:c5:e2`) |
+| Noise | **36.1 dB @ 0.3 m · 36.4 dB @ 0.2 m** (sound-level meter, idle, 2026-11-06) |
 | Role | Main workload host |
 | Docs | [ADR 01](decisions/01-hardware-selection-m910q.md) · [runbook 25](runbooks/25-m910q-os-refresh.md) |
 
@@ -76,16 +77,36 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 
 | Item | Spec |
 |---|---|
-| CPU | Intel Celeron J4105 (4C/4T, 2.5 GHz, 10 W TDP) · fanless, ~35 °C idle |
-| RAM | 8 GB DDR4 (2× 4 GiB; both slots populated, 16 GB max with replacement) |
-| Storage | M.2 SATA 2280 SK hynix SC311 128 GB SSD (SMART PASSED, ~97% life remaining) · unused 14.7 GiB eMMC |
-| Firmware | BIOS 1.34.0 (2024-11-08) · board `060J9C` |
-| Network | Realtek GbE (`enp1s0`) · Intel CNVi WiFi/BT (`wlp0s12f0`) |
+| CPU | Intel **Celeron J4105** (**Gemini Lake** / Goldmont Plus, 4C/4T, **1.5 GHz base / 2.5 GHz burst**, 4 MB cache, 10 W TDP, **x86-64-v2**) · AES-NI ✅ · fanless, ~35 °C idle (800 MHz, downclocked) · iGPU UHD Graphics 600 |
+| RAM | 8 GB DDR4 — 2× 4 GiB Micron `4ATF51264HZ-3G2J1` rated **DDR4-3200 (PC4-25600)** but **running at 2400 MT/s**, the Gemini Lake IMC ceiling · both slots populated, so 16 GB means a full 2× 8 GiB swap |
+| Storage | M.2 SATA 2280 SK hynix **SC311 128 GB** (SN `MS8BN03201230BC10`, FW `70000P10`) · SMART **PASSED**, ~97 % endurance remaining · **no NVMe controller** on Gemini Lake — M.2 **SATA / B+M key only** · unused 14.7 GiB eMMC |
+| Firmware | BIOS **1.34.0** (2024-11-08) · board `060J9C` · serial `16474B3` · SKU `080C` |
+| Network | Realtek RTL8111/8168 GbE (`enp1s0`, MAC `c0:25:a5:65:02:67`) · Intel CNVi WiFi + BT (`wlp0s12f0`, MAC `d0:3c:1f:cb:76:9a`) |
+| Virtualisation | VT-x ✅ **in use** (VM 210 + LXCs 211/212/214/215, `kvm_intel` loaded) · **VT-d supported** by the J4105 ([Intel ARK](https://www.intel.com/content/www/us/en/products/sku/128989/intel-celeron-j4105-processor-4m-cache-up-to-2-50-ghz/specifications.html)) — but **IOMMU/DMAR not yet confirmed on this board**, so PCIe passthrough is unproven; neither the TPM nor the Zigbee USB passthrough needs it |
 | TPM | **Intel PTT** firmware TPM 2.0 — `/dev/tpm0`, `/dev/tpmrm0` (measured 2026-10-04, [research 37 §5](research/37-tpm2-hardware-and-fleet.md)) · passed into LXC 215, which seals the CA's intermediate key to it |
 | Zigbee | Sonoff ZBDongle-P (CC2652P) · USB coordinator for LXC 212 |
 | OS | Proxmox VE 9.2.2 installed at `192.168.2.201` · base provisioned ([runbook 28](runbooks/28-pve-proxmox-node.md)) |
 | Role | Fleet virtualisation host (Proxmox VE) · hosts LXC 215 `ca`, the fleet trust anchor ([ADR 38](decisions/38-private-ca-hierarchy-and-custody.md)), and VM 216 `ipa`, the Fedora 45 FreeIPA domain ([ADR 43](decisions/43-freeipa-domain-realm.md)) |
 | Docs | [idea 05](ideas/05-home-assistant-thin-client.md) · [ADR 25](decisions/25-home-assistant-thin-client.md) · [research 26](research/26-home-assistant-thin-client.md) · [research 29](research/29-wyse5070-hardware-diagnostic.md) · [runbook 28](runbooks/28-pve-proxmox-node.md) |
+
+### Second Proxmox VE node — Dell OptiPlex 7050 MFF (planned)
+
+| Item | Spec |
+|---|---|
+| CPU | Intel **Core i5-7500** (Kaby Lake, 4C/4T, 3.4/3.8 GHz, **65 W TDP**) — not a factory Micro SKU (Dell's Micro list is 35 W T-series only); an i7-7700T swap is the fallback |
+| RAM | 8 GB DDR4-2400 (1× 8 GiB SO-DIMM, **DIMM 2 free**) — 16 GB is one stick, 32 GB with 2× 16 GiB |
+| Storage | **M.2 2280 SATA** module — SK hynix **SC311 SATA 128 GB**, SATA III via AHCI · 11 134 POH, **~97 % endurance remaining** (worst block only 86 erase cycles) — healthy but small; a larger NVMe is optional ([research 52](research/52-optiplex7050-hardware-diagnostic.md)) · 2.5″ bay empty |
+| Firmware | BIOS Dell 1.27.0 — Dell's current release (published 2023-11-15), not on DSA-2025-153, so nothing to flash · board `055H3G` · serial `3CLD6Q2` · asset tag `80006161` |
+| Network | Intel **I219-LM** GbE (`enp0s31f6`) · Intel 8265 WiFi/BT · DHCP `.206`, reserved `.203` ([ADR 31](decisions/31-static-address-scheme.md)) |
+| TPM | **TPM 2.0, enabled** (TPM On, SHA-256, attestation + key storage) — PTT vs discrete pending |
+| Power | **130 W** adapter (documented options: 65 W ↔ 35 W CPU, 130 W ↔ 65 W CPU) · BIOS logged `Unknown AC power adapter` before the purchase, none on the current boot · **23.2 W in BIOS Setup, 19.7 W at PXE** — pre-OS, OS idle still to measure |
+| Cooling | Fan **2278 RPM idle / 2908 RPM high** (ePSA) · CPU thermistor 36 °C, HDD 37 °C · audible at idle, **loud under sustained load** |
+| Noise | **37.3 dB @ 0.3 m · 38.2 dB @ 0.2 m** idle, **~59 dB at full fan speed** (ePSA fan test) — 1–2 dB above the M910q at idle; the ceiling is what matters |
+| Management | ⚠️ **AMT/vPro unreachable — treat as absent**: the platform qualifies (i5-7500 + Q270 + I219-LM, `USB Provision` present) and every BIOS gate for MEBx is satisfied (`OROM Keyboard Access` on, `MEBx Hotkey` on, admin password set), yet CTRL+P and F12 show nothing; CSME **11.8.94.4494** is alive, so the open question is whether that image is an AMT build (`mei-amt-version` still to run). Remote power therefore rests on **AC Recovery `Power On` + Wake-on-LAN `LAN Only`** — no remote console |
+| Virtualisation | VT-x ✅ · **VT-d ✅** · TXT off — firmware ready for Proxmox |
+| Wireless | Intel 8265 WLAN + Bluetooth, **both disabled in BIOS** — unused on a hypervisor |
+| Role | Second virtualisation host (planned) — cluster, QDevice and replication are out of scope for now ([idea 15](ideas/15-second-proxmox-node.md)) |
+| Docs | [idea 15](ideas/15-second-proxmox-node.md) · [research 47](research/47-second-proxmox-node.md) · [research 52](research/52-optiplex7050-hardware-diagnostic.md) · [#177](https://github.com/jaroslaw-bagnicki/Homelab/issues/177) |
 
 ### OPNsense Router — Fujitsu Futro S930 (planned)
 

@@ -4,7 +4,8 @@
 > server and the CA. A second node would add capacity, make Proxmox **HA** reachable with a quorum device,
 > and unlock **ZFS replication** as the two-node substitute for shared storage.
 
-**Status**: 🧠 Idea — no decision taken, nothing purchased
+**Status**: 🧠 Idea — device acquired (**Dell OptiPlex 7050 MFF**, bought 2026‑11‑04); cluster, QDevice and
+storage path still undecided
 **Date**: 2026-10-25
 **Sources**: two Gemini hardware threads — see [research 47](../research/47-second-proxmox-node.md); cluster, quorum, HA and replication figures in that doc are verified against the Proxmox VE 9.2 documentation  
 **Related**: [research 47](../research/47-second-proxmox-node.md) (the analysis) · [research 29](../research/29-wyse5070-hardware-diagnostic.md) (the incumbent `pve`) · [ADR 01](../decisions/01-hardware-selection-m910q.md) · [ADR 22](../decisions/22-k3s-arc-homelab.md) (the k3s path that also wants three nodes) · [ADR 25](../decisions/25-home-assistant-thin-client.md) (the first HA candidate) · [ADR 31](../decisions/31-static-address-scheme.md) (address block) · [ADR 33](../decisions/33-fleet-node-hostnames.md) (hostname policy — needs an amendment) · [ADR 41](../decisions/41-ssh-certificates-step-ca.md) (host certificates that would inherit the new name) · [idea 13](13-freeipa-domain-controller.md) (the extra guest that makes `pve` memory tight)
@@ -35,6 +36,9 @@ The GA is therefore: **capacity now, HA with a QDevice, ZFS replication once bot
 a third node would only remove the QDevice and make Ceph plausible.
 
 ## Device options
+
+> **Purchased:** a **Dell OptiPlex 7050 MFF** (2026‑11‑04). The table records the options weighed before
+> that purchase; provisioning is tracked in issue [#177](https://github.com/jaroslaw-bagnicki/Homelab/issues/177).
 
 | Option | Fit | Why |
 |---|---|---|
@@ -116,11 +120,11 @@ like the SFF, not the Micro.
   limit on a shared 1 GbE link?
 - **Does k3s change the plan?** [ADR 22](../decisions/22-k3s-arc-homelab.md) wants three nodes too; one
   third box could serve both.
-- **Budget** — is the 399 zł 7040 still available, and with which CPU?
 
 ## References
 
 - [Research 47 — second Proxmox node](../research/47-second-proxmox-node.md) — the hardware comparison, the HA/QDevice case and what ZFS replication requires
+- [Research 52 — OptiPlex 7050 MFF hardware diagnostic](../research/52-optiplex7050-hardware-diagnostic.md) — the pre-boot audit of the purchased unit
 - Chats: [37 — Wyse 5070 vs OptiPlex 3000](https://share.gemini.google/XvMCIZlMCC3d) · [38 — OptiPlex comparison](https://share.gemini.google/Q1nb6iTr0YzJ)
 - Proxmox VE 9.2 — [Cluster Manager](https://pve.proxmox.com/pve-docs/chapter-pvecm.html) · [Storage Replication](https://pve.proxmox.com/pve-docs/chapter-pvesr.html) · [Ceph](https://pve.proxmox.com/pve-docs/chapter-pveceph.html)
 - [Idea 13 — FreeIPA domain controller](13-freeipa-domain-controller.md) (the next guest) · [idea 05 — Home Assistant on a thin client](05-home-assistant-thin-client.md) (the HA candidate)
