@@ -76,14 +76,19 @@ Second pass (2026-11-06):
 
 | Page | Setting | Value |
 |---|---|---|
-| Security | **OROM Keyboard Access** | **`Disabled` on one pass, `Enabled` on another — this is what gates Ctrl+P and the F12 MEBx entry** ([Remark 2](#remark-2--mebxamt-does-not-come-up)) |
+| Security | **OROM Keyboard Access** | **Enabled** — confirmed; this is the option that gates Ctrl+P / F12 MEBx, and it is already on ([Remark 2](#remark-2--mebxamt-does-not-come-up)) |
 | System Configuration → SATA Operation | **AHCI** | correct for Proxmox and ZFS — no RAID/RST to undo |
 | System Configuration → Drives | `SATA-0` **(none)** · **`SATA-4` = 128 GB SSD, SK hynix SC311 SATA 128GB** · `M.2 PCIe SSD-0` **(none)** | the module enumerates on a SATA port; the **2.5″ bay (SATA-0) is empty** and **no NVMe device** is present — capacity confirmed **128 GB** |
-| System Configuration → Integrated NIC | **Enabled**; *Enable UEFI Network Stack* **unchecked** | no PXE boot path; Wake-on-LAN is unaffected by this |
+| System Configuration → Integrated NIC | **Enabled**; *Enable UEFI Network Stack* **enabled** | UEFI PXE available; Wake-on-LAN is a separate setting |
 | Manageability → USB Provision | **Enable USB Provision — checked** | the BIOS offers **AMT provisioning from USB**, i.e. the platform is AMT-capable |
 | Virtualization Support | Virtualization ✅ · **VT for Direct I/O ✅** · Trusted Execution ☐ | VT-x and VT-d both on; TXT off, which nothing here needs |
-| Wireless → Wireless Device Enable | WLAN/WiGig ✅ · Bluetooth ✅ | both radios on — unused on a hypervisor, worth disabling |
+| Wireless → Wireless Device Enable | WLAN/WiGig ☐ · Bluetooth ☐ | **both radios disabled** — right for a hypervisor |
 | Performance | **Intel TurboBoost ☐ off** · Limit CPUID ☐ | the chip tops out at its **3.4 GHz base**, not the 3.8 GHz turbo |
+| Power Management | **AC Recovery** — `Power Off` / `Power On` / `Last Power State` | set **`Power On`**: the node returns by itself after an outage ([remote power](#consequence-for-the-plan)) |
+| Power Management | **Deep Sleep Control** — `Disabled` / `S5 only` / `S4+S5` | leave **`Disabled`**: the page warns that enabling it disables **remote wake and manageability** while shut down |
+| Power Management | **USB Wake Support** ✅ · **Block Sleep (S3)** ☐ | USB wake on; sleep not blocked — irrelevant at runtime, both harmless on a 24/7 node |
+| Power Management → Wake on LAN/WLAN | `Disabled` / **`LAN Only`** / `WLAN Only` / `LAN or WLAN` / `LAN with PXE Boot` | set **`LAN Only`** — the setting that lets a magic packet start the node with no vPro |
+| POST Behavior | **Fastboot** — `Minimal` / `Thorough` / `Auto` · plus *Extend BIOS POST Time*, *Adapter Warnings*, *Keyboard Errors*, *Warnings and Errors* | set **`Thorough`** and a non-zero **`Extend BIOS POST Time`** — the reliable way to catch Ctrl+P |
 
 Notable absences: the **Manageability** group contains only `USB Provision` and `MEBx Hotkey` — there is **no `Intel AMT Capability` page**, the exact item Dell's KB instructs the customer to enable.
 
@@ -180,20 +185,22 @@ Dell KB [000199831 — Unable to access the MEBx vPro menu using the F12 boot me
 - **Its own illustration shows the AMT page in a `FW Status Recovery Error` state** — the condition in which AMT cannot be enabled from BIOS at all, whatever the password or capability setting says. That state is not observable from these menus.
 - **The password only unlocks the hotkey.** It proves nothing about whether the ME runs an AMT-capable image.
 
-So for this platform only three causes remain: **OROM Keyboard Access disabled**, the **ME image not being an AMT build**, or the **Ctrl+P window being missed** — with the ME-level check below as what separates the last two.
-
-Two BIOS details argue that AMT *is* present: `Manageability → USB Provision` is enabled and describes provisioning **Intel AMT** from a USB device, which a non-AMT image would have no use for. So the ordering is now **OROM Keyboard Access first, timing second, ME firmware third**.
+So for this platform only two causes remain, and neither is a menu item: the **Ctrl+P window being missed** (Fastboot, POST time, keyboard init) or the **ME firmware not presenting MEBx**. Two BIOS details argue that AMT *is* present: `Manageability → USB Provision` is enabled and describes provisioning **Intel AMT** from a USB device, which a non-AMT image would have no use for.
 - **The password is only an enabler for the hotkey**, not evidence that an AMT-capable ME image is present. Setting it proves nothing about the firmware.
 
 So the remaining causes are narrower than the original list: either the BIOS has **no AMT capability page** (the ME image is not an AMT build), the **ME firmware is in an error/recovery state**, or **Device Configuration Hotkey Access** is off. The ME-level check below — not another BIOS walk — is what separates them.
 
-### The gate Dell names: OROM Keyboard Access
+### The gate Dell names: OROM Keyboard Access — ruled out
 
-`Security → OROM Keyboard Access` controls *"whether users are able to enter Option ROM Configuration screens via hotkeys during boot. Specifically this setting is capable of preventing access to Intel RAID (CTRL+I) or **Intel Management Engine BIOS Extension (CTRL+P/F12)**"* — Dell's own wording on this machine's own BIOS screen.
+`Security → OROM Keyboard Access` is the platform's own switch for this: *"whether users are able to enter Option ROM Configuration screens via hotkeys during boot. Specifically this setting is capable of preventing access to Intel RAID (CTRL+I) or **Intel Management Engine BIOS Extension (CTRL+P/F12)**"*. If it is off, **no other BIOS setting can surface MEBx** — `MEBx Hotkey` and the admin password are downstream of it.
 
-It was seen **`Disabled`** on one pass and **`Enabled`** on another, which is exactly the state in which "the hotkey does nothing, and F12 shows no MEBx" makes sense. **With this option disabled, no other BIOS setting can surface MEBx** — the `MEBx Hotkey` toggle and the admin password are downstream of it.
+**It is `Enabled` on this unit.** With that, the hotkey enabled and the password set, **every BIOS-side condition Dell documents for MEBx is satisfied** — so the remaining causes are outside the menus: the POST window being too short to hit Ctrl+P, or the ME firmware not presenting MEBx.
 
-**Test:** set `OROM Keyboard Access = Enabled`, save, power off, then Ctrl+P at the Dell logo — and check F12 in the same boot for a MEBx entry.
+**Next, in this order:**
+
+1. **`POST Behavior → Fastboot = Thorough`** and a non-zero **`Extend BIOS POST Time`** — `Minimal` deliberately skips hardware initialisation, which shortens the window in which the hotkey is read; and the BIOS event log already recorded a `Keyboard not found`, so keyboard initialisation is worth giving time to.
+2. **`Deep Sleep Control = Disabled`** if it is currently enabled — the page warns it disables **remote wake and manageability** when the system is shut down, which is where a cluster node spends its repairs.
+3. **`mei-amt-version`** from the live session if Ctrl+P still does nothing — the one piece of evidence no BIOS page can give.
 
 ### Ranked hypotheses
 
@@ -201,7 +208,7 @@ It was seen **`Disabled`** on one pass and **`Enabled`** on another, which is ex
 |---|---|---|---|
 | 1 | **ME firmware is in a non-AMT mode** ("Standard Manageability" / AMT capability off in the ME region) | Dell shipped non-vPro SKUs whose ME image has no AMT; the ME region — not the CPU — decides. A corporate-lease unit with an asset tag is exactly where this happens | Intel's `mei-amt-version` from the live session prints the ME firmware version and states plainly whether AMT is present; `cat /sys/class/mei/mei0/fw_ver` |
 | 2 | **AMT/MEBx disabled in BIOS** | ❌ **Refuted 2026-11-06** — no `Intel AMT Capability` page exists on the 7050, and `MEBx Hotkey` is already enabled | — |
-| 2b | **`OROM Keyboard Access` = Disabled** | ⬅ **Leading candidate** — Dell's own description names *Intel Management Engine BIOS Extension (CTRL+P/F12)* as exactly what this option blocks, and it was seen in the `Disabled` state | Set it **Enabled**, save, power off, then Ctrl+P at the logo and re-check F12 |
+| 2b | **`OROM Keyboard Access` = Disabled** | ❌ **Ruled out** — it is `Enabled`, so the hotkey is permitted | — |
 | 3 | **Hotkey timing / input path** | Ctrl+P must be hammered the moment the Dell logo appears; a hub, KVM or USB 3 port can eat it, and Fast Boot shortens the window | Wired keyboard straight into a rear port, Fast Boot off, spam Ctrl+P from power-on |
 | 4 | **AMT soft-disabled / left unprovisioned in a bad state by the previous IT owner** | The ME re-reads its configuration on **cold** boot only | BIOS reset to defaults, unplug AC for ~30 s, then retry |
 | 5 | **ME in a firmware error / recovery state** (`FW Status Recovery Error`) | The Dell article's own screenshot shows it, and in that state no BIOS toggle brings AMT back | BIOS update to the current release, **Load BIOS defaults**, then a full AC drain (unplug ~30 s) and cold boot; if the state persists, Dell's ME recovery path is a board-level service |
@@ -237,7 +244,7 @@ Regardless of the outcome, **record the ME state** in `docs/hardware.md`: an unc
 
 ## Pending Checks
 
-1. **BIOS walk (F2)** — ✅ **done 2026-11-06** for the MEBx/storage/virtualisation questions: no AMT capability page, `MEBx Hotkey` enabled, **`OROM Keyboard Access` = the gate**, admin password set, TPM 2.0 enabled, **AHCI**, **VT-x + VT-d on**, TXT off, ASPM `Auto`, TurboBoost off, wireless radios enabled, `SATA-4 = 128 GB SK hynix SC311 SATA`, `SATA-0` and `M.2 PCIe SSD-0` empty. **Still to capture:** Power Management → **AC Recovery** and Wake-on-LAN, POST Behavior → **Fastboot**, Secure Boot state, BIOS Downgrade/BIOS Recovery toggles, and the Performance values for SpeedStep / C-States / Multi Core.
+1. **BIOS walk (F2)** — ✅ **done 2026-11-06** for the MEBx/storage/virtualisation questions: no AMT capability page, `MEBx Hotkey` enabled, **`OROM Keyboard Access` enabled**, admin password set, TPM 2.0 enabled, **AHCI**, **VT-x + VT-d on**, TXT off, ASPM `Auto`, TurboBoost off, wireless radios disabled, UEFI network stack enabled, `SATA-4 = 128 GB SK hynix SC311 SATA`, `SATA-0` and `M.2 PCIe SSD-0` empty. **Still to capture:** Power Management → **AC Recovery**, **Wake on LAN/WLAN**, **Deep Sleep Control**; POST Behavior → **Fastboot** and **Extend BIOS POST Time**; Secure Boot state; SpeedStep / C-States / Multi Core values.
 2. **ME/AMT state** — `mei-amt-version`, `/sys/class/mei/mei0/fw_ver`, `dmesg | grep -i mei`. With the BIOS ruled out and `OROM Keyboard Access` identified, this check runs **after** the retest and only matters if MEBx still will not appear.
 3. **BIOS level** — 1.27.0 is from 2023-09-18; check Dell's current release before installing Proxmox (and expect an `intel-microcode` update: the live session reports `old_microcode` **Vulnerable**).
 4. **Disk** — `lsblk`, `smartctl -a`: exact model, capacity, POH, `Media_Wearout`/`Total_LBAs_Written`. Used drive → endurance is the decision input, and an NVMe purchase decision hangs off it.
