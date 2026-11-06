@@ -34,11 +34,17 @@ ansible-playbook ansible/playbooks/playbook-logs.yml
 # ca private CA guest base provision (from a LAN workstation, runbook 35)
 ansible-playbook ansible/playbooks/playbook-ca.yml
 
+# ipa FreeIPA server VM base provision (from a LAN workstation, runbook 41)
+ansible-playbook ansible/playbooks/playbook-ipa.yml
+
 # OpenCode per-project workload (decoupled recipe)
 ansible-playbook ansible/workloads/opencode/opencode-playbook.yml
 
 # step-ca private CA workload (decoupled recipe, runbook 35)
 ansible-playbook ansible/workloads/step-ca/step-ca-playbook.yml
+
+# FreeIPA server workload (decoupled recipe, runbook 41)
+ansible-playbook ansible/workloads/freeipa/freeipa-playbook.yml
 ```
 
 ## Structure
@@ -60,16 +66,18 @@ ansible-playbook ansible/workloads/step-ca/step-ca-playbook.yml
 | `playbooks/playbook-nas.yml` | Beetle M-III OMV NAS base provision: common → ca_trust → security → nut_client → netdata → fluentbit (UFW LAN allow for SSH + OMV web `443`, `80` denied per ADR 34; Netdata child streaming to `pve`) |
 | `playbooks/playbook-logs.yml` | Victoria stack guest (`vtstack`, LXC 214) base provision: common → ca_trust → security → docker_host → fluentbit (Docker from the official repo, Debian) |
 | `playbooks/playbook-ca.yml` | Private CA guest (`ca`, LXC 215) base provision: common → security → fluentbit (Debian LXC on `pve`, no Docker; rerun after the CA starts so the host certificate and SSH CA trust are applied) |
+| `playbooks/playbook-ipa.yml` | FreeIPA server VM (`ipa`, VM 216) base provision: ipa_host — Fedora/RHEL-family hostname/FQDN, chrony, firewalld, fleet key, fleet resolver (runbook 41) |
 | `workloads/` | Self-contained workload recipes — playbook entrypoint, role recipes, ansible-side README, all co-located per workload |
 | `workloads/opencode/` | OpenCode per-project server workload (see [README](workloads/opencode/README.md)) |
 | `workloads/step-ca/` | Private CA — `step-ca` native service on the `ca` guest, TPM-bound intermediate and SSH CA keys (see [README](workloads/step-ca/README.md)) |
+| `workloads/freeipa/` | FreeIPA server — external-ca install, `admin` + test user, M1 verification (see [README](workloads/freeipa/README.md)) |
 | `roles/` | Base shared roles — see the [roles index](roles/README.md) |
 
 ## Workloads
 
 Each workload in `ansible/workloads/<workload>/` is a self-contained recipe that can run independently of the base playbook (after base setup has been applied). See [`docs/workloads.md`](../docs/workloads.md) for the index and convention rules.
 
-Currently: [OpenCode](workloads/opencode/README.md) — per-project OpenCode server instances on cloudlab; [VictoriaLogs](workloads/victorialogs/README.md) — the Tier B log store on the `vtstack` guest; [step-ca](workloads/step-ca/README.md) — the private CA on the `ca` guest.
+Currently: [OpenCode](workloads/opencode/README.md) — per-project OpenCode server instances on cloudlab; [VictoriaLogs](workloads/victorialogs/README.md) — the Tier B log store on the `vtstack` guest; [step-ca](workloads/step-ca/README.md) — the private CA on the `ca` guest; [FreeIPA](workloads/freeipa/README.md) — the Linux domain on the `ipa` VM.
 
 ## Roles
 
@@ -90,8 +98,10 @@ Base shared roles live in [`roles/`](roles/README.md). The [roles index](roles/R
 | `playbook-nas.yml` | common → ca_trust → security → nut_client → netdata → fluentbit | Beetle M-III OMV NAS base provision + Netdata child (see [runbook 32](../docs/runbooks/32-beetle-m3-omv-setup.md)) |
 | `playbook-logs.yml` | common → ca_trust → security → docker_host → fluentbit | Victoria stack guest (`vtstack`, LXC 214) base provision — Debian 13 LXC on `pve` (see [runbook 33](../docs/runbooks/33-deploy-victorialogs.md)) |
 | `playbook-ca.yml` | common → security → fluentbit | Private CA guest (`ca`, LXC 215) base provision — Debian 13 LXC on `pve`; rerun after the CA starts for the host certificate (see [runbook 35](../docs/runbooks/35-deploy-step-ca.md) / [runbook 40](../docs/runbooks/40-deploy-ssh-certificates.md)) |
+| `playbook-ipa.yml` | ipa_host | FreeIPA server VM (`ipa`, VM 216) base provision — Fedora/RHEL-family hostname/FQDN, chrony, firewalld, fleet key, fleet resolver (see [runbook 41](../docs/runbooks/41-deploy-freeipa-server.md)) |
 | `workloads/opencode/opencode-playbook.yml` | docker_opencode_ingress → docker_opencode_instances | Deploy the OpenCode per-project server workload (see [runbook 17](../docs/runbooks/17-deploy-opencode-on-cloudlab.md)) |
 | `workloads/step-ca/step-ca-playbook.yml` | step_ca | Deploy the private CA (`step-ca`) with a TPM-bound intermediate and SSH CA (see [runbook 35](../docs/runbooks/35-deploy-step-ca.md) / [runbook 36](../docs/runbooks/36-private-ca-init.md) / [runbook 40](../docs/runbooks/40-deploy-ssh-certificates.md)) |
+| `workloads/freeipa/freeipa-playbook.yml` | freeipa_server | Install the FreeIPA server with an external CA (see [runbook 41](../docs/runbooks/41-deploy-freeipa-server.md)) |
 
 ## Inventory
 
@@ -108,9 +118,10 @@ nas ansible_host=192.168.2.202 ansible_user=fleetadm
 [proxmox_guests]
 vtstack ansible_host=192.168.2.214 ansible_user=fleetadm
 ca ansible_host=192.168.2.215 ansible_user=fleetadm
+ipa ansible_host=192.168.2.216 ansible_user=fleetadm
 ```
 
-All hosts use the generic **`fleetadm`** operator account (key-only SSH, no password). The hostnames must resolve on the control machine — add `cloudlab`, `lab`, `pve`, `edge`, `nas`, `vtstack`, and `ca` to the hosts file (or the equivalent). `lab`, `pve`, `edge`, `nas`, `vtstack`, and `ca` live on the home LAN and are only reachable from a workstation on `192.168.2.0/24` — run their playbooks there (runbook 25 / runbook 24 / runbook 28 / runbook 32 / runbook 33 / runbook 35).
+All hosts use the generic **`fleetadm`** operator account (key-only SSH, no password). The hostnames must resolve on the control machine — add `cloudlab`, `lab`, `pve`, `edge`, `nas`, `vtstack`, `ca`, and `ipa` to the hosts file (or the equivalent). `lab`, `pve`, `edge`, `nas`, `vtstack`, `ca`, and `ipa` live on the home LAN and are only reachable from a workstation on `192.168.2.0/24` — run their playbooks there (runbook 25 / runbook 24 / runbook 28 / runbook 32 / runbook 33 / runbook 35 / runbook 41).
 
 ### Agent account pattern (`fleetadm`)
 
