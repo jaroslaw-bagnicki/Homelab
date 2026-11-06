@@ -52,8 +52,27 @@ The 7050 replaces the "OptiPlex 7040 Micro, i5-6500T" that [research 47 §2](47-
 | Audio | HDA Intel PCH (Realtek codec; DP/HDMI outputs + front line-out/headphone) |
 | TPM | **TPM 2.0 present** (ACPI `MSFT0101`) — firmware-vs-discrete still to identify ([research 37](37-tpm2-hardware-and-fleet.md) pattern) |
 | Power | AC attached, no battery · **130 W adapter** supplied · BIOS event log carries historical `Unknown AC power adapter` alerts ([below](#bios-event-log--the-adapter-history)) |
-| Cooling | Fan **2281 RPM at idle**, package **44 °C** (SystemRescue, ~4 min uptime) — audible, unlike the fanless Wyse 5070 |
+| Cooling | Fan **2281 RPM at idle**, package **44 °C** (SystemRescue, ~4 min uptime) — audible, compared against the M910q [below](#noise--measured-against-the-m910q) |
 | Session | SystemRescue 13.02, kernel 6.18.41, DHCP `192.168.2.206` on `enp0s31f6` |
+
+### Noise — measured against the M910q
+
+Measured 2026-11-06 with a sound-level meter, both machines at idle in the same room:
+
+| Distance | 7050 (i5-7500, 65 W) | M910q (i5-7500T, 35 W) | Δ |
+|---|---|---|---|
+| 0.3 m | **37.3 dB** | 36.1 dB | +1.2 dB |
+| 0.2 m | **38.2 dB** | 36.4 dB | +1.8 dB |
+
+This is the cleanest comparison the fleet can offer: **the same 4C/4T Kaby Lake silicon at two TDPs**, in two Micro/Tiny chassis. The 7050 is quieter than expected for a 65 W part in a 35 W chassis — the gap is **1–2 dB, not the 10 dB that reads as "twice as loud"**.
+
+Three things to keep in mind before acting on it:
+
+- **The readings are relative, not calibrated.** Weighting and ambient level were not recorded, and the distance behaviour does not follow inverse-square law: 0.3 m → 0.2 m should add ~3.5 dB, but the 7050 gained 0.9 dB and the M910q 0.3 dB. Near-field readings at that range are dominated by room reflections and background, so treat the numbers as a ranking between the two boxes rather than as SPL figures.
+- **Perception is not level.** A perception of *"much louder"* at a 1–2 dB difference points at **tonal character** — fan pitch and blade-pass frequency — rather than at acoustic power (1.2 dB ≈ 32 % more power, well under the "twice as loud" 10 dB step). The 7050 spins **2281 RPM at idle**; a 35 W CPU lets the M910q sit on a lower fan curve.
+- **Check the cooler before judging the design.** The unit is a 2018 machine whose BIOS event log records the cover removed repeatedly, idling at 44 °C. Dust in the heatsink and tired thermal paste raise both temperature and RPM: clean the fan/heatsink and repaste before drawing conclusions, then re-measure.
+
+**If the noise matters for placement** — the 35 W part is the lever, and the M910q is the evidence: an **i7-7700T (35 W, 4C/8T)** would both cut the fan curve and add hyper-threading. Cheaper knobs first: keep **TurboBoost off** (as it is), cap the package with `intel_rapl`, and chart fan RPM in Netdata so the ramp is visible rather than anecdotal.
 
 ### Firmware settings observed (F2 walk, 2026-11-06)
 

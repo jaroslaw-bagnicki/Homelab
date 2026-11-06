@@ -26,6 +26,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Storage | 256 GB NVMe — SK hynix BC501 HFM256GDJTNG-8310A · serial `FS85N582310805D30` · FW `80000C00` · SMART **PASSED** (1% used, 16,355 POH — §0 audit 2026-08-16); free 2.5" SATA bay for a secondary/backup disk |
 | Firmware | BIOS LENOVO M1AKT2CA (2017-11-22) · board 310B |
 | Network | 1× Gigabit Ethernet Intel I219-LM (`enp0s31f6`, MAC `6c:4b:90:40:c5:e2`) |
+| Noise | **36.1 dB @ 0.3 m · 36.4 dB @ 0.2 m** (sound-level meter, idle, 2026-11-06) |
 | Role | Main workload host |
 | Docs | [ADR 01](decisions/01-hardware-selection-m910q.md) · [runbook 25](runbooks/25-m910q-os-refresh.md) |
 
@@ -98,6 +99,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Network | Intel **I219-LM** GbE (`enp0s31f6`) · Intel 8265 WiFi/BT · DHCP `.206`, reserved `.203` ([ADR 31](decisions/31-static-address-scheme.md)) |
 | TPM | **TPM 2.0, enabled** (TPM On, SHA-256, attestation + key storage) — PTT vs discrete pending |
 | Power | **130 W** adapter (the model's documented 65 W / 130 W options) · BIOS logged `Unknown AC power adapter` before the purchase, none on the current boot · fan ~2281 RPM at idle |
+| Noise | **37.3 dB @ 0.3 m · 38.2 dB @ 0.2 m** (idle) — 1–2 dB above the M910q; tonal character, not level |
 | Management | AMT-capable platform (i5-7500 + Q270 + I219-LM, `USB Provision` present) — every BIOS gate for MEBx is satisfied (`OROM Keyboard Access` on, `MEBx Hotkey` on, admin password set) yet CTRL+P and F12 still show nothing; the ME firmware is still to prove |
 | Virtualisation | VT-x ✅ · **VT-d ✅** · TXT off — firmware ready for Proxmox |
 | Wireless | Intel 8265 WLAN + Bluetooth, **both enabled in BIOS** — unused, disable on a hypervisor |
