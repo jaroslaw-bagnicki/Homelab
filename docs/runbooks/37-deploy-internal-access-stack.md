@@ -31,7 +31,7 @@
   ([ADR 34](../decisions/34-lan-tls-only.md)).
 - **Published sites** — `dns.internal` (console), `netdata.internal`, `logs.internal` (VictoriaLogs),
   `proxmox.internal` (UI on `:8006`) and `omv.internal` (NAS workbench on `:443`), all behind the
-  single `:443` listener. `pve.internal` (`.201`) and `nas.internal` (`.202`) stay the host records so
+  single `:443` listener. `pve1.internal` (`.201`) and `nas.internal` (`.209`) stay the host records so
   Ansible, NUT and Netdata keep reaching the nodes themselves.
 - **CA prerequisite** — the `ca` guest (LXC 215) uses `192.168.2.240` so `step-ca` can resolve
   `netdata.internal` during challenge validation.
@@ -129,8 +129,9 @@ dig @192.168.2.240 logs.internal +short       # 192.168.2.240 (wildcard)
 dig @192.168.2.240 proxmox.internal +short    # 192.168.2.240 (wildcard)
 dig @192.168.2.240 omv.internal +short        # 192.168.2.240 (wildcard)
 dig @192.168.2.240 ca.internal +short         # 192.168.2.215
-dig @192.168.2.240 pve.internal +short        # 192.168.2.201
-dig @192.168.2.240 nas.internal +short        # 192.168.2.202
+dig @192.168.2.240 pve1.internal +short        # 192.168.2.201
+dig @192.168.2.240 pve2.internal +short        # 192.168.2.202
+dig @192.168.2.240 nas.internal +short        # 192.168.2.209
 dig @192.168.2.240 edge.internal +short       # 192.168.2.240
 dig @192.168.2.240 example.com +short         # forwarded upstream
 ```
@@ -151,10 +152,10 @@ The `common` role does it, on the **host** — guests are skipped and inherit th
 container start ([ADR 40](../decisions/40-internal-dns-proxy-edge.md) amendment):
 
 ```powershell
-ansible-playbook ansible/playbooks/playbook-pve.yml --diff --limit pve
+ansible-playbook ansible/playbooks/playbook-pve1.yml --diff --limit pve1
 ```
 
-`pve` gets `/etc/resolv.conf` pointing at Technitium (`nameserver 192.168.2.240`, `search internal`).
+`pve1` gets `/etc/resolv.conf` pointing at Technitium (`nameserver 192.168.2.240`, `search internal`).
 PVE writes a container's `/etc/resolv.conf` at every start and, with no `nameserver:` key in
 `/etc/pve/lxc/<vmid>.conf`, takes it from the **host's** own file — so the guest inherits the pin on
 its next start. A guest-side write alone is not durable, which is how a >24 h outage left every leaf
@@ -206,8 +207,8 @@ through Technitium and trusts the fleet root. Plaintext HTTP is never exposed: T
 | `https://dns.internal` | `http://127.0.0.1:5380` | Technitium console; loopback-only hop |
 | `https://netdata.internal` | `https://192.168.2.201:19999` | backend self-signed, verify skipped (#143) |
 | `https://logs.internal` | `https://192.168.2.214:9428` | VictoriaLogs; basic auth passes through |
-| `https://proxmox.internal` | `https://192.168.2.201:8006` | Proxmox UI (the host stays `pve.internal` → `.201`) |
-| `https://omv.internal` | `https://192.168.2.202:443` | OMV workbench; the host stays `nas.internal` → `.202` |
+| `https://proxmox.internal` | `https://192.168.2.201:8006` | Proxmox UI (the host stays `pve1.internal` → `.201`) |
+| `https://omv.internal` | `https://192.168.2.209:443` | OMV workbench; the host stays `nas.internal` → `.209` |
 
 ```sh
 # Same check as the browser, from a client that trusts the root
@@ -220,7 +221,7 @@ done
 Expected: `200` for every site (VictoriaLogs answers `401` without credentials — that still proves the
 TLS leg) and the `step-ca` leaf — `openssl s_client` must show the matching `DNS:<name>.internal`. A
 `502` means the backend is not listening; check `systemctl status dns` on `edge`, `victoria-logs` on
-`vtstack`, `pveproxy` on `pve`.
+`vtstack`, `pveproxy` on `pve1`.
 
 The CA resolver from §5 must be live before this section: without it `step-ca` cannot resolve
 `netdata.internal` to validate a challenge, and Caddy will keep retrying issuance.
@@ -264,7 +265,7 @@ curl -sS --connect-timeout 5 -o /dev/null -w '%{http_code}\n' http://192.168.2.2
 
 ```powershell
 ansible-playbook ansible/playbooks/playbook-edge.yml --diff
-ansible-playbook ansible/playbooks/playbook-pve.yml --diff --limit pve
+ansible-playbook ansible/playbooks/playbook-pve1.yml --diff --limit pve1
 ansible-playbook ansible/playbooks/playbook-ca.yml --diff
 ```
 
@@ -283,7 +284,7 @@ done
 Technitium's zone database, the Caddy certificates under `/var/lib/caddy`, and the systemd units all
 survive a reboot. The CA guest's resolver does too: PVE rewrites it from the host's file at every
 start, so the check in [§5](#5-point-the-fleet-at-technitium) is the one to re-run after a
-`pve` reboot.
+`pve1` reboot.
 
 ## 8. Backup and restore
 
@@ -314,7 +315,7 @@ start, so the check in [§5](#5-point-the-fleet-at-technitium) is the one to re-
 
 | Symptom | Check |
 |---|---|
-| All `.internal` leaves expired after an outage | The CA guest lost name resolution. On `ca`: `getent hosts ca.internal`, `cat /etc/resolv.conf`; on `pve`: `cat /etc/resolv.conf` — PVE rewrites the guest from it at every start. If the host points elsewhere, re-run `playbook-pve.yml --limit pve`, then `pct reboot 215` (PVE rewrites the guest file and `step-ca` comes back with it), then restart `caddy` |
+| All `.internal` leaves expired after an outage | The CA guest lost name resolution. On `ca`: `getent hosts ca.internal`, `cat /etc/resolv.conf`; on `pve1`: `cat /etc/resolv.conf` — PVE rewrites the guest from it at every start. If the host points elsewhere, re-run `playbook-pve1.yml --limit pve1`, then `pct reboot 215` (PVE rewrites the guest file and `step-ca` comes back with it), then restart `caddy` |
 | `homelab-leaf-expiry-check` fails on `edge` | A site serves no certificate, a leaf has <6 h left, or the CA's `/health` is down: `journalctl -u homelab-leaf-expiry-check -n 20`, `journalctl -u caddy -n 50` for the ACME order, and `systemctl reset-failed homelab-leaf-expiry-check` once renewal succeeds |
 | `dns.service` does not start | `journalctl -u dns -n 50`; `ss -lntp \| grep :53`; ensure `systemd-resolved` is stopped; confirm `libicu76` and the ASP.NET runtime are installed |
 | Technitium API login fails | From `edge`: `curl -s http://127.0.0.1:5380/api/status` shows `hasDefaultCredentials`; verify the AKV secret matches the password on the appliance |
@@ -323,7 +324,7 @@ start, so the check in [§5](#5-point-the-fleet-at-technitium) is the one to re-
 | ACME fails | `journalctl -u caddy`; from `edge`, `dig ca.internal`; from `ca`, `dig netdata.internal`; confirm TCP/443 reaches `.240` and TCP/9000 reaches `.215`; check clocks |
 | Certificate warning in a browser | The client lacks the fleet root — [#144](https://github.com/jaroslaw-bagnicki/Homelab/issues/144) distributes it |
 | `netdata.internal` returns 502 | Netdata Parent not listening on `192.168.2.201:19999`; check [runbook 31](31-deploy-netdata.md) |
-| Any other site returns 502 | The upstream is down: Technitium `:5380` on `edge`, VictoriaLogs `192.168.2.214:9428`, `pveproxy` `192.168.2.201:8006`, OMV nginx `192.168.2.202:443` |
+| Any other site returns 502 | The upstream is down: Technitium `:5380` on `edge`, VictoriaLogs `192.168.2.214:9428`, `pveproxy` `192.168.2.201:8006`, OMV nginx `192.168.2.209:443` |
 | Caddy starts before DNS on boot | Confirm `caddy.service.d/10-after-dns.conf` exists; Caddy should still start on a CA outage and retry issuance |
 
 ---

@@ -12,7 +12,8 @@
 >
 > **Hostname `nas`** — the node is named for its **role in the fleet** ([ADR 33](../decisions/33-fleet-node-hostnames.md));
 > `omv` is the ML110's name and names a workload, so it is not reused. It carries the static
-> `192.168.2.202` ([ADR 31](../decisions/31-static-address-scheme.md)).
+> `192.168.2.209` ([ADR 31](../decisions/31-static-address-scheme.md)) — moved from `.202` on
+> 2026-11-06 to free `.202` for `pve2`.
 
 ## Goals
 
@@ -21,15 +22,19 @@
   not run** — deliberately deferred (see Status).
 - Install **OMV 8.x** on the **SanDisk X600 128 GB SSD** (the Seagates disconnected during install).
 - Create the **mdadm RAID1** array `md0` = 2× Seagate 1 TB → **XFS** = **1 TB usable**.
-- Set static IP **`192.168.2.202`** on the LAN interface (confirm its name — §4c) and hostname **`nas`**.
+- Set static IP **`192.168.2.209`** on the LAN interface (confirm its name — §4c) and hostname **`nas`**.
 - Create `fleetadm` ([ADR 28](../decisions/28-fleet-admin-account-and-key.md)) and enroll the node
   with `playbook-nas.yml`: `common → security → nut_client → netdata`.
-- Verify the node appears in the Netdata Parent on `pve` and joins the NUT rail as an `upsmon`
+- Verify the node appears in the Netdata Parent on `pve1` and joins the NUT rail as an `upsmon`
   **secondary**.
 
 ## Status
 
 Authored 2026-09-20, before execution — the checklist fills in as the install runs.
+
+> **Address history.** The NAS was installed at `192.168.2.202` (2026-09-21). It was re-addressed
+> to **`192.168.2.209`** on 2026-11-06 to free `.202` for `pve2`; the dated checklist entries below
+> record the original `.202` state.
 
 - [x] Phase 0 BIOS walk — 2026‑09‑21, recorded in [research 32](../research/32-wincor-beetle-m3-hardware-diagnostic.md#bios-walk)
 - [ ] Phase 0 close-out — **Memtest86+ and the RTC coin cell are deliberately deferred**
@@ -44,7 +49,7 @@ Authored 2026-09-20, before execution — the checklist fills in as the install 
 - [x] `fleetadm` created at the CLI (key-only, password locked) — 2026‑09‑21; SSH hardening landed
       with the `security` role in §8
 - [x] `playbook-nas.yml` applied — `nut-monitor` active, Netdata child streaming and **visible on
-      the `pve` dashboard** — 2026‑09‑21
+      the `pve1` dashboard** — 2026‑09‑21
 - [ ] ML110 retired; `192.168.2.210` released — **deferred to Phase 2** (2026‑09‑22): the role must
 match a target that can serve shares, so the array being verified is necessary but not sufficient
 
@@ -160,16 +165,16 @@ With **only the SanDisk SSD attached** (Seagates disconnected):
   ([§8](#8-fleet-enrollment--ansible)), so a value set in the OMV UI here is overwritten. Verify with
   `timedatectl` — expect `Time zone: Etc/UTC` and `System clock synchronized: yes`.
 
-### 4c. Static IP `192.168.2.202` and hostname `nas`
+### 4c. Static IP `192.168.2.209` and hostname `nas`
 
-Per [ADR 31](../decisions/31-static-address-scheme.md), the NAS owns `192.168.2.202` (physical-server
-block):
+Per [ADR 31](../decisions/31-static-address-scheme.md), the NAS owns `192.168.2.209` (physical-server
+block, moved from `.202` on 2026-11-06 to free `.202` for `pve2`):
 
 - **Confirm the interface name first:** `ip -br addr` (research 32 records `enp0s31f6`; the kernel
   name can differ across boots/enumeration). Then `Network | Interfaces` → edit that interface
   (Intel I219-V, MAC `00:01:2e:8e:14:0d`).
-- Method: **Static** — IP `192.168.2.202`, netmask `255.255.255.0`, gateway `192.168.2.1`, DNS `192.168.2.1`.
-- Apply. Verify from `lab`: `ping 192.168.2.202`.
+- Method: **Static** — IP `192.168.2.209`, netmask `255.255.255.0`, gateway `192.168.2.1`, DNS `192.168.2.1`.
+- Apply. Verify from `lab`: `ping 192.168.2.209`.
 - **Hostname** — `Network → General` (a **top-level** `Network` item, not `System → Network`):
   confirm **`nas`** and, for now, domain **`home`** as set at §3 (so the FQDN is `nas.home`) — the name
   space is now `.internal` ([ADR 37](../decisions/37-lan-name-space-internal.md)), so repoint this field
@@ -199,7 +204,7 @@ block):
 > certificate is not the right home for the internal name either. OMV adds **`subjectAltName=DNS:<Common Name>`**, so `https://nas.local` matches on name and
 > only the untrusted-issuer warning remains, which is inherent to a self-signed certificate. An
 > X.509 certificate can match an IP when that address is included as an `iPAddress` SAN, but this
-> OMV-generated certificate has only a DNS SAN, so `https://192.168.2.202` warns on the name — use
+> OMV-generated certificate has only a DNS SAN, so `https://192.168.2.209` warns on the name — use
 > the `.local` name.
 
 **2. Enforce TLS** — `System | Workbench | Settings`:
@@ -496,11 +501,11 @@ left at defaults; the drop-in takes precedence. Verify `ssh fleetadm@nas` then `
 
 The node joins the fleet through the shared base playbooks. Two files land in this repo:
 
-- `ansible/inventory.ini` — `nas ansible_host=192.168.2.202 ansible_user=fleetadm`
+- `ansible/inventory.ini` — `nas ansible_host=192.168.2.209 ansible_user=fleetadm`
 - `ansible/playbooks/playbook-nas.yml` — `common → security → nut_client → netdata`
 - `ansible/host_vars/nas.yml` — Avahi on; UFW allows SSH + OMV web (`443`) from the LAN and denies
   `80` ([ADR 34](../decisions/34-lan-tls-only.md));
-  `netdata` as a **child** of `pve`; `nut_client` rides the **secondary** defaults.
+  `netdata` as a **child** of `pve1`; `nut_client` rides the **secondary** defaults.
 
 Run from a **LAN workstation** with the fleet key loaded
 ([fleet-connect skill](../../.opencode/skills/fleet-connect/SKILL.md)), and export the Key Vault
@@ -517,8 +522,8 @@ The roles do the following:
 |---|---|
 | `common` | Enforces hostname **`nas`**, `Etc/UTC`, Avahi, and the fleet SSH key on `fleetadm` |
 | `security` | UFW (deny incoming; allow SSH + **80/443** from `192.168.2.0/24`), fail2ban, SSH hardening |
-| `nut_client` | `nut-client` + `upsmon` as a **secondary** of the host-native NUT server on `pve` (`.201`) |
-| `netdata` | Agent streaming to the **`pve` Parent** at `192.168.2.201:19996` (TLS), loopback dashboard |
+| `nut_client` | `nut-client` + `upsmon` as a **secondary** of the host-native NUT server on `pve1` (`.201`) |
+| `netdata` | Agent streaming to the **`pve1` Parent** at `192.168.2.201:19996` (TLS), loopback dashboard |
 
 > **OMV × Ansible interaction.** The `security` role writes a `sshd_config.d` drop-in; OMV manages
 > SSH from its own module. The drop-in takes precedence and both express key-only/LAN-only — verify
@@ -532,13 +537,13 @@ The roles do the following:
 ssh fleetadm@nas 'systemctl is-active nut-monitor; upsc ups@192.168.2.201 | grep ups.status'
 ```
 
-- Netdata: on the `pve` dashboard (`https://192.168.2.201:19999`), the Nodes view should now list
-  **`pve, lab, edge, nas`**, with `nas` at `hops=1`. Agent footprint is ~130–170 MB RSS.
+- Netdata: on the `pve1` dashboard (`https://192.168.2.201:19999`), the Nodes view should now list
+  **`pve1, lab, edge, nas`**, with `nas` at `hops=1`. Agent footprint is ~130–170 MB RSS.
 - Idempotency: re-run `playbook-nas.yml`; the role tasks report `changed=0`.
 
 > **Verified 2026‑09‑21.** First run `nas : ok=39 changed=11 unreachable=0 failed=0 skipped=6`; an
 > immediate re-run reports `ok=35 changed=0 unreachable=0 failed=0 skipped=8` — idempotent. The
-> **`nas` node was confirmed visible in the `pve` Netdata dashboard**, `nut-monitor` is `active`,
+> **`nas` node was confirmed visible in the `pve1` Netdata dashboard**, `nut-monitor` is `active`,
 > and `upsc ups@192.168.2.213` returns `ups.status: OL`, `battery.charge: 100`.
 
 ## 9. Wrap-up
@@ -568,7 +573,7 @@ ssh fleetadm@nas 'systemctl is-active nut-monitor; upsc ups@192.168.2.201 | grep
   the BIOS port map (0 *white* / 1 *blue* / 2 *black*). The board exposes no SATA-mode setting;
   it is AHCI-only, so mdadm always sees raw disks.
 - **Web UI unavailable after the static IP** — use the console; `ip a show enp0s31f6` should show
-  `192.168.2.202`.
+  `192.168.2.209`.
 - **`Permission denied (publickey)` for `fleetadm`** — the account is missing the **`_ssh`** group
   (§7), or the fleet key was not installed.
 - **UFW blocked the OMV UI** — two different causes, check which:

@@ -1,12 +1,12 @@
 # nut_server
 
-Runs the **NUT server** (`nutdrv_qx` driver + `upsd`) **host-native on the `pve` node**, serving the
+Runs the **NUT server** (`nutdrv_qx` driver + `upsd`) **host-native on the `pve1` node**, serving the
 shared rail's UPS state to the fleet. Decision: [ADR 39](../../../docs/decisions/39-nut-host-native.md)
 (supersedes ADR 30's LXC placement); operating procedure, migration and the driver gate:
 [runbook 29](../../../docs/runbooks/29-nut-ups-shutdown.md).
 
 It is the **server** half; the **client** half is the [`nut_client`](../nut_client/README.md) role,
-which also configures `pve`'s local **primary** `upsmon`. This role owns the server, the **USB udev
+which also configures `pve1`'s local **primary** `upsmon`. This role owns the server, the **USB udev
 rule** and the `nut-monitor` → `nut-server` systemd ordering — no LXC, no USB passthrough, no mapped
 GID.
 
@@ -40,12 +40,12 @@ change restarts the service. The local primary `upsmon` is configured by `nut_cl
 Both monitor passwords exist in `homelab-bysxdb-kv` (provisioned by
 `scripts/New-HomelabNutUpsmonPasswords.ps1`):
 
-- `nut-upsmon-primary-password` — account `upsmon-host` (`pve`'s local primary)
+- `nut-upsmon-primary-password` — account `upsmon-host` (`pve1`'s local primary)
 - `nut-upsmon-secondary-password` — account `upsmon-fleet` (`lab`/`edge`/`nas` secondaries)
 
 The role fetches each at run time via `azure.azcollection.azure_keyvault_secret` (`delegate_to: localhost`,
 `no_log`) and writes it into `/etc/nut/upsd.users`. No password is a default or committed. Rotation =
-re-run the script with `-Force`, then re-run `playbook-pve.yml`. The controller needs `AZURE_CLIENT_ID` /
+re-run the script with `-Force`, then re-run `playbook-pve1.yml`. The controller needs `AZURE_CLIENT_ID` /
 `AZURE_CLIENT_SECRET` / `AZURE_TENANT_ID`.
 
 ## Parameters
@@ -67,12 +67,12 @@ defaults; set them to skip the lookups in tests.
 
 ## Hosts
 
-Applied by `playbook-pve.yml` to the **`pve`** host (before `nut_client`, so the primary's reachability
+Applied by `playbook-pve1.yml` to the **`pve1`** host (before `nut_client`, so the primary's reachability
 guard finds `upsd` up). See [runbook 29](../../../docs/runbooks/29-nut-ups-shutdown.md).
 
 ## References
 
-- [ADR 39 — NUT server host-native on the pve node](../../../docs/decisions/39-nut-host-native.md) · [ADR 30 (superseded)](../../../docs/decisions/30-ups-nut-graceful-shutdown.md)
+- [ADR 39 — NUT server host-native on the pve1 node](../../../docs/decisions/39-nut-host-native.md) · [ADR 30 (superseded)](../../../docs/decisions/30-ups-nut-graceful-shutdown.md)
 - [Runbook 29 — UPS graceful shutdown](../../../docs/runbooks/29-nut-ups-shutdown.md) · [runbook 30 — NUT clients](../../../docs/runbooks/30-deploy-nut-clients.md)
 - [Network UPS Tools](https://networkupstools.org/) — `upsd`, `upsd.conf`, `upsd.users`, `nutdrv_qx`
 

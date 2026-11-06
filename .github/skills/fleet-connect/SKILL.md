@@ -2,35 +2,38 @@
 name: fleet-connect
 description: >-
   SSH connectivity to any Homelab fleet node (cloudlab VPS, lab M910q, edge
-  Wyse 3040, pve Wyse 5070 Proxmox, nas Beetle M-III) from the right control node — for
+  Wyse 3040, pve1 Wyse 5070 Proxmox, pve2 OptiPlex 7050 Proxmox, nas Beetle M-III) from the right control node — for
   Ansible playbooks, ad-hoc shell access, file transfer, and AI agents
   (opencode, Copilot, …) that need to reach a node. Covers the step-ca SSH
   certificate (the daily path, ADR 41), the break-glass fleet key, ssh-agent
   setup, per-host reachability, known connectivity pitfalls, and verification.
-  USE FOR: running ansible-playbook against cloudlab/lab/pve/edge/nas/vtstack/ca,
+  USE FOR: running ansible-playbook against cloudlab/lab/pve1/pve2/edge/nas/vtstack/ca,
   SSH/SCP to a fleet node, getting an agent-ai or automation certificate, loading the
   break-glass fleet key, AI agent SSH access to a node, troubleshooting SSH to a
   fleet node.
   DO NOT USE FOR: provisioning the VPS (use cntb CLI), modifying the VPS in the
-  Contabo portal, setting up the physical nodes (use runbooks 24/25/28/32).
+  Contabo portal, setting up the physical nodes (use runbooks 24/25/28/32/42).
 when:
   - "ansible-playbook cloudlab"
   - "ansible-playbook lab"
   - "ansible-playbook edge"
-  - "ansible-playbook pve"
+  - "ansible-playbook pve1"
+  - "ansible-playbook pve2"
   - "ansible-playbook nas"
   - "run playbook against a fleet node"
   - "ssh to cloudlab"
   - "ssh to lab"
   - "ssh to edge"
-  - "ssh to pve"
+  - "ssh to pve1"
+  - "ssh to pve2"
   - "ssh to nas"
   - "SSH key fleet"
   - "load fleet key"
   - "connect to cloudlab"
   - "connect to lab"
   - "connect to edge"
-  - "connect to pve"
+  - "connect to pve1"
+  - "connect to pve2"
   - "AI agent ssh node"
   - "agent connect to node"
   - "Import-HomelabFleetKey"
@@ -47,7 +50,7 @@ when:
 
 # Fleet SSH Connectivity
 
-Every fleet node (`cloudlab`, `lab`, `pve`, `edge`, `nas`, `vtstack`, `ca`) accepts SSH as
+Every fleet node (`cloudlab`, `lab`, `pve1`, `pve2`, `edge`, `nas`, `vtstack`, `ca`) accepts SSH as
 **`fleetadm`**. Since [ADR 41](../../../docs/decisions/41-ssh-certificates-step-ca.md) you
 get in with a **certificate issued by step-ca**, not with a key: an **`agent-ai`**
 certificate for AI agents, an **`automation`** certificate for Ansible. Both are
@@ -157,15 +160,16 @@ loads the key. Nothing loads it at session start.
 |---|---|---|---|
 | `cloudlab` | `173.249.27.13` | anywhere (public IP) | `ansible/playbooks/playbook.yml` |
 | `lab` | `192.168.2.200` | LAN workstation (`192.168.2.0/24`) | `ansible/playbooks/playbook-lab.yml` |
-| `pve` | `192.168.2.201` | LAN workstation (`192.168.2.0/24`) | `ansible/playbooks/playbook-pve.yml` |
-| `nas` | `192.168.2.202` | LAN workstation (`192.168.2.0/24`) | `ansible/playbooks/playbook-nas.yml` |
+| `pve1` | `192.168.2.201` | LAN workstation (`192.168.2.0/24`) | `ansible/playbooks/playbook-pve1.yml` |
+| `pve2` | `192.168.2.202` | LAN workstation (`192.168.2.0/24`) | `ansible/playbooks/playbook-pve2.yml` |
+| `nas` | `192.168.2.209` | LAN workstation (`192.168.2.0/24`) | `ansible/playbooks/playbook-nas.yml` |
 | `edge` | `192.168.2.240` | LAN workstation (`192.168.2.0/24`) | `ansible/playbooks/playbook-edge.yml` |
 | `vtstack` | `192.168.2.214` | LAN workstation (`192.168.2.0/24`) | `ansible/playbooks/playbook-logs.yml` |
 | `ca` | `192.168.2.215` | LAN workstation (`192.168.2.0/24`) | `ansible/playbooks/playbook-ca.yml` |
 
-`lab`, `pve`, `edge`, `nas`, `vtstack` and `ca` are LAN-only — connect to them (SSH or
+`lab`, `pve1`, `pve2`, `edge`, `nas`, `vtstack` and `ca` are LAN-only — connect to them (SSH or
 playbooks) from a machine on `192.168.2.0/24`, with a certificate or the break-glass key in
-its agent (see runbooks 24/25/28/32). All nodes are on `fleetadm` (ADR 28) and each has a
+its agent (see runbooks 24/25/28/32/42). All nodes are on `fleetadm` (ADR 28) and each has a
 playbook in the table above.
 
 **`cloudlab` is the exception**: it has no route to `ca.internal`, so it is not
@@ -187,7 +191,8 @@ in the agent:
 cd /workspaces/Homelab
 ansible-playbook ansible/playbooks/playbook.yml          # cloudlab
 ansible-playbook ansible/playbooks/playbook-lab.yml      # lab (LAN workstation)
-ansible-playbook ansible/playbooks/playbook-pve.yml      # pve (LAN workstation)
+ansible-playbook ansible/playbooks/playbook-pve1.yml      # pve1 (LAN workstation)
+ansible-playbook ansible/playbooks/playbook-pve2.yml      # pve2 (LAN workstation)
 ansible-playbook ansible/playbooks/playbook-edge.yml     # edge (LAN workstation)
 ansible-playbook ansible/playbooks/playbook-nas.yml      # nas (LAN workstation)
 ```
@@ -260,7 +265,7 @@ The client needs the CA trust line in `~/.ssh/known_hosts`:
 ./scripts/Set-HomelabSshKnownHosts.ps1   # @cert-authority *.internal,192.168.2.*
 ```
 
-Delete any pinned `lab`/`pve`/`edge`/`nas` lines at the same time — a pinned key that no
+Delete any pinned `lab`/`pve1`/`pve2`/`edge`/`nas` lines at the same time — a pinned key that no
 longer matches fails before the CA is ever consulted.
 
 ### ❌ `ca.internal` does not resolve from the dev container

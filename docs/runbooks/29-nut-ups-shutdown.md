@@ -1,13 +1,13 @@
-# UPS Graceful Shutdown — NUT Host-Native on the pve Node
+# UPS Graceful Shutdown — NUT Host-Native on the pve1 Node
 
 > Put the lab's shared power rail under **NUT (Network UPS Tools)**: the Green Cell **UPSLM600**
-> stays plugged into the `pve` node, which runs the NUT server (`nutdrv_qx` driver + `upsd`)
+> stays plugged into the `pve1` node, which runs the NUT server (`nutdrv_qx` driver + `upsd`)
 > **host-native**, and the hypervisor plus the fleet each run a NUT client that stops the node in
 > order once the battery runs down. The placement is [ADR 39](../decisions/39-nut-host-native.md),
 > which **supersedes** [ADR 30](../decisions/30-ups-nut-graceful-shutdown.md)'s LXC route; the load
 > profile and model comparison are in [idea 09](../ideas/09-ups-nut-home-assistant.md).
 >
-> ⚠ **This runbook now retires LXC 213.** The NUT server moved out of the container onto the `pve`
+> ⚠ **This runbook now retires LXC 213.** The NUT server moved out of the container onto the `pve1`
 > host (§1), where it is built by the [`nut_server`](../../ansible/roles/nut_server/README.md) role
 > (§2–§3).
 >
@@ -36,32 +36,32 @@ moves it host-native and removes all three.
 
 ## What changes
 
-- **UPS stays on the `pve` node** — Green Cell `UPSLM600`, USB **`0665:5161`**
+- **UPS stays on the `pve1` node** — Green Cell `UPSLM600`, USB **`0665:5161`**
   (Cypress/INNO TECH bridge). The unit has **no serial number**, so NUT finds it by
   `vendorid`/`productid` rather than by a port path — which port it occupies is irrelevant, and the
   cable can be moved without touching any config.
-- **Host-native NUT server on `pve`** — the `nutdrv_qx` driver and `upsd` run directly on the host,
+- **Host-native NUT server on `pve1`** — the `nutdrv_qx` driver and `upsd` run directly on the host,
   listening on **`192.168.2.201:3493`** ([ADR 39](../decisions/39-nut-host-native.md)). No LXC, no USB
   passthrough. The [`nut_server`](../../ansible/roles/nut_server/README.md) role owns the config and
   the USB udev rule.
-- **One primary `upsmon` — on `pve`** — the host is the sole `upsmon` `primary` and shuts itself down;
+- **One primary `upsmon` — on `pve1`** — the host is the sole `upsmon` `primary` and shuts itself down;
   Proxmox then stops its guests in order. Because server and primary share the host, systemd starts
   `nut-monitor` after `nut-server` — no cold-boot race.
-- **Fleet clients** — `lab` (M910q), `edge` (Wyse 3040) and, once OMV is up, the **Beetle M-III** are
+- **Fleet clients** — `pve2` (OptiPlex 7050), `lab` (M910q), `edge` (Wyse 3040) and, once OMV is up, the **Beetle M-III** are
   `upsmon` secondaries pointing at `192.168.2.201`, delivered by the `nut_client` role
   ([runbook 30](30-deploy-nut-clients.md)).
-- **`pve` UFW allows `3493`** from `192.168.2.0/24` so the secondaries can reach `upsd`.
+- **`pve1` UFW allows `3493`** from `192.168.2.0/24` so the secondaries can reach `upsd`.
 
-> **Execution note.** The host build and the fleet clients are Ansible-managed — `playbook-pve.yml`
-> applies `nut_server` → `nut_client`; `playbook-lab.yml` / `playbook-edge.yml` / `playbook-nas.yml`
+> **Execution note.** The host build and the fleet clients are Ansible-managed — `playbook-pve1.yml`
+> applies `nut_server` → `nut_client`; `playbook-pve2.yml` / `playbook-lab.yml` / `playbook-edge.yml` / `playbook-nas.yml`
 > apply the secondaries. Only the LXC 213 retirement (§1) and the driver gate (§3) are manual, run from
 > a LAN workstation with the fleet key loaded (`fleet-connect` skill).
 
 ## Prerequisites
 
-- UPS on the `pve` node's USB and mains connected. The HID interface is **single-owner** — nothing else
+- UPS on the `pve1` node's USB and mains connected. The HID interface is **single-owner** — nothing else
   may be holding the device, which is why LXC 213 must release it first (§1).
-- `fleetadm` SSH + `sudo -n` on `pve`, `lab`, `edge`, `nas`.
+- `fleetadm` SSH + `sudo -n` on `pve1`, `pve2`, `lab`, `edge`, `nas`.
 - Both monitor passwords in Azure Key Vault `homelab-bysxdb-kv` —
   `nut-upsmon-primary-password`, `nut-upsmon-secondary-password`
   (`scripts/New-HomelabNutUpsmonPasswords.ps1`, `-Force` to rotate).
@@ -70,7 +70,7 @@ moves it host-native and removes all three.
 - Refs: [idea 09](../ideas/09-ups-nut-home-assistant.md) (architecture) ·
   [ADR 39](../decisions/39-nut-host-native.md) (placement) ·
   [research 24](../research/24-network-topology-design.md) (IP scheme) ·
-  [runbook 28](28-pve-proxmox-node.md) (the Proxmox base this builds on).
+  [runbook 28](28-pve1-proxmox-node.md) (the Proxmox base this builds on).
 
 ---
 
@@ -87,7 +87,8 @@ Two strips, both UPS-fed:
 
 | Strip | Load | Note |
 |---|---|---|
-| **1 — servers** | Dell Wyse 5070 (pve node) | hosts the UPS's USB, `0665:5161` |
+| **1 — servers** | Dell Wyse 5070 (pve1 node) | hosts the UPS's USB, `0665:5161` |
+| | Dell OptiPlex 7050 (pve2 node) | second Proxmox node ([runbook 42](42-pve2-proxmox-node.md)) |
 | | Lenovo M910q (lab) | 65/90 W external brick · k3s |
 | | Dell Wyse 3040 (edge) | external brick |
 | | Wincor Beetle M-III | the OMV NAS ([#98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98), [ADR 29](../decisions/29-nas-backup-target-beetle-m3-omv.md)) |
@@ -145,18 +146,18 @@ longer than `DEADTIME` (120 s since 2026-10-11 — §6) stops the lab on healthy
 ```sh
 # 1. Pause every client's fail-safe monitor — abort if any node cannot be paused
 set -e
-for n in 192.168.2.201 192.168.2.200 192.168.2.240 192.168.2.202; do
+for n in 192.168.2.201 192.168.2.200 192.168.2.240 192.168.2.209; do
   ssh fleetadm@"$n" 'sudo systemctl stop nut-monitor'
 done
 # assert none is still armed before touching LXC 213
-for n in 192.168.2.201 192.168.2.200 192.168.2.240 192.168.2.202; do
+for n in 192.168.2.201 192.168.2.200 192.168.2.240 192.168.2.209; do
   if ssh fleetadm@"$n" 'systemctl is-active --quiet nut-monitor'; then
     echo "nut-monitor still active on $n — aborting before pct destroy" >&2
     exit 1
   fi
 done
 
-# 2. Stop and destroy the old container (from the pve host)
+# 2. Stop and destroy the old container (from the pve1 host)
 ssh fleetadm@192.168.2.201 'sudo pct stop 213'
 ssh fleetadm@192.168.2.201 "sudo sed -i -e '/^lxc.cgroup2.devices.allow: c 189:/d' -e '\%^lxc.mount.entry: /dev/bus/usb%d' /etc/pve/lxc/213.conf"
 ssh fleetadm@192.168.2.201 'sudo pct destroy 213'
@@ -174,7 +175,7 @@ ssh fleetadm@192.168.2.201 'lsusb -d 0665:5161'
 The server is applied by Ansible — no hand edits:
 
 ```powershell
-ansible-playbook ansible/playbooks/playbook-pve.yml --diff
+ansible-playbook ansible/playbooks/playbook-pve1.yml --diff
 ```
 
 - **`nut_server`** installs `nut-server`/`nut-client`, writes `/etc/nut/*` (`MODE=standalone`, the
@@ -250,7 +251,7 @@ trigger is therefore **`LB`**; do not build a countdown on a variable that does 
 
 > **Delivered by the `nut_client` role.** The host is the **one and only `upsmon` `primary`**: account
 > `upsmon-host`, `FINALDELAY 30`, `HOSTSYNC 30`, monitoring `ups@192.168.2.201` (itself). It is
-> installed and kept converged by the base `playbook-pve.yml` — see
+> installed and kept converged by the base `playbook-pve1.yml` — see
 > [runbook 30](30-deploy-nut-clients.md).
 
 `/sbin/shutdown -h +0` is all that is needed to stop the VMs/LXCs in order — Proxmox handles the
@@ -263,7 +264,7 @@ the fleet — the drill in §7 is what proves it.
 
 ## 5. Fleet clients
 
-> **Delivered by the `nut_client` role.** `lab` (M910q), `edge` (Wyse 3040) and `nas` (Beetle M-III)
+> **Delivered by the `nut_client` role.** `pve2` (OptiPlex 7050), `lab` (M910q), `edge` (Wyse 3040) and `nas` (Beetle M-III)
 > are `upsmon` `secondary` nodes: account `upsmon-fleet`, `HOSTSYNC 15`, `FINALDELAY 0`, pointing at
 > `192.168.2.201`. Installed and kept converged by the same role — [runbook 30](30-deploy-nut-clients.md).
 
@@ -304,12 +305,12 @@ the sequence below is still how to do it deliberately:
 
 ```sh
 set -e
-for n in 192.168.2.201 192.168.2.200 192.168.2.240 192.168.2.202; do
+for n in 192.168.2.201 192.168.2.200 192.168.2.240 192.168.2.209; do
   ssh fleetadm@"$n" 'sudo systemctl stop nut-monitor'
 done
 ssh fleetadm@192.168.2.201 'sudo systemctl restart nut-server'
 ssh fleetadm@192.168.2.201 'upsc ups@localhost'          # restore only once this answers
-for n in 192.168.2.201 192.168.2.200 192.168.2.240 192.168.2.202; do
+for n in 192.168.2.201 192.168.2.200 192.168.2.240 192.168.2.209; do
   ssh fleetadm@"$n" 'sudo systemctl start nut-monitor'
 done
 ```
@@ -317,16 +318,16 @@ done
 On a normal host boot this race no longer exists: `nut-monitor` is ordered **after** `nut-server`
 (§2), so it waits for `upsd` rather than fail-safing.
 
-**Firewall.** `pve`'s UFW now allows `3493` from `192.168.2.0/24` (`security_ufw_allow_tcp_ports` in
-`ansible/host_vars/pve.yml`), so the secondaries can reach `upsd`. Add it via Ansible, never by hand,
+**Firewall.** `pve1`'s UFW now allows `3493` from `192.168.2.0/24` (`security_ufw_allow_tcp_ports` in
+`ansible/host_vars/pve1.yml`), so the secondaries can reach `upsd`. Add it via Ansible, never by hand,
 or the next `security` role run drops it.
 
 Accepted trade-off: a genuinely unreachable UPS *does* stop the fleet — fail-safe, not fail-open.
 **Applied 2026-10-11:** `DEADTIME` was raised 15 s → **120 s** (role default `nut_client_deadtime`).
-The migration moved the server onto the hypervisor's own host, so an `upsd` restart or a `pve` reboot
+The migration moved the server onto the hypervisor's own host, so an `upsd` restart or a `pve1` reboot
 became a routine event — and the reboot test measured `upsd` unreachable for **~60–67 s**, i.e. the
 fleet would have stopped itself on healthy mains at the old 15 s *or* at a 60 s cut. 120 s leaves the
-headroom to make a `pve` reboot survivable without pausing the secondaries. `POLLFREQ` and
+headroom to make a `pve1` reboot survivable without pausing the secondaries. `POLLFREQ` and
 `POLLFREQALERT` stay at 5 s: they govern how quickly `OB`/`LB` are *seen* (≤ 7 s in the 2026-09-19
 drill), so widening them would only slow genuine detection. `MINSUPPLIES 1` is unchanged.
 
@@ -406,18 +407,18 @@ runbook completes on its own; the client rollout (§4/§5) is verified by
 [runbook 30](30-deploy-nut-clients.md).
 
 - [ ] §0 UPS input on the wall socket; **both strips** on battery-backed outlets; monitors/dock/charger off the UPS
-- [x] §1 LXC 213 retired, `.213` freed; the host's `lsusb -d 0665:5161` shows the UPS — **2026-10-11** (all four monitors paused and asserted inactive first; LXC `/etc/nut` snapshotted to `pve:/tmp/nut-213-snapshot/`; `pct destroy 213` — container gone from `pct list`, UPS freed to the host)
-- [x] §2 `playbook-pve.yml` applies cleanly; `/etc/udev/rules.d/85-nut-usb.rules` present; `nut-monitor` ordered after `nut-server` — **2026-10-11** (`ok=80 changed=20 failed=0`; drop-in in place, and a re-run converges to `changed=0`)
+- [x] §1 LXC 213 retired, `.213` freed; the host's `lsusb -d 0665:5161` shows the UPS — **2026-10-11** (all four monitors paused and asserted inactive first; LXC `/etc/nut` snapshotted to `pve1:/tmp/nut-213-snapshot/`; `pct destroy 213` — container gone from `pct list`, UPS freed to the host)
+- [x] §2 `playbook-pve1.yml` applies cleanly; `/etc/udev/rules.d/85-nut-usb.rules` present; `nut-monitor` ordered after `nut-server` — **2026-10-11** (`ok=80 changed=20 failed=0`; drop-in in place, and a re-run converges to `changed=0`)
 - [x] §3 `/lib/nut/nutdrv_qx` attaches (as root **and** as `nut`), `upsc ups@192.168.2.201` returns real values, `battery.runtime` presence recorded — **2026-10-11** (`nutdrv_qx` 2.8.1 claimed the device on the host; `upsc ups@localhost` → `OL` / 100 % / 27.29 V; **`battery.runtime` absent**, so the trigger stays `LB`)
 - [x] §3 both monitor passwords in AKV and written into `upsd.users`; `/etc/nut` files `640 root:nut` — **2026-10-11** (accounts `upsmon-host` + `upsmon-fleet`; every file `0640 root:nut`)
 - [x] §3 `upsd` reloaded after the accounts were written — a daemon that predates the edit still serves the old user list — **2026-10-11** (`upsd.users` notifies a reload)
-- [x] §4/§5 the fleet's `nut-monitor` reaches `ups@192.168.2.201` from `pve`, `lab`, `edge`, `nas` — **2026-10-11** (all four `active`, `MONITOR` → `.201`, `upsc` returns `OL`, no `Login failed`; `lab` `ok=74 changed=4`, `edge` `ok=59 changed=3`, `nas` `ok=55 changed=3`)
-- [x] §2 two defects the live run exposed, fixed **2026-10-11** — `nut_client` now derives `nut.conf` `MODE` from the role (`standalone` on `pve`, `netclient` on the secondaries; both roles templated that one file and the client ran last), and `nut_server` enumerates the driver only while it is down (the `oneshot` enumerator, `RemainAfterExit=no`, had made every run report `changed=1`)
-- [x] §7 NUT events from the host are queryable in VictoriaLogs with the host identity `pve` — **2026-10-11** (`upsd` 44, `nut-server` 7, `nut-monitor` 3, `nut-driver-enumerator` 11; issue [#148](https://github.com/jaroslaw-bagnicki/Homelab/issues/148) acceptance criterion)
+- [x] §4/§5 the fleet's `nut-monitor` reaches `ups@192.168.2.201` from `pve1`, `lab`, `edge`, `nas` — **2026-10-11** (all four `active`, `MONITOR` → `.201`, `upsc` returns `OL`, no `Login failed`; `lab` `ok=74 changed=4`, `edge` `ok=59 changed=3`, `nas` `ok=55 changed=3`)
+- [x] §2 two defects the live run exposed, fixed **2026-10-11** — `nut_client` now derives `nut.conf` `MODE` from the role (`standalone` on `pve1`, `netclient` on the secondaries; both roles templated that one file and the client ran last), and `nut_server` enumerates the driver only while it is down (the `oneshot` enumerator, `RemainAfterExit=no`, had made every run report `changed=1`)
+- [x] §7 NUT events from the host are queryable in VictoriaLogs with the host identity `pve1` — **2026-10-11** (`upsd` 44, `nut-server` 7, `nut-monitor` 3, `nut-driver-enumerator` 11; issue [#148](https://github.com/jaroslaw-bagnicki/Homelab/issues/148) acceptance criterion)
 - [x] §7 Netdata no longer charts the UPS twice — the Parent's go.d job is renamed `nut` → `local` to match Netdata's own `sd:net_listeners` discovery, which had added a second device and summed `ups_on_line` to **2** — **2026-10-11**, [runbook 31](31-deploy-netdata.md) §2
 - [x] §7 on-battery ride performed from the dev container (2026-09-13, 5.5 min, fleet attached) — `OB`/`OL` propagate promptly; runtime **not** derivable by extrapolation — re-run on the host-native topology **2026-10-11**
-- [x] §7 on-battery propagation on the host-native topology — **2026-10-11**, ~90 s ride with the fleet loaded: `on battery` logged pve 10:46:29, nas :30, edge :31, lab :32; `on line power` pve 10:47:59, nas :00, edge :01, lab :02 — **≤ 3 s each way to all four nodes**. `ups.load` read 17 % on battery / 7 % on mains and `input.voltage` parked at 16.9 V while unplugged, exactly as the §7 caveats predict
-- [x] §7 `pve` reboot — `nut-monitor` comes up **after** `nut-server` — **2026-10-11**: `nut-driver@ups` 10:50:14 → `nut-server` 10:50:14 → `nut-monitor` 10:50:15, with the boot-journal order `nut-driver-enumerator.path` → `nut-driver@ups` → `nut-server` → listening on both addresses → driver connected. The UPS was claimed at cold boot by the udev rule — **no boot race**. `upsd` was unreachable for **~60–67 s** across the reboot (secondaries paused for the test), which is the measurement that set `DEADTIME` to 120 s
+- [x] §7 on-battery propagation on the host-native topology — **2026-10-11**, ~90 s ride with the fleet loaded: `on battery` logged pve1 10:46:29, nas :30, edge :31, lab :32; `on line power` pve1 10:47:59, nas :00, edge :01, lab :02 — **≤ 3 s each way to all four nodes**. `ups.load` read 17 % on battery / 7 % on mains and `input.voltage` parked at 16.9 V while unplugged, exactly as the §7 caveats predict
+- [x] §7 `pve1` reboot — `nut-monitor` comes up **after** `nut-server` — **2026-10-11**: `nut-driver@ups` 10:50:14 → `nut-server` 10:50:14 → `nut-monitor` 10:50:15, with the boot-journal order `nut-driver-enumerator.path` → `nut-driver@ups` → `nut-server` → listening on both addresses → driver connected. The UPS was claimed at cold boot by the udev rule — **no boot race**. `upsd` was unreachable for **~60–67 s** across the reboot (secondaries paused for the test), which is the measurement that set `DEADTIME` to 120 s
 - [x] §7 Beetle on battery **under disk load** — **2026-10-11**, ride taken with the NAS mid long-SMART-test: **no reset** (`nas` up since 10:22:41, uninterrupted through the ride), so the AcBel active-PFC supply rode a modified sine wave under load
 - [x] §7 fleet rides out an `upsd` outage — `DEADTIME` raised 15 s → **120 s** (`nut_client_deadtime`) **2026-10-11**, applied and verified on all four nodes; the fail-safe model itself (`MINSUPPLIES 1`) is unchanged — [ADR 39](../decisions/39-nut-host-native.md), §6
 - [x] §7 fleet-wide **`upsmon -c fsd` drill — dropped** by decision (2026-10-11): the host-native ride above is a *genuine* battery trigger, which is stronger than a forced flag, and the 2026-09-19 run already proved the `FINALDELAY`/`HOSTSYNC` ordering — [report](../reports/260919-nut-shutdown-drill.md) · **[#117]**
@@ -432,7 +433,7 @@ runbook completes on its own; the client rollout (§4/§5) is verified by
   [#85](https://github.com/jaroslaw-bagnicki/Homelab/issues/85)).
 - **AC-restore behaviour** — after a full drain the nodes stay off. Decide per node whether the BIOS
   should auto-power-on when mains returns, otherwise recovery is a manual walk to each machine.
-- **Ansible ownership** — complete: the **server** is the `nut_server` role on `pve`, the **clients**
+- **Ansible ownership** — complete: the **server** is the `nut_server` role on `pve1`, the **clients**
   are the `nut_client` role ([#116](https://github.com/jaroslaw-bagnicki/Homelab/issues/116)); only the
   LXC 213 retirement (§1) and the driver gate (§3) remain manual.
 - **Beetle M-III as the NAS client** — it sits on strip 1 from day one but joins NUT (§5) only once
@@ -447,9 +448,9 @@ runbook completes on its own; the client rollout (§4/§5) is verified by
 ## References
 
 - [Idea 09 — UPS with NUT + Home Assistant](../ideas/09-ups-nut-home-assistant.md) — load profile, model comparison, NUT architecture
-- [ADR 39 — NUT server host-native on the pve node](../decisions/39-nut-host-native.md) · [ADR 30 (superseded)](../decisions/30-ups-nut-graceful-shutdown.md)
+- [ADR 39 — NUT server host-native on the pve1 node](../decisions/39-nut-host-native.md) · [ADR 30 (superseded)](../decisions/30-ups-nut-graceful-shutdown.md)
 - [ADR 25 — Home Assistant on a thin client](../decisions/25-home-assistant-thin-client.md) · [ADR 27 — monitoring strategy](../decisions/27-monitoring-strategy.md) · [ADR 28 — fleet admin account and key](../decisions/28-fleet-admin-account-and-key.md)
-- [Runbook 28 — pve node install](28-pve-proxmox-node.md) · [Runbook 30 — NUT clients](30-deploy-nut-clients.md) · [Runbook 21 — TL-SG108E switch](21-tl-sg108e-switch.md)
+- [Runbook 28 — pve1 node install](28-pve1-proxmox-node.md) · [Runbook 30 — NUT clients](30-deploy-nut-clients.md) · [Runbook 21 — TL-SG108E switch](21-tl-sg108e-switch.md)
 - [ADR 29 — NAS backup target on the Beetle M-III](../decisions/29-nas-backup-target-beetle-m3-omv.md) · [idea 07 — OPNsense on the Futro S930](../ideas/07-opnsense-futro-s930.md) · [idea 08 — LTE WAN failover](../ideas/08-lte-wan-failover.md)
 - [research 24 — network topology](../research/24-network-topology-design.md) (IP scheme) · [research 29 — Wyse 5070 diagnostic](../research/29-wyse5070-hardware-diagnostic.md) (USB hub topology)
 - [Network UPS Tools](https://networkupstools.org/) — `nutdrv_qx` driver, `upsd` / `upsmon`

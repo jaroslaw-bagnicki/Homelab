@@ -1,7 +1,7 @@
 # Victoria Stack — VictoriaLogs Log Store (LXC 214)
 
 > Deploy the Tier B **log store** — **VictoriaLogs** as a Docker Compose service on the
-> `vtstack` guest (LXC 214, `192.168.2.214`) on the `pve` node — HTTPS-only, HTTP basic auth
+> `vtstack` guest (LXC 214, `192.168.2.214`) on the `pve1` node — HTTPS-only, HTTP basic auth
 > from day one, 30-day retention, LAN-bound at the container. Decision:
 > [ADR 35](../decisions/35-log-store-victorialogs.md); host placement and mechanics:
 > [research 33](../research/33-centralized-logging-victorialogs.md).
@@ -13,7 +13,7 @@
 > VictoriaTraces are **future ADRs** (§8).
 >
 > ⚠ **Execution note.** Author on the `feat/victorialogs-log-store` branch; **run only after CR**.
-> LXC creation (§1–§2) is a manual/console procedure on the `pve` host, reached as
+> LXC creation (§1–§2) is a manual/console procedure on the `pve1` host, reached as
 > `ssh fleetadm@192.168.2.201`; the Ansible steps (§3–§6) run with the fleet key loaded
 > ([`fleet-connect` skill](../../.opencode/skills/fleet-connect/SKILL.md)). The dev container
 > **can** drive the whole run — the Docker host routes it to the LAN — but that traffic arrives
@@ -30,7 +30,7 @@ built-in `/select/vmui` UI ([ADR 35](../decisions/35-log-store-victorialogs.md))
 
 ## What changes
 
-- **LXC 214 `vtstack`** on `pve` — unprivileged, **Debian 13**, `nesting` + `fuse`, 2 vCPU /
+- **LXC 214 `vtstack`** on `pve1` — unprivileged, **Debian 13**, `nesting` + `fuse`, 2 vCPU /
   2 GiB / 16 GiB rootfs on `local-lvm`, static `192.168.2.214`, `onboot 1`. Framed as the
   **Victoria stack** host (`vtstack`) — logs today; VictoriaMetrics/VictoriaTraces later join the
   same guest and Compose project.
@@ -50,8 +50,8 @@ built-in `/select/vmui` UI ([ADR 35](../decisions/35-log-store-victorialogs.md))
 
 ## Prerequisites
 
-- [ ] `pve` base-provisioned — Proxmox VE + `fleetadm` ([runbook 28](28-pve-proxmox-node.md)).
-- [ ] A Debian 13 LXC template available on the `pve` node (`pveam`).
+- [ ] `pve1` base-provisioned — Proxmox VE + `fleetadm` ([runbook 28](28-pve1-proxmox-node.md)).
+- [ ] A Debian 13 LXC template available on the `pve1` node (`pveam`).
 - [ ] Ansible collections installed (`ansible-galaxy collection install -r ansible/requirements.yml`).
 - [ ] Azure Key Vault `homelab-bysxdb-kv` reachable from the controller; `Az` module signed in
       (for the password secret, §4).
@@ -65,7 +65,7 @@ built-in `/select/vmui` UI ([ADR 35](../decisions/35-log-store-victorialogs.md))
 
 ## 1. Create LXC 214
 
-On the `pve` host (`ssh fleetadm@192.168.2.201`, then `sudo -i`):
+On the `pve1` host (`ssh fleetadm@192.168.2.201`, then `sudo -i`):
 
 ```sh
 # template — pick the current Debian build, don't hardcode a point release
@@ -90,7 +90,7 @@ pct create 214 local:vztmpl/<template> \
   disk caps in §5 are sized against it. **The size is an estimate** — no collector ships yet, so
   re-check it against the measured ingest rate once [#84](https://github.com/jaroslaw-bagnicki/Homelab/issues/84)
   lands.
-- **DNS is not passed here.** `playbook-pve.yml` points `pve` at the fleet resolver (`192.168.2.240`,
+- **DNS is not passed here.** `playbook-pve1.yml` points `pve1` at the fleet resolver (`192.168.2.240`,
   `search internal`) and PVE writes that same file into every container on start, so `vtstack` inherits
   it with no creation flag ([ADR 40](../decisions/40-internal-dns-proxy-edge.md) amendment). Until then
   the guest follows the host's current resolvers, which is enough for the installs in §3.
@@ -113,7 +113,7 @@ pct create 214 local:vztmpl/<template> \
 
 ## 2. `fleetadm` bootstrap (unblock Ansible)
 
-Mirrors [runbook 28 §3](28-pve-proxmox-node.md). From the `pve` host (the fleet public key lives at
+Mirrors [runbook 28 §3](28-pve1-proxmox-node.md). From the `pve1` host (the fleet public key lives at
 `ansible/roles/common/files/ssh/fleetadm.pub`, [ADR 28](../decisions/28-fleet-admin-account-and-key.md)):
 
 ```sh
@@ -137,7 +137,7 @@ passwd -l fleetadm
 ssh fleetadm@192.168.2.214 'sudo -n whoami'   # → root
 ```
 
-> **Verified 2026-09-27 — passed.** Bootstrapped over `pct exec 214` from `pve`:
+> **Verified 2026-09-27 — passed.** Bootstrapped over `pct exec 214` from `pve1`:
 >
 > | Check | Result |
 > |---|---|
@@ -431,7 +431,7 @@ project, **separate containers** (`victorialogs` today; `victoriametrics`, `vict
 each sharing the host-level TLS, password and UFW patterns. Adding them is **not** part of this
 work: VictoriaMetrics (fed by Netdata's Prometheus remote-write, [ADR 26](../decisions/26-zigbee-energy-monitoring.md) /
 [ADR 27](../decisions/27-monitoring-strategy.md)) and VictoriaTraces each need their **own ADR**,
-which must also revisit the `pve` resource budget and the `vmauth` question
+which must also revisit the `pve1` resource budget and the `vmauth` question
 ([ADR 35](../decisions/35-log-store-victorialogs.md)). Data lives in bind mounts under
 `/opt/vtstack/`, so the project can be reorganised without losing the store.
 
@@ -465,10 +465,10 @@ Executed on: **2026-09-27** — §1–§6 executed, off-LAN refusal **deferred**
 
 ## References
 
-- [ADR 35](../decisions/35-log-store-victorialogs.md) — VictoriaLogs log store in an LXC on `pve`
+- [ADR 35](../decisions/35-log-store-victorialogs.md) — VictoriaLogs log store in an LXC on `pve1`
 - [ADR 36](../decisions/36-log-collector-fluentbit.md) — the collector decision; its 2026-10-09 amendment resolves the router's path to syslog-ng → this store
 - [Runbook 35 §13](35-deploy-opnsense.md) — the OPNsense router's Ansible onboarding (the syslog sender)
 - [Research 33](../research/33-centralized-logging-victorialogs.md) — host placement, engine comparison, verified mechanics
 - [ADR 24](../decisions/24-edge-ingress-appliance.md) (volatile journald) · [ADR 27](../decisions/27-monitoring-strategy.md) (Tier B) · [ADR 31](../decisions/31-static-address-scheme.md) (guest block) · [ADR 34](../decisions/34-lan-tls-only.md) (TLS-only, UFW scope)
-- [Runbook 28](28-pve-proxmox-node.md) (Proxmox base + `fleetadm`) · [Runbook 29](29-nut-ups-shutdown.md) (host-native NUT on `pve`) · [Runbook 31](31-deploy-netdata.md) (AKV/TLS/validation pattern)
+- [Runbook 28](28-pve1-proxmox-node.md) (Proxmox base + `fleetadm`) · [Runbook 29](29-nut-ups-shutdown.md) (host-native NUT on `pve1`) · [Runbook 31](31-deploy-netdata.md) (AKV/TLS/validation pattern)
 - [Issue #123](https://github.com/jaroslaw-bagnicki/Homelab/issues/123) · [#84](https://github.com/jaroslaw-bagnicki/Homelab/issues/84) (collector) · [#132](https://github.com/jaroslaw-bagnicki/Homelab/issues/132) (monitoring) · [#75](https://github.com/jaroslaw-bagnicki/Homelab/issues/75) (umbrella)

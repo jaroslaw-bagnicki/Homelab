@@ -1,5 +1,5 @@
 ---
-# SSH CA (ADR 41): two signing keys in the pve TPM, authority policy, and the
+# SSH CA (ADR 41): two signing keys in the pve1 TPM, authority policy, and the
 # only three SSH identities — hosts, the control-node automation path, and the
 # shared AI-agent class. Per-agent key IDs are preserved by the templates.
 

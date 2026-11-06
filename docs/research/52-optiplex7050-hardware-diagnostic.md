@@ -10,7 +10,11 @@
 
 ## Decision Summary
 
-> **Decision authority:** there is no ADR for the second node yet — [idea 15](../ideas/15-second-proxmox-node.md) carries the plan and [research 47](47-second-proxmox-node.md) the analysis. This doc is the Phase 0 audit output for issue #177 and **overturns two of idea 15's hardware premises**: the unit is a **7050**, not the 7040, and its CPU is a **65 W i5-7500**, not a 35 W "T" part. No role decision is taken here.
+> **Decision authority:** [ADR 47](../decisions/47-second-proxmox-node-cluster-qdevice.md) owns the
+> second-node decision; [idea 15](../ideas/15-second-proxmox-node.md) carries the lifecycle and
+> [research 47](47-second-proxmox-node.md) the analysis. This doc is the Phase 0 audit output for issue
+> #177 and **overturns two of idea 15's hardware premises**: the unit is a **7050**, not the 7040, and
+> its CPU is a **65 W i5-7500**, not a 35 W "T" part.
 
 | Decision | Outcome (as of 2026-11-05) |
 |---|---|
@@ -19,7 +23,7 @@
 | Power adapter | **130 W** — a documented 7050 Micro option and the correct brick for a 65 W CPU; bigger brick ≠ bigger draw |
 | Storage | **M.2 2280 SATA** module (SK hynix SC311 S) in the **M.2 slot**, SATA III over AHCI · the **2.5″ bay is free** · 11 134 POH but **~97 % endurance remaining** — sound; **128 GB capacity** is the only argument for a bigger disk |
 | Management | **MEBx not reachable** (Ctrl+P silent, no F12 entry) although CPU, Q270 and the I219-LM all satisfy the AMT platform requirements — the BIOS has **no `Intel AMT Capability` page** and `MEBx Hotkey` is already on, so the answer lies in the ME firmware, not in a setting |
-| Address | DHCP `192.168.2.206` today; `192.168.2.203` is the reserved slot ([idea 15](../ideas/15-second-proxmox-node.md), [ADR 31](../decisions/31-static-address-scheme.md)) |
+| Address | DHCP `192.168.2.206` today; `192.168.2.202` is the reserved slot ([idea 15](../ideas/15-second-proxmox-node.md), [ADR 31](../decisions/31-static-address-scheme.md)) |
 
 ---
 
@@ -106,7 +110,7 @@ Two things also worth knowing before blaming the platform: the **research 47 idl
 
 **And the 0 W with the machine off is a fact about the meter, not the adapter.** A plugged-in brick always draws standby power (fractions of a watt to a couple of watts), so a reading of exactly `0 W` means the meter does not resolve the low end — roughly the same instrument limitation that makes sub-5 W readings untrustworthy. Validate it with a **known load at a similar level** (a 60–100 W lamp, a kettle on the low setting) before treating 23.2 W and 19.7 W as precise; the *difference* between states is the more reliable signal than either absolute value.
 
-**The adapter-rating A/B is not worth running.** Dell pairs the two supplies with the CPU class — **65 W (19.5 V, 3.34 A) for 35 W processors, 130 W (19.5 V, 6.7 A) for 65 W processors**, same 19.5 V and the same 4.5 × 3.0 mm barrel with an ID pin — so a 65 W brick on this box is *below* Dell's own pairing, and the platform reacts by throttling or refusing (`Underpowered AC power adapter, unable to proceed` is already in this unit's event log). That reaction changes the CPU state, which destroys the comparison: a drop from 23.2 W would prove throttling, not adapter efficiency. On top of that, the only 65 W Dell unit to hand is the **Wyse 5070's — the live `pve` node's adapter** — so the test costs an outage of the fleet CA, the log store, the Netdata parent and the NUT server to chase a 1–2 W effect that sits inside the error of a meter reading `0 W` at standby. **Keep the 130 W unit.**
+**The adapter-rating A/B is not worth running.** Dell pairs the two supplies with the CPU class — **65 W (19.5 V, 3.34 A) for 35 W processors, 130 W (19.5 V, 6.7 A) for 65 W processors**, same 19.5 V and the same 4.5 × 3.0 mm barrel with an ID pin — so a 65 W brick on this box is *below* Dell's own pairing, and the platform reacts by throttling or refusing (`Underpowered AC power adapter, unable to proceed` is already in this unit's event log). That reaction changes the CPU state, which destroys the comparison: a drop from 23.2 W would prove throttling, not adapter efficiency. On top of that, the only 65 W Dell unit to hand is the **Wyse 5070's — the live `pve1` node's adapter** — so the test costs an outage of the fleet CA, the log store, the Netdata parent and the NUT server to chase a 1–2 W effect that sits inside the error of a meter reading `0 W` at standby. **Keep the 130 W unit.**
 
 ### Boot menu (F12) and ePSA, 2026-11-06
 
@@ -171,7 +175,7 @@ Notable absences: the **Manageability** group contains only `USB Provision` and 
 - SPD also pins the part and the speed: **Kingston `KMKYF9-MIH`, 2400 MT/s, week 14 of 2018**, link running **1202 MHz IMC (DDR4-2405) at CAS 17-17-17-39** — rated speed, single channel, no downclocking.
 - **Memtest86+ 7.20 passed with 0 errors** (2026-11-06) across its full pattern sweep, at 3.4 GHz all-core with the package at 54–55 °C — the stick is good and the module is stable under sustained load.
 - So **16 GB is a single-stick add** and **32 GB is 2× 16 GiB** — Dell's documented ceiling for the model, and the i5-7500's memory controller tops out at DDR4-2400.
-- 8 GB is the same starting point as `pve`; unlike `pve`, the upgrade path here is cheap and non-destructive. Sizing the guests is still the real fix ([idea 15](../ideas/15-second-proxmox-node.md) risks).
+- 8 GB is the same starting point as `pve1`; unlike `pve1`, the upgrade path here is cheap and non-destructive. Sizing the guests is still the real fix ([idea 15](../ideas/15-second-proxmox-node.md) risks).
 
 ### Storage — an M.2 2280 SATA module in the M.2 slot
 
@@ -211,9 +215,9 @@ The drive is an **M.2 2280 SATA III module sitting in the M.2 slot**, and the **
 | Health counters | retired / reallocated blocks **0** · `Erase_Fail_Count` 385 · `Soft_ECC_Correction` 368 · `Command_Timeout` 116 · `UDMA_CRC_Error_Count` **0** (link and controller clean) |
 | Self-tests | short tests pass; the extended test was aborted by host at 90 % |
 
-**The wear reading was misread, and the erase counters correct it.** The first pass took `Media_Wearout_Indicator` normalized `4 / 100` as 96 % consumed. It is not — the physical counters cap the wear far below that: `Wear_Leveling_Count` raw **49** is the *average* erase count per block and `Max_Erase_Count` **86** the worst block, against client-TLC endurance of roughly **1 000–1 500 P/E cycles**, so **≤ 9 % is consumed**. A drive that had really spent 97 % of its endurance would show ~970 erases on its worst block, not 86. Raw **97** is therefore the percentage *remaining* — which is also how [research 29](29-wyse5070-hardware-diagnostic.md) reads the identical model in `pve`. The normalized `VALUE 004 / WORST 001` is anomalous on this firmware: the `WORST` column bottoms at 1 on healthy attributes too (`Soft_ECC_Correction` reports `VALUE 100 / WORST 001`), so it is not a life percentage and must not be quoted as one.
+**The wear reading was misread, and the erase counters correct it.** The first pass took `Media_Wearout_Indicator` normalized `4 / 100` as 96 % consumed. It is not — the physical counters cap the wear far below that: `Wear_Leveling_Count` raw **49** is the *average* erase count per block and `Max_Erase_Count` **86** the worst block, against client-TLC endurance of roughly **1 000–1 500 P/E cycles**, so **≤ 9 % is consumed**. A drive that had really spent 97 % of its endurance would show ~970 erases on its worst block, not 86. Raw **97** is therefore the percentage *remaining* — which is also how [research 29](29-wyse5070-hardware-diagnostic.md) reads the identical model in `pve1`. The normalized `VALUE 004 / WORST 001` is anomalous on this firmware: the `WORST` column bottoms at 1 on healthy attributes too (`Soft_ECC_Correction` reports `VALUE 100 / WORST 001`), so it is not a life percentage and must not be quoted as one.
 
-**Verdict: the module is sound.** PASSED, zero reallocated or retired blocks, zero reported uncorrectable errors, zero link CRC errors, and **~97 % of its endurance left** at 11 134 hours. **Capacity is the only reason to change it** — 128 GB is workable (the `pve` node runs the same drive with a VM and four LXCs) but tight if guests need real disk; a larger disk is a comfort upgrade, not a rescue.
+**Verdict: the module is sound.** PASSED, zero reallocated or retired blocks, zero reported uncorrectable errors, zero link CRC errors, and **~97 % of its endurance left** at 11 134 hours. **Capacity is the only reason to change it** — 128 GB is workable (the `pve1` node runs the same drive with a VM and four LXCs) but tight if guests need real disk; a larger disk is a comfort upgrade, not a rescue.
 
 **And it is empty.** `lsblk` on 2026-11-06 shows `sda` with **no partitions at all** — there is no Windows install left to preserve or wipe. That also corrects the 2026-11-05 reading: the "31.7 MiB ESP + ~57.7 GiB encrypted volume, 36.3 GiB used" was the **Ventoy installer stick**, not this disk — Ventoy's layout is exactly a ~58 GB exFAT data partition plus a 32 MiB `VTOYEFI` partition, and it accounts for every number in that description. The `P4: SK hynix … 128GB` entry under `LEGACY BOOT` is a stale BIOS option pointing at a disk that no longer carries a boot image.
 
@@ -333,7 +337,7 @@ Regardless of the outcome, **record the ME state** in `docs/hardware.md`: an unc
 | The 128 GB module as the boot disk | **~97 % endurance remaining** at 11 134 POH — healthy, merely small | ✅ usable as-is; a larger disk is optional, not a fix |
 | 32 GB RAM ceiling | 8 GB now, **one slot free** | ✅ 16 GB is one stick |
 | Heterogeneous CPUs vs the Wyse (Gemini Lake) | **Kaby Lake, x86-64-v3** — an even wider gap from the J4105 | ⚠️ any cross-node migration needs a conservative VM CPU type, or restarts |
-| Address `.203` | free; box currently on DHCP `.206` | ✅ reserve at install |
+| Address `.202` | free (NAS moved to `.209`); box currently on DHCP `.206` | ✅ reserve at install |
 
 **No ADR is affected** — the audit changes a hardware assumption inside idea 15, not a decision.
 
@@ -355,8 +359,8 @@ Six items that are either **impossible to recover afterwards** or that **change 
 **Install-time decisions**, recorded now so the installer is not a guess:
 
 - **Storage layout: `ext4` + LVM-thin, not ZFS** — 8 GB of RAM and a single 119 GiB module with **~97 % of its endurance left** ([SMART](#the-module-is-sound-and-it-is-empty-smart-2026-11-06)). A larger NVMe disk is a comfort upgrade, not a prerequisite; the 2.5″ bay stays free for the ZFS pool the node can hold later, per [idea 15](../ideas/15-second-proxmox-node.md) step 7.
-- **Proxmox VE 9.x — the same branch as `pve` (currently 9.2.2)** — a later cluster join needs matching versions (*"All nodes should have the same version"* in the [Cluster Manager requirements](https://pve.proxmox.com/pve-docs/chapter-pvecm.html)), so no 8.x and no snapshot ISO; align both nodes to the same point release before the cluster exists.
-- **Hostname `pve2`**, **static `192.168.2.203`** on `enp0s31f6` — record the MAC first for the DHCP reservation and for Wake-on-LAN.
+- **Proxmox VE 9.x — the same branch as `pve1` (currently 9.2.2)** — a later cluster join needs matching versions (*"All nodes should have the same version"* in the [Cluster Manager requirements](https://pve.proxmox.com/pve-docs/chapter-pvecm.html)), so no 8.x and no snapshot ISO; align both nodes to the same point release before the cluster exists.
+- **Hostname `pve2`**, **static `192.168.2.202`** on `enp0s31f6` — record the MAC first for the DHCP reservation and for Wake-on-LAN.
 - **Watch POST for `Unknown AC power adapter`** — if it appears, stop and resolve the brick before building anything.
 
 ### Remaining
@@ -376,9 +380,9 @@ Six items that are either **impossible to recover afterwards** or that **change 
 ## Open Questions
 
 1. **Keep the i5-7500 or fit an i7-7700T?** Recommendation: run the 7500 first and judge it on measurements; if sustained load brings fan noise or throttling, the 7700T is the upgrade that respects the 35 W chassis design — and it adds hyper-threading, which the 7500T would not.
-2. **Change the boot medium before the Proxmox install?** **Answered 2026-11-06 — not required.** The module is healthy (**~97 % endurance remaining**, [SMART read](#the-module-is-sound-and-it-is-empty-smart-2026-11-06)), so 128 GB of capacity is the only argument — and `pve` runs the identical drive today. **Optional: an NVMe M.2 2280 (500 GB–1 TB)** for headroom; it drops into the slot the module vacates, needs no caddy, and leaves the 2.5″ bay free for the later ZFS disk ([idea 15](../ideas/15-second-proxmox-node.md) step 7). The 2.5″ SATA route hinges on the caddy and ribbon actually being present.
+2. **Change the boot medium before the Proxmox install?** **Answered 2026-11-06 — not required.** The module is healthy (**~97 % endurance remaining**, [SMART read](#the-module-is-sound-and-it-is-empty-smart-2026-11-06)), so 128 GB of capacity is the only argument — and `pve1` runs the identical drive today. **Optional: an NVMe M.2 2280 (500 GB–1 TB)** for headroom; it drops into the slot the module vacates, needs no caddy, and leaves the 2.5″ bay free for the later ZFS disk ([idea 15](../ideas/15-second-proxmox-node.md) step 7). The 2.5″ SATA route hinges on the caddy and ribbon actually being present.
 3. **Is vPro worth chasing at all?** If the ME firmware is not in AMT mode, no BIOS setting will bring MEBx back. Decide between AC Recovery + WoL, an IP-KVM, or accepting manual power.
-4. **Rename first, or build `pve2` standalone?** Unchanged from idea 15: the `pve` → `pve1` rename must land **before** a cluster exists, but it is not a prerequisite for provisioning this node (issue #177 keeps the cluster out of scope).
+4. **Rename first, or build `pve2` standalone?** Unchanged from idea 15: the `pve` → `pve1` rename must land **before** a cluster exists, but it is not a prerequisite for provisioning this node. The cluster and QDevice are now a separate phase ([ADR 47](../decisions/47-second-proxmox-node-cluster-qdevice.md)).
 
 ---
 
@@ -387,7 +391,7 @@ Six items that are either **impossible to recover afterwards** or that **change 
 - [Idea 15 — a second Proxmox node](../ideas/15-second-proxmox-node.md) — the plan this hardware serves
 - [Research 47 — a second Proxmox node](47-second-proxmox-node.md) — the cluster/HA/replication analysis and the candidate comparison
 - Audit pattern: [research 28](28-wyse3040-hardware-diagnostic.md) · [research 29](29-wyse5070-hardware-diagnostic.md) · [research 31](31-futro-s930-hardware-diagnostic.md) · [research 32](32-wincor-beetle-m3-hardware-diagnostic.md)
-- [Research 37 — TPM 2.0 and the fleet](37-tpm2-hardware-and-fleet.md) · [ADR 31](../decisions/31-static-address-scheme.md) (addressing) · [ADR 33](../decisions/33-fleet-node-hostnames.md) (hostnames) · [runbook 28](../runbooks/28-pve-proxmox-node.md) (the incumbent node's build)
+- [Research 37 — TPM 2.0 and the fleet](37-tpm2-hardware-and-fleet.md) · [ADR 31](../decisions/31-static-address-scheme.md) (addressing) · [ADR 33](../decisions/33-fleet-node-hostnames.md) (hostnames) · [runbook 28](../runbooks/28-pve1-proxmox-node.md) (the incumbent node's build)
 - Intel ARK — [Core i5-7500](https://www.intel.com/content/www/us/en/products/sku/97123/intel-core-i57500-processor-6m-cache-up-to-3-80-ghz/specifications.html) (TDP, vPro Platform eligibility)
 - SK hynix **SC311** — SATA III / M.2 2280 module, Dell OEM part `6HG72` (`HFS128G39TNF-N2A0A`): the installed drive
 - Dell — [OptiPlex 7050 Micro Owner's Manual](https://dl.dell.com/topicspdf/optiplex-7050-desktop_owners-manual3_en-us.pdf) (storage table: 2.5″ SATA + M.2 2280 PCIe NVMe — **NVMe only in the option list**, while the delivered unit runs an M.2 SATA module; processor table: 35 W T-series only; 65 W / 130 W adapters)

@@ -14,7 +14,7 @@ not part of the delivery sequence.
 The **delivery steps are §1–§6**; each carries a verification gate. §7 is not a delivery step and has no
 gate — it documents revocation, rotation and recovery for when the stack is already live.
 
-**Scope.** `pve`, `lab`, `edge`, `nas`, `vtstack` and `ca`. **`cloudlab` is deliberately excluded** — it
+**Scope.** `pve1`, `pve2`, `lab`, `edge`, `nas`, `vtstack` and `ca`. **`cloudlab` is deliberately excluded** — it
 has no LAN route to `ca.internal`, so it keeps the pinned host key and the fleet key. The AI-agent broker
 is **not** part of this runbook; until it lands, agents self-issue with the shared `agent-ai` JWK
 (§6), and per-agent revocation is a class-level operation.
@@ -135,10 +135,10 @@ Verify a client accepts a test host certificate without a per-host `known_hosts`
 pinned LAN entries:
 
 ```sh
-ssh-keygen -R pve.internal; ssh-keygen -R 192.168.2.201
+ssh-keygen -R pve1.internal; ssh-keygen -R 192.168.2.201
 ```
 
-> **Execution record:** 2026-10-31 — `ca_trust` applied to `pve`, `lab`, `nas`, `edge`, `vtstack`
+> **Execution record:** 2026-10-31 — `ca_trust` applied to `pve1`, `lab`, `nas`, `edge`, `vtstack`
 > (5/5 `ok=14 changed=2 failed=0`): `/etc/ssh/ssh_host_ca_key.pub` and `/etc/ssh/ssh_user_ca_key.pub`
 > installed from Key Vault on every node, root still verified against the pinned fingerprint.
 > `./scripts/Set-HomelabSshKnownHosts.ps1` wrote
@@ -169,7 +169,8 @@ The `security` role now:
 
 ```powershell
 # LAN workstation, one at a time
-ansible-playbook ansible/playbooks/playbook-pve.yml --diff
+ansible-playbook ansible/playbooks/playbook-pve1.yml --diff
+ansible-playbook ansible/playbooks/playbook-pve2.yml --diff
 ansible-playbook ansible/playbooks/playbook-lab.yml --diff
 ansible-playbook ansible/playbooks/playbook-edge.yml --diff
 ansible-playbook ansible/playbooks/playbook-nas.yml --diff
@@ -211,7 +212,7 @@ sudo journalctl -u homelab-ssh-host-cert-renew -n 20
 > | Node | Playbook | First run | Re-run |
 > |---|---|---|---|
 > | `lab` (canary) | `playbook-lab.yml` | `ok=114 changed=10 failed=0` | — |
-> | `pve` | `playbook-pve.yml` | `ok=126 changed=19 failed=0` | — |
+> | `pve1` | `playbook-pve1.yml` | `ok=126 changed=19 failed=0` | — |
 > | `edge` | `playbook-edge.yml` | `ok=150 changed=19 failed=0` | `changed=0` |
 > | `nas` | `playbook-nas.yml` | `ok=67 changed=17 failed=0` (1 transient unreachable) | `ok=83 changed=0` |
 > | `vtstack` | `playbook-logs.yml` | `ok=97 changed=20 failed=0` | `changed=1` |
@@ -231,9 +232,9 @@ sudo journalctl -u homelab-ssh-host-cert-renew -n 20
 >   check, and root in the container holds no capabilities (`sudo capsh --print` → `Current: =ep`), so
 >   nothing could call `clock_settime` even if it ran. The `common` role therefore no longer claims to
 >   start a time daemon on container guests. The CA was ~6 h behind during the first issuances — a
->   **host-side** fault, not a guest one — so the `pve`/`lab`/`edge`/`nas` certificates carry a `notBefore`
+>   **host-side** fault, not a guest one — so the `pve1`/`lab`/`edge`/`nas` certificates carry a `notBefore`
 >   6 h in the past and a slightly short 7-day window. Harmless now; the check that matters is
->   `timedatectl` on `pve` (chrony active, `System clock synchronized: yes`), never inside the CA guest.
+>   `timedatectl` on `pve1` (chrony active, `System clock synchronized: yes`), never inside the CA guest.
 > - **Losing `ssh-agent` mid-run** costs a playbook: every task fails `Permission denied (publickey)`.
 >   Start the agent on a fixed socket (`ssh-agent -a /tmp/fleet-ssh-agent.sock`) so it survives terminal
 >   churn, and export `SSH_AUTH_SOCK` in each new shell.

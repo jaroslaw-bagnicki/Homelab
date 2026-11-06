@@ -12,10 +12,10 @@ hardware detail see [Hardware Inventory](hardware.md); for change history see
 |---|---|---|---|---|---|
 | **Lab** | main workload host (Docker → k3s) | Lenovo M910q Tiny · Ubuntu 24.04 LTS · Azure Arc | `lab` | `192.168.2.200` | 🔨 |
 | **OMV NAS** | backup target | HP ProLiant ML110 G5 · OMV 8.3 | `omv` | `192.168.2.210` | 🪦 |
-| **Beetle NAS** | backup target (successor to ML110) | Wincor Beetle M-III · OMV 8.5 | `nas` | `192.168.2.202` | 🔨 |
+| **Beetle NAS** | backup target (successor to ML110) | Wincor Beetle M-III · OMV 8.5 | `nas` | `192.168.2.209` | 🔨 |
 | **Edge Ingress** | LAN DNS + reverse proxy (public ingress held) | Dell Wyse 3040 · Debian 13 minimal | `edge` | `192.168.2.240` | ✅ |
-| **Proxmox VE** | virtualisation host — smart-home + always-on services | Dell Wyse 5070 | `pve` | `192.168.2.201` · guests `.210`–`.212`, `.214`–`.216` | ✅ |
-| **Proxmox VE (second node)** | second virtualisation host — capacity now, cluster later | Dell OptiPlex 7050 MFF · Proxmox VE 9.x (planned) | `pve2` | `192.168.2.203` (reserved) | 📋 |
+| **Proxmox VE** | virtualisation host — smart-home + always-on services | Dell Wyse 5070 | `pve1` | `192.168.2.201` · guests `.210`–`.212`, `.214`–`.216` | ✅ |
+| **Proxmox VE (second node)** | second virtualisation host — capacity now, two-node cluster next | Dell OptiPlex 7050 MFF · Proxmox VE 9.x (planned) | `pve2` | `192.168.2.202` (reserved) | 📋 |
 | **LLM server** | local LLM inference | Minisforum X1 Lite | — | TBD | 🧠 |
 | **Cloudlab VPS** | staging for Lab (Ansible + Docker/k3s workloads) | Contabo VPS 10 · Ubuntu 24.04 | `cloudlab` | `173.249.27.13` | ✅ |
 
@@ -26,12 +26,12 @@ hardware detail see [Hardware Inventory](hardware.md); for change history see
 | VM 210 | Home Assistant OS | — | `.210` | 📋 |
 | LXC 211 | Mosquitto | — | `.211` | 📋 |
 | LXC 212 | Zigbee2MQTT | — | `.212` | 📋 |
-| LXC 213 | NUT server — retired, moved host-native to `pve` | `nut` | `.213` | 🪦 |
+| LXC 213 | NUT server — retired, moved host-native to `pve1` | `nut` | `.213` | 🪦 |
 | LXC 214 | VictoriaLogs log store | `vtstack` | `.214` | ✅ |
 | LXC 215 | Private CA (`step-ca`) | `ca` | `.215` | ✅ |
 | VM 216 | FreeIPA Linux domain (Fedora 45) | `ipa` | `.216` | 🔨 |
 
-The NUT server now runs **host-native on `pve`** ([ADR 39](decisions/39-nut-host-native.md)); LXC 213 is retired and `.213` is free.
+The NUT server now runs **host-native on `pve1`** ([ADR 39](decisions/39-nut-host-native.md)); LXC 213 is retired and `.213` is free. `pve2` has no guests yet; its guest block is `25x` (`.250–.254`), and it joins `pve1` in the `homelab` cluster with a QDevice on `edge` ([ADR 47](decisions/47-second-proxmox-node-cluster-qdevice.md)).
 
 Addresses follow the static scheme ([ADR 31](decisions/31-static-address-scheme.md)); node hostnames name the host role ([ADR 33](decisions/33-fleet-node-hostnames.md)); the workload platform is migrating to k3s ([ADR 22](decisions/22-k3s-arc-homelab.md)).
 
@@ -47,12 +47,12 @@ Current state — what's running or in progress. Planned work is under [What's N
 | **OpenCode instances** (`homelab`, `prospera`) | `cloudlab` | per-project agentic dev servers | [ADR 17](decisions/17-adopt-opencode.md) · [runbook 17](runbooks/17-deploy-opencode-on-cloudlab.md) | ✅ |
 | **Zot** | `cloudlab` | self-hosted OCI registry + pull-through cache | [runbook 20](runbooks/20-deploy-zot.md) | ✅ |
 | **OpenMediaVault** | `omv` | network shares (SMB) + backup target | [ADR 23](decisions/23-nas-on-ml110.md) | 🪦 |
-| **Netdata Parent** | `pve` | Tier B central monitoring pane | [ADR 27](decisions/27-monitoring-strategy.md) · [runbook 31](runbooks/31-deploy-netdata.md) | ✅ |
-| **UPS + NUT** | `pve` (host-native NUT server) + `lab`/`edge`/`nas` clients | shared-rail power protection | [ADR 39](decisions/39-nut-host-native.md) · [runbook 29](runbooks/29-nut-ups-shutdown.md) · [runbook 30](runbooks/30-deploy-nut-clients.md) | ✅ |
-| **VictoriaLogs** | `pve` (LXC 214 `vtstack`) | Tier B log store | [ADR 35](decisions/35-log-store-victorialogs.md) · [runbook 33](runbooks/33-deploy-victorialogs.md) | ✅ |
-| **Private CA** (`step-ca`) | `pve` (LXC 215 `ca`) | fleet trust anchor — ACME issuance, intermediate sealed in the `pve` TPM | [ADR 38](decisions/38-private-ca-hierarchy-and-custody.md) · [runbook 35](runbooks/35-deploy-step-ca.md) | ✅ |
-| **FreeIPA** | `pve` (VM 216 `ipa`, Fedora 45) | Linux domain — Kerberos, LDAP, HBAC, central `sudo`; Dogtag issues only IPA's own certificates | [ADR 43](decisions/43-freeipa-domain-realm.md) · [runbook 41](runbooks/41-deploy-freeipa-server.md) | 🔨 |
-| **Fluent Bit** | every LAN node (`pve`, `edge`, `lab`, `nas`, `vtstack`) | Tier B log collector — ships journald + Docker logs to VictoriaLogs | [ADR 36](decisions/36-log-collector-fluentbit.md) · [runbook 34](runbooks/34-deploy-fluentbit.md) | ✅ |
+| **Netdata Parent** | `pve1` | Tier B central monitoring pane | [ADR 27](decisions/27-monitoring-strategy.md) · [runbook 31](runbooks/31-deploy-netdata.md) | ✅ |
+| **UPS + NUT** | `pve1` (host-native NUT server) + `pve2`/`lab`/`edge`/`nas` clients | shared-rail power protection | [ADR 39](decisions/39-nut-host-native.md) · [runbook 29](runbooks/29-nut-ups-shutdown.md) · [runbook 30](runbooks/30-deploy-nut-clients.md) | ✅ |
+| **VictoriaLogs** | `pve1` (LXC 214 `vtstack`) | Tier B log store | [ADR 35](decisions/35-log-store-victorialogs.md) · [runbook 33](runbooks/33-deploy-victorialogs.md) | ✅ |
+| **Private CA** (`step-ca`) | `pve1` (LXC 215 `ca`) | fleet trust anchor — ACME issuance, intermediate sealed in the `pve1` TPM | [ADR 38](decisions/38-private-ca-hierarchy-and-custody.md) · [runbook 35](runbooks/35-deploy-step-ca.md) | ✅ |
+| **FreeIPA** | `pve1` (VM 216 `ipa`, Fedora 45) | Linux domain — Kerberos, LDAP, HBAC, central `sudo`; Dogtag issues only IPA's own certificates | [ADR 43](decisions/43-freeipa-domain-realm.md) · [runbook 41](runbooks/41-deploy-freeipa-server.md) | 🔨 |
+| **Fluent Bit** | every LAN node (`pve1`, `pve2`, `edge`, `lab`, `nas`, `vtstack`) | Tier B log collector — ships journald + Docker logs to VictoriaLogs | [ADR 36](decisions/36-log-collector-fluentbit.md) · [runbook 34](runbooks/34-deploy-fluentbit.md) | ✅ |
 | **Internal access stack** (Technitium DNS + Caddy) | `edge` | authoritative `internal.` DNS + LAN reverse proxy with short-lived `step-ca` leaves | [ADR 40](decisions/40-internal-dns-proxy-edge.md) · [runbook 37](runbooks/37-deploy-internal-access-stack.md) | ✅ |
 
 ## Observability
@@ -67,9 +67,9 @@ watches the **management plane**, the LAN watches the **real-time plane**. Where
 | **Power state** | UPS charge, voltage, load and on-battery events charted in Netdata (`Remote Devices → UPS`) | [ADR 30](decisions/30-ups-nut-graceful-shutdown.md) · [runbook 31](runbooks/31-deploy-netdata.md) | ✅ |
 | **Disk health** | Drive health and long self-test results for the NAS arrays, per drive | [research 32](research/32-wincor-beetle-m3-hardware-diagnostic.md) | ✅ |
 | **Per-device energy** | Power draw per wall plug, charted in Grafana | [#73](https://github.com/jaroslaw-bagnicki/Homelab/issues/73) · [ADR 26](decisions/26-zigbee-energy-monitoring.md) | 📋 |
-| **Logs** | VictoriaLogs — the fleet's logs searchable in one place on the `pve` node, 30d retention | [#84](https://github.com/jaroslaw-bagnicki/Homelab/issues/84) · [ADR 36](decisions/36-log-collector-fluentbit.md) · [runbook 34](runbooks/34-deploy-fluentbit.md) · [runbook 33](runbooks/33-deploy-victorialogs.md) | ✅ |
+| **Logs** | VictoriaLogs — the fleet's logs searchable in one place on the `pve1` node, 30d retention | [#84](https://github.com/jaroslaw-bagnicki/Homelab/issues/84) · [ADR 36](decisions/36-log-collector-fluentbit.md) · [runbook 34](runbooks/34-deploy-fluentbit.md) · [runbook 33](runbooks/33-deploy-victorialogs.md) | ✅ |
 
-**Why two tiers**: Arc sees only the nodes enrolled in it, and the Edge appliance and `pve` are never
+**Why two tiers**: Arc sees only the nodes enrolled in it, and the Edge appliance and `pve1` are never
 enrolled — so the management plane (policy, compliance, portal, heartbeat) can never show the whole
 fleet. Real-time metrics come from Netdata on **every** LAN node instead.
 
@@ -86,8 +86,9 @@ once it is ready to start — a row leaves the table with the PR that completes 
 | Item | Effort | Next step | Refs |
 |---|---|---|---|
 | **Beetle NAS** | ⭐⭐⭐ | **Phase 1 done** — OMV 8.5 on `nas`, `md0` RAID1 clean + reboot-verified (a failed member was replaced 2026-10-17, [runbook 38](runbooks/38-nas-disk-replacement.md)), fleet-enrolled with the Netdata child and NUT secondary; next: create the share and move the backup target, then retire the ML110 and release `.210` (Memtest86+ and the RTC coin cell stay deferred — [research 32](research/32-wincor-beetle-m3-hardware-diagnostic.md)) | [#98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98) · [ADR 29](decisions/29-nas-backup-target-beetle-m3-omv.md) · [runbook 32](runbooks/32-beetle-m3-omv-setup.md) |
-| **Home Assistant VM + LXCs** | ⭐⭐⭐ | VM 210 (HA OS) + LXC 211/212 (Mosquitto, Zigbee2MQTT) on the `pve` node (the base from runbook 28), then point HA's NUT integration at `192.168.2.201` for UPS status + power-loss notifications | [#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68) · [#85](https://github.com/jaroslaw-bagnicki/Homelab/issues/85) · [ADR 25](decisions/25-home-assistant-thin-client.md) · [#122](https://github.com/jaroslaw-bagnicki/Homelab/issues/122) |
-| **FreeIPA M1 — server on `pve`** | ⭐⭐⭐ | VM 216 `ipa` (Fedora 45): `ipa.internal`/`IPA.INTERNAL`, Technitium A/PTR/SRV, external-ca under the fleet root, `admin` + test user; next: M2 backup/restore before the first client | [#164](https://github.com/jaroslaw-bagnicki/Homelab/issues/164) · [ADR 43](decisions/43-freeipa-domain-realm.md) · [runbook 41](runbooks/41-deploy-freeipa-server.md) |
+| **Home Assistant VM + LXCs** | ⭐⭐⭐ | VM 210 (HA OS) + LXC 211/212 (Mosquitto, Zigbee2MQTT) on the `pve1` node (the base from runbook 28), then point HA's NUT integration at `192.168.2.201` for UPS status + power-loss notifications | [#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68) · [#85](https://github.com/jaroslaw-bagnicki/Homelab/issues/85) · [ADR 25](decisions/25-home-assistant-thin-client.md) · [#122](https://github.com/jaroslaw-bagnicki/Homelab/issues/122) |
+| **Second Proxmox node + cluster** | ⭐⭐ | Rename `pve` → `pve1`, move the NAS to `.209`, install `pve2` at `.202`, then form the two-node cluster and add the QDevice on `edge` ([runbook 42](runbooks/42-pve2-proxmox-node.md) / [runbook 43](runbooks/43-proxmox-cluster-qdevice.md)) | [#177](https://github.com/jaroslaw-bagnicki/Homelab/issues/177) · [ADR 47](decisions/47-second-proxmox-node-cluster-qdevice.md) |
+| **FreeIPA M1 — server on `pve1`** | ⭐⭐⭐ | VM 216 `ipa` (Fedora 45): `ipa.internal`/`IPA.INTERNAL`, Technitium A/PTR/SRV, external-ca under the fleet root, `admin` + test user; next: M2 backup/restore before the first client | [#164](https://github.com/jaroslaw-bagnicki/Homelab/issues/164) · [ADR 43](decisions/43-freeipa-domain-realm.md) · [runbook 41](runbooks/41-deploy-freeipa-server.md) |
 
 
 ### Planned
@@ -129,15 +130,16 @@ Tenda Nova mesh — 192.168.2.0/24, gateway 192.168.2.1 (single broadcast domain
         │
         └── TL-SG108E switch (192.168.2.230)
                  ├── Lab M910q        — 192.168.2.200
-                 ├── Proxmox VE       — 192.168.2.201
+                 ├── Proxmox VE       — 192.168.2.201 (pve1)
+                 ├── Proxmox VE       — 192.168.2.202 (pve2, planned)
                  ├── OMV NAS          — 192.168.2.210
-                 ├── Beetle NAS       — 192.168.2.202
+                 ├── Beetle NAS       — 192.168.2.209
                  ├── Edge Ingress     — 192.168.2.240
                  └── work laptop dock — DHCP (corporate)
 ```
 
-**Power**: both strips sit behind the shared-rail **Green Cell UPSLM600** — USB on the `pve` node,
-which runs the NUT server **host-native**, with `upsmon` on `pve`/`lab`/`edge`/`nas`
+**Power**: both strips sit behind the shared-rail **Green Cell UPSLM600** — USB on the `pve1` node,
+which runs the NUT server **host-native**, with `upsmon` on `pve1`/`pve2`/`lab`/`edge`/`nas`
 ([ADR 39](decisions/39-nut-host-native.md)).
 
 Cloudlab VPS (Contabo) sits outside the LAN with its own Cloudflare Tunnel + Caddy (ADR 19).

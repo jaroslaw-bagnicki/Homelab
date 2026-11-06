@@ -29,3 +29,9 @@ netdata_storage: ram
 fluentbit_buffer_type: memrb
 fluentbit_buffer_limit: 16M
 fluentbit_cursor_tmpfs: true
+
+# Corosync QDevice arbitrator for the two-node Proxmox cluster (ADR 47) — TCP 5403
+# from pve1/pve2 only.
+corosync_qnetd_client_ips:
+  - 192.168.2.201
+  - 192.168.2.202

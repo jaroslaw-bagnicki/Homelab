@@ -1,7 +1,7 @@
-# UPS Graceful Shutdown — NUT on the pve Node
+# UPS Graceful Shutdown — NUT on the pve1 Node
 
 **Date:** 2026-09-12
-**Status:** Superseded by [ADR 39](39-nut-host-native.md) — the NUT server is now host-native on `pve`, not in LXC 213
+**Status:** Superseded by [ADR 39](39-nut-host-native.md) — the NUT server is now host-native on `pve1`, not in LXC 213
 
 ---
 
@@ -24,19 +24,19 @@ Three findings on 2026-09-12 pinned the remaining choices:
   declares usage page **`0xFF00` (vendor-defined)**, not **`0x84` (Power Device)**. NUT's HID Power
   Device driver is therefore structurally unable to drive it, and the unit carries **no serial
   number**.
-- **The `pve` node's base is live** ([runbook 28](../runbooks/28-pve-proxmox-node.md)) while the
+- **The `pve1` node's base is live** ([runbook 28](../runbooks/28-pve1-proxmox-node.md)) while the
   Home Assistant OS VM is not yet built ([#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68) /
   [#85](https://github.com/jaroslaw-bagnicki/Homelab/issues/85)), so the HA-side integration cannot be
   in the initial scope.
 
 ## Decision
 
-**Drive the shared rail with NUT, run its server in a dedicated LXC on the `pve` node, and let every
+**Drive the shared rail with NUT, run its server in a dedicated LXC on the `pve1` node, and let every
 node stop itself on low battery.**
 
 - **NUT.** One mechanism drives a heterogeneous fleet, and it already has a Home Assistant
   integration and a monitoring path.
-- **NUT server in a dedicated unprivileged LXC (213) on the `pve` node** — chosen over
+- **NUT server in a dedicated unprivileged LXC (213) on the `pve1` node** — chosen over
   host-native on the base, for container isolation and config that folds into VM/LXC backups.
 - **Driver `nutdrv_qx`**, with `port = auto` plus `vendorid`/`productid`. The vendor-defined usage
   page rules out `usbhid-ups`, and with no serial number there is no stable device path to name.
@@ -93,6 +93,6 @@ node stop itself on low battery.**
 ## References
 
 - [Issue #111 — UPS + NUT graceful shutdown](https://github.com/jaroslaw-bagnicki/Homelab/issues/111) · [Idea 09 — UPS with NUT + Home Assistant](../ideas/09-ups-nut-home-assistant.md)
-- [Runbook 29 — UPS graceful shutdown (NUT on the pve node)](../runbooks/29-nut-ups-shutdown.md)
-- [ADR 25](25-home-assistant-thin-client.md) — the `pve` node · [ADR 27](27-monitoring-strategy.md) — monitoring · [ADR 28](28-fleet-admin-account-and-key.md) — fleet admin account · [ADR 29](29-nas-backup-target-beetle-m3-omv.md) — Beetle NAS
+- [Runbook 29 — UPS graceful shutdown (NUT on the pve1 node)](../runbooks/29-nut-ups-shutdown.md)
+- [ADR 25](25-home-assistant-thin-client.md) — the `pve1` node · [ADR 27](27-monitoring-strategy.md) — monitoring · [ADR 28](28-fleet-admin-account-and-key.md) — fleet admin account · [ADR 29](29-nas-backup-target-beetle-m3-omv.md) — Beetle NAS
 - [Network UPS Tools](https://networkupstools.org/) — `nutdrv_qx`, `upsd`, `upsmon`

@@ -1,5 +1,5 @@
 ---
-- name: Configure ca (private CA guest on pve) base
+- name: Configure ca (private CA guest on pve1) base
   hosts: ca
   become: true
   roles:

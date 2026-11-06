@@ -47,7 +47,7 @@ Adopt a **three-tier PKI** issued and renewed by **`step-ca`**:
    **root certificate is distributed to the fleet and to workstations** — Ansible for the
    fleet, manually or by script for workstations.
 2. **Intermediate CA — 1 year**, signed by the root. Its private key is stored in the **TPM 2.0 on
-   `pve`** — the Wyse 5070's **Intel PTT firmware TPM**, not a discrete chip (measured 2026-10-04;
+   `pve1`** — the Wyse 5070's **Intel PTT firmware TPM**, not a discrete chip (measured 2026-10-04;
    [research 37 §5](../research/37-tpm2-hardware-and-fleet.md)) — so signing happens in hardware and the
    key never exists in the clear. Only the intermediate is online.
 3. **Leaves — short-lived**, signed by the intermediate: server certificates for the reverse proxy
@@ -56,7 +56,7 @@ Adopt a **three-tier PKI** issued and renewed by **`step-ca`**:
    long-lived leaves. **No CRL or OCSP is operated**: revocation relies entirely on the short lifetime,
    so a compromised leaf stays trusted until it expires. That is an accepted residual, not an oversight.
 
-The CA runs on **`pve`** — the TPM makes that host a hard requirement, since the intermediate key cannot
+The CA runs on **`pve1`** — the TPM makes that host a hard requirement, since the intermediate key cannot
 move to another machine. The container/VM shape is an implementation detail, not part of this decision
 ([research 36 §5](../research/36-step-ca-machine-identity.md) leans toward a dedicated unprivileged LXC
 with the TPM bound through, rather than one all-in-one stack).
@@ -72,24 +72,24 @@ with the TPM bound through, rather than one all-in-one stack).
 
 - **The ADR 34 gap closes** once leaves are deployed: LAN services present certificates a client can
   verify against the fleet root, which is the whole point of the exercise.
-- **The root is never online**, so compromising `pve` cannot forge a new intermediate — the worst case is
+- **The root is never online**, so compromising `pve1` cannot forge a new intermediate — the worst case is
   a stolen 1-year intermediate, not a stolen root.
 - **TPM key custody needs no custom build** — `tpmkms` is pure Go and compiled into the stock `step-ca`
   binary, so the CA stays an ordinary packaged service (the CGO / `step-ca-hsm` build is for PKCS #11 and
-  YubiKey PIV). That contradicts Smallstep's docs page, so it was **verified on `pve` on 2026-10-04** —
+  YubiKey PIV). That contradicts Smallstep's docs page, so it was **verified on `pve1` on 2026-10-04** —
   the stock binary served a CA from a TPM-held intermediate and issued a chain-verified leaf
   ([research 36 §5](../research/36-step-ca-machine-identity.md)).
-- **The `pve` TPM is firmware, not a discrete chip.** Measured 2026-10-04, the Wyse 5070 exposes an
+- **The `pve1` TPM is firmware, not a discrete chip.** Measured 2026-10-04, the Wyse 5070 exposes an
   **Intel PTT** firmware TPM, so the trust anchor is platform firmware rather than a separate
   tamper-resistant part, and a BIOS update, a `Clear TPM` or an NVRAM reset can **destroy the sealed
   key** ([research 37 §5](../research/37-tpm2-hardware-and-fleet.md)). PTT is still a genuine TPM 2.0
   implementation, so the key stays non-exportable, and the recovery path below absorbs the loss — a PTT
   wipe costs a re-signing ceremony, not a re-trust — but it will be needed more often than with a
   discrete chip.
-- **Recovery is cheap because the root stays offline: only the intermediate is re-issued.** If `pve` or
+- **Recovery is cheap because the root stays offline: only the intermediate is re-issued.** If `pve1` or
   its TPM dies, the intermediate key is gone but the **root is unaffected** — the runbook re-signs a
   fresh 1-year intermediate with the offline root, and the fleet and workstations keep trusting the same
-  root. There is **no root re-issue and no client re-trust window**, so a `pve` failure is contained to
+  root. There is **no root re-issue and no client re-trust window**, so a `pve1` failure is contained to
   the intermediate. Short-lived leaves then re-enrol automatically. Only the loss of the *root* key
   forces a new root and a full redistribution — which is exactly why the root is the one key kept offline
   on the IronKey, with the YubiKey PIV upgrade planned to make it non-exportable.

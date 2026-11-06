@@ -1,0 +1,6 @@
+---
+# Corosync QDevice arbitrator on the edge appliance (ADR 47). `corosync-qnetd`
+# is stateless and needs only TCP 5403 from the cluster nodes; it is not a
+# Proxmox node and has no version coupling to the cluster.
+corosync_qnetd_client_ips: []
+corosync_qnetd_port: 5403

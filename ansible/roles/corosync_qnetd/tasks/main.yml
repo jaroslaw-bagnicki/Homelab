@@ -1,0 +1,21 @@
+---
+- name: Install the Corosync QDevice arbitrator
+  ansible.builtin.apt:
+    name: corosync-qnetd
+    state: present
+    update_cache: true
+
+- name: Enable and start the QDevice arbitrator
+  ansible.builtin.service:
+    name: corosync-qnetd
+    state: started
+    enabled: true
+
+- name: Allow the cluster nodes to reach the QDevice arbitrator
+  community.general.ufw:
+    rule: allow
+    proto: tcp
+    port: "{{ corosync_qnetd_port }}"
+    from_ip: "{{ item }}"
+  loop: "{{ corosync_qnetd_client_ips }}"
+  when: corosync_qnetd_client_ips | length > 0

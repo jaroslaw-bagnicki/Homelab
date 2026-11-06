@@ -12,6 +12,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | **Beetle NAS** | OMV NAS backup target (successor to ML110) | Wincor Beetle M-III | Pentium G4400 (2C/2T, 3.3 GHz) | 8 GB DDR4 (1×, 1 free slot) | SanDisk 128 GB SSD + 2× Seagate 1 TB 2.5" | 1× GbE Intel I219-V |
 | **Edge Ingress** | LAN DNS + reverse proxy (public ingress held) | Dell Wyse 3040 | Atom x5-Z8350 (2 W TDP) | 2 GB DDR3L | 8 GB eMMC | 1× GbE |
 | **Proxmox VE** | virtualisation host — smart-home + always-on services | Dell Wyse 5070 | Celeron J4105 (Gemini Lake, 10 W) | 8 GB DDR4-2400 (2× 4 GB) | M.2 SATA SK hynix 128 GB | 1× GbE + WiFi |
+| **Proxmox VE (second node)** | second virtualisation host — cluster + QDevice next | Dell OptiPlex 7050 MFF | i5-7500 (4C/4T, 65 W) | 8 GB DDR4-2400 (1× 8 GiB, 1 slot free) | M.2 SATA SK hynix 128 GB (+ free 2.5″ bay) | 1× GbE Intel I219-LM |
 | **OPNsense Router** | LAN edge router / firewall | Fujitsu Futro S930 | GX-424CC (4C/4T, 25 W TDP) | 4 GB DDR3 (1×, 1 free slot) | Innodisk 7.99 GB mSATA | 3× GbE (BCM5720 2× + Realtek 1×) |
 | **Cloudlab VPS** | staging / playground | Contabo Cloud VPS 10 | 4 vCPU (cloud — no TDP) | 8 GB | 75 GB NVMe | public IP |
 
@@ -52,7 +53,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | RAM | 8 GB DDR4 (1× 8 GiB SODIMM @ 2133 MT/s; 1 slot free, 32 GB max) |
 | Storage | SanDisk X600 128 GB SSD (OS) + 2× Seagate 1 TB 2.5" → `md0` RAID1, 1 TB usable, XFS · members `WDES3KB7` + `WL10C3NG` (`WDEPBVR3` 🪦 failed 2026-10-11) |
 | Firmware | AMI BIOS `R1.8.0` (2021-11-22) · board `D3460-D22` · legacy boot, no Secure Boot |
-| Network | 1× GbE Intel I219-V (`enp0s31f6`) · hostname `nas` · static `192.168.2.202` ([ADR 31](decisions/31-static-address-scheme.md)) · LAN-only SSH/web UI |
+| Network | 1× GbE Intel I219-V (`enp0s31f6`) · hostname `nas` · static `192.168.2.209` ([ADR 31](decisions/31-static-address-scheme.md)) · LAN-only SSH/web UI |
 | OS | OMV 8.5.9-1 (Debian 13) · kernel `6.12.107+deb13-amd64` · HTTPS-only web UI ([ADR 34](decisions/34-lan-tls-only.md)) |
 | Cooling | 3 fans · 43.7 dB(A) · no software fan control · internal UPS battery not OS-exposed |
 | Power | 14–16 W idle · AcBel 250 W 80 Plus Gold UPS-integrated PSU |
@@ -73,7 +74,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Role | LAN DNS + reverse proxy (Technitium DNS + Caddy); public ingress held |
 | Docs | [runbook 24](runbooks/24-edge-appliance.md) · [runbook 37](runbooks/37-deploy-internal-access-stack.md) · [ADR 24](decisions/24-edge-ingress-appliance.md) · [ADR 40](decisions/40-internal-dns-proxy-edge.md) · [research 25](research/25-edge-ingress-sbc.md) |
 
-### Proxmox VE — Dell Wyse 5070
+### pve1 — Dell Wyse 5070
 
 | Item | Spec |
 |---|---|
@@ -85,11 +86,11 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Virtualisation | VT-x ✅ **in use** (VM 210 + LXCs 211/212/214/215, `kvm_intel` loaded) · **VT-d supported** by the J4105 ([Intel ARK](https://www.intel.com/content/www/us/en/products/sku/128989/intel-celeron-j4105-processor-4m-cache-up-to-2-50-ghz/specifications.html)) — but **IOMMU/DMAR not yet confirmed on this board**, so PCIe passthrough is unproven; neither the TPM nor the Zigbee USB passthrough needs it |
 | TPM | **Intel PTT** firmware TPM 2.0 — `/dev/tpm0`, `/dev/tpmrm0` (measured 2026-10-04, [research 37 §5](research/37-tpm2-hardware-and-fleet.md)) · passed into LXC 215, which seals the CA's intermediate key to it |
 | Zigbee | Sonoff ZBDongle-P (CC2652P) · USB coordinator for LXC 212 |
-| OS | Proxmox VE 9.2.2 installed at `192.168.2.201` · base provisioned ([runbook 28](runbooks/28-pve-proxmox-node.md)) |
+| OS | Proxmox VE 9.2.2 installed at `192.168.2.201` · base provisioned ([runbook 28](runbooks/28-pve1-proxmox-node.md)) |
 | Role | Fleet virtualisation host (Proxmox VE) · hosts LXC 215 `ca`, the fleet trust anchor ([ADR 38](decisions/38-private-ca-hierarchy-and-custody.md)), and VM 216 `ipa`, the Fedora 45 FreeIPA domain ([ADR 43](decisions/43-freeipa-domain-realm.md)) |
-| Docs | [idea 05](ideas/05-home-assistant-thin-client.md) · [ADR 25](decisions/25-home-assistant-thin-client.md) · [research 26](research/26-home-assistant-thin-client.md) · [research 29](research/29-wyse5070-hardware-diagnostic.md) · [runbook 28](runbooks/28-pve-proxmox-node.md) |
+| Docs | [idea 05](ideas/05-home-assistant-thin-client.md) · [ADR 25](decisions/25-home-assistant-thin-client.md) · [research 26](research/26-home-assistant-thin-client.md) · [research 29](research/29-wyse5070-hardware-diagnostic.md) · [runbook 28](runbooks/28-pve1-proxmox-node.md) |
 
-### Second Proxmox VE node — Dell OptiPlex 7050 MFF (planned)
+### pve2 — Dell OptiPlex 7050 MFF (planned)
 
 | Item | Spec |
 |---|---|
@@ -97,7 +98,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | RAM | 8 GB DDR4-2400 (1× 8 GiB SO-DIMM, **DIMM 2 free**) — 16 GB is one stick, 32 GB with 2× 16 GiB |
 | Storage | **M.2 2280 SATA** module — SK hynix **SC311 SATA 128 GB**, SATA III via AHCI · 11 134 POH, **~97 % endurance remaining** (worst block only 86 erase cycles) — healthy but small; a larger NVMe is optional ([research 52](research/52-optiplex7050-hardware-diagnostic.md)) · 2.5″ bay empty |
 | Firmware | BIOS Dell 1.27.0 — Dell's current release (published 2023-11-15), not on DSA-2025-153, so nothing to flash · board `055H3G` · serial `3CLD6Q2` · asset tag `80006161` |
-| Network | Intel **I219-LM** GbE (`enp0s31f6`) · Intel 8265 WiFi/BT · DHCP `.206`, reserved `.203` ([ADR 31](decisions/31-static-address-scheme.md)) |
+| Network | Intel **I219-LM** GbE (`enp0s31f6`) · Intel 8265 WiFi/BT · currently DHCP `.206`, reserved **`.202`** ([ADR 31](decisions/31-static-address-scheme.md)) |
 | TPM | **TPM 2.0, enabled** (TPM On, SHA-256, attestation + key storage) — PTT vs discrete pending |
 | Power | **130 W** adapter (documented options: 65 W ↔ 35 W CPU, 130 W ↔ 65 W CPU) · BIOS logged `Unknown AC power adapter` before the purchase, none on the current boot · **23.2 W in BIOS Setup, 19.7 W at PXE** — pre-OS, OS idle still to measure |
 | Cooling | Fan **2278 RPM idle / 2908 RPM high** (ePSA) · CPU thermistor 36 °C, HDD 37 °C · audible at idle, **loud under sustained load** |
@@ -105,8 +106,8 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Management | ⚠️ **AMT/vPro unreachable — treat as absent**: the platform qualifies (i5-7500 + Q270 + I219-LM, `USB Provision` present) and every BIOS gate for MEBx is satisfied (`OROM Keyboard Access` on, `MEBx Hotkey` on, admin password set), yet CTRL+P and F12 show nothing; CSME **11.8.94.4494** is alive, so the open question is whether that image is an AMT build (`mei-amt-version` still to run). Remote power therefore rests on **AC Recovery `Power On` + Wake-on-LAN `LAN Only`** — no remote console |
 | Virtualisation | VT-x ✅ · **VT-d ✅** · TXT off — firmware ready for Proxmox |
 | Wireless | Intel 8265 WLAN + Bluetooth, **both disabled in BIOS** — unused on a hypervisor |
-| Role | Second virtualisation host (planned) — cluster, QDevice and replication are out of scope for now ([idea 15](ideas/15-second-proxmox-node.md)) |
-| Docs | [idea 15](ideas/15-second-proxmox-node.md) · [research 47](research/47-second-proxmox-node.md) · [research 52](research/52-optiplex7050-hardware-diagnostic.md) · [#177](https://github.com/jaroslaw-bagnicki/Homelab/issues/177) |
+| Role | Second virtualisation host (planned) — two-node cluster + `corosync-qnetd` on `edge`; ZFS replication/HA later ([ADR 47](decisions/47-second-proxmox-node-cluster-qdevice.md)) |
+| Docs | [idea 15](ideas/15-second-proxmox-node.md) · [research 47](research/47-second-proxmox-node.md) · [research 52](research/52-optiplex7050-hardware-diagnostic.md) · [runbook 42](runbooks/42-pve2-proxmox-node.md) · [ADR 47](decisions/47-second-proxmox-node-cluster-qdevice.md) · [#177](https://github.com/jaroslaw-bagnicki/Homelab/issues/177) |
 
 ### OPNsense Router — Fujitsu Futro S930 (planned)
 
@@ -141,7 +142,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Ports | 8× Gigabit Ethernet (L2, utility-managed) |
 | Hardware | Rev V1 — web UI non-functional (HTTP 501), managed via **Easy Smart Configuration Utility** (Windows) |
 | IP | `192.168.2.230` (static) |
-| Role | Access switch — turns the single office drop into wired ports for Lab, OMV NAS, Edge Ingress, work dock |
+| Role | Access switch — turns the single office drop into wired ports for Lab, `pve1`, `pve2`, Beetle NAS, Edge Ingress and the work dock |
 | Docs | [runbook 21](runbooks/21-tl-sg108e-switch.md) · [research 24](research/24-network-topology-design.md) |
 
 ### Tenda Nova mesh
@@ -181,16 +182,16 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 |---|---|
 | Model | Green Cell **UPSLM600** — line-interactive, AVR, **modified sine**, 1000 VA / 600 W |
 | Battery | 2× 12 V 7 Ah (24 V, ~168 Wh) · no runtime estimate — end of discharge is the hardware `LB` flag |
-| Outlets | 4 (2× Schuko + 2× IEC) over two strips — servers (`pve`, `lab`, `edge`, `nas`) and network appliances; monitors, dock and laptop charger stay on the wall |
+| Outlets | 4 (2× Schuko + 2× IEC) over two strips — servers (`pve1`, `pve2`, `lab`, `edge`, `nas`) and network appliances; monitors, dock and laptop charger stay on the wall |
 | USB | `0665:5161` · HID page `0xFF00`, **no serial number** — driven by NUT `nutdrv_qx`, not `usbhid-ups` |
 | Measured | **17 W** self-consumption · **~55 min** to `LB` at the ~80 W fleet (inline meter, drill 2026-09-19); NUT reports no power — `ups.load` % only |
-| NUT | USB on the `pve` node, which runs the server **host-native** (`.201`); `upsmon` on `pve` (primary) and `lab`/`edge`/`nas` (secondaries) |
+| NUT | USB on the `pve1` node, which runs the server **host-native** (`.201`); `upsmon` on `pve1` (primary) and `pve2`/`lab`/`edge`/`nas` (secondaries) |
 | Docs | [ADR 39](decisions/39-nut-host-native.md) · [runbook 29](runbooks/29-nut-ups-shutdown.md) · [runbook 30](runbooks/30-deploy-nut-clients.md) · [drill report](reports/260919-nut-shutdown-drill.md) |
 
 ## Smart Home
 
 One Zigbee mesh serves two consumers — the Home Assistant OS VM (VM 210) and the
-HA-independent Zigbee2MQTT → Prometheus monitoring path — with the coordinator USB on the `pve`
+HA-independent Zigbee2MQTT → Prometheus monitoring path — with the coordinator USB on the `pve1`
 node ([ADR 25](decisions/25-home-assistant-thin-client.md) · [ADR 26](decisions/26-zigbee-energy-monitoring.md)).
 
 ### Zigbee coordinator — Sonoff ZBDongle-P
@@ -199,7 +200,7 @@ node ([ADR 25](decisions/25-home-assistant-thin-client.md) · [ADR 26](decisions
 |---|---|
 | Type | Zigbee 3.0 USB coordinator — Sonoff **ZBDongle-P**, Silicon Labs **CC2652P** (Z-Stack) |
 | USB | Silicon Labs CP210x bridge `10c4:ea60` · by-id `usb-ITead_Sonoff_Zigbee_3.0_USB_Dongle_Plus_c8f3975dd19aef1197dbb89061ce3355-if00-port0` |
-| Placement | USB on the `pve` node — the smart-home node sits centrally for Zigbee coverage; passthrough to **LXC 212** (Zigbee2MQTT) still to be wired ([#85](https://github.com/jaroslaw-bagnicki/Homelab/issues/85)) |
+| Placement | USB on the `pve1` node — the smart-home node sits centrally for Zigbee coverage; passthrough to **LXC 212** (Zigbee2MQTT) still to be wired ([#85](https://github.com/jaroslaw-bagnicki/Homelab/issues/85)) |
 | Docs | [ADR 26](decisions/26-zigbee-energy-monitoring.md) · [research 27](research/27-zigbee-energy-monitoring.md) · [research 29](research/29-wyse5070-hardware-diagnostic.md) |
 
 ### Smart plugs — 4× Nous A1Z

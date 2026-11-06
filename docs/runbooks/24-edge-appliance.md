@@ -205,6 +205,7 @@ reuse — see §3a). The LAN access stack is being deployed in
 - `ansible/roles/technitium` — **Technitium DNS** (authoritative `internal.`, DoT upstreams,
   API-driven zone/records) and the `127.0.0.1` / `internal` host resolver
 - `ansible/roles/caddy` — **Caddy** LAN reverse proxy, per-service leaves from `step-ca`
+- `ansible/roles/corosync_qnetd` — **Corosync QDevice arbitrator** for the two-node Proxmox cluster; TCP 5403 from `pve1`/`pve2` only ([ADR 47](../decisions/47-second-proxmox-node-cluster-qdevice.md) · [runbook 43](43-proxmox-cluster-qdevice.md))
 - Details: [runbook 37](37-deploy-internal-access-stack.md)
 - `ansible/host_vars/edge.yml` + `inventory.ini` (`edge` → `192.168.2.240`)
 
@@ -271,6 +272,21 @@ reuse — see §3a). The LAN access stack is being deployed in
 
 ---
 
+## 6a. Corosync QDevice arbitrator
+
+The edge box is the independent third vote for the two-node Proxmox cluster ([ADR 47](../decisions/47-second-proxmox-node-cluster-qdevice.md)).
+It runs `corosync-qnetd`, not Proxmox; it needs only TCP 5403 from `pve1`/`pve2`. Apply the role via
+`playbook-edge.yml` and verify:
+
+```sh
+systemctl status corosync-qnetd --no-pager
+ss -ltnp | grep 5403
+ufw status | grep 5403
+```
+
+The service is effectively stateless and its journal is on the volatile journald, so the eMMC stays
+write-light. Cluster-side setup is [runbook 43](43-proxmox-cluster-qdevice.md).
+
 ## 7. Validation
 
 > *To be completed.* End-to-end checks:
@@ -312,6 +328,7 @@ reuse — see §3a). The LAN access stack is being deployed in
 - [ ] §4 cloudflared tunnel up (`cloudflared tunnel list`)
 - [ ] §5 Caddy serves `*.internal` (LAN plane, [runbook 37](37-deploy-internal-access-stack.md)); `*.example.com` waits on the public-ingress decision
 - [ ] §6 Netdata child running (RAM-only); dashboard reachable
+- [ ] §6a `corosync-qnetd` active; TCP 5403 open only to `pve1`/`pve2`
 - [ ] §7 all validation checks pass
 - [ ] §8 switch port wired; `docs/overview.md` / `docs/hardware.md` reflect the edge node
 
@@ -322,6 +339,7 @@ reuse — see §3a). The LAN access stack is being deployed in
 - [ADR 27](../decisions/27-monitoring-strategy.md) — Netdata child node on the edge (RAM-only)
 - [ADR 20](../decisions/20-caddy-single-routing-layer.md) — single Caddyfile routing layer
 - [ADR 40](../decisions/40-internal-dns-proxy-edge.md) — Technitium DNS + Caddy on the edge · [runbook 37](37-deploy-internal-access-stack.md) — build + verification
+- [ADR 47](../decisions/47-second-proxmox-node-cluster-qdevice.md) — the edge QDevice arbitrator · [runbook 43](43-proxmox-cluster-qdevice.md) — cluster + QDevice
 - [ADR 19](../decisions/19-cloudflare-tunnel-http-origin.md) — CF tunnel origin pattern (plain HTTP to origin)
 - [Research 25](../research/25-edge-ingress-sbc.md) — PL-market hardware + OS evaluation
 - [Idea 04](../ideas/04-edge-device-tunnel-caddy.md) — original edge idea

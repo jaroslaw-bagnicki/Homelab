@@ -9,17 +9,19 @@ Workloads are a separate concern: self-contained recipes run on demand (see [`..
 | `common` | Hostname, `/etc/hosts`, UTC, NTP service selection, optional Avahi, fleet SSH key | all Debian/Ubuntu playbooks | [README](common/README.md) |
 | `security` | UFW, fail2ban, sshd hardening, host certificates and SSHPOP renewal | all Debian/Ubuntu playbooks | [README](security/README.md) |
 | `ipa_host` | Fedora/RHEL-family base for the FreeIPA VM — FQDN, `/etc/hosts`, resolver pin, chrony, firewalld LAN rules, fleet key | `playbook-ipa.yml` | [README](ipa_host/README.md) |
-| `ca_trust` | Fleet CA root and SSH CA public keys — Key Vault → system trust store and `/etc/ssh` | `playbook.yml`, `playbook-lab.yml`, `playbook-pve.yml`, `playbook-edge.yml`, `playbook-nas.yml`, `playbook-logs.yml`, `playbook-ca-trust.yml` | [README](ca_trust/README.md) |
+| `ca_trust` | Fleet CA root and SSH CA public keys — Key Vault → system trust store and `/etc/ssh` | `playbook.yml`, `playbook-lab.yml`, `playbook-pve1.yml`, `playbook-pve2.yml`, `playbook-edge.yml`, `playbook-nas.yml`, `playbook-logs.yml`, `playbook-ca-trust.yml` | [README](ca_trust/README.md) |
+| `proxmox_cluster` | `corosync-qdevice` + Corosync UDP link from the peer node | `playbook-pve1.yml`, `playbook-pve2.yml` | [README](proxmox_cluster/README.md) |
+| `corosync_qnetd` | QDevice arbitrator on `edge` — TCP 5403 from the cluster nodes | `playbook-edge.yml` | [README](corosync_qnetd/README.md) |
 | `azure_arc` | `azcmagent` install + Azure Arc enrolment | `playbook.yml`, `playbook-lab.yml` | [README](azure_arc/README.md) |
 | `docker_host` | Docker Engine from the official repository (Debian/Ubuntu) + json-file log rotation | `playbook.yml`, `playbook-lab.yml`, `playbook-logs.yml` | [README](docker_host/README.md) |
 | `docker_services` | Portainer, Caddy, cloudflared, shared Docker networks | `playbook.yml` | [README](docker_services/README.md) |
 | `edge_host` | Edge appliance host hygiene — unattended upgrades, logrotate, volatile journald | `playbook-edge.yml` | [README](edge_host/README.md) |
 | `technitium` | Technitium DNS Server — authoritative `.internal` zone, fleet resolver (ADR 40) | `playbook-edge.yml`, `playbook-technitium.yml` | [README](technitium/README.md) |
 | `caddy` | Caddy reverse proxy — LAN sites issuing short-lived leaves from `step-ca` | `playbook-edge.yml`, `playbook-caddy.yml` | [README](caddy/README.md) |
-| `nut_client` | `nut-client` + `upsmon` fleet clients | `playbook-pve.yml`, `playbook-lab.yml`, `playbook-edge.yml` | [README](nut_client/README.md) |
-| `nut_server` | NUT server (`upsd` + `nutdrv_qx`) host-native on `pve` | `playbook-pve.yml` | [README](nut_server/README.md) |
-| `netdata` | Netdata agent — parent (stream aggregator) + child modes | `playbook-pve.yml`, `playbook-lab.yml`, `playbook-edge.yml`, `playbook-nas.yml`, `playbook-netdata.yml` | [README](netdata/README.md) |
-| `fluentbit` | Fluent Bit log collector — journald + Docker logs into VictoriaLogs | `playbook-pve.yml`, `playbook-edge.yml`, `playbook-lab.yml`, `playbook-nas.yml`, `playbook-logs.yml` | [README](fluentbit/README.md) |
+| `nut_client` | `nut-client` + `upsmon` fleet clients | `playbook-pve1.yml`, `playbook-pve2.yml`, `playbook-lab.yml`, `playbook-edge.yml` | [README](nut_client/README.md) |
+| `nut_server` | NUT server (`upsd` + `nutdrv_qx`) host-native on `pve1` | `playbook-pve1.yml` | [README](nut_server/README.md) |
+| `netdata` | Netdata agent — parent (stream aggregator) + child modes | `playbook-pve1.yml`, `playbook-pve2.yml`, `playbook-lab.yml`, `playbook-edge.yml`, `playbook-nas.yml`, `playbook-netdata.yml` | [README](netdata/README.md) |
+| `fluentbit` | Fluent Bit log collector — journald + Docker logs into VictoriaLogs | `playbook-pve1.yml`, `playbook-pve2.yml`, `playbook-edge.yml`, `playbook-lab.yml`, `playbook-nas.yml`, `playbook-logs.yml` | [README](fluentbit/README.md) |
 
 ---
 

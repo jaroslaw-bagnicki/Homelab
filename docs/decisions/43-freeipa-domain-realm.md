@@ -22,12 +22,12 @@ and host certificates — and the constraints it has to fit:
   [ADR 40](40-internal-dns-proxy-edge.md)); IPA must not become a second one.
 - The domain must not take over TLS or SSH issuance — `step-ca` owns both, and
   [ADR 42](42-pki-topology-sibling-cas.md) governs how a second CA relates to the root.
-- `pve` is an 8 GB node that already carries guests, Netdata, NUT, VictoriaLogs and the CA
+- `pve1` is an 8 GB node that already carries guests, Netdata, NUT, VictoriaLogs and the CA
   ([idea 15](../ideas/15-second-proxmox-node.md) is the plan to relieve it).
 
 ## Decision
 
-**Adopt FreeIPA as the lab's Linux domain, hosted on `pve`, with Technitium remaining authoritative for
+**Adopt FreeIPA as the lab's Linux domain, hosted on `pve1`, with Technitium remaining authoritative for
 DNS.**
 
 1. **Realm `IPA.INTERNAL`, DNS domain `ipa.internal`** — a name **inside** the LAN name space, not a
@@ -57,7 +57,7 @@ DNS.**
 7. **Scope of enrolment**: Linux servers whose login policy is worth centralising, plus the travel
    workstation as the first visible client ([idea 12](../ideas/12-travel-workstation-arm-linux.md)). OMV
    is best-effort (its user database is the blocker, [research 44](../research/44-omv-identity-integration.md)),
-   OPNsense is manual LDAP+SSSD, and **`pve` hosts the server and is not a client**.
+   OPNsense is manual LDAP+SSSD, and **`pve1` hosts the server and is not a client**.
 8. **Break-glass is unchanged.** The [ADR 28](28-fleet-admin-account-and-key.md) fleet key and local admin
    accounts remain; management planes (Proxmox UI, Caddy admin, Portainer) are never behind the domain
    alone.
@@ -78,7 +78,7 @@ DNS.**
 - **The WebUI keeps one fewer dependency than the rest of the LAN.** It needs its own guest and Technitium
   answering `ipa.internal` — not `edge`'s Caddy and not a `step-ca` leaf. That is deliberate: when the
   domain is what is broken, its UI must still be reachable to fix it.
-- **The node's memory is the binding constraint.** The domain joins `pve`'s 8 GB beside Netdata, NUT,
+- **The node's memory is the binding constraint.** The domain joins `pve1`'s 8 GB beside Netdata, NUT,
   VictoriaLogs, the `ca` guest, the Authentik guest ([ADR 44](44-authentik-identity-provider.md)) and the
   planned HA VM — which is why the second-node work
   ([idea 15](../ideas/15-second-proxmox-node.md)) is sequenced alongside, not after.

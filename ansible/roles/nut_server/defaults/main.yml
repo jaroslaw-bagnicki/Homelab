@@ -1,6 +1,6 @@
 ---
 # NUT server role — runs the NUT server (`nutdrv_qx` driver + `upsd`) and serves the UPS to the
-# fleet, host-native on the `pve` node. Decision: ADR 39 (supersedes ADR 30's LXC placement).
+# fleet, host-native on the `pve1` node. Decision: ADR 39 (supersedes ADR 30's LXC placement).
 # The local primary `upsmon` is configured by the `nut_client` role; this role owns the server, the
 # USB udev rule and the `nut-monitor` -> `nut-server` ordering.
 nut_server_ups_name: ups

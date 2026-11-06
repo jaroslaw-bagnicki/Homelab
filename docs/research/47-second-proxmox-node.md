@@ -8,16 +8,19 @@ transcribed here in English —
 | 37 | [Wyse 5070 vs OptiPlex 3000](https://share.gemini.google/XvMCIZlMCC3d) | 2026‑10‑21 22:33 | 13 | Thin clients vs Micro PCs, the 3040/3050/7040, vPro/AMT, and the 399 zł 7040 offer |
 | 38 | [Porównanie Dell OptiPlex](https://share.gemini.google/Q1nb6iTr0YzJ) | 2026‑10‑23 05:54 | 3 | OptiPlex 3000/5000/7000 tiers, 7040 i3‑6100T vs i5‑6500T, the i7 options |
 
-**Related**: [idea 15](../ideas/15-second-proxmox-node.md) (the lifecycle) · [ADR 01](../decisions/01-hardware-selection-m910q.md) ·
+**Related**: [ADR 47](../decisions/47-second-proxmox-node-cluster-qdevice.md) (the decision) ·
+[idea 15](../ideas/15-second-proxmox-node.md) (the lifecycle) · [ADR 01](../decisions/01-hardware-selection-m910q.md) ·
 [ADR 22](../decisions/22-k3s-arc-homelab.md) (k3s — the other orchestration path) · [ADR 25](../decisions/25-home-assistant-thin-client.md)
-(the `pve` node's founding workload) · [ADR 31](../decisions/31-static-address-scheme.md) (addressing) ·
-[ADR 33](../decisions/33-fleet-node-hostnames.md) (hostname policy — this renames `pve`) ·
-[research 29](29-wyse5070-hardware-diagnostic.md) (the existing `pve` hardware) ·
-[idea 13](../ideas/13-freeipa-domain-controller.md) (why `pve` memory is already committed)
+(the `pve1` node's founding workload) · [ADR 31](../decisions/31-static-address-scheme.md) (addressing) ·
+[ADR 33](../decisions/33-fleet-node-hostnames.md) (hostname policy — this renames `pve` to `pve1`) ·
+[research 29](29-wyse5070-hardware-diagnostic.md) (the existing `pve1` hardware) ·
+[research 52](52-optiplex7050-hardware-diagnostic.md) (the delivered 7050) ·
+[idea 13](../ideas/13-freeipa-domain-controller.md) (why `pve1` memory is already committed)
 
-**Status**: 📝 Analysis — **no decision taken, nothing purchased**. The thread's conclusion (an OptiPlex
-7040 Micro) is the operator's current favourite; the cluster/HA/storage half of the idea is **not covered by
-the threads at all** and is analysed here from the Proxmox VE documentation.
+**Status**: ✅ **Decided** — [ADR 47](../decisions/47-second-proxmox-node-cluster-qdevice.md) records the
+rename, `pve2` at `.202`, the two-node cluster and the edge QDevice. This document remains the analysis
+that fed the decision; the OptiPlex 7040 conclusions were overtaken by the 7050 audit in
+[research 52](52-optiplex7050-hardware-diagnostic.md).
 
 > **Verification status.** Hardware figures are the threads' claims, not facts — only two answers carry
 > citations (Intel ARK in chat 37 turn 10, for the vPro fields of i5‑6400T vs i5‑6500T); everything else,
@@ -135,7 +138,7 @@ used unit may be missing the 2.5″ caddy/ribbon.
 `pve1` + `pve2` is a role name with an index, which [ADR 33](../decisions/33-fleet-node-hostnames.md)
 permits in spirit (*"name every fleet node after its role"*) but does not currently spell out — the ADR needs
 a short amendment for numbered roles, and [ADR 31](../decisions/31-static-address-scheme.md) needs the new
-address (`192.168.2.203` is the next free `20x` slot).
+address (`192.168.2.202` is freed for `pve2` when the Beetle NAS moves to `.209`).
 
 **The rename must happen before the cluster exists.** Proxmox: *"Make sure that each node is installed with
 the final hostname and IP configuration. Changing the hostname and IP is not possible after cluster
@@ -147,7 +150,7 @@ What the rename touches (all mechanical, none of it guest-facing):
 | Layer | Change |
 |---|---|
 | Proxmox | node name, `/etc/pve/nodes/pve` → `pve1`, node certificate regenerated (`pvecm updatecerts`) |
-| Ansible | `inventory.ini`, `host_vars/pve.yml` → `pve1.yml`, `playbook-pve.yml` and every `hosts: pve` |
+| Ansible | `inventory.ini`, `host_vars/pve.yml` → `pve1.yml`, `playbook-pve1.yml` and every `hosts: pve1` |
 | Docs | `docs/overview.md`, `docs/hardware.md`, ADR 33's table, runbook 28, prose in ADRs that name the node today |
 | Unaffected | the IP `.201`, VMIDs 210–215, secrets, `proxmox.internal` in Caddy, NUT/Netdata host vars by IP |
 

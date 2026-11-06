@@ -35,8 +35,8 @@ disagree, the ADR wins and this document is corrected.
 |---|---|---|---|---|
 | **0** | Decisions | — | — | ADR 42 + 43 **Accepted**; ADR 44 + 45 written |
 | **1** | **SSH CA foundation** — #161 M1–M5: `ssh` block in `ca.json` with TPM-held keys, trust distribution, host certificates, `hosts@internal` issuance, `automation` principal, shared `agent-ai` identity; explicit identity loading | [#161](https://github.com/jaroslaw-bagnicki/Homelab/issues/161) · [#170](https://github.com/jaroslaw-bagnicki/Homelab/issues/170) | nothing — no IdP, no directory | `tpmkms:` signers proven on `ca` (else ADR 41 amended to file custody); host certificates live on every LAN node (`cloudlab` excepted); fleet key out of daily LAN paths; agent starts empty and loads an explicit identity; every playbook green |
-| **2** | **FreeIPA domain** — server on `pve`, backup + restore drill, first client, HBAC + `sudo`, LDAPS for Authentik, fleet enrolment | [#164](https://github.com/jaroslaw-bagnicki/Homelab/issues/164) | ADR 43/42; `pve` memory headroom | `ipa-backup` restore rehearsed **before** the first client enrols; HBAC **refusal** proven, not just success |
-| **3** | **Authentik IdP** — LXC on `pve`, `auth.internal`, FreeIPA as LDAPS source (no local users), group-gated OIDC, first protected services, backup pair | [#165](https://github.com/jaroslaw-bagnicki/Homelab/issues/165) | stage 2 (LDAPS + service account) | A group-less user is refused by the OIDC application; PostgreSQL dump + `AUTHENTIK_SECRET_KEY` restored together |
+| **2** | **FreeIPA domain** — server on `pve1`, backup + restore drill, first client, HBAC + `sudo`, LDAPS for Authentik, fleet enrolment | [#164](https://github.com/jaroslaw-bagnicki/Homelab/issues/164) | ADR 43/42; `pve1` memory headroom | `ipa-backup` restore rehearsed **before** the first client enrols; HBAC **refusal** proven, not just success |
+| **3** | **Authentik IdP** — LXC on `pve1`, `auth.internal`, FreeIPA as LDAPS source (no local users), group-gated OIDC, first protected services, backup pair | [#165](https://github.com/jaroslaw-bagnicki/Homelab/issues/165) | stage 2 (LDAPS + service account) | A group-less user is refused by the OIDC application; PostgreSQL dump + `AUTHENTIK_SECRET_KEY` restored together |
 | **4** | **Human certificates** — OIDC provisioner, `admin@internal` `enableSSHCA: false`, principals on final names, runbook, close-out (split out of #161) | [#166](https://github.com/jaroslaw-bagnicki/Homelab/issues/166) | stage 3 | A non-member **cannot** obtain a certificate; no human-held JWK path can mint an SSH certificate |
 | **5** | **Workload identity** — dev container and agent workloads: `svc-` directory users, Authentik client credentials, shared `agent-ai` certificates with per-agent key IDs, keytab only if a non-HTTP consumer appears | [#168](https://github.com/jaroslaw-bagnicki/Homelab/issues/168) | stages 1, 2, 3, 4 — one slice attaches to each | A workload obtains a token with no credential in git, the image or a persistent volume; a deactivated identity stops issuing; the shared `agent-ai` principal carries a per-agent key ID |
 
@@ -46,7 +46,7 @@ disagree, the ADR wins and this document is corrected.
 
 - **Accept ADR 43 and ADR 42.** A realm cannot be built on a *Proposed* ADR, and ADR 42 is the rule
   that governs IPA's CA at install time.
-- **Write ADR 44 — Authentik.** Idea 11 has no decision yet. It must settle: host (`pve`), name
+- **Write ADR 44 — Authentik.** Idea 11 has no decision yet. It must settle: host (`pve1`), name
   (`auth.internal`), forward-auth scope, outpost placement, break-glass path, and the backup pair
   (PostgreSQL dump **with** `AUTHENTIK_SECRET_KEY` — MFA secrets and encrypted fields depend on it).
 - ADR 44 lands before stage 2 starts, not before stage 1 — stage 1 touches no identity.
@@ -96,7 +96,7 @@ Decided at install time, not later:
 - **SSHFP stays unmanaged.** FreeIPA can publish SSHFP records for hosts; with `@cert-authority` +
   `TrustedUserCAKeys` from stage 1 that is a second, redundant trust path — leave it off.
 
-The binding constraint is `pve`'s 8 GB. If the memory decision lags, this stage is where the whole plan
+The binding constraint is `pve1`'s 8 GB. If the memory decision lags, this stage is where the whole plan
 stalls, so [idea 15](../ideas/15-second-proxmox-node.md) is a genuine prerequisite rather than a
 parallel nicety.
 
@@ -197,11 +197,11 @@ supplied. Only one engine answers each question, which is why both ADRs can stan
 
 | Decision | Needed by | Default if it is not taken |
 |---|---|---|
-| `pve` headroom — 2 GB IPA and accept pressure, or pull [idea 15](../ideas/15-second-proxmox-node.md) forward first | stage 2 | 2 GB guest, accept pressure |
+| `pve1` headroom — 2 GB IPA and accept pressure, or pull [idea 15](../ideas/15-second-proxmox-node.md) forward first | stage 2 | 2 GB guest, accept pressure |
 | CA shape at IPA install — offline ceremony or self-signed interim | stage 2 M1 | **external-ca now** ([runbook 41](../runbooks/41-deploy-freeipa-server.md)); self-signed only as the documented fallback, re-parent before M3 ([ADR 42](../decisions/42-pki-topology-sibling-cas.md) item 6) |
 | Principal naming contract — IPA username as the principal | before stage 4 | IPA username |
 | Authentik outpost placement and the cross-LAN hop | stage 3 | embedded outpost over TLS, else an ADR 34 exception row |
-| Which hosts enrol as FreeIPA clients | stage 2 M6 | Linux hosts whose login policy is worth centralising; `pve` never ([ADR 43](../decisions/43-freeipa-domain-realm.md) item 7) |
+| Which hosts enrol as FreeIPA clients | stage 2 M6 | Linux hosts whose login policy is worth centralising; `pve1` never ([ADR 43](../decisions/43-freeipa-domain-realm.md) item 7) |
 | Authentik LDAP-source scoping — group-scoped sync for `workloads`, or a documented service-account exception | stage 5 M1 | group-scoped sync; if the pinned version cannot, amend [ADR 45](../decisions/45-workload-identity.md) rather than improvise |
 | When the keytab slice is built — with the first non-HTTP consumer, or never | after stage 5 | not built; no consumer exists |
 | Whether the fleet key is ever removed from `authorized_keys` | after stage 4 | it stays as break-glass |

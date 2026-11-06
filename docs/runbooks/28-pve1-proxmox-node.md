@@ -1,13 +1,13 @@
-# pve Node — Proxmox VE Install
+# pve1 Node — Proxmox VE Install
 
-> Install **Proxmox VE** on the Dell Wyse 5070 (`pve`, `192.168.2.201`)
+> Install **Proxmox VE** on the Dell Wyse 5070 (`pve1`, `192.168.2.201`)
 > — the fleet's virtualisation host and the dedicated smart-home hypervisor
 > ([ADR 25](../decisions/25-home-assistant-thin-client.md), [ADR 33](../decisions/33-fleet-node-hostnames.md)).
 > Tracked in [issue #103](https://github.com/jaroslaw-bagnicki/Homelab/issues/103) (child of
 > [#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68)). The hardware diagnostic is
 > already done ([research 29](../research/29-wyse5070-hardware-diagnostic.md), [issue #82](https://github.com/jaroslaw-bagnicki/Homelab/issues/82)).
 >
-> ⚠ **Netdata is applied by this runbook's own playbook** — `playbook-pve.yml` ends with the shared
+> ⚠ **Netdata is applied by this runbook's own playbook** — `playbook-pve1.yml` ends with the shared
 > `netdata` role (§4). The stream key, deployment and validation are in [runbook 31](31-deploy-netdata.md).
 
 ## Why
@@ -22,8 +22,8 @@ independent of the M910q, deployed by [runbook 31](31-deploy-netdata.md).
 - **Proxmox VE** installed on the Wyse 5070; static IP **`192.168.2.201`** — the `20x` **server**
   block of [research 24](../research/24-network-topology-design.md) (this is a compute/virtualisation
   host, not an edge/ingress device).
-- **`pve`** added to the Ansible inventory; base provisioned via `ansible/playbooks/playbook-pve.yml`
-  (`common` → `security` → `nut_client` → `netdata`).
+- **`pve1`** added to the Ansible inventory; base provisioned via `ansible/playbooks/playbook-pve1.yml`
+  (`common` → `ca_trust` → `security` → `proxmox_cluster` → `nut_server` → `nut_client` → `netdata` → `fluentbit`).
 - **Agent account — `fleetadm`** — key-only SSH ([ADR 28](../decisions/28-fleet-admin-account-and-key.md)), installed at bootstrap (full pattern in the
   [ansible README](../../ansible/README.md)).
 - **Breaking-glass account — `root`** — the Proxmox admin (web UI `:8006` + console), password stored
@@ -34,7 +34,7 @@ independent of the M910q, deployed by [runbook 31](31-deploy-netdata.md).
 
 > **Execution note.** Run this runbook **interactively from the repo's dev container** (any
 > interactive session — e.g. VSCode with the GitHub Copilot extension), like runbooks 24/25. This is a
-> **physical/console install** — it cannot be delegated to a headless agent. The `pve` node is LAN-only;
+> **physical/console install** — it cannot be delegated to a headless agent. The `pve1` node is LAN-only;
 > run its playbook from a machine on `192.168.2.0/24` per the `fleet-connect` skill.
 
 ## Prerequisites
@@ -66,12 +66,12 @@ DDR4 (both slots full — 16 GB means replacing both), M.2 **SATA** 128 GB (SK h
    | IP | `192.168.2.201/24` |
    | Gateway | `192.168.2.1` |
    | DNS | `1.1.1.1` — the Proxmox installer exposes a **single** DNS Server field (not two); the secondary `8.8.8.8` is added later via the node's **System → DNS** (or by the `common` role) |
-   | Hostname (FQDN) | `pve.local` — Proxmox sets OS `hostname` to `pve` (FQDN recorded in `/etc/hosts`); the `common` role keeps `pve` |
+   | Hostname (FQDN) | `pve1.local` — Proxmox sets OS `hostname` to `pve1` (FQDN recorded in `/etc/hosts`); the `common` role keeps `pve1` |
    | Timezone | `Etc/UTC` (the `common` role enforces it) |
 
-   > **Single DNS field.** The installer's network screen accepts **one** DNS server only — don't try to enter `1.1.1.1, 8.8.8.8` (it will reject the value as invalid). Enter just `1.1.1.1`; add `8.8.8.8` as a secondary via **Node `pve` → System → DNS**. A single resolver is fine for this host.
+   > **Single DNS field.** The installer's network screen accepts **one** DNS server only — don't try to enter `1.1.1.1, 8.8.8.8` (it will reject the value as invalid). Enter just `1.1.1.1`; add `8.8.8.8` as a secondary via **Node `pve1` → System → DNS**. A single resolver is fine for this host.
 
-   > `pve.local` resolves via Avahi mDNS; `pve.internal` is the planned name ([ADR 37](../decisions/37-lan-name-space-internal.md)) — nothing resolves it yet, see [idea 10](../ideas/10-internal-ca-dns-stack.md).
+   > `pve1.local` resolves via Avahi mDNS; `pve1.internal` resolves through Technitium on `edge` ([ADR 40](../decisions/40-internal-dns-proxy-edge.md)).
 
 4. Set a **strong root password** → **Keeper**. This is the breaking-glass account (Proxmox web UI
    admin + console).
@@ -84,8 +84,9 @@ DDR4 (both slots full — 16 GB means replacing both), M.2 **SATA** 128 GB (SK h
    ```
 7. Proxmox web UI: **https://192.168.2.201:8006** → log in as `root` (Keeper).
 
-> **Future (optional):** once something serves `.internal` ([ADR 37](../decisions/37-lan-name-space-internal.md) — no host serves it yet, [idea 10](../ideas/10-internal-ca-dns-stack.md)), the Edge Caddy can alias
-> `https://pve.internal` → `https://pve:8006` for a portless URL — HTTPS on both hops, per [ADR 34](../decisions/34-lan-tls-only.md). Not needed here — direct `:8006` access is used.
+> **Portless UI (optional):** Edge Caddy publishes `https://proxmox.internal` → `https://192.168.2.201:8006`
+> — HTTPS on both hops, per [ADR 34](../decisions/34-lan-tls-only.md) / [ADR 40](../decisions/40-internal-dns-proxy-edge.md).
+> Direct `:8006` access remains available.
 
 > **Proxmox reality vs runbook 25:** Proxmox VE has **no "create user" step** — `root` is the only
 > built-in admin (console + web UI). There is no separate personal account like the Ubuntu installer's.
@@ -98,7 +99,7 @@ Proxmox VE is free and fully functional **without a licence** — a subscription
 `pve-enterprise` APT repo and commercial support. A fresh install enables the **enterprise** repos by
 default, which error on `apt update` without a key, so switch to the free **no-subscription** repo:
 
-1. Node `pve` → **Updates → Repositories**.
+1. Node `pve1` → **Updates → Repositories**.
 2. **Disable** `pve-enterprise` — and `ceph-squid` too (the enterprise Ceph repo; unused on this
    single-node host, and it will otherwise throw the same subscription error on `apt update`).
 3. **Add → No-Subscription** — it auto-selects the correct Debian codename (Proxmox VE 9 = Debian 13 *trixie*).
@@ -155,13 +156,11 @@ From the **LAN workstation** (per `fleet-connect`), with the fleet key loaded:
 
 ```powershell
 chmod 755 /workspaces/Homelab /workspaces/Homelab/ansible   # world-writable fix
-ansible-playbook ansible/playbooks/playbook-pve.yml --diff
+ansible-playbook ansible/playbooks/playbook-pve1.yml --diff
 ```
 
-`playbook-pve.yml` runs `common → security → nut_client → netdata` — the last two read Azure Key
-Vault, so the controller needs `AZURE_CLIENT_ID` / `AZURE_CLIENT_SECRET` / `AZURE_TENANT_ID` (see the
-[runbook 31](31-deploy-netdata.md) prerequisites).
-- **`common`** — hostname `pve`, `Etc/UTC`, Avahi (`pve.local`, `common_enable_avahi: true`), and re-arms
+`playbook-pve1.yml` runs `common → ca_trust → security → proxmox_cluster → nut_server → nut_client → netdata → fluentbit` — the roles after `ca_trust` read Azure Key Vault, so the controller needs `AZURE_CLIENT_ID` / `AZURE_CLIENT_SECRET` / `AZURE_TENANT_ID` (see the [runbook 31](31-deploy-netdata.md) prerequisites).
+- **`common`** — hostname `pve1`, `Etc/UTC`, Avahi (`pve1.local`, `common_enable_avahi: true`), and re-arms
   the fleet key on `fleetadm` ([ADR 28](../decisions/28-fleet-admin-account-and-key.md)). Time sync is left to Proxmox's **`chrony`**.
 - **Fleet resolver** — `common` probes `192.168.2.240:53` and then points `/etc/resolv.conf` at it, so
   the run **fails** while `edge`/Technitium is unreachable. Deploy the edge stack first
@@ -196,13 +195,13 @@ Vault, so the controller needs `AZURE_CLIENT_ID` / `AZURE_CLIENT_SECRET` / `AZUR
 > **Verify** the rename took effect:
 >
 > ```sh
-> grep nodename /etc/pve/.members                      # → "nodename": "pve"
-> ls -l /etc/pve/local /etc/pve/lxc                    # → nodes/pve, not nodes/<old>
+> grep nodename /etc/pve/.members                      # → "nodename": "pve1"
+> ls -l /etc/pve/local /etc/pve/lxc                    # → nodes/pve1, not nodes/<old>
 > pct list && qm list
 > curl -sk -o /dev/null -w '%{http_code}\n' https://192.168.2.201:8006/   # → 200
 > ```
 >
-> A from-scratch install (this runbook) picks up `pve` directly.
+> A from-scratch install (this runbook) picks up `pve1` directly.
 
 > **Time sync.** The `common` role gathers `service_facts` and, if `chrony.service` is **running**,
 > manages `chrony`; otherwise it manages the standard `systemd-timesyncd`. This reads the **actual
@@ -229,14 +228,78 @@ many-VM** host (a safety margin so an overcommitted thin pool or a full `/` neve
 lvextend -l +100%FREE /dev/pve/data   # local-lvm → ~68 GiB; `vgs` VFree → 0
 ```
 
+## 6. Rename `pve` → `pve1` (existing node, before any cluster)
+
+Use this section only on the **existing** `pve` node. A from-scratch install already uses `pve1`.
+Proxmox freezes hostnames and IPs at cluster creation, so the rename must land before the cluster in
+[runbook 43](43-proxmox-cluster-qdevice.md). Do it in a maintenance window with console access.
+
+1. **Back up the configuration** (guest configs are the thing to preserve):
+
+   ```sh
+   cp -a /etc/pve /root/pve-config-backup-$(date +%F)
+   ```
+
+2. **Change the OS hostname and the LAN `/etc/hosts` line** — the `common` role enforces the short
+   name, but the `192.168.2.201` line still carries the old FQDN:
+
+   ```sh
+   hostnamectl set-hostname pve1
+   # edit /etc/hosts so the address line reads:
+   # 192.168.2.201 pve1.local pve1
+   getent hosts pve1        # must return 192.168.2.201, not 127.0.1.1
+   ```
+
+3. **Move the Proxmox node directory and make pmxcfs re-read the hostname** — the order matters:
+   move the guest configs first, then restart the cluster filesystem.
+
+   ```sh
+   mv /etc/pve/nodes/pve /etc/pve/nodes/pve1
+   systemctl stop pve-cluster && systemctl start pve-cluster
+   systemctl restart pveproxy pvedaemon pvestatd
+   pvecm updatecerts -f
+   ```
+
+4. **Verify the node, the guests and the UI** — the UI check is mandatory: `pct`/`qm` keep working
+   even when the `local` symlink is stale, so they are not a valid health check.
+
+   ```sh
+   grep nodename /etc/pve/.members          # "pve1"
+   ls -l /etc/pve/local /etc/pve/lxc        # nodes/pve1
+   pct list && qm list
+   pct config 214 && pct config 215         # vtstack + ca preserved
+   qm config 216                            # ipa preserved
+   openssl x509 -noout -subject -ext subjectAltName -in /etc/pve/local/pve-ssl.pem
+   curl -sk -o /dev/null -w '%{http_code}\n' https://192.168.2.201:8006/   # 200
+   ```
+
+5. **Re-run the base playbook with the SSH host certificate forced** — the `security` role only
+   checks expiry/CA, not principals, so the old `pve` certificate would otherwise survive:
+
+   ```powershell
+   ansible-playbook ansible/playbooks/playbook-pve1.yml --diff -e security_ssh_host_cert_force_reissue=true
+   ssh-keygen -L -f /etc/ssh/ssh_host_ed25519_key-cert.pub   # principals: pve1, pve1.internal, .201
+   ```
+
+6. **Update the DNS records** — the `technitium` role adds `pve1.internal` and `pve2.internal`; delete
+   the stale **`pve.internal`** A record in the Technitium console (the role adds but does not prune).
+   `proxmox.internal` stays the UI alias to `.201:8006`. Verify:
+
+   ```sh
+   dig @192.168.2.240 pve1.internal +short   # 192.168.2.201
+   dig @192.168.2.240 pve2.internal +short   # 192.168.2.202 (after runbook 42)
+   dig @192.168.2.240 pve.internal +short    # empty / NXDOMAIN
+   ```
+
 ## Verification Checklist
 
 - [x] §1 Proxmox VE installed; static IP `192.168.2.201`; web UI reachable at `:8006`
 - [x] §2 `no-subscription` repo enabled; `apt update && apt dist-upgrade` succeeds
 - [x] §3 `fleetadm` key-only SSH works; `sudo -n whoami` → root
 - [x] §4 `common` + `security` applied cleanly (idempotent — second run = 0 changed)
-- [x] UFW active; SSH + 8006 allowed from LAN; `pve.local` resolves
+- [x] UFW active; SSH + 8006 allowed from LAN; `pve1.local` resolves
 - [x] §5 storage: free VG space reclaimed into `local-lvm` (optional)
+- [ ] §6 rename applied: `/etc/pve/nodes/pve1`, node cert SAN, SSH host cert principal, `pve1.internal` resolves, UI `200`
 
 ## References
 
@@ -244,5 +307,6 @@ lvextend -l +100%FREE /dev/pve/data   # local-lvm → ~68 GiB; `vgs` VFree → 0
 - [research 29](../research/29-wyse5070-hardware-diagnostic.md) (diagnostic) · [issue #82](https://github.com/jaroslaw-bagnicki/Homelab/issues/82) (diagnostic, closed)
 - [ADR 28](../decisions/28-fleet-admin-account-and-key.md) (fleetadm) · [research 24 §Option A](../research/24-network-topology-design.md) (IP scheme)
 - [Runbook 25 §2](25-m910q-os-refresh.md) (fleetadm bootstrap pattern)
+- [Runbook 42](42-pve2-proxmox-node.md) (the second node) · [runbook 43](43-proxmox-cluster-qdevice.md) (cluster + QDevice) · [ADR 47](../decisions/47-second-proxmox-node-cluster-qdevice.md)
 - [runbook 01 §0](01-init.md) / [research 12](../research/12-first-boot-setup.md) (YUMI multiboot stick)
 - [Issue #103](https://github.com/jaroslaw-bagnicki/Homelab/issues/103) · parent [#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68) · Netdata [#104](https://github.com/jaroslaw-bagnicki/Homelab/issues/104)

@@ -1,6 +1,6 @@
-# FreeIPA Server — M1 on `pve` (Fedora Cloud VM, External CA)
+# FreeIPA Server — M1 on `pve1` (Fedora Cloud VM, External CA)
 
-> Deploy the FreeIPA server for the lab's Linux domain: Fedora 45 Cloud VM **216** on the `pve` node,
+> Deploy the FreeIPA server for the lab's Linux domain: Fedora 45 Cloud VM **216** on the `pve1` node,
 > FQDN **`ipa.internal`**, realm **`IPA.INTERNAL`**, integrated DNS **off**, CA installed with
 > **`--external-ca`** and signed by the offline fleet root. Decision:
 > [ADR 43](../decisions/43-freeipa-domain-realm.md); CA relation:
@@ -34,12 +34,12 @@ the server, the realm, the DNS glue and the CA chain before anything depends on 
 ## Prerequisites
 
 - [ ] ADR 42 and ADR 43 **Accepted** (done, 2026-10-25).
-- [ ] `pve` base-provisioned ([runbook 28](28-pve-proxmox-node.md)); `pve` chrony healthy.
+- [ ] `pve1` base-provisioned ([runbook 28](28-pve1-proxmox-node.md)); `pve1` chrony healthy.
 - [ ] Technitium on `edge` reachable — `ipa_host` probes it on `:53` and fails before pointing the VM
       at a resolver that is not there ([runbook 37](37-deploy-internal-access-stack.md), ADR 40/#174).
-- [ ] `pve` has ≥ 2.5 GB free RAM and ≥ 20 GB free `local-lvm`; if not, stop — [idea 15](../ideas/15-second-proxmox-node.md)
+- [ ] `pve1` has ≥ 2.5 GB free RAM and ≥ 20 GB free `local-lvm`; if not, stop — [idea 15](../ideas/15-second-proxmox-node.md)
       is the prerequisite.
-- [ ] Fedora 45 Cloud Base Generic image downloaded and checksum-verified on `pve`.
+- [ ] Fedora 45 Cloud Base Generic image downloaded and checksum-verified on `pve1`.
 - [ ] The **secure USB stick** and air-gapped signing machine for the CA ceremony.
 - [ ] Controller has `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID` and Ansible collections.
 - [ ] `automation` certificate (or break-glass fleet key) in `ssh-agent`; `ansible-lint` available.
@@ -47,7 +47,7 @@ the server, the realm, the DNS glue and the CA chain before anything depends on 
 
 ---
 
-## 1. Preflight on `pve`
+## 1. Preflight on `pve1`
 
 ```sh
 free -m
@@ -66,7 +66,7 @@ ls -l /dev/tpmrm0 2>/dev/null || true
 
 ## 2. Create the Fedora 45 VM
 
-On `pve` (`ssh fleetadm@192.168.2.201`, then `sudo -i`):
+On `pve1` (`ssh fleetadm@192.168.2.201`, then `sudo -i`):
 
 ```sh
 cd /var/lib/vz/template/iso
@@ -383,5 +383,5 @@ Write into the runbook/report:
 ## References
 
 - [ADR 42](../decisions/42-pki-topology-sibling-cas.md) · [ADR 43](../decisions/43-freeipa-domain-realm.md) · [research 51](../research/51-freeipa-dogtag-tpm-custody.md) (parked TPM work)
-- [Runbook 28](28-pve-proxmox-node.md) (pve) · [runbook 35](35-deploy-step-ca.md) (TPM LXC pattern) · [runbook 40](40-deploy-ssh-certificates.md) (SSH trust)
+- [Runbook 28](28-pve1-proxmox-node.md) (pve1) · [runbook 35](35-deploy-step-ca.md) (TPM LXC pattern) · [runbook 40](40-deploy-ssh-certificates.md) (SSH trust)
 - [Offline signing kit](../private-ca-offline-signing/README.md) · [FreeIPA documentation](https://www.freeipa.org/page/Documentation)

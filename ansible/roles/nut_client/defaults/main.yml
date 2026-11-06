@@ -13,6 +13,6 @@ nut_client_hostsync: 15
 nut_client_finaldelay: 0
 # Seconds of `upsd` unavailability tolerated before `upsmon` decides the UPS is dead and the node
 # fails safe. The NUT default of 15 s proved too tight once the server shared a host with Proxmox:
-# a measured `pve` reboot left `upsd` unreachable for ~60-67 s (2026-10-11), so at the old value the
+# a measured `pve1` reboot left `upsd` unreachable for ~60-67 s (2026-10-11), so at the old value the
 # fleet stopped itself on healthy mains. 120 s leaves real headroom.
 nut_client_deadtime: 120

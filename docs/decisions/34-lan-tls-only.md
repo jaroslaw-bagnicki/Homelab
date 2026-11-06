@@ -7,11 +7,11 @@
 
 ## Context
 
-The fleet has accumulated LAN-facing HTTP services — the Netdata Parent dashboard on `pve` ([ADR 27](27-monitoring-strategy.md)), the Proxmox web UI, Caddy on the edge appliance ([ADR 24](24-edge-ingress-appliance.md)) and, planned, a log store ([#123](https://github.com/jaroslaw-bagnicki/Homelab/issues/123)). Each was hardened individually: Netdata's dashboard listener is `^SSL=force` (plain HTTP receives its `399` redirect and no content), its stream listener is TLS-only, Proxmox serves `8006` over HTTPS, and `pve`/`lab` UFW carry `80/tcp DENY IN` commented *"block direct HTTP — ingress via the edge appliance"*.
+The fleet has accumulated LAN-facing HTTP services — the Netdata Parent dashboard on `pve1` ([ADR 27](27-monitoring-strategy.md)), the Proxmox web UI, Caddy on the edge appliance ([ADR 24](24-edge-ingress-appliance.md)) and, planned, a log store ([#123](https://github.com/jaroslaw-bagnicki/Homelab/issues/123)). Each was hardened individually: Netdata's dashboard listener is `^SSL=force` (plain HTTP receives its `399` redirect and no content), its stream listener is TLS-only, Proxmox serves `8006` over HTTPS, and `pve1`/`lab` UFW carry `80/tcp DENY IN` commented *"block direct HTTP — ingress via the edge appliance"*.
 
 That practice is real but **unwritten**, so nothing stops the next service being deployed over plain HTTP. A rule that exists only in individual configs is one that gets violated silently.
 
-An inventory of LAN listeners (2026-09-20) shows the fleet is currently compliant: `pve` exposes `22`, `8006`, `19996`, `19999`; `lab` and `edge` expose only `22`. No plaintext HTTP service is reachable, and UFW's default-deny closes the two Proxmox defaults that do listen in cleartext — `pve:3128` (spiceproxy, a cleartext HTTP CONNECT proxy) and `pve:111` (rpcbind).
+An inventory of LAN listeners (2026-09-20) shows the fleet is currently compliant: `pve1` exposes `22`, `8006`, `19996`, `19999`; `lab` and `edge` expose only `22`. No plaintext HTTP service is reachable, and UFW's default-deny closes the two Proxmox defaults that do listen in cleartext — `pve1:3128` (spiceproxy, a cleartext HTTP CONNECT proxy) and `pve1:111` (rpcbind).
 
 ## Decision
 
@@ -27,7 +27,7 @@ A plaintext listener is permitted only when all three hold:
 
 | Protocol | Port | Why plaintext is accepted |
 |---|---|---|
-| mDNS / Avahi | 5353/udp | Service discovery; no TLS variant. Permitted by UFW's stock `before.rules` (accept to `224.0.0.251:5353`), and LAN-scoped because link-local multicast does not cross routers — verified 2026-09-20 by resolving a peer from `pve` |
+| mDNS / Avahi | 5353/udp | Service discovery; no TLS variant. Permitted by UFW's stock `before.rules` (accept to `224.0.0.251:5353`), and LAN-scoped because link-local multicast does not cross routers — verified 2026-09-20 by resolving a peer from `pve1` |
 | DNS (resolver / forwarder) | 53 | Inherently plaintext; DoT/DoH only if adopted |
 | NTP / chrony | 123/udp | The protocol has no TLS |
 
@@ -39,11 +39,11 @@ TLS-capable protocols that are not yet configured for it. Each row carries a rem
 
 | Protocol | Port | Why it is currently plaintext | Removal condition |
 |---|---|---|---|
-| NUT | 3493 | `upsd`/`upsc` **do support TLS** — ours is unconfigured, so this is a deployment choice, not an inherent limitation. Anonymous reads are enabled. The listener is now **host-native on `pve`** ([ADR 39](39-nut-host-native.md)) and the host's UFW allows `3493` from `192.168.2.0/24` only; previously, in LXC 213 with no firewall of its own, it was reachable from a non-LAN host (verified 2026-09-20). | Configure NUT TLS (`upsd` + `upsmon` certificates) — or record an explicit accepted-risk waiver in [ADR 39](39-nut-host-native.md) |
+| NUT | 3493 | `upsd`/`upsc` **do support TLS** — ours is unconfigured, so this is a deployment choice, not an inherent limitation. Anonymous reads are enabled. The listener is now **host-native on `pve1`** ([ADR 39](39-nut-host-native.md)) and the host's UFW allows `3493` from `192.168.2.0/24` only; previously, in LXC 213 with no firewall of its own, it was reachable from a non-LAN host (verified 2026-09-20). | Configure NUT TLS (`upsd` + `upsmon` certificates) — or record an explicit accepted-risk waiver in [ADR 39](39-nut-host-native.md) |
 
 **NAS storage is a requirement, not an exception.** NFS and SMB are encryption-capable, so when the NAS joins ([ADR 29](29-nas-backup-target-beetle-m3-omv.md)) the choice must be NFSv4 with `krb5p` or SMB with encryption enabled — plaintext NFS/SMB is not admitted by this ADR.
 
-**Host UFW does not filter container traffic.** A service inside an LXC sits outside the host's UFW chains entirely — true of the VictoriaLogs store in LXC 214, and of any container-hosted workload. Container-hosted services need their own filtering; "the host firewall covers it" is never true for them. (The NUT server no longer fits this case — it is host-native on `pve`, [ADR 39](39-nut-host-native.md), so the host UFW *does* filter its `3493`.)
+**Host UFW does not filter container traffic.** A service inside an LXC sits outside the host's UFW chains entirely — true of the VictoriaLogs store in LXC 214, and of any container-hosted workload. Container-hosted services need their own filtering; "the host firewall covers it" is never true for them. (The NUT server no longer fits this case — it is host-native on `pve1`, [ADR 39](39-nut-host-native.md), so the host UFW *does* filter its `3493`.)
 
 This ADR governs the **transport** only. Authenticating *users* stays per-service: Netdata's dashboard is unauthenticated on a trusted LAN (the residual accepted in ADR 27), while the planned log store takes HTTP basic auth from day one.
 
@@ -76,4 +76,4 @@ This ADR governs the **transport** only. Authenticating *users* stays per-servic
 - [ADR 24](24-edge-ingress-appliance.md) — Edge appliance (Caddy, constrained hardware)
 - [ADR 27](27-monitoring-strategy.md) — Monitoring strategy; HTTPS-only dashboard and the accepted LAN-trust residual
 - [ADR 29](29-nas-backup-target-beetle-m3-omv.md) — NAS (NFS/SMB decision pending)
-- [ADR 39](39-nut-host-native.md) — NUT server host-native on `pve` (plaintext `upsd`, LAN-restricted by the host UFW)
+- [ADR 39](39-nut-host-native.md) — NUT server host-native on `pve1` (plaintext `upsd`, LAN-restricted by the host UFW)
