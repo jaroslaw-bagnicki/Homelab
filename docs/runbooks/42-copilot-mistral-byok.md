@@ -99,6 +99,21 @@ goes to the OS keychain (DPAPI on Windows). The file lives in `%APPDATA%`, outsi
    ```
 2. In VS Code / Copilot Desktop, both `Mistral Large 4` and `DeepSeek V4.1 Flash (via Mistral)` appear in the model picker.
 
+## Verification results (2026-11-06, this key)
+
+- `POST /v1/chat/completions` → **HTTP 200** for both `mistral-large-4` and `deepseek-v4-1-flash-1017` (streaming and non-streaming; `max_tokens: 128000` accepted).
+- Usage payload includes `prompt_tokens_details.cached_tokens` and `completion_tokens_details.reasoning_tokens` — usable for the A/B cache-hit and reasoning-cost measurements.
+- **ML4 is a reasoning model**: `content` comes back as a **list of typed chunks** (`[{"type":"thinking",...}, {"type":"text",...}]`), not a string. `reasoning_effort: "none"` is rejected (400, only `high`/`low`/`medium` supported); even `low` still emits thinking chunks.
+
+## Troubleshooting
+
+**Symptom:** Vibe/VS Code chat window shows "Sorry, your request failed … Error on conversation request" when the custom Mistral model answers.
+**Root cause:** client-side — VS Code's Custom Endpoint `chat-completions` parser expects `delta.content` as a string and breaks on Mistral reasoning models' chunked content (known issue pattern: microsoft/vscode#338309, `TypeError: e.replace is not a function` when content is an array). The API call itself is fine (HTTP 200 above).
+**Guidance:**
+- In **Vibe/Le Chat** use the native Le Chonk entry — no BYOK needed there; the custom endpoint is only for VS Code/Copilot BYOK.
+- In **VS Code** with the custom endpoint, the DeepSeek control (`deepseek-v4-1-flash-1017`) returns plain string content and works; ML4 trips the parser until the VS Code issue is fixed — check microsoft/vscode#338309 for a fixed version.
+- The idea-16 A/B is unaffected: it runs over the metered API via opencode/Copilot BYOK clients that parse Mistral's `ThinkChunk` natively.
+
 ## Caveats
 
 - **Context window:** the [model card](https://docs.mistral.ai/models/mistral-large-4-0) advertises 1M tokens, but the Vibe session runs Mistral Large 4 with an **800,000-token context window** (session UI shows `800.000`; observed 2026-11-06). Configure `maxInputTokens: 800000`, and log actual context usage per task in the A/B — cache-hit and compaction behaviour at 800k differ from the advertised 1M.
