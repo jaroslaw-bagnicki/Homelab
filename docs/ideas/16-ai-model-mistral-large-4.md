@@ -6,7 +6,7 @@
 > would displace it. Mistral Large 4 is close enough on price and stronger on paper in a few dimensions to
 > justify a **bounded comparison**, not a migration.
 
-**Status**: 📋 Planned — decided 2026-11-06: one **Mistral Pro** subscription funds the A/B, both models on one key; flips to 🔨 when the account is live
+**Status**: 📋 Planned — decided 2026-11-06: one **Mistral Pro** subscription funds the A/B, both models on one key; flips to 🔨 when the account is live; tracked in [#179](https://github.com/jaroslaw-bagnicki/Homelab/issues/179)
 **Date**: 2026-11-06
 **Sources**: [Mistral pricing](https://mistral.ai/pricing/) · [Mistral Large 4 model card](https://docs.mistral.ai/models/mistral-large-4-0) · [DeepSeek V4.1 Flash 1017 model card](https://docs.mistral.ai/models/deepseek-v4-flash-1017) · [Subscriptions / included usage](https://docs.mistral.ai/admin/billing-usage/subscriptions) · [Vibe CLI configuration](https://docs.mistral.ai/vibe/code/cli/configuration) — all read 2026-11-06
 **Related**: [ADR 15](../decisions/15-copilot-desktop-agentic.md) (Copilot BYOK provider) · [ADR 17](../decisions/17-adopt-opencode.md) (OpenCode, DeepSeek API + MiniMax plan) · [research 19](../research/19-copilot-desktop-agentic.md) · [docs/opencode-customization](../opencode-customization/README.md) (per-instance LLM key) · [research 02](../research/02-llm-requirements.md) / [research 08](../research/08-llm-server-hardware.md) (why local inference is out of scope)
