@@ -6,9 +6,9 @@
 > would displace it. Mistral Large 4 is close enough on price and stronger on paper in a few dimensions to
 > justify a **bounded comparison**, not a migration.
 
-**Status**: 📋 Planned — decided 2026-11-06: one **Mistral Pro** subscription funds the A/B, both models on one key; flips to 🔨 when the account is live; tracked in [#179](https://github.com/jaroslaw-bagnicki/Homelab/issues/179)
-**Date**: 2026-11-06
-**Sources**: [Mistral pricing](https://mistral.ai/pricing/) · [Mistral Large 4 model card](https://docs.mistral.ai/models/mistral-large-4-0) · [DeepSeek V4.1 Flash 1017 model card](https://docs.mistral.ai/models/deepseek-v4-flash-1017) · [Subscriptions / included usage](https://docs.mistral.ai/admin/billing-usage/subscriptions) · [Vibe CLI configuration](https://docs.mistral.ai/vibe/code/cli/configuration) — all read 2026-11-06
+**Status**: 🧠 Idea — the **evaluation** is decided (2026-11-06) and tracked in [#179](https://github.com/jaroslaw-bagnicki/Homelab/issues/179); the **model decision** is not, so there is no ADR yet and the index status stays here until one exists  
+**Date**: 2026-11-06  
+**Sources**: [Mistral pricing](https://mistral.ai/pricing/) · [Mistral Large 4 model card](https://docs.mistral.ai/models/mistral-large-4-0) · [DeepSeek V4.1 Flash 1017 model card](https://docs.mistral.ai/models/deepseek-v4-flash-1017) · [Subscriptions / included usage](https://docs.mistral.ai/admin/billing-usage/subscriptions) · [Vibe CLI configuration](https://docs.mistral.ai/vibe/code/cli/configuration) — all read 2026-11-06  
 **Related**: [ADR 15](../decisions/15-copilot-desktop-agentic.md) (Copilot BYOK provider) · [ADR 17](../decisions/17-adopt-opencode.md) (OpenCode, DeepSeek API + MiniMax plan) · [research 19](../research/19-copilot-desktop-agentic.md) · [docs/opencode-customization](../opencode-customization/README.md) (per-instance LLM key) · [research 02](../research/02-llm-requirements.md) / [research 08](../research/08-llm-server-hardware.md) (why local inference is out of scope)
 
 ---
@@ -34,7 +34,7 @@ the best fit?* — before something forces the question instead.
 
 | | **Mistral Large 4** (`mistral-large-4`, v26.10) | **DeepSeek V4.1 Flash 1017** (`deepseek-v4-1-flash-1017`) |
 |---|---|---|
-| Released | 2026-10-06, GA | 2026-10-28, public preview on Mistral's platform |
+| Released | 2026-10-06, **GA** badge on the card | 2026-10-28, **public preview** + third-party badges on the card |
 | Licence | Mistral Ecosystem Open Weight Licence | MIT |
 | Shape | MoE, **52B active / 1.05T total**, 1.6B vision encoder | not published on the card |
 | Context | **1M** | **1M**, max output 128k |
@@ -59,8 +59,9 @@ OpenAI-compatible endpoint.
 
 That turns the comparison from a project into a config edit:
 
-- The daily driver becomes the **experimental control on the same host** — no cross-vendor latency or
-  quota differences muddying the result.
+- The daily driver becomes the **experimental control on the same host** — no cross-vendor routing or
+  billing differences muddying the result. Latency and throttling are *measured*, not assumed equal: two
+  models behind one endpoint can still sit on different capacity.
 - `opencode.json` already takes providers by name; a `mistral` provider is one block, and
   [ADR 15](../decisions/15-copilot-desktop-agentic.md)'s BYOK path (ADR 15) is an OpenAI-compatible base
   URL plus a key — the same shape as the existing `https://api.deepseek.com/v1` entry.
@@ -97,15 +98,20 @@ One caveat that must not be glossed over: on Mistral's platform, DeepSeek V4.1 F
 *model* comparison but not a clean *vendor* comparison — a preview endpoint is the wrong thing to put
 daily work on.
 
-## Decision — 2026-11-06
+## Decision — 2026-11-06: run the evaluation, not the migration
 
 **Decided: run the comparison on a Mistral Pro subscription, with both models served through it.** Not
 Vibe's chat window, not a second vendor account — the metered API that `opencode` and Copilot BYOK already
 speak, funded from one allowance.
 
 - **Both sides of the A/B come from one provider.** `mistral-large-4` is the candidate;
-  `deepseek-v4-1-flash-1017` is the control on the same host — latency and throttling held constant, only
-  the model varies.
+  `deepseek-v4-1-flash-1017` is the control on the same host, so *routing* is constant — but latency and
+  throttling remain outcomes to measure, since two models behind one endpoint can sit on different
+  capacity.
+- **Two prerequisites before step 2, both checked in the account rather than the docs:** both model IDs
+  must be usable for the organization (the Vibe catalogue omits DeepSeek and still shows Large 3), and
+  overage needs pay-as-you-go **enabled with prepaid credits** — included usage alone will not carry a
+  week of agentic work.
 - **The Pro plan is the funding vehicle, not the surface.** Its **$15 /mo** of included usage is shared
   across Studio, API and Vibe Code, and pay-as-you-go credits extend it, so the test needs no second
   billing relationship.
@@ -118,8 +124,8 @@ speak, funded from one allowance.
 **Budget reality check.** $15 is a test budget, not a month of agentic coding, and **cache hit rate decides
 which number applies**: a session with ~1M input and ~100k output costs **$0.91 on Large 4 at 0 % cache
 hits but $0.28 at 100 %** — against **$0.42 and $0.13** on V4.1 Flash. So $15 covers roughly **16–53**
-Large 4 sessions or **35–116** DeepSeek ones. Expect a pay-as-you-go top-up, and spend step 1 in the free
-Playground.
+Large 4 sessions or **35–116** DeepSeek ones. Expect a pay-as-you-go top-up, and run step 1 in the
+Playground — no config needed, but it draws on the same shared allowance, so it is cheap rather than free.
 
 ## What is not on the table
 
@@ -143,6 +149,11 @@ nagged**".
 | **Task success without a retry** | completed task per attempt, on a fixed set of 4 task types the repo actually produces: Ansible role edit, ADR/research authoring, Bicep module, PowerShell script | retries are where the token bill and the frustration live |
 | **Cost per completed task** | Studio usage report ÷ tasks completed | separates "cheaper tokens" from "cheaper outcome" |
 | **Wall clock** | time to a finished, passing task | the actual daily cost |
+
+**Method, fixed before the first run:** four tasks with identical prompts and identical starting commits;
+acceptance is the repo's own gates (lint, review, changelog bar) — a task passes only if it needs no
+correction — and **retries are counted per task**, so a model that needs three attempts is recorded as
+three, not as one expensive success.
 
 ## Risks and honest doubts
 
@@ -168,8 +179,9 @@ repo's own tasks.
 Sequence, with an exit at every step:
 
 1. **Playground first, not the agent** — two real tasks from this repo (an ADR and an Ansible role) in
-   Studio's Playground, which needs no config and burns no agent tokens. If Large 4 visibly mishandles the
-   instruction files, stop here, mark this idea 🪦 Retired, and the $15 rolls to the next month.
+   Studio's Playground, which needs no config and no container. It still draws on the shared allowance,
+   so this is a cheap check rather than a free one. If Large 4 visibly mishandles the instruction files,
+   stop here, mark this idea 🪦 Retired, and the remaining $15 rolls to the next month.
 2. **One week, side by side, on the Pro key** — `mistral-large-4` and `deepseek-v4-1-flash-1017` as two
    model presets under one `mistral` provider in `opencode.json`; the DeepSeek-direct provider stays
    configured and untouched for real work. Log per task which model produced something that survived
