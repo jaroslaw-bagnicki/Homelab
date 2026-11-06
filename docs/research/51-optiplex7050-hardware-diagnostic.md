@@ -4,7 +4,7 @@
 
 **Scope**: Pre-boot hardware audit of the **Dell OptiPlex 7050 Micro (MFF)** bought on 2026-11-04 and delivered 2026-11-05 — the second Proxmox VE node planned in [idea 15](../ideas/15-second-proxmox-node.md) and [research 47](47-second-proxmox-node.md). Same Phase 0 pattern as the Wyse 3040 ([28](28-wyse3040-hardware-diagnostic.md)), Wyse 5070 ([29](29-wyse5070-hardware-diagnostic.md)), Futro S930 ([31](31-futro-s930-hardware-diagnostic.md)) and Beetle M-III ([32](32-wincor-beetle-m3-hardware-diagnostic.md)) audits: capture the exact specs into `docs/hardware.md` and find the surprises **before** committing an OS to the box.
 
-**Status**: 🔨 In progress — hardinfo2 inventory captured; **BIOS walk, ME/AMT state, disk capacity + SMART, TPM identity and a thermal load test are still pending** ([Pending checks](#pending-checks)). The storage finding was **corrected on 2026-11-06** after physical inspection: an M.2 2280 **SATA** module, not a 2.5″ drive.
+**Status**: 🔨 In progress — hardinfo2 inventory captured; **BIOS walk, ME/AMT state, disk capacity + SMART, TPM identity and a thermal load test are still pending** ([Pending checks](#pending-checks)).
 
 ---
 
@@ -17,7 +17,7 @@
 | Hardware | Dell **OptiPlex 7050 Micro (MFF)** — serial `3CLD6Q2`, **i5-7500 (4C/4T, 65 W)**, 8 GB (1× 8 GiB, one slot free), SK hynix SC311 **SATA** SSD |
 | CPU vs chassis | ⚠️ **i5-7500 is not a factory Micro SKU** — Dell's 7050 **Micro** list is 35 W T-series only; a 65 W part is a previous-owner swap in a socket the chassis was not thermally designed for |
 | Power adapter | **130 W** — a documented 7050 Micro option and the correct brick for a 65 W CPU; bigger brick ≠ bigger draw |
-| Storage | **M.2 2280 SATA** module (SK hynix SC311 S) in the **M.2 slot**, SATA III over AHCI — **not** a 2.5″ drive, **not** NVMe · the **2.5″ bay is free** |
+| Storage | **M.2 2280 SATA** module (SK hynix SC311 S) in the **M.2 slot**, SATA III over AHCI · the **2.5″ bay is free** |
 | Management | **MEBx not reachable** (Ctrl+P silent, no F12 entry) although CPU, Q270 and the I219-LM all satisfy the AMT platform requirements — ME firmware mode or a BIOS switch, not missing hardware |
 | Address | DHCP `192.168.2.206` today; `192.168.2.203` is the reserved slot ([idea 15](../ideas/15-second-proxmox-node.md), [ADR 31](../decisions/31-static-address-scheme.md)) |
 
@@ -61,18 +61,18 @@ The 7050 replaces the "OptiPlex 7040 Micro, i5-6500T" that [research 47 §2](47-
 - So **16 GB is a single-stick add** and **32 GB is 2× 16 GiB** — Dell's documented ceiling for the model, and the i5-7500's memory controller tops out at DDR4-2400.
 - 8 GB is the same starting point as `pve`; unlike `pve`, the upgrade path here is cheap and non-destructive. Sizing the guests is still the real fix ([idea 15](../ideas/15-second-proxmox-node.md) risks).
 
-### Storage — an M.2 2280 SATA module, not a 2.5″ drive and not NVMe
+### Storage — an M.2 2280 SATA module in the M.2 slot
 
-> **Corrected 2026-11-06.** The first pass read the report's AHCI/`ATA` enumeration against Dell's manual and concluded "2.5″ bay, M.2 slot empty". **Physical inspection of the unit settles it the other way:** the drive is an **M.2 2280 SATA III module sitting in the M.2 slot**, and the 2.5″ bay is empty.
+The drive is an **M.2 2280 SATA III module sitting in the M.2 slot**, and the **2.5″ bay is empty**.
 
-**The protocol really is SATA — the boot-list label is not a form-factor hint.** A Dell boot menu listing the drive as *SATA* is simply the truth about the protocol an M.2 SATA module speaks: it hangs off the AHCI controller exactly like a 2.5″ drive. Four independent signals agree and none of them says NVMe:
+**The interface is SATA.** Dell's boot list shows the drive as *SATA* because that is the protocol an M.2 SATA module speaks — it hangs off the AHCI controller exactly like a 2.5″ drive, so the label describes the interface, not where the module sits. Four independent signals agree, and none of them says NVMe:
 
 - the disk enumerates as **`ATA`** on the AHCI controller (`00:17.0`, `scsi4`);
 - **no `nvme` module** is loaded and **no NVMe PCI endpoint** exists — the only exposed root port (`00:1c.0`) leads to bus 01, the WiFi card;
 - the **SK hynix SC311 S** family is SATA-only by construction (SATA III, 6 Gb/s) and Dell shipped it as an OEM **M.2 2280** module (`HFS128G39TNF-N2A0A`, Dell part `6HG72`);
 - the live session saw no NVMe namespace — `sdb` is the only internal disk.
 
-**Dell's manual lists only NVMe for the Micro's M.2 slot.** That table enumerates the options Dell *sold*, not every mode the connector supports — this unit proves the slot takes an M.2 SATA module in practice. Record it, because it cuts against the obvious upgrade assumption: a **B+M key fits either protocol, but the slot's SATA support is not something the manual promises**, and Dell's own guidance is to treat protocol support as a platform property.
+**Dell's manual lists only NVMe for the Micro's M.2 slot** — that table enumerates the options Dell *sold*, not every mode the connector supports, and this unit runs an M.2 SATA module in it. Worth knowing before an upgrade: a **B+M key fits either protocol, but protocol support is a platform property** — verify with a live-boot test rather than assuming.
 
 **What that means for the build:**
 
@@ -166,7 +166,7 @@ Regardless of the outcome, **record the ME state** in `docs/hardware.md`: an unc
 2. **ME/AMT state** — `mei-amt-version`, `/sys/class/mei/mei0/fw_ver`, `dmesg | grep -i mei`. This single check decides hypothesis 1 and therefore whether vPro exists at all.
 3. **BIOS level** — 1.27.0 is from 2023-09-18; check Dell's current release before installing Proxmox (and expect an `intel-microcode` update: the live session reports `old_microcode` **Vulnerable**).
 4. **Disk** — `lsblk`, `smartctl -a`: exact model, capacity, POH, `Media_Wearout`/`Total_LBAs_Written`. Used drive → endurance is the decision input, and an NVMe purchase decision hangs off it.
-5. **Visual confirmation** — the M.2 2280 SATA module is confirmed in the M.2 slot (2026-11-06). Still to check: is the **2.5″ caddy + ribbon present** for a later second disk, is a RAM slot free, and is the CPU heatsink the 35 W design or a retrofit?
+5. **Visual confirmation** — is the **2.5″ caddy + ribbon present** for a later second disk, is a RAM slot free, and is the CPU heatsink the 35 W design or a retrofit?
 6. **TPM identity** — `tpm2_getcap properties-fixed` → Intel PTT vs discrete (the [research 37](37-tpm2-hardware-and-fleet.md) pattern). A real TPM 2.0 opens the option of a second sealed `step-ca` instance.
 7. **Thermal + power measurement under load** — package temperature, fan RPM and wall draw at idle and at all-core load, so the 65 W decision rests on numbers rather than on the TDP label.
 8. **ePSA diagnostics** — F12 → Diagnostics, record per-test results (memory, storage, NIC) as the pre-install baseline.
