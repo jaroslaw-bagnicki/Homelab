@@ -124,7 +124,7 @@ like the SFF, not the Micro.
 ## References
 
 - [Research 47 — second Proxmox node](../research/47-second-proxmox-node.md) — the hardware comparison, the HA/QDevice case and what ZFS replication requires
-- [Research 51 — OptiPlex 7050 MFF hardware diagnostic](../research/51-optiplex7050-hardware-diagnostic.md) — the pre-boot audit of the purchased unit
+- [Research 52 — OptiPlex 7050 MFF hardware diagnostic](../research/52-optiplex7050-hardware-diagnostic.md) — the pre-boot audit of the purchased unit
 - Chats: [37 — Wyse 5070 vs OptiPlex 3000](https://share.gemini.google/XvMCIZlMCC3d) · [38 — OptiPlex comparison](https://share.gemini.google/Q1nb6iTr0YzJ)
 - Proxmox VE 9.2 — [Cluster Manager](https://pve.proxmox.com/pve-docs/chapter-pvecm.html) · [Storage Replication](https://pve.proxmox.com/pve-docs/chapter-pvesr.html) · [Ceph](https://pve.proxmox.com/pve-docs/chapter-pveceph.html)
 - [Idea 13 — FreeIPA domain controller](13-freeipa-domain-controller.md) (the next guest) · [idea 05 — Home Assistant on a thin client](05-home-assistant-thin-client.md) (the HA candidate)

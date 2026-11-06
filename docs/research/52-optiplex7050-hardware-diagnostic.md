@@ -1,10 +1,10 @@
-# 51 — OptiPlex 7050 MFF Hardware Diagnostic: Pre-Boot Audit of the Second Proxmox Node
+# 52 — OptiPlex 7050 MFF Hardware Diagnostic: Pre-Boot Audit of the Second Proxmox Node
 
 **Source**: SystemRescue 13.02 live session + hardinfo2 report, 2026-11-05 20:21 UTC · issue [#177 — Provision the OptiPlex 7050 MFF as the second Proxmox VE node](https://github.com/jaroslaw-bagnicki/Homelab/issues/177)
 
 **Scope**: Pre-boot hardware audit of the **Dell OptiPlex 7050 Micro (MFF)** bought on 2026-11-04 and delivered 2026-11-05 — the second Proxmox VE node planned in [idea 15](../ideas/15-second-proxmox-node.md) and [research 47](47-second-proxmox-node.md). Same Phase 0 pattern as the Wyse 3040 ([28](28-wyse3040-hardware-diagnostic.md)), Wyse 5070 ([29](29-wyse5070-hardware-diagnostic.md)), Futro S930 ([31](31-futro-s930-hardware-diagnostic.md)) and Beetle M-III ([32](32-wincor-beetle-m3-hardware-diagnostic.md)) audits: capture the exact specs into `docs/hardware.md` and find the surprises **before** committing an OS to the box.
 
-**Status**: 🔨 In progress — hardinfo2 inventory, the F2 BIOS walk, the F12 boot menu, ePSA, the BIOS-level check, **disk SMART** and **ME firmware** are captured; **TPM vendor, MAC, the AMT verdict, Memtest86+ and a thermal load run are still pending** ([Pending checks](#pending-checks)).
+**Status**: 🔨 In progress — hardinfo2 inventory, the F2 BIOS walk, the F12 boot menu, ePSA, the BIOS-level check, **disk SMART** and **ME firmware** are captured; **TPM vendor, MAC, the AMT verdict, finishing Memtest86+ and the OS-side power/thermal trio are still pending** ([Pending checks](#pending-checks)).
 
 ---
 
@@ -52,7 +52,7 @@ The 7050 replaces the "OptiPlex 7040 Micro, i5-6500T" that [research 47 §2](47-
 | Audio | HDA Intel PCH (Realtek codec; DP/HDMI outputs + front line-out/headphone) |
 | TPM | **TPM 2.0 present** (ACPI `MSFT0101`) — firmware-vs-discrete still to identify ([research 37](37-tpm2-hardware-and-fleet.md) pattern) |
 | Power | AC attached, no battery · **130 W adapter** supplied · BIOS event log carries historical `Unknown AC power adapter` alerts ([below](#bios-event-log--the-adapter-history)) · **23.2 W at the wall in BIOS Setup, 19.7 W at PXE** ([pre-OS, not idle](#power-draw--measured-pre-os)) |
-| Cooling | Fan **2281 RPM at idle**, package **44 °C** (SystemRescue, ~4 min uptime) — audible, compared against the M910q [below](#noise--measured-against-the-m910q) · reconfirmed 2026-11-06: package **42 °C**, `dell_smm` fan **2266 RPM** at idle |
+| Cooling | Fan **2281 RPM at idle**, package **44 °C** (SystemRescue, ~4 min uptime) — audible, compared against the M910q [below](#noise--measured-against-the-m910q) · reconfirmed 2026-11-06: package **42 °C**, `dell_smm` fan **2266 RPM** at idle · **54–55 °C under a full Memtest86+ core load** at 3.4 GHz |
 | Session | SystemRescue 13.02, kernel 6.18.41, DHCP `192.168.2.206` on `enp0s31f6` |
 
 ### Noise — measured against the M910q
@@ -89,11 +89,13 @@ Measured at the wall on 2026-11-06, 130 W adapter:
 |---|---|
 | **BIOS Setup screen** | **23.2 W** |
 | **PXE boot** (network boot, IP stack up) | **19.7 W** |
+| **Memtest86+** (4 cores at 3.4 GHz, test 42 %, 0 errors) | **33.3 W** |
 
-Both are **pre-OS** numbers, and neither is the node's idle figure:
+All three are **pre-OS** numbers, and none is the node's idle figure:
 
 - **BIOS Setup runs the CPU flat out at base clock with no OS power management** — no P/C-state entry, no governor, no ASPM policy, all cores awake and the graphics engine redrawing. A 65 W-TDP Kaby Lake at 3.4 GHz with management disabled is a 10 W+ CPU on its own, which is exactly what makes this the *worst* state to quote as an idle baseline.
 - **PXE is cheaper than Setup by 3.5 W** for the same reason in reverse: the setup UI's graphics and keyboard polling go away, while the NIC and stack stay awake. Still no OS power management.
+- **Memtest86+ is the first genuine *load* reading.** All four cores run at the 3.4 GHz base clock for the whole test, so **33.3 W** is the top of the pre-OS range rather than another idle-ish state — **+10.1 W over BIOS Setup** for a full core load, with the package at **54–55 °C** on the 35 W-designed cooler and TurboBoost still off. That brackets the node's sustained integer-workload envelope from above; an AVX-heavy guest or an OS with working C-states moves it, which is what the OS-side trio below is still for.
 - **A 130 W brick is inefficient at this load.** At ~20 W output the adapter sits far below its sweet spot, so the wall figure carries more conversion loss than the same box on a 65 W unit would. It does not argue for a smaller adapter — a 65 W CPU config needs the 130 W unit — but it is part of why the number looks high.
 
 **What actually matters is the OS idle figure**, after Proxmox has settled: C-states, `cpufreq`, ASPM and a dark display typically take a large bite out of a pre-OS reading. Measure it the same way (same meter, same socket) for **OS idle**, **OS idle with a guest running**, and **all-core load**, and record them here — that trio is what sizes the UPS and the always-on budget.
@@ -165,6 +167,8 @@ Notable absences: the **Manageability** group contains only `USB Provision` and 
 ### RAM
 
 - **1× 8 GiB DDR4-2400 SO-DIMM, DIMM 2 empty** — the opposite of the Wyse 5070 (both slots full).
+- **The two tools disagree on *which* slot is which.** Dell's BIOS reports `*** DIMM 2 Size Empty ***`, while Memtest86+ lists the module as **`Slot 2: 8GB DDR4-2400 — Kingston KMKYF9-MIH (2018-W14)`**. Both agree on the fact that matters — **one module fitted, one slot free** — but confirm the free slot physically before buying the second stick: memtest numbers SPD devices, Dell numbers the board silkscreen.
+- SPD also pins the part and the speed: **Kingston `KMKYF9-MIH`, 2400 MT/s, week 14 of 2018**, link running **1202 MHz IMC (DDR4-2405) at CAS 17-17-17-39** — rated speed, single channel, no downclocking.
 - So **16 GB is a single-stick add** and **32 GB is 2× 16 GiB** — Dell's documented ceiling for the model, and the i5-7500's memory controller tops out at DDR4-2400.
 - 8 GB is the same starting point as `pve`; unlike `pve`, the upgrade path here is cheap and non-destructive. Sizing the guests is still the real fix ([idea 15](../ideas/15-second-proxmox-node.md) risks).
 
@@ -341,10 +345,10 @@ Six items that are either **impossible to recover afterwards** or that **change 
 
 1. **Disk evidence** — ✅ **done 2026-11-06.** 119.2 GiB, **11 134 POH**, **wear indicator 4/100 (≈97 % consumed)** — the module is **finished**, so the boot-disk decision is made for us ([SMART detail](#the-module-is-worn-out--and-it-is-empty-smart-2026-11-06)). Nothing was lost to a wipe either: the disk is **unpartitioned**, there was no install left on it.
 2. **ePSA diagnostics** (F12 → Diagnostics) — per-test pass/fail for memory, storage and NIC. A failing DIMM shows up later as random VM crashes, not as a failed boot. ✅ **ran clean 2026-11-06** (*no problems found*); let the remaining memory test finish for a full pass.
-3. **Memtest86+** — one to two full passes. It is used hardware, single-channel, and there is one 8 GiB stick: a host that silently corrupts guests is worse than one that does not boot.
+3. **Memtest86+** — one to two full passes. It is used hardware, single-channel, and there is one 8 GiB stick: a host that silently corrupts guests is worse than one that does not boot. 🔄 **running 2026-11-06** — Memtest86+ **7.20**, **0 errors** so far (test 42 % of the first pass); let the passes finish and record the total before installing.
 4. **BIOS level** — ✅ **resolved 2026-11-06, nothing to flash.** Dell's [OptiPlex 7050 BIOS page](https://www.dell.com/support/home/en-gb/drivers/driversdetails?driverid=kmhpc) (driver `KMHPC`, priority **Critical**) lists **1.27.0, released 2023-11-15**, as the current release — the build already installed; the `2023-09-18` in the SMBIOS dump is its compile date. The 7050 is also **absent from [DSA-2025-153](https://www.dell.com/support/kbdoc/000300450)** (CVE-2025-36579, weak BIOS password recovery), whose June-2026 affected-platform list ends at the 7090/7490 generation. So there is **no newer build and no open BIOS advisory** — the only firmware gap left is the `intel-microcode` package inside Proxmox.
 5. **ME/AMT verdict** — set `Fastboot = Thorough` + `Extend BIOS POST Time`, then Ctrl+P at the logo, then `mei-amt-version` from the live USB. That decides the remote-power model (**vPro** vs **AC Recovery + Wake-on-LAN**) before the node is carrying anything.
-6. **Thermal + load baseline** — a short all-core load run from SystemRescue (`stress-ng`/`mprime`) with package temperature, fan RPM and wall draw. It is the acceptance test for a 65 W CPU in a 35 W chassis, and it settles whether TurboBoost stays off. ⚠️ **not run 2026-11-06** — only the idle baseline came out (**42 °C package, 2266 RPM**); the load run is still owed.
+6. **Thermal + load baseline** — a short all-core load run from SystemRescue (`stress-ng`/`mprime`) with package temperature, fan RPM and wall draw. It is the acceptance test for a 65 W CPU in a 35 W chassis, and it settles whether TurboBoost stays off. ⚠️ **partly covered 2026-11-06** — Memtest86+ supplied the first load reading (**33.3 W wall, 54–55 °C**, TurboBoost off, [detail](#power-draw--measured-pre-os)); still owed are **OS idle**, **OS idle + guest** and an **AVX-class load**, with fan RPM and wall draw at each.
 
 **Install-time decisions**, recorded now so the installer is not a guess:
 
