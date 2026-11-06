@@ -98,11 +98,12 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Firmware | BIOS Dell 1.27.0 (2023-09-18) · board `055H3G` · serial `3CLD6Q2` · asset tag `80006161` |
 | Network | Intel **I219-LM** GbE (`enp0s31f6`) · Intel 8265 WiFi/BT · DHCP `.206`, reserved `.203` ([ADR 31](decisions/31-static-address-scheme.md)) |
 | TPM | **TPM 2.0, enabled** (TPM On, SHA-256, attestation + key storage) — PTT vs discrete pending |
-| Power | **130 W** adapter (the model's documented 65 W / 130 W options) · BIOS logged `Unknown AC power adapter` before the purchase, none on the current boot · fan ~2281 RPM at idle · **23.2 W in BIOS Setup, 19.7 W at PXE** (pre-OS, not idle) |
-| Noise | **37.3 dB @ 0.3 m · 38.2 dB @ 0.2 m** (idle) — 1–2 dB above the M910q; tonal character, not level |
+| Power | **130 W** adapter (documented options: 65 W ↔ 35 W CPU, 130 W ↔ 65 W CPU) · BIOS logged `Unknown AC power adapter` before the purchase, none on the current boot · **23.2 W in BIOS Setup, 19.7 W at PXE** — pre-OS, OS idle still to measure |
+| Cooling | Fan **2278 RPM idle / 2908 RPM high** (ePSA) · CPU thermistor 36 °C, HDD 37 °C · audible at idle, **loud under sustained load** |
+| Noise | **37.3 dB @ 0.3 m · 38.2 dB @ 0.2 m** idle, **~59 dB at full fan speed** (ePSA fan test) — 1–2 dB above the M910q at idle; the ceiling is what matters |
 | Management | AMT-capable platform (i5-7500 + Q270 + I219-LM, `USB Provision` present) — every BIOS gate for MEBx is satisfied (`OROM Keyboard Access` on, `MEBx Hotkey` on, admin password set) yet CTRL+P and F12 still show nothing; the ME firmware is still to prove |
 | Virtualisation | VT-x ✅ · **VT-d ✅** · TXT off — firmware ready for Proxmox |
-| Wireless | Intel 8265 WLAN + Bluetooth, **both enabled in BIOS** — unused, disable on a hypervisor |
+| Wireless | Intel 8265 WLAN + Bluetooth, **both disabled in BIOS** — unused on a hypervisor |
 | Role | Second virtualisation host (planned) — cluster, QDevice and replication are out of scope for now ([idea 15](ideas/15-second-proxmox-node.md)) |
 | Docs | [idea 15](ideas/15-second-proxmox-node.md) · [research 47](research/47-second-proxmox-node.md) · [research 51](research/51-optiplex7050-hardware-diagnostic.md) · [#177](https://github.com/jaroslaw-bagnicki/Homelab/issues/177) |
 

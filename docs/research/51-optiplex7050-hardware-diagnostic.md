@@ -74,6 +74,13 @@ Three things to keep in mind before acting on it:
 
 **If the noise matters for placement** — the 35 W part is the lever, and the M910q is the evidence: an **i7-7700T (35 W, 4C/8T)** would both cut the fan curve and add hyper-threading. Cheaper knobs first: keep **TurboBoost off** (as it is), cap the package with `intel_rapl`, and chart fan RPM in Netdata so the ramp is visible rather than anecdotal.
 
+**At full speed the ceiling is 59 dB.** ePSA's fan test drove the fan to its high-water mark and the meter read **~59 dB** — against **37.3 dB** at the 2278 RPM idle reading, a **+22 dB** step (roughly 160× the acoustic power, four times the perceived loudness). Read it as a ceiling, not a like-for-like comparison:
+
+- The ePSA health page reports the fan's **high = 2908 RPM** against an idle 2278 RPM — only 1.28× — and broadband fan noise scales roughly with the **fifth power of RPM**, which predicts ~+5 dB, not +22. So the fan test either runs past the sampled high-water mark or the blade passing hits a tonal resonance; either way the mechanism is not simple scaling.
+- The idle figures were taken at 0.3 m and 0.2 m; unless the 59 dB reading used the same distance and weighting, the two are not directly comparable.
+
+The planning conclusion holds regardless: **under sustained load this chassis is loud** (59 dB at close range is vacuum-cleaner territory), which is the strongest argument yet for keeping TurboBoost off, capping the package, and treating placement — not soundtrack — as the design constraint.
+
 ### Power draw — measured, pre-OS
 
 Measured at the wall on 2026-11-06, 130 W adapter:
@@ -98,6 +105,14 @@ Two things also worth knowing before blaming the platform: the **research 47 idl
 **And the 0 W with the machine off is a fact about the meter, not the adapter.** A plugged-in brick always draws standby power (fractions of a watt to a couple of watts), so a reading of exactly `0 W` means the meter does not resolve the low end — roughly the same instrument limitation that makes sub-5 W readings untrustworthy. Validate it with a **known load at a similar level** (a 60–100 W lamp, a kettle on the low setting) before treating 23.2 W and 19.7 W as precise; the *difference* between states is the more reliable signal than either absolute value.
 
 **The adapter-rating A/B is not worth running.** Dell pairs the two supplies with the CPU class — **65 W (19.5 V, 3.34 A) for 35 W processors, 130 W (19.5 V, 6.7 A) for 65 W processors**, same 19.5 V and the same 4.5 × 3.0 mm barrel with an ID pin — so a 65 W brick on this box is *below* Dell's own pairing, and the platform reacts by throttling or refusing (`Underpowered AC power adapter, unable to proceed` is already in this unit's event log). That reaction changes the CPU state, which destroys the comparison: a drop from 23.2 W would prove throttling, not adapter efficiency. On top of that, the only 65 W Dell unit to hand is the **Wyse 5070's — the live `pve` node's adapter** — so the test costs an outage of the fleet CA, the log store, the Netdata parent and the NUT server to chase a 1–2 W effect that sits inside the error of a meter reading `0 W` at standby. **Keep the 130 W unit.**
+
+### Boot menu (F12) and ePSA, 2026-11-06
+
+- **`Boot mode is set to: UEFI; Secure Boot: OFF`** — the install can stay on UEFI with Secure Boot off, which is what Proxmox expects.
+- The **internal disk appears only under `LEGACY BOOT`** (`P4: SK hynix SC311 SATA 128GB`), with `UEFI BOOT` listing just the NIC (IPv4/IPv6) — the leftover Windows install is a **legacy/MBR** image. After the wipe the installer will create the UEFI entry itself; the USB installer will appear under `UEFI BOOT` when inserted.
+- **No MEBx entry in F12** — consistent with everything else on the AMT thread.
+- `OTHER OPTIONS` exposes **`BIOS Flash Update`** and **`Change Boot Mode Settings`**, so the BIOS-update step needs nothing but a FAT32 USB stick.
+- **ePSA ran clean** — *"No problems have been found with this system so far"* at the memory-test prompt. System Health reported **fan 2278 RPM current / 2908 high / 2265 low**, **HDD 37 °C** (33–39 °C) and **CPU thermistor 36 °C** (33–36 °C).
 
 ### Firmware settings observed (F2 walk, 2026-11-06)
 
@@ -293,7 +308,7 @@ Regardless of the outcome, **record the ME state** in `docs/hardware.md`: an unc
 Six items that are either **impossible to recover afterwards** or that **change what gets installed**:
 
 1. **Disk evidence** — `lsblk -o NAME,SIZE,MODEL,TRAN` and `smartctl -a`. The module still carries a previous Windows install and the installer wipes it; capacity, POH and wear are unrecoverable after that, and the second-disk decision hangs off them.
-2. **ePSA diagnostics** (F12 → Diagnostics) — per-test pass/fail for memory, storage and NIC. A failing DIMM shows up later as random VM crashes, not as a failed boot.
+2. **ePSA diagnostics** (F12 → Diagnostics) — per-test pass/fail for memory, storage and NIC. A failing DIMM shows up later as random VM crashes, not as a failed boot. ✅ **ran clean 2026-11-06** (*no problems found*); let the remaining memory test finish for a full pass.
 3. **Memtest86+** — one to two full passes. It is used hardware, single-channel, and there is one 8 GiB stick: a host that silently corrupts guests is worse than one that does not boot.
 4. **BIOS level** — compare 1.27.0 with Dell's current release and flash from USB now if there is a newer one. Afterwards it is a reboot of a live node.
 5. **ME/AMT verdict** — set `Fastboot = Thorough` + `Extend BIOS POST Time`, then Ctrl+P at the logo, then `mei-amt-version` from the live USB. That decides the remote-power model (**vPro** vs **AC Recovery + Wake-on-LAN**) before the node is carrying anything.
