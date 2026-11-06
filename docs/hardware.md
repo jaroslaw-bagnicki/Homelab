@@ -96,8 +96,9 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Storage | **M.2 2280 SATA** module — SK hynix **SC311 S** (SATA III via AHCI; capacity/SMART pending) · **2.5″ bay free** |
 | Firmware | BIOS Dell 1.27.0 (2023-09-18) · board `055H3G` · serial `3CLD6Q2` · asset tag `80006161` |
 | Network | Intel **I219-LM** GbE (`enp0s31f6`) · Intel 8265 WiFi/BT · DHCP `.206`, reserved `.203` ([ADR 31](decisions/31-static-address-scheme.md)) |
-| Power | **130 W** adapter (the model's documented 65 W / 130 W options) · fan ~2281 RPM at idle |
-| Management | vPro-capable platform (i5-7500 + Q270 + I219-LM) but **MEBx unreachable** — treat remote KVM as absent until proven |
+| TPM | **TPM 2.0, enabled** (TPM On, SHA-256, attestation + key storage) — PTT vs discrete pending |
+| Power | **130 W** adapter (the model's documented 65 W / 130 W options) · BIOS logged `Unknown AC power adapter` before the purchase, none on the current boot · fan ~2281 RPM at idle |
+| Management | vPro-capable platform (i5-7500 + Q270 + I219-LM) but **no `Intel AMT Capability` page** on BIOS 1.27.0 and MEBx unreachable — treat remote KVM as absent until proven |
 | Role | Second virtualisation host (planned) — cluster, QDevice and replication are out of scope for now ([idea 15](ideas/15-second-proxmox-node.md)) |
 | Docs | [idea 15](ideas/15-second-proxmox-node.md) · [research 47](research/47-second-proxmox-node.md) · [research 51](research/51-optiplex7050-hardware-diagnostic.md) · [#177](https://github.com/jaroslaw-bagnicki/Homelab/issues/177) |
 
