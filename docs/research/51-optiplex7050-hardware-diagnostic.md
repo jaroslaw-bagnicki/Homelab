@@ -123,15 +123,29 @@ AMT on this platform needs three things, and **all three are present**:
 
 So the absence of MEBx is **not** a missing-hardware conclusion — it is a **firmware-mode or BIOS-setting** question.
 
+### What Dell's KB says, and what it changed here (2026-11-06)
+
+Dell KB [000199831 — Unable to access the MEBx vPro menu using the F12 boot menu](https://www.dell.com/support/kbdoc/en-gb/000199831/unable-to-access-the-mebx-vpro-menu-using-the-f12-boot-menu-on-precision-3660) gives the vendor answer: MEBx appears in the **F12 menu** only once a **BIOS admin password is set** *and* **`Enable Intel AMT Capability`** is on under **System Management → Intel AMT Capability**. The same page states MEBx is also blocked when **Device Configuration Hotkey Access** is disabled.
+
+**Outcome on this unit: a BIOS admin password was set, and nothing changed** — no MEBx entry in F12, no Ctrl+P prompt. Three things about the article narrow the field:
+
+- **Its affected-platform list is the modern BIOS generation** (Latitude 9430/5431/5430/5530, OptiPlex 5000/7000 MFF and MT, Precision 3460/3660/3571/5570). A 2017 OptiPlex 7050 on BIOS 1.27.0 does not necessarily have a *System Management → Intel AMT Capability* page at all, so "followed the instructions" can mean clicking nothing.
+- **Its own illustration shows the AMT page in a `FW Status Recovery Error` state** — the condition in which AMT cannot be enabled from BIOS at all, whatever the password or capability setting says.
+- **The password is only an enabler for the hotkey**, not evidence that an AMT-capable ME image is present. Setting it proves nothing about the firmware.
+
+So the remaining causes are narrower than the original list: either the BIOS has **no AMT capability page** (the ME image is not an AMT build), the **ME firmware is in an error/recovery state**, or **Device Configuration Hotkey Access** is off. The ME-level check below — not another BIOS walk — is what separates them.
+
 ### Ranked hypotheses
 
 | # | Hypothesis | Why it fits | How to confirm |
 |---|---|---|---|
 | 1 | **ME firmware is in a non-AMT mode** ("Standard Manageability" / AMT capability off in the ME region) | Dell shipped non-vPro SKUs whose ME image has no AMT; the ME region — not the CPU — decides. A corporate-lease unit with an asset tag is exactly where this happens | Intel's `mei-amt-version` from the live session prints the ME firmware version and states plainly whether AMT is present; `cat /sys/class/mei/mei0/fw_ver` |
-| 2 | **AMT/MEBx disabled in BIOS** | Enabling AMT and *entering* MEBx are separate steps, and the 7050 BIOS carries a **MEBx Hotkey** option that suppresses the prompt when off (System Configuration / Manageability) | F2 walk — enable AMT + MEBx Hotkey, save, **cold** boot |
+| 2 | **AMT/MEBx disabled in BIOS** | Enabling AMT and *entering* MEBx are separate steps, and the 7050 BIOS carries a **MEBx Hotkey** option that suppresses the prompt when off (System Configuration / Manageability). **Partially tested 2026-11-06** — BIOS admin password set, no change | Look for an **`Intel AMT Capability`** page under System Management/Manageability *at all*; also check **Device Configuration Hotkey Access**. If both exist: enable, save, **cold** boot |
 | 3 | **Hotkey timing / input path** | Ctrl+P must be hammered the moment the Dell logo appears; a hub, KVM or USB 3 port can eat it, and Fast Boot shortens the window | Wired keyboard straight into a rear port, Fast Boot off, spam Ctrl+P from power-on |
 | 4 | **AMT soft-disabled / left unprovisioned in a bad state by the previous IT owner** | The ME re-reads its configuration on **cold** boot only | BIOS reset to defaults, unplug AC for ~30 s, then retry |
-| 5 | MEBx expected in the F12 menu | Dell exposes it there on *some* vPro models — its absence here is consistent with 1 or 2 rather than a fifth cause | Check F12 again only after 1–2 are resolved |
+| 5 | **ME in a firmware error / recovery state** (`FW Status Recovery Error`) | The Dell article's own screenshot shows it, and in that state no BIOS toggle brings AMT back | BIOS update to the current release, **Load BIOS defaults**, then a full AC drain (unplug ~30 s) and cold boot; if the state persists, Dell's ME recovery path is a board-level service |
+
+A firmware error state and a non-AMT ME image are the two that a BIOS password cannot fix — which is exactly the outcome observed. **`mei-amt-version` distinguishes them in one command**: it reports the ME firmware version and whether AMT is present, and a `FW Status Recovery Error`-class state shows up as a version read that fails or reports no AMT.
 
 ### Consequence for the plan
 
@@ -162,8 +176,8 @@ Regardless of the outcome, **record the ME state** in `docs/hardware.md`: an unc
 
 ## Pending Checks
 
-1. **BIOS walk (F2)** — ME/AMT + MEBx Hotkey, **AC Recovery**, Wake-on-LAN, Fast Boot off, UEFI vs Legacy, Secure Boot, VT-x/VT-d, fan/power profile. Fast Boot off is a prerequisite for the Ctrl+P test.
-2. **ME/AMT state** — `mei-amt-version`, `/sys/class/mei/mei0/fw_ver`, `dmesg | grep -i mei`. This single check decides hypothesis 1 and therefore whether vPro exists at all.
+1. **BIOS walk (F2)** — whether a **System Management / Manageability → Intel AMT Capability** page exists at all, **Device Configuration Hotkey Access**, **AC Recovery**, Wake-on-LAN, Fast Boot off, UEFI vs Legacy, Secure Boot, VT-x/VT-d, fan/power profile. Fast Boot off is a prerequisite for the Ctrl+P test.
+2. **ME/AMT state** — `mei-amt-version`, `/sys/class/mei/mei0/fw_ver`, `dmesg | grep -i mei`. This single check decides whether the ME runs an **AMT build** at all, and it outranks any further BIOS setting.
 3. **BIOS level** — 1.27.0 is from 2023-09-18; check Dell's current release before installing Proxmox (and expect an `intel-microcode` update: the live session reports `old_microcode` **Vulnerable**).
 4. **Disk** — `lsblk`, `smartctl -a`: exact model, capacity, POH, `Media_Wearout`/`Total_LBAs_Written`. Used drive → endurance is the decision input, and an NVMe purchase decision hangs off it.
 5. **Visual confirmation** — is the **2.5″ caddy + ribbon present** for a later second disk, is a RAM slot free, and is the CPU heatsink the 35 W design or a retrofit?
