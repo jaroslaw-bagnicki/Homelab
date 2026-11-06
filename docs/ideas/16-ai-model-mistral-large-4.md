@@ -9,7 +9,7 @@
 **Status**: 🧠 Idea — the **evaluation** is decided (2026-11-06) and tracked in [#179](https://github.com/jaroslaw-bagnicki/Homelab/issues/179); the **model decision** is not, so there is no ADR yet and the index status stays here until one exists  
 **Date**: 2026-11-06  
 **Sources**: [Mistral pricing](https://mistral.ai/pricing/) · [Mistral Large 4 model card](https://docs.mistral.ai/models/mistral-large-4-0) · [DeepSeek V4.1 Flash 1017 model card](https://docs.mistral.ai/models/deepseek-v4-flash-1017) · [Subscriptions / included usage](https://docs.mistral.ai/admin/billing-usage/subscriptions) · [Vibe CLI configuration](https://docs.mistral.ai/vibe/code/cli/configuration) — all read 2026-11-06  
-**Related**: [ADR 15](../decisions/15-copilot-desktop-agentic.md) (Copilot BYOK provider) · [ADR 17](../decisions/17-adopt-opencode.md) (OpenCode, DeepSeek API + MiniMax plan) · [research 19](../research/19-copilot-desktop-agentic.md) · [docs/opencode-customization](../opencode-customization/README.md) (per-instance LLM key) · [research 02](../research/02-llm-requirements.md) / [research 08](../research/08-llm-server-hardware.md) (why local inference is out of scope)
+**Related**: [ADR 15](../decisions/15-copilot-desktop-agentic.md) (Copilot BYOK provider) · [runbook 42](../runbooks/42-copilot-mistral-byok.md) (Mistral BYOK in Copilot/VS Code for the A/B) · [ADR 17](../decisions/17-adopt-opencode.md) (OpenCode, DeepSeek API + MiniMax plan) · [research 19](../research/19-copilot-desktop-agentic.md) · [docs/opencode-customization](../opencode-customization/README.md) (per-instance LLM key) · [research 02](../research/02-llm-requirements.md) / [research 08](../research/08-llm-server-hardware.md) (why local inference is out of scope)
 
 ---
 
