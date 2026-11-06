@@ -51,7 +51,7 @@ The 7050 replaces the "OptiPlex 7040 Micro, i5-6500T" that [research 47 §2](47-
 | NIC (WiFi) | Intel **Wireless 8265** (`wlp1s0`, PCI `01:00.0` behind root port `00:1c.0`) + Intel Bluetooth |
 | Audio | HDA Intel PCH (Realtek codec; DP/HDMI outputs + front line-out/headphone) |
 | TPM | **TPM 2.0 present** (ACPI `MSFT0101`) — firmware-vs-discrete still to identify ([research 37](37-tpm2-hardware-and-fleet.md) pattern) |
-| Power | AC attached, no battery · **130 W adapter** supplied · BIOS event log carries historical `Unknown AC power adapter` alerts ([below](#bios-event-log--the-adapter-history)) |
+| Power | AC attached, no battery · **130 W adapter** supplied · BIOS event log carries historical `Unknown AC power adapter` alerts ([below](#bios-event-log--the-adapter-history)) · **23.2 W at the wall in BIOS Setup, 19.7 W at PXE** ([pre-OS, not idle](#power-draw--measured-pre-os)) |
 | Cooling | Fan **2281 RPM at idle**, package **44 °C** (SystemRescue, ~4 min uptime) — audible, compared against the M910q [below](#noise--measured-against-the-m910q) |
 | Session | SystemRescue 13.02, kernel 6.18.41, DHCP `192.168.2.206` on `enp0s31f6` |
 
@@ -73,6 +73,25 @@ Three things to keep in mind before acting on it:
 - **Check the cooler before judging the design.** The unit is a 2018 machine whose BIOS event log records the cover removed repeatedly, idling at 44 °C. Dust in the heatsink and tired thermal paste raise both temperature and RPM: clean the fan/heatsink and repaste before drawing conclusions, then re-measure.
 
 **If the noise matters for placement** — the 35 W part is the lever, and the M910q is the evidence: an **i7-7700T (35 W, 4C/8T)** would both cut the fan curve and add hyper-threading. Cheaper knobs first: keep **TurboBoost off** (as it is), cap the package with `intel_rapl`, and chart fan RPM in Netdata so the ramp is visible rather than anecdotal.
+
+### Power draw — measured, pre-OS
+
+Measured at the wall on 2026-11-06, 130 W adapter:
+
+| State | Draw |
+|---|---|
+| **BIOS Setup screen** | **23.2 W** |
+| **PXE boot** (network boot, IP stack up) | **19.7 W** |
+
+Both are **pre-OS** numbers, and neither is the node's idle figure:
+
+- **BIOS Setup runs the CPU flat out at base clock with no OS power management** — no P/C-state entry, no governor, no ASPM policy, all cores awake and the graphics engine redrawing. A 65 W-TDP Kaby Lake at 3.4 GHz with management disabled is a 10 W+ CPU on its own, which is exactly what makes this the *worst* state to quote as an idle baseline.
+- **PXE is cheaper than Setup by 3.5 W** for the same reason in reverse: the setup UI's graphics and keyboard polling go away, while the NIC and stack stay awake. Still no OS power management.
+- **A 130 W brick is inefficient at this load.** At ~20 W output the adapter sits far below its sweet spot, so the wall figure carries more conversion loss than the same box on a 65 W unit would. It does not argue for a smaller adapter — a 65 W CPU config needs the 130 W unit — but it is part of why the number looks high.
+
+**What actually matters is the OS idle figure**, after Proxmox has settled: C-states, `cpufreq`, ASPM and a dark display typically take a large bite out of a pre-OS reading. Measure it the same way (same meter, same socket) for **OS idle**, **OS idle with a guest running**, and **all-core load**, and record them here — that trio is what sizes the UPS and the always-on budget.
+
+Two things also worth knowing before blaming the platform: the **research 47 idle figure of ~9–11 W for a 7040 Micro was unsourced model output**, not a measurement, and wireless radios were enabled when these readings were taken (they are now disabled in BIOS).
 
 ### Firmware settings observed (F2 walk, 2026-11-06)
 
@@ -269,7 +288,7 @@ Regardless of the outcome, **record the ME state** in `docs/hardware.md`: an unc
 4. **Disk** — `lsblk`, `smartctl -a`: exact model, capacity, POH, `Media_Wearout`/`Total_LBAs_Written`. Used drive → endurance is the decision input, and an NVMe purchase decision hangs off it.
 5. **Visual confirmation** — is the **2.5″ caddy + ribbon present** for a later second disk, is a RAM slot free, and is the CPU heatsink the 35 W design or a retrofit?
 6. **TPM identity** — ✅ **enabled and active** per the F2 walk (TPM On, SHA-256, Attestation/Key Storage on, `Enabled`); **vendor still open** — `tpm2_getcap properties-fixed` for Intel PTT vs discrete (the [research 37](37-tpm2-hardware-and-fleet.md) pattern). A usable TPM 2.0 keeps the option of a second sealed `step-ca` instance open.
-7. **Thermal + power measurement under load** — package temperature, fan RPM and wall draw at idle and at all-core load, so the 65 W decision rests on numbers rather than on the TDP label.
+7. **Thermal + power measurement** — pre-OS baselines are in (**23.2 W BIOS Setup, 19.7 W PXE**); still to measure at the wall, same meter and socket: **OS idle**, **OS idle with a guest**, and **all-core load** — with package temperature and fan RPM alongside, so the 65 W decision rests on numbers rather than on the TDP label.
 8. **ePSA diagnostics** — F12 → Diagnostics, record per-test results (memory, storage, NIC) as the pre-install baseline.
 9. **MAC addresses** — record `enp0s31f6` for DHCP reservations / WoL.
 
