@@ -77,11 +77,12 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 
 | Item | Spec |
 |---|---|
-| CPU | Intel **Celeron J4105** (**Gemini Lake** / Goldmont Plus, 4C/4T, 800–2500 MHz, 10 W TDP, **x86-64-v2**) · fanless, ~35 °C idle · iGPU UHD Graphics 600 |
+| CPU | Intel **Celeron J4105** (**Gemini Lake** / Goldmont Plus, 4C/4T, **1.5 GHz base / 2.5 GHz burst**, 4 MB cache, 10 W TDP, **x86-64-v2**) · AES-NI ✅ · fanless, ~35 °C idle (800 MHz, downclocked) · iGPU UHD Graphics 600 |
 | RAM | 8 GB DDR4 — 2× 4 GiB Micron `4ATF51264HZ-3G2J1` rated **DDR4-3200 (PC4-25600)** but **running at 2400 MT/s**, the Gemini Lake IMC ceiling · both slots populated, so 16 GB means a full 2× 8 GiB swap |
 | Storage | M.2 SATA 2280 SK hynix **SC311 128 GB** (SN `MS8BN03201230BC10`, FW `70000P10`) · SMART **PASSED**, ~97 % endurance remaining · **no NVMe controller** on Gemini Lake — M.2 **SATA / B+M key only** · unused 14.7 GiB eMMC |
 | Firmware | BIOS **1.34.0** (2024-11-08) · board `060J9C` · serial `16474B3` · SKU `080C` |
 | Network | Realtek RTL8111/8168 GbE (`enp1s0`, MAC `c0:25:a5:65:02:67`) · Intel CNVi WiFi + BT (`wlp0s12f0`, MAC `d0:3c:1f:cb:76:9a`) |
+| Virtualisation | VT-x ✅ **in use** (VM 210 + LXCs 211/212/214/215, `kvm_intel` loaded) · **VT-d supported** by the J4105 ([Intel ARK](https://www.intel.com/content/www/us/en/products/sku/128989/intel-celeron-j4105-processor-4m-cache-up-to-2-50-ghz/specifications.html)) — but **IOMMU/DMAR not yet confirmed on this board**, so PCIe passthrough is unproven; neither the TPM nor the Zigbee USB passthrough needs it |
 | TPM | **Intel PTT** firmware TPM 2.0 — `/dev/tpm0`, `/dev/tpmrm0` (measured 2026-10-04, [research 37 §5](research/37-tpm2-hardware-and-fleet.md)) · passed into LXC 215, which seals the CA's intermediate key to it |
 | Zigbee | Sonoff ZBDongle-P (CC2652P) · USB coordinator for LXC 212 |
 | OS | Proxmox VE 9.2.2 installed at `192.168.2.201` · base provisioned ([runbook 28](runbooks/28-pve-proxmox-node.md)) |
