@@ -15,6 +15,7 @@ hardware detail see [Hardware Inventory](hardware.md); for change history see
 | **Beetle NAS** | backup target (successor to ML110) | Wincor Beetle M-III · OMV 8.5 | `nas` | `192.168.2.202` | 🔨 |
 | **Edge Ingress** | LAN DNS + reverse proxy (public ingress held) | Dell Wyse 3040 · Debian 13 minimal | `edge` | `192.168.2.240` | ✅ |
 | **Proxmox VE** | virtualisation host — smart-home + always-on services | Dell Wyse 5070 | `pve` | `192.168.2.201` · guests `.210`–`.212`, `.214`–`.216` | ✅ |
+| **Proxmox VE (second node)** | second virtualisation host — capacity now, cluster later | Dell OptiPlex 7050 MFF · Proxmox VE 9.x (planned) | `pve2` | `192.168.2.203` (reserved) | 📋 |
 | **LLM server** | local LLM inference | Minisforum X1 Lite | — | TBD | 🧠 |
 | **Cloudlab VPS** | staging for Lab (Ansible + Docker/k3s workloads) | Contabo VPS 10 · Ubuntu 24.04 | `cloudlab` | `173.249.27.13` | ✅ |
 
