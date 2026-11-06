@@ -31,7 +31,8 @@ metrics. A disposable **Contabo VPS** hosts the staging workloads.
 | Node | Role |
 |---|---|
 | **Lab** — Lenovo M910q Tiny (`lab`) | main workload host — Ubuntu 24.04 LTS + Azure Arc, Docker → k3s |
-| **Proxmox VE** — Dell Wyse 5070 (`pve`) | virtualisation host — smart-home + always-on services |
+| **Proxmox VE** — Dell Wyse 5070 (`pve1`) | virtualisation host — smart-home + always-on services |
+| **Proxmox VE (second node)** — Dell OptiPlex 7050 (`pve2`) | second virtualisation host — cluster + QDevice |
 | **Beetle NAS** — Wincor Beetle M-III (`nas`) | OMV backup target on `md0` RAID1 |
 | **OMV NAS** — HP ProLiant ML110 | incumbent backup target |
 | **Edge Ingress** — Dell Wyse 3040 (`edge`) | dedicated public ingress — `cloudflared` + Caddy |

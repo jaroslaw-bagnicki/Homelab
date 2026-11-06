@@ -1,7 +1,7 @@
-# Private CA — Deploy `step-ca` on `pve` (LXC `ca`, TPM-Bound Intermediate, ACME)
+# Private CA — Deploy `step-ca` on `pve1` (LXC `ca`, TPM-Bound Intermediate, ACME)
 
 > Stand up the fleet's issuing CA: an unprivileged Debian 13 LXC (`ca`, LXC **215**, `192.168.2.215`)
-> on the `pve` node with the host's **TPM 2.0** passed through, running **`step-ca` as a native
+> on the `pve1` node with the host's **TPM 2.0** passed through, running **`step-ca` as a native
 > systemd service** (no Docker), serving an **ACME provisioner** for LAN services. The intermediate key
 > is created **inside the TPM** and only a **CSR** leaves the host; the root signs that CSR **offline**
 > ([runbook 36](36-private-ca-init.md)). Decision:
@@ -14,7 +14,7 @@
 > the output observed on the run. §8 is operations: the only outstanding item is the annual re-sign
 > reminder. The runbook was written from ADR 38, research 36–37, and the
 > [#141](https://github.com/jaroslaw-bagnicki/Homelab/issues/141) gate, which measured the TPM and LXC
-> mechanics on `pve` — gate-measured facts are marked **(measured #141)**.
+> mechanics on `pve1` — gate-measured facts are marked **(measured #141)**.
 >
 > ⚠ **Order — one-way.** Run **§1–§6 first**, then the offline ceremony
 > ([runbook 36](36-private-ca-init.md)), then **resume at §7**. §1–§6 need no root key and end by
@@ -27,7 +27,7 @@
 > [#143](https://github.com/jaroslaw-bagnicki/Homelab/issues/143) — all out of scope.
 >
 > ⚠ **Execution note.** Author on `docs/private-ca-runbooks`; **run only after CR**. §1–§2 are
-> manual/console on the `pve` host, reached as `ssh fleetadm@192.168.2.201`; the Ansible steps (§4–§7)
+> manual/console on the `pve1` host, reached as `ssh fleetadm@192.168.2.201`; the Ansible steps (§4–§7)
 > run with the fleet key loaded ([`fleet-connect` skill](../../.opencode/skills/fleet-connect/SKILL.md)).
 
 ## Why
@@ -35,9 +35,9 @@
 The CA is the answer to [ADR 34](../decisions/34-lan-tls-only.md)'s unauthenticated-TLS gap: it is the
 fleet trust anchor that lets a client verify a LAN service instead of clicking past a warning.
 
-It must run on **`pve`** — the TPM makes that a hard requirement, because a TPM-bound intermediate key
+It must run on **`pve1`** — the TPM makes that a hard requirement, because a TPM-bound intermediate key
 cannot move to another machine ([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md)). The
-`pve` TPM is an **Intel PTT firmware TPM** (measured 2026-10-04,
+`pve1` TPM is an **Intel PTT firmware TPM** (measured 2026-10-04,
 [research 37 §5](../research/37-tpm2-hardware-and-fleet.md)); it is a genuine TPM 2.0 implementation, so
 the key stays non-exportable, but it is platform firmware rather than a discrete chip.
 
@@ -51,7 +51,7 @@ dedicated unprivileged LXC keeps it off the Proxmox host and away from the edge 
 - **LXC 215 `ca`** — unprivileged, **Debian 13**, `nesting=1`, static `192.168.2.215`, `onboot 1`,
   1 vCPU / 512 MiB / 8 GiB rootfs, with `/dev/tpmrm0` passed through. Next free guest in the `21x`
   block ([ADR 31](../decisions/31-static-address-scheme.md) — VMID = last octet).
-- **Reboot-durable TPM device ownership on `pve`** — a udev rule, because an unprivileged container's
+- **Reboot-durable TPM device ownership on `pve1`** — a udev rule, because an unprivileged container's
   root maps to host subuid `100000` and cannot open a `root:root 0600` device (measured #141).
 - **Base roles** — `common` (hostname, UTC, NTP, **Avahi**), `security` (UFW default-deny; SSH + CA
   `9000` from `192.168.2.0/24`), `fluentbit` (ships the CA's journald to VictoriaLogs on `vtstack`).
@@ -65,10 +65,10 @@ dedicated unprivileged LXC keeps it off the Proxmox host and away from the edge 
 
 ## Prerequisites
 
-- [ ] `pve` base-provisioned — Proxmox VE + `fleetadm` ([runbook 28](28-pve-proxmox-node.md)).
+- [ ] `pve1` base-provisioned — Proxmox VE + `fleetadm` ([runbook 28](28-pve1-proxmox-node.md)).
 - [ ] TPM available and cleared on second-hand hardware (`Clear PTT` in BIOS;
       [research 37 §5](../research/37-tpm2-hardware-and-fleet.md)).
-- [ ] A Debian 13 LXC template available on the `pve` node (`pveam`).
+- [ ] A Debian 13 LXC template available on the `pve1` node (`pveam`).
 - [ ] Ansible collections installed (`ansible-galaxy collection install -r ansible/requirements.yml`).
 - [ ] Azure Key Vault `homelab-bysxdb-kv` reachable from the controller (CA provisioner password —
       provisioned in §5 — and the Fluent Bit store password like every other node).
@@ -82,7 +82,7 @@ dedicated unprivileged LXC keeps it off the Proxmox host and away from the edge 
 
 ---
 
-## 1. Reboot-durable TPM device access on `pve`
+## 1. Reboot-durable TPM device access on `pve1`
 
 An unprivileged container's root maps to host subuid **`100000`**, so a bind-mounted `/dev/tpmrm0`
 that is `root:root 0600` on the host appears inside the container as `nobody` and every open fails with
@@ -90,7 +90,7 @@ that is `root:root 0600` on the host appears inside the container as `nobody` an
 **ownership** fix is host-side and must survive reboots.
 
 ```sh
-# on pve
+# on pve1
 ls -l /dev/tpmrm0        # read the major/minor off the host — do not assume
 
 # Only the resource-manager node is used: the CA's tpmkms opens /dev/tpmrm0, and /dev/tpm0 is
@@ -121,18 +121,18 @@ ls -l /dev/tpmrm0        # owner must now be 100000:100000
 - A **privileged** container avoids the ownership change, at the cost of the isolation the unprivileged
   shape exists for — not used here.
 
-> **Execution record — 2026-10-11 (`pve`).** Rule written, then `udevadm control --reload-rules` and
+> **Execution record — 2026-10-11 (`pve1`).** Rule written, then `udevadm control --reload-rules` and
 > `udevadm trigger --action=add --subsystem-match=tpmrm`:
 > `/dev/tpmrm0` → `crw------- 100000 100000 252, 65536` ✅ (`/dev/tpm0` left `root:root`, unused).
 > Two corrections were needed and are folded into the block above: the rule must match the `tpmrm`
 > subsystem (the node the CA opens), and `udevadm trigger` must use `--action=add` — the default
-> `change` action does not run `RUN` at all. **Reboot persistence proven same day** — after a `pve`
+> `change` action does not run `RUN` at all. **Reboot persistence proven same day** — after a `pve1`
 > reboot the rule fired on its own: `/dev/tpmrm0` → `100000:100000`, `/dev/tpm0` → `root:root` (no
 > rule covers it, as intended).
 
 ## 2. Create LXC 215 `ca`
 
-On the `pve` host (`ssh fleetadm@192.168.2.201`, then `sudo -i`):
+On the `pve1` host (`ssh fleetadm@192.168.2.201`, then `sudo -i`):
 
 ```sh
 pveam update
@@ -162,10 +162,10 @@ pct create 215 local:vztmpl/<template> \
 - **`--onboot 1`** — the CA must return on its own after a host reboot.
 - `--rootfs local-lvm:8` is a starting estimate; `step-ca` and its state are small, re-check after
   deployment.
-- **DNS comes from the `common` role, not from this command.** `playbook-pve.yml` points `pve` at
+- **DNS comes from the `common` role, not from this command.** `playbook-pve1.yml` points `pve1` at
   `192.168.2.240` (`search internal`), and PVE writes that same file into every container on start, so
   the guest inherits it with no flag and nothing to re-apply after a restart
-  ([ADR 40](../decisions/40-internal-dns-proxy-edge.md) amendment). Until `playbook-pve.yml` has run,
+  ([ADR 40](../decisions/40-internal-dns-proxy-edge.md) amendment). Until `playbook-pve1.yml` has run,
   this guest follows the host's current resolvers — enough for the apt and `step` installs below, and
   the reason the base CA bootstrap never depended on the edge stack.
 
@@ -184,7 +184,7 @@ pct exec 215 -- ls -l /dev/tpmrm0     # present and owned by container root
 - The device numbers must match §1's host reading; update the config if the host differs.
 - Keep the Proxmox network **Firewall** flag at `0` — the boundary is the in-container UFW (§4).
 
-> **Execution record — 2026-10-11 (`pve`).** Guest created, passthrough appended, started. `pct
+> **Execution record — 2026-10-11 (`pve1`).** Guest created, passthrough appended, started. `pct
 > status` → `running`; `systemctl --failed` → **0 units** (`0 loaded units listed`); `findmnt` →
 > `/tmp` `rw,nosuid,nodev,nr_inodes=1048576`, `/run/lock` `rw,nosuid,nodev,noexec,size=5120k`,
 > `/dev/mqueue` `rw,nosuid,nodev,noexec`; `/dev/tpmrm0` inside → `crw------- root root 252, 65536` ✅.
@@ -192,7 +192,7 @@ pct exec 215 -- ls -l /dev/tpmrm0     # present and owned by container root
 > stays a rootfs directory without `nosuid`/`nodev` — see the bullet above; (2) the `tpm0` passthrough
 > this runbook originally carried was dead weight (nothing opens it) and has been removed.
 >
-> **Post-reboot (same day, after a `pve` reboot).** `onboot 1` brought the guest up (`pct list` →
+> **Post-reboot (same day, after a `pve1` reboot).** `onboot 1` brought the guest up (`pct list` →
 > `running`; note PVE starts guests a little *after* the host is reachable, so an immediate check can
 > briefly see `stopped`). Inside: `/dev/tpmrm0` → `crw------- root root 252, 65536`,
 > `systemctl --failed` → 0 units, and `/tmp`, `/run/lock`, `/dev/mqueue` still mounted with
@@ -200,7 +200,7 @@ pct exec 215 -- ls -l /dev/tpmrm0     # present and owned by container root
 
 ## 3. `fleetadm` bootstrap (unblock Ansible)
 
-Mirrors [runbook 33 §2](33-deploy-victorialogs.md). From the `pve` host (the fleet public key lives at
+Mirrors [runbook 33 §2](33-deploy-victorialogs.md). From the `pve1` host (the fleet public key lives at
 `ansible/roles/common/files/ssh/fleetadm.pub`, [ADR 28](../decisions/28-fleet-admin-account-and-key.md)):
 
 ```sh
@@ -255,7 +255,7 @@ Add `ansible/playbooks/playbook-ca.yml`:
 
 ```yaml
 ---
-- name: Configure ca (private CA guest on pve) base
+- name: Configure ca (private CA guest on pve1) base
   hosts: ca
   become: true
   roles:
@@ -482,15 +482,15 @@ step certificate verify test.crt --roots "$ROOT"
 # plaintext is refused (ADR 34)
 curl -s --connect-timeout 5 -o /dev/null -w '%{http_code}\n' http://192.168.2.215:9000/acme/acme/directory
 
-# UFW is the LAN boundary (run inside the guest — pct exists only on the pve host)
+# UFW is the LAN boundary (run inside the guest — pct exists only on the pve1 host)
 ufw status verbose     # 22 + 9000 ALLOW IN 192.168.2.0/24
 ```
 
 **Reboot survival** — `onboot 1`, the udev rule, and `restart=on-failure` together. `pct` lives on the
-`pve` host, the service check on the guest:
+`pve1` host, the service check on the guest:
 
 ```sh
-# on the pve host (ssh fleetadm@192.168.2.201, then sudo -i)
+# on the pve1 host (ssh fleetadm@192.168.2.201, then sudo -i)
 pct reboot 215
 
 # on the ca guest (ssh fleetadm@192.168.2.215, then sudo -i)
@@ -552,7 +552,7 @@ must report no changes.
 Executed on: **2026-10-11** — §1–§7 done. Each section carries its own **Execution record** with the
 observed output.
 
-- [x] §1 udev rule makes `/dev/tpmrm0` owned by `100000:100000`; survived a `pve` reboot
+- [x] §1 udev rule makes `/dev/tpmrm0` owned by `100000:100000`; survived a `pve1` reboot
 - [x] §2 LXC 215 `ca` created unprivileged + `nesting=1`, `.215`, `/dev/tpmrm0` passed through; `--failed` empty
 - [x] §3 `fleetadm` key-only SSH works; `sudo -n whoami` → root
 - [x] §4 `playbook-ca.yml` applied cleanly; UFW `22` + `9000`; Avahi + Fluent Bit running
@@ -572,11 +572,11 @@ observed output.
 
 ## References
 
-- [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) — the CA hierarchy, custody, and `pve` host
+- [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) — the CA hierarchy, custody, and `pve1` host
 - [Research 36 §5](../research/36-step-ca-machine-identity.md) — the measured LXC TPM passthrough recipe
-- [Research 37 §5–§6](../research/37-tpm2-hardware-and-fleet.md) — the `pve` Intel PTT fTPM; Proxmox TPM shapes
+- [Research 37 §5–§6](../research/37-tpm2-hardware-and-fleet.md) — the `pve1` Intel PTT fTPM; Proxmox TPM shapes
 - [Issue #141](https://github.com/jaroslaw-bagnicki/Homelab/issues/141) — the measured TPM custody gate
 - [Runbook 36](36-private-ca-init.md) — the offline root/intermediate ceremony this deployment consumes
-- [Runbook 33](33-deploy-victorialogs.md) (LXC/Ansible pattern) · [Runbook 28](28-pve-proxmox-node.md) (Proxmox base)
+- [Runbook 33](33-deploy-victorialogs.md) (LXC/Ansible pattern) · [Runbook 28](28-pve1-proxmox-node.md) (Proxmox base)
 - [ADR 31](../decisions/31-static-address-scheme.md) (guest numbering) · [ADR 34](../decisions/34-lan-tls-only.md) (TLS-only) ·
   [ADR 36](../decisions/36-log-collector-fluentbit.md) (Fluent Bit) · [ADR 37](../decisions/37-lan-name-space-internal.md) (`.internal`)

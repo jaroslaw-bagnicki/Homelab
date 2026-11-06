@@ -54,7 +54,7 @@ routing entry point.**
   Caddyfile in the repo and rendered by Ansible. It serves `https://<service>.internal` and forwards to
   the service's real address on the LAN — and it is already in place if the public tunnel decision
   reverses, so both planes share one proxy.
-- **Certificates come from `step-ca` in LXC 215** on `pve` over ACME, starting with **per-service
+- **Certificates come from `step-ca` in LXC 215** on `pve1` over ACME, starting with **per-service
   leaves** validated by **TLS-ALPN-01 on 443** — the CA proves control on the port the proxy already
   serves, so [ADR 34](34-lan-tls-only.md)'s plaintext prohibition needs no exception. **HTTP-01 is the
   documented fallback only**: it needs TCP/80 from the CA guest (`192.168.2.215`) alone, a narrow
@@ -86,16 +86,16 @@ routing entry point.**
   first, ExternalDNS once k3s exists), and remote access (Tailscale split DNS pointing at this resolver
   if that route is chosen).
 
-The **CA stays on `pve`** (the TPM requirement of [ADR 38](38-private-ca-hierarchy-and-custody.md)) and
+The **CA stays on `pve1`** (the TPM requirement of [ADR 38](38-private-ca-hierarchy-and-custody.md)) and
 is reached as `ca.internal` → `.215`. Caddy depends on it for issuance only; serving existing
-certificates does not need `pve`.
+certificates does not need `pve1`.
 
 ## Consequences
 
 - **`.internal` finally resolves and terminates TLS on the box already assigned to ingress.** A new
   service costs one Caddyfile entry, because the wildcard already points at the proxy.
-- **`pve` maintenance no longer takes the fleet's naming down.** Reboots of the hypervisor that hosts
-  the CA, VictoriaLogs and Netdata leave names resolving; only `pve`-hosted backends fail.
+- **`pve1` maintenance no longer takes the fleet's naming down.** Reboots of the hypervisor that hosts
+  the CA, VictoriaLogs and Netdata leave names resolving; only `pve1`-hosted backends fail.
 - **One proxy serves both planes.** If the public tunnel decision reverses, Caddy is already in the
   right place — one Caddyfile, one routing layer ([ADR 20](20-caddy-single-routing-layer.md)).
 - **The edge box becomes the fleet's single naming dependency** — and the future public ingress. An
@@ -108,7 +108,7 @@ certificates does not need `pve`.
   roughly 250–300 MB against ~1.3 GB available today, so the ceiling holds, but it is a ceiling to
   watch.
 - **No new guest** — the `21x` block remains available for VMs/LXCs.
-- **The CA remains on `pve`** — issuance needs `pve` up; serving does not. A `ca.internal` record
+- **The CA remains on `pve1`** — issuance needs `pve1` up; serving does not. A `ca.internal` record
   points at `.215`.
 - **Existing held work is unchanged** — k3s ([ADR 22](22-k3s-arc-homelab.md)) and the OPNsense router
   ([#96](https://github.com/jaroslaw-bagnicki/Homelab/issues/96)) still land later and slot into this
@@ -119,7 +119,7 @@ certificates does not need `pve`.
 **One resolver, enforced by Ansible on every host — and guests inherit it from the hypervisor.** Two
 facts overturn the original wording ("the CA playbook points it at the edge resolver"):
 
-- **Inside a container, `/etc/resolv.conf` belongs to the hypervisor.** `pve` regenerates the file on
+- **Inside a container, `/etc/resolv.conf` belongs to the hypervisor.** `pve1` regenerates the file on
   **every container start** from the `nameserver:` / `searchdomain:` keys in `/etc/pve/lxc/<vmid>.conf`,
   falling back to the host resolvers when those keys are absent. A guest-side write is a cache with
   the lifetime of the current boot, nothing more.
@@ -134,7 +134,7 @@ So the `common` role owns it:
   resolver that is not there, so `edge` comes first on a rebuild (runbook 37 §1–§4).
 - **Guests are skipped and inherit it from the hypervisor.** PVE writes a container's
   `/etc/resolv.conf` at every start and, with no `nameserver:` key in the container config, takes it
-  from the **host's own file** — during the outage the CA guest fell back to `pve`'s
+  from the **host's own file** — during the outage the CA guest fell back to `pve1`'s
   `1.1.1.1`/`8.8.8.8`. So pinning the host covers every guest on it, with no per-guest key, no creation
   flag and no second mechanism — the same host-vs-guest split as the clock.
 - **Two exceptions, each a `host_vars` line:** `common_dns_server: ""` on `edge` (it *is* the resolver;
@@ -161,12 +161,12 @@ So the `common` role owns it:
   would run with host networking (mDNS, client IPs, UFW), so the isolation is nominal while `dockerd`
   and its boot ordering are added. Precedent leans native for a node's own plumbing (`step-ca`,
   NUT, Netdata); on the eMMC it also adds image layers to rewrite and prune.
-- **An LXC on `pve`** — the alternative considered first. Rejected: it couples DNS to
-  the hypervisor that hosts the CA and is rebooted for Proxmox and HA work, so every `pve` reboot would
+- **An LXC on `pve1`** — the alternative considered first. Rejected: it couples DNS to
+  the hypervisor that hosts the CA and is rebooted for Proxmox and HA work, so every `pve1` reboot would
   drop naming fleet-wide; it creates a second ingress location that would need migrating back if the
   tunnel returns; and the LXC/PBS boundary buys less than the full-image restore already available on
   the edge box. Remains the fallback if the Wyse 3040 proves unfit.
-- **Splitting DNS and proxy across `pve` and `edge`** — two wildcard targets, two backup units and two
+- **Splitting DNS and proxy across `pve1` and `edge`** — two wildcard targets, two backup units and two
   routing configs for one function; the split re-creates the two-layer problem.
 - **Caddy on the OPNsense router** — rejected in [research 39](../research/39-caddy-on-opnsense-rejected.md):
   a second routing layer, unmanaged configuration, and a permanent admin-port shift.

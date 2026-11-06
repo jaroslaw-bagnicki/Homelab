@@ -1,4 +1,4 @@
-# Authentik as the Fleet Identity Provider — an LXC on `pve`, FreeIPA Source, SSO-Exempt Management Planes
+# Authentik as the Fleet Identity Provider — an LXC on `pve1`, FreeIPA Source, SSO-Exempt Management Planes
 
 **Date:** 2026-10-27
 **Status:** Accepted
@@ -19,19 +19,19 @@ through, and [idea 11](../ideas/11-authentik-idp.md) carries the product compari
 
 ## Decision
 
-**Adopt Authentik as the fleet's identity provider — a guest on `pve`, reached at `auth.internal` over a
+**Adopt Authentik as the fleet's identity provider — a guest on `pve1`, reached at `auth.internal` over a
 `step-ca` leaf, with FreeIPA as its only user source and management planes permanently outside SSO.**
 
-1. **Host `pve`**, as an unprivileged LXC running the Compose stack (server, worker and PostgreSQL inside
+1. **Host `pve1`**, as an unprivileged LXC running the Compose stack (server, worker and PostgreSQL inside
    the guest). The always-on tier already lives there — the domain ([ADR 43](43-freeipa-domain-realm.md)),
    the CA ([ADR 38](38-private-ca-hierarchy-and-custody.md)) and VictoriaLogs
    ([ADR 35](35-log-store-victorialogs.md)) — so the IdP shares one lifecycle with the things it
    authenticates. It stays deliberately **outside the k3s cluster** ([ADR 22](22-k3s-arc-homelab.md)) that
    will consume it: the cluster authenticates *against* the IdP, and the IdP must not ride the migration
    that reshapes the platform. `edge` has 2 GB and cannot carry it
-   ([ADR 24](24-edge-ingress-appliance.md)); a small VM on `pve` is the documented fallback if
+   ([ADR 24](24-edge-ingress-appliance.md)); a small VM on `pve1` is the documented fallback if
    Docker-in-LXC proves unstable. The memory cost is accepted against the **second Proxmox node**
-   ([idea 15](../ideas/15-second-proxmox-node.md)) — planned, **not yet decided or purchased** — so `pve`
+   ([idea 15](../ideas/15-second-proxmox-node.md)) — planned, **not yet decided or purchased** — so `pve1`
    remains the binding constraint and the container limits are a current requirement; that node relieves
    the pressure, not the need for limits.
 2. **Server + worker + PostgreSQL.** Redis is not part of the stack — 2025.10 removed it — and the release
@@ -57,7 +57,7 @@ through, and [idea 11](../ideas/11-authentik-idp.md) carries the product compari
 8. **Audit and application logs leave as JSON on stdout** through the existing Fluent Bit
    ([ADR 36](36-log-collector-fluentbit.md)) into VictoriaLogs ([ADR 35](35-log-store-victorialogs.md)).
    No second collector.
-9. **The embedded proxy outpost is the shape that runs.** The `edge` → `pve` hop is TLS
+9. **The embedded proxy outpost is the shape that runs.** The `edge` → `pve1` hop is TLS
    ([ADR 34](34-lan-tls-only.md)); if the outpost's HTTPS listener proves unusable, an external proxy
    outpost on `edge` is the fallback and earns an ADR 34 exception row — never a plaintext path.
 10. **Scope: LAN-only.** Nothing is published to the WAN, no cloud IdP is federated (an Entra ID guest
@@ -76,14 +76,14 @@ through, and [idea 11](../ideas/11-authentik-idp.md) carries the product compari
   with is closed for the services that are gated, not for the fleet by decree.
 - **The IdP becomes an availability dependency for every gated service.** That is what item 6 and the
   break-glass path bound: existing sessions and existing SSH certificates survive an outage, and new
-  logins do not. The domain and the IdP now share one node, so a `pve` failure costs **both** kinds of new
+  logins do not. The domain and the IdP now share one node, so a `pve1` failure costs **both** kinds of new
   login at once — and these two guests are the first candidates for the second node's ZFS replication
   ([idea 15](../ideas/15-second-proxmox-node.md)).
-- **`pve` inherits a stack that must not be starved.** Container resource limits are part of the decision,
+- **`pve1` inherits a stack that must not be starved.** Container resource limits are part of the decision,
   not tuning — every login in the lab queues behind it. The node now carries the domain, the CA, the log
   store and the IdP on 8 GB, which is what makes the second node load-bearing rather than optional.
 - **The k3s migration loses a passenger but gains a dependency.** Authentik no longer moves with `lab`; in
-  exchange the cluster's identity comes from a guest on `pve`, so that node's availability now gates
+  exchange the cluster's identity comes from a guest on `pve1`, so that node's availability now gates
   cluster logins as well as LAN ones.
 - **The worker mounts a Docker socket** to manage local outposts — root-equivalent **inside that guest**.
   The socket is the LXC's own and is never mounted from the host or shared across hosts.
@@ -104,7 +104,7 @@ through, and [idea 11](../ideas/11-authentik-idp.md) carries the product compari
 - **Docker on `lab`** — the earlier leaning: 16 GB of headroom and the always-on Compose stacks already
   there. Rejected because `lab` is the node in motion (Docker today, k3s next) and the IdP would ride the
   migration that reshapes the platform it protects; headroom does not buy a stable lifecycle.
-- **A VM on `pve` instead of an LXC** — heavier: an extra kernel and a fixed RAM reservation on the fleet's
+- **A VM on `pve1` instead of an LXC** — heavier: an extra kernel and a fixed RAM reservation on the fleet's
   tightest node. Kept as the fallback if Docker-in-LXC misbehaves, not as the default.
 - **Inside the k3s cluster** — rejected: the IdP must not be reconciled by the platform whose access it
   governs, and a cluster re-arrangement would remove every login needed to fix it

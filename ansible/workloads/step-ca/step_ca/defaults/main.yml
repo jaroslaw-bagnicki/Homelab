@@ -19,7 +19,7 @@ step_ca_csr_force: false
 step_ca_reset: false
 
 # ── SSH CA (ADR 41) ──────────────────────────────────────────────────────────
-# Both SSH CA keys live in the pve TPM by default. `file` is the documented
+# Both SSH CA keys live in the pve1 TPM by default. `file` is the documented
 # fallback only when the guest cannot serve tpmkms: signers for SSH; it requires
 # an ADR 41 amendment and 0600 root:root custody.
 step_ca_ssh_key_custody: tpm

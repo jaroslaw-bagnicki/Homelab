@@ -1,5 +1,5 @@
 ---
-- name: Configure ipa (FreeIPA server VM on pve) base
+- name: Configure ipa (FreeIPA server VM on pve1) base
   hosts: ipa
   become: true
   roles:

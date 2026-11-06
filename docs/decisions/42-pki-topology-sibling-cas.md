@@ -8,7 +8,7 @@
 ## Context
 
 [ADR 38](38-private-ca-hierarchy-and-custody.md) built the lab's PKI: a **10-year root kept offline**, a
-**1-year intermediate sealed to the `pve` TPM**, and **24 h / 7 d leaves** issued over ACME.
+**1-year intermediate sealed to the `pve1` TPM**, and **24 h / 7 d leaves** issued over ACME.
 [ADR 41](41-ssh-certificates-step-ca.md) added **SSH certificates** from separate CA keys in the same TPM.
 Both are in force and one of them is being implemented now ([#161](https://github.com/jaroslaw-bagnicki/Homelab/issues/161)).
 
@@ -28,7 +28,7 @@ records the resulting rule.
 1. **The [ADR 38](38-private-ca-hierarchy-and-custody.md) root is the fleet's trust anchor.** It signs the
    intermediate of every CA in the lab, and no CA signs another CA's certificate. The single exception is
    the interim self-signed IPA CA in item 6 — a second, temporary anchor removed by re-parenting.
-2. **`step-ca`'s intermediate stays a direct child of the root** — custody unchanged (TPM 2.0 on `pve`).
+2. **`step-ca`'s intermediate stays a direct child of the root** — custody unchanged (TPM 2.0 on `pve1`).
    FreeIPA's Dogtag CA, if it is adopted, becomes a **second direct child**, installed with
    `ipa-server-install --external-ca` and its CSR signed in the same offline ceremony
    ([ADR 43](43-freeipa-domain-realm.md)).
@@ -64,7 +64,7 @@ records the resulting rule.
 - **Distribution does not grow per CA.** Hosts trust the **root** (`ca_trust`); the `@cert-authority` lines
   and `TrustedUserCAKeys` files that [ADR 41](41-ssh-certificates-step-ca.md) adds are SSH CA keys, which
   are a separate artefact regardless of topology.
-- **A TPM loss on `pve` still costs both `step-ca` chains** (X.509 and SSH) and requires redistributing
+- **A TPM loss on `pve1` still costs both `step-ca` chains** (X.509 and SSH) and requires redistributing
   their public keys, exactly as ADR 41 states — siblinging does not change that.
 - **`--external-ca` is unproven here.** The install flow and Dogtag's profile requirements are flagged
   unverified in [research 48 §6](../research/48-pki-topology-step-ca-freeipa.md); the first implementation

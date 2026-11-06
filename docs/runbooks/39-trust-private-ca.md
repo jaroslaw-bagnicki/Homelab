@@ -41,7 +41,7 @@
 # Dev container only — the world-writable workspace breaks ansible.cfg:
 chmod 755 /workspaces/Homelab /workspaces/Homelab/ansible
 
-# LAN nodes (pve, lab, edge, nas, vtstack) — from a workstation
+# LAN nodes (pve1, pve2, lab, edge, nas, vtstack) — from a workstation
 ansible-playbook ansible/playbooks/playbook-ca-trust.yml --diff \
   --limit 'physical:proxmox_guests'
 
@@ -57,7 +57,8 @@ after `security`:
 
 | Host | Playbook |
 |---|---|
-| `pve` | `ansible/playbooks/playbook-pve.yml` |
+| `pve1` | `ansible/playbooks/playbook-pve1.yml` |
+| `pve2` | `ansible/playbooks/playbook-pve2.yml` |
 | `lab` | `ansible/playbooks/playbook-lab.yml` |
 | `edge` | `ansible/playbooks/playbook-edge.yml` |
 | `nas` | `ansible/playbooks/playbook-nas.yml` |

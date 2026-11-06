@@ -24,9 +24,10 @@ technitium_forwarders:
 technitium_forwarder_protocol: Tls
 technitium_records:
   - { name: "edge.internal", ip: "192.168.2.240" }
-  - { name: "pve.internal", ip: "192.168.2.201" }
+  - { name: "pve1.internal", ip: "192.168.2.201" }
+  - { name: "pve2.internal", ip: "192.168.2.202" }
   - { name: "lab.internal", ip: "192.168.2.200" }
-  - { name: "nas.internal", ip: "192.168.2.202" }
+  - { name: "nas.internal", ip: "192.168.2.209" }
   - { name: "ca.internal", ip: "192.168.2.215" }
   - { name: "vtstack.internal", ip: "192.168.2.214" }
   - { name: "ipa.internal", ip: "192.168.2.216" }

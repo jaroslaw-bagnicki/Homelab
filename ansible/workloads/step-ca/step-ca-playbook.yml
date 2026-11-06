@@ -2,7 +2,7 @@
 # Private CA (step-ca) workload — self-contained recipe.
 #
 # Deploys `step-ca` as a native systemd service on the `ca` guest (LXC 215 on the
-# `pve` node) with the intermediate CA key held in the host TPM 2.0, per ADR 38.
+# `pve1` node) with the intermediate CA key held in the host TPM 2.0, per ADR 38.
 # One role recipe co-located under ansible/workloads/step-ca/:
 #   - role: step_ca   (toolchain + TPM key + CSR + TPM-backed ca.json + service)
 #

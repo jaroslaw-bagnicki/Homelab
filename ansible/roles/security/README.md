@@ -25,7 +25,7 @@ timer, and manages the principal → Unix-account mapping
 | `security_ssh_port` | `22` | SSH port UFW allows. |
 | `security_ufw_allow_ssh_from` | `0.0.0.0/0` | Source range for SSH; set to the LAN in `host_vars`. |
 | `security_ufw_allow_tcp_from` | `0.0.0.0/0` | Source range for the extra ports below. |
-| `security_ufw_allow_tcp_ports` | `[]` | Extra inbound TCP ports (e.g. Proxmox UI `8006` on `pve`). |
+| `security_ufw_allow_tcp_ports` | `[]` | Extra inbound TCP ports (e.g. Proxmox UI `8006` on `pve1`). |
 | `security_ufw_allow_udp_from` | `0.0.0.0/0` | Source range for the extra UDP ports below. |
 | `security_ufw_allow_udp_ports` | `[]` | Extra inbound UDP ports (e.g. DNS `53` on `edge`). |
 | `security_ufw_deny_inbound_tcp_80` | `true` | Block direct HTTP — ingress is via the edge appliance. |
@@ -61,7 +61,7 @@ timer, and manages the principal → Unix-account mapping
   `systemd_service_unit_failed_state` alarm raises, and the alert unit writes a `crit` journal line that
   Fluent Bit ships to VictoriaLogs. Alarm delivery remains deferred per [ADR 27](../../../docs/decisions/27-monitoring-strategy.md).
 - UFW here is the host management plane only — bridged VM/guest traffic is unaffected (see
-  [runbook 28](../../../docs/runbooks/28-pve-proxmox-node.md)).
+  [runbook 28](../../../docs/runbooks/28-pve1-proxmox-node.md)).
 
 ---
 

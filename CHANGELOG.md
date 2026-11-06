@@ -13,6 +13,7 @@ Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month 
 
 ## 2026‑11
 
+- **(feat)** Add `pve2` as the second Proxmox node, rename `pve` to `pve1` and give the two-node cluster an edge QDevice — [ADR 47](docs/decisions/47-second-proxmox-node-cluster-qdevice.md) · [runbook 42](docs/runbooks/42-pve2-proxmox-node.md)
 - **(docs)** Audit the OptiPlex 7050 MFF for `pve2` — 65 W i5-7500, a sound but small 128 GB SSD, MEBx unreachable — [research 52](docs/research/52-optiplex7050-hardware-diagnostic.md)
 - **(fix)** Serve the fleet resolver from the hosts and alert when a `.internal` leaf nears expiry — [ADR 40](docs/decisions/40-internal-dns-proxy-edge.md)
 - **(feat)** Deploy the FreeIPA server on `pve` — external-ca under the fleet root, M1 verified; TPM-backed Dogtag custody parked — [runbook 41](docs/runbooks/41-deploy-freeipa-server.md)
@@ -59,7 +60,7 @@ Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month 
 - **(docs)** Wincor Beetle M-III is the NAS successor on OMV, superseding the ML110 — [ADR 29](docs/decisions/29-nas-backup-target-beetle-m3-omv.md)
 - **(docs)** Make `overview.md` "What's Next" a state-grouped board with a `Not Scheduled` parking lot — [overview](docs/overview.md)
 - **(docs)** Add idea 09 — shared-rail UPS with NUT-driven shutdown — [idea 09](docs/ideas/09-ups-nut-home-assistant.md)
-- **(feat)** Proxmox VE host (Wyse 5070) — **9.2.2** installed and base provisioned — [runbook 28](docs/runbooks/28-pve-proxmox-node.md)
+- **(feat)** Proxmox VE host (Wyse 5070) — **9.2.2** installed and base provisioned — [runbook 28](docs/runbooks/28-pve1-proxmox-node.md)
 - **(feat)** Fleet SSH access restricted to the LAN, with devcontainer key autoload — [runbook 24](docs/runbooks/24-edge-appliance.md)
 - **(docs)** Futro S930 hardware diagnostic — OPNsense router candidate — [research 31](docs/research/31-futro-s930-hardware-diagnostic.md)
 

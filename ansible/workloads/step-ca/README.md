@@ -3,7 +3,7 @@
 ## Purpose
 
 A self-contained Ansible recipe that deploys the fleet **private CA** — **`step-ca`** — as a native
-systemd service on the `ca` guest (LXC 215, `192.168.2.215`) on the `pve` node, with the intermediate
+systemd service on the `ca` guest (LXC 215, `192.168.2.215`) on the `pve1` node, with the intermediate
 CA private key held in the host's **TPM 2.0**. Decision:
 [ADR 38](../../../docs/decisions/38-private-ca-hierarchy-and-custody.md); measured gate:
 [#141](https://github.com/jaroslaw-bagnicki/Homelab/issues/141); operational steps:
@@ -129,6 +129,6 @@ Run order across the two workstreams: base guest ([`playbook-ca.yml`](../../play
 
 ## References
 
-- [ADR 38](../../../docs/decisions/38-private-ca-hierarchy-and-custody.md) — hierarchy, custody, `pve` host
+- [ADR 38](../../../docs/decisions/38-private-ca-hierarchy-and-custody.md) — hierarchy, custody, `pve1` host
 - [Runbook 35](../../../docs/runbooks/35-deploy-step-ca.md) — deploy + validate · [Runbook 36](../../../docs/runbooks/36-private-ca-init.md) — offline root/signing
 - [Research 36 §5](../../../docs/research/36-step-ca-machine-identity.md) · [Research 37 §5](../../../docs/research/37-tpm2-hardware-and-fleet.md) · [#141](https://github.com/jaroslaw-bagnicki/Homelab/issues/141)
