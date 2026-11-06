@@ -13,7 +13,7 @@ Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month 
 
 ## 2026‑11
 
-- **(docs)** Audit the OptiPlex 7050 MFF bought as the second Proxmox node — an i5-7500 at 65 W, an M.2 SATA module with the 2.5″ bay free, MEBx unreachable — [research 51](docs/research/51-optiplex7050-hardware-diagnostic.md)
+- **(docs)** Audit the OptiPlex 7050 MFF for `pve2` — 65 W i5-7500, an SSD worn to 4 % endurance, MEBx unreachable — [research 51](docs/research/51-optiplex7050-hardware-diagnostic.md)
 - **(fix)** Serve the fleet resolver from the hosts and alert when a `.internal` leaf nears expiry — [ADR 40](docs/decisions/40-internal-dns-proxy-edge.md)
 - **(feat)** Deploy the FreeIPA server on `pve` — external-ca under the fleet root, M1 verified; TPM-backed Dogtag custody parked — [runbook 41](docs/runbooks/41-deploy-freeipa-server.md)
 - **(feat)** Load SSH identities explicitly — empty agent by default, loaders for `automation`, `agent-ai` and break-glass, one preflight that establishes the session — [ADR 41](docs/decisions/41-ssh-certificates-step-ca.md)
