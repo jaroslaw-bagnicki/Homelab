@@ -72,6 +72,19 @@ The BIOS is the 2017-generation layout — relevant because every recent Dell ME
 | Manageability | **MEBx Hotkey** | **enabled** (checked) |
 | Advanced configurations | ASPM | **Auto** |
 
+Second pass (2026-11-06):
+
+| Page | Setting | Value |
+|---|---|---|
+| Security | **OROM Keyboard Access** | **`Disabled` on one pass, `Enabled` on another — this is what gates Ctrl+P and the F12 MEBx entry** ([Remark 2](#remark-2--mebxamt-does-not-come-up)) |
+| System Configuration → SATA Operation | **AHCI** | correct for Proxmox and ZFS — no RAID/RST to undo |
+| System Configuration → Drives | `SATA-0` **(none)** · **`SATA-4` = 128 GB SSD, SK hynix SC311 SATA 128GB** · `M.2 PCIe SSD-0` **(none)** | the module enumerates on a SATA port; the **2.5″ bay (SATA-0) is empty** and **no NVMe device** is present — capacity confirmed **128 GB** |
+| System Configuration → Integrated NIC | **Enabled**; *Enable UEFI Network Stack* **unchecked** | no PXE boot path; Wake-on-LAN is unaffected by this |
+| Manageability → USB Provision | **Enable USB Provision — checked** | the BIOS offers **AMT provisioning from USB**, i.e. the platform is AMT-capable |
+| Virtualization Support | Virtualization ✅ · **VT for Direct I/O ✅** · Trusted Execution ☐ | VT-x and VT-d both on; TXT off, which nothing here needs |
+| Wireless → Wireless Device Enable | WLAN/WiGig ✅ · Bluetooth ✅ | both radios on — unused on a hypervisor, worth disabling |
+| Performance | **Intel TurboBoost ☐ off** · Limit CPUID ☐ | the chip tops out at its **3.4 GHz base**, not the 3.8 GHz turbo |
+
 Notable absences: the **Manageability** group contains only `USB Provision` and `MEBx Hotkey` — there is **no `Intel AMT Capability` page**, the exact item Dell's KB instructs the customer to enable.
 
 #### BIOS event log — the adapter history
@@ -109,7 +122,8 @@ The drive is an **M.2 2280 SATA III module sitting in the M.2 slot**, and the **
 - The **M.2 slot is occupied** by the SATA module → an NVMe upgrade **replaces** it, it does not sit beside it. An M.2 SATA module cannot be demoted to the 2.5″ bay without an M.2→SATA 2.5″ enclosure.
 - The **2.5″ bay is free** — that is the cheap second disk, and it needs the caddy and ribbon present (pending).
 - So idea 15's `zfspool` has three shapes: **add a 2.5″ SATA SSD** as the pool with Proxmox on the module; **replace the module with NVMe** and leave the bay for later; or mirror across the two — noting that an M.2 + 2.5″ mirror is **one controller and one chassis**, not protection against losing the node.
-- Capacity is likely 128 GB (`HFS128G39TNF` is the 128 GB part) but unconfirmed until `lsblk`/`smartctl` are captured.
+- Capacity is **128 GB** (`SK hynix SC311 SATA 128GB`), confirmed by the BIOS **Drives** page, which also shows `SATA-0` (the 2.5″ bay) and `M.2 PCIe SSD-0` as **(none)** — the module is the only internal disk.
+- **`SATA Operation` is AHCI** — nothing to undo before Proxmox.
 
 The drive also carries a **previous installation**: `sdb2` is a 31.7 MiB ESP and `sdb1` a ~57.7 GiB **encrypted** volume (mapped read-only by the live session, 36.3 GiB used) — a BitLocker/LUKS Windows install. To be wiped at install; capture the model, capacity and SMART first (used drive → endurance matters, the lesson from the [Wyse 5070 audit](29-wyse5070-hardware-diagnostic.md)).
 
@@ -137,6 +151,7 @@ The drive also carries a **previous installation**: `sdb2` is a 31.7 MiB ESP and
 - **The extra clocks are worth having.** 3.4/3.8 GHz vs 2.7/3.3 GHz is ~20 % more single-thread headroom for guests — real for a second node that will absorb `vtstack` and the domain controller.
 - **A 7500T swap would be a downgrade** in exactly the metric that matters (clocks) for a 30 W paper saving. If the thermal envelope proves to be the problem, the correct move is an **i7-7700T (35 W, 4C/8T)** — the best part that Dell actually shipped in this chassis: +hyper-threading, same 35 W budget, officially supported.
 - **What to watch:** sustained all-core load on a 35 W-designed cooler → fan ramp and possible throttling. Measure before deciding (see [Pending checks](#pending-checks)); cap with `intel_rapl`/`cpufreq` only if the measurements justify it.
+- **TurboBoost is off** in BIOS, so the chip currently runs at its **3.4 GHz base** and never reaches 3.8 GHz. That is a deliberate-looking power/thermal cap — and it still beats the 7500T's 3.3 GHz turbo. Decide it with the thermal measurement: enable TurboBoost if the node can take the burst, leave it off if noise matters more.
 
 ---
 
@@ -165,10 +180,20 @@ Dell KB [000199831 — Unable to access the MEBx vPro menu using the F12 boot me
 - **Its own illustration shows the AMT page in a `FW Status Recovery Error` state** — the condition in which AMT cannot be enabled from BIOS at all, whatever the password or capability setting says. That state is not observable from these menus.
 - **The password only unlocks the hotkey.** It proves nothing about whether the ME runs an AMT-capable image.
 
-So for this platform only three causes remain: the **ME image is not an AMT build**, the **ME firmware is in an error state**, or the **Ctrl+P window is being missed** (keyboard init, Fast Boot, input path). The ME-level check below — not another BIOS walk — is what separates them.
+So for this platform only three causes remain: **OROM Keyboard Access disabled**, the **ME image not being an AMT build**, or the **Ctrl+P window being missed** — with the ME-level check below as what separates the last two.
+
+Two BIOS details argue that AMT *is* present: `Manageability → USB Provision` is enabled and describes provisioning **Intel AMT** from a USB device, which a non-AMT image would have no use for. So the ordering is now **OROM Keyboard Access first, timing second, ME firmware third**.
 - **The password is only an enabler for the hotkey**, not evidence that an AMT-capable ME image is present. Setting it proves nothing about the firmware.
 
 So the remaining causes are narrower than the original list: either the BIOS has **no AMT capability page** (the ME image is not an AMT build), the **ME firmware is in an error/recovery state**, or **Device Configuration Hotkey Access** is off. The ME-level check below — not another BIOS walk — is what separates them.
+
+### The gate Dell names: OROM Keyboard Access
+
+`Security → OROM Keyboard Access` controls *"whether users are able to enter Option ROM Configuration screens via hotkeys during boot. Specifically this setting is capable of preventing access to Intel RAID (CTRL+I) or **Intel Management Engine BIOS Extension (CTRL+P/F12)**"* — Dell's own wording on this machine's own BIOS screen.
+
+It was seen **`Disabled`** on one pass and **`Enabled`** on another, which is exactly the state in which "the hotkey does nothing, and F12 shows no MEBx" makes sense. **With this option disabled, no other BIOS setting can surface MEBx** — the `MEBx Hotkey` toggle and the admin password are downstream of it.
+
+**Test:** set `OROM Keyboard Access = Enabled`, save, power off, then Ctrl+P at the Dell logo — and check F12 in the same boot for a MEBx entry.
 
 ### Ranked hypotheses
 
@@ -176,6 +201,7 @@ So the remaining causes are narrower than the original list: either the BIOS has
 |---|---|---|---|
 | 1 | **ME firmware is in a non-AMT mode** ("Standard Manageability" / AMT capability off in the ME region) | Dell shipped non-vPro SKUs whose ME image has no AMT; the ME region — not the CPU — decides. A corporate-lease unit with an asset tag is exactly where this happens | Intel's `mei-amt-version` from the live session prints the ME firmware version and states plainly whether AMT is present; `cat /sys/class/mei/mei0/fw_ver` |
 | 2 | **AMT/MEBx disabled in BIOS** | ❌ **Refuted 2026-11-06** — no `Intel AMT Capability` page exists on the 7050, and `MEBx Hotkey` is already enabled | — |
+| 2b | **`OROM Keyboard Access` = Disabled** | ⬅ **Leading candidate** — Dell's own description names *Intel Management Engine BIOS Extension (CTRL+P/F12)* as exactly what this option blocks, and it was seen in the `Disabled` state | Set it **Enabled**, save, power off, then Ctrl+P at the logo and re-check F12 |
 | 3 | **Hotkey timing / input path** | Ctrl+P must be hammered the moment the Dell logo appears; a hub, KVM or USB 3 port can eat it, and Fast Boot shortens the window | Wired keyboard straight into a rear port, Fast Boot off, spam Ctrl+P from power-on |
 | 4 | **AMT soft-disabled / left unprovisioned in a bad state by the previous IT owner** | The ME re-reads its configuration on **cold** boot only | BIOS reset to defaults, unplug AC for ~30 s, then retry |
 | 5 | **ME in a firmware error / recovery state** (`FW Status Recovery Error`) | The Dell article's own screenshot shows it, and in that state no BIOS toggle brings AMT back | BIOS update to the current release, **Load BIOS defaults**, then a full AC drain (unplug ~30 s) and cold boot; if the state persists, Dell's ME recovery path is a board-level service |
@@ -211,8 +237,8 @@ Regardless of the outcome, **record the ME state** in `docs/hardware.md`: an unc
 
 ## Pending Checks
 
-1. **BIOS walk (F2)** — ✅ **partly done 2026-11-06**: no AMT capability page, `MEBx Hotkey` enabled, admin password set, TPM 2.0 enabled, ASPM `Auto`, `Slot1_M.2 = SATA Installed`. **Still to capture:** Integrated NIC, **SATA Operation** (AHCI vs RAID), **Fastboot** under POST Behavior, **AC Recovery** and Wake-on-LAN under Power Management, Secure Boot state, VT-d/Trusted Execution, BIOS Downgrade and BIOS Recovery toggles.
-2. **ME/AMT state** — `mei-amt-version`, `/sys/class/mei/mei0/fw_ver`, `dmesg | grep -i mei`. With the BIOS ruled out, this is **the** remaining question: whether the ME runs an **AMT build** at all.
+1. **BIOS walk (F2)** — ✅ **done 2026-11-06** for the MEBx/storage/virtualisation questions: no AMT capability page, `MEBx Hotkey` enabled, **`OROM Keyboard Access` = the gate**, admin password set, TPM 2.0 enabled, **AHCI**, **VT-x + VT-d on**, TXT off, ASPM `Auto`, TurboBoost off, wireless radios enabled, `SATA-4 = 128 GB SK hynix SC311 SATA`, `SATA-0` and `M.2 PCIe SSD-0` empty. **Still to capture:** Power Management → **AC Recovery** and Wake-on-LAN, POST Behavior → **Fastboot**, Secure Boot state, BIOS Downgrade/BIOS Recovery toggles, and the Performance values for SpeedStep / C-States / Multi Core.
+2. **ME/AMT state** — `mei-amt-version`, `/sys/class/mei/mei0/fw_ver`, `dmesg | grep -i mei`. With the BIOS ruled out and `OROM Keyboard Access` identified, this check runs **after** the retest and only matters if MEBx still will not appear.
 3. **BIOS level** — 1.27.0 is from 2023-09-18; check Dell's current release before installing Proxmox (and expect an `intel-microcode` update: the live session reports `old_microcode` **Vulnerable**).
 4. **Disk** — `lsblk`, `smartctl -a`: exact model, capacity, POH, `Media_Wearout`/`Total_LBAs_Written`. Used drive → endurance is the decision input, and an NVMe purchase decision hangs off it.
 5. **Visual confirmation** — is the **2.5″ caddy + ribbon present** for a later second disk, is a RAM slot free, and is the CPU heatsink the 35 W design or a retrofit?

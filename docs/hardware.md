@@ -93,12 +93,14 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 |---|---|
 | CPU | Intel **Core i5-7500** (Kaby Lake, 4C/4T, 3.4/3.8 GHz, **65 W TDP**) — not a factory Micro SKU (Dell's Micro list is 35 W T-series only); an i7-7700T swap is the fallback |
 | RAM | 8 GB DDR4-2400 (1× 8 GiB SO-DIMM, **DIMM 2 free**) — 16 GB is one stick, 32 GB with 2× 16 GiB |
-| Storage | **M.2 2280 SATA** module — SK hynix **SC311 S** (SATA III via AHCI; capacity/SMART pending) · **2.5″ bay free** |
+| Storage | **M.2 2280 SATA** module — SK hynix **SC311 SATA 128 GB** (SATA III via AHCI; SMART pending) · 2.5″ bay empty · M.2 PCIe/NVMe slot entry empty |
 | Firmware | BIOS Dell 1.27.0 (2023-09-18) · board `055H3G` · serial `3CLD6Q2` · asset tag `80006161` |
 | Network | Intel **I219-LM** GbE (`enp0s31f6`) · Intel 8265 WiFi/BT · DHCP `.206`, reserved `.203` ([ADR 31](decisions/31-static-address-scheme.md)) |
 | TPM | **TPM 2.0, enabled** (TPM On, SHA-256, attestation + key storage) — PTT vs discrete pending |
 | Power | **130 W** adapter (the model's documented 65 W / 130 W options) · BIOS logged `Unknown AC power adapter` before the purchase, none on the current boot · fan ~2281 RPM at idle |
-| Management | vPro-capable platform (i5-7500 + Q270 + I219-LM) but **no `Intel AMT Capability` page** on BIOS 1.27.0 and MEBx unreachable — treat remote KVM as absent until proven |
+| Management | AMT-capable platform (i5-7500 + Q270 + I219-LM, `USB Provision` present) — MEBx blocked by `Security → OROM Keyboard Access`, which Dell documents as gating **CTRL+P / F12**; the ME entry is still to prove |
+| Virtualisation | VT-x ✅ · **VT-d ✅** · TXT off — firmware ready for Proxmox |
+| Wireless | Intel 8265 WLAN + Bluetooth, **both enabled in BIOS** — unused, disable on a hypervisor |
 | Role | Second virtualisation host (planned) — cluster, QDevice and replication are out of scope for now ([idea 15](ideas/15-second-proxmox-node.md)) |
 | Docs | [idea 15](ideas/15-second-proxmox-node.md) · [research 47](research/47-second-proxmox-node.md) · [research 51](research/51-optiplex7050-hardware-diagnostic.md) · [#177](https://github.com/jaroslaw-bagnicki/Homelab/issues/177) |
 
