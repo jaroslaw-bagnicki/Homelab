@@ -4,7 +4,7 @@
 
 **Scope**: Pre-boot hardware audit of the **Dell OptiPlex 7050 Micro (MFF)** bought on 2026-11-04 and delivered 2026-11-05 — the second Proxmox VE node planned in [idea 15](../ideas/15-second-proxmox-node.md) and [research 47](47-second-proxmox-node.md). Same Phase 0 pattern as the Wyse 3040 ([28](28-wyse3040-hardware-diagnostic.md)), Wyse 5070 ([29](29-wyse5070-hardware-diagnostic.md)), Futro S930 ([31](31-futro-s930-hardware-diagnostic.md)) and Beetle M-III ([32](32-wincor-beetle-m3-hardware-diagnostic.md)) audits: capture the exact specs into `docs/hardware.md` and find the surprises **before** committing an OS to the box.
 
-**Status**: 🔨 In progress — hardinfo2 inventory, the F2 BIOS walk, the F12 boot menu, ePSA and the BIOS-level check are captured; **disk capacity + SMART, the ME/AMT verdict, TPM vendor, Memtest86+ and a thermal load test are still pending** ([Pending checks](#pending-checks)).
+**Status**: 🔨 In progress — hardinfo2 inventory, the F2 BIOS walk, the F12 boot menu, ePSA, the BIOS-level check, **disk SMART** and **ME firmware** are captured; **TPM vendor, MAC, the AMT verdict, Memtest86+ and a thermal load test are still pending** ([Pending checks](#pending-checks)), and the **live USB has to be rebuilt first** — it failed mid-session with I/O errors.
 
 ---
 
@@ -17,7 +17,7 @@
 | Hardware | Dell **OptiPlex 7050 Micro (MFF)** — serial `3CLD6Q2`, **i5-7500 (4C/4T, 65 W)**, 8 GB (1× 8 GiB, one slot free), SK hynix SC311 **SATA** SSD |
 | CPU vs chassis | ⚠️ **i5-7500 is not a factory Micro SKU** — Dell's 7050 **Micro** list is 35 W T-series only; a 65 W part is a previous-owner swap in a socket the chassis was not thermally designed for |
 | Power adapter | **130 W** — a documented 7050 Micro option and the correct brick for a 65 W CPU; bigger brick ≠ bigger draw |
-| Storage | **M.2 2280 SATA** module (SK hynix SC311 S) in the **M.2 slot**, SATA III over AHCI · the **2.5″ bay is free** |
+| Storage | **M.2 2280 SATA** module (SK hynix SC311 S) in the **M.2 slot**, SATA III over AHCI · the **2.5″ bay is free** · ⚠️ **11 134 power-on hours, wear indicator 4/100 — the module is at the end of its rated endurance**, 128 GB: **not a boot-disk candidate** |
 | Management | **MEBx not reachable** (Ctrl+P silent, no F12 entry) although CPU, Q270 and the I219-LM all satisfy the AMT platform requirements — the BIOS has **no `Intel AMT Capability` page** and `MEBx Hotkey` is already on, so the answer lies in the ME firmware, not in a setting |
 | Address | DHCP `192.168.2.206` today; `192.168.2.203` is the reserved slot ([idea 15](../ideas/15-second-proxmox-node.md), [ADR 31](../decisions/31-static-address-scheme.md)) |
 
@@ -45,14 +45,14 @@ The 7050 replaces the "OptiPlex 7040 Micro, i5-6500T" that [research 47 §2](47-
 | BIOS | Dell Inc. **1.27.0**, released **2023-09-18** — check whether a later build exists before installing |
 | CPU | Intel **Core i5-7500** (Kaby Lake, 4C/4T), 3.4 GHz base / 3.8 GHz turbo, 6 MB L3, **65 W TDP**, HWCAPS **x86-64-V3** |
 | RAM | **8 GB** — 1× 8 GiB DDR4 SO-DIMM `KMKYF9-MIH`, rated/configured **2400 MT/s**, **DIMM 2 free** |
-| Storage | **M.2 2280 SATA SSD** — SK hynix SC311 S, enumerated as `ATA` on the AHCI controller (`00:17.0`); capacity and SMART not captured yet |
+| Storage | **M.2 2280 SATA SSD** — SK hynix SC311 SATA 128GB, enumerated as `sda` on the AHCI controller (`00:17.0`); **119.2 GiB, unpartitioned**, **11 134 POH**, **wear indicator 4/100** ([SMART](#the-module-is-worn-out--and-it-is-empty-smart-2026-11-06)) |
 | GPU | Intel **HD Graphics 630** (PCI `00:02.0`, i915) |
 | NIC (GbE) | Intel **I219-LM** (`enp0s31f6`), PCI `00:1f.6` — the AMT-capable NIC |
 | NIC (WiFi) | Intel **Wireless 8265** (`wlp1s0`, PCI `01:00.0` behind root port `00:1c.0`) + Intel Bluetooth |
 | Audio | HDA Intel PCH (Realtek codec; DP/HDMI outputs + front line-out/headphone) |
 | TPM | **TPM 2.0 present** (ACPI `MSFT0101`) — firmware-vs-discrete still to identify ([research 37](37-tpm2-hardware-and-fleet.md) pattern) |
 | Power | AC attached, no battery · **130 W adapter** supplied · BIOS event log carries historical `Unknown AC power adapter` alerts ([below](#bios-event-log--the-adapter-history)) · **23.2 W at the wall in BIOS Setup, 19.7 W at PXE** ([pre-OS, not idle](#power-draw--measured-pre-os)) |
-| Cooling | Fan **2281 RPM at idle**, package **44 °C** (SystemRescue, ~4 min uptime) — audible, compared against the M910q [below](#noise--measured-against-the-m910q) |
+| Cooling | Fan **2281 RPM at idle**, package **44 °C** (SystemRescue, ~4 min uptime) — audible, compared against the M910q [below](#noise--measured-against-the-m910q) · reconfirmed 2026-11-06: package **42 °C**, `dell_smm` fan **2266 RPM** at idle |
 | Session | SystemRescue 13.02, kernel 6.18.41, DHCP `192.168.2.206` on `enp0s31f6` |
 
 ### Noise — measured against the M910q
@@ -177,7 +177,7 @@ The drive is an **M.2 2280 SATA III module sitting in the M.2 slot**, and the **
 - the disk enumerates as **`ATA`** on the AHCI controller (`00:17.0`, `scsi4`);
 - **no `nvme` module** is loaded and **no NVMe PCI endpoint** exists — the only exposed root port (`00:1c.0`) leads to bus 01, the WiFi card;
 - the **SK hynix SC311 S** family is SATA-only by construction (SATA III, 6 Gb/s) and Dell shipped it as an OEM **M.2 2280** module (`HFS128G39TNF-N2A0A`, Dell part `6HG72`);
-- the live session saw no NVMe namespace — `sdb` is the only internal disk.
+- no NVMe namespace exists — **`sda`** is the only internal disk (the Ventoy installer stick is `sdc`).
 
 **Dell's manual lists only NVMe for the Micro's M.2 slot** — that table enumerates the options Dell *sold*, not every mode the connector supports, and this unit runs an M.2 SATA module in it. Worth knowing before an upgrade: a **B+M key fits either protocol, but protocol support is a platform property** — verify with a live-boot test rather than assuming.
 
@@ -185,11 +185,30 @@ The drive is an **M.2 2280 SATA III module sitting in the M.2 slot**, and the **
 
 - The **M.2 slot is occupied** by the SATA module → an NVMe upgrade **replaces** it, it does not sit beside it. An M.2 SATA module cannot be demoted to the 2.5″ bay without an M.2→SATA 2.5″ enclosure.
 - The **2.5″ bay is free** — that is the cheap second disk, and it needs the caddy and ribbon present (pending).
-- So idea 15's `zfspool` has three shapes: **add a 2.5″ SATA SSD** as the pool with Proxmox on the module; **replace the module with NVMe** and leave the bay for later; or mirror across the two — noting that an M.2 + 2.5″ mirror is **one controller and one chassis**, not protection against losing the node.
+- So idea 15's `zfspool` has three shapes, but the SMART read below **removes the module from all of them**: **replace it with NVMe** — boot disk in the M.2 slot and the 2.5″ bay left free for the later ZFS disk, the recommendation; **add a 2.5″ SATA SSD** as the boot disk, which needs the caddy and ribbon; or **both** for a mirror — noting that an M.2 + 2.5″ mirror is **one controller and one chassis**, not protection against losing the node.
 - Capacity is **128 GB** (`SK hynix SC311 SATA 128GB`), confirmed by the BIOS **Drives** page, which also shows `SATA-0` (the 2.5″ bay) and `M.2 PCIe SSD-0` as **(none)** — the module is the only internal disk.
 - **`SATA Operation` is AHCI** — nothing to undo before Proxmox.
 
-The drive also carries a **previous installation**: `sdb2` is a 31.7 MiB ESP and `sdb1` a ~57.7 GiB **encrypted** volume (mapped read-only by the live session, 36.3 GiB used) — a BitLocker/LUKS Windows install. To be wiped at install; capture the model, capacity and SMART first (used drive → endurance matters, the lesson from the [Wyse 5070 audit](29-wyse5070-hardware-diagnostic.md)).
+#### The module is worn out — and it is empty (SMART, 2026-11-06)
+
+`smartctl -a /dev/sda`, SystemRescue 13.02:
+
+| Field | Value |
+|---|---|
+| Model / serial / firmware | SK hynix **SC311 SATA 128GB** · `MJ85N536011005C0V` · `70000P10` |
+| Form factor / link | **M.2**, SATA 3.2 negotiated at **6.0 Gb/s**, 512 B logical / 4 KiB physical, TRIM deterministic, SMART **PASSED** |
+| Capacity | 128,035,676,160 bytes — **119.2 GiB** |
+| **Power-on hours** | **11 134** — 464 days, ~1.3 years of on-time |
+| **Power-cycle count** | **12 049** — ~1.08 cycles per hour of on-time, against **140 unexpected power losses**: a machine that was restarted constantly |
+| **Media_Wearout_Indicator** | normalized **4 / 100** (worst ever **1**), raw **97** → **~97 % of rated endurance consumed** |
+| Erase counters | `Wear_Leveling_Count` 97 (worst 1) · `Total_Erase_Count` **700 941** · max/min per block **86 / 22** |
+| Write / read counters | `Total_Writes_GB` 33 164 791 682 · `Total_Reads_GB` 24 367 235 118 — vendor units, **not** directly mappable to TBW |
+| Health counters | retired / reallocated blocks **0** · `Erase_Fail_Count` 385 · `Soft_ECC_Correction` 368 · `Command_Timeout` 116 · `UDMA_CRC_Error_Count` **0** (link and controller clean) |
+| Self-tests | short tests pass; the extended test was aborted by host at 90 % |
+
+**It is not failing — it is finished.** Zero reallocated events, zero reported uncorrectable errors, zero link CRC errors and a PASSED assessment say the drive is electrically sound; the **wear indicator at 4 %** says the NAND is at the end of its rated life. With **128 GB** of capacity on top, the verdict is easy: **this module is not the boot disk of a 24/7 hypervisor.** A guest-bearing LVM-thin pool or a ZFS pool on a 97 %-worn client SSD is how a node dies in month three, and nothing on it is worth the risk.
+
+**And it is empty.** `lsblk` on 2026-11-06 shows `sda` with **no partitions at all** — there is no Windows install left to preserve or wipe. That also corrects the 2026-11-05 reading: the "31.7 MiB ESP + ~57.7 GiB encrypted volume, 36.3 GiB used" was the **Ventoy installer stick**, not this disk — Ventoy's layout is exactly a ~58 GB exFAT data partition plus a 32 MiB `VTOYEFI` partition, and it accounts for every number in that description. The `P4: SK hynix … 128GB` entry under `LEGACY BOOT` is a stale BIOS option pointing at a disk that no longer carries a boot image.
 
 ---
 
@@ -230,9 +249,21 @@ AMT on this platform needs three things, and **all three are present**:
 | vPro-eligible CPU | ✅ | i5-7500 is listed as **Intel vPro Platform eligible** on Intel ARK |
 | Q270 chipset | ✅ | PCI `00:1f.0` = "200 Series PCH LPC Controller **(Q270)**" |
 | AMT-capable NIC | ✅ | Intel **I219-LM** at `00:1f.6` (the "-LM" part is the AMT one) |
-| ME firmware reachable | ✅ | `mei_me` loaded, `mei_wdt` available |
+| ME firmware reachable | ✅ | `mei_me` loaded, `mei_wdt` available · **CSME `11.8.94.4494`** read from `/sys/class/mei/mei0/fw_ver` ([below](#me-firmware--csme-118944494-alive-but-still-unproven-2026-11-06)) |
 
 So the absence of MEBx is **not** a missing-hardware conclusion — it is a **firmware-mode or BIOS-setting** question.
+
+### ME firmware — CSME 11.8.94.4494, alive but still unproven (2026-11-06)
+
+`cat /sys/class/mei/mei0/fw_ver` answers, so the ME is **running and responsive** — it is not absent, and there is no sign of the `FW Status Recovery Error` state the Dell article screenshots:
+
+```
+0:11.8.94.4494
+0:11.8.94.4494
+0:11.8.50.3425
+```
+
+Two partitions report the running build **11.8.94.4494** (a late CSME 11.8 release, the Kaby-Lake-era branch), the third reports an older **11.8.50.3425** image — the recovery/ROM copy, which keeps its original version. **This is what a healthy ME looks like**, so hypothesis 5 loses most of its weight and the question narrows to one: *is this ME image an AMT (corporate) build?* The version string cannot answer that — `mei-amt-version` can, and it did not run (see the [live-medium failure](#the-live-usb-failed-mid-session-2026-11-06)).
 
 ### What Dell's KB says, and what it changed here (2026-11-06)
 
@@ -270,7 +301,7 @@ So the remaining causes are narrower than the original list: either the BIOS has
 | 2b | **`OROM Keyboard Access` = Disabled** | ❌ **Ruled out** — it is `Enabled`, so the hotkey is permitted | — |
 | 3 | **Hotkey timing / input path** | Ctrl+P must be hammered the moment the Dell logo appears; a hub, KVM or USB 3 port can eat it, and Fast Boot shortens the window | Wired keyboard straight into a rear port, Fast Boot off, spam Ctrl+P from power-on |
 | 4 | **AMT soft-disabled / left unprovisioned in a bad state by the previous IT owner** | The ME re-reads its configuration on **cold** boot only | BIOS reset to defaults, unplug AC for ~30 s, then retry |
-| 5 | **ME in a firmware error / recovery state** (`FW Status Recovery Error`) | The Dell article's own screenshot shows it, and in that state no BIOS toggle brings AMT back | BIOS update to the current release, **Load BIOS defaults**, then a full AC drain (unplug ~30 s) and cold boot; if the state persists, Dell's ME recovery path is a board-level service |
+| 5 | **ME in a firmware error / recovery state** (`FW Status Recovery Error`) | ⚠️ **weakened 2026-11-06** — `fw_ver` returns a clean `11.8.94.4494`, i.e. the ME is alive and reporting | BIOS update to the current release, **Load BIOS defaults**, then a full AC drain (unplug ~30 s) and cold boot; if the state persists, Dell's ME recovery path is a board-level service |
 
 A firmware error state and a non-AMT ME image are the two that a BIOS password cannot fix — which is exactly the outcome observed. **`mei-amt-version` distinguishes them in one command**: it reports the ME firmware version and whether AMT is present, and a `FW Status Recovery Error`-class state shows up as a version read that fails or reports no AMT.
 
@@ -293,6 +324,7 @@ Regardless of the outcome, **record the ME state** in `docs/hardware.md`: an unc
 | OptiPlex **7040** Micro, **i5-6500T** (35 W) | **7050** Micro, **i5-7500** (65 W) | ⚠️ faster CPU, **outside the chassis' 35 W design** — measure thermals |
 | vPro/AMT as the differentiator | CPU + chipset + I219-LM all capable, **MEBx unreachable** | ⚠️ unconfirmed — treat as absent until proven |
 | M.2 NVMe **plus** a 2.5″ bay | **M.2 slot holds a SATA module** (no NVMe drive); **2.5″ bay free** | ⚠️ NVMe means *replacing* the module, not adding — but the bay still gives a second disk |
+| The 128 GB module as the boot disk | **11 134 POH, wear indicator 4/100** — the NAND is at the end of its rated life | ❌ replace with an NVMe disk before the install |
 | 32 GB RAM ceiling | 8 GB now, **one slot free** | ✅ 16 GB is one stick |
 | Heterogeneous CPUs vs the Wyse (Gemini Lake) | **Kaby Lake, x86-64-v3** — an even wider gap from the J4105 | ⚠️ any cross-node migration needs a conservative VM CPU type, or restarts |
 | Address `.203` | free; box currently on DHCP `.206` | ✅ reserve at install |
@@ -307,37 +339,49 @@ Regardless of the outcome, **record the ME state** in `docs/hardware.md`: an unc
 
 Six items that are either **impossible to recover afterwards** or that **change what gets installed**:
 
-1. **Disk evidence** — `lsblk -o NAME,SIZE,MODEL,TRAN` and `smartctl -a`. The module still carries a previous Windows install and the installer wipes it; capacity, POH and wear are unrecoverable after that, and the second-disk decision hangs off them.
+1. **Disk evidence** — ✅ **done 2026-11-06.** 119.2 GiB, **11 134 POH**, **wear indicator 4/100 (≈97 % consumed)** — the module is **finished**, so the boot-disk decision is made for us ([SMART detail](#the-module-is-worn-out--and-it-is-empty-smart-2026-11-06)). Nothing was lost to a wipe either: the disk is **unpartitioned**, there was no install left on it.
 2. **ePSA diagnostics** (F12 → Diagnostics) — per-test pass/fail for memory, storage and NIC. A failing DIMM shows up later as random VM crashes, not as a failed boot. ✅ **ran clean 2026-11-06** (*no problems found*); let the remaining memory test finish for a full pass.
 3. **Memtest86+** — one to two full passes. It is used hardware, single-channel, and there is one 8 GiB stick: a host that silently corrupts guests is worse than one that does not boot.
 4. **BIOS level** — ✅ **resolved 2026-11-06, nothing to flash.** Dell's [OptiPlex 7050 BIOS page](https://www.dell.com/support/home/en-gb/drivers/driversdetails?driverid=kmhpc) (driver `KMHPC`, priority **Critical**) lists **1.27.0, released 2023-11-15**, as the current release — the build already installed; the `2023-09-18` in the SMBIOS dump is its compile date. The 7050 is also **absent from [DSA-2025-153](https://www.dell.com/support/kbdoc/000300450)** (CVE-2025-36579, weak BIOS password recovery), whose June-2026 affected-platform list ends at the 7090/7490 generation. So there is **no newer build and no open BIOS advisory** — the only firmware gap left is the `intel-microcode` package inside Proxmox.
 5. **ME/AMT verdict** — set `Fastboot = Thorough` + `Extend BIOS POST Time`, then Ctrl+P at the logo, then `mei-amt-version` from the live USB. That decides the remote-power model (**vPro** vs **AC Recovery + Wake-on-LAN**) before the node is carrying anything.
-6. **Thermal + load baseline** — a short all-core load run from SystemRescue (`stress-ng`/`mprime`) with package temperature, fan RPM and wall draw. It is the acceptance test for a 65 W CPU in a 35 W chassis, and it settles whether TurboBoost stays off.
+6. **Thermal + load baseline** — a short all-core load run from SystemRescue (`stress-ng`/`mprime`) with package temperature, fan RPM and wall draw. It is the acceptance test for a 65 W CPU in a 35 W chassis, and it settles whether TurboBoost stays off. ⚠️ **attempted 2026-11-06 and did not run** — the live medium threw I/O errors before a single burner started ([below](#the-live-usb-failed-mid-session-2026-11-06)); only the idle baseline came out (**42 °C package, 2266 RPM**).
 
 **Install-time decisions**, recorded now so the installer is not a guess:
 
-- **Storage layout: `ext4` + LVM-thin, not ZFS** — 8 GB of RAM and a single 128 GB SATA module. ZFS belongs on this node when a ZFS pool (the free 2.5″ bay) exists, per [idea 15](../ideas/15-second-proxmox-node.md) step 7.
+- **Storage layout: replace the worn module first, then `ext4` + LVM-thin, not ZFS** — the 119 GiB module sits at **4 % of its endurance**, so it is not a candidate ([SMART](#the-module-is-worn-out--and-it-is-empty-smart-2026-11-06)); an **NVMe M.2 2280 (500 GB–1 TB)** takes its place and leaves the 2.5″ bay free. **LVM-thin** stays the right layout for 8 GB of RAM; ZFS waits for the pool the bay can hold later, per [idea 15](../ideas/15-second-proxmox-node.md) step 7.
 - **Hostname `pve2`**, **static `192.168.2.203`** on `enp0s31f6` — record the MAC first for the DHCP reservation and for Wake-on-LAN.
 - **Watch POST for `Unknown AC power adapter`** — if it appears, stop and resolve the brick before building anything.
 
 ### Remaining
 
+#### The live USB failed mid-session (2026-11-06)
+
+The SystemRescue stick is not trustworthy, and it has to be replaced **before the installer runs**:
+
+- **It re-enumerated.** The same stick was `sdb` in the first `lsblk` call and `sdc` in the second, minutes later.
+- **Binaries became unreadable.** `/usr/bin/awk`, `dmesg`, `ip`, `nproc`, `seq`, `sleep` and `pkill` all returned `Input/output error` while shell builtins and page-cached reads (`lsblk`, `smartctl`, `cat` of `/sys`) kept working — the classic signature of a lost squashfs backing store, not of bad RAM.
+- **Consequences.** The thermal test was invalid (`nproc`/`seq` failed, so **zero** burner processes started and `sleep 600` returned at once — the "after" sensors output is the same idle state as the "before"); `dmesg`, `ip` and `mei-amt-version` produced nothing, which is why **TPM vendor and MAC are still open**.
+
+**Fix before the next boot:** re-burn SystemRescue on a different stick and boot it with **`copytoram=y`**, which copies the whole squashfs into RAM and stops the live image depending on the stick after handover. Verify with `dmesg | tail` (no `usb reset` / `I/O error`), a stable `lsblk`, and one binary that was failing above. Do **not** install Proxmox from this stick.
+
+---
+
 1. **BIOS walk (F2)** — ✅ **done 2026-11-06** for the MEBx/storage/virtualisation questions: no AMT capability page, `MEBx Hotkey` enabled, **`OROM Keyboard Access` enabled**, admin password set, TPM 2.0 enabled, **AHCI**, **VT-x + VT-d on**, TXT off, ASPM `Auto`, TurboBoost off, wireless radios disabled, UEFI network stack enabled, `SATA-4 = 128 GB SK hynix SC311 SATA`, `SATA-0` and `M.2 PCIe SSD-0` empty. The second pass filled in Power Management (**AC Recovery `Power On`**, **Wake on LAN `LAN Only`**, **Deep Sleep `Disabled`**), POST Behavior (**Fastboot `Thorough`** + non-zero **Extend BIOS POST Time**) and Secure Boot (**off**, per the F12 page). **Still to capture:** SpeedStep / C-States / Multi Core values.
 2. **ME/AMT state** — `mei-amt-version`, `/sys/class/mei/mei0/fw_ver`, `dmesg | grep -i mei`. With the BIOS ruled out and `OROM Keyboard Access` identified, this check runs **after** the retest and only matters if MEBx still will not appear.
 3. **BIOS level** — ✅ **done** — 1.27.0 is Dell's current release (published 2023-11-15, priority Critical) and the 7050 is not on DSA-2025-153, so there is nothing to flash ([gate item 4](#pre-install-gate--do-these-before-the-proxmox-installer-runs)). The `intel-microcode` update inside Proxmox is still outstanding: the live session reports `old_microcode` **Vulnerable**.
-4. **Disk** — `lsblk`, `smartctl -a`: exact model, capacity, POH, `Media_Wearout`/`Total_LBAs_Written`. Used drive → endurance is the decision input, and an NVMe purchase decision hangs off it.
+4. **Disk** — ✅ **done 2026-11-06** — model, capacity, POH, wear and health counters recorded ([SMART](#the-module-is-worn-out--and-it-is-empty-smart-2026-11-06)). Verdict: **replace it** rather than plan around it.
 5. **Visual confirmation** — is the **2.5″ caddy + ribbon present** for a later second disk, is a RAM slot free, and is the CPU heatsink the 35 W design or a retrofit?
-6. **TPM identity** — ✅ **enabled and active** per the F2 walk (TPM On, SHA-256, Attestation/Key Storage on, `Enabled`); **vendor still open** — `tpm2_getcap properties-fixed` for Intel PTT vs discrete (the [research 37](37-tpm2-hardware-and-fleet.md) pattern). A usable TPM 2.0 keeps the option of a second sealed `step-ca` instance open.
+6. **TPM identity** — ✅ enabled and active per the F2 walk (TPM On, SHA-256, Attestation/Key Storage on, `Enabled`); **vendor still open** — the `dmesg`/`tpm2_getcap` read was killed by the live-medium failure, so Intel PTT vs a discrete chip is unresolved (the [research 37](37-tpm2-hardware-and-fleet.md) pattern: `TPM_PT_MANUFACTURER` = `INTC` → PTT, `IFX`/`NTC` → discrete). A usable TPM 2.0 keeps the option of a second sealed `step-ca` instance open.
 7. **Thermal + power measurement** — pre-OS baselines are in (**23.2 W BIOS Setup, 19.7 W PXE**); still to measure at the wall, same meter and socket: **OS idle**, **OS idle with a guest**, and **all-core load** — with package temperature and fan RPM alongside, so the 65 W decision rests on numbers rather than on the TDP label.
 8. **ePSA diagnostics** — ✅ **ran clean 2026-11-06** (*no problems found*); the System Health readings are recorded [above](#boot-menu-f12-and-epsa-2026-11-06), the memory test is the item left open under the gate.
-9. **MAC addresses** — record `enp0s31f6` for DHCP reservations / WoL.
+9. **MAC addresses** — record `enp0s31f6` for DHCP reservations / WoL. ⚠️ blocked 2026-11-06: `ip` failed with an I/O error on the failing live medium — read it from the next boot or from the DHCP leases.
 
 ---
 
 ## Open Questions
 
 1. **Keep the i5-7500 or fit an i7-7700T?** Recommendation: run the 7500 first and judge it on measurements; if sustained load brings fan noise or throttling, the 7700T is the upgrade that respects the 35 W chassis design — and it adds hyper-threading, which the 7500T would not.
-2. **Change the boot medium before the Proxmox install?** The M.2 slot holds a SATA module, so this is either *add a 2.5″ SATA SSD and keep Proxmox on the module*, or *replace the module with NVMe*. Deciding before the install is dramatically cheaper than migrating guests onto ZFS later (idea 15 step 7).
+2. **Change the boot medium before the Proxmox install?** **Answered 2026-11-06 — yes, and not for the reason expected.** The measured module is worn to **4 % remaining endurance** with 128 GB total, so it is not a candidate at all; the only question left is *which* new disk. **Recommendation: an NVMe M.2 2280 (500 GB–1 TB)** — it drops into the slot the module vacates, needs no caddy, and leaves the 2.5″ bay free for the later ZFS disk ([idea 15](../ideas/15-second-proxmox-node.md) step 7). The 2.5″ SATA route is the fallback and hinges on the caddy and ribbon actually being present. ZFS vs LVM-thin is then a capacity question, not a wear one.
 3. **Is vPro worth chasing at all?** If the ME firmware is not in AMT mode, no BIOS setting will bring MEBx back. Decide between AC Recovery + WoL, an IP-KVM, or accepting manual power.
 4. **Rename first, or build `pve2` standalone?** Unchanged from idea 15: the `pve` → `pve1` rename must land **before** a cluster exists, but it is not a prerequisite for provisioning this node (issue #177 keeps the cluster out of scope).
 
