@@ -40,8 +40,8 @@ a third node would only remove the QDevice and make Ceph plausible.
 
 > **The purchase overtook the analysis.** The unit in hand is a **7050 MFF with an i5‑7500 at 65 W**, not
 the 7040 with a 35 W T-series part this table prefers — the 65 W CPU is a previous-owner swap outside the
-Micro chassis' thermal design, and its M.2 2280 **NVMe** slot is empty while the SATA SSD sits in the 2.5″
-bay. See [research 51](../research/51-optiplex7050-hardware-diagnostic.md).
+Micro chassis' thermal design, and the installed disk is an **M.2 2280 SATA module**, leaving the 2.5″ bay
+free for a second disk. See [research 51](../research/51-optiplex7050-hardware-diagnostic.md).
 
 | Option | Fit | Why |
 |---|---|---|
@@ -129,7 +129,7 @@ like the SFF, not the Micro.
 ## References
 
 - [Research 47 — second Proxmox node](../research/47-second-proxmox-node.md) — the hardware comparison, the HA/QDevice case and what ZFS replication requires
-- [Research 51 — OptiPlex 7050 MFF hardware diagnostic](../research/51-optiplex7050-hardware-diagnostic.md) — the audit of the unit actually bought: i5‑7500 at 65 W, free M.2 NVMe slot, MEBx unreachable
+- [Research 51 — OptiPlex 7050 MFF hardware diagnostic](../research/51-optiplex7050-hardware-diagnostic.md) — the audit of the unit actually bought: i5‑7500 at 65 W, an M.2 2280 SATA module with the 2.5″ bay free, MEBx unreachable
 - Chats: [37 — Wyse 5070 vs OptiPlex 3000](https://share.gemini.google/XvMCIZlMCC3d) · [38 — OptiPlex comparison](https://share.gemini.google/Q1nb6iTr0YzJ)
 - Proxmox VE 9.2 — [Cluster Manager](https://pve.proxmox.com/pve-docs/chapter-pvecm.html) · [Storage Replication](https://pve.proxmox.com/pve-docs/chapter-pvesr.html) · [Ceph](https://pve.proxmox.com/pve-docs/chapter-pveceph.html)
 - [Idea 13 — FreeIPA domain controller](13-freeipa-domain-controller.md) (the next guest) · [idea 05 — Home Assistant on a thin client](05-home-assistant-thin-client.md) (the HA candidate)
