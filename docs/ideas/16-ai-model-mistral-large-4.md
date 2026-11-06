@@ -6,7 +6,7 @@
 > would displace it. Mistral Large 4 is close enough on price and stronger on paper in a few dimensions to
 > justify a **bounded comparison**, not a migration.
 
-**Status**: 🧠 Idea — no account, no spend, nothing reconfigured
+**Status**: 📋 Planned — decided 2026-11-06: one **Mistral Pro** subscription funds the A/B, both models on one key; flips to 🔨 when the account is live
 **Date**: 2026-11-06
 **Sources**: [Mistral pricing](https://mistral.ai/pricing/) · [Mistral Large 4 model card](https://docs.mistral.ai/models/mistral-large-4-0) · [DeepSeek V4.1 Flash 1017 model card](https://docs.mistral.ai/models/deepseek-v4-flash-1017) · [Subscriptions / included usage](https://docs.mistral.ai/admin/billing-usage/subscriptions) · [Vibe CLI configuration](https://docs.mistral.ai/vibe/code/cli/configuration) — all read 2026-11-06
 **Related**: [ADR 15](../decisions/15-copilot-desktop-agentic.md) (Copilot BYOK provider) · [ADR 17](../decisions/17-adopt-opencode.md) (OpenCode, DeepSeek API + MiniMax plan) · [research 19](../research/19-copilot-desktop-agentic.md) · [docs/opencode-customization](../opencode-customization/README.md) (per-instance LLM key) · [research 02](../research/02-llm-requirements.md) / [research 08](../research/08-llm-server-hardware.md) (why local inference is out of scope)
@@ -97,6 +97,30 @@ One caveat that must not be glossed over: on Mistral's platform, DeepSeek V4.1 F
 *model* comparison but not a clean *vendor* comparison — a preview endpoint is the wrong thing to put
 daily work on.
 
+## Decision — 2026-11-06
+
+**Decided: run the comparison on a Mistral Pro subscription, with both models served through it.** Not
+Vibe's chat window, not a second vendor account — the metered API that `opencode` and Copilot BYOK already
+speak, funded from one allowance.
+
+- **Both sides of the A/B come from one provider.** `mistral-large-4` is the candidate;
+  `deepseek-v4-1-flash-1017` is the control on the same host — latency and throttling held constant, only
+  the model varies.
+- **The Pro plan is the funding vehicle, not the surface.** Its **$15 /mo** of included usage is shared
+  across Studio, API and Vibe Code, and pay-as-you-go credits extend it, so the test needs no second
+  billing relationship.
+- **The daily driver does not move yet.** Real work stays on DeepSeek's own API
+  ([runbook 13 §2](../runbooks/13-copilot-desktop-setup.md)); the Mistral-served DeepSeek is a *test*
+  control, because it is public preview there.
+- **No ADR yet.** This decides *how to find out*, not *what the model is* — the ADR lands only if Large 4
+  wins (step 3 below), which is the "decide in writing" the idea was missing.
+
+**Budget reality check.** $15 is a test budget, not a month of agentic coding, and **cache hit rate decides
+which number applies**: a session with ~1M input and ~100k output costs **$0.91 on Large 4 at 0 % cache
+hits but $0.28 at 100 %** — against **$0.42 and $0.13** on V4.1 Flash. So $15 covers roughly **16–53**
+Large 4 sessions or **35–116** DeepSeek ones. Expect a pay-as-you-go top-up, and spend step 1 in the free
+Playground.
+
 ## What is not on the table
 
 **Self-hosting.** Mistral Large 4 is open-weight, but at **1.05T total parameters** it is several orders
@@ -127,10 +151,10 @@ nagged**".
   one-off verdict, and argues against rewriting anything around a winner.
 - **A preference without a written outcome is worthless.** If the experiment runs and nothing is recorded,
   the repo is back to "it works" as the only evidence — the same position this idea exists to fix.
-- **Consumer plans are not the comparison.** Mistral's subscription tiers have message and usage caps and
-  are aimed at the Vibe product; the only figure that transfers to agentic work is the metered API price.
-  ([ADR 15](../decisions/15-copilot-desktop-agentic.md)'s reasoning for BYOK over subscription applies
-  unchanged.)
+- **A subscription is a bundle, not a price.** Pro's included usage is metered in dollars and shared across
+  surfaces, so it works as a prepaid runway — but the figure that decides anything is still the per-token
+  API price, and $15 is a *test* budget, not a permanent one
+  ([ADR 15](../decisions/15-copilot-desktop-agentic.md)'s argument for BYOK over subscription stands).
 - **Vendor fit is a real but unproven criterion.** An EU vendor with an open-weight licence is a plausible
   advantage if this ever stops being a hobby — data residency, procurement, licence portability. It is a
   *criterion to weigh*, not a conclusion to assume, and it does not outweigh instruction adherence.
@@ -143,10 +167,13 @@ repo's own tasks.
 
 Sequence, with an exit at every step:
 
-1. **Zero-config sanity check** — free tier in Mistral Studio, two real tasks from this repo (an ADR and an
-   Ansible role). If it visibly mishandles the instruction files, stop here and mark this idea 🪦 Retired.
-2. **One week, side by side** — `mistral-large-4` as a *second* provider in `opencode.json`, DeepSeek left
-   untouched as the control. Same work, both models, log which one produced a task that survived review.
+1. **Playground first, not the agent** — two real tasks from this repo (an ADR and an Ansible role) in
+   Studio's Playground, which needs no config and burns no agent tokens. If Large 4 visibly mishandles the
+   instruction files, stop here, mark this idea 🪦 Retired, and the $15 rolls to the next month.
+2. **One week, side by side, on the Pro key** — `mistral-large-4` and `deepseek-v4-1-flash-1017` as two
+   model presets under one `mistral` provider in `opencode.json`; the DeepSeek-direct provider stays
+   configured and untouched for real work. Log per task which model produced something that survived
+   review, and read the Studio usage report before and after.
 3. **Decide in writing** — if Large 4 wins on task success and adherence, author the ADR that records the
    daily model (superseding the model note in [ADR 15](../decisions/15-copilot-desktop-agentic.md) /
    [ADR 17](../decisions/17-adopt-opencode.md)). If it loses, record that outcome *in this doc* and retire

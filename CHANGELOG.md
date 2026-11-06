@@ -14,7 +14,7 @@ Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month 
 ## 2026‑11
 
 - **(docs)** Plan the second Proxmox node — `pve` → `pve1`, `pve2` at `.202`, and a two-node cluster with an edge QDevice — [ADR 47](docs/decisions/47-second-proxmox-node-cluster-qdevice.md) · [runbook 42](docs/runbooks/42-pve2-proxmox-node.md)
-- **(docs)** Weigh Mistral Large 4 against the daily DeepSeek V4.1 Flash — 2.3× input, 10× cached cost, so only task success can decide — [idea 16](docs/ideas/16-ai-model-mistral-large-4.md)
+- **(docs)** Plan a Mistral Large 4 vs DeepSeek V4.1 Flash A/B — one Mistral Pro allowance serves candidate and control, so only task success can decide — [idea 16](docs/ideas/16-ai-model-mistral-large-4.md)
 - **(docs)** Audit the OptiPlex 7050 MFF for `pve2` — 65 W i5-7500, a sound but small 128 GB SSD, MEBx unreachable — [research 52](docs/research/52-optiplex7050-hardware-diagnostic.md)
 - **(fix)** Serve the fleet resolver from the hosts and alert when a `.internal` leaf nears expiry — [ADR 40](docs/decisions/40-internal-dns-proxy-edge.md)
 - **(feat)** Deploy the FreeIPA server on `pve` — external-ca under the fleet root, M1 verified; TPM-backed Dogtag custody parked — [runbook 41](docs/runbooks/41-deploy-freeipa-server.md)
