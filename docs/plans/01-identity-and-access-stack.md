@@ -1,6 +1,6 @@
 # Plan 01 — Identity and Access Stack Rollout
 
-**Status**: 🔨 Active — stage 1 (SSH CA foundation) is the only stage unblocked
+**Status**: 🔨 Active — stage 1 delivered; stage 2 starts with the FreeIPA server (M1)
 **Date**: 2026-10-27
 
 **Workstreams**: [SSH host + agent certs #161](https://github.com/jaroslaw-bagnicki/Homelab/issues/161) · [SSH identity loading #170](https://github.com/jaroslaw-bagnicki/Homelab/issues/170) · [SSH human certs #166](https://github.com/jaroslaw-bagnicki/Homelab/issues/166) · [FreeIPA #164](https://github.com/jaroslaw-bagnicki/Homelab/issues/164) · [Authentik #165](https://github.com/jaroslaw-bagnicki/Homelab/issues/165) · [Workload identity #168](https://github.com/jaroslaw-bagnicki/Homelab/issues/168)
@@ -77,13 +77,22 @@ Deliberately **not** in this stage: human user certificates. See "Why human cert
 ADR 43 item 9 rollout, unchanged: server → `ipa-backup` + rehearsed restore → one disposable client →
 one HBAC rule and one `sudo` rule → the fleet.
 
+**Key custody:** the Dogtag CA key stays **on disk**; `ipa-backup` is the restore path. TPM-backed
+PKCS#11 keys are parked — see [research 51](../research/51-freeipa-dogtag-tpm-custody.md). Revisit a
+Dogtag-supported HSM only if hardware-backed CA custody becomes a requirement.
+
+**Guest OS:** Fedora 45 Cloud, pinned by build. Fedora's ~13-month lifecycle means a major upgrade
+every 6–12 months; major upgrades wait until **M2** (`ipa-backup` + rehearsed restore) has passed.
+
 Decided at install time, not later:
 
 - **CA shape** ([ADR 42](../decisions/42-pki-topology-sibling-cas.md)) — sign IPA's CSR in the offline
   ceremony (`--external-ca`), or install self-signed as the documented interim and re-parent later.
   Batching matters: every known CSR in one offline session is cheaper than two.
 - **DNS** — integrated DNS off; Technitium carries `_kerberos._tcp`, `_ldap._tcp` and forward/reverse
-  for every member. A missing SRV record presents as a wrong password.
+  for every member. The `ipa_host` role also pins the VM's `/etc/resolv.conf` to Technitium, following
+  the host-owned resolver rule from [ADR 40](../decisions/40-internal-dns-proxy-edge.md) (#174). A
+  missing SRV record presents as a wrong password.
 - **SSHFP stays unmanaged.** FreeIPA can publish SSHFP records for hosts; with `@cert-authority` +
   `TrustedUserCAKeys` from stage 1 that is a second, redundant trust path — leave it off.
 
@@ -189,7 +198,7 @@ supplied. Only one engine answers each question, which is why both ADRs can stan
 | Decision | Needed by | Default if it is not taken |
 |---|---|---|
 | `pve` headroom — 2 GB IPA and accept pressure, or pull [idea 15](../ideas/15-second-proxmox-node.md) forward first | stage 2 | 2 GB guest, accept pressure |
-| CA shape at IPA install — offline ceremony or self-signed interim | stage 2 M1 | self-signed interim, re-parent later ([ADR 42](../decisions/42-pki-topology-sibling-cas.md) item 6) |
+| CA shape at IPA install — offline ceremony or self-signed interim | stage 2 M1 | **external-ca now** ([runbook 41](../runbooks/41-deploy-freeipa-server.md)); self-signed only as the documented fallback, re-parent before M3 ([ADR 42](../decisions/42-pki-topology-sibling-cas.md) item 6) |
 | Principal naming contract — IPA username as the principal | before stage 4 | IPA username |
 | Authentik outpost placement and the cross-LAN hop | stage 3 | embedded outpost over TLS, else an ADR 34 exception row |
 | Which hosts enrol as FreeIPA clients | stage 2 M6 | Linux hosts whose login policy is worth centralising; `pve` never ([ADR 43](../decisions/43-freeipa-domain-realm.md) item 7) |

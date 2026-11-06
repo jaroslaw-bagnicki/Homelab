@@ -4,10 +4,11 @@ Everything the air-gapped signing machine needs — **except the secure USB stic
 
 ## What this is, and is not
 
-The fleet CA's **offline root** is created here, and the **intermediate certificate** is signed by it.
-Both happen on a machine with no network of any kind, because the root's private key lives on the
-stick and must never touch a networked machine. This bundle carries the tool, the request and the
-recipes, so the signing machine needs **nothing installed and nothing downloaded**.
+The fleet CA's **offline root** is created here, the **`step-ca` intermediate** is signed by it, and
+(for M1) the **FreeIPA CA** CSR is signed by the same root. All of it happens on a machine with no
+network of any kind, because the root's private key lives on the stick and must never touch a
+networked machine. This bundle carries the tool, the requests and the recipes, so the signing machine
+needs **nothing installed and nothing downloaded**.
 
 **Any live Linux will do.** SystemRescue 13 is the default; an Ubuntu Live desktop works just as well.
 Nothing has to be installed: the bundled `step` is statically linked, so it does not care what the host
@@ -35,8 +36,10 @@ the signing machine only on the stick, back into the safe.
 | `step` | the `step` CLI, linux/amd64 — **not stored in git** (42 MB upstream binary), added by 01 | — |
 | `intermediate_ca.csr` | the certificate request, created on the CA host by the key that lives in `pve`'s TPM — **not stored in git**, bring the file the CA host produced | — |
 | `intermediate-ca.tpl` | the signing template — the extensions the finished certificate must carry | — |
+| `ipa-ca.tpl` | the FreeIPA CA signing template — `CN=Certificate Authority,O=IPA.INTERNAL`, CA:TRUE, pathlen:0 | — |
 | `root.sh` | creates the root CA on the stick — first run only | — |
-| `sign.sh` | signs the CSR with that root, then machine-checks the result | — |
+| `sign.sh` | signs the `step-ca` intermediate CSR with that root, then machine-checks the result | — |
+| `sign-ipa-ca.sh` | signs FreeIPA's `ipa.csr` (from `ipa-server-install --external-ca`) with the same root | — |
 
 `intermediate-ca.tpl` is a **copy** of `ansible/workloads/step-ca/files/intermediate-ca.tpl`, which is the
 versioned source. If you change one, change both — otherwise the signing machine uses the old shape.
@@ -48,6 +51,7 @@ versioned source. If you change one, change both — otherwise the signing machi
 - The **YUMI multiboot stick**, with this bundle on it. One stick does both jobs: it boots the signing
   machine (SystemRescue 13, or an Ubuntu Live desktop) *and* carries the bundle, so there is no second
   USB to keep track of.
+- `ipa.csr` when the M1 FreeIPA CA ceremony runs — produced on the IPA guest, public, not stored in git.
 - A safe place to keep the stick and the written-down key passphrase.
 
 ## Rules
@@ -85,7 +89,7 @@ versioned source. If you change one, change both — otherwise the signing machi
    ```sh
    cp -r <usb>/private-ca-offline-signing /tmp/bundle
    cd /tmp/bundle
-   chmod +x step root.sh sign.sh
+   chmod +x step root.sh sign.sh sign-ipa-ca.sh
    ./step version
    ```
 
@@ -125,16 +129,23 @@ versioned source. If you change one, change both — otherwise the signing machi
 6. **Sign the intermediate.** This is the operation that repeats — including the annual re-sign:
    [03-signing-csr.md](03-signing-csr.md).
 
+6b. **Sign the FreeIPA CA when M1 needs it.** Bring `ipa.csr` from the IPA guest to this bundle and run
+   `./sign-ipa-ca.sh <destination-path>`; copy `ipa-ca.crt` back with `root_ca.crt`. The script checks
+   the chain, `CA:TRUE, pathlen:0`, key usage and the `CN=Certificate Authority,O=IPA.INTERNAL`
+   subject. This is a separate ceremony from the `step-ca` intermediate.
+
 7. **Finish.** Unmount and remove the stick and return it to the safe, copy `intermediate_ca.crt`
-   **and** a copy of `root_ca.crt` back onto the YUMI stick (both are public certificates), and power
-   the machine off.
+   (and, when used, `ipa-ca.crt`) **and** a copy of `root_ca.crt` back onto the YUMI stick (all are
+   public certificates), and power the machine off.
 
 ## Bring back
 
-- `intermediate_ca.crt` — the signed intermediate
+- `intermediate_ca.crt` — the signed `step-ca` intermediate
+- `ipa-ca.crt` — the signed FreeIPA CA (when M1 runs its ceremony)
 - `root_ca.crt` — a copy taken from the stick
 
-These are installed and the CA started by **runbook 35 §7**.
+`intermediate_ca.crt` is installed and the CA started by **runbook 35 §7**; `ipa-ca.crt` is installed
+by the FreeIPA workload ([runbook 41](../runbooks/41-deploy-freeipa-server.md)).
 
 ## If something goes wrong
 

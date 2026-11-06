@@ -1,0 +1,28 @@
+---
+# FreeIPA VM base (Fedora 45) — RPM-family counterpart to the Debian/Ubuntu
+# common+security roles. The IPA guest is not a normal fleet node: its
+# hostname is the FQDN from ADR 43 and its firewall is firewalld, not UFW.
+
+ipa_host_fqdn: ipa.internal
+ipa_host_short_name: ipa
+ipa_host_ip: 192.168.2.216
+ipa_host_lan_cidr: 192.168.2.0/24
+
+# Fleet resolver (ADR 40, #174). The IPA VM is a host, not a container: it owns
+# /etc/resolv.conf and writes the Technitium pin. An empty value disables the
+# pin for a bootstrap before `edge` exists.
+ipa_host_dns_server: "192.168.2.240"
+ipa_host_dns_search: "internal"
+
+# 389 is deliberately absent until M3 client enrolment; the IPA server itself
+# uses LDAPI/HTTPS locally. Record the ADR 34 decision when 389 is opened.
+ipa_host_firewall_ports:
+  - { port: "22", proto: tcp }
+  - { port: "88", proto: tcp }
+  - { port: "88", proto: udp }
+  - { port: "464", proto: tcp }
+  - { port: "464", proto: udp }
+  - { port: "443", proto: tcp }
+  - { port: "636", proto: tcp }
+
+ipa_host_timezone: Etc/UTC

@@ -1,0 +1,152 @@
+---
+- name: Assert the FreeIPA guest is a RHEL-family system
+  ansible.builtin.assert:
+    that:
+      - ansible_os_family == 'RedHat'
+    fail_msg: >-
+      ipa_host targets Fedora or a RHEL-family host; the FreeIPA server is not supported
+      on Debian/Ubuntu in this lab.
+
+- name: Set the FreeIPA FQDN
+  ansible.builtin.hostname:
+    name: "{{ ipa_host_fqdn }}"
+
+- name: Map the FreeIPA FQDN in /etc/hosts
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    regexp: '^\S+\s+{{ ipa_host_fqdn | regex_escape }}(\s|$)'
+    line: "{{ ipa_host_ip }} {{ ipa_host_fqdn }} {{ ipa_host_short_name }}"
+    state: present
+
+- name: Check for NetworkManager
+  ansible.builtin.stat:
+    path: /etc/NetworkManager
+  register: ipa_host_networkmanager
+
+- name: Ensure the NetworkManager config directory exists
+  when: ipa_host_networkmanager.stat.exists
+  ansible.builtin.file:
+    path: /etc/NetworkManager/conf.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Stop NetworkManager from managing /etc/resolv.conf
+  when: ipa_host_networkmanager.stat.exists
+  ansible.builtin.copy:
+    content: |
+      [main]
+      dns=none
+    dest: /etc/NetworkManager/conf.d/90-dns-none.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload NetworkManager
+
+- name: Apply the NetworkManager DNS change before writing resolv.conf
+  ansible.builtin.meta: flush_handlers
+
+- name: Check the fleet resolver is reachable
+  when:
+    - ipa_host_dns_server | length > 0
+    - ansible_virtualization_type | default('none') not in ['lxc', 'docker', 'podman', 'container']
+  ansible.builtin.wait_for:
+    host: "{{ ipa_host_dns_server }}"
+    port: 53
+    timeout: 3
+
+- name: Point the host at the fleet resolver
+  when:
+    - ipa_host_dns_server | length > 0
+    - ansible_virtualization_type | default('none') not in ['lxc', 'docker', 'podman', 'container']
+  ansible.builtin.copy:
+    content: |
+      # Managed by Ansible — fleet resolver, Technitium on the edge node (ADR 40, #174).
+      nameserver {{ ipa_host_dns_server }}
+      search {{ ipa_host_dns_search }}
+    dest: /etc/resolv.conf
+    owner: root
+    group: root
+    mode: "0644"
+    follow: false
+
+- name: Set the timezone
+  community.general.timezone:
+    name: "{{ ipa_host_timezone }}"
+
+- name: Install the EL base packages
+  ansible.builtin.dnf:
+    name:
+      - chrony
+      - firewalld
+      - python3-firewall
+      - sudo
+      - tar
+    state: present
+    update_cache: true
+
+- name: Enable and start chronyd
+  ansible.builtin.service:
+    name: chronyd
+    state: started
+    enabled: true
+
+- name: Wait for chrony to synchronise
+  ansible.builtin.command:
+    cmd: chronyc waitsync 30 0.1
+  register: ipa_host_chrony
+  changed_when: false
+  retries: 2
+  delay: 10
+  until: ipa_host_chrony.rc == 0
+
+- name: Ensure the fleet admin account exists
+  ansible.builtin.user:
+    name: fleetadm
+    shell: /bin/bash
+    groups: wheel
+    append: true
+    create_home: true
+
+- name: Grant fleetadm NOPASSWD sudo
+  ansible.builtin.copy:
+    content: "fleetadm ALL=(ALL) NOPASSWD: ALL\n"
+    dest: /etc/sudoers.d/fleetadm
+    owner: root
+    group: root
+    mode: "0440"
+    validate: /usr/sbin/visudo -cf %s
+
+- name: Deploy the fleet key to fleetadm
+  ansible.posix.authorized_key:
+    user: fleetadm
+    state: present
+    exclusive: true
+    key: "{{ lookup('file', role_path ~ '/../common/files/ssh/fleetadm.pub') }}"
+    key_options: "no-port-forwarding,no-agent-forwarding,no-X11-forwarding"
+
+- name: Enable and start firewalld
+  ansible.builtin.service:
+    name: firewalld
+    state: started
+    enabled: true
+
+- name: Allow the FreeIPA ports from the LAN
+  ansible.posix.firewalld:
+    rich_rule: >-
+      rule family="ipv4" source address="{{ ipa_host_lan_cidr }}"
+      port port="{{ item.port }}" protocol="{{ item.proto }}" accept
+    permanent: true
+    immediate: true
+    state: enabled
+  loop: "{{ ipa_host_firewall_ports }}"
+  loop_control:
+    label: "{{ item.port }}/{{ item.proto }}"
+
+- name: Verify the FQDN resolves to the guest address
+  ansible.builtin.command:
+    cmd: "getent hosts {{ ipa_host_fqdn }}"
+  register: ipa_host_fqdn_lookup
+  changed_when: false
+  failed_when: ipa_host_ip not in ipa_host_fqdn_lookup.stdout
