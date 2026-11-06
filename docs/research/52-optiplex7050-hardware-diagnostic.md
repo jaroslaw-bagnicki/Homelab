@@ -42,7 +42,7 @@ The 7050 replaces the "OptiPlex 7040 Micro, i5-6500T" that [research 47 §2](47-
 | Serial / asset tag | `3CLD6Q2` / **`80006161`** — an asset tag is set, i.e. a decommissioned corporate unit (lease return), not consumer stock |
 | SKU | `07A1` |
 | Board | "055H3G", Dell Inc., A01, SN `/3CLD6Q2/CNPE1008560B1R/` |
-| BIOS | Dell Inc. **1.27.0**, released **2023-09-18** — check whether a later build exists before installing |
+| BIOS | Dell Inc. **1.27.0** — SMBIOS build date **2023-09-18**, published by Dell **2023-11-15**; that is the **current release**, so there is nothing to flash ([gate item 4](#pre-install-gate--do-these-before-the-proxmox-installer-runs)) |
 | CPU | Intel **Core i5-7500** (Kaby Lake, 4C/4T), 3.4 GHz base / 3.8 GHz turbo, 6 MB L3, **65 W TDP**, HWCAPS **x86-64-V3** |
 | RAM | **8 GB** — 1× 8 GiB DDR4 SO-DIMM `KMKYF9-MIH`, rated/configured **2400 MT/s**, **DIMM 2 free** |
 | Storage | **M.2 2280 SATA SSD** — SK hynix SC311 SATA 128GB, enumerated as `sda` on the AHCI controller (`00:17.0`); **119.2 GiB, unpartitioned**, **11 134 POH**, **~97 % endurance remaining** ([SMART](#the-module-is-sound-and-it-is-empty-smart-2026-11-06)) |
@@ -282,10 +282,9 @@ Dell KB [000199831 — Unable to access the MEBx vPro menu using the F12 boot me
 - **Its own illustration shows the AMT page in a `FW Status Recovery Error` state** — the condition in which AMT cannot be enabled from BIOS at all, whatever the password or capability setting says. That state is not observable from these menus.
 - **The password only unlocks the hotkey.** It proves nothing about whether the ME runs an AMT-capable image.
 
-So for this platform only two causes remain, and neither is a menu item: the **Ctrl+P window being missed** (Fastboot, POST time, keyboard init) or the **ME firmware not presenting MEBx**. Two BIOS details argue that AMT *is* present: `Manageability → USB Provision` is enabled and describes provisioning **Intel AMT** from a USB device, which a non-AMT image would have no use for.
-- **The password is only an enabler for the hotkey**, not evidence that an AMT-capable ME image is present. Setting it proves nothing about the firmware.
+So for this platform only two causes remain, and neither is a menu item: the **Ctrl+P window being missed** (Fastboot, POST time, keyboard init) or the **ME firmware not presenting MEBx**. Two BIOS details argue that AMT *is* present: `Manageability → USB Provision` is enabled and describes provisioning **Intel AMT** from a USB device, which a non-AMT image would have no use for — and the admin password only unlocks the hotkey, so it proves nothing about the firmware.
 
-So the remaining causes are narrower than the original list: either the BIOS has **no AMT capability page** (the ME image is not an AMT build), the **ME firmware is in an error/recovery state**, or **Device Configuration Hotkey Access** is off. The ME-level check below — not another BIOS walk — is what separates them.
+The remaining causes are therefore narrower than the original list: the **ME image is not an AMT build**, the **ME configuration is in a state that withholds MEBx** (never provisioned, or left soft-disabled by the previous owner), or **the hotkey window is being missed**. `Device Configuration Hotkey Access` is *not* on that list — this BIOS generation does not have the item. The ME-level check below, not another BIOS walk, is what separates them.
 
 ### The gate Dell names: OROM Keyboard Access — ruled out
 
