@@ -37,8 +37,9 @@ with a QDevice on `edge`.**
 
 ### `pve2` build
 
-- **Proxmox VE 9.x, the same branch and point release as `pve1`** (currently 9.2.2) — a later cluster
-  join requires matching versions.
+- **Proxmox VE 9.x, the same branch and point release as `pve1`** — a later cluster join requires
+  matching versions. Match whatever `pveversion -v` reports on `pve1` at install time; do not copy a
+  point release from this document.
 - **`ext4` + LVM-thin** on the healthy 128 GB M.2 SATA module. No ZFS now; the free 2.5″ bay is the
   later pool. A larger NVMe is a capacity upgrade, not a wear fix.
 - **Remote power is AC Recovery `Power On` + Wake-on-LAN `LAN Only`** — vPro/AMT is treated as absent.

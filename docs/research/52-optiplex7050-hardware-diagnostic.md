@@ -359,7 +359,7 @@ Six items that are either **impossible to recover afterwards** or that **change 
 **Install-time decisions**, recorded now so the installer is not a guess:
 
 - **Storage layout: `ext4` + LVM-thin, not ZFS** — 8 GB of RAM and a single 119 GiB module with **~97 % of its endurance left** ([SMART](#the-module-is-sound-and-it-is-empty-smart-2026-11-06)). A larger NVMe disk is a comfort upgrade, not a prerequisite; the 2.5″ bay stays free for the ZFS pool the node can hold later, per [idea 15](../ideas/15-second-proxmox-node.md) step 7.
-- **Proxmox VE 9.x — the same branch as `pve1` (currently 9.2.2)** — a later cluster join needs matching versions (*"All nodes should have the same version"* in the [Cluster Manager requirements](https://pve.proxmox.com/pve-docs/chapter-pvecm.html)), so no 8.x and no snapshot ISO; align both nodes to the same point release before the cluster exists.
+- **Proxmox VE 9.x — the same branch as `pve1`** — a later cluster join needs matching versions (*"All nodes should have the same version"* in the [Cluster Manager requirements](https://pve.proxmox.com/pve-docs/chapter-pvecm.html)), so no 8.x and no snapshot ISO; align both nodes to the same point release before the cluster exists. Match whatever `pveversion -v` reports on `pve1` at install time.
 - **Hostname `pve2`**, **static `192.168.2.202`** on `enp0s31f6` — record the MAC first for the DHCP reservation and for Wake-on-LAN.
 - **Watch POST for `Unknown AC power adapter`** — if it appears, stop and resolve the brick before building anything.
 

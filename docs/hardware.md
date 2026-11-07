@@ -86,8 +86,8 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Virtualisation | VT-x ✅ **in use** (VM 210 + LXCs 211/212/214/215, `kvm_intel` loaded) · **VT-d supported** by the J4105 ([Intel ARK](https://www.intel.com/content/www/us/en/products/sku/128989/intel-celeron-j4105-processor-4m-cache-up-to-2-50-ghz/specifications.html)) — but **IOMMU/DMAR not yet confirmed on this board**, so PCIe passthrough is unproven; neither the TPM nor the Zigbee USB passthrough needs it |
 | TPM | **Intel PTT** firmware TPM 2.0 — `/dev/tpm0`, `/dev/tpmrm0` (measured 2026-10-04, [research 37 §5](research/37-tpm2-hardware-and-fleet.md)) · passed into LXC 215, which seals the CA's intermediate key to it |
 | Zigbee | Sonoff ZBDongle-P (CC2652P) · USB coordinator for LXC 212 |
-| OS | Proxmox VE 9.2.2 installed at `192.168.2.201` · base provisioned ([runbook 28](runbooks/28-pve1-proxmox-node.md)) |
-| Role | Fleet virtualisation host (Proxmox VE) · hosts LXC 215 `ca`, the fleet trust anchor ([ADR 38](decisions/38-private-ca-hierarchy-and-custody.md)), and VM 216 `ipa`, the Fedora 45 FreeIPA domain ([ADR 43](decisions/43-freeipa-domain-realm.md)) |
+| OS | Proxmox VE **9.2.26** installed at `192.168.2.201` · base provisioned ([runbook 28](runbooks/28-pve1-proxmox-node.md)) |
+| Role | Fleet virtualisation host (Proxmox VE) · hosts LXC 214 `vtstack` (VictoriaLogs) and LXC 215 `ca`, the fleet trust anchor ([ADR 38](decisions/38-private-ca-hierarchy-and-custody.md)) |
 | Docs | [idea 05](ideas/05-home-assistant-thin-client.md) · [ADR 25](decisions/25-home-assistant-thin-client.md) · [research 26](research/26-home-assistant-thin-client.md) · [research 29](research/29-wyse5070-hardware-diagnostic.md) · [runbook 28](runbooks/28-pve1-proxmox-node.md) |
 
 ### pve2 — Dell OptiPlex 7050 MFF (planned)

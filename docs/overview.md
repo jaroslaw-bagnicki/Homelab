@@ -14,7 +14,7 @@ hardware detail see [Hardware Inventory](hardware.md); for change history see
 | **OMV NAS** | emergency NAS — powered-off cold standby (OMV retained as the fallback) | HP ProLiant ML110 G5 · OMV 8.3 | `omv` | `192.168.2.210` → re-address to `20x` before next boot ([ADR 31](decisions/31-static-address-scheme.md)) | 💤 |
 | **Beetle NAS** | backup target (successor to ML110) | Wincor Beetle M-III · OMV 8.5 | `nas` | `192.168.2.209` | 🔨 |
 | **Edge Ingress** | LAN DNS + reverse proxy (public ingress held) | Dell Wyse 3040 · Debian 13 minimal | `edge` | `192.168.2.240` | ✅ |
-| **Proxmox VE** | virtualisation host — smart-home + always-on services | Dell Wyse 5070 | `pve1` | `192.168.2.201` · guests `.210`–`.212`, `.214`–`.216` | ✅ |
+| **Proxmox VE** | virtualisation host — smart-home + always-on services | Dell Wyse 5070 · Proxmox VE 9.2.26 | `pve1` | `192.168.2.201` · guests `.214`–`.215` | ✅ |
 | **Proxmox VE (second node)** | second virtualisation host — capacity now, two-node cluster next | Dell OptiPlex 7050 MFF · Proxmox VE 9.x (planned) | `pve2` | `192.168.2.202` (reserved) | 📋 |
 | **LLM server** | local LLM inference | Minisforum X1 Lite | — | TBD | 🧠 |
 | **Cloudlab VPS** | staging for Lab (Ansible + Docker/k3s workloads) | Contabo VPS 10 · Ubuntu 24.04 | `cloudlab` | `173.249.27.13` | ✅ |
@@ -29,9 +29,9 @@ hardware detail see [Hardware Inventory](hardware.md); for change history see
 | LXC 213 | NUT server — retired, moved host-native to `pve1` | `nut` | `.213` | 🪦 |
 | LXC 214 | VictoriaLogs log store | `vtstack` | `.214` | ✅ |
 | LXC 215 | Private CA (`step-ca`) | `ca` | `.215` | ✅ |
-| VM 216 | FreeIPA Linux domain (Fedora 45) | `ipa` | `.216` | 🔨 |
+| VM 216 | FreeIPA Linux domain (Fedora 45) — **removed 2026-11-07**, config absent from `pve1` | `ipa` | `.216` | 🪦 |
 
-The NUT server now runs **host-native on `pve1`** ([ADR 39](decisions/39-nut-host-native.md)); LXC 213 is retired and `.213` is free. `pve2` has no guests yet; its guest block is `25x` (`.250–.254`), and it joins `pve1` in the `homelab` cluster with a QDevice on `edge` ([ADR 47](decisions/47-second-proxmox-node-cluster-qdevice.md)).
+The NUT server now runs **host-native on `pve1`** ([ADR 39](decisions/39-nut-host-native.md)); LXC 213 is retired and `.213` is free. **VM 216 `ipa` was removed on 2026-11-07** — no config remained in `/etc/pve/qemu-server/` and `.216` was unreachable; the FreeIPA workstream ([#164](https://github.com/jaroslaw-bagnicki/Homelab/issues/164)) needs a rebuild. `pve2` has no guests yet; its guest block is `25x` (`.250–.254`), and it joins `pve1` in the `homelab` cluster with a QDevice on `edge` ([ADR 47](decisions/47-second-proxmox-node-cluster-qdevice.md)).
 
 Addresses follow the static scheme ([ADR 31](decisions/31-static-address-scheme.md)); node hostnames name the host role ([ADR 33](decisions/33-fleet-node-hostnames.md)); the workload platform is migrating to k3s ([ADR 22](decisions/22-k3s-arc-homelab.md)).
 
@@ -87,7 +87,7 @@ once it is ready to start — a row leaves the table with the PR that completes 
 |---|---|---|---|
 | **Beetle NAS** | ⭐⭐⭐ | **Phase 1 done** — OMV 8.5 on `nas`, `md0` RAID1 clean + reboot-verified (a failed member was replaced 2026-10-17, [runbook 38](runbooks/38-nas-disk-replacement.md)), fleet-enrolled with the Netdata child and NUT secondary; next: create the share and move the backup target — the ML110 is **kept powered off as the OMV emergency NAS** instead of being retired, so `.210` stays reserved ([idea 17](ideas/17-truenas-vs-omv-nas-os.md)); Memtest86+ and the RTC coin cell stay deferred — [research 32](research/32-wincor-beetle-m3-hardware-diagnostic.md)) | [#98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98) · [ADR 29](decisions/29-nas-backup-target-beetle-m3-omv.md) · [runbook 32](runbooks/32-beetle-m3-omv-setup.md) |
 | **Home Assistant VM + LXCs** | ⭐⭐⭐ | VM 210 (HA OS) + LXC 211/212 (Mosquitto, Zigbee2MQTT) on the `pve1` node (the base from runbook 28), then point HA's NUT integration at `192.168.2.201` for UPS status + power-loss notifications | [#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68) · [#85](https://github.com/jaroslaw-bagnicki/Homelab/issues/85) · [ADR 25](decisions/25-home-assistant-thin-client.md) · [#122](https://github.com/jaroslaw-bagnicki/Homelab/issues/122) |
-| **Second Proxmox node + cluster** | ⭐⭐ | Rename `pve` → `pve1`, move the NAS to `.209`, install `pve2` at `.202`, then form the two-node cluster and add the QDevice on `edge` ([runbook 42](runbooks/42-pve2-proxmox-node.md) / [runbook 43](runbooks/43-proxmox-cluster-qdevice.md)) | [#177](https://github.com/jaroslaw-bagnicki/Homelab/issues/177) · [ADR 47](decisions/47-second-proxmox-node-cluster-qdevice.md) |
+| **Second Proxmox node + cluster** | ⭐⭐ | **Stage 0–2 done** — NAS moved to `.209`, `pve1` upgraded to 9.2.26 and renamed from `pve`; next: install `pve2` at `.202` ([runbook 42](runbooks/42-pve2-proxmox-node.md)), then form the two-node cluster and add the QDevice on `edge` ([runbook 43](runbooks/43-proxmox-cluster-qdevice.md)) | [#177](https://github.com/jaroslaw-bagnicki/Homelab/issues/177) · [ADR 47](decisions/47-second-proxmox-node-cluster-qdevice.md) |
 | **FreeIPA M1 — server on `pve1`** | ⭐⭐⭐ | VM 216 `ipa` (Fedora 45): `ipa.internal`/`IPA.INTERNAL`, Technitium A/PTR/SRV, external-ca under the fleet root, `admin` + test user; next: M2 backup/restore before the first client | [#164](https://github.com/jaroslaw-bagnicki/Homelab/issues/164) · [ADR 43](decisions/43-freeipa-domain-realm.md) · [runbook 41](runbooks/41-deploy-freeipa-server.md) |
 
 
