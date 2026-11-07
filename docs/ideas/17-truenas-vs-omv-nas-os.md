@@ -44,10 +44,13 @@ Keep the box and the collision becomes permanent, so the standby must move into 
 (`.203`–`.208`) before its next boot — ideally at the console with the NIC unplugged, so the first boot after
 the change cannot land on top of the HA VM.
 
-The standby protects the **OS and the service**, not the data: converting `md0` to ZFS is destructive, so the
-data rollback for the migration window is restic from [ADR 02](../decisions/02-backup-strategy-restic-blob.md)
-(Azure Blob) — *unless* the Beetle's working set fits in the ML110's 1 TB `md0`, in which case a pre-cutover
-copy promotes the standby into a genuine data rollback. Whether it does is an open question below.
+The standby protects the **OS and the service**, not the data. Converting `md0` to ZFS is destructive, and
+[ADR 02](../decisions/02-backup-strategy-restic-blob.md)'s restic repository does **not** cover the Beetle: it
+backs up the `lab` host's SSD, and Longhorn persistent volumes are explicitly deferred to Velero. So the
+default rollback for the migration window is **OS/service recovery only** — boot the standby, restore the OMV
+install, re-point consumers. A genuine *data* rollback needs a **separately staged and verified copy** of the
+Beetle working set. The ML110's `md0` is a RAID1 of 2× 500 GB, so it offers **~500 GB usable**, not 1 TB;
+whether the working set fits in that is an open question below.
 
 The important framing: **this idea is not a bug report.** The driver is *experience*, so the success
 criterion is not "is TrueNAS better?" — it is "what does the lab gain in skill, and what does it lose in
@@ -78,7 +81,7 @@ appliance contract, not the OS family.
 | **Checksums + scrub + self-heal** on the mirror | ✅ Real — but only the *silent* corruption class. The monthly mdadm scrub already caught a failing member (`WDEPBVR3`, 2026-10-11), so failure *detection* is not the gap |
 | **Snapshots on the Longhorn NFS path** | ✅ **Strongest single argument** — raw volume images have no other integrity or rollback layer; restic blobs already self-verify with `restic check --read-data` |
 | **Replication (`send`/`recv`)** | ✅ Enables a real second copy later — into `pve2`'s future `zfspool`, or a USB target elsewhere |
-| **NFSv4 `krb5p` + encrypted SMB out of the box** | ✅ [ADR 34](../decisions/34-lan-tls-only.md) compliance becomes a toggle, not a plugin hunt |
+| **NFSv4 `krb5p` + Kerberos SMB** | ✅ [ADR 34](../decisions/34-lan-tls-only.md) compliance becomes a supported product feature rather than a plugin hunt — but **not a toggle**: it still needs a directory service, a Kerberos realm and keytabs configured (the [ADR 43](../decisions/43-freeipa-domain-realm.md) FreeIPA realm), so the gain is *support*, not zero setup |
 | **LDAP/AD join and keytab SMB auth** | ✅ Closes exactly the "OMV user database" wall found in [research 44](../research/44-omv-identity-integration.md) — relevant to [ADR 43](../decisions/43-freeipa-domain-realm.md) |
 | **SMART / alerting / reporting UI** | ⚠️ Nicer, not additive — Netdata already covers the fleet |
 | **Apps (Docker) and VMs (Incus)** | ❌ Irrelevant here — 2C/2T / 8 GB, and `pve1`/`pve2` are the compute hosts. Do not run apps on the NAS |
@@ -96,13 +99,16 @@ appliance contract, not the OS family.
 - **Hardware sits at the floor.** 8 GB is TrueNAS's documented minimum (up to eight drives); **16 GB is the
   practical target**. The free slot makes that ~€20, so it is a cost, not a blocker. The G4400 is fine for a
   pure file server and would not be if anything else landed on it.
-- **Resilver on this media is not a selling point.** The last mdadm resync took **six days**
-  (2026-10-11 → 17, [runbook 38](../runbooks/38-nas-disk-replacement.md)); a ZFS resilver is *more*
-  random-access intensive, so "ZFS heals a degraded mirror faster" is not true on 2× 2.5″ drives. No ECC
-  either way, so that comparison is a wash.
-- **No in-place conversion.** mdadm + XFS cannot become a ZFS pool. The array is destroyed and restored from
-  [ADR 02](../decisions/02-backup-strategy-restic-blob.md) backups or staged elsewhere first — which also
-  means the *restore path gets exercised*, a genuine side benefit.
+- **Resilver on this media is not a selling point.** The last mdadm resync took **~2 h 16 m** at ~120 MB/s
+  (`finish=135.6min`, 2026-10-17, [runbook 38](../runbooks/38-nas-disk-replacement.md)) — the *six-day*
+  2026-10-11 → 17 window was the whole failed-member replacement (self-test, `badblocks -w`, then resync), not
+  the resync itself. A ZFS resilver is *more* random-access intensive than mdadm's sequential rebuild, so
+  "ZFS heals a degraded mirror faster" is not true on 2× 2.5″ drives. No ECC either way, so that comparison is
+  a wash.
+- **No in-place conversion.** mdadm + XFS cannot become a ZFS pool. The array is destroyed and its contents
+  restored from a **separately staged copy** — [ADR 02](../decisions/02-backup-strategy-restic-blob.md)'s
+  restic repo does not hold the Beetle's data — which also means the *restore path gets exercised*, a genuine
+  side benefit.
 - **Documentation churn.** Supersedes ADR 29, rewrites [runbook 32](../runbooks/32-beetle-m3-omv-setup.md) and
   [runbook 38](../runbooks/38-nas-disk-replacement.md), plus the Caddy `omv.internal` site, state docs and
   role exclusions.
@@ -124,21 +130,29 @@ survivable.
 ## Cutover shape (option C)
 
 1. **Measure, then decide the rollback.** What is actually on `md0` — datasets, the restic repo, Longhorn
-   snapshot usage — and does it fit in the ML110's 1 TB `md0`? That single number decides whether the standby
-   is a data rollback or only an OS/service rollback.
-2. **Verify the backup before destroying anything.** A fresh `restic check --read-data` against
-   [ADR 02](../decisions/02-backup-strategy-restic-blob.md)'s Azure Blob repo. An unverified backup is not a
-   rollback.
+   snapshot usage — and does it fit in the ML110's **~500 GB usable** `md0` (RAID1 of 2× 500 GB)? That single
+   number decides whether the standby is a data rollback or only an OS/service rollback.
+2. **Verify the rollback before destroying anything.** Whatever step 1 chose — a staged copy of the Beetle
+   working set, or OS/service recovery only — prove it *before* the pool is destroyed. A fresh
+   `restic check --read-data` against [ADR 02](../decisions/02-backup-strategy-restic-blob.md)'s Azure Blob
+   repo verifies the *other* integrity layer (the `lab` host), **not** the NAS rollback. An unverified backup
+   is not a rollback.
 3. **Buy the RAM.** One 8 GB DDR4 SODIMM → 16 GB, before the appliance is judged.
 4. **Rehearse (A2)** — the TrueNAS installer, a mirror pool, the dataset/share/ACL screens, an NFS export and
    an SMB share, on a VM or a spare disk, so nothing is being learned for the first time during an outage.
 5. **Cut over.** TrueNAS onto the SanDisk SSD; `md0` re-pooled as a ZFS mirror. **Rollback stops here**: after
-   the pool conversion the way back is a restore from step 2, not a reboot of the old install.
+   the pool conversion the way back is the staged copy from step 1 (or a restore of the OMV install for
+   OS/service only), not a reboot of the old install.
 6. **Re-point consumers** — the Longhorn NFS export, the restic SMB landing, the `omv.internal` Caddy site
    (rename or re-TLS it), `nas.internal` and `.209` unchanged.
-7. **Make the automation exception explicit** — remove or replace the `nas` Netdata child and Fluent Bit in the
-   playbooks and amend [ADR 27](../decisions/27-monitoring-strategy.md)/[36](../decisions/36-log-collector-fluentbit.md)
-   with a documented exception; keep the native NUT UPS service.
+7. **Make the automation exception explicit** — `playbook-nas.yml` applies `common`, `ca_trust`, `security`,
+   `nut_client`, `netdata` and `fluentbit`, and the first four install Debian packages and manage
+   systemd/UFW/`fleetadm`. Removing only the two collectors does **not** make the host safe to run through the
+   existing playbook, so the exception must cover the **whole playbook**: either exclude `nas` from it entirely
+   and define a supported TrueNAS-specific path, or document a per-role exclusion including the NUT client mode
+   (TrueNAS ships a native UPS service, so [ADR 39](../decisions/39-nut-host-native.md) is unaffected). Amend
+   [ADR 27](../decisions/27-monitoring-strategy.md)/[36](../decisions/36-log-collector-fluentbit.md) with the
+   documented exception.
 8. **Record it** — a superseding ADR (TrueNAS on the Beetle, ML110 retained as standby) plus a rewritten
    [runbook 32](../runbooks/32-beetle-m3-omv-setup.md); do not edit ADR 29 into a different decision.
 
@@ -149,9 +163,9 @@ survivable.
   the third and the second, and gives ZFS with the most ceremony.
 - **Would the lab rather have ZFS on `pve2`** (where [ADR 47](../decisions/47-second-proxmox-node-cluster-qdevice.md)
   already wants a `zfspool`) than on the NAS? ZFS replication between them then becomes a second backup copy.
-- **What does the standby hold** — just the intact OMV install (OS/service rollback), or a copy of the NAS
-  working set on `md0` (a real data rollback for the migration window, if it fits in 1 TB)? This decides how
-  long the cutover window can safely be.
+- **What does the standby hold** — just the intact OMV install (OS/service rollback), or a separately staged
+  copy of the NAS working set on `md0` (a real data rollback for the migration window, if it fits in the
+  **~500 GB usable** RAID1)? This decides how long the cutover window can safely be.
 - **How is the standby kept honest** — a box that is never booted is a rumour of a backup. What is the
   periodic test (boot, mount, serve one file, power off), and is it acceptable that it appears in neither
   Netdata nor the Fleet inventory while off?

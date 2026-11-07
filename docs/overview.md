@@ -4,14 +4,14 @@ High-level view of the current homelab: nodes and workloads. For the full per-no
 hardware detail see [Hardware Inventory](hardware.md); for change history see
 [CHANGELOG](../CHANGELOG.md); for step-by-step setup see the [Runbooks](runbooks/README.md).
 
-**Status legend**: ✅ running · 🔨 in progress · 📋 planned · 🧠 idea · 🪦 retired
+**Status legend**: ✅ running · 🔨 in progress · 📋 planned · 🧠 idea · 💤 standby (retained, powered off) · 🪦 retired
 
 ## Nodes
 
 | Node | Role | Hardware / OS | Hostname | IP | Status |
 |---|---|---|---|---|---|
 | **Lab** | main workload host (Docker → k3s) | Lenovo M910q Tiny · Ubuntu 24.04 LTS · Azure Arc | `lab` | `192.168.2.200` | 🔨 |
-| **OMV NAS** | emergency NAS — powered-off cold standby (OMV retained as the fallback) | HP ProLiant ML110 G5 · OMV 8.3 | `omv` | `192.168.2.210` → re-address to `20x` before next boot ([ADR 31](decisions/31-static-address-scheme.md)) | 🪦 |
+| **OMV NAS** | emergency NAS — powered-off cold standby (OMV retained as the fallback) | HP ProLiant ML110 G5 · OMV 8.3 | `omv` | `192.168.2.210` → re-address to `20x` before next boot ([ADR 31](decisions/31-static-address-scheme.md)) | 💤 |
 | **Beetle NAS** | backup target (successor to ML110) | Wincor Beetle M-III · OMV 8.5 | `nas` | `192.168.2.209` | 🔨 |
 | **Edge Ingress** | LAN DNS + reverse proxy (public ingress held) | Dell Wyse 3040 · Debian 13 minimal | `edge` | `192.168.2.240` | ✅ |
 | **Proxmox VE** | virtualisation host — smart-home + always-on services | Dell Wyse 5070 | `pve1` | `192.168.2.201` · guests `.210`–`.212`, `.214`–`.216` | ✅ |
@@ -46,7 +46,7 @@ Current state — what's running or in progress. Planned work is under [What's N
 | **cloudflared** | `cloudlab` | Cloudflare Tunnel public HTTPS | [ADR 19](decisions/19-cloudflare-tunnel-http-origin.md) · [runbook 16](runbooks/16-docker-services-ansible-role.md) | ✅ |
 | **OpenCode instances** (`homelab`, `prospera`) | `cloudlab` | per-project agentic dev servers | [ADR 17](decisions/17-adopt-opencode.md) · [runbook 17](runbooks/17-deploy-opencode-on-cloudlab.md) | ✅ |
 | **Zot** | `cloudlab` | self-hosted OCI registry + pull-through cache | [runbook 20](runbooks/20-deploy-zot.md) | ✅ |
-| **OpenMediaVault** | `omv` | network shares (SMB) + backup target — retained powered off as the emergency NAS ([idea 17](ideas/17-truenas-vs-omv-nas-os.md)) | [ADR 23](decisions/23-nas-on-ml110.md) | 🪦 |
+| **OpenMediaVault** | `omv` | network shares (SMB) + backup target — retained powered off as the emergency NAS ([idea 17](ideas/17-truenas-vs-omv-nas-os.md)) | [ADR 23](decisions/23-nas-on-ml110.md) | 💤 |
 | **Netdata Parent** | `pve1` | Tier B central monitoring pane | [ADR 27](decisions/27-monitoring-strategy.md) · [runbook 31](runbooks/31-deploy-netdata.md) | ✅ |
 | **UPS + NUT** | `pve1` (host-native NUT server) + `pve2`/`lab`/`edge`/`nas` clients | shared-rail power protection | [ADR 39](decisions/39-nut-host-native.md) · [runbook 29](runbooks/29-nut-ups-shutdown.md) · [runbook 30](runbooks/30-deploy-nut-clients.md) | ✅ |
 | **VictoriaLogs** | `pve1` (LXC 214 `vtstack`) | Tier B log store | [ADR 35](decisions/35-log-store-victorialogs.md) · [runbook 33](runbooks/33-deploy-victorialogs.md) | ✅ |
