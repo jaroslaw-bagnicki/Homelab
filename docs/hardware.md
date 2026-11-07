@@ -107,7 +107,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Management | ⚠️ **AMT/vPro unreachable — treat as absent**: the platform qualifies (i5-7500 + Q270 + I219-LM, `USB Provision` present) and every BIOS gate for MEBx is satisfied (`OROM Keyboard Access` on, `MEBx Hotkey` on, admin password set), yet CTRL+P and F12 show nothing; CSME **11.8.94.4494** is alive, so the open question is whether that image is an AMT build (`mei-amt-version` still to run). Remote power therefore rests on **AC Recovery `Power On` + Wake-on-LAN `LAN Only`** — no remote console |
 | Virtualisation | VT-x ✅ · **VT-d ✅** · TXT off — firmware ready for Proxmox |
 | Wireless | Intel 8265 WLAN + Bluetooth, **both disabled in BIOS** — unused on a hypervisor |
-| Role | Second virtualisation host — `homelab` cluster member with `pve1`, QDevice on `edge`; guest block `25x` (`.250`–`.254`); ZFS replication/HA later ([ADR 47](decisions/47-second-proxmox-node-cluster-qdevice.md)) |
+| Role | Second virtualisation host — `homelab` cluster member with `pve1`, QDevice on `edge`; guest block `25x` (`.250`–`.254`), VM 250 `ipa` planned; ZFS replication/HA later ([ADR 47](decisions/47-second-proxmox-node-cluster-qdevice.md)) |
 | Docs | [idea 15](ideas/15-second-proxmox-node.md) · [research 47](research/47-second-proxmox-node.md) · [research 52](research/52-optiplex7050-hardware-diagnostic.md) · [runbook 42](runbooks/42-pve2-proxmox-node.md) · [runbook 43](runbooks/43-proxmox-cluster-qdevice.md) · [ADR 47](decisions/47-second-proxmox-node-cluster-qdevice.md) · [#177](https://github.com/jaroslaw-bagnicki/Homelab/issues/177) |
 
 ### OPNsense Router — Fujitsu Futro S930 (planned)

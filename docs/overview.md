@@ -19,7 +19,7 @@ hardware detail see [Hardware Inventory](hardware.md); for change history see
 | **LLM server** | local LLM inference | Minisforum X1 Lite | — | TBD | 🧠 |
 | **Cloudlab VPS** | staging for Lab (Ansible + Docker/k3s workloads) | Contabo VPS 10 · Ubuntu 24.04 | `cloudlab` | `173.249.27.13` | ✅ |
 
-### Guests on the Proxmox VE node
+### Guests on the `pve1` node
 
 | Guest | Workload | Hostname | Address | Status |
 |---|---|---|---|---|
@@ -31,7 +31,13 @@ hardware detail see [Hardware Inventory](hardware.md); for change history see
 | LXC 215 | Private CA (`step-ca`) | `ca` | `.215` | ✅ |
 | VM 216 | FreeIPA Linux domain (Fedora 45) — **removed 2026-11-07**, config absent from `pve1` | `ipa` | `.216` | 🪦 |
 
-The NUT server now runs **host-native on `pve1`** ([ADR 39](decisions/39-nut-host-native.md)); LXC 213 is retired and `.213` is free. **VM 216 `ipa` was removed on 2026-11-07** — no config remained in `/etc/pve/qemu-server/` and `.216` was unreachable; the FreeIPA workstream ([#164](https://github.com/jaroslaw-bagnicki/Homelab/issues/164)) needs a rebuild. `pve2` has no guests yet; its guest block is `25x` (`.250–.254`). `pve1` and `pve2` form the two-node **`homelab`** cluster with a QDevice on `edge` ([ADR 47](decisions/47-second-proxmox-node-cluster-qdevice.md)).
+### Guests on the `pve2` node
+
+| Guest | Workload | Hostname | Address | Status |
+|---|---|---|---|---|
+| VM 250 | FreeIPA Linux domain (Fedora 45) — moved here from `pve1` ([ADR 43](decisions/43-freeipa-domain-realm.md) amendment) | `ipa` | `.250` | 📋 |
+
+The NUT server now runs **host-native on `pve1`** ([ADR 39](decisions/39-nut-host-native.md)); LXC 213 is retired and `.213` is free. **VM 216 `ipa` was removed on 2026-11-07** — no config remained in `/etc/pve/qemu-server/` and `.216` was unreachable, so the FreeIPA workstream ([#164](https://github.com/jaroslaw-bagnicki/Homelab/issues/164)) rebuilds it as **VM 250 on `pve2`** ([ADR 43](decisions/43-freeipa-domain-realm.md) amendment): `pve1`'s memory cannot carry the domain beside the Home Assistant guests, which are pinned there by the Zigbee coordinator. `pve2`'s guest block is `25x` (`.250–.254`). `pve1` and `pve2` form the two-node **`homelab`** cluster with a QDevice on `edge` ([ADR 47](decisions/47-second-proxmox-node-cluster-qdevice.md)).
 
 Addresses follow the static scheme ([ADR 31](decisions/31-static-address-scheme.md)); node hostnames name the host role ([ADR 33](decisions/33-fleet-node-hostnames.md)); the workload platform is migrating to k3s ([ADR 22](decisions/22-k3s-arc-homelab.md)).
 
@@ -51,7 +57,7 @@ Current state — what's running or in progress. Planned work is under [What's N
 | **UPS + NUT** | `pve1` (host-native NUT server) + `pve2`/`lab`/`edge`/`nas` clients | shared-rail power protection | [ADR 39](decisions/39-nut-host-native.md) · [runbook 29](runbooks/29-nut-ups-shutdown.md) · [runbook 30](runbooks/30-deploy-nut-clients.md) | ✅ |
 | **VictoriaLogs** | `pve1` (LXC 214 `vtstack`) | Tier B log store | [ADR 35](decisions/35-log-store-victorialogs.md) · [runbook 33](runbooks/33-deploy-victorialogs.md) | ✅ |
 | **Private CA** (`step-ca`) | `pve1` (LXC 215 `ca`) | fleet trust anchor — ACME issuance, intermediate sealed in the `pve1` TPM | [ADR 38](decisions/38-private-ca-hierarchy-and-custody.md) · [runbook 35](runbooks/35-deploy-step-ca.md) | ✅ |
-| **FreeIPA** | `pve1` (VM 216 `ipa` — **removed 2026-11-07**, rebuild pending) | Linux domain — Kerberos, LDAP, HBAC, central `sudo`; Dogtag issues only IPA's own certificates | [ADR 43](decisions/43-freeipa-domain-realm.md) · [runbook 41](runbooks/41-deploy-freeipa-server.md) | 🔨 |
+| **FreeIPA** | `pve2` (VM 250 `ipa` — rebuild pending after VM 216 was removed 2026-11-07) | Linux domain — Kerberos, LDAP, HBAC, central `sudo`; Dogtag issues only IPA's own certificates | [ADR 43](decisions/43-freeipa-domain-realm.md) · [runbook 41](runbooks/41-deploy-freeipa-server.md) | 🔨 |
 | **Fluent Bit** | every LAN node (`pve1`, `pve2`, `edge`, `lab`, `nas`, `vtstack`) | Tier B log collector — ships journald + Docker logs to VictoriaLogs | [ADR 36](decisions/36-log-collector-fluentbit.md) · [runbook 34](runbooks/34-deploy-fluentbit.md) | ✅ |
 | **Internal access stack** (Technitium DNS + Caddy) | `edge` | authoritative `internal.` DNS + LAN reverse proxy with short-lived `step-ca` leaves | [ADR 40](decisions/40-internal-dns-proxy-edge.md) · [runbook 37](runbooks/37-deploy-internal-access-stack.md) | ✅ |
 | **Corosync QDevice** (`corosync-qnetd`) | `edge` | third vote for the two-node `homelab` cluster — TCP 5403 from `pve1`/`pve2` only | [ADR 47](decisions/47-second-proxmox-node-cluster-qdevice.md) · [runbook 43](runbooks/43-proxmox-cluster-qdevice.md) | ✅ |
@@ -88,7 +94,7 @@ once it is ready to start — a row leaves the table with the PR that completes 
 |---|---|---|---|
 | **Beetle NAS** | ⭐⭐⭐ | **Phase 1 done** — OMV 8.5 on `nas`, `md0` RAID1 clean + reboot-verified (a failed member was replaced 2026-10-17, [runbook 38](runbooks/38-nas-disk-replacement.md)), fleet-enrolled with the Netdata child and NUT secondary; next: create the share and move the backup target — the ML110 is **kept powered off as the OMV emergency NAS** instead of being retired, so `.210` stays reserved ([idea 17](ideas/17-truenas-vs-omv-nas-os.md)); Memtest86+ and the RTC coin cell stay deferred — [research 32](research/32-wincor-beetle-m3-hardware-diagnostic.md)) | [#98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98) · [ADR 29](decisions/29-nas-backup-target-beetle-m3-omv.md) · [runbook 32](runbooks/32-beetle-m3-omv-setup.md) |
 | **Home Assistant VM + LXCs** | ⭐⭐⭐ | VM 210 (HA OS) + LXC 211/212 (Mosquitto, Zigbee2MQTT) on the `pve1` node (the base from runbook 28), then point HA's NUT integration at `192.168.2.201` for UPS status + power-loss notifications | [#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68) · [#85](https://github.com/jaroslaw-bagnicki/Homelab/issues/85) · [ADR 25](decisions/25-home-assistant-thin-client.md) · [#122](https://github.com/jaroslaw-bagnicki/Homelab/issues/122) |
-| **FreeIPA M1 — server on `pve1`** | ⭐⭐⭐ | **VM 216 was removed 2026-11-07** — no config remained in `/etc/pve/qemu-server/` and `.216` was unreachable, so M1 restarts from a fresh VM: `ipa.internal`/`IPA.INTERNAL`, Technitium A/PTR/SRV, external-ca under the fleet root, `admin` + test user; next: rebuild the VM, then M2 backup/restore before the first client | [#164](https://github.com/jaroslaw-bagnicki/Homelab/issues/164) · [ADR 43](decisions/43-freeipa-domain-realm.md) · [runbook 41](runbooks/41-deploy-freeipa-server.md) |
+| **FreeIPA M1 — server on `pve2`** | ⭐⭐⭐ | **VM 216 was removed 2026-11-07**, so M1 restarts as **VM 250 on `pve2`** ([ADR 43](decisions/43-freeipa-domain-realm.md) amendment — `pve1`'s memory is committed to the Home Assistant guests): `ipa.internal`/`IPA.INTERNAL`, Technitium A/PTR/SRV, external-ca under the fleet root, `admin` + test user; next: build the VM, then M2 backup/restore before the first client | [#164](https://github.com/jaroslaw-bagnicki/Homelab/issues/164) · [ADR 43](decisions/43-freeipa-domain-realm.md) · [runbook 41](runbooks/41-deploy-freeipa-server.md) |
 
 
 ### Planned

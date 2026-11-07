@@ -2,6 +2,7 @@
 
 **Date:** 2026-10-25  
 **Status:** Accepted  
+**Amended:** 2026-11-07 — the server moves from `pve1` to `pve2` (VM 250, `.250`): `pve1`'s memory cannot carry it beside the Home Assistant guests, which are pinned there by the Zigbee coordinator. See the amendment note below.
 
 ---
 
@@ -22,12 +23,14 @@ and host certificates — and the constraints it has to fit:
   [ADR 40](40-internal-dns-proxy-edge.md)); IPA must not become a second one.
 - The domain must not take over TLS or SSH issuance — `step-ca` owns both, and
   [ADR 42](42-pki-topology-sibling-cas.md) governs how a second CA relates to the root.
-- `pve1` is an 8 GB node that already carries guests, Netdata, NUT, VictoriaLogs and the CA
-  ([idea 15](../ideas/15-second-proxmox-node.md) is the plan to relieve it).
+- `pve1` is an 8 GB node that already carries guests, Netdata, NUT, VictoriaLogs and the CA, and the
+  Home Assistant guests are pinned to it by the Zigbee coordinator's USB port — so the domain is the
+  guest that has to move. **Amended 2026-11-07:** it goes to `pve2`, the second node
+  ([ADR 47](47-second-proxmox-node-cluster-qdevice.md)), not to `pve1`.
 
 ## Decision
 
-**Adopt FreeIPA as the lab's Linux domain, hosted on `pve1`, with Technitium remaining authoritative for
+**Adopt FreeIPA as the lab's Linux domain, hosted on `pve2`, with Technitium remaining authoritative for
 DNS.**
 
 1. **Realm `IPA.INTERNAL`, DNS domain `ipa.internal`** — a name **inside** the LAN name space, not a
@@ -57,7 +60,7 @@ DNS.**
 7. **Scope of enrolment**: Linux servers whose login policy is worth centralising, plus the travel
    workstation as the first visible client ([idea 12](../ideas/12-travel-workstation-arm-linux.md)). OMV
    is best-effort (its user database is the blocker, [research 44](../research/44-omv-identity-integration.md)),
-   OPNsense is manual LDAP+SSSD, and **`pve1` hosts the server and is not a client**.
+   OPNsense is manual LDAP+SSSD, and **`pve2` hosts the server and is not a client**.
 8. **Break-glass is unchanged.** The [ADR 28](28-fleet-admin-account-and-key.md) fleet key and local admin
    accounts remain; management planes (Proxmox UI, Caddy admin, Portainer) are never behind the domain
    alone.
@@ -78,10 +81,9 @@ DNS.**
 - **The WebUI keeps one fewer dependency than the rest of the LAN.** It needs its own guest and Technitium
   answering `ipa.internal` — not `edge`'s Caddy and not a `step-ca` leaf. That is deliberate: when the
   domain is what is broken, its UI must still be reachable to fix it.
-- **The node's memory is the binding constraint.** The domain joins `pve1`'s 8 GB beside Netdata, NUT,
-  VictoriaLogs, the `ca` guest, the Authentik guest ([ADR 44](44-authentik-identity-provider.md)) and the
-  planned HA VM — which is why the second-node work
-  ([idea 15](../ideas/15-second-proxmox-node.md)) is sequenced alongside, not after.
+- **The node's memory was the binding constraint, and it decided the placement.** The domain joins
+  `pve2`'s 8 GB, which carries no other guest; `pve1` keeps the Home Assistant VM and its two LXCs, the
+  `ca` guest, VictoriaLogs, Netdata and NUT. **Amended 2026-11-07** — see the amendment note below.
 - **Time and DNS become silent failure modes.** Kerberos tolerates ~5 minutes of skew (chrony everywhere
   before enrolment); a missing SRV record presents as a wrong password.
 - **The realm is effectively permanent.** Renaming it is a reinstall for every client, so the name is
@@ -117,6 +119,41 @@ identity source — the difference matters.
 
 **Status quo (per-service accounts + the fleet key).** Rejected as the ADR 41 human path lands: a shared
 root-equivalent key is exactly what the certificate work exists to retire.
+
+### Amendment — 2026-11-07
+
+**The server moves from `pve1` to `pve2` — VM 250 at `192.168.2.250`.** The placement was the one part of
+this decision that the second node was expected to settle, and it has: `pve2` exists
+([ADR 47](47-second-proxmox-node-cluster-qdevice.md)) and carries no guests.
+
+The measurement that forced it, taken on both nodes 2026-11-07:
+
+| Node | Total | Available | Guests |
+|---|---|---|---|
+| `pve1` | 7.76 GB | 5.1 GB | LXC 214 `vtstack`, LXC 215 `ca` |
+| `pve2` | 7.65 GB | 5.6 GB | none |
+
+`pve1`'s remaining plan is the Home Assistant VM 210 (4 GB) plus LXCs 211/212 (~1 GB), the domain (2 GB)
+and the Authentik guest ([ADR 44](44-authentik-identity-provider.md), ~1.5 GB) — about 8.5 GB of new
+guests against 5.1 GB free. **Home Assistant cannot be the guest that moves**: the Zigbee coordinator is
+physically plugged into `pve1` ([ADR 25](25-home-assistant-thin-client.md)), so the domain is.
+
+Three things follow, and they are the reason this is an amendment rather than a swap of one word:
+
+- **The identity tier consolidates on `pve2`, and the trust anchor stays on `pve1`.** The domain and the
+  IdP ([ADR 44](44-authentik-identity-provider.md)) share one node, so a login never crosses two
+  hypervisors; `step-ca` and VictoriaLogs stay where they are. That is a better shape than the original:
+  the sibling CAs of [ADR 42](42-pki-topology-sibling-cas.md) no longer share a host, and a `pve1` reboot
+  no longer takes every new login with it.
+- **`pve2` is the non-client host**, not `pve1` (item 7). `pve1` becomes an ordinary client candidate.
+- **The guest block is `25x`** ([ADR 31](31-static-address-scheme.md)): VMID 250, address `.250`. VM 216
+  and `.216` are retired with the removed guest and are not reused — the ID *is* the address, so a guest
+  on `pve2` cannot take a `21x` number.
+
+Unchanged: the realm, the DNS authority, the CA relation, the WebUI-direct rule, the enrolment scope, the
+break-glass path and the rollout order. [ADR 44](44-authentik-identity-provider.md) is amended in the same
+change — the IdP follows the domain to `pve2`, because a domain and its IdP on separate nodes buys a
+second failure mode rather than redundancy.
 
 ## References
 

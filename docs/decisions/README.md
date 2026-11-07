@@ -16,8 +16,8 @@ Significant architectural and technology choices recorded in
 | 47 | 2026-11-06 | [Second Proxmox VE Node — pve2, a Two-Node Cluster and an Edge QDevice](47-second-proxmox-node-cluster-qdevice.md) | Accepted |
 | 46 | 2026-10-31 | [Observability Host — VictoriaLogs, Netdata Parent and Grafana in One LXC](46-grafana-logs-ui-victorialogs.md) | Proposed |
 | 45 | 2026-10-27 | [Workload Identity — One Mechanism per Protocol, Workloads as Directory Users](45-workload-identity.md) | Accepted |
-| 44 | 2026-10-27 | [Authentik as the Fleet Identity Provider — an LXC on `pve1`, FreeIPA Source, SSO-Exempt Management Planes](44-authentik-identity-provider.md) | Accepted |
-| 43 | 2026-10-25 | [FreeIPA as the Lab's Domain — `ipa.internal`, Technitium Keeps DNS](43-freeipa-domain-realm.md) | Accepted |
+| 44 | 2026-10-27 | [Authentik as the Fleet Identity Provider — an LXC on `pve2`, FreeIPA Source, SSO-Exempt Management Planes](44-authentik-identity-provider.md) | Accepted |
+| 43 | 2026-10-25 | [FreeIPA as the Lab's Domain — `ipa.internal` on `pve2`, Technitium Keeps DNS](43-freeipa-domain-realm.md) | Accepted |
 | 42 | 2026-10-25 | [PKI Topology — One Offline Root, Sibling Subordinate CAs](42-pki-topology-sibling-cas.md) | Accepted |
 | 41 | 2026-10-18 | [SSH Access — step-ca Certificates, Authentik Identity, Shared AI-Agent Identity](41-ssh-certificates-step-ca.md) | Accepted |
 | 40 | 2026-10-17 | [Internal DNS and Reverse Proxy — Technitium + Caddy on the Edge Node](40-internal-dns-proxy-edge.md) | Accepted |
