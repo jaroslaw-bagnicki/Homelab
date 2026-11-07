@@ -64,6 +64,7 @@ reaches both models in Copilot; plans are global, so BYOK calls draw first from 
          "url": "https://api.mistral.ai/v1/chat/completions",
          "toolCalling": true,
          "vision": true,
+         "reasoningEffort": ["none", "low", "high", "max"],
          "maxInputTokens": 800000,
          "maxOutputTokens": 128000
        }
@@ -78,6 +79,7 @@ reaches both models in Copilot; plans are global, so BYOK calls draw first from 
    | `url` | full endpoint URL for the `chat-completions` API type (not the base URL) |
    | `toolCalling` | must be `true`, otherwise the model is hidden from agent-mode chat |
    | `vision` | `true` for both models (both accept image input) |
+   | `reasoningEffort` | *(Optional)* array of effort levels the model accepts — when set, the Thinking Effort selector appears for the custom endpoint. Probed 2026-11-06 against the Mistral endpoint: `mistral-large-4` accepts `low/medium/high` (`none` → HTTP 400); `deepseek-v4-1-flash-1017` accepts `none/low/high/max` (`medium` → HTTP 400). Declare exactly what the API accepts |
    | `maxInputTokens` / `maxOutputTokens` | card advertises a 1M context window, but Vibe sessions run ML4 with an **800k window** (observed 2026-11-06), so set 800000; output capped at 128k (prompt + output must fit the context — lower `maxOutputTokens` if a request is rejected) |
 
 3. Save; restart VS Code if the models do not appear in the picker immediately.
