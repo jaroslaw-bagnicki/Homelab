@@ -190,6 +190,68 @@ The node is now ready to join the cluster. Do not create guests before the join.
 Update `docs/overview.md` (node row + topology), `docs/hardware.md` (per-node specs) and the Technitium
 `pve2.internal` record in the same change.
 
+## 7. Edge proxy failover for `proxmox.internal`
+
+`proxmox.internal` is the single UI entry point for the whole cluster, so it must survive `pve1` being
+down. Caddy on `edge` fronts **both** nodes with `lb_policy first` — `pve1` primary, `pve2` fallback:
+
+```yaml
+# ansible/roles/caddy/defaults/main.yml
+- name: proxmox.internal
+  upstreams:
+    - "https://192.168.2.201:8006"
+    - "https://192.168.2.202:8006"
+  lb_policy: first
+  tls_skip_verify: true
+```
+
+**Why `first` and not round-robin.** The Proxmox UI is **node-scoped** — the URL fragment
+(`#v1:0:18:4:5`) encodes the selected node, so a round-robin proxy would move a session between nodes
+mid-flight and the tree would jump. `first` keeps every session on `pve1` and only reaches `pve2` when
+`pve1` fails Caddy's active health check. Round-robin would also make a down node fail ~50 % of
+requests instead of 0 %.
+
+**Why the switch is transparent.** Proxmox tickets are **cluster-wide**: `/etc/pve/priv/authkey.key` is
+shared through pmxcfs, so a session started on `pve1` is valid on `pve2`. Verify the two are identical:
+
+```sh
+md5sum /etc/pve/priv/authkey.key     # same digest on pve1 and pve2
+```
+
+Apply and verify:
+
+```powershell
+ansible-playbook ansible/playbooks/playbook-caddy.yml --diff
+```
+
+```sh
+# On edge — the rendered block
+sed -n '/^proxmox.internal {/,/^}/p' /etc/caddy/Caddyfile
+
+# The runtime view: both upstreams, policy `first`
+curl -s localhost:2019/config/ | python3 -c '
+import json, sys
+def walk(o):
+    if isinstance(o, dict):
+        if o.get("handler") == "reverse_proxy":
+            print([u.get("dial") for u in o.get("upstreams", [])],
+                  o.get("load_balancing", {}).get("selection_policy", {}).get("policy", "-"))
+        for v in o.values(): walk(v)
+    elif isinstance(o, list):
+        for v in o: walk(v)
+walk(json.load(sys.stdin))'
+# → ['192.168.2.201:8006', '192.168.2.202:8006'] first
+
+# Both backends answer, and the proxy serves
+curl -sk -o /dev/null -w 'pve1 %{http_code}\n' https://192.168.2.201:8006/
+curl -sk -o /dev/null -w 'pve2 %{http_code}\n' https://192.168.2.202:8006/
+curl -sk -o /dev/null -w 'proxy %{http_code}\n' https://proxmox.internal/
+```
+
+> **Failover is not a substitute for the cluster.** `pve2` serving the UI does not mean guests run
+> there — there is no HA or replication yet ([ADR 47](../decisions/47-second-proxmox-node-cluster-qdevice.md)),
+> so a guest on a failed `pve1` stays down. This only keeps the management plane reachable.
+
 ## Verification Checklist
 
 - [x] §1 Proxmox VE installed; `pve2` at `192.168.2.202`; UI `:8006` returns `200`
@@ -201,6 +263,7 @@ Update `docs/overview.md` (node row + topology), `docs/hardware.md` (per-node sp
 - [x] `upsc ups@192.168.2.201` works; `nut-monitor` active
 - [x] §5 smoke-test LXC 250 created, verified and destroyed
 - [x] §6 `docs/overview.md` and `docs/hardware.md` updated
+- [x] §7 `proxmox.internal` fronts both nodes with `lb_policy first`; `pve1` primary, `pve2` fallback
 
 ## References
 

@@ -3,6 +3,8 @@
 }
 
 {% for site in caddy_sites %}
+{% set upstreams = site.upstreams | default([site.upstream]) %}
+{% set needs_block = site.lb_policy is defined or site.tls_skip_verify | default(false) %}
 {{ site.name }} {
     tls {
         issuer acme {
@@ -13,11 +15,12 @@
         }
     }
 
-    reverse_proxy {{ site.upstream }}{% if site.tls_skip_verify | default(false) %} {
-        transport http {
+    reverse_proxy {{ upstreams | join(' ') }}{% if needs_block %} {
+{% if site.lb_policy is defined %}        lb_policy {{ site.lb_policy }}
+{% endif %}{% if site.tls_skip_verify | default(false) %}        transport http {
             tls_insecure_skip_verify
         }
-    }{% endif %}
+{% endif %}    }{% endif %}
 
 }
 {% endfor %}
