@@ -128,11 +128,12 @@ pvesm status
 1. **Pre-seed root SSH access** — `pvecm qdevice setup` connects to the qnetd host as `root` and copies
    the cluster's SSH key. `edge` runs `PermitRootLogin prohibit-password`, so add `pve1`'s root public
    key to `edge` `/root/.ssh/authorized_keys` (via `fleetadm` + `sudo`) and trust `edge`'s host key on
-   `pve1` (`ssh-keyscan 192.168.2.240 >> /root/.ssh/known_hosts`).
+   `pve1` with `accept-new` — **not** `ssh-keyscan`, which returns nothing here because the `security`
+   role pins `HostKeyAlgorithms` to the certificate key (see the pitfall in step 3).
 
    ```sh
    # On pve1, as root — test the path before the setup
-   ssh root@192.168.2.240 hostname     # → edge
+   ssh -o StrictHostKeyChecking=accept-new root@192.168.2.240 hostname     # → edge
    ```
 
 2. **Install the arbitrator** — apply the `corosync_qnetd` role via `playbook-edge.yml` (the package

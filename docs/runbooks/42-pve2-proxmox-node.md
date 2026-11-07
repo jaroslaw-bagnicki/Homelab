@@ -202,14 +202,25 @@ down. Caddy on `edge` fronts **both** nodes with `lb_policy first` — `pve1` pr
     - "https://192.168.2.201:8006"
     - "https://192.168.2.202:8006"
   lb_policy: first
+  health_uri: /
+  health_interval: 10s
+  health_timeout: 3s
+  fail_duration: 30s
+  max_fails: 1
   tls_skip_verify: true
 ```
+
+**The health check is what makes `first` mean anything.** Caddy's passive checks are **off by default**
+(`fail_duration` 0), so `lb_policy first` alone never demotes a dead primary — every request keeps
+going to the dead node. `health_uri` turns on the active checker; `fail_duration` + `max_fails` cover
+the passive side. `health_uri /` is enough: `pveproxy` answers `200` on `/`, and the check runs over the
+same `tls_insecure_skip_verify` transport.
 
 **Why `first` and not round-robin.** The Proxmox UI is **node-scoped** — the URL fragment
 (`#v1:0:18:4:5`) encodes the selected node, so a round-robin proxy would move a session between nodes
 mid-flight and the tree would jump. `first` keeps every session on `pve1` and only reaches `pve2` when
-`pve1` fails Caddy's active health check. Round-robin would also make a down node fail ~50 % of
-requests instead of 0 %.
+`pve1` fails its health check. Round-robin would also make a down node fail ~50 % of requests instead
+of 0 %.
 
 **Why the switch is transparent.** Proxmox tickets are **cluster-wide**: `/etc/pve/priv/authkey.key` is
 shared through pmxcfs, so a session started on `pve1` is valid on `pve2`. Verify the two are identical:
@@ -228,25 +239,50 @@ ansible-playbook ansible/playbooks/playbook-caddy.yml --diff
 # On edge — the rendered block
 sed -n '/^proxmox.internal {/,/^}/p' /etc/caddy/Caddyfile
 
-# The runtime view: both upstreams, policy `first`
+# The runtime view: both upstreams, policy `first`, and the health checker
 curl -s localhost:2019/config/ | python3 -c '
 import json, sys
 def walk(o):
     if isinstance(o, dict):
         if o.get("handler") == "reverse_proxy":
             print([u.get("dial") for u in o.get("upstreams", [])],
-                  o.get("load_balancing", {}).get("selection_policy", {}).get("policy", "-"))
+                  o.get("load_balancing", {}).get("selection_policy", {}).get("policy", "-"),
+                  "health:", o.get("health_checks", {}).get("active", {}).get("uri", "NONE"))
         for v in o.values(): walk(v)
     elif isinstance(o, list):
         for v in o: walk(v)
 walk(json.load(sys.stdin))'
-# → ['192.168.2.201:8006', '192.168.2.202:8006'] first
+# → ['192.168.2.201:8006', '192.168.2.202:8006'] first health: /
 
 # Both backends answer, and the proxy serves
 curl -sk -o /dev/null -w 'pve1 %{http_code}\n' https://192.168.2.201:8006/
 curl -sk -o /dev/null -w 'pve2 %{http_code}\n' https://192.168.2.202:8006/
 curl -sk -o /dev/null -w 'proxy %{http_code}\n' https://proxmox.internal/
 ```
+
+**Failover test — verified 2026-11-07.** Stop the primary's web UI and confirm the proxy keeps serving:
+
+```sh
+# On pve1
+systemctl stop pveproxy
+
+# On edge — wait past fail_duration (30 s), then the proxy must still answer
+sleep 45
+curl -sk -o /dev/null -w 'proxy -> %{http_code}\n' https://proxmox.internal/   # 200
+journalctl -u caddy --since '-2min' | grep health_checker.active              # pve1 marked down
+
+# Confirm pve2 is the one serving — its access log shows the edge proxy
+# On pve2
+tail -5 /var/log/pveproxy/access.log     # ::ffff:192.168.2.240 ... GET /api2/json/...
+
+# Restore
+# On pve1
+systemctl start pveproxy
+```
+
+Measured: with `pveproxy` stopped on `pve1`, the proxy returned **200** and `pve2`'s access log showed
+the requests arriving from `192.168.2.240`. After restarting `pveproxy`, health checks went quiet and
+the proxy returned to `pve1`.
 
 > **Failover is not a substitute for the cluster.** `pve2` serving the UI does not mean guests run
 > there — there is no HA or replication yet ([ADR 47](../decisions/47-second-proxmox-node-cluster-qdevice.md)),

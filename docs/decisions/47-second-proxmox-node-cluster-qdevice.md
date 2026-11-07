@@ -1,7 +1,7 @@
 # Second Proxmox VE Node — pve2, a Two-Node Cluster and an Edge QDevice
 
 **Date:** 2026-11-06
-**Status:** Accepted
+**Status:** Implemented
 
 ---
 

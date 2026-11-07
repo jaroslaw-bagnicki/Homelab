@@ -250,23 +250,10 @@ Proxmox freezes hostnames and IPs at cluster creation, so the rename must land b
    getent hosts pve1        # must return 192.168.2.201, not 127.0.1.1
    ```
 
-3. **Move the Proxmox node directory and make pmxcfs re-read the hostname** — the order matters:
-   move the guest configs first, then restart the cluster filesystem.
+3. **Make pmxcfs adopt the new hostname, then move the guest configs** — the order matters: restart
+   the cluster filesystem first so it creates `nodes/pve1`, then move the guest configs into it.
 
    ```sh
-   mv /etc/pve/nodes/pve /etc/pve/nodes/pve1
-   systemctl stop pve-cluster && systemctl start pve-cluster
-   systemctl restart pveproxy pvedaemon pvestatd
-   pvecm updatecerts -f
-   ```
-
-   > **The `mv` fails once pmxcfs has already seen the new hostname.** `hostnamectl set-hostname`
-   > (step 2) makes pmxcfs create an **empty** `/etc/pve/nodes/pve1` on its next write, so the `mv`
-   > aborts with `cannot overwrite '/etc/pve/nodes/pve1': Directory not empty` — and because the
-   > command is chained with `&&`, `pve-cluster` never restarts, leaving `nodename` on the old name.
-   > Executed 2026-11-07 and hit exactly this. Do it in two steps instead:
-   >
-   > ```sh
    # 1. restart pmxcfs first so it adopts the new hostname
    systemctl stop pve-cluster && systemctl start pve-cluster
    cat /etc/pve/.members          # "nodename": "pve1"
@@ -277,6 +264,14 @@ Proxmox freezes hostnames and IPs at cluster creation, so the rename must land b
    systemctl restart pveproxy pvedaemon pvestatd
    pvecm updatecerts -f
    ```
+
+   > **Do not move the node directory itself.** `hostnamectl set-hostname` (step 2) makes pmxcfs
+   > create an **empty** `/etc/pve/nodes/pve1` on its next write, so
+   > `mv /etc/pve/nodes/pve /etc/pve/nodes/pve1` aborts with
+   > `cannot overwrite '/etc/pve/nodes/pve1': Directory not empty` — and because that command is
+   > chained with `&&`, `pve-cluster` never restarts, leaving `nodename` on the old name. Executed
+   > 2026-11-07 and hit exactly this, which is why the sequence above restarts pmxcfs first and moves
+   > only the guest configs.
    >
    > The old `/etc/pve/nodes/pve` directory is left behind empty; it is harmless and disappears from
    > the UI once pmxcfs settles.

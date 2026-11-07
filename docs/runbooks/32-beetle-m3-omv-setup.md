@@ -13,7 +13,7 @@
 > **Hostname `nas`** — the node is named for its **role in the fleet** ([ADR 33](../decisions/33-fleet-node-hostnames.md));
 > `omv` is the ML110's name and names a workload, so it is not reused. It carries the static
 > `192.168.2.209` ([ADR 31](../decisions/31-static-address-scheme.md)) — moved from `.202` on
-> 2026-11-06 to free `.202` for `pve2`.
+> 2026-11-07 to free `.202` for `pve2`.
 
 ## Goals
 
@@ -33,7 +33,7 @@
 Authored 2026-09-20, before execution — the checklist fills in as the install runs.
 
 > **Address history.** The NAS was installed at `192.168.2.202` (2026-09-21). It was re-addressed
-> to **`192.168.2.209`** on 2026-11-06 to free `.202` for `pve2`; the dated checklist entries below
+> to **`192.168.2.209`** on 2026-11-07 to free `.202` for `pve2`; the dated checklist entries below
 > record the original `.202` state.
 >
 > **Re-address executed 2026-11-07** (issue [#177](https://github.com/jaroslaw-bagnicki/Homelab/issues/177),
@@ -188,7 +188,7 @@ With **only the SanDisk SSD attached** (Seagates disconnected):
 ### 4c. Static IP `192.168.2.209` and hostname `nas`
 
 Per [ADR 31](../decisions/31-static-address-scheme.md), the NAS owns `192.168.2.209` (physical-server
-block, moved from `.202` on 2026-11-06 to free `.202` for `pve2`):
+block, moved from `.202` on 2026-11-07 to free `.202` for `pve2`):
 
 - **Confirm the interface name first:** `ip -br addr` (research 32 records `enp0s31f6`; the kernel
   name can differ across boots/enumeration). Then `Network | Interfaces` → edit that interface
