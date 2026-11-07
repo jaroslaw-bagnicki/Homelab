@@ -17,7 +17,9 @@ replication stay out of scope.
 
 ## What changes
 
-- Proxmox VE **9.x, the same point release as `pve1`** (currently 9.2.2).
+- Proxmox VE **9.x, the same point release as `pve1`** (currently **9.2.18** — verify with
+  `pveversion -v` on `pve1` before installing; the point release moves, so match it, do not copy a
+  number from this document).
 - Hostname `pve2`, static `192.168.2.202/24`, gateway `192.168.2.1`, DNS `1.1.1.1`, timezone `Etc/UTC`.
 - `ext4` + LVM-thin on the 128 GB M.2 SATA module; no ZFS. The 2.5″ bay stays free for a later pool.
 - Fleet enrollment via `ansible/playbooks/playbook-pve2.yml`:
@@ -32,6 +34,18 @@ replication stay out of scope.
 - LAN workstation with the `automation` certificate or the break-glass fleet key
 - `AZURE_CLIENT_ID` / `AZURE_CLIENT_SECRET` / `AZURE_TENANT_ID` on the controller, `step` CLI, and
   `ca.internal` resolution
+
+> **Pre-flight verified 2026-11-07** (issue [#177](https://github.com/jaroslaw-bagnicki/Homelab/issues/177)):
+>
+> | Check | State |
+> |---|---|
+> | `pve1` hostname | still **`pve`** — the rename ([runbook 28 §6](28-pve1-proxmox-node.md)) has **not** run |
+> | `pve1` version | **9.2.18** — match this, not 9.2.2 |
+> | `pve1` guests | LXC 214 `vtstack`, LXC 215 `ca` — both running |
+> | **VM 216 `ipa`** | **absent** — no config in `/etc/pve/qemu-server/`, `.216` unreachable. `docs/overview.md` still lists it as 🔨; reconcile before the rename |
+> | `.202` | **free** — the NAS moved to `.209` on 2026-11-07 ([runbook 32 §4c](32-beetle-m3-omv-setup.md)) |
+> | `edge` `corosync-qnetd` | **not installed** (candidate `3.0.3-2`); no 5403 listener, no UFW rule — `playbook-edge.yml` installs it |
+> | CA SSH host policy | regenerated 2026-11-07 — now carries `pve1`, `pve2`, `ipa`, `.209`, `.216` |
 
 ---
 
