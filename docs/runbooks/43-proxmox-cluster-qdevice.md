@@ -19,13 +19,42 @@ no worse than it would be without one.
 
 ## Prerequisites
 
-- [ ] `pve` renamed to `pve1` and base-provisioned ([runbook 28 §6](28-pve1-proxmox-node.md)).
-- [ ] `pve2` installed, base-provisioned and **empty of guests** ([runbook 42](42-pve2-proxmox-node.md)).
-- [ ] Both nodes on the **same Proxmox VE point release** — `pveversion -v`.
-- [ ] Time synchronized on both nodes (`chronyc tracking` / `timedatectl`).
-- [ ] Final hostnames and IPs — they are frozen once the cluster exists.
-- [ ] Console/SSH access to both nodes and the `root@pam` password for `pve1` (Keeper).
-- [ ] `edge` reachable; `corosync-qnetd` installed by `playbook-edge.yml`.
+- [x] `pve` renamed to `pve1` and base-provisioned ([runbook 28 §6](28-pve1-proxmox-node.md)).
+- [x] `pve2` installed, base-provisioned and **empty of guests** ([runbook 42](42-pve2-proxmox-node.md)).
+- [x] Both nodes on the **same Proxmox VE point release** — `pveversion -v`.
+- [x] Time synchronized on both nodes (`chronyc tracking` / `timedatectl`).
+- [x] Final hostnames and IPs — they are frozen once the cluster exists.
+- [x] Console/SSH access to both nodes and the `root@pam` password for `pve1` (Keeper).
+- [x] `edge` reachable; `corosync-qnetd` installed by `playbook-edge.yml`.
+
+---
+
+## Status
+
+Authored 2026-11-06, before execution — the checklist fills in as the cluster is built.
+
+> **Executed 2026-11-07** (issue [#177](https://github.com/jaroslaw-bagnicki/Homelab/issues/177)).
+> The `homelab` cluster is formed and quorate with the QDevice. Measured results:
+>
+> | Step | Result |
+> |---|---|
+> | `pvecm create homelab --link0 192.168.2.201` | config version 1, single node quorate |
+> | `pvecm add … --use_ssh` on `pve2` | config version 2, node certificate regenerated, `pve2` joined |
+> | `pvecm qdevice setup 192.168.2.240` | config version 3, QDevice `Connected` |
+> | Final `pvecm status` | 2 nodes, **`Quorate Qdevice`**, flags `A,V,NMW`, expected votes **3** / quorum **2** |
+> | `corosync-cfgtool -s` | link 0 `udp` on `.201`, nodeid 2 `connected` |
+> | `corosync-qnetd-tool -l` on `edge` | both nodes listed, `ACK` |
+>
+> **Two pitfalls hit during execution, now folded into the steps below:**
+>
+> 1. **`pvecm qdevice setup` fails silently on stale host keys** (§4.3). It reaches each member via
+>    `PVE::SSHInfo`, which passes `HostKeyAlias=<nodename>` and
+>    `UserKnownHostsFile=/etc/pve/nodes/<node>/ssh_known_hosts`. The join replaces host keys with
+>    certificates, so pre-join RSA entries are stale and the per-node `certutil -i` fails with
+>    `noerr => 1` — surfacing only later as `Certificate database doesn't exists`. `ssh-keyscan`
+>    cannot repair it because the `security` role pins `HostKeyAlgorithms` to the certificate type.
+> 2. **`pvecm add --use_ssh` takes an underscore** (§3). The hyphen form `--use-ssh` is rejected as
+>    `Unknown option: use-ssh`.
 
 ---
 
@@ -68,6 +97,19 @@ The default join flow authenticates against `pve1`'s API and prompts for its `ro
 SSH password login is required. On success the node certificate is replaced by the cluster CA
 certificate and the web session drops — log in again.
 
+**Non-interactive alternative — `--use_ssh`.** When the `root@pam` password is not at hand, join over
+root SSH instead. Pre-seed `pve2`'s root key into `pve1` first, then pass the flag (note the
+underscore — the CLI rejects `--use-ssh`):
+
+```sh
+# On pve2, as root
+ssh -o StrictHostKeyChecking=accept-new root@192.168.2.201 hostname   # prove the path
+pvecm add 192.168.2.201 --link0 192.168.2.202 --use_ssh
+```
+
+This path runs `ssh-copy-id`, `pvecm addnode` and an `rsync` of the Corosync auth key over SSH, so it
+needs no password prompt at all.
+
 Verify from either node:
 
 ```sh
@@ -86,11 +128,12 @@ pvesm status
 1. **Pre-seed root SSH access** — `pvecm qdevice setup` connects to the qnetd host as `root` and copies
    the cluster's SSH key. `edge` runs `PermitRootLogin prohibit-password`, so add `pve1`'s root public
    key to `edge` `/root/.ssh/authorized_keys` (via `fleetadm` + `sudo`) and trust `edge`'s host key on
-   `pve1` (`ssh-keyscan 192.168.2.240 >> /root/.ssh/known_hosts`).
+   `pve1` with `accept-new` — **not** `ssh-keyscan`, which returns nothing here because the `security`
+   role pins `HostKeyAlgorithms` to the certificate key (see the pitfall in step 3).
 
    ```sh
    # On pve1, as root — test the path before the setup
-   ssh root@192.168.2.240 hostname     # → edge
+   ssh -o StrictHostKeyChecking=accept-new root@192.168.2.240 hostname     # → edge
    ```
 
 2. **Install the arbitrator** — apply the `corosync_qnetd` role via `playbook-edge.yml` (the package
@@ -109,6 +152,33 @@ pvesm status
    pvecm qdevice setup 192.168.2.240
    ```
 
+   **Pitfall — `Host key verification failed` on the per-node step.** `pvecm qdevice setup` reaches
+   each cluster member through `PVE::SSHInfo`, which passes `HostKeyAlias=<nodename>` and
+   `UserKnownHostsFile=/etc/pve/nodes/<nodename>/ssh_known_hosts`. The cluster join replaces each
+   node's host key with a certificate, so any pre-join RSA entry in those files is stale and the
+   `corosync-qdevice-net-certutil -i` step fails **silently** (`noerr => 1`), surfacing later as
+   `Certificate database doesn't exists`. Note that `ssh-keyscan` returns nothing here — the
+   `security` role pins `HostKeyAlgorithms ssh-ed25519-cert-v01@openssh.com`, so sshd offers only the
+   certificate key. Rebuild the files with `accept-new` instead, keyed by node name:
+
+   ```sh
+   # On pve1, as root — one entry per node, keyed by the HostKeyAlias
+   ssh -o HostKeyAlias=pve1 -o StrictHostKeyChecking=accept-new root@192.168.2.201 hostname
+   ssh -o HostKeyAlias=pve2 -o StrictHostKeyChecking=accept-new root@192.168.2.202 hostname
+   cp /root/.ssh/known_hosts /etc/pve/nodes/pve1/ssh_known_hosts
+   cp /root/.ssh/known_hosts /etc/pve/nodes/pve2/ssh_known_hosts
+   ```
+
+   Verify the exact invocation before retrying:
+
+   ```sh
+   ssh -o BatchMode=yes -o HostKeyAlias=pve2 \
+       -o UserKnownHostsFile=/etc/pve/nodes/pve1/ssh_known_hosts \
+       -o GlobalKnownHostsFile=none root@192.168.2.202 hostname   # → pve2
+   ```
+
+   A failed attempt leaves no partial state — `pvecm qdevice setup` is safe to re-run.
+
 4. **Verify** — `pvecm status` must show `Flags: Quorate Qdevice`, a `Qdevice` row, and the QDevice
    flags `A,V,NMW`:
 
@@ -116,6 +186,22 @@ pvesm status
    pvecm status
    corosync-qnetd-tool -l          # on edge
    ```
+
+   > **The web UI does not show the QDevice.** Datacenter → **Cluster** (and Datacenter → Summary)
+   > render only *Cluster Name*, *Config Version*, *Number of Nodes* and a *Cluster Nodes* grid of
+   > nodename / ID / votes / link — there is no QDevice panel, and `pvemanagerlib.js` contains no
+   > `qdevice` reference at all. The API endpoint exists (`GET /cluster/config/qdevice`, backed by the
+   > `corosync-qdevice` socket) but no GUI component consumes it. Read the state from the CLI or the
+   > API instead:
+   >
+   > ```sh
+   > pvecm status                                   # Flags: Quorate Qdevice + the Qdevice row
+   > pvesh get /cluster/config/qdevice --output-format json-pretty
+   > # { "Model": "Net", "QNetd host": "192.168.2.240:5403", "State": "Connected", ... }
+   > ```
+   >
+   > `edge` is **not** a Proxmox node, so it never appears in the node list either — the QDevice is
+   > visible only as the extra vote in `pvecm status` (expected votes 3 against 2 nodes).
 
 ## 5. Operational rules
 
@@ -132,15 +218,15 @@ pvesm status
 
 ## 6. Verification checklist
 
-- [ ] `pve1` and `pve2` at the same `pveversion -v`
-- [ ] `pvecm status` shows two nodes, `Quorate: Yes`
-- [ ] `pvecm nodes` lists `pve1` and `pve2`
-- [ ] `corosync-cfgtool -s` shows the `.201`/`.202` link
-- [ ] `pvecm status` shows `Quorate Qdevice` and `A,V,NMW`
-- [ ] `corosync-qnetd-tool -l` lists both nodes
-- [ ] `ufw status` on `edge` allows TCP 5403 only from `.201`/`.202`
-- [ ] `pvesm status` on both nodes shows `local` and `local-lvm`
-- [ ] No guests on `pve2` were created before the join
+- [x] `pve1` and `pve2` at the same `pveversion -v` — both `9.2.26`
+- [x] `pvecm status` shows two nodes, `Quorate: Yes`
+- [x] `pvecm nodes` lists `pve1` and `pve2`
+- [x] `corosync-cfgtool -s` shows the `.201`/`.202` link
+- [x] `pvecm status` shows `Quorate Qdevice` and `A,V,NMW`
+- [x] `corosync-qnetd-tool -l` lists both nodes
+- [x] `ufw status` on `edge` allows TCP 5403 only from `.201`/`.202`
+- [x] `pvesm status` on both nodes shows `local` and `local-lvm`
+- [x] No guests on `pve2` were created before the join
 
 ## 7. Rollback / removal
 
