@@ -13,7 +13,7 @@
 > **Hostname `nas`** — the node is named for its **role in the fleet** ([ADR 33](../decisions/33-fleet-node-hostnames.md));
 > `omv` is the ML110's name and names a workload, so it is not reused. It carries the static
 > `192.168.2.209` ([ADR 31](../decisions/31-static-address-scheme.md)) — moved from `.202` on
-> 2026-11-06 to free `.202` for `pve2`.
+> 2026-11-07 to free `.202` for `pve2`.
 
 ## Goals
 
@@ -33,8 +33,25 @@
 Authored 2026-09-20, before execution — the checklist fills in as the install runs.
 
 > **Address history.** The NAS was installed at `192.168.2.202` (2026-09-21). It was re-addressed
-> to **`192.168.2.209`** on 2026-11-06 to free `.202` for `pve2`; the dated checklist entries below
+> to **`192.168.2.209`** on 2026-11-07 to free `.202` for `pve2`; the dated checklist entries below
 > record the original `.202` state.
+>
+> **Re-address executed 2026-11-07** (issue [#177](https://github.com/jaroslaw-bagnicki/Homelab/issues/177),
+> stage 1 of the `pve2` rollout). `Network | Interfaces` → `enp0s31f6` → Address `192.168.2.209`,
+> applied. Verified: `md0` `[2/2] [UU]` still mounted, OMV engine active, `.202` free. Two follow-ups
+> were required and are now part of the procedure:
+>
+> 1. **`edge` had to be re-applied.** The live `nas.internal` A record and the Caddy `omv.internal`
+>    upstream still pointed at `.202` — the repo was already correct (`technitium` defaults →
+>    `.209`, `caddy` defaults → `https://192.168.2.209:443`), but `playbook-edge.yml` had not been run
+>    since the address change landed. Run it **immediately** after the re-address, or the OMV UI is
+>    unreachable through the proxy.
+> 2. **The CA SSH host policy had to be regenerated.** `hosts@internal` carries an IP allow-list
+>    derived from inventory (`step_ca_ssh_hosts`); it did not contain `.209`, so host-certificate
+>    issuance failed with `ip name "192.168.2.209" not allowed`. Re-running
+>    `ansible/workloads/step-ca/step-ca-playbook.yml` rebuilds the policy from inventory. Then
+>    re-issue the NAS host certificate:
+>    `ansible-playbook ansible/playbooks/playbook-nas.yml --diff -e security_ssh_host_cert_force_reissue=true`.
 
 - [x] Phase 0 BIOS walk — 2026‑09‑21, recorded in [research 32](../research/32-wincor-beetle-m3-hardware-diagnostic.md#bios-walk)
 - [ ] Phase 0 close-out — **Memtest86+ and the RTC coin cell are deliberately deferred**
@@ -42,6 +59,9 @@ Authored 2026-09-20, before execution — the checklist fills in as the install 
       Still open in [research 32](../research/32-wincor-beetle-m3-hardware-diagnostic.md).
 - [x] OMV 8.x installed on the SanDisk SSD; hostname `nas` — 2026‑09‑21
 - [x] Static IP `192.168.2.202` set and verified from `lab` — 2026‑09‑21
+- [x] Re-addressed to `192.168.2.209` — 2026‑11‑07; `md0` intact, `.202` freed for `pve2`, `edge`
+      DNS + Caddy re-applied, NAS host certificate re-issued with the `.209` principal
+- [x] Domain corrected `home` → `internal` (FQDN `nas.internal`) — 2026‑11‑07
 - [x] `md0` (2× Seagate 1 TB → XFS) online and mounted — 2026‑09‑21; **reboot-survival test
       passed** 2026‑09‑22 (§6)
 - [x] Web UI reachable at `https://192.168.2.202` (HTTPS-only) — 2026‑09‑21
@@ -137,11 +157,11 @@ With **only the SanDisk SSD attached** (Seagates disconnected):
 1. Boot the ISO → the installer prompts for **location**, **language**, **keyboard**, then
    **hostname** and **domain name**, then a **root password**.
    - **Hostname `nas`** — the installer's default is not `nas`; set it.
-   - **Domain `home`** — the fleet domain as it stood when this was applied
-     ([ADR 06](../decisions/06-local-dns-dnsmasq.md)); **the LAN name space is now `.internal`**
-     ([ADR 37](../decisions/37-lan-name-space-internal.md)), so expect this field to be repointed when
-     the internal stack lands. The field **prefills `Internal`**, so replace it. `.local` is
-     independent — Avahi publishes `nas.local` from the short hostname (§8).
+   - **Domain `internal`** — the LAN name space ([ADR 37](../decisions/37-lan-name-space-internal.md)),
+     so the FQDN is `nas.internal`. The original install used `home` (the fleet domain as it stood
+     under [ADR 06](../decisions/06-local-dns-dnsmasq.md)) and was corrected on 2026-11-07 — see §4c.
+     The field **prefills `Internal`**, so replace it. `.local` is independent — Avahi publishes
+     `nas.local` from the short hostname (§8).
    - Record the root password.
 2. It deploys to the **first disk found** — the SanDisk SSD.
 3. On completion the machine reboots — **remove the USB stick**.
@@ -168,18 +188,30 @@ With **only the SanDisk SSD attached** (Seagates disconnected):
 ### 4c. Static IP `192.168.2.209` and hostname `nas`
 
 Per [ADR 31](../decisions/31-static-address-scheme.md), the NAS owns `192.168.2.209` (physical-server
-block, moved from `.202` on 2026-11-06 to free `.202` for `pve2`):
+block, moved from `.202` on 2026-11-07 to free `.202` for `pve2`):
 
 - **Confirm the interface name first:** `ip -br addr` (research 32 records `enp0s31f6`; the kernel
   name can differ across boots/enumeration). Then `Network | Interfaces` → edit that interface
   (Intel I219-V, MAC `00:01:2e:8e:14:0d`).
 - Method: **Static** — IP `192.168.2.209`, netmask `255.255.255.0`, gateway `192.168.2.1`, DNS `192.168.2.1`.
 - Apply. Verify from `lab`: `ping 192.168.2.209`.
-- **Hostname** — `Network → General` (a **top-level** `Network` item, not `System → Network`):
-  confirm **`nas`** and, for now, domain **`home`** as set at §3 (so the FQDN is `nas.home`) — the name
-  space is now `.internal` ([ADR 37](../decisions/37-lan-name-space-internal.md)), so repoint this field
-  with the stack. Avahi publishes mDNS `nas.local` from the short hostname regardless (runbook 23 §8
-  pattern). The `common` role also enforces the inventory name `nas` ([§8](#8-fleet-enrollment--ansible)).
+- **Hostname and domain** — `Network → General` (a **top-level** `Network` item, not
+  `System → Network`): hostname **`nas`**, domain **`internal`** — the LAN name space is `.internal`
+  ([ADR 37](../decisions/37-lan-name-space-internal.md)), so the FQDN is **`nas.internal`**. The
+  original install used `home`; it was corrected on 2026-11-07. Avahi publishes mDNS `nas.local` from
+  the short hostname regardless (runbook 23 §8 pattern). The `common` role also enforces the inventory
+  name `nas` ([§8](#8-fleet-enrollment--ansible)).
+
+  > **The domain change needs the OMV apply step.** Saving `Network → General` only writes
+  > `conf.system.network.dns` (`domainname: internal`); `/etc/hosts` and the FQDN are regenerated by
+  > the pending-configuration **Apply** in the banner at the top of the workbench. Until it is applied
+  > `hostname -f` still returns the old `nas.home`. Verify with `hostname -f` → `nas.internal` and
+  > `grep 192.168.2.209 /etc/hosts` → `192.168.2.209 nas.internal nas`.
+  >
+  > **Apply also resets `/etc/resolv.conf`** to the systemd-resolved stub
+  > (`nameserver 127.0.0.53`). Re-run `playbook-nas.yml` afterwards so the `common` role restores the
+  > fleet resolver (`nameserver 192.168.2.240`, `search internal`) — the role replaces the symlink
+  > rather than writing through it.
 
 ### 4d. HTTPS-only web UI
 
@@ -197,15 +229,18 @@ block, moved from `.202` on 2026-11-06 to free `.202` for `pve2`):
 | Country | your own |
 | Organization / Unit / City / State / Email, Tags | leave blank (Tags auto-fills from the subject) |
 
-> **Why `nas.local` and not `nas.internal`.** The LAN name space is now `.internal`
-> ([ADR 37](../decisions/37-lan-name-space-internal.md) — `.home` and DNSMasq retired), and
-> [ADR 07](../decisions/07-reverse-proxy-caddy.md) fronts internal services with Caddy's CA — but
-> **nothing resolves `.internal` yet**, so `nas.local` is the only name that works today, and OMV's own
-> certificate is not the right home for the internal name either. OMV adds **`subjectAltName=DNS:<Common Name>`**, so `https://nas.local` matches on name and
-> only the untrusted-issuer warning remains, which is inherent to a self-signed certificate. An
-> X.509 certificate can match an IP when that address is included as an `iPAddress` SAN, but this
-> OMV-generated certificate has only a DNS SAN, so `https://192.168.2.209` warns on the name — use
-> the `.local` name.
+> **Why `nas.local` and not `nas.internal`.** Both names now resolve — `nas.internal` → `.209` via
+> Technitium ([ADR 40](../decisions/40-internal-dns-proxy-edge.md)), `nas.local` via Avahi — but the
+> **certificate** is the constraint, not the name. OMV's self-signed certificate is not the right home
+> for the internal name: `nas.internal` is served by the edge Caddy with a short-lived `step-ca` leaf
+> ([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md)), and the workbench is reached as
+> **`https://omv.internal`** through that proxy ([runbook 37](37-deploy-internal-access-stack.md)).
+> This certificate only covers the **direct** UI on `https://192.168.2.209:443`, where `nas.local` is
+> the name that matches. OMV adds **`subjectAltName=DNS:<Common Name>`**, so `https://nas.local`
+> matches on name and only the untrusted-issuer warning remains, which is inherent to a self-signed
+> certificate. An X.509 certificate can match an IP when that address is included as an `iPAddress`
+> SAN, but this OMV-generated certificate has only a DNS SAN, so `https://192.168.2.209` warns on the
+> name — use the `.local` name.
 
 **2. Enforce TLS** — `System | Workbench | Settings`:
 

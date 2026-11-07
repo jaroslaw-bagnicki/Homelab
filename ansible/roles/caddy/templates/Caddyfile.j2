@@ -3,6 +3,8 @@
 }
 
 {% for site in caddy_sites %}
+{% set upstreams = site.upstreams | default([site.upstream]) %}
+{% set needs_block = site.lb_policy is defined or site.health_uri is defined or site.tls_skip_verify | default(false) %}
 {{ site.name }} {
     tls {
         issuer acme {
@@ -13,11 +15,17 @@
         }
     }
 
-    reverse_proxy {{ site.upstream }}{% if site.tls_skip_verify | default(false) %} {
-        transport http {
+    reverse_proxy {{ upstreams | join(' ') }}{% if needs_block %} {
+{% if site.lb_policy is defined %}        lb_policy {{ site.lb_policy }}
+{% endif %}{% if site.health_uri is defined %}        health_uri {{ site.health_uri }}
+        health_interval {{ site.health_interval | default('10s') }}
+        health_timeout {{ site.health_timeout | default('3s') }}
+        fail_duration {{ site.fail_duration | default('30s') }}
+        max_fails {{ site.max_fails | default(1) }}
+{% endif %}{% if site.tls_skip_verify | default(false) %}        transport http {
             tls_insecure_skip_verify
         }
-    }{% endif %}
+{% endif %}    }{% endif %}
 
 }
 {% endfor %}

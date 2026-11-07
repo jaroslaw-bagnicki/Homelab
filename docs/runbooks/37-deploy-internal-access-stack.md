@@ -207,7 +207,7 @@ through Technitium and trusts the fleet root. Plaintext HTTP is never exposed: T
 | `https://dns.internal` | `http://127.0.0.1:5380` | Technitium console; loopback-only hop |
 | `https://netdata.internal` | `https://192.168.2.201:19999` | backend self-signed, verify skipped (#143) |
 | `https://logs.internal` | `https://192.168.2.214:9428` | VictoriaLogs; basic auth passes through |
-| `https://proxmox.internal` | `https://192.168.2.201:8006` | Proxmox UI (the host stays `pve1.internal` → `.201`) |
+| `https://proxmox.internal` | `https://192.168.2.201:8006` → `https://192.168.2.202:8006` | Proxmox UI; `lb_policy first` — `pve1` primary, `pve2` fallback ([runbook 42 §7](42-pve2-proxmox-node.md)). The host names stay `pve1.internal` → `.201` and `pve2.internal` → `.202` |
 | `https://omv.internal` | `https://192.168.2.209:443` | OMV workbench; the host stays `nas.internal` → `.209` |
 
 ```sh

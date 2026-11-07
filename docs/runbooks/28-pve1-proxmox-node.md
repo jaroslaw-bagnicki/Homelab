@@ -250,15 +250,31 @@ Proxmox freezes hostnames and IPs at cluster creation, so the rename must land b
    getent hosts pve1        # must return 192.168.2.201, not 127.0.1.1
    ```
 
-3. **Move the Proxmox node directory and make pmxcfs re-read the hostname** — the order matters:
-   move the guest configs first, then restart the cluster filesystem.
+3. **Make pmxcfs adopt the new hostname, then move the guest configs** — the order matters: restart
+   the cluster filesystem first so it creates `nodes/pve1`, then move the guest configs into it.
 
    ```sh
-   mv /etc/pve/nodes/pve /etc/pve/nodes/pve1
+   # 1. restart pmxcfs first so it adopts the new hostname
    systemctl stop pve-cluster && systemctl start pve-cluster
+   cat /etc/pve/.members          # "nodename": "pve1"
+   ls -l /etc/pve/local           # -> nodes/pve1
+   # 2. then move the guest configs into the new node directory
+   mv /etc/pve/nodes/pve/lxc/*.conf /etc/pve/nodes/pve1/lxc/
+   mv /etc/pve/nodes/pve/qemu-server/*.conf /etc/pve/nodes/pve1/qemu-server/ 2>/dev/null
    systemctl restart pveproxy pvedaemon pvestatd
    pvecm updatecerts -f
    ```
+
+   > **Do not move the node directory itself.** `hostnamectl set-hostname` (step 2) makes pmxcfs
+   > create an **empty** `/etc/pve/nodes/pve1` on its next write, so
+   > `mv /etc/pve/nodes/pve /etc/pve/nodes/pve1` aborts with
+   > `cannot overwrite '/etc/pve/nodes/pve1': Directory not empty` — and because that command is
+   > chained with `&&`, `pve-cluster` never restarts, leaving `nodename` on the old name. Executed
+   > 2026-11-07 and hit exactly this, which is why the sequence above restarts pmxcfs first and moves
+   > only the guest configs.
+   >
+   > The old `/etc/pve/nodes/pve` directory is left behind empty; it is harmless and disappears from
+   > the UI once pmxcfs settles.
 
 4. **Verify the node, the guests and the UI** — the UI check is mandatory: `pct`/`qm` keep working
    even when the `local` symlink is stale, so they are not a valid health check.
@@ -268,10 +284,16 @@ Proxmox freezes hostnames and IPs at cluster creation, so the rename must land b
    ls -l /etc/pve/local /etc/pve/lxc        # nodes/pve1
    pct list && qm list
    pct config 214 && pct config 215         # vtstack + ca preserved
-   qm config 216                            # ipa preserved
    openssl x509 -noout -subject -ext subjectAltName -in /etc/pve/local/pve-ssl.pem
    curl -sk -o /dev/null -w '%{http_code}\n' https://192.168.2.201:8006/   # 200
    ```
+
+   > **Restart Netdata on the node.** Netdata caches the hostname at startup, so the Netdata Parent
+   > keeps reporting the node under its old name until the service restarts — the UI shows `pve`
+   > while the host is already `pve1`. `systemctl restart netdata` fixes it; the other nodes
+   > reconnect on their own. Verify with
+   > `curl -sk https://192.168.2.201:19999/api/v1/info` → `mirrored_hosts` must list `pve1`, not
+   > `pve`. (Observed 2026-11-07.)
 
 5. **Re-run the base playbook with the SSH host certificate forced** — the `security` role only
    checks expiry/CA, not principals, so the old `pve` certificate would otherwise survive:
