@@ -54,7 +54,9 @@ reaches both models in Copilot; plans are global, so BYOK calls draw first from 
          "url": "https://api.mistral.ai/v1/chat/completions",
          "toolCalling": true,
          "vision": true,
-         "reasoningEffort": ["low", "medium", "high"],
+         "thinking": true,
+         "supportsReasoningEffort": ["low", "medium", "high"],
+         "reasoningEffortFormat": "chat-completions",
          "maxInputTokens": 800000,
          "maxOutputTokens": 128000
        },
@@ -64,11 +66,17 @@ reaches both models in Copilot; plans are global, so BYOK calls draw first from 
          "url": "https://api.mistral.ai/v1/chat/completions",
          "toolCalling": true,
          "vision": true,
-         "reasoningEffort": ["none", "low", "high", "max"],
+         "thinking": true,
+         "supportsReasoningEffort": ["none", "low", "high", "max"],
+         "reasoningEffortFormat": "chat-completions",
          "maxInputTokens": 800000,
          "maxOutputTokens": 128000
        }
-     ]
+     ],
+     "settings": {
+       "mistral-large-4": { "reasoningEffort": "high" },
+       "deepseek-v4-1-flash-1017": { "reasoningEffort": "high" }
+     }
    }
    ```
 
@@ -79,7 +87,10 @@ reaches both models in Copilot; plans are global, so BYOK calls draw first from 
    | `url` | full endpoint URL for the `chat-completions` API type (not the base URL) |
    | `toolCalling` | must be `true`, otherwise the model is hidden from agent-mode chat |
    | `vision` | `true` for both models (both accept image input) |
-   | `reasoningEffort` | *(Optional)* array of effort levels the model accepts — when set, the Thinking Effort selector appears for the custom endpoint. Probed 2026-11-06 against the Mistral endpoint: `mistral-large-4` accepts `low/medium/high` (`none` → HTTP 400); `deepseek-v4-1-flash-1017` accepts `none/low/high/max` (`medium` → HTTP 400). Declare exactly what the API accepts |
+   | `thinking` | `true` marks the model as reasoning-capable (required for the effort selector) |
+   | `supportsReasoningEffort` | array of effort levels the model accepts — makes the Thinking Effort selector appear. Probed 2026-11-06 against the Mistral endpoint: `mistral-large-4` accepts `low/medium/high` (`none` → HTTP 400); `deepseek-v4-1-flash-1017` accepts `none/low/high/max` (`medium` → HTTP 400). Declare exactly what the API accepts |
+   | `reasoningEffortFormat` | `chat-completions` so the selected effort is sent as `reasoning_effort` in the chat-completions body |
+   | provider-level `settings` | `"settings": { "<model-id>": { "reasoningEffort": "high" } }` pins the default/selected effort per model — this is the read path that works; the picker write path is buggy for custom endpoints (microsoft/vscode#346464) |
    | `maxInputTokens` / `maxOutputTokens` | card advertises a 1M context window, but Vibe sessions run ML4 with an **800k window** (observed 2026-11-06), so set 800000; output capped at 128k (prompt + output must fit the context — lower `maxOutputTokens` if a request is rejected) |
 
 3. Save; restart VS Code if the models do not appear in the picker immediately.
@@ -117,7 +128,7 @@ goes to the OS keychain (DPAPI on Windows). The file lives in `%APPDATA%`, outsi
 - In **Vibe/Le Chat** use the native Le Chonk entry — no BYOK needed there; the custom endpoint is only for VS Code/Copilot BYOK.
 - In **VS Code** with the custom endpoint, the DeepSeek control (`deepseek-v4-1-flash-1017`) returns plain string content and works; ML4 trips the parser until the VS Code issue is fixed — check microsoft/vscode#338309 for a fixed version.
 - The idea-16 A/B is unaffected: it runs over the metered API via opencode/Copilot BYOK clients that parse Mistral's `ThinkChunk` natively.
-- **Thinking Effort selector on custom endpoints:** declare `reasoningEffort` per model (table above) or the selector won't appear. Even then, some VS Code versions drop the selected effort from the custom-endpoint request body (microsoft/vscode#325121, #320805, #345722) — verify it actually went out: chat **⋯ → Show Chat Debug View** should list `gen_ai.usage.reasoning.output_tokens` > 0 per request, or check `usage.completion_tokens_details.reasoning_tokens` in the raw API response (probed: 0 without effort, >0 with `high`).
+- **Thinking Effort selector on custom endpoints:** use `thinking: true` + `supportsReasoningEffort: [...]` on the model and a provider-level `settings` map for the selected level (the picker write path is buggy for custom endpoints — microsoft/vscode#346464; some versions also drop the effort from the request body — #325121, #320805, #345722). Verify it actually went out: **Chat Debug View** → right-click a log entry → raw request should contain `reasoning_effort`, and `gen_ai.usage.reasoning.output_tokens` > 0; or check `usage.completion_tokens_details.reasoning_tokens` in the raw API response (probed: 0 without effort, >0 with `high`).
 
 ## Caveats
 
