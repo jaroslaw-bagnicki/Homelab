@@ -1,0 +1,10 @@
+---
+ipa_host_fqdn: ipa.internal
+ipa_host_short_name: ipa
+ipa_host_ip: 192.168.2.216
+
+freeipa_realm: IPA.INTERNAL
+freeipa_domain: ipa.internal
+freeipa_hostname: ipa.internal
+freeipa_ip: 192.168.2.216
+freeipa_ca_mode: external

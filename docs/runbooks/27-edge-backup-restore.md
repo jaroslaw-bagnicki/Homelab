@@ -260,9 +260,33 @@ gzip -l /mnt/backup/edge/wyse3040_<timestamp>.img.gz   # shows uncompressed size
 > image bundle, with run logs inside at `\\omv\edge\wyse3040-20260830-125805\logs\`
 > (same as `Z:\edge\wyse3040-20260830-125805\` and `Z:\edge\wyse3040-20260830-125805\logs\`).
 
+## Technitium zone export (ADR 40)
+
+The full eMMC image already contains `/etc/dns`, but the `internal.` zone is the one piece of the
+edge box that is worth exporting separately — it survives an image loss and can be re-imported into a
+fresh Technitium install ([runbook 37](37-deploy-internal-access-stack.md)).
+
+The console and the API are served over TLS by Caddy at `https://dns.internal` — plaintext
+`5380` stays on loopback. Run this from a client that resolves `dns.internal` to
+`192.168.2.240` through Technitium and trusts the fleet root ([#144](https://github.com/jaroslaw-bagnicki/Homelab/issues/144));
+`edge` itself satisfies both. The password is never written to disk:
+
+```powershell
+$pw = Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name technitium-admin-password -AsPlainText
+$session = Invoke-RestMethod -Method Post -Uri https://dns.internal/api/user/login `
+    -Body @{ user = 'admin'; pass = $pw }
+Invoke-RestMethod -Headers @{ Authorization = "Bearer $($session.token)" } `
+    -Uri 'https://dns.internal/api/zones/export?zone=internal' `
+    -OutFile .\internal.zone
+```
+
+Store `internal.zone` beside the eMMC image on the backup share. The Caddyfile itself needs no
+export — it is rendered from this repo.
+
 ## References
 
 - [Runbook 24](24-edge-appliance.md) — the edge appliance itself
+- [Runbook 37](37-deploy-internal-access-stack.md) — Technitium DNS + Caddy on the edge
 - [Runbook 26 — NAS exports](26-ml110-nas-exports.md) — the SMB `shared` target (nas-phase2 worktree)
 - [Research 28](../research/28-wyse3040-hardware-diagnostic.md) — hardware audit + eMMC quirks
 - [Issue #79](https://github.com/jaroslaw-bagnicki/Homelab/issues/79) — initial system backup

@@ -10,8 +10,8 @@
 > [§7](35-deploy-step-ca.md), which installs the signed certificate. Steps 1 and 2 are carried out by
 > the [offline signing kit](../private-ca-offline-signing/README.md). The one command that needs a
 > network is publishing the root to Key Vault at the end of step 1 — it runs on the controller,
-> deliberately away from the signing machine. Installing the root on the fleet is
-> [#144](https://github.com/jaroslaw-bagnicki/Homelab/issues/144), not covered here.
+deliberately away from the signing machine. Installing the root on the fleet and on personal
+devices is [runbook 39](39-trust-private-ca.md), not covered here.
 
 ## Why
 
@@ -19,15 +19,15 @@
 certificate a service signs for itself proves nothing, so anyone already on the LAN can still sit in the
 middle of the connection. [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) settles the fix
 as three tiers — a **root** that is never online and lasts 10 years, an **intermediate** that lasts one
-year whose key is sealed inside the `pve` TPM and cannot be copied out, and **leaf** certificates that
+year whose key is sealed inside the `pve1` TPM and cannot be copied out, and **leaf** certificates that
 last hours or days.
 
-The root is the one secret that cannot be replaced. Compromising `pve` still cannot mint a new
-intermediate, and if `pve` or its TPM dies the root is untouched — the fix is to sign a new intermediate
+The root is the one secret that cannot be replaced. Compromising `pve1` still cannot mint a new
+intermediate, and if `pve1` or its TPM dies the root is untouched — the fix is to sign a new intermediate
 with the same root, not to hand every client a new root to trust. That only holds as long as the root
 key is created and used offline.
 
-The `pve` TPM seals the intermediate key so it cannot be copied out
+The `pve1` TPM seals the intermediate key so it cannot be copied out
 ([research 37 §5](../research/37-tpm2-hardware-and-fleet.md)).
 
 ## Prerequisites
@@ -140,9 +140,9 @@ year; the root is published to Key Vault as `ca-root-cert`.
 
 - [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) — the three tiers, who holds what, and the 1-year intermediate
 - [Research 36 §4–§5](../research/36-step-ca-machine-identity.md) — how the TPM and KMS work
-- [Research 37 §5](../research/37-tpm2-hardware-and-fleet.md) — the `pve` Intel PTT TPM, and why the key can be lost
+- [Research 37 §5](../research/37-tpm2-hardware-and-fleet.md) — the `pve1` Intel PTT TPM, and why the key can be lost
 - [Issue #141](https://github.com/jaroslaw-bagnicki/Homelab/issues/141) — the TPM test that settled the approach
 - [Runbook 35](35-deploy-step-ca.md) — the deployment this ceremony feeds
 - [Offline signing kit](../private-ca-offline-signing/README.md) — the scripts, and the instructions the signing machine follows
-- [Runbook 28](28-pve-proxmox-node.md) (Proxmox base) · [ADR 34](../decisions/34-lan-tls-only.md) (TLS-only) ·
+- [Runbook 28](28-pve1-proxmox-node.md) (Proxmox base) · [ADR 34](../decisions/34-lan-tls-only.md) (TLS-only) ·
   [ADR 37](../decisions/37-lan-name-space-internal.md) (`.internal`)

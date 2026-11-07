@@ -1,7 +1,7 @@
 ---
 # VictoriaLogs log store workload — self-contained recipe.
 #
-# Deploys the Tier B log store (VictoriaLogs) on the `vtstack` guest (LXC 214 on the `pve`
+# Deploys the Tier B log store (VictoriaLogs) on the `vtstack` guest (LXC 214 on the `pve1`
 # node) per issue #123. One role recipe co-located under ansible/workloads/victorialogs/:
 #   - role: victorialogs_store   (TLS cert + file:// basic-auth password + Compose deploy)
 #

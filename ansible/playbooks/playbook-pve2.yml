@@ -1,0 +1,12 @@
+---
+- name: Configure pve2 (OptiPlex 7050 Proxmox) base
+  hosts: pve2
+  become: true
+  roles:
+    - common
+    - ca_trust
+    - security
+    - proxmox_cluster
+    - nut_client
+    - netdata
+    - fluentbit

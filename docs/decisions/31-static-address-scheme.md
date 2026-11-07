@@ -2,6 +2,7 @@
 
 **Date:** 2026-09-13
 **Status:** Accepted
+**Amended:** 2026-11-06 — `pve` → `pve1`; `pve2` takes `.202`; the Beetle NAS moves to `.209`; `pve2`'s guest block is `25x` (`.250–.254`).
 
 ---
 
@@ -15,8 +16,9 @@ Its tens-blocks were introduced as `20x` server / `21x` NAS / `22x` LLM / `23x` 
 Two things have moved since:
 
 - **The smart-home node grew a hypervisor.** The Wyse 5070 runs Proxmox VE
-  ([ADR 25](25-home-assistant-thin-client.md), [runbook 28](../runbooks/28-pve-proxmox-node.md)) with
-  a VM and three LXCs planned, none of which had a home in the scheme.
+  ([ADR 25](25-home-assistant-thin-client.md), [runbook 28](../runbooks/28-pve1-proxmox-node.md)) with
+  a VM and three LXCs planned, none of which had a home in the scheme. A second hypervisor (`pve2`)
+  now needs its own guest block as well ([ADR 47](47-second-proxmox-node-cluster-qdevice.md)).
 - **The NAS role left the `21x` block.** The ML110 was the block's only member
   ([ADR 23](23-nas-on-ml110.md)) and is retiring ([ADR 29](29-nas-backup-target-beetle-m3-omv.md)),
   while its successor is a physical server in its own right. Reusing the vacated block for virtual
@@ -30,11 +32,12 @@ guest's VMID its address's last octet.**
 
 | Block | Class | Members |
 |---|---|---|
-| `200–209` | physical servers | `lab` M910q `.200` · `pve` Wyse 5070 `.201` · Beetle NAS `.202` |
-| `210–219` | Proxmox guests on the `pve` node | **VM 210** `.210` · **LXC 211** `.211` · **LXC 212** `.212` · **LXC 213** `.213` (retired — NUT host-native, [ADR 39](39-nut-host-native.md)) · **LXC 214** `.214` |
+| `200–209` | physical servers | `lab` M910q `.200` · `pve1` Wyse 5070 `.201` · `pve2` OptiPlex 7050 `.202` · `.203–.208` free · Beetle NAS `.209` |
+| `210–219` | Proxmox guests on the `pve1` node | **VM 210** `.210` · **LXC 211** `.211` · **LXC 212** `.212` · **LXC 213** `.213` (retired — NUT host-native, [ADR 39](39-nut-host-native.md)) · **LXC 214** `.214` |
 | `220–229` | LLM server (Phase 2) | — |
 | `230–239` | switch management | TL-SG108E `.230` |
 | `240–249` | edge/ingress appliances | Wyse 3040 `.240` |
+| `250–254` | Proxmox guests on the `pve2` node | reserved — `.255` is the broadcast address, so the block has five usable addresses |
 
 The ID and the address are **the same number** — `VM 210` is `.210`, `LXC 214` is `.214` — so
 neither needs a lookup or an offset. Everything else stays on mesh DHCP. The IDs are assigned while
@@ -45,16 +48,19 @@ is a restore, not an edit.
 ## Consequences
 
 - **A guest's address needs no derivation** — the ID *is* the address, so `qm list` / `pct list` read
-  as the address plan, and a new guest's address is known from the ID it is handed.
+  as the address plan, and a new guest's address is known from the ID it is handed. `pve2` guests
+  therefore use VMIDs/CTIDs `250–254`.
 - **Each role sits in a block of its own class.** The Beetle takes a `20x` address as the physical
   NAS; the ML110 vacates `.210` when it retires.
-- **The numbering follows the addresses, not a shared counter.** A second hypervisor would need its
-  **own guest block allocated before it exists** — which is the point: the scheme scales by class, and
-  that coupling is what an offset rule (`.210 + (VMID - 100)`) cannot express. `22x` is already the
-  Phase 2 LLM server's block, so a second host's guests would need a new one.
+- **The numbering follows the addresses, not a shared counter.** A second hypervisor gets its
+  **own guest block allocated before it exists** — `pve2` takes `25x` (`.250–.254`), which is the
+  last free tens-block in the `/24`. `22x` stays the Phase 2 LLM server's block. The `/24` is now
+  full: a third hypervisor would need a second subnet or a VLAN, not a new tens-block.
 - **The address and the ID move together.** Re-addressing a guest means changing its ID as well, and
   Proxmox has no in-place ID change — the guest is restored under the new ID. Accepted because the
   addresses are stable by design: it is the price of the identity.
+- **The Beetle NAS moved from `.202` to `.209`** on 2026-11-06 so `pve2` can take `.202`; the
+  `20x` block still has `.203–.208` free for future physical servers.
 - **`.210` stays occupied until the ML110 is retired** — powered off is not the same as released.
   It is configured static at `.210` ([runbook 23](../runbooks/23-ml110-omv-setup.md)), so any boot
   before retirement, most likely the data migration onto the Beetle, collides with the HA VM:
@@ -87,5 +93,6 @@ is a restore, not an edit.
 ## References
 
 - [Research 24 — Homelab Network Topology & Design](../research/24-network-topology-design.md) — allocation table and block rationale
-- [Runbook 29 — UPS graceful shutdown (NUT on the pve node)](../runbooks/29-nut-ups-shutdown.md) — the NUT server is now **host-native** on `pve` (`.201`), so `.213` is free ([ADR 39](39-nut-host-native.md))
-- [ADR 23](23-nas-on-ml110.md) — the ML110's `.210` · [ADR 25](25-home-assistant-thin-client.md) — the `pve` node · [ADR 29](29-nas-backup-target-beetle-m3-omv.md) — Beetle NAS · [ADR 39](39-nut-host-native.md) — NUT host-native
+- [Runbook 29 — UPS graceful shutdown (NUT on the pve1 node)](../runbooks/29-nut-ups-shutdown.md) — the NUT server is now **host-native** on `pve1` (`.201`), so `.213` is free ([ADR 39](39-nut-host-native.md))
+- [ADR 23](23-nas-on-ml110.md) — the ML110's `.210` · [ADR 25](25-home-assistant-thin-client.md) — the `pve1` node · [ADR 29](29-nas-backup-target-beetle-m3-omv.md) — Beetle NAS · [ADR 39](39-nut-host-native.md) — NUT host-native
+- [ADR 47](47-second-proxmox-node-cluster-qdevice.md) — `pve2`, the `25x` guest block and the two-node cluster

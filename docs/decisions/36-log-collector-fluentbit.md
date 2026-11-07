@@ -3,7 +3,7 @@
 **Date:** 2026-09-27
 **Status:** Accepted
 **Amended:** 2026-09-27 (implementation) — the journald inclusion list and priority floor were
-dropped for **collect-all**; buffering is **filesystem** on `pve`/`lab`/`nas` with **`memrb`** on
+dropped for **collect-all**; buffering is **filesystem** on `pve1`/`lab`/`nas` with **`memrb`** on
 `edge`; the output uses the ISO8601 event time as `_time_field` for every source shape; and journald's
 numeric **`PRIORITY`** is mapped to the readable **`level`** field the store displays and filters on; and
 the outputs retry **without limit** (`Retry_Limit False`), without which the filesystem buffers did not
@@ -12,7 +12,7 @@ actually ride out an outage.
 VictoriaLogs syslog listener** (in-band, configured through the GUI/API via `oxlorg.opnsense.syslog`),
 resolving the deferral below. Fluent Bit stays out on the router (no OPNsense plugin). The listener has
 **no authentication** (mTLS is VictoriaLogs Enterprise-only) and **no parsing** (`filterlog` CSV arrives
-raw) — the LAN rule and LogsQL carry those. Deployed by [runbook 37](../runbooks/37-deploy-opnsense.md) §13
+raw) — the LAN rule and LogsQL carry those. Deployed by [runbook 45](../runbooks/45-deploy-opnsense.md) §13
 once the store's syslog listener lands.
 
 > **This ADR records the decision and why.** Flags, parsers, per-node paths, tuning and the full
@@ -72,7 +72,7 @@ at all (§7).
   parser; containerd CRI logs when [ADR 22](22-k3s-arc-homelab.md)'s k3s lands, with `cri` + `kube-custom`;
   and native file logs where a system keeps its own (Proxmox task logs, OMV's log directory)
   ([research 34 §9](../research/34-log-collector-options.md)).
-- **One transport per line** — `pve` and `nas` keep rsyslog files *and* a journal, so collecting both would
+- **One transport per line** — `pve1` and `nas` keep rsyslog files *and* a journal, so collecting both would
   store every line twice. Each node picks one, in `host_vars`; there is no dedup to enable at ingest.
 - **Output: the store's JSON-lines API over TLS with basic auth** — `https://192.168.2.214:9428/insert/jsonline`
   with `_stream_fields` / `_msg_field` / `_time_field`; **one output block per source shape, because a single
@@ -88,7 +88,7 @@ at all (§7).
   ingest arg, so a small Lua filter maps journald's `PRIORITY` to the readable `level` the store displays
   and filters on. `level` is a regular field, never a stream field: it varies per line, and a non-constant
   stream field is the high-cardinality trap.
-- **Buffering: filesystem on `pve`/`lab`/`nas`, `memrb` on `edge`** — bounded filesystem chunks carry logs
+- **Buffering: filesystem on `pve1`/`lab`/`nas`, `memrb` on `edge`** — bounded filesystem chunks carry logs
   across a store outage, the cursor on disk and the output queue capped. On `edge` the input uses Fluent
   Bit's **memory ring buffer** (`memrb`), which drops the oldest chunks and never writes to disk, with the
   cursor on **tmpfs** — where a reboot loses nothing journald had not already lost
@@ -101,7 +101,7 @@ at all (§7).
 - **The whole journal per node — no inclusion list, no priority floor.** Fluent Bit's journald filter is exact
   key/value, so a severity threshold cannot be expressed without inventing one; the simplest correct config is
   to ship everything and filter at query time. The store's volume and cardinality are the accepted costs.
-- **Rollout `pve` → `edge` → `lab`**, then `nas` and `vtstack`, validating each before the next.
+- **Rollout `pve1` → `edge` → `lab`**, then `nas` and `vtstack`, validating each before the next.
   **`cloudlab` is never a target** — off-LAN, and Tier A already covers it ([ADR 27](27-monitoring-strategy.md)).
 - **The OPNsense router is out of scope** — a FreeBSD appliance with no journald and no Docker, which
   [ADR 27](27-monitoring-strategy.md) already treats as a per-OS exception. Fluent Bit does build on FreeBSD,

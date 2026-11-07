@@ -13,17 +13,25 @@ Significant architectural and technology choices recorded in
 
 | # | Date | ADR | Status |
 |---|------|-----|--------|
-| 40 | 2026-10-09 | [LAN Router — OPNsense on the Futro S930, Routing-First](40-lan-router-futro-s930.md) | Accepted |
-| 39 | 2026-10-11 | [NUT Server Host-Native on the pve Node](39-nut-host-native.md) | Accepted |
+| 48 | 2026-10-09 | [LAN Router — OPNsense on the Futro S930, Routing-First](48-lan-router-futro-s930.md) | Accepted |
+| 47 | 2026-11-06 | [Second Proxmox VE Node — pve2, a Two-Node Cluster and an Edge QDevice](47-second-proxmox-node-cluster-qdevice.md) | Accepted |
+| 46 | 2026-10-31 | [Observability Host — VictoriaLogs, Netdata Parent and Grafana in One LXC](46-grafana-logs-ui-victorialogs.md) | Proposed |
+| 45 | 2026-10-27 | [Workload Identity — One Mechanism per Protocol, Workloads as Directory Users](45-workload-identity.md) | Accepted |
+| 44 | 2026-10-27 | [Authentik as the Fleet Identity Provider — an LXC on `pve1`, FreeIPA Source, SSO-Exempt Management Planes](44-authentik-identity-provider.md) | Accepted |
+| 43 | 2026-10-25 | [FreeIPA as the Lab's Domain — `ipa.internal`, Technitium Keeps DNS](43-freeipa-domain-realm.md) | Accepted |
+| 42 | 2026-10-25 | [PKI Topology — One Offline Root, Sibling Subordinate CAs](42-pki-topology-sibling-cas.md) | Accepted |
+| 41 | 2026-10-18 | [SSH Access — step-ca Certificates, Authentik Identity, Shared AI-Agent Identity](41-ssh-certificates-step-ca.md) | Accepted |
+| 40 | 2026-10-17 | [Internal DNS and Reverse Proxy — Technitium + Caddy on the Edge Node](40-internal-dns-proxy-edge.md) | Accepted |
+| 39 | 2026-10-11 | [NUT Server Host-Native on the pve1 Node](39-nut-host-native.md) | Accepted |
 | 38 | 2026-10-04 | [Private CA — 10-Year Offline Root, TPM-Bound Intermediate, Short-Lived Leaves](38-private-ca-hierarchy-and-custody.md) | Accepted |
 | 37 | 2026-09-29 | [LAN Name Space Is `.internal` — DNSMasq and `.home` Retired](37-lan-name-space-internal.md) | Accepted |
 | 36 | 2026-09-27 | [Log Collector — Fluent Bit, Fleet-Wide, into VictoriaLogs](36-log-collector-fluentbit.md) | Accepted |
-| 35 | 2026-09-27 | [Log Store — VictoriaLogs in an LXC on the pve Node](35-log-store-victorialogs.md) | Accepted |
+| 35 | 2026-09-27 | [Log Store — VictoriaLogs in an LXC on the pve1 Node](35-log-store-victorialogs.md) | Accepted |
 | 34 | 2026-09-20 | [LAN Services Are TLS-Only — No Plaintext HTTP](34-lan-tls-only.md) | Accepted |
 | 33 | 2026-09-19 | [Fleet Node Hostnames Name the Host Role](33-fleet-node-hostnames.md) | Accepted |
 | 32 | 2026-09-16 | [No Hosted CI — Verification Stays Local](32-no-hosted-ci.md) | Accepted |
 | 31 | 2026-09-13 | [Static Address Scheme — Server and Guest Blocks](31-static-address-scheme.md) | Accepted |
-| 30 | 2026-09-12 | [UPS Graceful Shutdown — NUT on the pve Node](30-ups-nut-graceful-shutdown.md) | Superseded by [ADR 39](39-nut-host-native.md) |
+| 30 | 2026-09-12 | [UPS Graceful Shutdown — NUT on the pve1 Node](30-ups-nut-graceful-shutdown.md) | Superseded by [ADR 39](39-nut-host-native.md) |
 | 29 | 2026‑09‑12 | [NAS Backup Target — Wincor Beetle M-III (OpenMediaVault)](29-nas-backup-target-beetle-m3-omv.md) | Accepted |
 | 28 | 2026‑08‑30 | [Dedicated Fleet-Wide SSH Admin Account & Key](28-fleet-admin-account-and-key.md) | Accepted |
 | 27 | 2026‑08‑15 | [Homelab Monitoring & Observability Strategy — Two-Tier Model (Azure Monitor via Arc + Local Monitoring Stack)](27-monitoring-strategy.md) | Accepted |

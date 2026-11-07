@@ -1,5 +1,5 @@
-# ── Homelab: auto-start ssh-agent, ensure Azure context, load VPS key ─
-# Runs once per session — idempotent, non-interactive.
+# ── Homelab: auto-start ssh-agent, ensure Azure context, trust the SSH host CA ─
+# Runs once per session — idempotent, non-interactive. Loads no SSH identity.
 
 # Opencode
 $env:PATH = "/home/vscode/.opencode/bin:$env:PATH"
@@ -42,24 +42,29 @@ if (-not (Get-AzContext)) {
   Write-Host ":: Reusing existing Azure context: $((Get-AzContext).Account.Id)" -ForegroundColor DarkGray
 }
 
-# Load fleet + VPS keys from Key Vault (ssh-add is idempotent — run every
-# session so fleetadm-key-priv is always present, even when the agent already
-# holds other keys)
-$keyNames = [ordered]@{
-  'fleetadm-key-priv'     = 'fleetadm SSH key (fleetadm@homelab)'
-  'cloudlab-vps-key-priv' = 'legacy cloudlab VPS SSH key'
-}
+# No SSH identity is loaded here (ADR 41, #170): the agent starts empty, so a run cannot
+# silently authenticate with whatever happened to be in it. Load one explicitly before an
+# Ansible run:
+#   scripts/Get-HomelabSshAutomationCert.ps1            operator / non-agent automation
+#   scripts/Get-HomelabSshAgentCert.ps1 -Agent <name>    AI agent (agent-ai principal)
+#   scripts/Import-HomelabFleetKey.ps1                   break-glass fleetadm key
+#   scripts/Import-HomelabCloudlabKey.ps1                cloudlab (not certificate-enabled)
+
+# ── SSH host CA trust ─────────────────────────────────────────────
+# The fleet's @cert-authority line replaces per-host known_hosts pins for the
+# LAN nodes. The SSH host CA public key is published to Key Vault by the CA
+# workload; cloudlab is out of scope and keeps its pinned host key.
 if ($env:SSH_AUTH_SOCK -and (Get-AzContext -ErrorAction SilentlyContinue)) {
-  foreach ($secret in $keyNames.Keys) {
-    Write-Host ":: Loading $($keyNames[$secret]) from Key Vault..." -ForegroundColor Yellow
-    $key = Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name $secret -AsPlainText -ErrorAction SilentlyContinue 2>$null
-    if (-not $key) {
-      Write-Warning ":: Could not read $secret from Key Vault — check Azure context / vault access"
-      continue
-    }
-    $null = $key | ssh-add - 2>$null
-    if ($LASTEXITCODE -ne 0) {
-      Write-Warning ":: ssh-add failed for $($keyNames[$secret])"
-    }
+  $caKey = Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name ssh-host-ca-pub -AsPlainText -ErrorAction SilentlyContinue 2>$null
+  if ($caKey) {
+    $sshDir = Join-Path $HOME '.ssh'
+    if (-not (Test-Path $sshDir)) { New-Item -ItemType Directory -Path $sshDir -Force | Out-Null }
+    $knownHosts = Join-Path $sshDir 'known_hosts'
+    $pattern = '*.internal,192.168.2.*'
+    $line = "@cert-authority $pattern $($caKey.Trim())"
+    $existing = if (Test-Path $knownHosts) { @(Get-Content -LiteralPath $knownHosts) } else { @() }
+    $filtered = $existing | Where-Object { $_ -notmatch '^@cert-authority\s+.*\*\.internal' }
+    [System.IO.File]::WriteAllLines($knownHosts, @($filtered) + $line)
+    if ($IsLinux) { & chmod 600 $knownHosts }
   }
 }

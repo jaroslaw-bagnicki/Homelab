@@ -11,9 +11,36 @@ entry. Notable changes only: no instruction-file tweaks, typo/link fixes, cross-
 corrections, or changelog bookkeeping.
 Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month and newest entry first.
 
+## 2026‑11
+
+- **(docs)** Adopt OPNsense on the Futro S930 as the LAN router, routing-first — [ADR 48](docs/decisions/48-lan-router-futro-s930.md)
+- **(feat)** Stand up `pve2` as the second Proxmox node — `pve` → `pve1`, the NAS moved to `.209`, the two-node `homelab` cluster with an `edge` QDevice, and `proxmox.internal` failover — [runbook 42](docs/runbooks/42-pve2-proxmox-node.md) · [runbook 43](docs/runbooks/43-proxmox-cluster-qdevice.md)
+- **(docs)** Plan a Mistral Large 4 vs DeepSeek V4.1 Flash A/B — one Mistral Pro allowance serves candidate and control, so only task success can decide — [idea 16](docs/ideas/16-ai-model-mistral-large-4.md)
+- **(docs)** Audit the OptiPlex 7050 MFF for `pve2` — 65 W i5-7500, a sound but small 128 GB SSD, MEBx unreachable — [research 52](docs/research/52-optiplex7050-hardware-diagnostic.md)
+- **(fix)** Serve the fleet resolver from the hosts and alert when a `.internal` leaf nears expiry — [ADR 40](docs/decisions/40-internal-dns-proxy-edge.md)
+- **(feat)** Deploy the FreeIPA server on `pve` — external-ca under the fleet root, M1 verified; TPM-backed Dogtag custody parked — [runbook 41](docs/runbooks/41-deploy-freeipa-server.md)
+- **(feat)** Load SSH identities explicitly — empty agent by default, loaders for `automation`, `agent-ai` and break-glass, one preflight that establishes the session — [ADR 41](docs/decisions/41-ssh-certificates-step-ca.md)
+
 ## 2026‑10
 
-- **(docs)** Adopt OPNsense on the Futro S930 as the LAN router, routing-first — [ADR 40](docs/decisions/40-lan-router-futro-s930.md)
+- **(docs)** Propose the `monitor` observability host — collocate VictoriaLogs, Netdata Parent and Grafana in one LXC; Parent first, 4 GiB / 32 GiB now — [ADR 46](docs/decisions/46-grafana-logs-ui-victorialogs.md)
+- **(feat)** SSH certificates — TPM SSH CA, host certs on LAN nodes, `automation` and shared `agent-ai`; `cloudlab` stays on the fleet key — [runbook 40](docs/runbooks/40-deploy-ssh-certificates.md)
+- **(docs)** Decide workload identity — mechanism per protocol, one `svc-` directory identity per workload, keytabs only for non-HTTP consumers — [ADR 45](docs/decisions/45-workload-identity.md)
+- **(docs)** Decide Authentik as the fleet identity provider — an LXC on `pve`, FreeIPA as its user source, management planes never behind SSO — [ADR 44](docs/decisions/44-authentik-identity-provider.md)
+- **(docs)** Decide the PKI topology — one offline root, `step-ca` and FreeIPA's CA as siblings, never a chain — [ADR 42](docs/decisions/42-pki-topology-sibling-cas.md)
+- **(docs)** Weigh a second Proxmox node — `pve` → `pve1`, HA needs a QDevice, storage is ZFS replication, OptiPlex 7040 leading — [idea 15](docs/ideas/15-second-proxmox-node.md)
+- **(docs)** Decide FreeIPA as the lab's domain — realm `ipa.internal`, Technitium keeps DNS, `step-ca` keeps TLS and SSH — [ADR 43](docs/decisions/43-freeipa-domain-realm.md)
+- **(docs)** Scope a self-hosted secret store to replace Azure Key Vault — ten-plus consumers, Vault/OpenBao vs Infisical, TPM unseal — [idea 14](docs/ideas/14-self-hosted-secret-store.md)
+- **(docs)** Scope an ARM travel workstation with a Linux desktop — per-model Linux support; a supplement to the Lenovo, not a replacement — [idea 12](docs/ideas/12-travel-workstation-arm-linux.md)
+- **(docs)** Adopt SSH certificates from the private CA — Authentik for humans, per-agent identities, key demoted to break-glass — [ADR 41](docs/decisions/41-ssh-certificates-step-ca.md)
+- **(docs)** Answer whether OMV can do Kerberos SMB and OIDC — Samba yes, OMV's user model and missing OIDC provider decide it — [research 44](docs/research/44-omv-identity-integration.md)
+- **(docs)** Extend idea 11 with Authentik hosting — Caddy forward-auth, local-only deployment and `lab` as the leading host candidate — [research 42](docs/research/42-authentik-hosting.md)
+- **(docs)** Capture the Kerberos and machine-identity research — keytabs, FreeIPA vs `step-ca`, Proxmox→OMV backup paths — [research 41](docs/research/41-machine-identity-kerberos.md)
+- **(feat)** Enable per-core CPU C-state residency charts in Netdata across the fleet — [runbook 31](docs/runbooks/31-deploy-netdata.md)
+- **(feat)** Distribute the private CA root across the fleet (`ca_trust`, all six nodes) and document the personal-device trust procedure — [runbook 39](docs/runbooks/39-trust-private-ca.md)
+- **(fix)** Replace the failed `md0` mirror disk on the Beetle NAS (`WDEPBVR3` → `WL10C3NG`), restoring `[2/2] [UU]` — [runbook 38](docs/runbooks/38-nas-disk-replacement.md)
+- **(feat)** Serve `.internal` from the `edge` node — Technitium DNS + Caddy with short-lived `step-ca` leaves — [runbook 37](docs/runbooks/37-deploy-internal-access-stack.md)
+- **(docs)** Add idea 11 — Authentik as the lab identity provider — [idea 11](docs/ideas/11-authentik-idp.md)
 - **(feat)** Move the NUT server host-native on `pve` under Ansible, retiring LXC 213, and widen the NUT fail-safe window to 120 s — [ADR 39](docs/decisions/39-nut-host-native.md) · [runbook 29](docs/runbooks/29-nut-ups-shutdown.md)
 - **(feat)** Private CA — offline signing kit, root and TPM-sealed intermediate issued, `step-ca` serving ACME on the `ca` guest — [runbook 35](docs/runbooks/35-deploy-step-ca.md)
 
@@ -35,7 +62,7 @@ Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month 
 - **(docs)** Wincor Beetle M-III is the NAS successor on OMV, superseding the ML110 — [ADR 29](docs/decisions/29-nas-backup-target-beetle-m3-omv.md)
 - **(docs)** Make `overview.md` "What's Next" a state-grouped board with a `Not Scheduled` parking lot — [overview](docs/overview.md)
 - **(docs)** Add idea 09 — shared-rail UPS with NUT-driven shutdown — [idea 09](docs/ideas/09-ups-nut-home-assistant.md)
-- **(feat)** Proxmox VE host (Wyse 5070) — **9.2.2** installed and base provisioned — [runbook 28](docs/runbooks/28-pve-proxmox-node.md)
+- **(feat)** Proxmox VE host (Wyse 5070) — **9.2.2** installed and base provisioned — [runbook 28](docs/runbooks/28-pve1-proxmox-node.md)
 - **(feat)** Fleet SSH access restricted to the LAN, with devcontainer key autoload — [runbook 24](docs/runbooks/24-edge-appliance.md)
 
 ## 2026‑08

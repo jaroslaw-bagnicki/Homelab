@@ -70,8 +70,33 @@ The PAT is referenced in the `Authorization` header of the remote MCP request. F
 **Per ADR 17:** PAT auth is transitional. It ties operations to a personal identity rather than a workload identity. It will be replaced by GitHub App installation tokens when k3s lands ([#44](https://github.com/jaroslaw-bagnicki/Homelab/issues/44)), using the same sidecar pattern as Azure MCP.
 
 **PAT scope requirements:**
-- Fine-grained: repository-scoped, `Contents: Read/Write`, `Issues: Read/Write`, `Pull requests: Read/Write`, `Metadata: Read`
-- Classic: `repo` scope
+- Fine-grained: repository-scoped, `Contents: Read/Write`, `Issues: Read/Write`, `Pull requests: Read/Write`, `Metadata: Read`; `Commit statuses: Read` is optional.
+- Classic: `repo` scope.
+- Do **not** grant `Workflows`, `Actions`, `Secrets`, `Administration` or organization permissions. Fine-grained PATs cannot call the Checks API.
+
+#### Generating the fine-grained PAT (Homelab)
+
+Creation is **UI-only** — there is no `gh` command or documented REST endpoint that mints a fine-grained PAT. `gh auth login` creates an OAuth token, and `gh auth login --with-token` only consumes an existing PAT. For automated issuance, use a GitHub App installation token (the direction in [#43](https://github.com/jaroslaw-bagnicki/Homelab/issues/43)).
+
+1. Open **Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token**.
+2. Set **Resource owner** to `jaroslaw-bagnicki` and **Repository access** to **Only select repositories** → `Homelab`.
+3. Grant the permissions above. `Metadata: Read` is automatic; leave Workflows out unless the agent must edit `.github/workflows` (there are none today).
+4. Set **Expiration** to 90 days or shorter.
+5. Generate the token, copy it once, and store it in Key Vault:
+
+   ```powershell
+   .\scripts\Set-HomelabOcGhPat.ps1 -Force
+   ```
+
+6. Re-run the OpenCode workload playbook so `GH_PAT` is injected, then verify the MCP `get_me` and a branch push/PR.
+
+The form supports pre-filled query parameters. This URL selects the owner and required permissions, but still requires a click on **Generate token**:
+
+```text
+https://github.com/settings/personal-access-tokens/new?name=opencode-homelab&description=OpenCode+Homelab+agent&target_name=jaroslaw-bagnicki&expires_in=90&contents=write&pull_requests=write&issues=write&statuses=read
+```
+
+**Contents write is not branch-scoped** — it also permits merges, releases and branch deletion. Keep `main` protected; the agent's no-merge rule is policy, not token scope.
 
 ### OAuth — remote
 
@@ -241,13 +266,13 @@ See [Managing MCP servers](https://opencode.ai/docs/mcp-servers/#manage) in the 
 ## Troubleshooting
 
 **Permission denied on private repos:**
-Ensure the PAT has `repo` (classic) or `Contents: Read` + `Metadata: Read` (fine-grained) scopes on the target repositories.
+Ensure the PAT has `repo` (classic) or the fine-grained permissions in [Generating the fine-grained PAT (Homelab)](#generating-the-fine-grained-pat-homelab) — at minimum `Contents: Read/Write` and `Metadata: Read` on `Homelab`.
 
 **GitHub MCP tools not appearing:**
 The remote server at `api.githubcopilot.com` must return a valid tool list on the first request. If tools don't load, verify the PAT is valid and the container has outbound HTTPS access. Check the OpenCode server logs for MCP startup errors.
 
 **PAT expired:**
-GitHub fine-grained PATs have a configurable expiry (default: 7 days, max: 2 years). Classic PATs can be set to never expire. Rotate via GitHub Settings → Developer settings → Personal access tokens.
+Regenerate it through the UI steps in [Generating the fine-grained PAT (Homelab)](#generating-the-fine-grained-pat-homelab), re-store it in Key Vault and redeploy. Fine-grained PATs have a configurable expiry (default: 7 days, max: 2 years); classic PATs can be set to never expire.
 
 ## References
 

@@ -1,9 +1,9 @@
-# Log Store — VictoriaLogs in an LXC on the pve Node
+# Log Store — VictoriaLogs in an LXC on the pve1 Node
 
 **Date:** 2026-09-27
 **Status:** Accepted
 **Amended:** 2026-10-10 — the store also runs a **TLS syslog listener** (`:6514`, `-syslog.*`) for the
-**OPNsense router** ([ADR 36 amendment](36-log-collector-fluentbit.md) · [runbook 37](../runbooks/37-deploy-opnsense.md) §13).
+**OPNsense router** ([ADR 36 amendment](36-log-collector-fluentbit.md) · [runbook 45](../runbooks/45-deploy-opnsense.md) §13).
 It reuses the store's TLS certificate and has **no authentication** — client-cert mTLS is VictoriaLogs
 Enterprise-only — so it is the store's **one unauthenticated write path**, and the in-LXC LAN UFW rule is the
 entire boundary (the same posture as the "LAN-only, enforced at the container" clause above). Configured in
@@ -42,14 +42,14 @@ Host placement was the open question, researched in
 ## Decision
 
 **Adopt VictoriaLogs as the Tier B log store, running as a Docker Compose workload in an unprivileged
-LXC on the `pve` node.**
+LXC on the `pve1` node.**
 
 - **Store: VictoriaLogs** over Loki — a single static Go binary with no chunk store or object storage,
   no label-cardinality discipline to maintain, and a built-in LogsQL web UI at `/select/vmui` so
   **Grafana is not a prerequisite** (ADR 27's future dashboard component stays optional). The engine
   comparison behind this is in
   [research 33 §8](../research/33-centralized-logging-victorialogs.md#8-how-the-three-engines-store-and-query-logs--the-mechanism-behind-the-store-choice).
-- **Host: the `pve` node (Proxmox VE, Wyse 5070)** — the store lands beside the pane it serves, on
+- **Host: the `pve1` node (Proxmox VE, Wyse 5070)** — the store lands beside the pane it serves, on
   the node that is always on regardless of maintenance on `lab`, where the fleet's firewall policy is
   already managed, and whose guests' backup route (`vzdump` → the NAS share) is the natural path once
   the Beetle's share lands. **LXC 214 / `192.168.2.214`** — the next free guest ID, per ADR 31's
@@ -119,7 +119,7 @@ LXC on the `pve` node.**
   ([research 33 §8](../research/33-centralized-logging-victorialogs.md#8-how-the-three-engines-store-and-query-logs--the-mechanism-behind-the-store-choice)).
   Accepted: fleet queries are stream- and field-filtered sweeps, and an inverted index is what an 8 GB
   node cannot afford.
-- **Risk bounded, not removed — resource contention on a Celeron with 8 GB.** `pve` carries the
+- **Risk bounded, not removed — resource contention on a Celeron with 8 GB.** `pve1` carries the
   host-native NUT server and the host-native Netdata Parent today, and is slated to take the Home Assistant VM
   plus the Mosquitto and Zigbee2MQTT LXCs (ADR 25, [#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68)).
   VictoriaLogs' compression and LogsQL scans are CPU-bound and its memory can spike under wide queries,
@@ -128,7 +128,7 @@ LXC on the `pve` node.**
   ([research 33](../research/33-centralized-logging-victorialogs.md)); the memory and disk caps above
   bound the damage but do not remove the competition for a weak CPU. If the store proves disruptive,
   ADR 22's k3s node is the documented fallback and this ADR is updated or superseded.
-- **Disk is shared on one 128 GB M.2 SATA.** The `pve` node has a single SSD: `local` is a ~39 GiB
+- **Disk is shared on one 128 GB M.2 SATA.** The `pve1` node has a single SSD: `local` is a ~39 GiB
   root LV already holding the Netdata Parent's ≈9 GiB per-tier database, and `local-lvm` is a ~68 GiB
   thin pool backing the guests' disks. The store's volume and its retention cap are sized against that
   one device — the docs' guidance is ≥20% free space at the store's data directory, and a thin pool is

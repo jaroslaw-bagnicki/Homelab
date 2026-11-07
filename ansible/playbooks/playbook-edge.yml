@@ -4,8 +4,12 @@
   become: true
   roles:
     - common
+    - ca_trust
     - security
+    - corosync_qnetd
     - edge_host
+    - technitium
+    - caddy
     - nut_client
     - netdata
     - fluentbit

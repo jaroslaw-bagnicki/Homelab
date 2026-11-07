@@ -1,24 +1,24 @@
 # nut_client
 
-Installs **NUT clients** (`nut-client` + `upsmon`) on the physical fleet nodes, so each node stops itself in an orderly way when the shared UPS battery runs down. It is the **client** half of the UPS/NUT setup: the NUT **server** runs host-native on the `pve` node and is delivered by the [`nut_server`](../nut_server/README.md) role ([runbook 29](../../../docs/runbooks/29-nut-ups-shutdown.md)). Decision: [ADR 30](../../../docs/decisions/30-ups-nut-graceful-shutdown.md) (placement changed by [ADR 39](../../../docs/decisions/39-nut-host-native.md)); tracked in [issue #116](https://github.com/jaroslaw-bagnicki/Homelab/issues/116).
+Installs **NUT clients** (`nut-client` + `upsmon`) on the physical fleet nodes, so each node stops itself in an orderly way when the shared UPS battery runs down. It is the **client** half of the UPS/NUT setup: the NUT **server** runs host-native on the `pve1` node and is delivered by the [`nut_server`](../nut_server/README.md) role ([runbook 29](../../../docs/runbooks/29-nut-ups-shutdown.md)). Decision: [ADR 30](../../../docs/decisions/30-ups-nut-graceful-shutdown.md) (placement changed by [ADR 39](../../../docs/decisions/39-nut-host-native.md)); tracked in [issue #116](https://github.com/jaroslaw-bagnicki/Homelab/issues/116).
 
 ## Files
 
 - `defaults/main.yml` — role parameters (secondary values).
 - `tasks/main.yml` — install, Key Vault password fetch, templates, reachability guard, service.
 - `handlers/main.yml` — restart `nut-monitor` (guarded).
-- `templates/nut.conf.j2` — the NUT mode: `standalone` on `pve`, `netclient` on the secondaries.
+- `templates/nut.conf.j2` — the NUT mode: `standalone` on `pve1`, `netclient` on the secondaries.
 - `templates/upsmon.conf.j2` — the shared monitor config.
 
 ## Roles
 
 | Hosts | `upsmon` role | Account | Password secret | `HOSTSYNC` | `FINALDELAY` |
 |---|---|---|---|---|---|
-| `pve` | `primary` | `upsmon-host` | `nut-upsmon-primary-password` | 30 | 30 |
-| `lab`, `edge`, `nas` | `secondary` | `upsmon-fleet` | `nut-upsmon-secondary-password` | 15 | 0 |
+| `pve1` | `primary` | `upsmon-host` | `nut-upsmon-primary-password` | 30 | 30 |
+| `pve2`, `lab`, `edge`, `nas` | `secondary` | `upsmon-fleet` | `nut-upsmon-secondary-password` | 15 | 0 |
 
-- **`pve` is the sole `primary`.** It waits `FINALDELAY 30` after the shutdown signal before stopping the Proxmox host, giving the secondaries time to finish; Proxmox then stops its own VMs/LXCs in order. Its overrides live in [`host_vars/pve.yml`](../../host_vars/pve.yml).
-- **`lab`/`edge`/`nas` are `secondary`.** They act on the FSD signal the primary raises; `FINALDELAY 0` is NUT's default and is inert on a secondary. They ride the role defaults.
+- **`pve1` is the sole `primary`.** It waits `FINALDELAY 30` after the shutdown signal before stopping the Proxmox host, giving the secondaries time to finish; Proxmox then stops its own VMs/LXCs in order. Its overrides live in [`host_vars/pve1.yml`](../../host_vars/pve1.yml).
+- **`pve2`/`lab`/`edge`/`nas` are `secondary`.** They act on the FSD signal the primary raises; `FINALDELAY 0` is NUT's default and is inert on a secondary. They ride the role defaults.
 - Both render the **same `upsmon.conf` template**, so the files differ only in the per-role values above.
 
 ## Services and files written
@@ -26,29 +26,29 @@ Installs **NUT clients** (`nut-client` + `upsmon`) on the physical fleet nodes, 
 | Item | Notes |
 |---|---|
 | `nut-monitor` | `upsmon`; enabled and started by the role (when the server is reachable). |
-| `/etc/nut/nut.conf` | `MODE=standalone` on `pve` (it also runs the server), `MODE=netclient` on the secondaries; `0640 root:nut`. |
+| `/etc/nut/nut.conf` | `MODE=standalone` on `pve1` (it also runs the server), `MODE=netclient` on the secondaries; `0640 root:nut`. |
 | `/etc/nut/upsmon.conf` | `MONITOR` + shutdown policy, `0640 root:nut`; templated with `no_log` so the password never prints, including under `--diff`. |
-| `nut-server` / `nut-driver@ups` | `pve` — delivered by the [`nut_server`](../nut_server/README.md) role ([ADR 39](../../../docs/decisions/39-nut-host-native.md)). |
+| `nut-server` / `nut-driver@ups` | `pve1` — delivered by the [`nut_server`](../nut_server/README.md) role ([ADR 39](../../../docs/decisions/39-nut-host-native.md)). |
 
 ## Secrets
 
 The monitor passwords already exist in `homelab-bysxdb-kv` (provisioned by `scripts/New-HomelabNutUpsmonPasswords.ps1`):
 
-- `nut-upsmon-primary-password` — `pve`, account `upsmon-host`
-- `nut-upsmon-secondary-password` — `lab`/`edge`/`nas`, account `upsmon-fleet`
+- `nut-upsmon-primary-password` — `pve1`, account `upsmon-host`
+- `nut-upsmon-secondary-password` — `pve2`/`lab`/`edge`/`nas`, account `upsmon-fleet`
 
 The role fetches the password for its role at run time via `azure.azcollection.azure_keyvault_secret` (`delegate_to: localhost`, `no_log`) and writes it straight into `/etc/nut/upsmon.conf`. **No password is a role default or is committed.** Rotation = re-run the script with `-Force`, then re-run the base playbook.
 
-The accounts must match `upsd.users` on the `pve` host (`upsmon-host` = `upsmon primary`, `upsmon-fleet` = `upsmon secondary`); a role mismatch surfaces as `Login failed: not authorized for this mode` in the client's `nut-monitor` log.
+The accounts must match `upsd.users` on the `pve1` host (`upsmon-host` = `upsmon primary`, `upsmon-fleet` = `upsmon secondary`); a role mismatch surfaces as `Login failed: not authorized for this mode` in the client's `nut-monitor` log.
 
 ## Reachability guard
 
 `upsmon` is **fail-safe**: with `MINSUPPLIES 1`, an `upsmon` that loses the server for `DEADTIME` (**120 s** — `nut_client_deadtime`) shuts the node down. The role therefore probes the server with `upsc ups@192.168.2.201` (5 retries, 2 s apart) before touching the service:
 
 - **Server answers** → `nut-monitor` is enabled and started (the restart handler is likewise gated).
-- **Server unreachable** → config is written, the service is left stopped, and the play warns. Re-run once the NUT server on `pve` is up.
+- **Server unreachable** → config is written, the service is left stopped, and the play warns. Re-run once the NUT server on `pve1` is up.
 
-This keeps a from-scratch `pve` rebuild (where the NUT server is not up yet) from starting a fail-safe monitor with no server to reach.
+This keeps a from-scratch `pve1` rebuild (where the NUT server is not up yet) from starting a fail-safe monitor with no server to reach.
 
 The guard is **provisioning-only**: it governs whether the service is (re)started and leaves an already-running `nut-monitor` alone, so a converged node whose server genuinely goes down still stops itself — the fail-safe trade-off [ADR 30](../../../docs/decisions/30-ups-nut-graceful-shutdown.md) accepts (see runbook 29 §6).
 
@@ -64,21 +64,21 @@ The guard is **provisioning-only**: it governs whether the service is (re)starte
 | Var | Default | Notes |
 |---|---|---|
 | `nut_client_ups_name` | `ups` | UPS section name in `ups.conf`. |
-| `nut_client_server` | `192.168.2.201` | NUT server (host-native on `pve`). |
+| `nut_client_server` | `192.168.2.201` | NUT server (host-native on `pve1`). |
 | `nut_client_keyvault_name` | `homelab-bysxdb-kv` | Key Vault for the password. |
-| `nut_client_role` | `secondary` | `primary` on `pve` (via `host_vars`). |
+| `nut_client_role` | `secondary` | `primary` on `pve1` (via `host_vars`). |
 | `nut_client_nut_mode` | `{{ 'standalone' if nut_client_role == 'primary' else 'netclient' }}` | `/etc/nut/nut.conf` MODE — derived from the role, not host-set. |
-| `nut_client_account` | `upsmon-fleet` | `upsmon-host` on `pve`. |
-| `nut_client_password_secret` | `nut-upsmon-secondary-password` | `nut-upsmon-primary-password` on `pve`. |
-| `nut_client_hostsync` | `15` | `30` on `pve`. |
-| `nut_client_finaldelay` | `0` | `30` on `pve`; inert on a secondary. |
-| `nut_client_deadtime` | `120` | Seconds of `upsd` silence before the node fails safe (shuts down). Raised from the NUT default 15 s on 2026-10-11 — a measured `pve` reboot leaves `upsd` unreachable for ~60–67 s (see [runbook 29 §6](../../../docs/runbooks/29-nut-ups-shutdown.md)). |
+| `nut_client_account` | `upsmon-fleet` | `upsmon-host` on `pve1`. |
+| `nut_client_password_secret` | `nut-upsmon-secondary-password` | `nut-upsmon-primary-password` on `pve1`. |
+| `nut_client_hostsync` | `15` | `30` on `pve1`. |
+| `nut_client_finaldelay` | `0` | `30` on `pve1`; inert on a secondary. |
+| `nut_client_deadtime` | `120` | Seconds of `upsd` silence before the node fails safe (shuts down). Raised from the NUT default 15 s on 2026-10-11 — a measured `pve1` reboot leaves `upsd` unreachable for ~60–67 s (see [runbook 29 §6](../../../docs/runbooks/29-nut-ups-shutdown.md)). |
 
 `nut_client_upsmon_password` is a runtime fact from Key Vault — never a default.
 
 ## Hosts
 
-Applied by the base playbooks `playbook-pve.yml` (primary) and `playbook-lab.yml` / `playbook-edge.yml` / `playbook-nas.yml` (secondaries). The `nas` node (Wincor Beetle M-III OMV NAS) joins when OMV is installed ([#98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98), [runbook 32](../../../docs/runbooks/32-beetle-m3-omv-setup.md) §8); the Futro S930 runs FreeBSD ([#96](https://github.com/jaroslaw-bagnicki/Homelab/issues/96)), and the ML110 is not enrolled. `cloudlab` is never targeted.
+Applied by the base playbooks `playbook-pve1.yml` (primary) and `playbook-pve2.yml` / `playbook-lab.yml` / `playbook-edge.yml` / `playbook-nas.yml` (secondaries). The `nas` node (Wincor Beetle M-III OMV NAS) joins when OMV is installed ([#98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98), [runbook 32](../../../docs/runbooks/32-beetle-m3-omv-setup.md) §8); the Futro S930 runs FreeBSD ([#96](https://github.com/jaroslaw-bagnicki/Homelab/issues/96)), and the ML110 is not enrolled. `cloudlab` is never targeted.
 
 ## Operational runbook
 
@@ -87,7 +87,7 @@ Deployment, verification, and troubleshooting: [runbook 30 — NUT clients](../.
 ## References
 
 - [Issue #116 — NUT clients across the fleet](https://github.com/jaroslaw-bagnicki/Homelab/issues/116)
-- [ADR 30 — UPS graceful shutdown (NUT on the pve node)](../../../docs/decisions/30-ups-nut-graceful-shutdown.md)
+- [ADR 30 — UPS graceful shutdown (NUT on the pve1 node)](../../../docs/decisions/30-ups-nut-graceful-shutdown.md)
 - [Runbook 29 — UPS graceful shutdown](../../../docs/runbooks/29-nut-ups-shutdown.md) (server §1–§3; choreography §6)
 - [Network UPS Tools](https://networkupstools.org/) — `upsmon.conf`, `upsmon`
 

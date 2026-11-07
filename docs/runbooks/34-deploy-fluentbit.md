@@ -9,13 +9,13 @@
 > ⚠ **Scope.** This is the **collector**; the store is [runbook 33](33-deploy-victorialogs.md)
 > ([#123](https://github.com/jaroslaw-bagnicki/Homelab/issues/123)) and must be live first. The
 > OPNsense router is **not a Fluent Bit target** — its logs reach the store via **syslog-ng**
-> ([runbook 37 §13](37-deploy-opnsense.md) · [runbook 33 §7](33-deploy-victorialogs.md) ·
+> ([runbook 45 §13](45-deploy-opnsense.md) · [runbook 33 §7](33-deploy-victorialogs.md) ·
 > [research 34 §8](../research/34-log-collector-options.md)).
 >
 > ⚠ **Execution note.** Author on the `feat/fluentbit-role` branch; **run only after CR**. The LAN
 > nodes are reached from a workstation on `192.168.2.0/24` with the fleet key loaded
 > ([`fleet-connect` skill](../../.opencode/skills/fleet-connect/SKILL.md)). Roll out
-> **`pve` → `edge` → `lab` → `nas` → `vtstack`**, validating each before the next.
+> **`pve1` → `pve2` → `edge` → `lab` → `nas` → `vtstack`**, validating each before the next.
 
 ## Why
 
@@ -44,7 +44,7 @@ the collector chosen in [ADR 36](../decisions/36-log-collector-fluentbit.md).
 - **Severity** — a Lua filter maps journald's numeric `PRIORITY` to the readable `level` field the store
   displays and filters on (`0`-`7` → `emerg`, `alert`, `crit`, `error`, `warn`, `notice`, `info`, `debug`).
   `level` is a regular field, never a stream field — it changes per line.
-- **Buffering** — **filesystem** on `pve`/`lab`/`nas` (chunks survive a store outage, cursor on disk);
+- **Buffering** — **filesystem** on `pve1`/`pve2`/`lab`/`nas` (chunks survive a store outage, cursor on disk);
   **`memrb`** (bounded memory ring buffer that drops the oldest chunks) on `edge` with a **tmpfs
   cursor**, so an unreachable store never writes to the eMMC. Every output retries **without limit**
   (`Retry_Limit False`) — Fluent Bit's default of a single retry discards the chunk once retries are
@@ -63,7 +63,7 @@ malformed-URI `400` behaved during the rollout (`chunk will not be retried` once
 `vl_http_errors_total` at **0** the whole time). The realistic trigger is **password rotation** —
 `scripts/New-HomelabVictoriaLogsPassword.ps1 -Force` changes the store's password, the collectors keep
 sending the old one and get **401** until each playbook is re-run. **Rotate, then immediately re-run
-`playbook-pve.yml`, `playbook-edge.yml`, `playbook-lab.yml`, `playbook-nas.yml` and `playbook-logs.yml`** —
+`playbook-pve1.yml`, `playbook-pve2.yml`, `playbook-edge.yml`, `playbook-lab.yml`, `playbook-nas.yml` and `playbook-logs.yml`** —
 the window between the two is permanent, silent log loss.
 
 **On `edge`, that loss is unobservable.** `memrb` overwrites the oldest chunks when its 16 MB ring fills
@@ -86,15 +86,15 @@ Apply that playbook deliberately, not as a side effect of this rollout.
 - [ ] Key Vault `homelab-bysxdb-kv/victorialogs-basic-auth-password` exists ([runbook 33 §4](33-deploy-victorialogs.md)).
 - [ ] `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID` exported on the controller.
 - [ ] Ansible collections installed (`ansible-galaxy collection install -r ansible/requirements.yml`).
-- [ ] Fleet key in `ssh-agent` (`ssh-add -l` shows `fleetadm@homelab`).
+- [ ] An SSH identity is loaded in `ssh-agent` (`ssh-add -l` is not empty).
 - [ ] Dev container only: `chmod 755 /workspaces/Homelab /workspaces/Homelab/ansible`.
 
 ---
 
-## 1. Deploy `pve` (first — richest sources, no resource constraint)
+## 1. Deploy `pve1` (first — richest sources, no resource constraint)
 
 ```powershell
-ansible-playbook ansible/playbooks/playbook-pve.yml --diff
+ansible-playbook ansible/playbooks/playbook-pve1.yml --diff
 ```
 
 The role adds the Fluent Bit APT repository and package, fetches the store password, writes
@@ -102,30 +102,30 @@ The role adds the Fluent Bit APT repository and package, fetches the store passw
 node **with `debug=1`** before trusting the rollout:
 
 ```powershell
-ansible-playbook ansible/playbooks/playbook-pve.yml -e fluentbit_store_debug=true
+ansible-playbook ansible/playbooks/playbook-pve1.yml -e fluentbit_store_debug=true
 ```
 
 ```sh
-# on pve
+# on pve1
 systemctl status fluent-bit --no-pager
 systemctl show fluent-bit -p MemoryCurrent       # RSS baseline (research 34 flagged ~10–30 MB unverified)
 sudo grep -c '^\[OUTPUT\]' /etc/fluent-bit/fluent-bit.conf   # 0640 root:fluent-bit — sudo required
 ```
 
-Then check the store accepted the records and how it parsed them (from `pve`):
+Then check the store accepted the records and how it parsed them (from `pve1`):
 
 ```sh
 sudo pct exec 214 -- docker logs victorialogs --since 3m 2>&1 | grep -iE 'debug|error'
 ```
 
-Open `https://192.168.2.214:9428/select/vmui` (basic auth) and confirm entries from `pve` appear with
-`_msg` populated and a sane timestamp — `_stream:{_HOSTNAME="pve"}` should be non-empty. **Then turn
+Open `https://192.168.2.214:9428/select/vmui` (basic auth) and confirm entries from `pve1` appear with
+`_msg` populated and a sane timestamp — `_stream:{_HOSTNAME="pve1"}` should be non-empty. **Then turn
 `fluentbit_store_debug` back off** (`-e fluentbit_store_debug=false`).
 
-> **Verified 2026-09-27** — `PLAY RECAP` `pve ok=59 changed=10 failed=0`; service `active`; config renders
+> **Verified 2026-09-27** — `PLAY RECAP` `pve1 ok=59 changed=10 failed=0`; service `active`; config renders
 > one `[INPUT]`/`[OUTPUT]`; RSS **7.2 MB** (`MemoryCurrent=7245824`, below research 34's estimated range).
-> The store holds `pve` records with `_msg` populated, `_time` ISO8601 and `_stream`
-> `{_HOSTNAME="pve",_SYSTEMD_UNIT="..."}` — the field mapping was confirmed by querying the store
+> The store holds `pve1` records with `_msg` populated, `_time` ISO8601 and `_stream`
+> `{_HOSTNAME="pve1",_SYSTEMD_UNIT="..."}` — the field mapping was confirmed by querying the store
 > directly instead of via `debug=1`. `level` is derived from `PRIORITY` by the Lua filter and verified
 > complete — in a window strictly after the restart `count(PRIORITY)` = `count(level)` = 113, and
 > `level:error` returns exactly the `PRIORITY="3"` records.
@@ -140,7 +140,7 @@ Open `https://192.168.2.214:9428/select/vmui` (basic auth) and confirm entries f
 > discarded **0** chunks and kept retrying with growing backoff (`retry in 21 seconds`), against **57**
 > discarded during the earlier 49 s outage under Fluent Bit's default `Retry_Limit`. Once the store
 > returned, the whole outage window was present —
-> `_time:[2026-09-27T19:58:03Z, 2026-09-27T19:58:30Z] {_HOSTNAME="pve"}` held **192** records spanning
+> `_time:[2026-09-27T19:58:03Z, 2026-09-27T19:58:30Z] {_HOSTNAME="pve1"}` held **192** records spanning
 > 19:58:03.212 → 19:58:30.228, i.e. no gap.
 
 ## 2. Deploy `edge` (the node that justifies the pipeline)
@@ -166,14 +166,14 @@ collector's **own** I/O counters and from the absence of chunk files — **not**
 over the root filesystem alone accounts for megabytes):
 
 ```sh
-# from pve
+# from pve1
 sudo pct exec 214 -- docker stop victorialogs
 # on edge — while the store is down
 sudo grep -E '^write_bytes|^wchar' /proc/$(pgrep -x fluent-bit)/io   # write_bytes must stay 0
 sudo find / -xdev -name '*.flb'                                      # nothing spooled to any disk
 sudo journalctl -u fluent-bit --since -2m --no-pager | grep -cE 'cannot be retried|failed to flush'
 sudo journalctl -u fluent-bit --since -2m --no-pager | grep -iE 'paus|resume'
-# from pve
+# from pve1
 sudo pct exec 214 -- docker start victorialogs
 ```
 
@@ -254,7 +254,7 @@ host (confirm afterwards with `dpkg -s python3-debian`).
 > **Verified 2026-09-27** — `PLAY RECAP` `nas ok=55 changed=12 failed=0`; `python3-debian` installed;
 > service `active`; the config renders one `[INPUT]`/`[OUTPUT]` with `Retry_Limit False`; RSS **21.9 MB**
 > (`MemoryCurrent=21884928` — the busier OMV host, and the first node inside research 34's estimated
-> 10-30 MB range, where `pve` came in well under it). The store holds **128** `nas` records, **127 with a
+> 10-30 MB range, where `pve1` came in well under it). The store holds **128** `nas` records, **127 with a
 > `level`** (`info`, `warn`, `notice`), across `ssh`, `fluent-bit` and `init.scope`.
 
 ## 5. Deploy `vtstack` (the store's own logs)
@@ -283,7 +283,7 @@ searchable in the store — after the three LAN nodes, as ADR 36 orders it.
 >
 > **The store restart cost nobody else anything.** With `Retry_Limit False` in place on all four
 > already-deployed nodes, the `docker_host` restart of the store produced **0 discarded chunks** on
-> `pve`, `edge`, `lab` and `nas` — the behaviour §2 could not yet provide before the fix.
+> `pve1`, `edge`, `lab` and `nas` — the behaviour §2 could not yet provide before the fix.
 
 ## 6. Idempotency
 
@@ -291,7 +291,7 @@ A second `ansible-playbook … --diff` run on a converged node must report **`ch
 template writes only on change; the APT key/repo/package are guarded by the package manager). Note
 that the `docker_host` daemon.json write reports `changed` only on first apply or a value change.
 
-> **Verified 2026-09-27** — the §6 re-run on the converged `pve` reported `ok=59 changed=0 failed=0`:
+> **Verified 2026-09-27** — the §6 re-run on the converged `pve1` reported `ok=59 changed=0 failed=0`:
 > the config template, the APT key/repo/package, the parsers, the Lua script and the daemon.json merge
 > all re-apply cleanly, so a repeat run neither touches the service nor restarts Docker.
 >
@@ -306,7 +306,7 @@ that the `docker_host` daemon.json write reports `changed` only on first apply o
 ## Rollback
 
 The collector keeps no state that matters, so it can be withdrawn per node, in reverse order
-(`vtstack`, `nas`, `lab`, `edge`, `pve`):
+(`vtstack`, `nas`, `lab`, `edge`, `pve1`):
 
 ```sh
 sudo systemctl disable --now fluent-bit
@@ -324,21 +324,21 @@ stops receiving.
 
 ## Verification Checklist
 
-Executed on: **complete** — all five nodes (`pve`, `edge`, `lab`, `nas`, `vtstack`) verified
+Executed on: **complete** — all five nodes (`pve1`, `edge`, `lab`, `nas`, `vtstack`) verified
 2026-09-27. Record the `ansible-playbook --diff` summary and each result.
 
-- [x] §1 `pve` — service active; config has one `[INPUT]`/`[OUTPUT]`; `_msg`/`_time`/streams confirmed from the stored records; `level` derived from `PRIORITY`; records queryable; RSS 7.2 MB; `debug` off; with `Retry_Limit False` an outage loses nothing (**192** records spanning the whole window, 0 discards)
+- [x] §1 `pve1` — service active; config has one `[INPUT]`/`[OUTPUT]`; `_msg`/`_time`/streams confirmed from the stored records; `level` derived from `PRIORITY`; records queryable; RSS 7.2 MB; `debug` off; with `Retry_Limit False` an outage loses nothing (**192** records spanning the whole window, 0 discards)
 - [x] §2 `edge` — cursor on tmpfs; `write_bytes` stayed **0** and no `*.flb` on disk across two store outages; does not pause; delivered the whole outage window (**155** records, 0 discards — was 12 pre-fix)
 - [x] §3 `lab` — Docker logs queryable with a 64-hex `container_id` stream (via a throwaway probe — `lab` runs no containers); `docker_host` rotation adopted (`max-size: 10m` / `max-file: 3`); journald and `level` shipping
 - [x] §4 `nas` — records queryable and levelled (**128**, 127 with a `level`) on RSS 21.9 MB; the `python3-debian` prerequisite installed cleanly on the OMV host that does not ship it
 - [x] §5 `vtstack` — `ok=48 changed=14 failed=0`; the store's own container log queryable (including its own shutdown line); 184 records, 182 with a `level`; the store restart cost the other four nodes **0 discarded chunks**
-- [x] §6 idempotent — the `pve` re-run reports **`changed=0`** (`ok=59`); on `vtstack` the only `changed` is `common`'s NTP task, which cannot converge in an unprivileged LXC
+- [x] §6 idempotent — the `pve1` re-run reports **`changed=0`** (`ok=59`); on `vtstack` the only `changed` is `common`'s NTP task, which cannot converge in an unprivileged LXC
 
 ## Follow-ups
 
 - **Collector health** — a collector that silently stops looks like a quiet fleet; its own metrics and
   the store's health stay [#132](https://github.com/jaroslaw-bagnicki/Homelab/issues/132).
-- **Native file sources** — enable `fluentbit_file_paths` for Proxmox task logs (`pve`) and OMV's log
+- **Native file sources** — enable `fluentbit_file_paths` for Proxmox task logs (`pve1`) and OMV's log
   directory (`nas`) once the exact paths are verified on those nodes ([research 34 §9](../research/34-log-collector-options.md)).
 - **Stream cardinality** — watch `_SYSTEMD_UNIT` on templated units; a `host_vars` inclusion list is
   the mitigation if it grows.

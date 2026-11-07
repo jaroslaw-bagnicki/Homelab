@@ -1,0 +1,9 @@
+---
+# Targeted run for the reverse proxy only — same role the edge playbook applies,
+# without re-running the base, DNS, NUT, Netdata or Fluent Bit roles.
+# Needs AZURE_CLIENT_ID / AZURE_CLIENT_SECRET / AZURE_TENANT_ID for the CA root lookup.
+- name: Apply the Caddy reverse proxy
+  hosts: edge
+  become: true
+  roles:
+    - caddy

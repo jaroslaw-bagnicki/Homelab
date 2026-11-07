@@ -1,6 +1,6 @@
 # Idea 02 - DevContainers for OpenCode with DevPod
 
-**Status**: 🧠 Idea
+**Status**: 🚧 On Hold
 **Date**: 2026-08-07
 **Sources**:
 - [Gemini thread 1](https://share.gemini.google/H5JtxyWxJVTl) - Dev Container standard and K3s orchestration

@@ -1,25 +1,28 @@
 # edge_host
 
-Extras for the Edge Wyse 3040 ingress appliance ([ADR 24](../../../docs/decisions/24-edge-ingress-appliance.md)) — a small Debian host, so the role keeps writes low (volatile journald) and manages the DNS search domain.
+Host hygiene for the Edge Wyse 3040 appliance ([ADR 24](../../../docs/decisions/24-edge-ingress-appliance.md)):
+keep the box write-light and patched. It no longer deploys services — DNS and the reverse proxy are
+separate roles so they can run on any node.
 
 ## Files
 
-- `defaults/main.yml` — role parameters.
-- `tasks/main.yml` — unattended-upgrades, logrotate, journald, DNS search.
-- `handlers/main.yml` — restart systemd-journald.
+- `tasks/main.yml` — `unattended-upgrades`, `logrotate`, journald `Storage=volatile` (eMMC longevity).
+- `handlers/main.yml` — restart `systemd-journald`.
+
+## Services on the box
+
+| Role | Purpose |
+|---|---|
+| [technitium](../technitium/README.md) | authoritative `internal.` DNS and the fleet resolver ([ADR 40](../../../docs/decisions/40-internal-dns-proxy-edge.md)) |
+| [caddy](../caddy/README.md) | LAN reverse proxy and ACME client for `step-ca` |
 
 ## Parameters
 
-| Var | Default | Notes |
-|---|---|---|
-| `edge_dns_search` | `""` | DNS search domain. Empty removes it (clears the installer's `example.com` leftover that hijacked bare LAN names); set to `internal` once the LAN DNS the internal stack serves is live (ADR 37). |
+None. All service parameters live in the two roles above; hostname/UTC/Avahi come from `common`,
+UFW/fail2ban/sshd from `security`.
 
-## Notes
-
-- journald is set to `Storage=volatile` to spare the eMMC.
-- Manages `dns-search` in both `/etc/network/interfaces` (source of truth) and the live `/etc/resolv.conf`.
-- Applied by `playbook-edge.yml`; hostname/UTC/Avahi come from `common`, UFW/fail2ban/sshd from `security`.
+Applied by `playbook-edge.yml`.
 
 ---
 
-[← Roles index](../README.md) · [← Ansible](../../README.md)
+[← Roles](../README.md)

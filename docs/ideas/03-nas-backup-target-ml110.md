@@ -9,7 +9,7 @@
 > [**Research 23 — ML110 NAS (OMV)**](../research/23-ml110-nas-omv.md);
 > this doc is the implementation plan.
 
-**Status**: 🚧 On Hold — SMB `/shared` backup share live (2026-08-22, [runbook 26](../runbooks/26-ml110-nas-exports.md)); NFS `/export/backups` + Longhorn pending  
+**Status**: 🪦 Retired — superseded by [ADR 29](../decisions/29-nas-backup-target-beetle-m3-omv.md); the SMB `/shared` backup share ran on the ML110 (2026-08-22, [runbook 26](../runbooks/26-ml110-nas-exports.md)), the backup-target cutover to the Beetle NAS is still pending ([#98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98))  
 **Date**: 2026-08-08  
 **Idea**: 01 — [Homelab NAS](01-nas-backup-target.md) (historical V1)  
 **Research**: [23 — ML110 NAS (OMV)](../research/23-ml110-nas-omv.md)  

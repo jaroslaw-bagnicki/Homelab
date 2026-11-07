@@ -19,10 +19,10 @@ deployed by [runbook 31](../../../docs/runbooks/31-deploy-netdata.md); tracked i
 
 | Hosts | `netdata_role` | Storage | Listeners | Streaming |
 |---|---|---|---|---|
-| `pve` | `parent` | `dbengine` | `:19999=dashboard^SSL=force` · `:19996=streaming^SSL=force` (LAN-bound) | accepts **TLS** streams on the shared key |
-| `lab`, `edge` | `child` | `dbengine` (Lab) · `ram` (Edge) | `127.0.0.1:19999` (loopback, plain HTTP) | streams to `192.168.2.201:19996:SSL` |
+| `pve1` | `parent` | `dbengine` | `:19999=dashboard^SSL=force` · `:19996=streaming^SSL=force` (LAN-bound) | accepts **TLS** streams on the shared key |
+| `pve2`, `lab`, `edge` | `child` | `dbengine` (`pve2`, Lab) · `ram` (Edge) | `127.0.0.1:19999` (loopback, plain HTTP) | streams to `192.168.2.201:19996:SSL` |
 
-- **The Parent runs host-native on the `pve` Proxmox host** — not an LXC/VM — so it can read VM/CT cgroups and `/etc/pve` names; the overrides live in [`host_vars/pve.yml`](../../host_vars/pve.yml).
+- **The Parent runs host-native on the `pve1` Proxmox host** — not an LXC/VM — so it can read VM/CT cgroups and `/etc/pve` names; the overrides live in [`host_vars/pve1.yml`](../../host_vars/pve1.yml).
 - **Edge uses `netdata_storage: ram`** — no `dbengine` on the eMMC (ADR 24/27).
 - **History is per-tier and disk-capped** — the policy is **role-owned, not host-owned**: `netdata_retention_tiers_by_role` keys it by `netdata_role` and `netdata_retention_tiers` is the effective list ([Retention](#retention)).
 - **Standalone-first** — a child with no reachable parent is still useful locally; re-pointing it is a config change, not a reinstall.
@@ -57,7 +57,7 @@ charts `upsd.ups_battery_charge`, `upsd.ups_battery_voltage`, `upsd.ups_load` (%
 (`on_line` / `on_battery` / `low_battery` dimensions).
 
 Reads are **anonymous** (`upsd` is open on the LAN, [ADR 30](../../../docs/decisions/30-ups-nut-graceful-shutdown.md)),
-so there is **no NUT account and no Key Vault secret** — only [`host_vars/pve.yml`](../../host_vars/pve.yml)
+so there is **no NUT account and no Key Vault secret** — only [`host_vars/pve1.yml`](../../host_vars/pve1.yml)
 sets an address. A node with the variable empty converges with **no job** (`/etc/netdata/go.d/upsd.conf`
 is removed). The module polls a **remote** `upsd`, so no agent goes inside a guest — one agent per node
 (ADR 27) still holds. `upsd.ups_battery_estimated_runtime` stays empty on this unit: `nutdrv_qx` reports
@@ -77,6 +77,7 @@ Alerts view and the API ([ADR 27](../../../docs/decisions/27-monitoring-strategy
 | `netdata_role` | `child` | `parent` accepts streams; `child` streams to `netdata_stream_target`. |
 | `netdata_stream_target` | `""` | Parent `host:port`; empty on a `child` = standalone (no streaming). |
 | `netdata_storage` | `dbengine` | `ram` on eMMC-only nodes. |
+| `netdata_cpu_idle_states` | `true` | Per-core C-state residency charts (`cpu idle states` in `[plugin:proc:/proc/stat]`); the agent default is off and `auto` never creates them — only `yes` does ([research 40](../../../docs/research/40-netdata-cpu-cstates.md)). |
 | `netdata_retention_tiers` | selected from `netdata_role` | The effective per-tier list (`time` + `size`, combined limits — the ceiling is the sum of the caps); `dbengine` only. Defaults to `netdata_retention_tiers_by_role[netdata_role]`; override only if a host's disk cannot carry its role's caps. |
 | `netdata_retention_tiers_by_role` | `parent` → 14d/5GiB, 30d/2GiB, 365d/2GiB · `child` → 7d/256MiB per tier | The retention **policy**, keyed by role — the parent is the long-term store, a child a short-term forwarder. |
 | `netdata_bind` | `127.0.0.1` | `[web] bind to` — a plain address, or Netdata's per-listener spec (`<ip>:<port>=<service>^SSL=force`); the parent lists two TLS-only listeners. |
@@ -121,7 +122,7 @@ every streaming child — so the controller needs `AZURE_CLIENT_ID` / `AZURE_CLI
 
 ## Hosts
 
-Applied by `playbook-pve.yml` (parent), `playbook-lab.yml` / `playbook-edge.yml` / `playbook-nas.yml`
+Applied by `playbook-pve1.yml` (parent), `playbook-pve2.yml` / `playbook-lab.yml` / `playbook-edge.yml` / `playbook-nas.yml`
 (children). **The LAN fleet only** — `cloudlab` is never targeted (it sits outside the LAN and Tier A
 already covers it, [ADR 27](../../../docs/decisions/27-monitoring-strategy.md)). The `nas` node (Beetle
 M-III OMV) joins as a child when OMV is installed ([runbook 32](../../../docs/runbooks/32-beetle-m3-omv-setup.md)
@@ -132,7 +133,7 @@ M-III OMV) joins as a child when OMV is installed ([runbook 32](../../../docs/ru
 To update an existing agent, opt in for one run:
 
 ```powershell
-ansible-playbook ansible/playbooks/playbook-pve.yml -e netdata_upgrade=true
+ansible-playbook ansible/playbooks/playbook-pve1.yml -e netdata_upgrade=true
 ```
 
 That re-runs the official kickstart script with `--reinstall` (stable channel, telemetry off);

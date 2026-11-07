@@ -1,7 +1,7 @@
 # Victoria Stack — VictoriaLogs Log Store (LXC 214)
 
 > Deploy the Tier B **log store** — **VictoriaLogs** as a Docker Compose service on the
-> `vtstack` guest (LXC 214, `192.168.2.214`) on the `pve` node — HTTPS-only, HTTP basic auth
+> `vtstack` guest (LXC 214, `192.168.2.214`) on the `pve1` node — HTTPS-only, HTTP basic auth
 > from day one, 30-day retention, LAN-bound at the container. Decision:
 > [ADR 35](../decisions/35-log-store-victorialogs.md); host placement and mechanics:
 > [research 33](../research/33-centralized-logging-victorialogs.md).
@@ -13,7 +13,7 @@
 > VictoriaTraces are **future ADRs** (§8).
 >
 > ⚠ **Execution note.** Author on the `feat/victorialogs-log-store` branch; **run only after CR**.
-> LXC creation (§1–§2) is a manual/console procedure on the `pve` host, reached as
+> LXC creation (§1–§2) is a manual/console procedure on the `pve1` host, reached as
 > `ssh fleetadm@192.168.2.201`; the Ansible steps (§3–§6) run with the fleet key loaded
 > ([`fleet-connect` skill](../../.opencode/skills/fleet-connect/SKILL.md)). The dev container
 > **can** drive the whole run — the Docker host routes it to the LAN — but that traffic arrives
@@ -30,7 +30,7 @@ built-in `/select/vmui` UI ([ADR 35](../decisions/35-log-store-victorialogs.md))
 
 ## What changes
 
-- **LXC 214 `vtstack`** on `pve` — unprivileged, **Debian 13**, `nesting` + `fuse`, 2 vCPU /
+- **LXC 214 `vtstack`** on `pve1` — unprivileged, **Debian 13**, `nesting` + `fuse`, 2 vCPU /
   2 GiB / 16 GiB rootfs on `local-lvm`, static `192.168.2.214`, `onboot 1`. Framed as the
   **Victoria stack** host (`vtstack`) — logs today; VictoriaMetrics/VictoriaTraces later join the
   same guest and Compose project.
@@ -44,14 +44,14 @@ built-in `/select/vmui` UI ([ADR 35](../decisions/35-log-store-victorialogs.md))
   ([ADR 34](../decisions/34-lan-tls-only.md)).
 - **A TLS syslog listener** (`:6514`) for the **OPNsense router's** syslog-ng — TLS, reusing the
   store's certificate, **no authentication** (mTLS is Enterprise-only), so the LAN UFW rule is the
-  boundary ([ADR 36 amendment](../decisions/36-log-collector-fluentbit.md) · [runbook 37](37-deploy-opnsense.md) §13).
+  boundary ([ADR 36 amendment](../decisions/36-log-collector-fluentbit.md) · [runbook 45](45-deploy-opnsense.md) §13).
 - **Not backed up** — a rolling 30-day window stays outside [ADR 02](../decisions/02-backup-strategy-restic-blob.md)'s
   scope.
 
 ## Prerequisites
 
-- [ ] `pve` base-provisioned — Proxmox VE + `fleetadm` ([runbook 28](28-pve-proxmox-node.md)).
-- [ ] A Debian 13 LXC template available on the `pve` node (`pveam`).
+- [ ] `pve1` base-provisioned — Proxmox VE + `fleetadm` ([runbook 28](28-pve1-proxmox-node.md)).
+- [ ] A Debian 13 LXC template available on the `pve1` node (`pveam`).
 - [ ] Ansible collections installed (`ansible-galaxy collection install -r ansible/requirements.yml`).
 - [ ] Azure Key Vault `homelab-bysxdb-kv` reachable from the controller; `Az` module signed in
       (for the password secret, §4).
@@ -59,13 +59,13 @@ built-in `/select/vmui` UI ([ADR 35](../decisions/35-log-store-victorialogs.md))
       (`pip3 install --break-system-packages azure-identity azure-keyvault-secrets`).
 - [ ] `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET` and `AZURE_TENANT_ID` exported on the controller —
       the workload role reads the Key Vault secret through them.
-- [ ] Fleet key in `ssh-agent` (`ssh-add -l` shows `fleetadm@homelab`).
+- [ ] An SSH identity is loaded in `ssh-agent` (`ssh-add -l` is not empty).
 
 ---
 
 ## 1. Create LXC 214
 
-On the `pve` host (`ssh fleetadm@192.168.2.201`, then `sudo -i`):
+On the `pve1` host (`ssh fleetadm@192.168.2.201`, then `sudo -i`):
 
 ```sh
 # template — pick the current Debian build, don't hardcode a point release
@@ -90,9 +90,10 @@ pct create 214 local:vztmpl/<template> \
   disk caps in §5 are sized against it. **The size is an estimate** — no collector ships yet, so
   re-check it against the measured ingest rate once [#84](https://github.com/jaroslaw-bagnicki/Homelab/issues/84)
   lands.
-- DNS is deliberately **not** pinned with `--nameserver` — the container inherits the host's
-  resolvers, so it keeps following the LAN (`pve.local` / the planned `.internal` name space,
-  [ADR 37](../decisions/37-lan-name-space-internal.md)).
+- **DNS is not passed here.** `playbook-pve1.yml` points `pve1` at the fleet resolver (`192.168.2.240`,
+  `search internal`) and PVE writes that same file into every container on start, so `vtstack` inherits
+  it with no creation flag ([ADR 40](../decisions/40-internal-dns-proxy-edge.md) amendment). Until then
+  the guest follows the host's current resolvers, which is enough for the installs in §3.
 - Keep the Proxmox network **Firewall** flag at `0` (`pct create` does). The LAN-only rule is a
   UFW rule inside the container (§5), not the Proxmox firewall.
 
@@ -112,7 +113,7 @@ pct create 214 local:vztmpl/<template> \
 
 ## 2. `fleetadm` bootstrap (unblock Ansible)
 
-Mirrors [runbook 28 §3](28-pve-proxmox-node.md). From the `pve` host (the fleet public key lives at
+Mirrors [runbook 28 §3](28-pve1-proxmox-node.md). From the `pve1` host (the fleet public key lives at
 `ansible/roles/common/files/ssh/fleetadm.pub`, [ADR 28](../decisions/28-fleet-admin-account-and-key.md)):
 
 ```sh
@@ -136,7 +137,7 @@ passwd -l fleetadm
 ssh fleetadm@192.168.2.214 'sudo -n whoami'   # → root
 ```
 
-> **Verified 2026-09-27 — passed.** Bootstrapped over `pct exec 214` from `pve`:
+> **Verified 2026-09-27 — passed.** Bootstrapped over `pct exec 214` from `pve1`:
 >
 > | Check | Result |
 > |---|---|
@@ -360,7 +361,7 @@ latency (VictoriaLogs' documented weak case — [research 33 §8](../research/33
 
 The **OPNsense router** (`router`) ships its logs to the store over **syslog-ng → a TLS syslog
 listener** — its per-OS path ([ADR 36 amendment](../decisions/36-log-collector-fluentbit.md) ·
-[research 34 §8](../research/34-log-collector-options.md) · [runbook 37](37-deploy-opnsense.md) §13).
+[research 34 §8](../research/34-log-collector-options.md) · [runbook 45](45-deploy-opnsense.md) §13).
 The listener is part of the store (flags in §5; [ADR 35 amendment](../decisions/35-log-store-victorialogs.md)):
 
 - **TLS only**, reusing the store's certificate (`ssl/cert.pem` + `ssl/key.pem`) —
@@ -378,7 +379,7 @@ The listener is part of the store (flags in §5; [ADR 35 amendment](../decisions
 > out** — UFW drops it silently, which reads as a broken listener. Run `playbook-logs.yml` before
 > validating, then confirm with the `ufw status verbose` check below.
 
-The router side lives in [runbook 37 §13](37-deploy-opnsense.md): add the store's certificate as a
+The router side lives in [runbook 45 §13](45-deploy-opnsense.md): add the store's certificate as a
 **trust anchor** (**System → Trust → Authorities**) so OPNsense verifies the server, and set
 `opnsense_syslog_certificate` to a **local client certificate** (**System → Trust → Certificates**, its
 own private key — syslog-ng's `cert-file`/`key-file`; it is **not** the store's cert). Then set
@@ -398,7 +399,7 @@ curl -sk --netrc-file "$VL_NETRC" \
   'https://192.168.2.214:9428/select/logsql/query' -d 'query="hello syslog listener"'
 # → the test line; app_name/level come from the syslog parser. `remote_ip` is the *sender's*
 #   address (this test's source) — a message actually sent by `router` is the real provenance
-#   check (runbook 37 §13).
+#   check (runbook 45 §13).
 
 # done — take the credential back out of /dev/shm (moved here from §6)
 shred -u "$VL_NETRC"
@@ -407,7 +408,7 @@ shred -u "$VL_NETRC"
 > **Timezone caveat.** VictoriaLogs parses `rfc3164` timestamps in the *server* timezone (the store runs
 > `Etc/UTC`); if the router's lines look shifted, set the **global** `-syslog.timezone` (e.g.
 > `Europe/Warsaw`) — it is not a per-listener flag — and the syslog-ng sender is configured in
-> [runbook 37 §13](37-deploy-opnsense.md).
+> [runbook 45 §13](45-deploy-opnsense.md).
 
 > **Verified 2026-10-11 — passed** (store-side listener; the router's destination is still off).
 >
@@ -430,7 +431,7 @@ project, **separate containers** (`victorialogs` today; `victoriametrics`, `vict
 each sharing the host-level TLS, password and UFW patterns. Adding them is **not** part of this
 work: VictoriaMetrics (fed by Netdata's Prometheus remote-write, [ADR 26](../decisions/26-zigbee-energy-monitoring.md) /
 [ADR 27](../decisions/27-monitoring-strategy.md)) and VictoriaTraces each need their **own ADR**,
-which must also revisit the `pve` resource budget and the `vmauth` question
+which must also revisit the `pve1` resource budget and the `vmauth` question
 ([ADR 35](../decisions/35-log-store-victorialogs.md)). Data lives in bind mounts under
 `/opt/vtstack/`, so the project can be reorganised without losing the store.
 
@@ -456,7 +457,7 @@ Executed on: **2026-09-27** — §1–§6 executed, off-LAN refusal **deferred**
 
 - **Off-LAN refusal check** — ⏸ deferred 2026-09-27; needs a source that routes to `192.168.2.214` from another subnet, which the current Tenda-NAT topology does not offer (§6).
 - **Collector** — [#84](https://github.com/jaroslaw-bagnicki/Homelab/issues/84); the store is inert until one ships.
-- **Router syslog go-live** — enable the destination certificate + `opnsense_syslog_enabled` on `router` ([runbook 37](37-deploy-opnsense.md) §13) once this store change is deployed.
+- **Router syslog go-live** — enable the destination certificate + `opnsense_syslog_enabled` on `router` ([runbook 45](45-deploy-opnsense.md) §13e).
 - **Store monitoring** — [#132](https://github.com/jaroslaw-bagnicki/Homelab/issues/132); the Netdata Parent already charts the container as a Proxmox guest, and the `/metrics` job + alarms follow.
 - **Certificate pinning** — the private CA is [#126](https://github.com/jaroslaw-bagnicki/Homelab/issues/126); clients skip verification for now ([ADR 27](../decisions/27-monitoring-strategy.md)'s accepted residual).
 - **VictoriaMetrics / VictoriaTraces** — future ADRs (§8); same guest and Compose project.
@@ -464,10 +465,10 @@ Executed on: **2026-09-27** — §1–§6 executed, off-LAN refusal **deferred**
 
 ## References
 
-- [ADR 35](../decisions/35-log-store-victorialogs.md) — VictoriaLogs log store in an LXC on `pve`
+- [ADR 35](../decisions/35-log-store-victorialogs.md) — VictoriaLogs log store in an LXC on `pve1`
 - [ADR 36](../decisions/36-log-collector-fluentbit.md) — the collector decision; its 2026-10-09 amendment resolves the router's path to syslog-ng → this store
-- [Runbook 37 §13](37-deploy-opnsense.md) — the OPNsense router's Ansible onboarding (the syslog sender)
+- [Runbook 45 §13](45-deploy-opnsense.md) — the OPNsense router's Ansible onboarding (the syslog sender)
 - [Research 33](../research/33-centralized-logging-victorialogs.md) — host placement, engine comparison, verified mechanics
 - [ADR 24](../decisions/24-edge-ingress-appliance.md) (volatile journald) · [ADR 27](../decisions/27-monitoring-strategy.md) (Tier B) · [ADR 31](../decisions/31-static-address-scheme.md) (guest block) · [ADR 34](../decisions/34-lan-tls-only.md) (TLS-only, UFW scope)
-- [Runbook 28](28-pve-proxmox-node.md) (Proxmox base + `fleetadm`) · [Runbook 29](29-nut-ups-shutdown.md) (host-native NUT on `pve`) · [Runbook 31](31-deploy-netdata.md) (AKV/TLS/validation pattern)
+- [Runbook 28](28-pve1-proxmox-node.md) (Proxmox base + `fleetadm`) · [Runbook 29](29-nut-ups-shutdown.md) (host-native NUT on `pve1`) · [Runbook 31](31-deploy-netdata.md) (AKV/TLS/validation pattern)
 - [Issue #123](https://github.com/jaroslaw-bagnicki/Homelab/issues/123) · [#84](https://github.com/jaroslaw-bagnicki/Homelab/issues/84) (collector) · [#132](https://github.com/jaroslaw-bagnicki/Homelab/issues/132) (monitoring) · [#75](https://github.com/jaroslaw-bagnicki/Homelab/issues/75) (umbrella)

@@ -2,73 +2,157 @@
 name: fleet-connect
 description: >-
   SSH connectivity to any Homelab fleet node (cloudlab VPS, lab M910q, edge
-  Wyse 3040, pve Wyse 5070 Proxmox, nas Beetle M-III) from the right control node — for
+  Wyse 3040, pve1 Wyse 5070 Proxmox, pve2 OptiPlex 7050 Proxmox, nas Beetle M-III) from the right control node — for
   Ansible playbooks, ad-hoc shell access, file transfer, and AI agents
-  (opencode, Copilot, …) that need to reach a node. Covers the fleet SSH key
-  retrieval from Azure Key Vault, ssh-agent setup, per-host reachability, known
-  connectivity pitfalls, and verification.
-  USE FOR: running ansible-playbook against cloudlab/lab/pve/edge/nas, SSH/SCP to a
-  fleet node, loading the fleet SSH key, AI agent SSH access to a node,
-  troubleshooting SSH to a fleet node.
+  (opencode, Copilot, …) that need to reach a node. Covers the step-ca SSH
+  certificate (the daily path, ADR 41), the break-glass fleet key, ssh-agent
+  setup, per-host reachability, known connectivity pitfalls, and verification.
+  USE FOR: running ansible-playbook against cloudlab/lab/pve1/pve2/edge/nas/vtstack/ca,
+  SSH/SCP to a fleet node, getting an agent-ai or automation certificate, loading the
+  break-glass fleet key, AI agent SSH access to a node, troubleshooting SSH to a
+  fleet node.
   DO NOT USE FOR: provisioning the VPS (use cntb CLI), modifying the VPS in the
-  Contabo portal, setting up the physical nodes (use runbooks 24/25/28/32).
+  Contabo portal, setting up the physical nodes (use runbooks 24/25/28/32/42).
 when:
   - "ansible-playbook cloudlab"
   - "ansible-playbook lab"
   - "ansible-playbook edge"
-  - "ansible-playbook pve"
+  - "ansible-playbook pve1"
+  - "ansible-playbook pve2"
   - "ansible-playbook nas"
   - "run playbook against a fleet node"
   - "ssh to cloudlab"
   - "ssh to lab"
   - "ssh to edge"
-  - "ssh to pve"
+  - "ssh to pve1"
+  - "ssh to pve2"
   - "ssh to nas"
   - "SSH key fleet"
   - "load fleet key"
   - "connect to cloudlab"
   - "connect to lab"
   - "connect to edge"
-  - "connect to pve"
+  - "connect to pve1"
+  - "connect to pve2"
   - "AI agent ssh node"
   - "agent connect to node"
-  - "Import-SshKey"
+  - "Import-HomelabFleetKey"
   - "fleet SSH agent"
+  - "ssh certificate"
+  - "agent-ai certificate"
+  - "Get-HomelabSshAgentCert"
+  - "Get-HomelabSshAutomationCert"
+  - "Permission denied publickey"
+  - "SSH_AUTH_SOCK is not set"
+  - "AZURE_CLIENT_ID not set"
+  - "fleet preflight"
 ---
 
 # Fleet SSH Connectivity
 
-Every fleet node (`cloudlab`, `lab`, `pve`, `edge`, `nas`) accepts key-based SSH as **`fleetadm`** — the fleet-wide migration (ADR 28) completed 2026-08-30
-using the single **fleet key** (`fleetadm@homelab`, ADR 28). This is the **one way
-in** to every node — whether you're running Ansible, shelling in interactively,
-copying files, or an AI agent needs to reach a node, the flow is identical.
+Every fleet node (`cloudlab`, `lab`, `pve1`, `pve2`, `edge`, `nas`, `vtstack`, `ca`) accepts SSH as
+**`fleetadm`**. Since [ADR 41](../../../docs/decisions/41-ssh-certificates-step-ca.md) you
+get in with a **certificate issued by step-ca**, not with a key: an **`agent-ai`**
+certificate for AI agents, an **`automation`** certificate for Ansible. Both are
+short-lived, both land in `ssh-agent`, and every host maps the principal to `fleetadm`
+through `AuthorizedPrincipalsFile`.
 
-## SSH Key Setup (required once per session)
+The **fleet key** (`fleetadm@homelab`, ADR 28) still exists, but as **break-glass only** —
+when the CA is unreachable, a certificate is lost, or a host is brand new. It is not
+loaded by default and is not a daily path.
 
-The private key is stored in Azure Key Vault as `homelab-bysxdb-kv/fleetadm-key-priv`
-and loaded into `ssh-agent` — it never exists as a plain file in the repo. The dev
-container's `profile.ps1` loads it (plus the legacy `cloudlab-vps-key-priv`) every
-session — this manual flow is the fallback when that hasn't happened.
+## Preflight — do this once per shell, before anything else
 
-### 1. Load the fleet key into ssh-agent
-
-Run these commands **directly in the active terminal** (not via `pwsh -File`):
+Three separate things fail in three different ways: an unset socket throws
+`SSH_AUTH_SOCK is not set`, an expired certificate shows `Permission denied (publickey)`, and a
+missing `AZURE_*` principal fails a playbook **halfway through** with a Key Vault assertion
+(after the host has already been changed). One script establishes all three:
 
 ```powershell
-$agentOutput = ssh-agent
-$agentOutput | ForEach-Object {
-    if ($_ -match 'SSH_AUTH_SOCK=(.*?);') { $env:SSH_AUTH_SOCK = $Matches[1] }
-    if ($_ -match 'SSH_AGENT_PID=(.*?);') { $env:SSH_AGENT_PID = $Matches[1] }
-}
-Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name fleetadm-key-priv -AsPlainText | ssh-add -
+./scripts/Initialize-HomelabFleetSession.ps1                 # automation certificate (Ansible)
+./scripts/Initialize-HomelabFleetSession.ps1 -Agent copilot  # agent-ai certificate (AI agent)
+./scripts/Initialize-HomelabFleetSession.ps1 -Force          # re-issue even if one is loaded
 ```
 
-### 2. Verify the key is loaded
+It prints one line — `fleet session: AKV=True sock=… cert=True principal=automation` — and is
+idempotent: with a certificate already in the agent it changes nothing. The same by hand:
 
 ```powershell
+$env:SSH_AUTH_SOCK = (bash -c 'eval $(ssh-agent -s) >/dev/null 2>&1; echo $SSH_AUTH_SOCK').Trim()
+./scripts/Get-HomelabSshAutomationCert.ps1
+$env:AZURE_TENANT_ID     = Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name codespaces-sp-tenant-id     -AsPlainText
+$env:AZURE_CLIENT_ID     = Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name codespaces-sp-client-id     -AsPlainText
+$env:AZURE_CLIENT_SECRET = Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name codespaces-sp-client-secret -AsPlainText
+```
+
+- **One shell for the whole rollout** — `SSH_AUTH_SOCK` and the `AZURE_*` variables are session
+  state. A command that lands in another terminal has none of it, which is how an agent that just
+  connected "suddenly" cannot.
+- **Idempotent, but principal-aware** — it re-issues only when the loaded certificate is not for
+  the requested principal, so `-Agent copilot` over an `automation` certificate replaces it instead
+  of reporting success. A stale `SSH_AUTH_SOCK` (dead agent) is replaced by a fresh one.
+- **`AZURE_*` needs all three** — tenant, client id and secret form one principal; a partial set
+  authenticates nothing, so any gap refills the whole set.
+- **`AZURE_*` is the controller service principal**, `codespaces-sp-*` in `homelab-bysxdb-kv` — not
+  the interactive account. The `azure.azcollection` lookups inside the roles read it from the
+  environment, and each role asserts it before doing anything.
+- **`cloudlab` uses a different preflight** — it is not certificate-enabled: run
+  `./scripts/Import-HomelabCloudlabKey.ps1` in the shell that runs its playbook.
+
+## Certificate (daily path)
+
+`profile.ps1` starts `ssh-agent` and establishes the Azure context each session — but it loads
+**no identity**, so the agent starts empty and Ansible fails closed until you load one. With both in
+place, one command gets you in:
+
+```powershell
+./scripts/Get-HomelabSshAgentCert.ps1 -Agent copilot    # AI agent → principal agent-ai
+./scripts/Get-HomelabSshAutomationCert.ps1              # Ansible  → principal automation
+```
+
+Each reads its provisioner password and the CA root from `homelab-bysxdb-kv`, generates a
+key, signs it at `https://ca.internal:9000`, adds it to `ssh-agent`, and deletes the key
+material from tmpfs on exit. `-Agent copilot` becomes the key ID `agent-copilot` (audit
+only) — the **principal is always `agent-ai`**, fixed by the provisioner's certificate
+template, so asking for another one changes nothing.
+
+Verify:
+
+```powershell
+ssh-add -L | ssh-keygen -L -f /dev/stdin
+# expect: Principals: agent-ai   (or automation)   Key ID: "agent-copilot"
+```
+
+User certificates do **not** renew themselves — lifetime is ≤ 8 h, so re-run the script
+when `ssh` starts refusing you. Host certificates on the nodes do renew unattended
+(SSHPOP), which is why host keys never prompt.
+
+## Break-glass: the fleet key
+
+`fleetadm-key-priv` is root-equivalent and loaded on demand only:
+
+```powershell
+./scripts/Import-HomelabFleetKey.ps1
 ssh-add -l
 # Expected: 256 SHA256:... fleetadm@homelab (ED25519)
 ```
+
+Use it when the CA is down, a certificate cannot be issued, or a rebuilt host has no
+`TrustedUserCAKeys` yet — then go back to certificates. Runbooks 24/25/28/32 describe the
+bootstrap role of this key. It is added with a 1 h lifetime (`ssh-add -t 1h`); drop it earlier
+with `ssh-add -D`.
+
+## `cloudlab`: the VPS key
+
+`cloudlab` has no route to `ca.internal`, so it is not certificate-enabled and keeps its own key —
+`cloudlab-vps-key-priv` in `homelab-bysxdb-kv` — loaded explicitly:
+
+```powershell
+./scripts/Import-HomelabCloudlabKey.ps1
+```
+
+Run it in the shell that will run the playbook: it starts an `ssh-agent`, exports the socket and
+loads the key. Nothing loads it at session start.
 
 ## Per-host reachability
 
@@ -76,29 +160,39 @@ ssh-add -l
 |---|---|---|---|
 | `cloudlab` | `173.249.27.13` | anywhere (public IP) | `ansible/playbooks/playbook.yml` |
 | `lab` | `192.168.2.200` | LAN workstation (`192.168.2.0/24`) | `ansible/playbooks/playbook-lab.yml` |
-| `pve` | `192.168.2.201` | LAN workstation (`192.168.2.0/24`) | `ansible/playbooks/playbook-pve.yml` |
-| `nas` | `192.168.2.202` | LAN workstation (`192.168.2.0/24`) | `ansible/playbooks/playbook-nas.yml` |
+| `pve1` | `192.168.2.201` | LAN workstation (`192.168.2.0/24`) | `ansible/playbooks/playbook-pve1.yml` |
+| `pve2` | `192.168.2.202` | LAN workstation (`192.168.2.0/24`) | `ansible/playbooks/playbook-pve2.yml` |
+| `nas` | `192.168.2.209` | LAN workstation (`192.168.2.0/24`) | `ansible/playbooks/playbook-nas.yml` |
 | `edge` | `192.168.2.240` | LAN workstation (`192.168.2.0/24`) | `ansible/playbooks/playbook-edge.yml` |
+| `vtstack` | `192.168.2.214` | LAN workstation (`192.168.2.0/24`) | `ansible/playbooks/playbook-logs.yml` |
+| `ca` | `192.168.2.215` | LAN workstation (`192.168.2.0/24`) | `ansible/playbooks/playbook-ca.yml` |
 
-`lab`, `pve`, `edge`, and `nas` are LAN-only — connect to them (SSH or playbooks)
-from a machine on `192.168.2.0/24` with the fleet key loaded in its agent (see
-runbooks 24/25/28/32). All nodes are on `fleetadm` (ADR 28), and all four LAN
-nodes are Ansible-managed — each has a playbook in the table above. The retired
-ML110 NAS (`omv`, `192.168.2.210`) is not a connection target; `nas` — the Wincor
-Beetle M-III — is its successor
+`lab`, `pve1`, `pve2`, `edge`, `nas`, `vtstack` and `ca` are LAN-only — connect to them (SSH or
+playbooks) from a machine on `192.168.2.0/24`, with a certificate or the break-glass key in
+its agent (see runbooks 24/25/28/32/42). All nodes are on `fleetadm` (ADR 28) and each has a
+playbook in the table above.
+
+**`cloudlab` is the exception**: it has no route to `ca.internal`, so it is not
+certificate-enabled — it keeps the pinned host key and authenticates with the
+`cloudlab-vps-key-priv` key (`scripts/Import-HomelabCloudlabKey.ps1`), or the break-glass fleet key
+([ADR 41](../../../docs/decisions/41-ssh-certificates-step-ca.md)). The retired ML110 NAS
+(`omv`, `192.168.2.210`) is not a connection target; `nas` — the Wincor Beetle M-III — is
+its successor
 ([ADR 29](../../../docs/decisions/29-nas-backup-target-beetle-m3-omv.md)).
 
 ## Connecting to a Node
 
 ### Ansible playbooks
 
-From the repo root, with the fleet key in the agent:
+From the repo root, with the `automation` certificate — or the cloudlab key for `cloudlab` —
+in the agent:
 
 ```powershell
 cd /workspaces/Homelab
 ansible-playbook ansible/playbooks/playbook.yml          # cloudlab
 ansible-playbook ansible/playbooks/playbook-lab.yml      # lab (LAN workstation)
-ansible-playbook ansible/playbooks/playbook-pve.yml      # pve (LAN workstation)
+ansible-playbook ansible/playbooks/playbook-pve1.yml      # pve1 (LAN workstation)
+ansible-playbook ansible/playbooks/playbook-pve2.yml      # pve2 (LAN workstation)
 ansible-playbook ansible/playbooks/playbook-edge.yml     # edge (LAN workstation)
 ansible-playbook ansible/playbooks/playbook-nas.yml      # nas (LAN workstation)
 ```
@@ -119,28 +213,91 @@ scp file.txt fleetadm@192.168.2.200:/tmp/   # copy to lab (LAN workstation)
 
 ### AI agents
 
-AI agents (opencode instances, Copilot, custom agents) reach fleet nodes through
-the **same fleet key** — no separate credentials:
+AI agents (opencode instances, Copilot, custom agents) issue their own **`agent-ai`**
+certificate — one shared principal, a per-agent key ID:
 
-- An agent running in the dev container uses the key already loaded in
-  `ssh-agent`; it runs `ssh`/`ansible-playbook` like a human would and never
-  touches the private key material (it stays in the agent / Key Vault).
-- An agent on `cloudlab` that must reach another node needs the fleet key loaded
-  in *cloudlab's* ssh-agent too — load it there the same way (§1).
-- LAN-only nodes (`lab`, `edge`, `pve`, `nas`) require the agent to run on a machine on
-  `192.168.2.0/24` with the fleet key in its agent (runbooks 24/25/28/32).
+```powershell
+./scripts/Get-HomelabSshAgentCert.ps1 -Agent opencode
+```
+
+- The certificate lasts ≤ 8 h. Issue a new one when it expires instead of holding a
+  long-lived credential.
+- An agent may also run `./scripts/Import-HomelabFleetKey.ps1` — it has Key Vault read access —
+  but that key is root-equivalent and break-glass: prefer the `agent-ai` certificate and let the
+  1 h lifetime expire the key.
+- The provisioner password comes from Key Vault, so the agent needs a working Azure context; the
+  password and CA root go to tmpfs and are deleted on exit — nothing is printed or logged.
+- An agent's `ssh-agent` dies with the terminal that started it. Pin a stable socket so a
+  later shell — or a playbook run — still finds the certificate:
+  `SSH_AUTH_SOCK=/tmp/agent-ai.sock ssh-agent -a /tmp/agent-ai.sock`.
+- An agent on `cloudlab` that must reach another node needs the credential loaded in
+  *cloudlab's* agent; nothing propagates it for you.
+- LAN-only nodes require the agent to run on a machine on `192.168.2.0/24` (runbooks
+  24/25/28/32).
+- The principal is shared by design: a host can deny the AI class, not one agent. Deleting
+  `agent-ai@internal` at the CA revokes the whole class.
 
 ## Known Pitfalls
 
-### ❌ `pwsh -File scripts/Import-SshKey.ps1` loses env vars
+### ❌ An identity swap still connects as the old identity
 
-The script `scripts/Import-SshKey.ps1` starts `ssh-agent` and sets
-`SSH_AUTH_SOCK` / `SSH_AGENT_PID` as PowerShell environment variables.
-When run via `pwsh -File`, these variables are set in a **child process**
-that exits immediately — the parent terminal never gets them.
+Ansible keeps one authenticated SSH connection per host for `ControlPersist=60s` (`ansible.cfg`), and
+`ssh-agent` keeps every key loaded into it. A second loader adds its identity *alongside* the first,
+and ssh may offer the older key first — while a connection opened under the previous identity is
+reused outright. Either way the host can keep seeing the old principal.
 
-**Fix:** Run the commands directly (dot-sourced) in the active terminal, or
-copy-paste the sequence in §1.
+**Fix:** every loader runs `./scripts/Reset-HomelabSshIdentity.ps1` first — it empties the agent and
+clears `~/.ansible/cp`, so only the identity just loaded can authenticate. Swapping identities by
+hand bypasses that: run the same script, or `ssh -O exit <host>`.
+
+### ❌ `Permission denied (publickey)` on a node that worked earlier
+
+The certificate expired (≤ 8 h) or the terminal that held its agent is gone. Re-run
+`Get-HomelabSshAgentCert.ps1` / `Get-HomelabSshAutomationCert.ps1` and check
+`ssh-add -L`. Do not reach for the fleet key first — storing it in the agent turns a
+two-minute fix into a root-equivalent credential sitting in an orphaned process.
+
+### ❌ `Host key verification failed`, or the host cert is ignored
+
+The client needs the CA trust line in `~/.ssh/known_hosts`:
+
+```powershell
+./scripts/Set-HomelabSshKnownHosts.ps1   # @cert-authority *.internal,192.168.2.*
+```
+
+Delete any pinned `lab`/`pve1`/`pve2`/`edge`/`nas` lines at the same time — a pinned key that no
+longer matches fails before the CA is ever consulted.
+
+### ❌ `ca.internal` does not resolve from the dev container
+
+The container gets no LAN DNS. Issuance fails, and the failure is easy to miss — inside
+Ansible the host is simply reported `ok` with nothing issued. Add the mapping once per
+container:
+
+```text
+192.168.2.215 ca.internal
+```
+
+### ❌ `SSH_AUTH_SOCK is not set; start ssh-agent first`
+
+A loader script throws this when the shell it runs in has no agent — usually because the command
+landed in a **different terminal** than the one where the agent was started, or `ssh-agent -s`
+output was never evaluated into the session.
+
+**Fix:** run the **preflight** (top of this skill) in the shell that will run the playbook, and keep
+using that shell for the rest of the rollout. After a shell switch, `ssh-add -l` and
+`$env:AZURE_CLIENT_ID` tell you in one line whether the session state survived.
+
+### ❌ `pwsh -File scripts/Import-HomelabFleetKey.ps1` loses the key
+
+The script loads the key into the agent named by `SSH_AUTH_SOCK` and throws when that variable is
+unset — it never starts an agent and never exports `SSH_AUTH_SOCK` / `SSH_AGENT_PID`. Started as a
+child process (`pwsh -File …`), it therefore either throws or loads the key into an agent the parent
+shell cannot reach.
+
+**Fix:** start the agent in the active terminal first (`ssh-agent -a /tmp/fleet-ssh-agent.sock`, then
+export `SSH_AUTH_SOCK` to that socket) and only then run the script there — see
+[Break-glass](#break-glass-the-fleet-key).
 
 ### ❌ `host_key_checking = True` blocks first connection
 
@@ -165,8 +322,16 @@ read `ansible.cfg` from world-writable directories as a security measure.
 | Item | Value |
 |---|---|
 | SSH user | `fleetadm` (all nodes) |
-| Fleet key | `homelab-bysxdb-kv/fleetadm-key-priv` (comment `fleetadm@homelab`) |
-| Legacy VPS key | `homelab-bysxdb-kv/cloudlab-vps-key-priv` (cloudlab only) |
+| SSH CA | step-ca on `ca`, `https://ca.internal:9000` |
+| AI-agent credential | provisioner `agent-ai@internal`, principal `agent-ai`, ≤ 8 h |
+| Automation credential | provisioner `automation@internal`, principal `automation`, ≤ 8 h |
+| Principal mapping | `/etc/ssh/auth_principals/<user>` on each host |
+| Client trust | `@cert-authority *.internal,192.168.2.*` in `~/.ssh/known_hosts` |
+| Break-glass key | `homelab-bysxdb-kv/fleetadm-key-priv` (comment `fleetadm@homelab`), 1 h lifetime |
+| `cloudlab` key | `homelab-bysxdb-kv/cloudlab-vps-key-priv` — `scripts/Import-HomelabCloudlabKey.ps1` |
+| Identity loaders | `Initialize-HomelabFleetSession.ps1` (preflight — agent + certificate + AKV principal) · `Get-HomelabSshAutomationCert.ps1` · `Get-HomelabSshAgentCert.ps1 -Agent <name>` · `Import-HomelabFleetKey.ps1` · `Import-HomelabCloudlabKey.ps1` |
+| Identity reset | `scripts/Reset-HomelabSshIdentity.ps1` — empties the agent and clears `~/.ansible/cp` on every load |
 | Key Vault | `homelab-bysxdb-kv` |
 | Ansible inventory | `ansible/inventory.ini` |
 | Fleet design | [ADR 28](../../../docs/decisions/28-fleet-admin-account-and-key.md) |
+| Certificate access | [ADR 41](../../../docs/decisions/41-ssh-certificates-step-ca.md), [runbook 40](../../../docs/runbooks/40-deploy-ssh-certificates.md) |

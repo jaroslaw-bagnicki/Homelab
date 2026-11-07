@@ -5,7 +5,7 @@ Manages the **OPNsense router** (`router`, `192.168.2.1`) over its **REST API** 
 exception** to the fleet's Linux roles — OPNsense is FreeBSD, so `common`/`security`/`netdata`/
 `fluentbit` do **not** apply (supplement to [ADR 10](../../../docs/decisions/10-ansible-host-config.md);
 [ADR 27](../../../docs/decisions/27-monitoring-strategy.md) · [ADR 36](../../../docs/decisions/36-log-collector-fluentbit.md)).
-Deployed by [runbook 37](../../../docs/runbooks/37-deploy-opnsense.md) §13; tracked in
+Deployed by [runbook 45](../../../docs/runbooks/45-deploy-opnsense.md) §13; tracked in
 [issue #96](https://github.com/jaroslaw-bagnicki/Homelab/issues/96).
 
 ## How it connects
@@ -29,17 +29,17 @@ Deployed by [runbook 37](../../../docs/runbooks/37-deploy-opnsense.md) §13; tra
 ## What it does
 
 - **Installs the `os-netdata` plugin** (`oxlorg.opnsense.package`, `action: install`).
-  Netdata then runs as a **Tier B child** streaming to the Parent on `pve`
+  Netdata then runs as a **Tier B child** streaming to the Parent on `pve1`
   (`192.168.2.201:19996`, TLS). **The streaming configuration itself is made in the plugin**
   (System → Netdata) — the collection exposes no module for it — so that step is documented in
-  runbook 37 §13 rather than automated here.
+  runbook 45 §13 rather than automated here.
 - **Configures the syslog-ng remote destination** to the VictoriaLogs syslog listener
   (`oxlorg.opnsense.syslog`, `transport: tls4`) — **gated by `opnsense_syslog_enabled`**, off
-  until the store's syslog listener is deployed (separate PR / runbook 33). For TLS the module's
+  once the store's syslog listener is live (it has been since 2026-10-11, runbook 33 §7). For TLS the module's
   `certificate` field takes a **local OPNsense client certificate** (syslog-ng's `cert-file`/`key-file`;
   create one under System → Trust → Certificates) — **not** the store's server cert, which belongs in
   the **trust store** (System → Trust → Authorities) so OPNsense verifies the server.
 
 Everything else on the router (interfaces, LAN DHCP/NAT/firewall, `bge` offloading, RAM disks)
-is set by runbook 37 and is **not** managed here — this role covers only the Ansible-onboarding
+is set by runbook 45 and is **not** managed here — this role covers only the Ansible-onboarding
 pieces (Netdata + logging).

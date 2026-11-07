@@ -1,0 +1,13 @@
+---
+- name: Configure pve1 (Wyse 5070 Proxmox) base
+  hosts: pve1
+  become: true
+  roles:
+    - common
+    - ca_trust
+    - security
+    - proxmox_cluster
+    - nut_server
+    - nut_client
+    - netdata
+    - fluentbit

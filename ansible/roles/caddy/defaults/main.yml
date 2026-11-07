@@ -1,0 +1,66 @@
+---
+# Caddy (ADR 20) — the LAN routing layer and ACME client for the private CA
+# (ADR 40). Tunables only; structural paths live in vars/main.yml.
+
+caddy_enabled: true
+
+# The CA the ACME client talks to; `ca.internal` resolves through Technitium.
+caddy_ca_url: "https://ca.internal:9000/acme/acme/directory"
+caddy_keyvault_name: homelab-bysxdb-kv
+caddy_ca_root_secret_name: ca-root-cert
+# Set to skip the Key Vault lookup (tests).
+caddy_ca_root: ""
+
+# Fail fast when the CA hostname cannot be resolved locally: on the edge box the
+# resolver is Technitium. Set false on a host whose resolver is managed elsewhere.
+caddy_require_technitium: true
+
+# Start Caddy after the local resolver so `ca.internal` is resolvable at boot.
+caddy_after_service: dns.service
+
+# A >24 h outage expires every leaf and Caddy can only log the renewal failure, so the
+# served leaves and the CA behind them are checked hourly (issue #171).
+caddy_ca_health_url: https://ca.internal:9000/health
+caddy_leaf_expiry_check_min_remaining_seconds: 21600
+
+caddy_sites:
+  - name: netdata.internal
+    upstream: "https://192.168.2.201:19999"
+    # Netdata still serves its own self-signed certificate; the client-facing
+    # leg is the step-ca leaf. #143 removes this backend-self-signed hop.
+    tls_skip_verify: true
+  # The Technitium console is plaintext on loopback only; Caddy is the sole
+  # LAN-facing listener and serves it over TLS (ADR 34).
+  - name: dns.internal
+    upstream: "http://127.0.0.1:5380"
+  # VictoriaLogs and the Proxmox UI still serve their own self-signed
+  # certificates; the client-facing leg is the step-ca leaf.
+  - name: logs.internal
+    upstream: "https://192.168.2.214:9428"
+    tls_skip_verify: true
+  # The Proxmox UI is node-scoped (the URL fragment selects the node), so this is
+  # primary + fallback, not load balancing: `lb_policy first` keeps every session on
+  # `pve1` and only reaches `pve2` when `pve1` fails its health check. Tickets are
+  # cluster-wide (`/etc/pve/priv/authkey.key` is shared), so a session survives the
+  # switch. See runbook 42 §7.
+  #
+  # The health check is what makes `first` mean anything: Caddy's passive checks are
+  # off by default (`fail_duration` 0), so without `health_uri` a dead `pve1` is never
+  # demoted and every request keeps failing. `health_uri /` is enough — pveproxy
+  # answers 200 on `/` and the check runs over the same TLS-skip transport.
+  - name: proxmox.internal
+    upstreams:
+      - "https://192.168.2.201:8006"
+      - "https://192.168.2.202:8006"
+    lb_policy: first
+    health_uri: /
+    health_interval: 10s
+    health_timeout: 3s
+    fail_duration: 30s
+    max_fails: 1
+    tls_skip_verify: true
+  # OMV's nginx serves its workbench with a self-signed `nas.local` certificate;
+  # the NAS host identity stays `nas.internal` → .209.
+  - name: omv.internal
+    upstream: "https://192.168.2.209:443"
+    tls_skip_verify: true

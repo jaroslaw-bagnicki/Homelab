@@ -1,0 +1,6 @@
+[Unit]
+Description=Log an SSH host certificate renewal failure
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c 'logger -t homelab-ssh-host-cert -p user.crit "host certificate renewal failed"'

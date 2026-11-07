@@ -12,7 +12,8 @@
 >
 > **Hostname `nas`** — the node is named for its **role in the fleet** ([ADR 33](../decisions/33-fleet-node-hostnames.md));
 > `omv` is the ML110's name and names a workload, so it is not reused. It carries the static
-> `192.168.2.202` ([ADR 31](../decisions/31-static-address-scheme.md)).
+> `192.168.2.209` ([ADR 31](../decisions/31-static-address-scheme.md)) — moved from `.202` on
+> 2026-11-07 to free `.202` for `pve2`.
 
 ## Goals
 
@@ -21,15 +22,36 @@
   not run** — deliberately deferred (see Status).
 - Install **OMV 8.x** on the **SanDisk X600 128 GB SSD** (the Seagates disconnected during install).
 - Create the **mdadm RAID1** array `md0` = 2× Seagate 1 TB → **XFS** = **1 TB usable**.
-- Set static IP **`192.168.2.202`** on the LAN interface (confirm its name — §4c) and hostname **`nas`**.
+- Set static IP **`192.168.2.209`** on the LAN interface (confirm its name — §4c) and hostname **`nas`**.
 - Create `fleetadm` ([ADR 28](../decisions/28-fleet-admin-account-and-key.md)) and enroll the node
   with `playbook-nas.yml`: `common → security → nut_client → netdata`.
-- Verify the node appears in the Netdata Parent on `pve` and joins the NUT rail as an `upsmon`
+- Verify the node appears in the Netdata Parent on `pve1` and joins the NUT rail as an `upsmon`
   **secondary**.
 
 ## Status
 
 Authored 2026-09-20, before execution — the checklist fills in as the install runs.
+
+> **Address history.** The NAS was installed at `192.168.2.202` (2026-09-21). It was re-addressed
+> to **`192.168.2.209`** on 2026-11-07 to free `.202` for `pve2`; the dated checklist entries below
+> record the original `.202` state.
+>
+> **Re-address executed 2026-11-07** (issue [#177](https://github.com/jaroslaw-bagnicki/Homelab/issues/177),
+> stage 1 of the `pve2` rollout). `Network | Interfaces` → `enp0s31f6` → Address `192.168.2.209`,
+> applied. Verified: `md0` `[2/2] [UU]` still mounted, OMV engine active, `.202` free. Two follow-ups
+> were required and are now part of the procedure:
+>
+> 1. **`edge` had to be re-applied.** The live `nas.internal` A record and the Caddy `omv.internal`
+>    upstream still pointed at `.202` — the repo was already correct (`technitium` defaults →
+>    `.209`, `caddy` defaults → `https://192.168.2.209:443`), but `playbook-edge.yml` had not been run
+>    since the address change landed. Run it **immediately** after the re-address, or the OMV UI is
+>    unreachable through the proxy.
+> 2. **The CA SSH host policy had to be regenerated.** `hosts@internal` carries an IP allow-list
+>    derived from inventory (`step_ca_ssh_hosts`); it did not contain `.209`, so host-certificate
+>    issuance failed with `ip name "192.168.2.209" not allowed`. Re-running
+>    `ansible/workloads/step-ca/step-ca-playbook.yml` rebuilds the policy from inventory. Then
+>    re-issue the NAS host certificate:
+>    `ansible-playbook ansible/playbooks/playbook-nas.yml --diff -e security_ssh_host_cert_force_reissue=true`.
 
 - [x] Phase 0 BIOS walk — 2026‑09‑21, recorded in [research 32](../research/32-wincor-beetle-m3-hardware-diagnostic.md#bios-walk)
 - [ ] Phase 0 close-out — **Memtest86+ and the RTC coin cell are deliberately deferred**
@@ -37,13 +59,17 @@ Authored 2026-09-20, before execution — the checklist fills in as the install 
       Still open in [research 32](../research/32-wincor-beetle-m3-hardware-diagnostic.md).
 - [x] OMV 8.x installed on the SanDisk SSD; hostname `nas` — 2026‑09‑21
 - [x] Static IP `192.168.2.202` set and verified from `lab` — 2026‑09‑21
+- [x] Re-addressed to `192.168.2.209` — 2026‑11‑07; `md0` intact, `.202` freed for `pve2`, `edge`
+      DNS + Caddy re-applied, NAS host certificate re-issued with the `.209` principal
+- [x] Domain corrected `home` → `internal` (FQDN `nas.internal`) — 2026‑11‑07
 - [x] `md0` (2× Seagate 1 TB → XFS) online and mounted — 2026‑09‑21; **reboot-survival test
       passed** 2026‑09‑22 (§6)
 - [x] Web UI reachable at `https://192.168.2.202` (HTTPS-only) — 2026‑09‑21
+  - the fleet name is `https://omv.internal` behind the edge proxy ([runbook 37](37-deploy-internal-access-stack.md)); `nas.internal` stays the host record
 - [x] `fleetadm` created at the CLI (key-only, password locked) — 2026‑09‑21; SSH hardening landed
       with the `security` role in §8
 - [x] `playbook-nas.yml` applied — `nut-monitor` active, Netdata child streaming and **visible on
-      the `pve` dashboard** — 2026‑09‑21
+      the `pve1` dashboard** — 2026‑09‑21
 - [ ] ML110 retired; `192.168.2.210` released — **deferred to Phase 2** (2026‑09‑22): the role must
 match a target that can serve shares, so the array being verified is necessary but not sufficient
 
@@ -61,7 +87,11 @@ No out-of-band management — all steps run from a **keyboard + monitor** attach
 |---|---|---|---|
 | `sda` | SanDisk X600 `SD9SB8W-128G` 128 GB SSD | `191702804011` | **OMV OS** (SMART PASSED) |
 | `sdb` | Seagate ST1000VT001-1RE172 1 TB 2.5" | `WDES3KB7` | `md0` member (0 reallocated) |
-| `sdc` | Seagate ST1000VT001-1RE172 1 TB 2.5" | `WDEPBVR3` | `md0` mirror (1,056 reallocated, **released to 0** by the resync — **kept + SMART-monitored**) |
+| `sdc` | Seagate ST1000VT001-1RE172 1 TB 2.5" | `WL10C3NG` | `md0` mirror — fitted **2026-10-17** (0 reallocated, 11 head-flying hours) |
+| — | Seagate ST1000VT001-1RE172 1 TB 2.5" | `WDEPBVR3` | 🪦 **retired 2026-10-11** — failed under the monthly scrub; replaced by `WL10C3NG` ([runbook 38](38-nas-disk-replacement.md)) |
+
+> **Device letters are a snapshot, not an identity.** They rotate between boots and across servicing
+> (§5); the serial is the only stable handle.
 
 > **Confirm on the unit** — the values below are research 32's audit; verify the LAN interface name
 > at the console.
@@ -127,11 +157,11 @@ With **only the SanDisk SSD attached** (Seagates disconnected):
 1. Boot the ISO → the installer prompts for **location**, **language**, **keyboard**, then
    **hostname** and **domain name**, then a **root password**.
    - **Hostname `nas`** — the installer's default is not `nas`; set it.
-   - **Domain `home`** — the fleet domain as it stood when this was applied
-     ([ADR 06](../decisions/06-local-dns-dnsmasq.md)); **the LAN name space is now `.internal`**
-     ([ADR 37](../decisions/37-lan-name-space-internal.md)), so expect this field to be repointed when
-     the internal stack lands. The field **prefills `Internal`**, so replace it. `.local` is
-     independent — Avahi publishes `nas.local` from the short hostname (§8).
+   - **Domain `internal`** — the LAN name space ([ADR 37](../decisions/37-lan-name-space-internal.md)),
+     so the FQDN is `nas.internal`. The original install used `home` (the fleet domain as it stood
+     under [ADR 06](../decisions/06-local-dns-dnsmasq.md)) and was corrected on 2026-11-07 — see §4c.
+     The field **prefills `Internal`**, so replace it. `.local` is independent — Avahi publishes
+     `nas.local` from the short hostname (§8).
    - Record the root password.
 2. It deploys to the **first disk found** — the SanDisk SSD.
 3. On completion the machine reboots — **remove the USB stick**.
@@ -155,21 +185,33 @@ With **only the SanDisk SSD attached** (Seagates disconnected):
   ([§8](#8-fleet-enrollment--ansible)), so a value set in the OMV UI here is overwritten. Verify with
   `timedatectl` — expect `Time zone: Etc/UTC` and `System clock synchronized: yes`.
 
-### 4c. Static IP `192.168.2.202` and hostname `nas`
+### 4c. Static IP `192.168.2.209` and hostname `nas`
 
-Per [ADR 31](../decisions/31-static-address-scheme.md), the NAS owns `192.168.2.202` (physical-server
-block):
+Per [ADR 31](../decisions/31-static-address-scheme.md), the NAS owns `192.168.2.209` (physical-server
+block, moved from `.202` on 2026-11-07 to free `.202` for `pve2`):
 
 - **Confirm the interface name first:** `ip -br addr` (research 32 records `enp0s31f6`; the kernel
   name can differ across boots/enumeration). Then `Network | Interfaces` → edit that interface
   (Intel I219-V, MAC `00:01:2e:8e:14:0d`).
-- Method: **Static** — IP `192.168.2.202`, netmask `255.255.255.0`, gateway `192.168.2.1`, DNS `192.168.2.1`.
-- Apply. Verify from `lab`: `ping 192.168.2.202`.
-- **Hostname** — `Network → General` (a **top-level** `Network` item, not `System → Network`):
-  confirm **`nas`** and, for now, domain **`home`** as set at §3 (so the FQDN is `nas.home`) — the name
-  space is now `.internal` ([ADR 37](../decisions/37-lan-name-space-internal.md)), so repoint this field
-  with the stack. Avahi publishes mDNS `nas.local` from the short hostname regardless (runbook 23 §8
-  pattern). The `common` role also enforces the inventory name `nas` ([§8](#8-fleet-enrollment--ansible)).
+- Method: **Static** — IP `192.168.2.209`, netmask `255.255.255.0`, gateway `192.168.2.1`, DNS `192.168.2.1`.
+- Apply. Verify from `lab`: `ping 192.168.2.209`.
+- **Hostname and domain** — `Network → General` (a **top-level** `Network` item, not
+  `System → Network`): hostname **`nas`**, domain **`internal`** — the LAN name space is `.internal`
+  ([ADR 37](../decisions/37-lan-name-space-internal.md)), so the FQDN is **`nas.internal`**. The
+  original install used `home`; it was corrected on 2026-11-07. Avahi publishes mDNS `nas.local` from
+  the short hostname regardless (runbook 23 §8 pattern). The `common` role also enforces the inventory
+  name `nas` ([§8](#8-fleet-enrollment--ansible)).
+
+  > **The domain change needs the OMV apply step.** Saving `Network → General` only writes
+  > `conf.system.network.dns` (`domainname: internal`); `/etc/hosts` and the FQDN are regenerated by
+  > the pending-configuration **Apply** in the banner at the top of the workbench. Until it is applied
+  > `hostname -f` still returns the old `nas.home`. Verify with `hostname -f` → `nas.internal` and
+  > `grep 192.168.2.209 /etc/hosts` → `192.168.2.209 nas.internal nas`.
+  >
+  > **Apply also resets `/etc/resolv.conf`** to the systemd-resolved stub
+  > (`nameserver 127.0.0.53`). Re-run `playbook-nas.yml` afterwards so the `common` role restores the
+  > fleet resolver (`nameserver 192.168.2.240`, `search internal`) — the role replaces the symlink
+  > rather than writing through it.
 
 ### 4d. HTTPS-only web UI
 
@@ -187,15 +229,18 @@ block):
 | Country | your own |
 | Organization / Unit / City / State / Email, Tags | leave blank (Tags auto-fills from the subject) |
 
-> **Why `nas.local` and not `nas.internal`.** The LAN name space is now `.internal`
-> ([ADR 37](../decisions/37-lan-name-space-internal.md) — `.home` and DNSMasq retired), and
-> [ADR 07](../decisions/07-reverse-proxy-caddy.md) fronts internal services with Caddy's CA — but
-> **nothing resolves `.internal` yet**, so `nas.local` is the only name that works today, and OMV's own
-> certificate is not the right home for the internal name either. OMV adds **`subjectAltName=DNS:<Common Name>`**, so `https://nas.local` matches on name and
-> only the untrusted-issuer warning remains, which is inherent to a self-signed certificate. An
-> X.509 certificate can match an IP when that address is included as an `iPAddress` SAN, but this
-> OMV-generated certificate has only a DNS SAN, so `https://192.168.2.202` warns on the name — use
-> the `.local` name.
+> **Why `nas.local` and not `nas.internal`.** Both names now resolve — `nas.internal` → `.209` via
+> Technitium ([ADR 40](../decisions/40-internal-dns-proxy-edge.md)), `nas.local` via Avahi — but the
+> **certificate** is the constraint, not the name. OMV's self-signed certificate is not the right home
+> for the internal name: `nas.internal` is served by the edge Caddy with a short-lived `step-ca` leaf
+> ([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md)), and the workbench is reached as
+> **`https://omv.internal`** through that proxy ([runbook 37](37-deploy-internal-access-stack.md)).
+> This certificate only covers the **direct** UI on `https://192.168.2.209:443`, where `nas.local` is
+> the name that matches. OMV adds **`subjectAltName=DNS:<Common Name>`**, so `https://nas.local`
+> matches on name and only the untrusted-issuer warning remains, which is inherent to a self-signed
+> certificate. An X.509 certificate can match an IP when that address is included as an `iPAddress`
+> SAN, but this OMV-generated certificate has only a DNS SAN, so `https://192.168.2.209` warns on the
+> name — use the `.local` name.
 
 **2. Enforce TLS** — `System | Workbench | Settings`:
 
@@ -282,12 +327,44 @@ portable to any Linux box, with per-disk SMART intact.
 > and mdadm records members by UUID — the array assembles identically whichever letters the kernel
 > hands out. **Measured:** Boot C came up fully rotated and `md0` still assembled as
 > `sdb[1] sdc[0]` → `[2/2] [UU]`, i.e. slot 0 (`WDES3KB7`) moved `sda → sdc` with no effect at all.
-> **Physical anchor:** the degraded drive is the one on the **black** connector — the one
-> to pull when it eventually needs replacing.
+>
+> **Physical anchor — identify by SERIAL, never by connector colour.** The colours moved during the
+> 2026-10-11 replacement: `WL10C3NG` was fitted on **blue** and `WDES3KB7` now sits on **black**
+> (measured `by-path`, 2026-10-17):
+>
+> | `by-path` | Connector | Serial | Disk |
+> |---|---|---|---|
+> | `ata-1` | *white* | `191702804011` | SanDisk SSD — the OS disk |
+> | `ata-2` | *blue* | `WL10C3NG` | Seagate — `md0` mirror |
+> | `ata-3` | *black* | `WDES3KB7` | Seagate — `md0` mirror |
+>
+> (The Boot A/B/C columns above record the 2026-09-21/22 pair `WDES3KB7` (blue) + `WDEPBVR3`
+> (black), before that replacement.) Pick the member to pull from `Storage | Disks`, by serial.
 3. Wait for the initial resync. Optionally speed it up:
    ```sh
    echo 50000 > /proc/sys/dev/raid/speed_limit_min
    ```
+
+### Replacing a failed member
+
+Replacing a member is [runbook 38](38-nas-disk-replacement.md) (identify by serial → destructive
+test → `mdadm --add` → resync → verify). Lessons from the first failure (2026-10-11, `WDEPBVR3`):
+
+- **SMART "PASSED" is not a health verdict.** The drive died under the monthly scrub with
+  `Reallocated_Sector_Ct` climbing `0 → 40 → 56` and `8 / 8` pending / offline-uncorrectable — while
+  the overall-health flag still read **PASSED**. Judge by the counters and the self-test.
+- **Attribute 9 `Power_On_Hours` is bogus on the ST1000VT001** (`smartctl` "not in database"):
+  every unit reports ~65.5 k, which cannot be real. Read **Head_Flying_Hours (240)** and the LBA
+  counters (**241/242**) instead — a genuinely unused drive showed **11 h** head-flying and
+  **~3.5 GB** written.
+- **The decisive tests** are the **extended self-test** (`smartctl -t long`) and a **destructive
+  write pass** (`badblocks -w`). In a degraded mirror, a bad sector on the surviving disk is an I/O
+  error to the filesystem — never resync from an unverified source.
+- **The OMV RAID UI lists live arrays.** `Storage | Multiple Device` shows `md0` even though
+  `config.xml` carries no `<mdadm>` block (verified 2026-10-17), so use its **Recover** action for a
+  degraded array — it runs `mdadm --add` underneath. The **S.M.A.R.T. monitor list**
+  (`<smart><monitor><device>`) is a separate record: it keeps stale serials in `config.xml` and lists
+  only *detected* disks in the UI, so enable monitoring for the new disk after fitting it.
 
 ### Filesystem
 
@@ -391,8 +468,8 @@ lever**: it does not set the ATA automatic acoustic management feature bit, so *
 
 ```sh
 sudo apt-get install -y hdparm     # not present on a stock OMV 8 — without it AAM is undetectable
-sudo hdparm -M /dev/sda            # WDES3KB7 → acoustic = not supported
-sudo hdparm -M /dev/sdb            # WDEPBVR3 → acoustic = not supported
+sudo hdparm -M /dev/sdX            # WDES3KB7 / WL10C3NG → acoustic = not supported
+                                   # (WDEPBVR3 is retired 2026-10-11)
 ```
 
 `hdparm -I` lists a *Recommended acoustic management value: 128*, but never the
@@ -459,11 +536,11 @@ left at defaults; the drop-in takes precedence. Verify `ssh fleetadm@nas` then `
 
 The node joins the fleet through the shared base playbooks. Two files land in this repo:
 
-- `ansible/inventory.ini` — `nas ansible_host=192.168.2.202 ansible_user=fleetadm`
+- `ansible/inventory.ini` — `nas ansible_host=192.168.2.209 ansible_user=fleetadm`
 - `ansible/playbooks/playbook-nas.yml` — `common → security → nut_client → netdata`
 - `ansible/host_vars/nas.yml` — Avahi on; UFW allows SSH + OMV web (`443`) from the LAN and denies
   `80` ([ADR 34](../decisions/34-lan-tls-only.md));
-  `netdata` as a **child** of `pve`; `nut_client` rides the **secondary** defaults.
+  `netdata` as a **child** of `pve1`; `nut_client` rides the **secondary** defaults.
 
 Run from a **LAN workstation** with the fleet key loaded
 ([fleet-connect skill](../../.opencode/skills/fleet-connect/SKILL.md)), and export the Key Vault
@@ -480,8 +557,8 @@ The roles do the following:
 |---|---|
 | `common` | Enforces hostname **`nas`**, `Etc/UTC`, Avahi, and the fleet SSH key on `fleetadm` |
 | `security` | UFW (deny incoming; allow SSH + **80/443** from `192.168.2.0/24`), fail2ban, SSH hardening |
-| `nut_client` | `nut-client` + `upsmon` as a **secondary** of the host-native NUT server on `pve` (`.201`) |
-| `netdata` | Agent streaming to the **`pve` Parent** at `192.168.2.201:19996` (TLS), loopback dashboard |
+| `nut_client` | `nut-client` + `upsmon` as a **secondary** of the host-native NUT server on `pve1` (`.201`) |
+| `netdata` | Agent streaming to the **`pve1` Parent** at `192.168.2.201:19996` (TLS), loopback dashboard |
 
 > **OMV × Ansible interaction.** The `security` role writes a `sshd_config.d` drop-in; OMV manages
 > SSH from its own module. The drop-in takes precedence and both express key-only/LAN-only — verify
@@ -495,13 +572,13 @@ The roles do the following:
 ssh fleetadm@nas 'systemctl is-active nut-monitor; upsc ups@192.168.2.201 | grep ups.status'
 ```
 
-- Netdata: on the `pve` dashboard (`https://192.168.2.201:19999`), the Nodes view should now list
-  **`pve, lab, edge, nas`**, with `nas` at `hops=1`. Agent footprint is ~130–170 MB RSS.
+- Netdata: on the `pve1` dashboard (`https://192.168.2.201:19999`), the Nodes view should now list
+  **`pve1, lab, edge, nas`**, with `nas` at `hops=1`. Agent footprint is ~130–170 MB RSS.
 - Idempotency: re-run `playbook-nas.yml`; the role tasks report `changed=0`.
 
 > **Verified 2026‑09‑21.** First run `nas : ok=39 changed=11 unreachable=0 failed=0 skipped=6`; an
 > immediate re-run reports `ok=35 changed=0 unreachable=0 failed=0 skipped=8` — idempotent. The
-> **`nas` node was confirmed visible in the `pve` Netdata dashboard**, `nut-monitor` is `active`,
+> **`nas` node was confirmed visible in the `pve1` Netdata dashboard**, `nut-monitor` is `active`,
 > and `upsc ups@192.168.2.213` returns `ups.status: OL`, `battery.charge: 100`.
 
 ## 9. Wrap-up
@@ -531,7 +608,7 @@ ssh fleetadm@nas 'systemctl is-active nut-monitor; upsc ups@192.168.2.201 | grep
   the BIOS port map (0 *white* / 1 *blue* / 2 *black*). The board exposes no SATA-mode setting;
   it is AHCI-only, so mdadm always sees raw disks.
 - **Web UI unavailable after the static IP** — use the console; `ip a show enp0s31f6` should show
-  `192.168.2.202`.
+  `192.168.2.209`.
 - **`Permission denied (publickey)` for `fleetadm`** — the account is missing the **`_ssh`** group
   (§7), or the fleet key was not installed.
 - **UFW blocked the OMV UI** — two different causes, check which:

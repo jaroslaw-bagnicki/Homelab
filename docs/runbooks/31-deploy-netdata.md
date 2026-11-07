@@ -1,6 +1,6 @@
-# Netdata — Tier B Parent (pve node) + streaming children
+# Netdata — Tier B Parent (pve1 node) + streaming children
 
-> Deploy the **Netdata Parent** on the `pve` node's Proxmox host (`192.168.2.201`), re-point the Lab
+> Deploy the **Netdata Parent** on the `pve1` node's Proxmox host (`192.168.2.201`), re-point the Lab
 > and Edge children to it, and point the Parent's go.d `upsd` job at the NUT server for **UPS
 > telemetry** (§2) — all via the shared `netdata` Ansible role. Tracked in
 > [issue #104](https://github.com/jaroslaw-bagnicki/Homelab/issues/104) (child of
@@ -9,10 +9,10 @@
 >
 > **One agent per node.** Per the [Netdata Proxmox VE integration](https://www.netdata.cloud/integrations/data-collection/containers-and-vms/proxmox-ve-monitoring/),
 > Netdata must run **directly on the Proxmox host** (not in a VM or container) to read VM/CT
-> cgroups and `/etc/pve` names — so the `pve` node runs a single **host-native** instance that
+> cgroups and `/etc/pve` names — so the `pve1` node runs a single **host-native** instance that
 > acts as the Parent. No parent LXC.
 >
-> **Scope — the LAN fleet only.** Netdata goes on the local nodes (`pve`, `lab`, `edge`; the NAS
+> **Scope — the LAN fleet only.** Netdata goes on the local nodes (`pve1`, `pve2`, `lab`, `edge`; the NAS
 > child is added by [runbook 32](32-beetle-m3-omv-setup.md) §8 once OMV is installed). **`cloudlab`
 > is never a target** — it sits outside the LAN and Tier A (Arc/AMA) already covers it. The OPNsense
 > router (FreeBSD) also waits until it joins the fleet.
@@ -33,11 +33,12 @@
 
 ADR 27 makes Netdata the first component of the local (Tier B) monitoring plane: one agent on every
 LAN node → a central **Parent** → one dashboard covering the fleet, Arc or not. The Lab (M910q) and
-Edge nodes stream to the Parent on the `pve` node; the NAS joins when it joins the fleet.
+Lab, Edge and `pve2` stream to the Parent on the `pve1` node; the NAS joins when it joins the fleet.
 
-> **Execution note.** Run this runbook **from a LAN workstation** (`192.168.2.0/24`) with the
-> fleet key loaded in `ssh-agent` (see the [`fleet-connect` skill](../../.github/skills/fleet-connect/SKILL.md)) —
-> `lab`, `edge` and `pve` are LAN-only. The Parent also reads the stream key from Azure Key Vault,
+> **Execution note.** Run this runbook **from a LAN workstation** (`192.168.2.0/24`) with an identity
+> in `ssh-agent` — the `automation` certificate or the break-glass fleet key (see the
+> [`fleet-connect` skill](../../.github/skills/fleet-connect/SKILL.md)) —
+> `lab`, `edge`, `pve1` and `pve2` are LAN-only. The Parent also reads the stream key from Azure Key Vault,
 > so the controller needs `AZURE_CLIENT_ID` / `AZURE_CLIENT_SECRET` / `AZURE_TENANT_ID` set.
 
 ## What changes
@@ -45,7 +46,7 @@ Edge nodes stream to the Parent on the `pve` node; the NAS joins when it joins t
 - **Shared `netdata` Ansible role** — parent + child modes, parameterized per host (`netdata_role`,
   `netdata_stream_target`, `netdata_stream_ssl`, `netdata_storage`, `netdata_retention_tiers`,
   `netdata_bind`, `netdata_tls`, `netdata_upgrade`).
-- **Parent** — `pve` Proxmox host, host-native systemd, `dbengine`, two LAN-bound listeners both
+- **Parent** — `pve1` Proxmox host, host-native systemd, `dbengine`, two LAN-bound listeners both
   forced to TLS: `<ip>:19999=dashboard^SSL=force` and `<ip>:19996=streaming^SSL=force`
   (`netdata_bind` accepts Netdata's per-listener syntax). `netdata_tls: true` writes the `[web] ssl`
   paths and generates a self-signed certificate when one is missing; `netdata_proxmox_host: true`
@@ -53,19 +54,21 @@ Edge nodes stream to the Parent on the `pve` node; the NAS joins when it joins t
 - **Children** — Lab (M910q, `dbengine`) and Edge (Wyse 3040, `ram` — eMMC-safe) stream to
   `192.168.2.201:19996:SSL` (`netdata_stream_ssl: true` — the Parent refuses plaintext streams).
 - **UPS telemetry** — the Parent's bundled go.d `upsd` module polls the NUT server
-  (`netdata_upsd_address: 192.168.2.201:3493`, set in `host_vars/pve.yml`) and charts battery
+  (`netdata_upsd_address: 192.168.2.201:3493`, set in `host_vars/pve1.yml`) and charts battery
   charge, load, voltages and the `OL`/`OB`/`LB` status (runtime too, though this unit reports none).
   Reads are **anonymous**, so no NUT account and no Key Vault secret — and the same run installs two
   **power-state alarms** (`on_battery` → warning, `low_battery` → critical), because the stock UPS
   alarms never flag a mains loss (§2).
 - **Stream key** — a shared `netdata-stream-api-key` in `homelab-bysxdb-kv`, fetched at deploy time,
   sent only inside the TLS stream (§1).
+- **CPU C-states** — per-core C-state residency charts on every host (`cpu idle states = yes`; the
+  agent's default is off and `auto` never creates them — [research 40](../research/40-netdata-cpu-cstates.md)).
 - **History** — per-tier, from `netdata_retention_tiers`, which the role selects by `netdata_role` from `netdata_retention_tiers_by_role` (a `time` target and a `size` cap per tier).
   Children stay at 7 d / 256 MiB; the **Parent** holds **14 d at 1s (5 GiB)**, **30 d at 1m (2 GiB)** and
   **365 d at 1h (2 GiB)** — sized from measured growth: the live Parent (2026-10-10, ~15.8k metrics)
   filled tier 0 to **2.97 GB in 9.2 days** (≈0.32 GB/day), so **5 GiB** carries the full 14 d (the
   earlier 3 GiB cap bound at ~9 d); tier 1 ≈59 MB/day and tier 2 ≈5 MB/day run far under their caps.
-  Capped at ≈9 GiB on the `pve` root LV, which the guests do not
+  Capped at ≈9 GiB on the `pve1` root LV, which the guests do not
   share. Time and size are **combined** limits: data is dropped when either is reached, so the ceiling is
   the **sum** of the three caps.
 - **Secret hygiene** — `stream.conf` is written with `no_log`, so the shared key never appears in
@@ -75,7 +78,8 @@ Edge nodes stream to the Parent on the `pve` node; the NAS joins when it joins t
 
 ## Prerequisites
 
-- [ ] `pve` base-provisioned — Proxmox VE + `fleetadm` + `playbook-pve.yml` (runbook 28).
+- [ ] `pve1` base-provisioned — Proxmox VE + `fleetadm` + `playbook-pve1.yml` (runbook 28).
+- [ ] `pve2` base-provisioned — Proxmox VE + `fleetadm` + `playbook-pve2.yml` (runbook 42).
 - [ ] `lab` and `edge` reachable and base-provisioned (runbooks 25 / 24).
 - [ ] Ansible collections installed: `azure.azcollection`, `community.general`
       (`ansible-galaxy collection install -r ansible/requirements.yml`).
@@ -83,7 +87,7 @@ Edge nodes stream to the Parent on the `pve` node; the NAS joins when it joins t
       (`pip3 install --break-system-packages azure-identity azure-keyvault-secrets`, see
       [runbook 16](16-docker-services-ansible-role.md)).
 - [ ] Azure Key Vault `homelab-bysxdb-kv` accessible from the controller identity.
-- [ ] Fleet key loaded in `ssh-agent` (`ssh-add -l` shows `fleetadm@homelab`).
+- [ ] An SSH identity is loaded in `ssh-agent` (`ssh-add -l` is not empty).
 
 ---
 
@@ -100,36 +104,36 @@ The role fetches `homelab-bysxdb-kv/netdata-stream-api-key` at deploy time and w
 (`[stream] destination = 192.168.2.201:19996:SSL`, `api key = <key>`). **Rotation**: re-run with
 `-Force`, then re-run the playbooks. The key is only ever sent inside the TLS stream.
 
-## 2. Parent — deploy on `pve`
+## 2. Parent — deploy on `pve1`
 
 From the repo root on the LAN workstation (fleet key loaded):
 
 ```powershell
 # Dev container only — world-writable /workspaces breaks ansible.cfg; skip this line on a LAN workstation:
 chmod 755 /workspaces/Homelab /workspaces/Homelab/ansible
-ansible-playbook ansible/playbooks/playbook-pve.yml --diff   # run from the repo root
+ansible-playbook ansible/playbooks/playbook-pve1.yml --diff   # run from the repo root
 ```
 
-`playbook-pve.yml` runs `common → security → nut_client → netdata`. The `netdata` role installs via the
+`playbook-pve1.yml` runs `common → security → nut_client → netdata`. The `netdata` role installs via the
 official kickstart script (`get.netdata.cloud/kickstart.sh`), configures `dbengine`, generates the
 self-signed certificate, writes the TLS-only listeners and the parent `stream.conf`, and adds the
 `netdata` user to `www-data` (Proxmox `/etc/pve` read for friendly VM/CT names). UFW already allows
-`19999` (dashboard) and `19996` (streaming) from `192.168.2.0/24` (`host_vars/pve.yml`) — neither
+`19999` (dashboard) and `19996` (streaming) from `192.168.2.0/24` (`host_vars/pve1.yml`) — neither
 serves content over cleartext (plain HTTP gets a `399` redirect to `https://`).
 
 ### UPS telemetry (NUT collector)
 
 The same run enables the Parent's **UPS charts**. The go.d `upsd` module ships with the installed
-agent, so this is configuration only — `host_vars/pve.yml` sets
+agent, so this is configuration only — `host_vars/pve1.yml` sets
 
 ```yaml
-netdata_upsd_address: "192.168.2.201:3493"   # NUT server host-native on pve
+netdata_upsd_address: "192.168.2.201:3493"   # NUT server host-native on pve1
 netdata_upsd_name: local                     # must match the name Netdata's discovery uses
 ```
 
 and the role renders `/etc/netdata/go.d/upsd.conf` (one job named `local` at that address) and restarts
 `netdata`. The NUT server allows **anonymous** reads, so there is no NUT account and no Key Vault
-secret; `pve` reaches `.201:3493` locally (UFW allows loopback and the LAN rule). A node with the
+secret; `pve1` reaches `.201:3493` locally (UFW allows loopback and the LAN rule). A node with the
 variable empty converges with no `upsd.conf`.
 
 **The job name is not free.** The `upsd` module itself has no auto-detection
@@ -181,7 +185,7 @@ their dashboard to `127.0.0.1:19999` only — the fleet view is the Parent.
 
 ## 4. Validation
 
-On `pve`:
+On `pve1`:
 
 ```sh
 systemctl status netdata
@@ -215,7 +219,7 @@ curl -sk https://192.168.2.201:19999/api/v2/alerts | grep -o upsd[._a-z]*       
 > contexts, values and alarms above are authoritative.
 
 Open **`https://192.168.2.201:19999`** (expect a self-signed certificate warning) — the dashboard
-should show the `pve` node and, once §3 runs, the `lab` and `edge` nodes in the Nodes view.
+should show the `pve1` node and, once the children run, the `pve2`, `lab` and `edge` nodes in the Nodes view.
 
 **Never print the shared key.** `stream.conf` carries it (on the parent the section header *is* the
 key), so check the shape, not the file:
@@ -228,12 +232,28 @@ sudo awk '/^\[/ { n++ } END { print "stream sections: " (n > 0 ? "present" : "MI
 sudo sed -n 's/^[[:space:]]*destination[[:space:]]*=[[:space:]]*//p' /etc/netdata/stream.conf
 ```
 
-Check the history budget on `pve` and on `lab`:
+Check the history budget on `pve1` and on `lab`:
 
 ```sh
 sudo grep -E 'tier [0-2] retention' /etc/netdata/netdata.conf   # per-tier time + size caps
 du -sh /var/cache/netdata/dbengine                              # actual DB size vs the caps
 ```
+
+Targeted re-apply: `ansible-playbook ansible/playbooks/playbook-netdata.yml --diff` — `hosts: physical`,
+so `pve1`, `pve2`, `lab`, `nas` and `edge` get the `netdata` role only and nothing else re-runs.
+
+Check the C-state charts on every host — one `cpuN_cpuidle` chart per core:
+
+```sh
+for h in pve1:4 pve2:4 lab:4 nas:2 edge:4; do
+  host=${h%%:*}; want=${h##*:}
+  got=$(curl -sk "https://192.168.2.201:19999/host/$host/api/v1/charts" | grep -o 'cpu[0-9]*_cpuidle' | sort -u | wc -l)
+  echo "$host: $got (expected $want)"
+done
+```
+
+The dashboard groups the per-core charts into one panel — "4 cpu cores", each dimension as `AVG()` —
+so pick a core in the instance selector (`4 cpu cores` → `cpuN`) before reading a single CPU's residency.
 
 Retention is a **combined** limit — data is dropped when either the time or the size limit is
 reached — and both apply **per tier**, so the DB ceiling is the **sum** of the three caps (≈9 GiB on
@@ -248,7 +268,8 @@ The role installs once and never re-installs silently, so a converged fleet stay
 update an agent, opt in for that run:
 
 ```powershell
-ansible-playbook ansible/playbooks/playbook-pve.yml -e netdata_upgrade=true
+ansible-playbook ansible/playbooks/playbook-pve1.yml -e netdata_upgrade=true
+ansible-playbook ansible/playbooks/playbook-pve2.yml -e netdata_upgrade=true
 ```
 
 `netdata_upgrade: true` re-runs the official kickstart script with `--reinstall` (stable channel,
@@ -257,8 +278,8 @@ task reports `changed` by design. Roll the **Parent first**, then the children, 
 without the flag to confirm `changed=0`.
 
 > **Validated 2026-09-20 across the fleet.** With the flag set, the install task skips (`creates:`) and
-> the update task runs on `pve`, `lab` and `edge`; the follow-up run without the flag returned
-> `changed=0` on `pve` and `edge` (`lab`'s single change is `azure_arc`'s Arc-connect task, unrelated
+> the update task runs on `pve1`, `lab` and `edge`; the follow-up run without the flag returned
+> `changed=0` on `pve1` and `edge` (`lab`'s single change is `azure_arc`'s Arc-connect task, unrelated
 > to Netdata). Every role-owned setting stayed `ok` through the re-install — `bind to`, the `ssl`
 > paths, the tier retention keys, `stream.conf`, the certificate and the `www-data` grant — and no
 > service was restarted: all three nodes were already on the current stable (**v2.11.1**), so the
@@ -272,24 +293,25 @@ without the flag to confirm `changed=0`.
 
 ## Verification Checklist
 
-Executed 2026-09-19 (install and configuration) and 2026-09-20 (§5 updates) — `playbook-pve.yml
+Executed 2026-09-19 (install and configuration) and 2026-09-20 (§5 updates) — `playbook-pve1.yml
 --diff` `ok=48 changed=16 failed=0`, then `playbook-lab.yml` `ok=56 changed=10 failed=0` and
 `playbook-edge.yml` `ok=44 changed=8 failed=0`:
 
 - [x] §1 `netdata-stream-api-key` present in `homelab-bysxdb-kv` (created 2026-09-19, no expiry)
-- [x] §2 Parent active on `pve` (Netdata **v2.11.1**); dashboard reachable at **`https://192.168.2.201:19999`** (self-signed warning expected)
+- [x] §2 Parent active on `pve1` (Netdata **v2.11.1**); dashboard reachable at **`https://192.168.2.201:19999`** (self-signed warning expected)
 - [x] §2 plain HTTP on `19999` answers **`399 Redirection`** → `https://` (no cleartext content); the `19996` listener completes a TLSv1.3 handshake
 - [x] §2 UFW allows `19999` + `19996` from the LAN; `netdata` in `www-data` (VM/CT names resolve)
 - [x] §3 both children stream over TLS (`destination = 192.168.2.201:19996:SSL` on each)
-- [x] §3 Lab child streams to the Parent (parent mirrors `pve, lab, edge`; both children `hops=1`)
+- [x] §3 Lab child streams to the Parent (parent mirrors `pve1, lab, edge`; both children `hops=1`)
 - [x] §3 Edge child streams to the Parent; `netdata.conf` `mode = ram`
 - [x] §4 `dbengine tier 0/1/2 retention time = 7d` + `retention size` present (1 GiB per tier on the parent); `du -sh /var/cache/netdata/dbengine` → `512K` on a fresh install — *superseded 2026-09-26 by the per-tier row below*
 - [x] §4 retention is now **per-tier** (role-owned) — `netdata_retention_tiers` renders **`14d`/`3GiB`**, **`30d`/`2GiB`**, **`365d`/`2GiB`** on the Parent (verified live in `netdata.conf` 2026-09-26 — the 21 d first cut ran `ok=45 changed=3 failed=0`, the trim to 14 d ran `ok=45 changed=2 failed=0`; `netdata` active, DB 993 MB); children stay at 7 d / 256 MiB — **tier-0 cap raised `3GiB` → `5GiB` 2026-10-10** (the 3 GiB cap bound at ~9 d of the 14 d target)
+- [x] §4 C-state charts present on all four hosts — `pve1` 4 / `lab` 4 / `nas` 2 / `edge` 4 `cpuN_cpuidle` charts from the parent API (2026-10-17, targeted `playbook-netdata.yml`: `ok=11–18 changed=2 failed=0` per host — the option plus the restart), enabled by `netdata_cpu_idle_states` ([research 40](../research/40-netdata-cpu-cstates.md))
 - [ ] §4 per-tier retention **effective** values confirmed as the tiers fill — the console storage view should show `effective` = `configured` for tiers 1 and 2 once 30 d / 365 d of data exist (weeks out)
 - [x] §4 no validation command printed the shared key
-- [x] Idempotent — a re-run reports **`changed=0`** for this role on all three nodes (`pve` `ok=38 changed=0`, `edge` `ok=40 changed=0`; `lab` `changed=1`, that one being `azure_arc`'s Arc-connect task, unrelated)
-- [x] §5 validated 2026-09-20 on all three nodes — with the flag: install skipped, `--reinstall` ran (`pve` `ok=40 changed=1`, `lab` `ok=52 changed=2`, `edge` `ok=42 changed=1`); without it: `changed=0` on `pve`/`edge` (`lab` `changed=1` = `azure_arc`); all three were already at the current stable, so no version change was observable
-- [x] §2 UPS collector live on the Parent — `upsd` job in `go.d/upsd.conf`; 12 `upsd.*` contexts, battery charge **100**, status `on_line`, collection alarm **CLEAR** (2026-09-26 — `playbook-pve.yml` `ok=41 changed=3 failed=0`)
+- [x] Idempotent — a re-run reports **`changed=0`** for this role on all three nodes (`pve1` `ok=38 changed=0`, `edge` `ok=40 changed=0`; `lab` `changed=1`, that one being `azure_arc`'s Arc-connect task, unrelated)
+- [x] §5 validated 2026-09-20 on all three nodes — with the flag: install skipped, `--reinstall` ran (`pve1` `ok=40 changed=1`, `lab` `ok=52 changed=2`, `edge` `ok=42 changed=1`); without it: `changed=0` on `pve1`/`edge` (`lab` `changed=1` = `azure_arc`); all three were already at the current stable, so no version change was observable
+- [x] §2 UPS collector live on the Parent — `upsd` job in `go.d/upsd.conf`; 12 `upsd.*` contexts, battery charge **100**, status `on_line`, collection alarm **CLEAR** (2026-09-26 — `playbook-pve1.yml` `ok=41 changed=3 failed=0`)
 - [x] §2 power-state alarms registered — `upsd_nut_ups.status.upsd_ups_on_battery` + `…upsd_ups_low_battery` (2026-09-26 — `ok=43 changed=2 failed=0`), and **both raise/clear paths validated on a real mains loss the same day**: wall plug pulled 11:54:05 → *warning* within ~10 s ("UPS ups is on battery", value `1 status`); mains restored → **cleared** (verified 09:56 UTC)
 - [x] §2 UPS job **renamed `nut` → `local`** — **2026-10-11**: with the NUT server host-native on the Parent's own host, Netdata's `sd:net_listeners` discovery added a second `upsd` job, so the same UPS was charted twice and `ups_on_line` summed to **2**. Chart ids are now `upsd_local_ups.*` and the alarm instances `upsd_local_ups.status.upsd_ups_on_battery` / `…upsd_ups_low_battery`; the entries directly above keep the pre-rename instance names they were verified under. `nut_ups` history is not carried over (accepted)
 - [x] §2 UPS charts visible in the Parent's dashboard — **`Remote Devices → UPS → NUT`** (observed **2026-09-27**); they were **absent from the UI** immediately after the 2026-09-26 integration although the API published the contexts and values from the first run (§2 caveat 1)
@@ -300,5 +322,5 @@ Executed 2026-09-19 (install and configuration) and 2026-09-20 (§5 updates) —
 - [ADR 27 — Monitoring & observability strategy](../decisions/27-monitoring-strategy.md)
 - [ADR 24 — Edge appliance (RAM-only Netdata)](../decisions/24-edge-ingress-appliance.md)
 - [ADR 25 — Home Assistant node](../decisions/25-home-assistant-thin-client.md)
-- [Runbook 28 — Proxmox VE host](28-pve-proxmox-node.md) · [Runbook 25 — M910q](25-m910q-os-refresh.md) · [Runbook 24 — Edge](24-edge-appliance.md)
+- [Runbook 28 — Proxmox VE host](28-pve1-proxmox-node.md) · [Runbook 25 — M910q](25-m910q-os-refresh.md) · [Runbook 24 — Edge](24-edge-appliance.md)
 - [Issue #104](https://github.com/jaroslaw-bagnicki/Homelab/issues/104) · [#80](https://github.com/jaroslaw-bagnicki/Homelab/issues/80) · [#75](https://github.com/jaroslaw-bagnicki/Homelab/issues/75)
