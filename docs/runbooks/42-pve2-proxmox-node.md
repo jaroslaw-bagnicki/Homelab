@@ -17,10 +17,12 @@ replication stay out of scope.
 
 ## What changes
 
-- Proxmox VE **9.x, the same point release as `pve1`** (currently **9.2.18** — verify with
+- Proxmox VE **9.x, the same point release as `pve1`** (currently **9.2.26** — verify with
   `pveversion -v` on `pve1` before installing; the point release moves, so match it, do not copy a
   number from this document).
-- Hostname `pve2`, static `192.168.2.202/24`, gateway `192.168.2.1`, DNS `1.1.1.1`, timezone `Etc/UTC`.
+- Hostname `pve2`, static `192.168.2.202/24`, gateway `192.168.2.1`, **DNS `192.168.2.240`** (the
+  fleet resolver on `edge`, [ADR 40](../decisions/40-internal-dns-proxy-edge.md) — **not** a public
+  resolver: `.internal` names must resolve before Ansible runs), timezone `Etc/UTC`.
 - `ext4` + LVM-thin on the 128 GB M.2 SATA module; no ZFS. The 2.5″ bay stays free for a later pool.
 - Fleet enrollment via `ansible/playbooks/playbook-pve2.yml`:
   `common → ca_trust → security → proxmox_cluster → nut_client → netdata → fluentbit`.
@@ -40,7 +42,7 @@ replication stay out of scope.
 > | Check | State |
 > |---|---|
 > | `pve1` hostname | still **`pve`** — the rename ([runbook 28 §6](28-pve1-proxmox-node.md)) has **not** run |
-> | `pve1` version | **9.2.18** — match this, not 9.2.2 |
+> | `pve1` version | **9.2.26** — match this, not 9.2.2 |
 > | `pve1` guests | LXC 214 `vtstack`, LXC 215 `ca` — both running |
 > | **VM 216 `ipa`** | **absent** — no config in `/etc/pve/qemu-server/`, `.216` unreachable. `docs/overview.md` still lists it as 🔨; reconcile before the rename |
 > | `.202` | **free** — the NAS moved to `.209` on 2026-11-07 ([runbook 32 §4c](32-beetle-m3-omv-setup.md)) |
@@ -54,9 +56,9 @@ replication stay out of scope.
 1. **BIOS (F2), final settings** — AHCI; UEFI with Secure Boot **off**; VT-x + VT-d on; TPM 2.0 on;
    wireless disabled; TurboBoost **off**; **AC Recovery `Power On`**; **Wake on LAN `LAN Only`**;
    **Deep Sleep `Disabled`**; Fastboot `Thorough` with a non-zero POST delay.
-2. **Record the NIC MAC** — `enp0s31f6` on the Intel I219-LM; it is needed for WoL and the DHCP
-   reservation. Run `mei-amt-version` and the TPM vendor check from a live session; if AMT is absent,
-   remote power is AC Recovery + WoL only.
+2. **Record the NIC MAC** — `enp0s31f6` on the Intel I219-LM, **`d8:9e:f3:97:3e:d1`** (captured
+   2026-11-07); it is needed for WoL and the DHCP reservation. Run `mei-amt-version` and the TPM
+   vendor check from a live session; if AMT is absent, remote power is AC Recovery + WoL only.
 3. **Confirm the disk is the 128 GB SK hynix SC311** and that the 2.5″ bay is empty. No disk
    replacement is required (research 52).
 
@@ -69,13 +71,11 @@ replication stay out of scope.
 
    | Field | Value |
    |---|---|
-   | Management interface | `enp0s31f6` |
-   | IP | `192.168.2.202/24` |
-   | Gateway | `192.168.2.1` |
-   | DNS | `1.1.1.1` |
-   | Hostname (FQDN) | `pve2.local` (OS hostname `pve2`) |
-   | Timezone | `Etc/UTC` |
-
+| Management interface | `enp0s31f6` (Intel I219-LM, MAC `d8:9e:f3:97:3e:d1`) |
+| Hostname (FQDN) | `pve2.internal` (OS hostname `pve2`) |
+| IP | `192.168.2.202/24` |
+| Gateway | `192.168.2.1` |
+| DNS | **`192.168.2.240`** — the fleet resolver on `edge` ([ADR 40](../decisions/40-internal-dns-proxy-edge.md)); a public resolver cannot answer `.internal` |
 4. Set a strong `root` password → **Keeper**. Reboot, remove the USB.
 5. Verify:
 
@@ -164,7 +164,7 @@ Update `docs/overview.md` (node row + topology), `docs/hardware.md` (per-node sp
 - [ ] `pveversion -v` matches `pve1`
 - [ ] `fleetadm` key-only SSH works; `sudo -n whoami` → root
 - [ ] `playbook-pve2.yml` applies cleanly; second run `changed=0`
-- [ ] UFW active; SSH + `8006` allowed from LAN; `pve2.local` / `pve2.internal` resolve
+- [ ] UFW active; SSH + `8006` allowed from LAN; `pve2.internal` resolves
 - [ ] Netdata child visible on the `pve1` Parent; Fluent Bit logs in VictoriaLogs
 - [ ] `upsc ups@192.168.2.201` works; `nut-monitor` active
 - [ ] Smoke-test LXC 250 created, verified and destroyed

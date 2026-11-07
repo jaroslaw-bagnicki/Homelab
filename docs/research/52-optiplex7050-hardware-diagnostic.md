@@ -4,7 +4,7 @@
 
 **Scope**: Pre-boot hardware audit of the **Dell OptiPlex 7050 Micro (MFF)** bought on 2026-11-04 and delivered 2026-11-05 — the second Proxmox VE node planned in [idea 15](../ideas/15-second-proxmox-node.md) and [research 47](47-second-proxmox-node.md). Same Phase 0 pattern as the Wyse 3040 ([28](28-wyse3040-hardware-diagnostic.md)), Wyse 5070 ([29](29-wyse5070-hardware-diagnostic.md)), Futro S930 ([31](31-futro-s930-hardware-diagnostic.md)) and Beetle M-III ([32](32-wincor-beetle-m3-hardware-diagnostic.md)) audits: capture the exact specs into `docs/hardware.md` and find the surprises **before** committing an OS to the box.
 
-**Status**: 🔨 In progress — hardinfo2 inventory, the F2 BIOS walk, the F12 boot menu, ePSA, the BIOS-level check, **disk SMART**, **ME firmware** and **Memtest86+** are captured; **TPM vendor, MAC, the AMT verdict and the OS-side power/thermal trio are still pending** ([Pending checks](#pending-checks)).
+**Status**: 🔨 In progress — hardinfo2 inventory, the F2 BIOS walk, the F12 boot menu, ePSA, the BIOS-level check, **disk SMART**, **ME firmware**, **Memtest86+** and the **NIC MAC** are captured; **TPM vendor, the AMT verdict and the OS-side power/thermal trio are still pending** ([Pending checks](#pending-checks)).
 
 ---
 
@@ -51,7 +51,7 @@ The 7050 replaces the "OptiPlex 7040 Micro, i5-6500T" that [research 47 §2](47-
 | RAM | **8 GB** — 1× 8 GiB DDR4 SO-DIMM `KMKYF9-MIH`, rated/configured **2400 MT/s**, **DIMM 2 free** |
 | Storage | **M.2 2280 SATA SSD** — SK hynix SC311 SATA 128GB, enumerated as `sda` on the AHCI controller (`00:17.0`); **119.2 GiB, unpartitioned**, **11 134 POH**, **~97 % endurance remaining** ([SMART](#the-module-is-sound-and-it-is-empty-smart-2026-11-06)) |
 | GPU | Intel **HD Graphics 630** (PCI `00:02.0`, i915) |
-| NIC (GbE) | Intel **I219-LM** (`enp0s31f6`), PCI `00:1f.6` — the AMT-capable NIC |
+| NIC (GbE) | Intel **I219-LM** (`enp0s31f6`), PCI `00:1f.6`, MAC **`d8:9e:f3:97:3e:d1`** (captured 2026-11-07 at the PVE installer) — the AMT-capable NIC |
 | NIC (WiFi) | Intel **Wireless 8265** (`wlp1s0`, PCI `01:00.0` behind root port `00:1c.0`) + Intel Bluetooth |
 | Audio | HDA Intel PCH (Realtek codec; DP/HDMI outputs + front line-out/headphone) |
 | TPM | **TPM 2.0 present** (ACPI `MSFT0101`) — firmware-vs-discrete still to identify ([research 37](37-tpm2-hardware-and-fleet.md) pattern) |
@@ -373,7 +373,7 @@ Six items that are either **impossible to recover afterwards** or that **change 
 6. **TPM identity** — ✅ enabled and active per the F2 walk (TPM On, SHA-256, Attestation/Key Storage on, `Enabled`); **vendor still open** — the `dmesg`/`tpm2_getcap` output was not captured in the 2026-11-06 session, so Intel PTT vs a discrete chip is unresolved (the [research 37](37-tpm2-hardware-and-fleet.md) pattern: `TPM_PT_MANUFACTURER` = `INTC` → PTT, `IFX`/`NTC` → discrete). A usable TPM 2.0 keeps the option of a second sealed `step-ca` instance open.
 7. **Thermal + power measurement** — pre-OS baselines are in (**23.2 W BIOS Setup, 19.7 W PXE**); still to measure at the wall, same meter and socket: **OS idle**, **OS idle with a guest**, and **all-core load** — with package temperature and fan RPM alongside, so the 65 W decision rests on numbers rather than on the TDP label.
 8. **ePSA diagnostics** — ✅ **ran clean 2026-11-06** (*no problems found*); the System Health readings are recorded [above](#boot-menu-f12-and-epsa-2026-11-06), the memory test is the item left open under the gate.
-9. **MAC addresses** — record `enp0s31f6` for DHCP reservations / WoL. ⚠️ not captured 2026-11-06 — read it on the next boot or from the DHCP leases.
+9. **MAC addresses** — ✅ captured 2026-11-07 at the PVE installer: `enp0s31f6` = **`d8:9e:f3:97:3e:d1`** (for the DHCP reservation and WoL).
 
 ---
 
