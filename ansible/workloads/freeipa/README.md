@@ -2,8 +2,8 @@
 
 ## Purpose
 
-A self-contained Ansible recipe that installs the **FreeIPA server** on the `ipa` VM (VMID 216,
-`192.168.2.216`) on the `pve1` node, realm **`IPA.INTERNAL`**, DNS domain **`ipa.internal`**,
+A self-contained Ansible recipe that installs the **FreeIPA server** on the `ipa` VM (VMID 250,
+`192.168.2.250`) on the `pve2` node, realm **`IPA.INTERNAL`**, DNS domain **`ipa.internal`**,
 integrated DNS **off**. Decision: [ADR 43](../../../docs/decisions/43-freeipa-domain-realm.md);
 CA relation: [ADR 42](../../../docs/decisions/42-pki-topology-sibling-cas.md); implementation:
 [issue #164](https://github.com/jaroslaw-bagnicki/Homelab/issues/164) and

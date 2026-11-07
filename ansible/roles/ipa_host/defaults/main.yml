@@ -5,7 +5,7 @@
 
 ipa_host_fqdn: ipa.internal
 ipa_host_short_name: ipa
-ipa_host_ip: 192.168.2.216
+ipa_host_ip: 192.168.2.250
 ipa_host_lan_cidr: 192.168.2.0/24
 
 # Fleet resolver (ADR 40, #174). The IPA VM is a host, not a container: it owns

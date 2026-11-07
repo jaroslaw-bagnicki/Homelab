@@ -15,7 +15,7 @@ freeipa_admin_password: ""
 freeipa_realm: IPA.INTERNAL
 freeipa_domain: ipa.internal
 freeipa_hostname: ipa.internal
-freeipa_ip: 192.168.2.216
+freeipa_ip: 192.168.2.250
 
 # Shared installer arguments. DNS is intentionally not configured; the
 # Technitium records are verified separately. --no-host-dns keeps the install

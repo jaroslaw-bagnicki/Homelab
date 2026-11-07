@@ -1,10 +1,10 @@
-# FreeIPA Server — M1 on `pve1` (Fedora Cloud VM, External CA)
+# FreeIPA Server — M1 on `pve2` (Fedora Cloud VM, External CA)
 
-> Deploy the FreeIPA server for the lab's Linux domain: Fedora 45 Cloud VM **216** on the `pve1` node,
+> Deploy the FreeIPA server for the lab's Linux domain: Fedora 45 Cloud VM **250** on the `pve2` node,
 > FQDN **`ipa.internal`**, realm **`IPA.INTERNAL`**, integrated DNS **off**, CA installed with
 > **`--external-ca`** and signed by the offline fleet root. Decision:
-> [ADR 43](../decisions/43-freeipa-domain-realm.md); CA relation:
-> [ADR 42](../decisions/42-pki-topology-sibling-cas.md); tracker:
+> [ADR 43](../decisions/43-freeipa-domain-realm.md) (amended 2026-11-07 — the server moved from `pve1`
+> to `pve2`); CA relation: [ADR 42](../decisions/42-pki-topology-sibling-cas.md); tracker:
 > [issue #164](https://github.com/jaroslaw-bagnicki/Homelab/issues/164) M1.
 >
 > ⚠ **M1 only.** This runbook stops at a verified server. `ipa-backup` and the rehearsed restore (M2)
@@ -23,8 +23,9 @@ the server, the realm, the DNS glue and the CA chain before anything depends on 
 
 ## What changes
 
-- **VM 216 `ipa`** — Fedora 45, 2 vCPU / 2 GB / 16 GB, static `192.168.2.216`, FQDN `ipa.internal`,
-  `onboot 1`.
+- **VM 250 `ipa`** — Fedora 45, 2 vCPU / 2 GB / 16 GB, static `192.168.2.250`, FQDN `ipa.internal`,
+  `onboot 1`. VMID 250 is the `pve2` guest block's first number, and the ID *is* the address
+  ([ADR 31](../decisions/31-static-address-scheme.md)).
 - **`ipa_host` role** — EL hostname/FQDN, `/etc/hosts`, chrony, firewalld LAN rules, `fleetadm` + fleet
   key. It replaces `common`/`security`, which are Debian/Ubuntu-only.
 - **Technitium** — `ipa.internal` A, reverse zone + PTR, and the Kerberos/LDAP SRV records.
@@ -33,21 +34,24 @@ the server, the realm, the DNS glue and the CA chain before anything depends on 
 
 ## Prerequisites
 
-- [ ] ADR 42 and ADR 43 **Accepted** (done, 2026-10-25).
-- [ ] `pve1` base-provisioned ([runbook 28](28-pve1-proxmox-node.md)); `pve1` chrony healthy.
+- [ ] ADR 42 and ADR 43 **Accepted** (done, 2026-10-25; ADR 43 amended 2026-11-07 for the `pve2`
+      placement).
+- [ ] `pve2` base-provisioned and in the `homelab` cluster ([runbook 42](42-pve2-proxmox-node.md),
+      [runbook 43](43-proxmox-cluster-qdevice.md)); `pve2` chrony healthy.
 - [ ] Technitium on `edge` reachable — `ipa_host` probes it on `:53` and fails before pointing the VM
       at a resolver that is not there ([runbook 37](37-deploy-internal-access-stack.md), ADR 40/#174).
-- [ ] `pve1` has ≥ 2.5 GB free RAM and ≥ 20 GB free `local-lvm`; if not, stop — [idea 15](../ideas/15-second-proxmox-node.md)
-      is the prerequisite.
-- [ ] Fedora 45 Cloud Base Generic image downloaded and checksum-verified on `pve1`.
+- [ ] `pve2` has ≥ 2.5 GB free RAM and ≥ 20 GB free `local-lvm`. It carries no guests, so this is a
+      check rather than a gate — `pve1` could not satisfy it beside the Home Assistant guests, which is
+      why the server moved here.
+- [ ] Fedora 45 Cloud Base Generic image downloaded and checksum-verified on `pve2`.
 - [ ] The **secure USB stick** and air-gapped signing machine for the CA ceremony.
 - [ ] Controller has `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID` and Ansible collections.
 - [ ] `automation` certificate (or break-glass fleet key) in `ssh-agent`; `ansible-lint` available.
-- [ ] `.216` and VMID 216 are free.
+- [ ] `.250` and VMID 250 are free.
 
 ---
 
-## 1. Preflight on `pve1`
+## 1. Preflight on `pve2`
 
 ```sh
 free -m
@@ -61,12 +65,12 @@ ls -l /dev/tpmrm0 2>/dev/null || true
 
 - Record the memory headroom. The IPA VM is fixed at 2048 MB; do not start it if the host cannot keep
   at least ~500 MB free.
-- `local-lvm` must have room for the 16 GiB disk.
+- `local-lvm` must have room for the 16 GiB disk (the `pve2` thin pool is ~57 GB).
 - The TPM line is informational only — **M1 does not use the TPM**.
 
 ## 2. Create the Fedora 45 VM
 
-On `pve1` (`ssh fleetadm@192.168.2.201`, then `sudo -i`):
+On `pve2` (`ssh fleetadm@192.168.2.202`, then `sudo -i`):
 
 ```sh
 cd /var/lib/vz/template/iso
@@ -77,16 +81,16 @@ sed -n 's/^SHA256 (\(Fedora-Cloud-Base-Generic-45-1.4.x86_64.qcow2\)) = \(.*\)$/
   Fedora-Cloud-45-1.4-x86_64-CHECKSUM \
   | sha256sum -c -
 
-qm create 216 \
+qm create 250 \
   --name ipa --memory 2048 --cores 2 --cpu host \
   --ostype l26 --scsihw virtio-scsi-single \
   --net0 virtio,bridge=vmbr0 \
   --agent enabled=1 --serial0 socket --vga serial0
 
-qm importdisk 216 /var/lib/vz/template/iso/Fedora-Cloud-Base-Generic-45-1.4.x86_64.qcow2 local-lvm
-qm set 216 --scsi0 local-lvm:vm-216-disk-0 --boot order=scsi0 --ide2 local:cloudinit
-qm resize 216 scsi0 16G
-qm set 216 --onboot 1
+qm importdisk 250 /var/lib/vz/template/iso/Fedora-Cloud-Base-Generic-45-1.4.x86_64.qcow2 local-lvm
+qm set 250 --scsi0 local-lvm:vm-250-disk-0 --boot order=scsi0 --ide2 local:cloudinit
+qm resize 250 scsi0 16G
+qm set 250 --onboot 1
 ```
 
 The Fedora Cloud Base Generic image is BIOS-bootable. If this `qm` configuration does not boot it,
@@ -118,13 +122,13 @@ users:
 Apply and start:
 
 ```sh
-qm set 216 --cicustom user=local:snippets/ipa-user-data.yaml \
-  --ipconfig0 ip=192.168.2.216/24,gw=192.168.2.1 \
+qm set 250 --cicustom user=local:snippets/ipa-user-data.yaml \
+  --ipconfig0 ip=192.168.2.250/24,gw=192.168.2.1 \
   --nameserver 192.168.2.240 --searchdomain ipa.internal
-qm cloudinit update 216
-qm start 216
-qm status 216
-qm guest cmd 216 network-get-interfaces || true
+qm cloudinit update 250
+qm start 250
+qm status 250
+qm guest cmd 250 network-get-interfaces || true
 ```
 
 The `--nameserver` above is the cloud-init bootstrap only. `ipa_host` owns the durable pin: it sets
@@ -136,10 +140,10 @@ from NetworkManager at boot.
 Verify from the LAN workstation:
 
 ```sh
-ssh fleetadm@192.168.2.216 'hostname -f; getent hosts ipa.internal; sudo -n whoami; chronyc tracking'
+ssh fleetadm@192.168.2.250 'hostname -f; getent hosts ipa.internal; sudo -n whoami; chronyc tracking'
 ```
 
-Expected: `ipa.internal`, `192.168.2.216 ipa.internal`, `root`, and a synchronised chrony.
+Expected: `ipa.internal`, `192.168.2.250 ipa.internal`, `root`, and a synchronised chrony.
 
 ## 3. Apply the EL base role
 
@@ -151,9 +155,9 @@ ansible-playbook ansible/playbooks/playbook-ipa.yml --diff
 Verify:
 
 ```sh
-ssh fleetadm@192.168.2.216 'hostname -f; sudo -n whoami'
-ssh fleetadm@192.168.2.216 'sudo firewall-cmd --list-rich-rules; sudo systemctl is-active chronyd firewalld'
-ssh fleetadm@192.168.2.216 'cat /etc/resolv.conf; getent hosts ipa.internal'
+ssh fleetadm@192.168.2.250 'hostname -f; sudo -n whoami'
+ssh fleetadm@192.168.2.250 'sudo firewall-cmd --list-rich-rules; sudo systemctl is-active chronyd firewalld'
+ssh fleetadm@192.168.2.250 'cat /etc/resolv.conf; getent hosts ipa.internal'
 ```
 
 `/etc/resolv.conf` must be the Ansible-managed file — `nameserver 192.168.2.240`, `search internal` —
@@ -170,8 +174,8 @@ ansible-playbook ansible/playbooks/playbook-technitium.yml --diff
 Verify from a LAN client:
 
 ```sh
-dig @192.168.2.240 ipa.internal +short                 # 192.168.2.216
-dig @192.168.2.240 -x 192.168.2.216 +short             # ipa.internal.
+dig @192.168.2.240 ipa.internal +short                 # 192.168.2.250
+dig @192.168.2.240 -x 192.168.2.250 +short             # ipa.internal.
 dig @192.168.2.240 _kerberos._tcp.ipa.internal SRV +short  # 0 100 88 ipa.internal.
 dig @192.168.2.240 _kerberos._udp.ipa.internal SRV +short
 dig @192.168.2.240 _kpasswd._tcp.ipa.internal SRV +short   # 0 100 464 ipa.internal.
@@ -208,7 +212,7 @@ This installs `freeipa-server`, fetches the passwords, and runs:
 ```sh
 ipa-server-install --external-ca --unattended \
   --realm=IPA.INTERNAL --domain=ipa.internal \
-  --hostname=ipa.internal --ip-address=192.168.2.216 \
+  --hostname=ipa.internal --ip-address=192.168.2.250 \
   --no-host-dns --no-ntp --no-hbac-allow \
   --ds-password=... --admin-password=...
 ```
@@ -221,7 +225,7 @@ It stops at the signing gate with `/root/ipa.csr` on the guest and an explicit �
 incomplete” message — that first-run stop is expected. Fetch the CSR (public):
 
 ```sh
-ssh fleetadm@192.168.2.216 'sudo cat /root/ipa.csr' > ipa.csr
+ssh fleetadm@192.168.2.250 'sudo cat /root/ipa.csr' > ipa.csr
 openssl req -in ipa.csr -noout -subject
 # expected: subject=CN = Certificate Authority, O = IPA.INTERNAL
 ```
@@ -249,8 +253,8 @@ Bring back `ipa-ca.crt` and a copy of `root_ca.crt`. If any check fails, stop; n
 Copy the two public certificates to the guest:
 
 ```sh
-scp ipa-ca.crt root_ca.crt fleetadm@192.168.2.216:/tmp/
-ssh fleetadm@192.168.2.216 '
+scp ipa-ca.crt root_ca.crt fleetadm@192.168.2.250:/tmp/
+ssh fleetadm@192.168.2.250 '
   sudo install -m 0644 /tmp/ipa-ca.crt /root/ipa-ca.crt
   sudo install -m 0644 /tmp/root_ca.crt /root/root_ca.crt
 '
@@ -267,7 +271,7 @@ It detects the CSR and the signed chain and runs:
 ```sh
 ipa-server-install --unattended \
   --realm=IPA.INTERNAL --domain=ipa.internal \
-  --hostname=ipa.internal --ip-address=192.168.2.216 \
+  --hostname=ipa.internal --ip-address=192.168.2.250 \
   --no-host-dns --no-ntp --no-hbac-allow \
   --external-cert-file=/root/ipa-ca.crt \
   --external-cert-file=/root/root_ca.crt \
@@ -283,7 +287,7 @@ M3** a hard gate. Do not hand-edit Dogtag.
 The role creates `m1test` without a password. Set one interactively (the password is in AKV):
 
 ```sh
-ssh fleetadm@192.168.2.216 'sudo -i'
+ssh fleetadm@192.168.2.250 'sudo -i'
 ipa passwd m1test
 # paste freeipa-test-user-password; complete the forced change with kpasswd
 kinit m1test
@@ -325,10 +329,10 @@ From a LAN client that trusts the fleet root:
 
 ```sh
 openssl verify -CAfile root_ca.crt ipa-ca.crt
-openssl s_client -connect 192.168.2.216:443 -servername ipa.internal \
+openssl s_client -connect 192.168.2.250:443 -servername ipa.internal \
   -CAfile root_ca.crt -showcerts </dev/null 2>/dev/null \
   | openssl x509 -noout -issuer -subject -dates
-curl --resolve ipa.internal:443:192.168.2.216 --cacert root_ca.crt \
+curl --resolve ipa.internal:443:192.168.2.250 --cacert root_ca.crt \
   -sS -o /dev/null -w '%{http_code}\n' https://ipa.internal/ipa/ui/
 ```
 
@@ -361,13 +365,14 @@ Write into the runbook/report:
 
 - The ADR 28 fleet key and every node's local admin account remain; management planes are never behind
   the domain alone.
-- The IPA VM console is reached through Proxmox (`qm terminal 216` / the UI); `fleetadm` is key-only.
+- The IPA VM console is reached through Proxmox (`qm terminal 250` on `pve2` / the UI); `fleetadm` is
+  key-only.
 - **M2 is next:** schedule `ipa-backup`, rehearse a restore into a throwaway guest with the same FQDN,
   and only then enrol the first client (M3).
 
 ## Verification checklist
 
-- [ ] VM 216 `ipa` up; `hostname -f` → `ipa.internal`; `.216` reachable
+- [ ] VM 250 `ipa` up on `pve2`; `hostname -f` → `ipa.internal`; `.250` reachable
 - [ ] `playbook-ipa.yml` green; firewalld LAN rules; `fleetadm` key-only
 - [ ] `dig` A/PTR/SRV records correct
 - [ ] `/root/ipa.csr` signed by the root; `ipa-ca.crt` chains to the fleet root
@@ -383,5 +388,5 @@ Write into the runbook/report:
 ## References
 
 - [ADR 42](../decisions/42-pki-topology-sibling-cas.md) · [ADR 43](../decisions/43-freeipa-domain-realm.md) · [research 51](../research/51-freeipa-dogtag-tpm-custody.md) (parked TPM work)
-- [Runbook 28](28-pve1-proxmox-node.md) (pve1) · [runbook 35](35-deploy-step-ca.md) (TPM LXC pattern) · [runbook 40](40-deploy-ssh-certificates.md) (SSH trust)
+- [Runbook 42](42-pve2-proxmox-node.md) (pve2) · [runbook 43](43-proxmox-cluster-qdevice.md) (cluster + QDevice) · [runbook 35](35-deploy-step-ca.md) (TPM LXC pattern) · [runbook 40](40-deploy-ssh-certificates.md) (SSH trust)
 - [Offline signing kit](../private-ca-offline-signing/README.md) · [FreeIPA documentation](https://www.freeipa.org/page/Documentation)
