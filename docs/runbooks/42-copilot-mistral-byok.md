@@ -54,6 +54,7 @@ reaches both models in Copilot; plans are global, so BYOK calls draw first from 
          "url": "https://api.mistral.ai/v1/chat/completions",
          "toolCalling": true,
          "vision": true,
+         "reasoningEffort": ["low", "medium", "high"],
          "maxInputTokens": 800000,
          "maxOutputTokens": 128000
        },
@@ -114,6 +115,7 @@ goes to the OS keychain (DPAPI on Windows). The file lives in `%APPDATA%`, outsi
 - In **Vibe/Le Chat** use the native Le Chonk entry — no BYOK needed there; the custom endpoint is only for VS Code/Copilot BYOK.
 - In **VS Code** with the custom endpoint, the DeepSeek control (`deepseek-v4-1-flash-1017`) returns plain string content and works; ML4 trips the parser until the VS Code issue is fixed — check microsoft/vscode#338309 for a fixed version.
 - The idea-16 A/B is unaffected: it runs over the metered API via opencode/Copilot BYOK clients that parse Mistral's `ThinkChunk` natively.
+- **Thinking Effort selector on custom endpoints:** declare `reasoningEffort` per model (table above) or the selector won't appear. Even then, some VS Code versions drop the selected effort from the custom-endpoint request body (microsoft/vscode#325121, #320805, #345722) — verify it actually went out: chat **⋯ → Show Chat Debug View** should list `gen_ai.usage.reasoning.output_tokens` > 0 per request, or check `usage.completion_tokens_details.reasoning_tokens` in the raw API response (probed: 0 without effort, >0 with `high`).
 
 ## Caveats
 
