@@ -13,7 +13,7 @@ hardware detail see [Hardware Inventory](hardware.md); for change history see
 | **Lab** | main workload host (Docker → k3s) | Lenovo M910q Tiny · Ubuntu 24.04 LTS · Azure Arc | `lab` | `192.168.2.200` | 🔨 |
 | **OMV NAS** | emergency NAS — powered-off cold standby (OMV retained as the fallback) | HP ProLiant ML110 G5 · OMV 8.3 | `omv` | `192.168.2.210` → re-address to `20x` before next boot ([ADR 31](decisions/31-static-address-scheme.md)) | 💤 |
 | **Beetle NAS** | backup target (successor to ML110) | Wincor Beetle M-III · OMV 8.5 | `nas` | `192.168.2.209` | 🔨 |
-| **Edge Ingress** | LAN DNS + reverse proxy (public ingress held) | Dell Wyse 3040 · Debian 13 minimal | `edge` | `192.168.2.240` | ✅ |
+| **Edge Ingress** | LAN DNS + reverse proxy + cluster QDevice arbitrator (public ingress held) | Dell Wyse 3040 · Debian 13 minimal | `edge` | `192.168.2.240` | ✅ |
 | **Proxmox VE** | virtualisation host — smart-home + always-on services | Dell Wyse 5070 · Proxmox VE 9.2.26 | `pve1` | `192.168.2.201` · guests `.214`–`.215` | ✅ |
 | **Proxmox VE (second node)** | second virtualisation host — `homelab` cluster member with the `edge` QDevice | Dell OptiPlex 7050 MFF · Proxmox VE 9.2.26 | `pve2` | `192.168.2.202` · guests `.250`–`.254` | ✅ |
 | **LLM server** | local LLM inference | Minisforum X1 Lite | — | TBD | 🧠 |
@@ -54,6 +54,7 @@ Current state — what's running or in progress. Planned work is under [What's N
 | **FreeIPA** | `pve1` (VM 216 `ipa`, Fedora 45) | Linux domain — Kerberos, LDAP, HBAC, central `sudo`; Dogtag issues only IPA's own certificates | [ADR 43](decisions/43-freeipa-domain-realm.md) · [runbook 41](runbooks/41-deploy-freeipa-server.md) | 🔨 |
 | **Fluent Bit** | every LAN node (`pve1`, `pve2`, `edge`, `lab`, `nas`, `vtstack`) | Tier B log collector — ships journald + Docker logs to VictoriaLogs | [ADR 36](decisions/36-log-collector-fluentbit.md) · [runbook 34](runbooks/34-deploy-fluentbit.md) | ✅ |
 | **Internal access stack** (Technitium DNS + Caddy) | `edge` | authoritative `internal.` DNS + LAN reverse proxy with short-lived `step-ca` leaves | [ADR 40](decisions/40-internal-dns-proxy-edge.md) · [runbook 37](runbooks/37-deploy-internal-access-stack.md) | ✅ |
+| **Corosync QDevice** (`corosync-qnetd`) | `edge` | third vote for the two-node `homelab` cluster — TCP 5403 from `pve1`/`pve2` only | [ADR 47](decisions/47-second-proxmox-node-cluster-qdevice.md) · [runbook 43](runbooks/43-proxmox-cluster-qdevice.md) | ✅ |
 
 ## Observability
 

@@ -71,8 +71,8 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Network | 1× GbE Realtek RTL8111/8168 (`enp1s0`, MAC `8c:ec:4b:6d:6f:4f`) · static `192.168.2.240/24` |
 | OS | Debian 13 minimal (netinst on eMMC, no desktop) |
 | Cooling | Fanless · ~2–3 W idle |
-| Role | LAN DNS + reverse proxy (Technitium DNS + Caddy); public ingress held |
-| Docs | [runbook 24](runbooks/24-edge-appliance.md) · [runbook 37](runbooks/37-deploy-internal-access-stack.md) · [ADR 24](decisions/24-edge-ingress-appliance.md) · [ADR 40](decisions/40-internal-dns-proxy-edge.md) · [research 25](research/25-edge-ingress-sbc.md) |
+| Role | LAN DNS + reverse proxy (Technitium DNS + Caddy); **Corosync QDevice arbitrator** (`corosync-qnetd`, TCP 5403) for the `homelab` cluster; public ingress held |
+| Docs | [runbook 24](runbooks/24-edge-appliance.md) · [runbook 37](runbooks/37-deploy-internal-access-stack.md) · [runbook 43](runbooks/43-proxmox-cluster-qdevice.md) · [ADR 24](decisions/24-edge-ingress-appliance.md) · [ADR 40](decisions/40-internal-dns-proxy-edge.md) · [ADR 47](decisions/47-second-proxmox-node-cluster-qdevice.md) · [research 25](research/25-edge-ingress-sbc.md) |
 
 ### pve1 — Dell Wyse 5070
 
