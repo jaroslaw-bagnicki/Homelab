@@ -186,6 +186,22 @@ pvesm status
    corosync-qnetd-tool -l          # on edge
    ```
 
+   > **The web UI does not show the QDevice.** Datacenter → **Cluster** (and Datacenter → Summary)
+   > render only *Cluster Name*, *Config Version*, *Number of Nodes* and a *Cluster Nodes* grid of
+   > nodename / ID / votes / link — there is no QDevice panel, and `pvemanagerlib.js` contains no
+   > `qdevice` reference at all. The API endpoint exists (`GET /cluster/config/qdevice`, backed by the
+   > `corosync-qdevice` socket) but no GUI component consumes it. Read the state from the CLI or the
+   > API instead:
+   >
+   > ```sh
+   > pvecm status                                   # Flags: Quorate Qdevice + the Qdevice row
+   > pvesh get /cluster/config/qdevice --output-format json-pretty
+   > # { "Model": "Net", "QNetd host": "192.168.2.240:5403", "State": "Connected", ... }
+   > ```
+   >
+   > `edge` is **not** a Proxmox node, so it never appears in the node list either — the QDevice is
+   > visible only as the extra vote in `pvecm status` (expected votes 3 against 2 nodes).
+
 ## 5. Operational rules
 
 - **Remove the QDevice before adding or removing a cluster node:**
