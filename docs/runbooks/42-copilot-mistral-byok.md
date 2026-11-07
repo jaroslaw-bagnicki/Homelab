@@ -116,7 +116,7 @@ goes to the OS keychain (DPAPI on Windows). The file lives in `%APPDATA%`, outsi
 ## Verification results (2026-11-06, this key)
 
 - `POST /v1/chat/completions` → **HTTP 200** for both `mistral-large-4` and `deepseek-v4-1-flash-1017` (streaming and non-streaming; `max_tokens: 128000` accepted).
-- **Control path verified in the chat UI (2026-11-06):** `DeepSeek V4.1 Flash (via Mistral)` via the CustomEndpoint provider answers in the Copilot chat window (model picker shows it, max context 1.1M). Studio **Admin → Usage** confirms BYOK calls bill on the Mistral org: `deepseek-v4-1-flash-1017`, Completion, 3 requests, €0.02 at that point — the Pro allowance/PAYG meter sees them.
+- **Control path verified in the chat UI (2026-11-06, effort selector verified 2026-11-07):** the `supportsReasoningEffort` + `settings` shape above makes the Effort Level selector appear (None/Low/High/Max, High pinned) — `DeepSeek V4.1 Flash (via Mistral)` via the CustomEndpoint provider answers in the Copilot chat window (model picker shows it, max context 1.1M). Studio **Admin → Usage** confirms BYOK calls bill on the Mistral org: `deepseek-v4-1-flash-1017`, Completion, 3 requests, €0.02 at that point — the Pro allowance/PAYG meter sees them.
 - Usage payload includes `prompt_tokens_details.cached_tokens` and `completion_tokens_details.reasoning_tokens` — usable for the A/B cache-hit and reasoning-cost measurements.
 - **ML4 is a reasoning model**: `content` comes back as a **list of typed chunks** (`[{"type":"thinking",...}, {"type":"text",...}]`), not a string. `reasoning_effort: "none"` is rejected (400, only `high`/`low`/`medium` supported); even `low` still emits thinking chunks.
 
