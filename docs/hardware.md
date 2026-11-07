@@ -12,7 +12,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | **Beetle NAS** | OMV NAS backup target (successor to ML110) | Wincor Beetle M-III | Pentium G4400 (2C/2T, 3.3 GHz) | 8 GB DDR4 (1×, 1 free slot) | SanDisk 128 GB SSD + 2× Seagate 1 TB 2.5" | 1× GbE Intel I219-V |
 | **Edge Ingress** | LAN DNS + reverse proxy (public ingress held) | Dell Wyse 3040 | Atom x5-Z8350 (2 W TDP) | 2 GB DDR3L | 8 GB eMMC | 1× GbE |
 | **Proxmox VE** | virtualisation host — smart-home + always-on services | Dell Wyse 5070 | Celeron J4105 (Gemini Lake, 10 W) | 8 GB DDR4-2400 (2× 4 GB) | M.2 SATA SK hynix 128 GB | 1× GbE + WiFi |
-| **Proxmox VE (second node)** | second virtualisation host — cluster + QDevice next | Dell OptiPlex 7050 MFF | i5-7500 (4C/4T, 65 W) | 8 GB DDR4-2400 (1× 8 GiB, 1 slot free) | M.2 SATA SK hynix 128 GB (+ free 2.5″ bay) | 1× GbE Intel I219-LM |
+| **Proxmox VE (second node)** | second virtualisation host — `homelab` cluster member | Dell OptiPlex 7050 MFF | i5-7500 (4C/4T, 65 W) | 8 GB DDR4-2400 (1× 8 GiB, 1 slot free) | M.2 SATA SK hynix 128 GB (+ free 2.5″ bay) | 1× GbE Intel I219-LM |
 | **OPNsense Router** | LAN edge router / firewall | Fujitsu Futro S930 | GX-424CC (4C/4T, 25 W TDP) | 4 GB DDR3 (1×, 1 free slot) | Innodisk 7.99 GB mSATA | 3× GbE (BCM5720 2× + Realtek 1×) |
 | **Cloudlab VPS** | staging / playground | Contabo Cloud VPS 10 | 4 vCPU (cloud — no TDP) | 8 GB | 75 GB NVMe | public IP |
 
@@ -90,15 +90,16 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Role | Fleet virtualisation host (Proxmox VE) · hosts LXC 214 `vtstack` (VictoriaLogs) and LXC 215 `ca`, the fleet trust anchor ([ADR 38](decisions/38-private-ca-hierarchy-and-custody.md)) |
 | Docs | [idea 05](ideas/05-home-assistant-thin-client.md) · [ADR 25](decisions/25-home-assistant-thin-client.md) · [research 26](research/26-home-assistant-thin-client.md) · [research 29](research/29-wyse5070-hardware-diagnostic.md) · [runbook 28](runbooks/28-pve1-proxmox-node.md) |
 
-### pve2 — Dell OptiPlex 7050 MFF (planned)
+### pve2 — Dell OptiPlex 7050 MFF
 
 | Item | Spec |
 |---|---|
+| OS | **Proxmox VE 9.2.26** (Debian 13 trixie, kernel `7.0.14-28-pve`) — matches `pve1` |
 | CPU | Intel **Core i5-7500** (Kaby Lake, 4C/4T, 3.4/3.8 GHz, **65 W TDP**) — not a factory Micro SKU (Dell's Micro list is 35 W T-series only); an i7-7700T swap is the fallback |
 | RAM | 8 GB DDR4-2400 (1× 8 GiB SO-DIMM, **DIMM 2 free**) — 16 GB is one stick, 32 GB with 2× 16 GiB |
-| Storage | **M.2 2280 SATA** module — SK hynix **SC311 SATA 128 GB**, SATA III via AHCI · 11 134 POH, **~97 % endurance remaining** (worst block only 86 erase cycles) — healthy but small; a larger NVMe is optional ([research 52](research/52-optiplex7050-hardware-diagnostic.md)) · 2.5″ bay empty |
+| Storage | **M.2 2280 SATA** module — SK hynix **SC311 SATA 128 GB**, SATA III via AHCI · 11 134 POH, **~97 % endurance remaining** (worst block only 86 erase cycles) — healthy but small; a larger NVMe is optional ([research 52](research/52-optiplex7050-hardware-diagnostic.md)) · 2.5″ bay empty · `local` 40 GB + `local-lvm` 57 GB thin pool on VG `pve` |
 | Firmware | BIOS Dell 1.27.0 — Dell's current release (published 2023-11-15), not on DSA-2025-153, so nothing to flash · board `055H3G` · serial `3CLD6Q2` · asset tag `80006161` |
-| Network | Intel **I219-LM** GbE (`enp0s31f6`) · Intel 8265 WiFi/BT · currently DHCP `.206`, reserved **`.202`** ([ADR 31](decisions/31-static-address-scheme.md)) |
+| Network | Intel **I219-LM** GbE (`enp0s31f6`, MAC `d8:9e:f3:97:3e:d1`) · Intel 8265 WiFi/BT · **`.202`** ([ADR 31](decisions/31-static-address-scheme.md)) |
 | TPM | **TPM 2.0, enabled** (TPM On, SHA-256, attestation + key storage) — PTT vs discrete pending |
 | Power | **130 W** adapter (documented options: 65 W ↔ 35 W CPU, 130 W ↔ 65 W CPU) · BIOS logged `Unknown AC power adapter` before the purchase, none on the current boot · **23.2 W in BIOS Setup, 19.7 W at PXE** — pre-OS, OS idle still to measure |
 | Cooling | Fan **2278 RPM idle / 2908 RPM high** (ePSA) · CPU thermistor 36 °C, HDD 37 °C · audible at idle, **loud under sustained load** |
@@ -106,8 +107,8 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Management | ⚠️ **AMT/vPro unreachable — treat as absent**: the platform qualifies (i5-7500 + Q270 + I219-LM, `USB Provision` present) and every BIOS gate for MEBx is satisfied (`OROM Keyboard Access` on, `MEBx Hotkey` on, admin password set), yet CTRL+P and F12 show nothing; CSME **11.8.94.4494** is alive, so the open question is whether that image is an AMT build (`mei-amt-version` still to run). Remote power therefore rests on **AC Recovery `Power On` + Wake-on-LAN `LAN Only`** — no remote console |
 | Virtualisation | VT-x ✅ · **VT-d ✅** · TXT off — firmware ready for Proxmox |
 | Wireless | Intel 8265 WLAN + Bluetooth, **both disabled in BIOS** — unused on a hypervisor |
-| Role | Second virtualisation host (planned) — two-node cluster + `corosync-qnetd` on `edge`; ZFS replication/HA later ([ADR 47](decisions/47-second-proxmox-node-cluster-qdevice.md)) |
-| Docs | [idea 15](ideas/15-second-proxmox-node.md) · [research 47](research/47-second-proxmox-node.md) · [research 52](research/52-optiplex7050-hardware-diagnostic.md) · [runbook 42](runbooks/42-pve2-proxmox-node.md) · [ADR 47](decisions/47-second-proxmox-node-cluster-qdevice.md) · [#177](https://github.com/jaroslaw-bagnicki/Homelab/issues/177) |
+| Role | Second virtualisation host — `homelab` cluster member with `pve1`, QDevice on `edge`; guest block `25x` (`.250`–`.254`); ZFS replication/HA later ([ADR 47](decisions/47-second-proxmox-node-cluster-qdevice.md)) |
+| Docs | [idea 15](ideas/15-second-proxmox-node.md) · [research 47](research/47-second-proxmox-node.md) · [research 52](research/52-optiplex7050-hardware-diagnostic.md) · [runbook 42](runbooks/42-pve2-proxmox-node.md) · [runbook 43](runbooks/43-proxmox-cluster-qdevice.md) · [ADR 47](decisions/47-second-proxmox-node-cluster-qdevice.md) · [#177](https://github.com/jaroslaw-bagnicki/Homelab/issues/177) |
 
 ### OPNsense Router — Fujitsu Futro S930 (planned)
 

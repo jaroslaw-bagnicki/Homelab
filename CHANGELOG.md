@@ -13,6 +13,7 @@ Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month 
 
 ## 2026‑11
 
+- **(feat)** `pve2` joins `pve1` in the `homelab` cluster with a QDevice on `edge` — [runbook 43](docs/runbooks/43-proxmox-cluster-qdevice.md)
 - **(feat)** Rename `pve` → `pve1` and move the Beetle NAS to `.209`, freeing `.202` for `pve2` — [runbook 28](docs/runbooks/28-pve1-proxmox-node.md)
 - **(docs)** Plan the second Proxmox node — `pve` → `pve1`, `pve2` at `.202`, and a two-node cluster with an edge QDevice — [ADR 47](docs/decisions/47-second-proxmox-node-cluster-qdevice.md) · [runbook 42](docs/runbooks/42-pve2-proxmox-node.md)
 - **(docs)** Plan a Mistral Large 4 vs DeepSeek V4.1 Flash A/B — one Mistral Pro allowance serves candidate and control, so only task success can decide — [idea 16](docs/ideas/16-ai-model-mistral-large-4.md)

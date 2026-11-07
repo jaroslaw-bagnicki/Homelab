@@ -68,6 +68,19 @@ The default join flow authenticates against `pve1`'s API and prompts for its `ro
 SSH password login is required. On success the node certificate is replaced by the cluster CA
 certificate and the web session drops — log in again.
 
+**Non-interactive alternative — `--use_ssh`.** When the `root@pam` password is not at hand, join over
+root SSH instead. Pre-seed `pve2`'s root key into `pve1` first, then pass the flag (note the
+underscore — the CLI rejects `--use-ssh`):
+
+```sh
+# On pve2, as root
+ssh -o StrictHostKeyChecking=accept-new root@192.168.2.201 hostname   # prove the path
+pvecm add 192.168.2.201 --link0 192.168.2.202 --use_ssh
+```
+
+This path runs `ssh-copy-id`, `pvecm addnode` and an `rsync` of the Corosync auth key over SSH, so it
+needs no password prompt at all.
+
 Verify from either node:
 
 ```sh
@@ -109,6 +122,33 @@ pvesm status
    pvecm qdevice setup 192.168.2.240
    ```
 
+   **Pitfall — `Host key verification failed` on the per-node step.** `pvecm qdevice setup` reaches
+   each cluster member through `PVE::SSHInfo`, which passes `HostKeyAlias=<nodename>` and
+   `UserKnownHostsFile=/etc/pve/nodes/<nodename>/ssh_known_hosts`. The cluster join replaces each
+   node's host key with a certificate, so any pre-join RSA entry in those files is stale and the
+   `corosync-qdevice-net-certutil -i` step fails **silently** (`noerr => 1`), surfacing later as
+   `Certificate database doesn't exists`. Note that `ssh-keyscan` returns nothing here — the
+   `security` role pins `HostKeyAlgorithms ssh-ed25519-cert-v01@openssh.com`, so sshd offers only the
+   certificate key. Rebuild the files with `accept-new` instead, keyed by node name:
+
+   ```sh
+   # On pve1, as root — one entry per node, keyed by the HostKeyAlias
+   ssh -o HostKeyAlias=pve1 -o StrictHostKeyChecking=accept-new root@192.168.2.201 hostname
+   ssh -o HostKeyAlias=pve2 -o StrictHostKeyChecking=accept-new root@192.168.2.202 hostname
+   cp /root/.ssh/known_hosts /etc/pve/nodes/pve1/ssh_known_hosts
+   cp /root/.ssh/known_hosts /etc/pve/nodes/pve2/ssh_known_hosts
+   ```
+
+   Verify the exact invocation before retrying:
+
+   ```sh
+   ssh -o BatchMode=yes -o HostKeyAlias=pve2 \
+       -o UserKnownHostsFile=/etc/pve/nodes/pve1/ssh_known_hosts \
+       -o GlobalKnownHostsFile=none root@192.168.2.202 hostname   # → pve2
+   ```
+
+   A failed attempt leaves no partial state — `pvecm qdevice setup` is safe to re-run.
+
 4. **Verify** — `pvecm status` must show `Flags: Quorate Qdevice`, a `Qdevice` row, and the QDevice
    flags `A,V,NMW`:
 
@@ -132,15 +172,15 @@ pvesm status
 
 ## 6. Verification checklist
 
-- [ ] `pve1` and `pve2` at the same `pveversion -v`
-- [ ] `pvecm status` shows two nodes, `Quorate: Yes`
-- [ ] `pvecm nodes` lists `pve1` and `pve2`
-- [ ] `corosync-cfgtool -s` shows the `.201`/`.202` link
-- [ ] `pvecm status` shows `Quorate Qdevice` and `A,V,NMW`
-- [ ] `corosync-qnetd-tool -l` lists both nodes
-- [ ] `ufw status` on `edge` allows TCP 5403 only from `.201`/`.202`
-- [ ] `pvesm status` on both nodes shows `local` and `local-lvm`
-- [ ] No guests on `pve2` were created before the join
+- [x] `pve1` and `pve2` at the same `pveversion -v` — both `9.2.26`
+- [x] `pvecm status` shows two nodes, `Quorate: Yes`
+- [x] `pvecm nodes` lists `pve1` and `pve2`
+- [x] `corosync-cfgtool -s` shows the `.201`/`.202` link
+- [x] `pvecm status` shows `Quorate Qdevice` and `A,V,NMW`
+- [x] `corosync-qnetd-tool -l` lists both nodes
+- [x] `ufw status` on `edge` allows TCP 5403 only from `.201`/`.202`
+- [x] `pvesm status` on both nodes shows `local` and `local-lvm`
+- [x] No guests on `pve2` were created before the join
 
 ## 7. Rollback / removal
 
