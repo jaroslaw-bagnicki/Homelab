@@ -51,6 +51,48 @@ replication stay out of scope.
 
 ---
 
+## Status
+
+Authored 2026-11-06, before execution — the checklist fills in as the install runs.
+
+> **Executed 2026-11-07** (issue [#177](https://github.com/jaroslaw-bagnicki/Homelab/issues/177)).
+> `pve2` is installed, base-provisioned and joined to the `homelab` cluster
+> ([runbook 43](43-proxmox-cluster-qdevice.md)). Measured results:
+>
+> | Step | Result |
+> |---|---|
+> | Installer | Proxmox VE **9.2.2** base, `ext4` + LVM-thin on the 128 GB M.2, `pve2.internal` at `.202` |
+> | Point release | `apt dist-upgrade` → **9.2.26** (666 MB, 214 packages); reboot activated kernel **`7.0.14-28-pve`** — matches `pve1` |
+> | `fleetadm` | key-only, password locked, `sudo -n whoami` → `root` |
+> | `playbook-pve2.yml` | first run **`ok=117 changed=58 failed=0`**; second run **`ok=87 changed=0`** — idempotent |
+> | Host certificate | principals `pve2`, `pve2.internal`, `192.168.2.202` |
+> | Smoke test | LXC 250 from `debian-13-standard_13.6-1_amd64` — DHCP `.49`, gateway reachable, `pve1.internal` resolved via Technitium, `local-lvm` thin volume mounted; destroyed, `pct list` empty |
+>
+> **Three deviations from this document, now folded into the steps below:**
+>
+> 1. **The enterprise repos cannot be disabled with `sed`.** The deb822 `.sources` files
+>    (`pve-enterprise.sources`, `ceph.sources`) carry **no `Enabled:` line**, so
+>    `sed 's/^Enabled: true/Enabled: false/'` is a silent no-op. Use the web UI path in §2.
+> 2. **The installer's timezone is `Europe/Warsaw`, not `Etc/UTC`.** The `common` role corrects it on
+>    the first playbook run, so no manual step is needed — but do not expect the installer to land on
+>    UTC.
+> 3. **`--check` fails on `avahi-daemon` and `ca_trust` on a fresh host.** Both are check-mode
+>    artifacts, not real failures: apt is a no-op in check mode so the `avahi-daemon` unit does not
+>    exist yet, and `ca_trust`'s fingerprint task uses `ansible.builtin.command`, which check mode
+>    skips. Run `--diff` for the real result.
+
+- [x] Proxmox VE installed; `pve2` at `192.168.2.202`; UI `:8006` returns `200` — 2026‑11‑07
+- [x] `pveversion -v` matches `pve1` — both **9.2.26**, kernel `7.0.14-28-pve`, 2026‑11‑07
+- [x] `fleetadm` key-only SSH works; `sudo -n whoami` → `root` — 2026‑11‑07
+- [x] `playbook-pve2.yml` applies cleanly; second run `changed=0` — `ok=117 changed=58` → `ok=87 changed=0`, 2026‑11‑07
+- [x] UFW active; SSH + `8006` allowed from LAN; `pve2.internal` resolves — 2026‑11‑07
+- [x] Netdata child visible on the `pve1` Parent; Fluent Bit logs in VictoriaLogs — 4 children streaming (`.200`/`.202`/`.209`/`.240`), Fluent Bit `HTTP status=200`, 2026‑11‑07
+- [x] `upsc ups@192.168.2.201` works; `nut-monitor` active — 2026‑11‑07
+- [x] Smoke-test LXC 250 created, verified and destroyed — 2026‑11‑07
+- [x] `docs/overview.md` and `docs/hardware.md` updated — 2026‑11‑07
+
+---
+
 ## 0. Pre-boot checks
 
 1. **BIOS (F2), final settings** — AHCI; UEFI with Secure Boot **off**; VT-x + VT-d on; TPM 2.0 on;
@@ -157,18 +199,6 @@ The node is now ready to join the cluster. Do not create guests before the join.
 
 Update `docs/overview.md` (node row + topology), `docs/hardware.md` (per-node specs) and the Technitium
 `pve2.internal` record in the same change.
-
-## Verification Checklist
-
-- [ ] Proxmox VE 9.x installed; `pve2` at `192.168.2.202`; UI `:8006` returns `200`
-- [ ] `pveversion -v` matches `pve1`
-- [ ] `fleetadm` key-only SSH works; `sudo -n whoami` → root
-- [ ] `playbook-pve2.yml` applies cleanly; second run `changed=0`
-- [ ] UFW active; SSH + `8006` allowed from LAN; `pve2.internal` resolves
-- [ ] Netdata child visible on the `pve1` Parent; Fluent Bit logs in VictoriaLogs
-- [ ] `upsc ups@192.168.2.201` works; `nut-monitor` active
-- [ ] Smoke-test LXC 250 created, verified and destroyed
-- [ ] `docs/overview.md` and `docs/hardware.md` updated
 
 ## References
 
