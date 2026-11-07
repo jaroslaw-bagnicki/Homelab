@@ -14,11 +14,11 @@ reaches both models in Copilot; plans are global, so BYOK calls draw first from 
 
 | Step | Action | Status |
 |---|---|---|
-| 1 | Create/copy the Mistral API key in the console | ⬜ |
-| 2 | Copilot Desktop: add the Mistral provider (BYOK) | ⬜ |
-| 3 | VS Code: fill the `chatLanguageModels.json` custom-endpoint entry with both model IDs | ⬜ |
-| 4 | Enter the key at the `${input:...}` secret prompt (stored in the OS keychain) | ⬜ |
-| 5 | Verify: API probe + both models in the model picker | ⬜ |
+| 1 | Create/copy the Mistral API key in the console | ✅ (2026-11-06/07) |
+| 2 | Copilot Desktop: add the Mistral provider (BYOK) | ⬜ not exercised — the VS Code path below was verified instead |
+| 3 | VS Code: fill the `chatLanguageModels.json` custom-endpoint entry with both model IDs | ✅ (2026-11-07, effort selector working) |
+| 4 | Enter the key at the `${input:...}` secret prompt (stored in the OS keychain) | ✅ (2026-11-07) |
+| 5 | Verify: API probe + both models in the model picker | ✅ API HTTP 200 both models; picker shows the DeepSeek control — ML4 in chat is 🚫 blocked by vscode#338309 |
 
 ## Step Details
 
@@ -42,11 +42,12 @@ reaches both models in Copilot; plans are global, so BYOK calls draw first from 
 2. Fill the model entries (keep the generated casing `apikey`/`apitype`):
 
    ```json
-   {
+   [
+     {
      "name": "Mistral",
      "vendor": "customendpoint",
-     "apikey": "${input:chat.lm.secret.XXXX}",
-     "apitype": "chat-completions",
+     "apiKey": "${input:chat.lm.secret.XXXX}",
+     "apiType": "chat-completions",
      "models": [
        {
          "id": "mistral-large-4",
@@ -75,10 +76,12 @@ reaches both models in Copilot; plans are global, so BYOK calls draw first from 
      ],
      "settings": {
        "mistral-large-4": { "reasoningEffort": "high" },
-       "deepseek-v4-1-flash-1017": { "reasoningEffort": "high" }
+       "deepseek-v4-1-flash-1017": { "reasoningEffort": "none" }
      }
-   }
+   ]
    ```
+
+   > The control is pinned to `none` because VS Code's Custom Endpoint parser crashes on thinking chunks at any higher effort (see Troubleshooting); `mistral-large-4` rejects `none` server-side, so in VS Code chat it is blocked until vscode#338309 ships.
 
    | Field | Meaning |
    |---|---|
@@ -127,7 +130,7 @@ goes to the OS keychain (DPAPI on Windows). The file lives in `%APPDATA%`, outsi
 **Guidance:**
 - In **Vibe/Le Chat** use the native Le Chonk entry — no BYOK needed there; the custom endpoint is only for VS Code/Copilot BYOK.
 - In **VS Code** with the custom endpoint, the DeepSeek control (`deepseek-v4-1-flash-1017`) returns plain string content and works; ML4 trips the parser until the VS Code issue is fixed — check microsoft/vscode#338309 for a fixed version.
-- The idea-16 A/B is unaffected: it runs over the metered API via opencode/Copilot BYOK clients that parse Mistral's `ThinkChunk` natively.
+- The idea-16 A/B does **not** run through VS Code chat BYOK: the parser bug above applies to any thinking-on response. It runs over the **raw API / opencode**, whose clients parse Mistral's `ThinkChunk` natively. In VS Code chat the custom endpoint is control-only at effort `none`; Copilot Desktop BYOK for ML4 is untested and presumed blocked by the same bug until #338309 ships.
 - **Thinking Effort selector on custom endpoints:** use `thinking: true` + `supportsReasoningEffort: [...]` on the model and a provider-level `settings` map for the selected level (the picker write path is buggy for custom endpoints — microsoft/vscode#346464; some versions also drop the effort from the request body — #325121, #320805, #345722). Verify it actually went out: **Chat Debug View** → right-click a log entry → raw request should contain `reasoning_effort`, and `gen_ai.usage.reasoning.output_tokens` > 0; or check `usage.completion_tokens_details.reasoning_tokens` in the raw API response (probed: 0 without effort, >0 with `high`).
 
 ## Caveats
