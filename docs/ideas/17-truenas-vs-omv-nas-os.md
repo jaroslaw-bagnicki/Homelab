@@ -5,7 +5,8 @@
 > because this is a playground and an **enterprise-grade NAS appliance** is a different thing to learn from
 > than a casual WebUI around Debian's storage stack.
 
-**Status**: 🧠 Idea — no decision taken, nothing installed
+**Status**: 🧠 Idea — **leaning to a full TrueNAS cutover on the Beetle** (option C), with the ML110 kept on
+OMV as a cold standby. No decision taken, nothing installed.
 **Date**: 2026-11-07
 **Sources**: operator request, 2026-11-07 ("Homelab is my playground — experience TrueNAS as an enterprise-grade
 NAS solution compared to OMV, which seems casual for less tech-oriented hobbyists") ·
@@ -29,15 +30,24 @@ snapshots, SMB as a restic/backup landing zone ([ADR 29](../decisions/29-nas-bac
 It does no compute, and it should not: the box is a **Pentium G4400 (2C/2T) with 8 GB DDR4** (one free SODIMM
 slot, 32 GB max), a SanDisk 128 GB boot SSD, and **2× Seagate ST1000VT001 1 TB 2.5"** in `md0` → XFS.
 
-**The trial target already exists.** The predecessor **HP ProLiant ML110 G5** is still on the shelf — powered
-off since the Beetle took over the backup role, kept only to avoid its ~80 W idle draw. That makes a
-TrueNAS experiment much cheaper than first assumed: it is a complete, disposable x86 box with its own boot
-SSD (Goodram 120 GB), **2× 500 GB in `md0`** and **2× 250 GB in `md1`** available to destroy and re-pool,
-plus a 1 TB WD10EZEX offline spare — and nothing depends on it. Caveats, all real: **4 GB DDR2** against
-TrueNAS's documented 8 GB floor (two DIMM slots are free, DDR2-800 ECC is cheap secondhand — HP's ceiling for
-this board is 8 GB), a **Pentium E2160** at 1.8 GHz with **no AES-NI** (so no ZFS native encryption in any
-real use), no out-of-band management, and 3 fans at ~80 W — which is precisely why it was retired. As a
-*bench* it is fine; as a *service* it stays off.
+**The predecessor box stays — as a cold standby, not a bench.** The **HP ProLiant ML110 G5** (`omv`, `.210`
+today) is not being scrapped: it keeps its OMV 8.3 install, its `md0` (2× 500 GB) and `md1` (2× 250 GB)
+arrays, and its 1 TB WD10EZEX offline spare, and stays **powered off** as an **ad-hoc / emergency NAS** — the box to boot
+when the Beetle is being rebuilt, when a restore wants a second live SMB/NFS endpoint, or when a cutover goes
+wrong badly enough to want a night's sleep. It is therefore **neither a TrueNAS trial bench nor scratch**:
+nothing on it is wiped for an experiment. Its limits are why it is standby only — 4 GB DDR2 (8 GB ceiling, two
+free DIMM slots), a Pentium E2160 at 1.8 GHz with **no AES-NI**, no out-of-band management, 3 fans at ~80 W.
+
+**One chore comes with retention.** [ADR 31](../decisions/31-static-address-scheme.md) only tolerated `.210`
+as "occupied until the ML110 retires" — and `.210` is also the planned address of **VM 210** (Home Assistant).
+Keep the box and the collision becomes permanent, so the standby must move into the free `20x` range
+(`.203`–`.208`) before its next boot — ideally at the console with the NIC unplugged, so the first boot after
+the change cannot land on top of the HA VM.
+
+The standby protects the **OS and the service**, not the data: converting `md0` to ZFS is destructive, so the
+data rollback for the migration window is restic from [ADR 02](../decisions/02-backup-strategy-restic-blob.md)
+(Azure Blob) — *unless* the Beetle's working set fits in the ML110's 1 TB `md0`, in which case a pre-cutover
+copy promotes the standby into a genuine data rollback. Whether it does is an open question below.
 
 The important framing: **this idea is not a bug report.** The driver is *experience*, so the success
 criterion is not "is TrueNAS better?" — it is "what does the lab gain in skill, and what does it lose in
@@ -101,27 +111,54 @@ appliance contract, not the OS family.
 
 | Option | What it is | Verdict |
 |---|---|---|
-| **A. Trial TrueNAS on the shelf **ML110** | Install over its Goodram SSD and re-pool `md0`/`md1` as a throwaway ZFS mirror. Beetle, OMV and every backup untouched; no purchase; the box is already powered off, so it costs nothing until the experiment starts | ⭐ **Do this first.** It buys the entire learning objective for near-zero risk, and answers "do I actually enjoy operating this appliance?" before any production box is touched |
-| **A2. Trial on a spare disk or a VM on `pve2`** | A spare SSD/2.5″ disk on the Beetle's free SATA ports (**5 total**, 1 OS + 2 data), or TrueNAS in a VM with a passed-through disk | Fallback if the ML110 proves too slow to judge the UI honestly, or if its RAM cannot be brought to 8 GB |
-| **B. ZFS under the existing management** | OMV's `openmediavault-zfs` plugin, or plain Debian 13 + `zfs-dkms` + Samba/NFS managed by Ansible | ⭐ **Best value if the goal is ZFS.** Keeps [ADR 10](../decisions/10-ansible-host-config.md)/[27](../decisions/27-monitoring-strategy.md)/[36](../decisions/36-log-collector-fluentbit.md) intact, gains checksums/scrub/snapshots/replication — no appliance divergence |
-| **C. Full TrueNAS cutover on the Beetle** | The actual proposal: wipe, install TrueNAS, create a ZFS mirror, re-point NFS/SMB, carve the NAS out of uniform automation | Acceptable **only** after A proves the appliance is wanted, and with the 16 GB upgrade |
+| **A. Keep the ML110 on OMV as an ad-hoc / emergency NAS** | Powered off, OMV 8.3 and `md0`/`md1` intact; boot it when the Beetle is down, when a restore needs a second endpoint, or as the last look-before-you-leap reference. Vacates `.210` for VM 210 and takes a free `20x` address | ✅ **Held as the safety net** — decided 2026-11-07. It is not a trial target and its data is not scratch |
+| **B. ZFS under the existing management** | OMV's `openmediavault-zfs` plugin, or plain Debian 13 + `zfs-dkms` + Samba/NFS managed by Ansible | Keeps [ADR 10](../decisions/10-ansible-host-config.md)/[27](../decisions/27-monitoring-strategy.md)/[36](../decisions/36-log-collector-fluentbit.md) intact and still gains ZFS — the fallback if the appliance model turns out to be the expensive part |
+| **C. Full TrueNAS cutover on the Beetle** | Wipe and install TrueNAS, create a ZFS mirror on the two 1 TB drives, re-point NFS/SMB, carve `nas` out of uniform automation | ⭐ **Primary direction** — what the operator actually wants to have run in the lab. Accepts the appliance tax knowingly, and needs the 16 GB upgrade |
 | **D. Stay on OMV, tighten it** | Add a restic `check --read-data` schedule, keep the monthly scrub, verify SMART alerting reaches Netdata | Always on the table — nothing is broken today |
+| **A2. Rehearse before the cutover** | TrueNAS in a VM on `pve2` with a passed-through disk, or on a spare SSD in the Beetle's free SATA ports (**5 total**: 1 OS + 2 data), building a throwaway pool | Not a substitute for C — a **rehearsal** for the UI, the pool layout and the NFS/SMB/ACL screens, so the cutover day is the second time you have seen them |
 
-A and B are not mutually exclusive with C; the natural sequence is **A → (B or C)**.
+**Leaning: C**, with **A2** as the pre-cutover rehearsal and **B** as the fallback if the appliance proves to
+be more obstacle than product. The ML110 (**A**) is deliberately *not* a trial target — it is what makes C
+survivable.
+
+## Cutover shape (option C)
+
+1. **Measure, then decide the rollback.** What is actually on `md0` — datasets, the restic repo, Longhorn
+   snapshot usage — and does it fit in the ML110's 1 TB `md0`? That single number decides whether the standby
+   is a data rollback or only an OS/service rollback.
+2. **Verify the backup before destroying anything.** A fresh `restic check --read-data` against
+   [ADR 02](../decisions/02-backup-strategy-restic-blob.md)'s Azure Blob repo. An unverified backup is not a
+   rollback.
+3. **Buy the RAM.** One 8 GB DDR4 SODIMM → 16 GB, before the appliance is judged.
+4. **Rehearse (A2)** — the TrueNAS installer, a mirror pool, the dataset/share/ACL screens, an NFS export and
+   an SMB share, on a VM or a spare disk, so nothing is being learned for the first time during an outage.
+5. **Cut over.** TrueNAS onto the SanDisk SSD; `md0` re-pooled as a ZFS mirror. **Rollback stops here**: after
+   the pool conversion the way back is a restore from step 2, not a reboot of the old install.
+6. **Re-point consumers** — the Longhorn NFS export, the restic SMB landing, the `omv.internal` Caddy site
+   (rename or re-TLS it), `nas.internal` and `.209` unchanged.
+7. **Make the automation exception explicit** — remove or replace the `nas` Netdata child and Fluent Bit in the
+   playbooks and amend [ADR 27](../decisions/27-monitoring-strategy.md)/[36](../decisions/36-log-collector-fluentbit.md)
+   with a documented exception; keep the native NUT UPS service.
+8. **Record it** — a superseding ADR (TrueNAS on the Beetle, ML110 retained as standby) plus a rewritten
+   [runbook 32](../runbooks/32-beetle-m3-omv-setup.md); do not edit ADR 29 into a different decision.
 
 ## Open questions
 
 - **What is the actual goal** — ZFS fluency, appliance operating experience, or "a NAS that looks like what a
-  company would buy"? The first two point at B/A; the third is an argument about résumé and feel, not fit.
+  company would buy"? All three point at C; the question is which one must not be sacrificed, because C gives
+  the third and the second, and gives ZFS with the most ceremony.
 - **Would the lab rather have ZFS on `pve2`** (where [ADR 47](../decisions/47-second-proxmox-node-cluster-qdevice.md)
   already wants a `zfspool`) than on the NAS? ZFS replication between them then becomes a second backup copy.
-- **Is 4 GB enough for the trial**, or is buying 2× 2 GiB DDR2-800 ECC (its two free DIMM slots, HP ceiling 8 GB)
-  worth reaching TrueNAS's documented floor? Below 8 GB the appliance may refuse to behave, which would
-  invalidate the experiment rather than the product.
-- **Is the ML110's data disposable** — is anything still on `md0` (2× 500 GB) / `md1` (2× 250 GB) that has to be
-  copied off before those disks become a ZFS pool, or is the whole box scratch?
+- **What does the standby hold** — just the intact OMV install (OS/service rollback), or a copy of the NAS
+  working set on `md0` (a real data rollback for the migration window, if it fits in 1 TB)? This decides how
+  long the cutover window can safely be.
+- **How is the standby kept honest** — a box that is never booted is a rumour of a backup. What is the
+  periodic test (boot, mount, serve one file, power off), and is it acceptable that it appears in neither
+  Netdata nor the Fleet inventory while off?
+- **Which `20x` address** the standby takes (`.203`–`.208` are free) — and is the change made at the console
+  with the NIC unplugged, so the first boot at the new address cannot collide with VM 210 on `.210`?
 - **If cutover happens, what is the restore rehearsal** — from Azure Blob (slow) or from a staged copy on
-  `lab`? How long is the NAS's NFS export offline for Longhorn?
+  `lab` or the standby? How long is the NAS's NFS export offline for Longhorn?
 - **Does the appliance tax get accepted explicitly**, or does the NAS keep a documented "not Ansible-managed"
   exception in [ADR 27](../decisions/27-monitoring-strategy.md)/[36](../decisions/36-log-collector-fluentbit.md)?
   A silent exception is the one outcome to avoid.
@@ -135,13 +172,14 @@ A and B are not mutually exclusive with C; the natural sequence is **A → (B or
   OMV's `apt` upgrades are incremental and interruptible.
 - **Half-migrated automation.** Netdata child, Fluent Bit and `fleetadm` either work or are removed — a role
   that "sort of runs" against an appliance is worse than an explicit exclusion.
-- **A trial on the ML110 judges the wrong thing.** 4–8 GB DDR2 and a 1.8 GHz E2160 will make the UI and any
-  scrub feel sluggish; the point is to evaluate the appliance model and ZFS semantics, not throughput. Slow is
-  expected and must not be read as "TrueNAS is bad" — nor should a smooth trial on 8 GB DDR2 be read as
-  "the Beetle is fine without the RAM upgrade".
-- **The ML110's retirement is now conditional.** [`docs/overview.md`](../overview.md) plans to "retire the ML110
-  and release `.210`"; keeping it as a bench means that step becomes *retain powered-off, no address needed*
-  until the idea is settled, and the state docs should say so when it changes.
+- **A cold standby rots silently.** Powered off, outside Netdata and the inventory, with 2010-era drives and a
+  4 GB ceiling — it is a comfort object unless it is booted and exercised *before* it is needed. Budget the
+  test just before the cutover, not after, and expect the drives to need a check when it wakes up.
+- **The standby contradicts ADR 29 as written.** ADR 29's consequence is "the ML110 retires once the Beetle's
+  array is verified", and [`docs/overview.md`](../overview.md) plans to "retire the ML110 and release `.210`".
+  Retaining it is a real, small reversal and needs the superseding ADR to say so — not a quiet prose edit. It
+  also makes [ADR 31](../decisions/31-static-address-scheme.md)'s ".210 stays occupied *until retirement*" a
+  permanent state, so both ADRs need an amendment.
 - **Two NAS truths in the docs** if OMV and ZFS paths are both documented without one superseding the other.
 
 ## References
