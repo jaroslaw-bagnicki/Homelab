@@ -81,16 +81,6 @@ Authored 2026-11-06, before execution — the checklist fills in as the install 
 >    exist yet, and `ca_trust`'s fingerprint task uses `ansible.builtin.command`, which check mode
 >    skips. Run `--diff` for the real result.
 
-- [x] Proxmox VE installed; `pve2` at `192.168.2.202`; UI `:8006` returns `200` — 2026‑11‑07
-- [x] `pveversion -v` matches `pve1` — both **9.2.26**, kernel `7.0.14-28-pve`, 2026‑11‑07
-- [x] `fleetadm` key-only SSH works; `sudo -n whoami` → `root` — 2026‑11‑07
-- [x] `playbook-pve2.yml` applies cleanly; second run `changed=0` — `ok=117 changed=58` → `ok=87 changed=0`, 2026‑11‑07
-- [x] UFW active; SSH + `8006` allowed from LAN; `pve2.internal` resolves — 2026‑11‑07
-- [x] Netdata child visible on the `pve1` Parent; Fluent Bit logs in VictoriaLogs — 4 children streaming (`.200`/`.202`/`.209`/`.240`), Fluent Bit `HTTP status=200`, 2026‑11‑07
-- [x] `upsc ups@192.168.2.201` works; `nut-monitor` active — 2026‑11‑07
-- [x] Smoke-test LXC 250 created, verified and destroyed — 2026‑11‑07
-- [x] `docs/overview.md` and `docs/hardware.md` updated — 2026‑11‑07
-
 ---
 
 ## 0. Pre-boot checks
@@ -199,6 +189,18 @@ The node is now ready to join the cluster. Do not create guests before the join.
 
 Update `docs/overview.md` (node row + topology), `docs/hardware.md` (per-node specs) and the Technitium
 `pve2.internal` record in the same change.
+
+## Verification Checklist
+
+- [x] §1 Proxmox VE installed; `pve2` at `192.168.2.202`; UI `:8006` returns `200`
+- [x] §2 `no-subscription` repo enabled; `apt dist-upgrade` succeeds; `pveversion -v` matches `pve1` (both **9.2.26**, kernel `7.0.14-28-pve`)
+- [x] §3 `fleetadm` key-only SSH works; `sudo -n whoami` → root
+- [x] §4 `playbook-pve2.yml` applies cleanly; second run `changed=0` (`ok=117 changed=58` → `ok=87 changed=0`)
+- [x] UFW active; SSH + `8006` allowed from LAN; `pve2.internal` resolves
+- [x] Netdata child visible on the `pve1` Parent; Fluent Bit logs in VictoriaLogs
+- [x] `upsc ups@192.168.2.201` works; `nut-monitor` active
+- [x] §5 smoke-test LXC 250 created, verified and destroyed
+- [x] §6 `docs/overview.md` and `docs/hardware.md` updated
 
 ## References
 
