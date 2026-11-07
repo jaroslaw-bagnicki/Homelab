@@ -13,7 +13,7 @@ Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month 
 
 ## 2026‑11
 
-- **(docs)** Weigh TrueNAS against OMV for the Beetle NAS — ZFS and appliance experience against the fleet automation it would break — [idea 16](docs/ideas/16-truenas-vs-omv-nas-os.md)
+- **(docs)** Weigh TrueNAS against OMV for the Beetle NAS — ZFS and appliance experience against the fleet automation it would break — [idea 17](docs/ideas/17-truenas-vs-omv-nas-os.md)
 - **(docs)** Plan the second Proxmox node — `pve` → `pve1`, `pve2` at `.202`, and a two-node cluster with an edge QDevice — [ADR 47](docs/decisions/47-second-proxmox-node-cluster-qdevice.md) · [runbook 42](docs/runbooks/42-pve2-proxmox-node.md)
 - **(docs)** Audit the OptiPlex 7050 MFF for `pve2` — 65 W i5-7500, a sound but small 128 GB SSD, MEBx unreachable — [research 52](docs/research/52-optiplex7050-hardware-diagnostic.md)
 - **(fix)** Serve the fleet resolver from the hosts and alert when a `.internal` leaf nears expiry — [ADR 40](docs/decisions/40-internal-dns-proxy-edge.md)

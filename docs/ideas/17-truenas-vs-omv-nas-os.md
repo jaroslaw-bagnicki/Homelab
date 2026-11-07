@@ -1,4 +1,4 @@
-# Idea 16 — TrueNAS as the NAS OS (vs OMV)
+# Idea 17 — TrueNAS as the NAS OS (vs OMV)
 
 > The Beetle NAS runs **OMV 8.5.9-1** on mdadm RAID1 + XFS and works. The operator wants to know what it
 > would take — and what it would be worth — to run **TrueNAS** there instead: not because OMV is broken, but
