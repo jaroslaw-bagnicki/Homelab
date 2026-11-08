@@ -6,7 +6,7 @@
 > × a four-model "Balanced" council, plus Actions minutes on private repos. That is not acceptable, and
 > the reviewer is worth re-examining like the daily model was in [idea 16](16-ai-model-mistral-large-4.md).
 
-**Status**: 🧠 Idea — **no decision taken**; the analysis is in [research 54](../research/54-external-code-review-delegation.md).
+**Status**: 🔨 **POC running direction — Kodus (Kody) self-hosted on `cloudlab` with `mistral-large-4` BYOK**, per [runbook 46](../runbooks/46-poc-kodus-code-review.md) (2026‑11‑08); the analysis is in [research 54](../research/54-external-code-review-delegation.md). No ADR — the POC decides.
 **Date**: 2026‑11‑08
 **Sources**: operator report, 2026‑11‑08 ("some CR cost 2–3× of the implementation cost after the rollout of
 changes how it works — not acceptable, seek alternatives") · [research 54](../research/54-external-code-review-delegation.md)
@@ -36,6 +36,7 @@ overtaking implementation cost is therefore not a bug — it is the new meter me
 | B | **Flat-rate third-party bot** (CodeRabbit free-for-OSS / ~$24 Pro, Greptile ~$30, Qodo ~$30) | flat per seat | predictable on big PRs; but the app reads the whole repo (vendor cloud) — fine for this public repo, a real question for private ones |
 | C | **BYO-model reviewer** — own workflow/webhook calling `api.mistral.ai` (`mistral-large-4` ~$0.05–0.30/review at cache reuse) or a local LLM (~free) | per token, ~10–50× cheaper than Copilot worst case | **conflicts with ADR 32** if committed as CI here — run ad hoc instead; `appleboy/LLM-action` speaks the Mistral endpoint natively |
 | D | **Local agent review, ad hoc** — Vibe/OpenCode + GitHub MCP: `gh pr diff` → review → post comments | per token to your provider only | zero new infrastructure; already works today ([runbook 44](../runbooks/44-copilot-mistral-byok.md)); human still merges |
+| E | **Kodus/Kody self-hosted as the CR service** — AGPLv3, BYOK zero-markup, any OpenAI-compatible endpoint incl. Mistral | LLM tokens only (~$0.05–0.30/review for ML4) | **chosen for the POC** — [runbook 46](../runbooks/46-poc-kodus-code-review.md); full review pipeline (webhook, Kody Rules, dashboard), not just a diff paste |
 
 ## Recommendation
 
@@ -51,8 +52,9 @@ overtaking implementation cost is therefore not a bug — it is the new meter me
    PR** — not on token price alone.
 3. **Decide in writing** — ADR only if a non-Copilot reviewer wins; otherwise record the outcome in
    [research 54](../research/54-external-code-review-delegation.md) and retire this idea. Landing spots:
-   Copilot capped (A) + local Vibe review (D) as the cheap second pass; or a flat-rate bot (B) if this repo's
-   reviews stay expensive even capped.
+   Copilot capped (A) + local Vibe review (D) as the cheap second pass; a flat-rate bot (B) if this repo's
+   reviews stay expensive even capped; **Kodus + ML4 (E) if the POC (runbook 46) beats Copilot on cost per
+   merged PR at equal findings quality.**
 
 **Exit criterion, stated up front:** any alternative must catch what Copilot catches on this repo's own PRs
 (repo-instruction adherence first — a reviewer that misses `AGENTS.md` rules costs more than it saves) at a
