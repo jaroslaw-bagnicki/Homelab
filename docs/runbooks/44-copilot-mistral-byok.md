@@ -18,7 +18,7 @@ reaches both models in Copilot; plans are global, so BYOK calls draw first from 
 | 2 | Copilot Desktop: add the Mistral provider (BYOK) | ⬜ not exercised — the VS Code path below was verified instead |
 | 3 | VS Code: fill the `chatLanguageModels.json` custom-endpoint entry with both model IDs | ✅ (2026-11-07, effort selector working) |
 | 4 | Enter the key at the `${input:...}` secret prompt (stored in the OS keychain) | ✅ (2026-11-07) |
-| 5 | Verify: API probe + both models in the model picker | ✅ API HTTP 200 both models; picker shows the DeepSeek control — ML4 in chat is 🚫 blocked by vscode#338309 |
+| 5 | Verify: API probe + both models in the model picker | ✅ API HTTP 200 both models; **ML4 answers in VS Code chat via the Responses API path (2026-11-08, [#179](https://github.com/jaroslaw-bagnicki/Homelab/issues/179)#issuecomment-6719695584)** — the chat-completions path stays blocked by vscode#338309 |
 
 ## Step Details
 
@@ -81,7 +81,38 @@ reaches both models in Copilot; plans are global, so BYOK calls draw first from 
    ]
    ```
 
-   > The control is pinned to `none` because VS Code's Custom Endpoint parser crashes on thinking chunks at any higher effort (see Troubleshooting); `mistral-large-4` rejects `none` server-side, so in VS Code chat it is blocked until vscode#338309 ships.
+   > On the `chat-completions` path the control is pinned to `none` because VS Code's Custom Endpoint parser crashes on thinking chunks at any higher effort (see Troubleshooting); `mistral-large-4` rejects `none` server-side, so on this path it is blocked by vscode#338309. **ML4 in VS Code chat works via the Responses API path below (2026-11-08).**
+
+   **Responses API path — ML4 in VS Code chat, verified 2026-11-08** ([#179](https://github.com/jaroslaw-bagnicki/Homelab/issues/179)#issuecomment-6719695584): Mistral's API also speaks OpenAI's Responses API, and VS Code's `responses` parser handles Mistral's reasoning items natively, bypassing the #338309 chat-completions bug entirely (PR microsoft/vscode#338459 still open but not needed for this path). Same provider entry with:
+
+   ```json
+   {
+     "name": "Mistral",
+     "vendor": "customendpoint",
+     "apiKey": "${input:chat.lm.secret.XXXX}",
+     "apiType": "responses",
+     "models": [
+       {
+         "id": "mistral-large-4",
+         "name": "Mistral Large 4",
+         "url": "https://api.mistral.ai/v1/responses",
+         "toolCalling": true,
+         "vision": true,
+         "thinking": true,
+         "supportsReasoningEffort": ["low", "medium", "high"],
+         "reasoningEffortFormat": "responses",
+         "statefulResponses": false,
+         "maxInputTokens": 800000,
+         "maxOutputTokens": 128000
+       }
+     ],
+     "settings": {
+       "mistral-large-4": { "reasoningEffort": "high" }
+     }
+   }
+   ```
+
+   Verified on the Pro key: `POST /v1/responses` returns proper Responses objects for both models (ML4: reasoning item + `output_text`; DeepSeek: plain `output_text`), and in VS Code chat **Mistral Large 4 answers at High with no `e.replace is not a function` crash**.
 
    | Field | Meaning |
    |---|---|
@@ -121,16 +152,20 @@ goes to the OS keychain (DPAPI on Windows). The file lives in `%APPDATA%`, outsi
 - `POST /v1/chat/completions` → **HTTP 200** for both `mistral-large-4` and `deepseek-v4-1-flash-1017` (streaming and non-streaming; `max_tokens: 128000` accepted).
 - **Control path verified in the chat UI (2026-11-06, effort selector verified 2026-11-07):** the `supportsReasoningEffort` + `settings` shape above makes the Effort Level selector appear (None/Low/High/Max, High pinned) — `DeepSeek V4.1 Flash (via Mistral)` via the CustomEndpoint provider answers in the Copilot chat window (model picker shows it, max context 1.1M). Studio **Admin → Usage** confirms BYOK calls bill on the Mistral org: `deepseek-v4-1-flash-1017`, Completion, 3 requests, €0.02 at that point — the Pro allowance/PAYG meter sees them.
 - Usage payload includes `prompt_tokens_details.cached_tokens` and `completion_tokens_details.reasoning_tokens` — usable for the A/B cache-hit and reasoning-cost measurements.
-- **ML4 is a reasoning model**: `content` comes back as a **list of typed chunks** (`[{"type":"thinking",...}, {"type":"text",...}]`), not a string. `reasoning_effort: "none"` is rejected (400, only `high`/`low`/`medium` supported); even `low` still emits thinking chunks.
+- **ML4 is a reasoning model**: on `chat-completions`, `content` comes back as a **list of typed chunks** (`[{"type":"thinking",...}, {"type":"text",...}]`), not a string. `reasoning_effort: "none"` is rejected (400, only `high`/`low`/`medium` supported); even `low` still emits thinking chunks. On the **Responses API** (`/v1/responses`) it returns proper Responses objects (reasoning item + `output_text`) — **verified in VS Code chat at High, 2026-11-08** ([#179](https://github.com/jaroslaw-bagnicki/Homelab/issues/179)#issuecomment-6719695584).
 
 ## Troubleshooting
 
 **Symptom:** Vibe/VS Code chat window shows "Sorry, your request failed … Error on conversation request" when the custom Mistral model answers.
-**Root cause:** client-side — VS Code's Custom Endpoint `chat-completions` parser expects `delta.content` as a string and breaks on Mistral-hosted reasoning models' chunked content: microsoft/vscode#338309, surfaced as `Error Code: e.replace is not a function` (reproduced 2026-11-07 with `deepseek-v4-1-flash-1017` at any effort above None). The API call itself is fine (HTTP 200 above). **Workaround: in the chat UI keep the custom Mistral entries at Effort = None** — pin it via `"settings": { "<model-id>": { "reasoningEffort": "none" } }` (`mistral-large-4` rejects `none` server-side, so that entry is unusable in VS Code chat until #338309 is fixed; use None for the DeepSeek control). Thinking-on runs belong on paths that parse `ThinkChunk` natively: raw API, opencode, or Vibe/Le Chat's native Le Chonk.
+**Root cause:** client-side — VS Code's Custom Endpoint `chat-completions` parser expects `delta.content` as a string and breaks on Mistral-hosted reasoning models' chunked content: microsoft/vscode#338309, surfaced as `Error Code: e.replace is not a function` (reproduced 2026-11-07 with `deepseek-v4-1-flash-1017` at any effort above None). The API call itself is fine (HTTP 200 above). **Workarounds, in order of preference:**
+1. **Responses API path (2026-11-08, verified):** `apiType: "responses"` + `url: https://api.mistral.ai/v1/responses` + `reasoningEffortFormat: "responses"` + `statefulResponses: false` — VS Code's responses parser handles reasoning items natively, so **both ML4 (at any effort) and the DeepSeek control work in chat**, no #338309 crash. See the config block in Step 3.
+2. **chat-completions path:** keep the custom Mistral entries at Effort = None — pin via `"settings": { "<model-id>": { "reasoningEffort": "none" } }` (`mistral-large-4` rejects `none` server-side, so on this path only the DeepSeek control is usable in chat until #338309 ships).
+3. Thinking-on runs also belong on paths that parse `ThinkChunk` natively: raw API, opencode, or Vibe/Le Chat's native Le Chonk.
+
 **Guidance:**
 - In **Vibe/Le Chat** use the native Le Chonk entry — no BYOK needed there; the custom endpoint is only for VS Code/Copilot BYOK.
-- In **VS Code** with the custom endpoint, the DeepSeek control (`deepseek-v4-1-flash-1017`) returns plain string content and works; ML4 trips the parser until the VS Code issue is fixed — check microsoft/vscode#338309 for a fixed version.
-- The idea-16 A/B does **not** run through VS Code chat BYOK: the parser bug above applies to any thinking-on response. It runs over the **raw API / opencode**, whose clients parse Mistral's `ThinkChunk` natively. In VS Code chat the custom endpoint is control-only at effort `none`; Copilot Desktop BYOK for ML4 is untested and presumed blocked by the same bug until #338309 ships.
+- In **VS Code** use the **Responses API path** for ML4 (works at High, verified 2026-11-08); on the `chat-completions` path the DeepSeek control works at effort `none` only, and ML4 stays blocked by microsoft/vscode#338309 — check that issue for a fixed version.
+- The idea-16 A/B can now also run through VS Code chat BYOK on the Responses path; the raw API / opencode clients remain the reference path because they parse Mistral's `ThinkChunk` natively. Copilot Desktop BYOK for ML4 via the Responses path is untested as of 2026-11-08.
 - **Thinking Effort selector on custom endpoints:** use `thinking: true` + `supportsReasoningEffort: [...]` on the model and a provider-level `settings` map for the selected level (the picker write path is buggy for custom endpoints — microsoft/vscode#346464; some versions also drop the effort from the request body — #325121, #320805, #345722). Verify it actually went out: **Chat Debug View** → right-click a log entry → raw request should contain `reasoning_effort`, and `gen_ai.usage.reasoning.output_tokens` > 0; or check `usage.completion_tokens_details.reasoning_tokens` in the raw API response (probed: 0 without effort, >0 with `high`).
 
 ## Caveats

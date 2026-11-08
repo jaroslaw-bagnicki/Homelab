@@ -114,8 +114,10 @@ Rough math for this repo's PR profile (a docs/Ansible PR: diff ~10–50k tokens 
 - [ADR 32](32-no-hosted-ci.md) deliberately keeps hosted CI out of this repo, and PRs here are
   **human-reviewed in the GitHub UI** — so a pattern-3 workflow would run *ad hoc* (locally / on demand), not
   as committed CI. Pattern 4 (Vibe + native Le Chonk, per [runbook 44](../runbooks/44-copilot-mistral-byok.md))
-  is the zero-infrastructure version and already works — VS Code/Copilot BYOK with ML4 does **not**
-  (vscode#338309 parser bug), only raw API / OpenCode / Vibe parse its thinking chunks.
+  is the zero-infrastructure version and already works. ML4 also answers in **VS Code/Copilot chat** since
+  2026-11-08 via the Responses API BYOK path (`apiType: "responses"`, `/v1/responses`) — it bypasses the
+  vscode#338309 chat-completions parser bug, which still blocks ML4 on the `chat-completions` BYOK path
+  ([#179](https://github.com/jaroslaw-bagnicki/Homelab/issues/179)#issuecomment-6719695584).
 - The model question is already framed by [idea 16](../ideas/16-ai-model-mistral-large-4.md) and #179: one
   Mistral Pro key serves `mistral-large-4` and the DeepSeek control, so a reviewer A/B reuses the same
   allowance and method (task success per attempt, cost per completed task).

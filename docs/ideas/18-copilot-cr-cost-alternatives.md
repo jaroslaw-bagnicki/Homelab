@@ -15,7 +15,7 @@ changes how it works — not acceptable, seek alternatives") · [research 54](..
 [changelog 2026‑11‑06](https://github.blog/changelog/2026-11-06-copilot-code-review-api-management-and-review-overview-updates/) (Balanced = 3 reviewer models + 1 combiner)
 **Related**: [ADR 32](../decisions/32-no-hosted-ci.md) (no hosted CI in this repo) · [idea 16](16-ai-model-mistral-large-4.md) +
 [#179](https://github.com/jaroslaw-bagnicki/Homelab/issues/179) (the model A/B this would reuse) ·
-[runbook 44](../runbooks/44-copilot-mistral-byok.md) (Mistral BYOK — ML4 blocked in VS Code chat, works via raw API/Vibe) ·
+[runbook 44](../runbooks/44-copilot-mistral-byok.md) (Mistral BYOK — ML4 in VS Code chat via the Responses API path since 2026-11-08, [#179](https://github.com/jaroslaw-bagnicki/Homelab/issues/179)#issuecomment-6719695584)) ·
 [ADR 15](../decisions/15-copilot-desktop-agentic.md) (Copilot BYOK pattern)
 
 ---
