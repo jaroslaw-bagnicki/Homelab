@@ -1,0 +1,59 @@
+---
+- name: Assert Azure controller credentials are set
+  when: opnsense_api_key | length == 0 or opnsense_api_secret | length == 0
+  ansible.builtin.assert:
+    that:
+      - lookup('ansible.builtin.env', 'AZURE_CLIENT_ID', default='') | length > 0
+      - lookup('ansible.builtin.env', 'AZURE_CLIENT_SECRET', default='') | length > 0
+      - lookup('ansible.builtin.env', 'AZURE_TENANT_ID', default='') | length > 0
+    fail_msg: >-
+      AZURE_CLIENT_ID, AZURE_CLIENT_SECRET and AZURE_TENANT_ID must be set on the
+      Ansible controller for the OPNsense API-key Key Vault lookup.
+  delegate_to: localhost
+
+- name: Fetch the OPNsense API key and secret from Key Vault
+  when: opnsense_api_key | length == 0 or opnsense_api_secret | length == 0
+  vars:
+    opnsense_vault_url: "https://{{ opnsense_keyvault_name }}.vault.azure.net"
+    opnsense_azure_client_id: "{{ lookup('ansible.builtin.env', 'AZURE_CLIENT_ID') }}"
+    opnsense_azure_secret: "{{ lookup('ansible.builtin.env', 'AZURE_CLIENT_SECRET') }}"
+    opnsense_azure_tenant_id: "{{ lookup('ansible.builtin.env', 'AZURE_TENANT_ID') }}"
+  ansible.builtin.set_fact:
+    opnsense_api_key: >-
+      {{ lookup('azure.azcollection.azure_keyvault_secret', opnsense_api_key_secret_name,
+      vault_url=opnsense_vault_url, client_id=opnsense_azure_client_id,
+      secret=opnsense_azure_secret, tenant=opnsense_azure_tenant_id) }}
+    opnsense_api_secret: >-
+      {{ lookup('azure.azcollection.azure_keyvault_secret', opnsense_api_secret_secret_name,
+      vault_url=opnsense_vault_url, client_id=opnsense_azure_client_id,
+      secret=opnsense_azure_secret, tenant=opnsense_azure_tenant_id) }}
+  delegate_to: localhost
+  no_log: true
+
+# All OPNsense modules share the same connection arguments via the collection's action group.
+- name: Manage the router over its REST API
+  module_defaults:
+    group/oxlorg.opnsense.all:
+      firewall: "{{ ansible_host }}"
+      api_port: "{{ opnsense_api_port }}"
+      api_key: "{{ opnsense_api_key }}"
+      api_secret: "{{ opnsense_api_secret }}"
+      ssl_verify: "{{ opnsense_ssl_verify | bool }}"
+  block:
+    - name: Install the Netdata plugin (os-netdata)
+      when: opnsense_install_netdata | bool
+      oxlorg.opnsense.package:
+        name: "{{ opnsense_netdata_package }}"
+        action: install
+
+    - name: Configure the syslog remote destination
+      when: opnsense_syslog_enabled | bool
+      oxlorg.opnsense.syslog:
+        target: "{{ opnsense_syslog_target }}"
+        port: "{{ opnsense_syslog_port }}"
+        transport: "{{ opnsense_syslog_transport }}"
+        certificate: "{{ opnsense_syslog_certificate }}"
+        level: "{{ opnsense_syslog_level }}"
+        description: "{{ opnsense_syslog_description }}"
+        match_fields: [description]
+        reload: true   # apply only when the destination actually changes (keeps reruns idempotent)

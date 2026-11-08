@@ -13,6 +13,7 @@ Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month 
 
 ## 2026‑11
 
+- **(docs)** Adopt OPNsense on the Futro S930 as the LAN router, routing-first — [ADR 48](docs/decisions/48-lan-router-futro-s930.md)
 - **(feat)** Stand up `pve2` as the second Proxmox node — `pve` → `pve1`, the NAS moved to `.209`, the two-node `homelab` cluster with an `edge` QDevice, and `proxmox.internal` failover — [runbook 42](docs/runbooks/42-pve2-proxmox-node.md) · [runbook 43](docs/runbooks/43-proxmox-cluster-qdevice.md)
 - **(docs)** Plan a Mistral Large 4 vs DeepSeek V4.1 Flash A/B — one Mistral Pro allowance serves candidate and control, so only task success can decide — [idea 16](docs/ideas/16-ai-model-mistral-large-4.md)
 - **(docs)** Audit the OptiPlex 7050 MFF for `pve2` — 65 W i5-7500, a sound but small 128 GB SSD, MEBx unreachable — [research 52](docs/research/52-optiplex7050-hardware-diagnostic.md)
@@ -63,7 +64,6 @@ Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month 
 - **(docs)** Add idea 09 — shared-rail UPS with NUT-driven shutdown — [idea 09](docs/ideas/09-ups-nut-home-assistant.md)
 - **(feat)** Proxmox VE host (Wyse 5070) — **9.2.2** installed and base provisioned — [runbook 28](docs/runbooks/28-pve1-proxmox-node.md)
 - **(feat)** Fleet SSH access restricted to the LAN, with devcontainer key autoload — [runbook 24](docs/runbooks/24-edge-appliance.md)
-- **(docs)** Futro S930 hardware diagnostic — OPNsense router candidate — [research 31](docs/research/31-futro-s930-hardware-diagnostic.md)
 
 ## 2026‑08
 

@@ -1,0 +1,9 @@
+---
+# OPNsense router — the FreeBSD per-OS exception. Managed over its REST API (the modules run
+# on the controller via `connection: local`), NOT the Linux roles (ADR 10 supplement).
+- name: Configure router (Futro S930 OPNsense) via the API
+  hosts: router
+  connection: local
+  gather_facts: false
+  roles:
+    - opnsense
