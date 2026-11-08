@@ -70,28 +70,55 @@ ls -l /dev/tpmrm0 2>/dev/null || true
 
 ## 2. Create the Fedora 45 VM
 
-On `pve2` (`ssh fleetadm@192.168.2.202`, then `sudo -i`):
+On `pve2` (`ssh fleetadm@192.168.2.202`, then `sudo -i`).
+
+### 2a. Download the image into the `import` content type
+
+A `.qcow2` is a **disk image, not an ISO**. Proxmox files it under the **`import`** content type
+(`.ova`/`.qcow2`/`.raw`/`.vmdk`), not `iso` (`.iso`/`.img` only) — so it belongs in
+`/var/lib/vz/import/` and appears under **Import** in the UI, never under **ISO Images**.
+
+Use the native downloader, which verifies the checksum server-side:
+
+**Datacenter → node `pve2` → Storage → `local` → Import → Download from URL**
+
+| Field | Value |
+|---|---|
+| URL | `https://download.fedoraproject.org/pub/fedora/linux/releases/45/Cloud/x86_64/images/Fedora-Cloud-Base-Generic-45-1.4.x86_64.qcow2` |
+| File name | `Fedora-Cloud-Base-Generic-45-1.4.x86_64.qcow2` |
+| Content | **Import** |
+| Checksum algorithm | `sha256` |
+| Checksum | the value from `Fedora-Cloud-45-1.4-x86_64-CHECKSUM` |
+
+Pin the build (1.4) — do not use a floating `latest`. Verify it landed where Proxmox can see it:
 
 ```sh
-cd /var/lib/vz/template/iso
-# Fedora 45 current stable, pinned to build 1.4. Do not use a floating "latest".
-wget https://download.fedoraproject.org/pub/fedora/linux/releases/45/Cloud/x86_64/images/Fedora-Cloud-Base-Generic-45-1.4.x86_64.qcow2
-wget https://download.fedoraproject.org/pub/fedora/linux/releases/45/Cloud/x86_64/images/Fedora-Cloud-45-1.4-x86_64-CHECKSUM
-sed -n 's/^SHA256 (\(Fedora-Cloud-Base-Generic-45-1.4.x86_64.qcow2\)) = \(.*\)$/\2  \1/p' \
-  Fedora-Cloud-45-1.4-x86_64-CHECKSUM \
-  | sha256sum -c -
+pvesm list local --content import
+# local:import/Fedora-Cloud-Base-Generic-45-1.4.x86_64.qcow2  qcow2  import  <size>
+```
 
+> **Do not `wget` into `template/iso/`.** The file works there — `qm importdisk` takes a filesystem
+> path — but Proxmox cannot list it, so the UI shows ISO Images empty and the download looks failed.
+
+### 2b. Create the VM
+
+```sh
 qm create 250 \
   --name ipa --memory 2048 --cores 2 --cpu host \
   --ostype l26 --scsihw virtio-scsi-single \
   --net0 virtio,bridge=vmbr0 \
   --agent enabled=1 --serial0 socket --vga serial0
 
-qm importdisk 250 /var/lib/vz/template/iso/Fedora-Cloud-Base-Generic-45-1.4.x86_64.qcow2 local-lvm
+qm importdisk 250 /var/lib/vz/import/Fedora-Cloud-Base-Generic-45-1.4.x86_64.qcow2 local-lvm
 qm set 250 --scsi0 local-lvm:vm-250-disk-0 --boot order=scsi0 --ide2 local:cloudinit
 qm resize 250 scsi0 16G
 qm set 250 --onboot 1
 ```
+
+`qm importdisk` takes a **filesystem path**, not a storage volume ID — the `local:import/…` volid from
+`pvesm list` is not what goes here. The import converts the sparse qcow2 into a **raw** volume on
+`local-lvm` (LVM-thin cannot store qcow2), which is why it reports transferring the image's *virtual*
+size (~5 GiB) rather than the 579 MB file.
 
 The Fedora Cloud Base Generic image is BIOS-bootable. If this `qm` configuration does not boot it,
 switch the VM to OVMF (`--bios ovmf` plus an EFI disk) rather than changing the image.
@@ -101,11 +128,20 @@ switch the VM to OVMF (`--bios ovmf` plus an EFI disk) rather than changing the 
 > an upgrade is a domain-controller downtime event, and the backup is the way back. Plan the Fedora 46
 > upgrade only after M2 passes.
 
-Cloud-init needs a `snippets`-capable storage. If `local` does not already accept snippets:
-**Datacenter → Storage → local → Edit → Content → Snippets**, then create
-`/var/lib/vz/snippets/ipa-user-data.yaml`:
+Cloud-init needs a `snippets`-capable storage. `pvesm set --content` **replaces** the whole list rather
+than appending, so state every type the storage must keep — dropping `images` breaks
+`qm cloudinit update` with `storage 'local' does not support content-type 'images'`, because the
+cloud-init ISO is written as an `images` volume:
 
-```yaml
+```sh
+pvesm set local --content iso,vztmpl,backup,import,images,snippets
+```
+
+Then create `/var/lib/vz/snippets/ipa-user-data.yaml`. **Generate the key line from the key file** —
+a mistyped key leaves the guest unreachable with no console-free way back in:
+
+```sh
+cat > /var/lib/vz/snippets/ipa-user-data.yaml <<'EOF'
 #cloud-config
 hostname: ipa
 fqdn: ipa.internal
@@ -116,7 +152,15 @@ users:
     groups: wheel
     shell: /bin/bash
     ssh_authorized_keys:
-      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKAucOXvwvHvSn11uzG49QFvJPxodbOjPEWkvdS9vCVG fleetadm@homelab
+EOF
+printf '      - %s\n' "$(cat /path/to/fleetadm.pub)" >> /var/lib/vz/snippets/ipa-user-data.yaml
+```
+
+Verify the key before starting the VM — compare the fingerprint against the known fleet key:
+
+```sh
+ssh-keygen -lf /path/to/fleetadm.pub
+# 256 SHA256:… fleetadm@homelab
 ```
 
 Apply and start:
@@ -137,13 +181,29 @@ NetworkManager `dns=none`, probes Technitium on `:53`, then writes `/etc/resolv.
 [ADR 40](../decisions/40-internal-dns-proxy-edge.md) / #174. Fedora would otherwise rewrite the file
 from NetworkManager at boot.
 
-Verify from the LAN workstation:
+Verify from the LAN workstation. **Certificate SSH does not work yet** — `TrustedUserCAKeys` and
+`AuthorizedPrincipalsFile` are installed by `ipa_host` in §3, so a fresh guest rejects the `agent-ai`
+certificate with `Permission denied (publickey)`. That is the ADR 41 transition state, not a fault.
+Use the break-glass fleet key for this check:
 
-```sh
-ssh fleetadm@192.168.2.250 'hostname -f; getent hosts ipa.internal; sudo -n whoami; chronyc tracking'
+```powershell
+./scripts/Import-HomelabFleetKey.ps1    # 1 h TTL, root-equivalent — drop it early with ssh-add -D
 ```
 
-Expected: `ipa.internal`, `192.168.2.250 ipa.internal`, `root`, and a synchronised chrony.
+```sh
+ssh fleetadm@192.168.2.250 'hostname -f; sudo -n whoami; chronyc tracking'
+```
+
+Expected: `ipa.internal`, `root`, and a synchronised chrony.
+
+> **Do not use `getent hosts ipa.internal` to verify DNS here.** `manage_etc_hosts: true` writes the
+> FQDN to loopback in `/etc/hosts`, so `getent` answers `::1` from that file and never asks the
+> resolver — it proves nothing. Query Technitium directly instead (§4), and note that Fedora Cloud
+> Base ships **no `dig`** (`bind-utils` is not installed); use `resolvectl query` or install it.
+
+`/etc/resolv.conf` is still the `systemd-resolved` stub at this point (`nameserver 127.0.0.53`). The
+cloud-init `--nameserver` seeds NetworkManager; it does not pin the file. `ipa_host` owns the durable
+pin in §3, so DNS behaviour before then is not the fleet's.
 
 ## 3. Apply the EL base role
 
@@ -157,11 +217,23 @@ Verify:
 ```sh
 ssh fleetadm@192.168.2.250 'hostname -f; sudo -n whoami'
 ssh fleetadm@192.168.2.250 'sudo firewall-cmd --list-rich-rules; sudo systemctl is-active chronyd firewalld'
-ssh fleetadm@192.168.2.250 'cat /etc/resolv.conf; getent hosts ipa.internal'
+ssh fleetadm@192.168.2.250 'cat /etc/resolv.conf'
 ```
 
 `/etc/resolv.conf` must be the Ansible-managed file — `nameserver 192.168.2.240`, `search internal` —
 not the cloud-init placeholder and not a `systemd-resolved` symlink.
+
+Certificate SSH now works: `ipa_host` has installed `TrustedUserCAKeys` and `AuthorizedPrincipalsFile`,
+so the `agent-ai` certificate reaches `fleetadm`. Drop the break-glass key and confirm:
+
+```powershell
+ssh-add -D
+./scripts/Initialize-HomelabFleetSession.ps1 -Agent copilot
+```
+
+```sh
+ssh fleetadm@192.168.2.250 'sudo -n whoami'    # root, via certificate
+```
 
 ## 4. Add the DNS records in Technitium
 
@@ -171,7 +243,8 @@ From the LAN workstation, after CR:
 ansible-playbook ansible/playbooks/playbook-technitium.yml --diff
 ```
 
-Verify from a LAN client:
+Verify from a LAN client. **Query Technitium directly** — `getent` on the guest answers from
+`/etc/hosts` and proves nothing:
 
 ```sh
 dig @192.168.2.240 ipa.internal +short                 # 192.168.2.250
@@ -181,6 +254,14 @@ dig @192.168.2.240 _kerberos._udp.ipa.internal SRV +short
 dig @192.168.2.240 _kpasswd._tcp.ipa.internal SRV +short   # 0 100 464 ipa.internal.
 dig @192.168.2.240 _ldap._tcp.ipa.internal SRV +short      # 0 100 389 ipa.internal.
 ```
+
+> **Check the stale record is gone.** VM 216 was removed but its A/PTR records were not, so before this
+> step `ipa.internal` resolved to the dead `192.168.2.216`. Confirm the role replaced them:
+>
+> ```sh
+> dig @192.168.2.240 ipa.internal +short      # must be 192.168.2.250, never .216
+> dig @192.168.2.240 -x 192.168.2.216 +short  # must be empty
+> ```
 
 `_ldap._tcp` is published now, but TCP/389 is intentionally closed on the IPA firewall until M3 client
 enrolment. The server itself uses LDAPI/HTTPS locally.
@@ -372,9 +453,14 @@ Write into the runbook/report:
 
 ## Verification checklist
 
+- [ ] `local` storage carries `iso,vztmpl,backup,import,images,snippets` — `images` is required for the cloud-init ISO
+- [ ] Fedora image downloaded into the **`import`** content type; `pvesm list local --content import` shows it
+- [ ] Snippet key generated from the key file and fingerprint-checked with `ssh-keygen -lf`
 - [ ] VM 250 `ipa` up on `pve2`; `hostname -f` → `ipa.internal`; `.250` reachable
+- [ ] Guest verified with the **break-glass fleet key** (certificate SSH arrives in §3)
 - [ ] `playbook-ipa.yml` green; firewalld LAN rules; `fleetadm` key-only
-- [ ] `dig` A/PTR/SRV records correct
+- [ ] Certificate SSH works after §3; break-glass key dropped
+- [ ] `dig` A/PTR/SRV records correct — and the stale `.216` A/PTR are gone
 - [ ] `/root/ipa.csr` signed by the root; `ipa-ca.crt` chains to the fleet root
 - [ ] `ipa-server-install` complete; `kinit admin`/`klist`/`ipa ping` pass
 - [ ] `ipa ca-show ipa` and `getcert list` show the external CA
