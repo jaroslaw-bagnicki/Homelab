@@ -454,11 +454,15 @@ Write into the runbook/report:
 
 ## Verification checklist
 
-- [ ] `local` storage carries `iso,vztmpl,backup,import,images,snippets` — `images` is required for the cloud-init ISO
-- [ ] Fedora image downloaded into the **`import`** content type; `pvesm list local --content import` shows it
-- [ ] Snippet key generated from the key file and fingerprint-checked with `ssh-keygen -lf`
-- [ ] VM 250 `ipa` up on `pve2`; `hostname -f` → `ipa.internal`; `.250` reachable
-- [ ] Guest verified with the **break-glass fleet key** (certificate SSH arrives in §3)
+Executed on: **2026-11-08** — §1–§2 executed and verified; §3 onward **not yet run**. The stale
+`ipa.internal` → `.216` A and PTR records were deleted from Technitium by hand (the `technitium` role
+only adds records, it never deletes), so §4 must create the `.250` records before §6.
+
+- [x] `local` storage carries `iso,vztmpl,backup,import,images,snippets` — `images` is required for the cloud-init ISO
+- [x] Fedora image downloaded into the **`import`** content type; `pvesm list local --content import` shows it
+- [x] Snippet key generated from the key file and fingerprint-checked with `ssh-keygen -lf`
+- [x] VM 250 `ipa` up on `pve2`; `.250` reachable; guest agent responding
+- [x] Guest verified with the **break-glass fleet key** (certificate SSH arrives in §3)
 - [ ] `playbook-ipa.yml` green; firewalld LAN rules; `fleetadm` key-only
 - [ ] Certificate SSH works after §3; break-glass key dropped
 - [ ] `dig` A/PTR/SRV records correct — and the stale `.216` A/PTR are gone
@@ -471,6 +475,30 @@ Write into the runbook/report:
 - [ ] `dig SSHFP` empty
 - [ ] CA mode and fingerprints recorded
 - [ ] M2 remains the gate before the first client
+
+### §1–§2 execution record — 2026-11-08
+
+| Check | Result |
+|---|---|
+| `pve2` RAM | 7648 MB total, **5602 MB available** (needs ≥ 2.5 GB) |
+| `local-lvm` | 56.9 GB total, **0 used** (needs ≥ 20 GB) |
+| Guests before | `qm list` / `pct list` both **empty** |
+| chrony | stratum 3, **+1.8 ms** |
+| TPM | `/dev/tpmrm0` present (informational — M1 does not use it) |
+| Technitium from `pve2` | `edge.internal` → `192.168.2.240` |
+| Image | Fedora 45 Cloud Base Generic 1.4, **SHA256 verified** |
+| VM 250 | **running**, 2 vCPU / 2048 MB, `cpu host`, `onboot 1` |
+| Disk | `local-lvm:vm-250-disk-0`, **16 G** (thin: 754 M written) |
+| Network | `eth0` virtio `192.168.2.250/24`, gw `.1` |
+| Guest filesystem | `/dev/sda3` **16 G**, 754 M used — `resize_rootfs` ran |
+| Guest FQDN | `ipa.internal` |
+| Guest resolver | **still `127.0.0.53`** — the resolved stub; §3 pins it |
+| Certificate SSH | **fails** — no `TrustedUserCAKeys` yet; break-glass key used |
+
+**Six defects found and fixed in §2 during this run** — the corrected sequence is what the runbook now
+carries: the `import` content type for a `.qcow2`, the full `pvesm set --content` list, a generated
+rather than pasted public key, the fleet-key verification path, `getent` vs the resolver, and the stale
+`.216` records.
 
 ## References
 
