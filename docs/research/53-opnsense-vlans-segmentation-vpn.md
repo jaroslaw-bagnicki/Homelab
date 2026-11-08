@@ -1,8 +1,9 @@
 # 53 — OPNsense VLANs, Port Segmentation, Cascade NAT and VPN Access
 
 **Source**: [Gemini chat 41 — "OPNsense i VLANy"](https://gemini.google.com/share/a1db00e36b4c)
-(3.6 Flash; thread created 2026‑11‑06 22:44, published 2026‑11‑08 07:42; conversation in Polish).
-Five questions, five answers, all about placing OPNsense at the edge of the home network.
+(3.6 Flash; thread created 2026‑11‑06 22:44, published 2026‑11‑08 07:42; conversation in Polish),
+plus [Gemini chat 42 — "Wybór switcha do OPNsense"](https://gemini.google.com/share/b43a9aa2cefe)
+(folded into §6). Chat 41: five questions about placing OPNsense at the edge of the home network.
 
 **Scope**: VLAN support requirements on switches, what a multi-port NIC changes, inter-network
 visibility under physical separation, routing in a cascade/Double‑NAT topology behind the ISP
@@ -144,6 +145,28 @@ IP with full L3 access to the homelab subnet, and the rest of the house traffic 
    WireGuard is stateless UDP — there is no TCP‑style session setup; the tunnel stays up via
    keys + `PersistentKeepalive`. Per‑client ACLs (e.g. VPN client may reach only Home Assistant on
    `8123`) are enforced with OPNsense firewall rules on the WireGuard interface.
+
+## §6 — Managed switch selection (Gemini chat 42, folded in)
+
+The lab runs out of ports on the current **TP‑Link TL‑SG108E** (8× GbE Easy Smart, HW V1,
+`192.168.2.230`, [research 24](24-network-topology-design.md)). Essentials from the switch
+thread ([chat 42](https://gemini.google.com/share/b43a9aa2cefe)):
+
+- **2× 8‑port vs one 16‑port**: a second 8‑port switch leaves **14** usable ports (one port per
+  switch spent on the uplink, 1 Gbps inter‑switch bottleneck, two web panels); a 16‑port fanless
+  smart switch (TL‑SG1016DE / ZyXEL GS1200‑16 / HP 1810G‑24) gives all 16 ports, one panel, no
+  bottleneck. With the S930's 3 NICs, one switch + one trunk is the natural shape.
+- **Spec checklist for any candidate** (used market included): `Gigabit` (10/100/1000 — skip
+  10/100), `IEEE 802.1Q` + `Smart / Web‑Managed / Easy Smart` (never "Unmanaged"/"Plug‑and‑Play").
+  Rejected on exactly those grounds: Netgear JGS524, Cudy GS1016, Lanberg RSGE‑16, HP ProCurve
+  1410 (HP **18xx** series = the managed ones), HP A3600‑24‑PoE+ (10/100 ports), Dell WW060 (blade
+  pass‑through module, not a switch). Conditional: JGS524E only as **v2** (v1 has no web GUI),
+  GS752TS only if cheap and placed out of the room (fans, 20–35 W, SFP is 1G not 10G).
+- **GS108E vs the lab's TL‑SG108E**: same 8× 1G fanless metal box; GS108E has 64 VLANs (vs 32) and
+  a ProSAFE lifetime warranty, but **no LAG** (TL‑SG108E has static LAG, up to 2 groups) and a web
+  GUI **only from hardware v3** — v1/v2 need the Windows ProSAFE Plus Utility. A used GS108E
+  (e.g. 109 PLN on Allegro) is only worth it if the rear label says `GS108Ev3`; GS308E‑400EUS is
+  the always‑web‑GUI new alternative (3‑year EU warranty instead).
 
 ---
 

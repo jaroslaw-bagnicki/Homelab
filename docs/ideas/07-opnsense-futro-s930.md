@@ -8,7 +8,7 @@
 
 **Status**: 🔨 Implementing — hardware acquired & verified ([research 31](../research/31-futro-s930-hardware-diagnostic.md)); direction recorded in [ADR 48](../decisions/48-lan-router-futro-s930.md); install tracked in [issue #96](https://github.com/jaroslaw-bagnicki/Homelab/issues/96)  
 **Date**: 2026-08-21  
-**Updated**: 2026-11-08 — [research 53](../research/53-opnsense-vlans-segmentation-vpn.md) recorded (Gemini chat 41: VLANs, port segmentation, cascade NAT, WireGuard) ahead of runbook 45 execution; PR #146 merged  
+**Updated**: 2026-11-08 — [research 53](../research/53-opnsense-vlans-segmentation-vpn.md) recorded (Gemini chats 41–42: VLANs, port segmentation, cascade NAT, WireGuard, managed-switch selection) ahead of runbook 45 execution; PR #146 merged  
 **Updated**: 2026-10-09 — ADR 48 accepted; [runbook 45](../runbooks/45-deploy-opnsense.md) authored; 24 GB mSATA installed  
 **Source**: [Gemini discussion — OPNsense firewall i router](https://share.gemini.google/k8PVbnk90fuo) (published 2026-08-21)
 
@@ -187,7 +187,7 @@ depend on it.
 ## Open questions
 
 1. **Resolved** ([ADR 48](../decisions/48-lan-router-futro-s930.md)): the Nova bridges onto the **ISP segment**, not behind OPNsense; putting house Wi-Fi behind OPNsense needs dedicated APs — a follow-up.
-2. VLAN segmentation scope — separate lab / office / IoT VLANs (drives i350-T2 vs i350-T4)? — options analysed in [research 53 §1–§2](../research/53-opnsense-vlans-segmentation-vpn.md) (physical ports vs hybrid trunk on the S930's 3 NICs)
+2. VLAN segmentation scope — separate lab / office / IoT VLANs (drives i350-T2 vs i350-T4)? — segmentation and switch options in [research 53 §1–§2, §6](../research/53-opnsense-vlans-segmentation-vpn.md) (physical ports vs hybrid trunk on the S930's 3 NICs; 2×8 vs 16-port switch)
 3. Bare-metal appliance vs Proxmox-VM on the Futro (reuse the thin-client + Proxmox pattern
    from idea 05) — bare-metal keeps it a dedicated appliance; VM adds snapshots/HA.
 4. Physical placement — same rack/utility spot as the switch?
@@ -203,7 +203,7 @@ New hardware + a new network role for the lab — expect research/ADR before acq
 ## References
 
 - [Gemini discussion — OPNsense firewall i router](https://share.gemini.google/k8PVbnk90fuo) — the full thread this idea is based on
-- [Gemini discussion — OPNsense i VLANy](https://gemini.google.com/share/a1db00e36b4c) — VLAN/segmentation/VPN thread, written up as [research 53](../research/53-opnsense-vlans-segmentation-vpn.md)
+- [Gemini discussions — OPNsense i VLANy + Wybór switcha do OPNsense](https://gemini.google.com/share/a1db00e36b4c) — VLAN/segmentation/VPN and switch-selection threads, written up as [research 53](../research/53-opnsense-vlans-segmentation-vpn.md) (chats 41–42)
 - [Gemini discussion — Dell NIC comparison (BCM5719 vs BCM5720, OPNsense, 5G failover)](https://share.gemini.google/Z2xgg2TSotrn) (published 2026-08-24) — NIC comparison + Futro S930 compatibility + 5G-failover supplement
 - [Idea 08 — Homelab LTE/5G WAN Failover](08-lte-wan-failover.md) — backup WAN, split out of this idea's Multi-WAN section
 - [ADR 24 — Edge ingress appliance](../decisions/24-edge-ingress-appliance.md) · [research 24](../research/24-network-topology-design.md) — network topology context
