@@ -4,3 +4,8 @@
   become: true
   roles:
     - ipa_host
+    # Monitoring and logging come after the base role: the Netdata child needs the
+    # pinned resolver and chrony, and Fluent Bit ships journald records that only
+    # start to matter once the host is a fleet member.
+    - netdata
+    - fluentbit

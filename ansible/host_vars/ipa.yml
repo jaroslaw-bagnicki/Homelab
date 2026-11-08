@@ -8,3 +8,11 @@ freeipa_domain: ipa.internal
 freeipa_hostname: ipa.internal
 freeipa_ip: 192.168.2.250
 freeipa_ca_mode: external
+
+# Netdata child streaming to the Parent on pve1 (ADR 27). The child keeps a short
+# local ring and forwards; retention belongs to the Parent.
+netdata_role: child
+netdata_stream_target: "192.168.2.201:19996"
+netdata_stream_ssl: true
+netdata_bind: "127.0.0.1"
+netdata_storage: dbengine

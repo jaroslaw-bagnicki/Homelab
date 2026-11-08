@@ -1,5 +1,9 @@
 ---
-- name: Install Netdata prerequisites
+# The kickstart script supports Debian/Ubuntu and the RHEL family; only the
+# prerequisite packages differ. `gnupg` is Debian's name for GnuPG — EL ships it as
+# `gnupg2`, and `ca-certificates`/`curl` are common to both.
+- name: Install Netdata prerequisites (Debian/Ubuntu)
+  when: ansible_facts["os_family"] == "Debian"
   ansible.builtin.apt:
     name:
       - curl
@@ -7,6 +11,15 @@
       - gnupg
     state: present
     update_cache: true
+
+- name: Install Netdata prerequisites (RHEL family)
+  when: ansible_facts["os_family"] == "RedHat"
+  ansible.builtin.dnf:
+    name:
+      - curl
+      - ca-certificates
+      - gnupg2
+    state: present
 
 - name: Check whether Netdata is installed
   ansible.builtin.stat:

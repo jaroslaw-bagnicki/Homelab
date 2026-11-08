@@ -1,13 +1,21 @@
 ---
-- name: Assert the distribution is served by the Fluent Bit repository
+# Two install paths, chosen by OS family:
+#   Debian/Ubuntu — the official packages.fluentbit.io APT repository.
+#   RHEL family     — the distribution's own repository. Fedora ships `fluent-bit`
+#                     (4.2.2 on Fedora 45) and EPEL carries it for RHEL/Alma/Rocky, so no
+#                     third-party repo is needed. The upstream EL repo at
+#                     packages.fluentbit.io/centos/$releasever does NOT serve Fedora —
+#                     `$releasever` resolves to 45 and returns 404.
+- name: Assert the distribution has a Fluent Bit package source
   ansible.builtin.assert:
     that:
-      - ansible_facts['distribution'] in ['Debian', 'Ubuntu']
+      - ansible_facts['os_family'] in ['Debian', 'RedHat']
     fail_msg: >-
-      fluentbit supports Debian and Ubuntu only — got
-      '{{ ansible_facts['distribution'] }}'.
+      fluentbit supports Debian/Ubuntu (upstream APT repo) and the RHEL family
+      (distribution repo) — got '{{ ansible_facts['distribution'] }}'.
 
-- name: Install the Fluent Bit repository prerequisites
+- name: Install the Fluent Bit repository prerequisites (Debian/Ubuntu)
+  when: ansible_facts['os_family'] == 'Debian'
   # `deb822_repository` needs the `python3-debian` library on the target, and ansible-core 2.16 has
   # no `install_python_debian` option — minimal Debian installs (e.g. the OMV `nas`) do not ship it.
   ansible.builtin.apt:
@@ -18,6 +26,7 @@
     update_cache: true
 
 - name: Ensure the APT keyrings directory exists
+  when: ansible_facts['os_family'] == 'Debian'
   ansible.builtin.file:
     path: /etc/apt/keyrings
     state: directory
@@ -26,6 +35,7 @@
     mode: "0755"
 
 - name: Download the Fluent Bit signing key
+  when: ansible_facts['os_family'] == 'Debian'
   ansible.builtin.get_url:
     url: "{{ fluentbit_apt_key_url }}"
     dest: "{{ fluentbit_keyring }}"
@@ -34,6 +44,7 @@
     mode: "0644"
 
 - name: Add the Fluent Bit APT repository
+  when: ansible_facts['os_family'] == 'Debian'
   ansible.builtin.deb822_repository:
     name: fluentbit
     types: [deb]
@@ -44,11 +55,18 @@
     components: [main]
     state: present
 
-- name: Install Fluent Bit
+- name: Install Fluent Bit (Debian/Ubuntu)
+  when: ansible_facts['os_family'] == 'Debian'
   ansible.builtin.apt:
     name: "{{ fluentbit_package }}"
     state: present
     update_cache: true
+
+- name: Install Fluent Bit (RHEL family)
+  when: ansible_facts['os_family'] == 'RedHat'
+  ansible.builtin.dnf:
+    name: "{{ fluentbit_package }}"
+    state: present
 
 - name: Ensure the Fluent Bit system group exists
   ansible.builtin.group:

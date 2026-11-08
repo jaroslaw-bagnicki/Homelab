@@ -201,9 +201,11 @@ Expected: `ipa.internal`, `root`, and a synchronised chrony.
 > resolver — it proves nothing. Query Technitium directly instead (§4), and note that Fedora Cloud
 > Base ships **no `dig`** (`bind-utils` is not installed); use `resolvectl query` or install it.
 
-`/etc/resolv.conf` is still the `systemd-resolved` stub at this point (`nameserver 127.0.0.53`). The
-cloud-init `--nameserver` seeds NetworkManager; it does not pin the file. `ipa_host` owns the durable
-pin in §3, so DNS behaviour before then is not the fleet's.
+`/etc/resolv.conf` is the `systemd-resolved` **stub** at this point (`nameserver 127.0.0.53`), and that
+is not a fault: the stub forwards to whatever NetworkManager learned, which is Technitium. Confirm with
+`resolvectl status` — the `eth0` link should show `DNS Servers: 192.168.2.240`. What the stub does not
+give you is a **fleet-owned file**: it is regenerated at boot, so `ipa_host` replaces the symlink with a
+static pin in §3 (ADR 40 / #174).
 
 ## 3. Apply the EL base role
 
@@ -492,7 +494,7 @@ only adds records, it never deletes), so §4 must create the `.250` records befo
 | Network | `eth0` virtio `192.168.2.250/24`, gw `.1` |
 | Guest filesystem | `/dev/sda3` **16 G**, 754 M used — `resize_rootfs` ran |
 | Guest FQDN | `ipa.internal` |
-| Guest resolver | **still `127.0.0.53`** — the resolved stub; §3 pins it |
+| Guest resolver | `127.0.0.53` — the systemd-resolved **stub**, which forwards to Technitium (`resolvectl` shows `192.168.2.240` on `eth0`); resolution works. §3 replaces the stub with a direct pin for fleet consistency, not to fix a break |
 | Certificate SSH | **fails** — no `TrustedUserCAKeys` yet; break-glass key used |
 
 **Six defects found and fixed in §2 during this run** — the corrected sequence is what the runbook now
