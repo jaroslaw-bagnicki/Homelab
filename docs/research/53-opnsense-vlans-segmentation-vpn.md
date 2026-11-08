@@ -3,7 +3,8 @@
 **Source**: [Gemini chat 41 — "OPNsense i VLANy"](https://gemini.google.com/share/a1db00e36b4c)
 (3.6 Flash; thread created 2026‑11‑06 22:44, published 2026‑11‑08 07:42; conversation in Polish),
 plus [Gemini chat 42 — "Wybór switcha do OPNsense"](https://gemini.google.com/share/b43a9aa2cefe)
-(folded into §6). Chat 41: five questions about placing OPNsense at the edge of the home network.
+(folded into §6; thread extended 2026‑11‑08 with the 10G‑uplink options and the CSS318‑16G‑2S+IN
+listing). Chat 41: five questions about placing OPNsense at the edge of the home network.
 
 **Scope**: VLAN support requirements on switches, what a multi-port NIC changes, inter-network
 visibility under physical separation, routing in a cascade/Double‑NAT topology behind the ISP
@@ -165,12 +166,36 @@ thread ([chat 42](https://gemini.google.com/share/b43a9aa2cefe)):
   1410 (HP **18xx** series = the managed ones), HP A3600‑24‑PoE+ (10/100 ports), Dell WW060 (blade
   pass‑through module, not a switch). Conditional: JGS524E only as **v2** (v1 has no web GUI),
   GS752TS only if cheap and placed out of the room (fans, 20–35 W, SFP is 1G not 10G).
-- **GS108E vs the lab's TL‑SG108E**: same 8× 1G fanless metal box; GS108E has 64given the 2×8‑port
-  leaning, a **second TL‑SG108E** is the ecosystem‑consistent pick (same Easy Smart UI, LAG,
-  guaranteed web GUI); GS308E‑400EUS is the always‑web‑GUI new alternative (3‑year EU warrantytic LAG, up to 2 groups) and a web
+- **GS108E vs the lab's TL‑SG108E**: same 8× 1G fanless metal box; GS108E has 64 VLANs (vs 32) and
+  a ProSAFE lifetime warranty, but **no LAG** (TL‑SG108E has static LAG, up to 2 groups) and a web
   GUI **only from hardware v3** — v1/v2 need the Windows ProSAFE Plus Utility. A used GS108E
-  (e.g. 109 PLN on Allegro) is only worth it if the rear label says `GS108Ev3`; GS308E‑400EUS is
-  the always‑web‑GUI new alternative (3‑year EU warranty instead).
+  (e.g. 109 PLN on Allegro) is only worth it if the rear label says `GS108Ev3`; given the 2×8‑port
+  leaning, a **second TL‑SG108E** is the ecosystem‑consistent pick (same Easy Smart UI, LAG,
+  guaranteed web GUI); GS308E‑400EUS is the always‑web‑GUI new alternative (3‑year EU warranty).
+- **SFP 1 Gbps ports** (e.g. ZyXEL GS1200‑10V3: 8× RJ45 + 2× SFP 1G, web GUI, LAG, passive, ~4.4 W,
+  default IP `192.168.1.3`): only worth it as "free" uplink ports (SFP‑to‑RJ45 module or DAC frees
+  an RJ45 port), for **galvanic isolation over fiber between buildings**, or runs >100 m
+  (fiber up to 550 m–10 km). Not worth it for speed — 1G SFP is a bottleneck for 2.5/10G NAS/Proxmox
+  links, and pointless when both devices sit in the same rack.
+
+### Future upgrade: 16× 1G + 2× SFP+ 10G (recorded 2026‑11‑08, not purchased)
+
+When the 2×8‑port setup runs out of ports or a 10G NAS/Proxmox link is wanted, the thread compared:
+
+| Option | Ports | OS / GUI | Cooling / power | Price (thread) |
+|---|---|---|---|---|
+| **MikroTik CSS318‑16G‑2S+IN** ⭐ recorded option | 16× RJ45 1G + 2× SFP+ 10G, Marvell 98DX2518 | **SwOS only** (L2, simple web GUI for VLAN/Trunk/PVID/IGMP) | passive 0 dB, built‑in AC, **10–13 W**, desktop 218×157×44 mm with rack ears | **509 PLN new** (morele.net) |
+| MikroTik CRS318‑16G‑2S+RM | 16× 1G + 2× SFP+ 10G | **dual‑boot SwOS + RouterOS** (L3 capable), rack 1U | fanless/quiet, ~10–13 W | ~750–850 zł new, ~500–600 zł used |
+| "Realtek‑based" (Haswitch/Nicgiga/YuanLey/Sodola 16G+2S+) | 16× 1G + 2× SFP+ 10G | web‑managed L2 | passive, <10–12 W | ~350–450 zł new |
+| QNAP QSW‑M2108‑2C/2S | 8× 2.5G + 2× combo 10G SFP+/RJ45 | QSS web GUI | — | ~800–1000 zł |
+
+**CSS318‑16G‑2S+IN notes** (the thread first doubted the model name, then confirmed it against the
+morele.net listing photo — it **does exist**; don't confuse with CRS318‑…RM): pure L2 SwOS switch,
+full wirespeed 802.1Q, the two SFP+ slots give a 10G trunk/DAC link to a 10G Proxmox node or NAS
+without a bottleneck; at ~10 W idle and 0 dB it avoids exactly the power/noise reasons the 24‑port
+server gear was rejected above. Caveats: SwOS‑only (no RouterOS L3); MikroTik naming needs the exact
+product code on the rear label (`CSS` = SwOS smart switch, `CRS` = dual‑boot, `IN` = desktop,
+`RM` = rack).
 
 ---
 

@@ -187,7 +187,7 @@ depend on it.
 ## Open questions
 
 1. **Resolved** ([ADR 48](../decisions/48-lan-router-futro-s930.md)): the Nova bridges onto the **ISP segment**, not behind OPNsense; putting house Wi-Fi behind OPNsense needs dedicated APs — a follow-up.
-2. VLAN segmentation scope — separate lab / office / IoT VLANs (drives i350-T2 vs i350-T4)? — segmentation and switch options in [research 53 §1–§2, §6](../research/53-opnsense-vlans-segmentation-vpn.md); **leaning 2026‑11‑08: second 8‑port switch** (cheapest, lowest power; server‑grade 24‑port rejected on draw + fan noise) — purchase not yet made
+2. VLAN segmentation scope — separate lab / office / IoT VLANs (drives i350-T2 vs i350-T4)? — segmentation and switch options in [research 53 §1–§2, §6](../research/53-opnsense-vlans-segmentation-vpn.md); **leaning 2026‑11‑08: second 8‑port switch** (cheapest, lowest power; server‑grade 24‑port rejected on draw + fan noise) — purchase not yet made; **future upgrade recorded: MikroTik CSS318‑16G‑2S+IN** (16× 1G + 2× SFP+ 10G, SwOS, passive, 10–13 W, 509 PLN new) when 10G uplinks are wanted
 3. Bare-metal appliance vs Proxmox-VM on the Futro (reuse the thin-client + Proxmox pattern
    from idea 05) — bare-metal keeps it a dedicated appliance; VM adds snapshots/HA.
 4. Physical placement — same rack/utility spot as the switch?
