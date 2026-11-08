@@ -1,7 +1,7 @@
 # POC: Kodus (Kody) as the Code Review Service — self-hosted on `cloudlab`, ML4 BYOK
 
 > Idea: [idea 18](../ideas/18-copilot-cr-cost-alternatives.md) — Copilot CR costs 2–3× implementation on
-> some PRs since the 2026 usage-based billing change; POC the BYO-model pattern with **Kodus/Kody**
+> some PRs since the 2026 usage-based billing change; POC tracked in [#190](https://github.com/jaroslaw-bagnicki/Homelab/issues/190); BYO-model pattern with **Kodus/Kody**
 > ([research 54](../research/54-external-code-review-delegation.md) §3–§4). Not CI: an event-driven
 > GitHub App + self-hosted service, so [ADR 32](../decisions/32-no-hosted-ci.md) is not touched —
 > nothing lands in GitHub Actions.
