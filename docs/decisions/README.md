@@ -13,6 +13,7 @@ Significant architectural and technology choices recorded in
 
 | # | Date | ADR | Status |
 |---|------|-----|--------|
+| 49 | 2026-11-08 | [VM Provisioning — Cloud Image + Cloud-Init, Never a Hand-Clicked Installer](49-vm-provisioning-cloud-image.md) | Accepted |
 | 47 | 2026-11-06 | [Second Proxmox VE Node — pve2, a Two-Node Cluster and an Edge QDevice](47-second-proxmox-node-cluster-qdevice.md) | Accepted |
 | 46 | 2026-10-31 | [Observability Host — VictoriaLogs, Netdata Parent and Grafana in One LXC](46-grafana-logs-ui-victorialogs.md) | Proposed |
 | 45 | 2026-10-27 | [Workload Identity — One Mechanism per Protocol, Workloads as Directory Users](45-workload-identity.md) | Accepted |

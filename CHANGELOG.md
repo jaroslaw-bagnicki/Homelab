@@ -13,6 +13,7 @@ Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month 
 
 ## 2026‑11
 
+- **(docs)** Provision VMs from a cloud image plus cloud-init, never a hand-clicked installer — [ADR 49](docs/decisions/49-vm-provisioning-cloud-image.md)
 - **(docs)** Move the FreeIPA server to `pve2` — `pve1`'s memory is committed to the Home Assistant guests, which the Zigbee coordinator pins there — [ADR 43](docs/decisions/43-freeipa-domain-realm.md)
 - **(feat)** Stand up `pve2` as the second Proxmox node — `pve` → `pve1`, the NAS moved to `.209`, the two-node `homelab` cluster with an `edge` QDevice, and `proxmox.internal` failover — [runbook 42](docs/runbooks/42-pve2-proxmox-node.md) · [runbook 43](docs/runbooks/43-proxmox-cluster-qdevice.md)
 - **(docs)** Plan a Mistral Large 4 vs DeepSeek V4.1 Flash A/B — one Mistral Pro allowance serves candidate and control, so only task success can decide — [idea 16](docs/ideas/16-ai-model-mistral-large-4.md)
