@@ -14,7 +14,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | **Proxmox VE** | virtualisation host — smart-home + always-on services | Dell Wyse 5070 | Celeron J4105 (Gemini Lake, 10 W) | 8 GB DDR4-2400 (2× 4 GB) | M.2 SATA SK hynix 128 GB | 1× GbE + WiFi |
 | **Proxmox VE (second node)** | second virtualisation host — `homelab` cluster member | Dell OptiPlex 7050 MFF | i5-7500 (4C/4T, 65 W) | 8 GB DDR4-2400 (1× 8 GiB, 1 slot free) | M.2 SATA SK hynix 128 GB (+ free 2.5″ bay) | 1× GbE Intel I219-LM |
 | **OPNsense Router** | LAN router / firewall | Fujitsu Futro S930 | GX-424CC (4C/4T, 25 W TDP) | 4 GB DDR3 (1×, 1 free slot) | Kingston 24 GB mSATA | 3× GbE (BCM5720 2× + Realtek 1×) |
-| **Cloudlab VPS** | staging / playground | Contabo Cloud VPS 10 | 4 vCPU (cloud — no TDP) | 8 GB | 75 GB NVMe | public IP |
+| **Cloudlab VPS** | staging / playground — **decommission planned, no new workloads** | Contabo Cloud VPS 10 | 4 vCPU (cloud — no TDP) | 8 GB | 75 GB NVMe | public IP |
 
 ## Compute & Storage Nodes
 
@@ -131,7 +131,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | Compute | 4 vCPU, 8 GB RAM |
 | Storage | 75 GB NVMe |
 | OS | Ubuntu 24.04 LTS (pre-installed by Contabo) |
-| Role | Staging / playground VPS |
+| Role | Staging / playground VPS — **decommission planned, no new workloads** |
 | Docs | [runbook 10](runbooks/10-vps-playground.md) · [ADR 13](decisions/13-cloudlab-staging.md) |
 
 ## Network Appliances
