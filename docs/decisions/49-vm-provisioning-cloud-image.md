@@ -7,24 +7,24 @@
 
 ## Context
 
-Every VM in the lab so far has been built by hand at a console: boot an installer ISO, click through
-language, disk, timezone, user and network, then configure the rest afterwards. That is how VM 216
-(`ipa`) was built — and when it was found missing on 2026-11-07, nothing in the repository could
-reproduce it. The rebuild had to be re-derived from scratch.
+The lab has **no VM build history to inherit.** VM 250 (`ipa`) is the first VM the lab has ever built —
+`pve1` has only ever run containers (LXC 214 `vtstack`, LXC 215 `ca`), and its `/etc/pve/qemu-server/`
+was empty before this work. So this ADR does not record a practice that evolved; it **adopts one from
+day one**, before a second VM exists to diverge from it.
 
-The FreeIPA M1 rebuild (VM 250 on `pve2`) was the first VM built the other way: a vendor cloud image
-imported onto `local-lvm`, configured entirely by a `#cloud-config` file, and booted unattended. It
-surfaced six defects in the runbook — all of them in the *mechanics* of the approach, none in the
-approach itself — and the corrected sequence is now proven end to end.
-
-Two facts make this worth settling as a decision rather than leaving as one runbook's local habit:
+Two things make it worth writing down now rather than after the fact:
 
 - **The next VM is already queued.** Home Assistant OS (VM 210, 2 vCPU / 4 GB, [ADR 25](25-home-assistant-thin-client.md))
   is the next guest, and it will be built by whoever reads the runbook next — possibly an agent with no
   memory of this session.
-- **The mechanics are not obvious.** A `.qcow2` is a disk image, not an ISO; `pvesm set --content`
-  replaces rather than appends; `qm importdisk` leaves the disk unattached; `qm resize` grows the device
-  but not the filesystem. Each of those cost a debugging cycle during VM 250.
+- **The mechanics are not obvious, and the runbook had them wrong.** Building VM 250 surfaced six defects
+  in the documented sequence — all in the *mechanics*, none in the approach. A `.qcow2` is a disk image,
+  not an ISO; `pvesm set --content` replaces rather than appends; `qm importdisk` leaves the disk
+  unattached; `qm resize` grows the device but not the filesystem. Each cost a debugging cycle, and each
+  would have cost the next person the same.
+
+The reproducibility property is the reason to fix the method now, while there is exactly one VM to be
+consistent with. A second VM built a different way would make the divergence permanent.
 
 Proxmox's own guidance splits by intent: an ISO install is the documented path for a one-off VM, while
 cloud images are recommended for repeatable deployment — and the docs go further, preferring images you
@@ -33,8 +33,8 @@ build yourself over vendor-supplied ones.
 ## Decision
 
 **Every Linux VM in the lab is provisioned from a cloud image plus cloud-init, never from a
-hand-clicked installer.** The sequence is fixed and lives in
-[runbook 41](../runbooks/41-deploy-freeipa-server.md) §2 as the reference implementation.
+hand-clicked installer.** This is the lab's practice from day one, now made explicit. The procedure is
+fixed and lives in [runbook 41](../runbooks/41-deploy-freeipa-server.md) §2.
 
 1. **Cloud image, not installer ISO.** Download the vendor's cloud image into the **`import`** content
    type — never `iso`. A `.qcow2` is a disk image; Proxmox files it under `import`
@@ -66,8 +66,8 @@ templates, not cloud images.
 
 ## Consequences
 
-- **A lost guest is a rebuild, not an archaeology exercise.** VM 216's disappearance cost a re-derivation;
-  the same loss now costs one runbook run. This is the property the decision exists for.
+- **A lost guest is a rebuild, not an archaeology exercise.** The build is a documented sequence, so
+  recreating a VM is a re-run rather than a re-derivation — which is the property this decision protects.
 - **The build is reviewable before it runs.** The guest's identity is a diff in a pull request, not a
   memory of what was clicked.
 - **The approach is portable.** The same `#cloud-config` works on Proxmox, on `cloudlab`, and on any
@@ -90,10 +90,11 @@ templates, not cloud images.
 
 ### Alternatives considered
 
-**Installer ISO, clicked through.** The documented Proxmox path for a one-off VM, and the reason the
-first FreeIPA VM was built that way. Rejected as the default because the result is not reproducible: the
-build exists only as a sequence of human actions, and a rebuild is a re-decision. Retained as the
-fallback for an OS with no cloud image.
+**Installer ISO, clicked through.** Proxmox's documented path for a single VM, and the obvious default
+for anyone coming from a desktop background. Rejected because the result is not reproducible: the build
+exists only as a sequence of human actions, so a rebuild is a re-decision. The lab has never used it —
+VM 250 is the first VM it has built, and it went through the cloud-image path — and this decision keeps
+it that way. Retained as the fallback for an OS with no cloud image.
 
 **Cloud-init without a cloud image** (install once, then template it). The Proxmox-recommended path —
 prepare a VM, then convert it to a template and clone. Rejected as the *first* step because it still

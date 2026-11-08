@@ -146,9 +146,9 @@ Three things follow, and they are the reason this is an amendment rather than a 
   the sibling CAs of [ADR 42](42-pki-topology-sibling-cas.md) no longer share a host, and a `pve1` reboot
   no longer takes every new login with it.
 - **`pve2` is the non-client host**, not `pve1` (item 7). `pve1` becomes an ordinary client candidate.
-- **The guest block is `25x`** ([ADR 31](31-static-address-scheme.md)): VMID 250, address `.250`. VM 216
-  and `.216` are retired with the removed guest and are not reused — the ID *is* the address, so a guest
-  on `pve2` cannot take a `21x` number.
+- **The guest block is `25x`** ([ADR 31](31-static-address-scheme.md)): VMID 250, address `.250`. VMID 216
+  was reserved for a `pve1` guest that was never built — the `21x` block belongs to `pve1`, so a guest on
+  `pve2` cannot use it. The stale `ipa.internal` → `.216` DNS records are replaced by the `25x` ones.
 
 Unchanged: the realm, the DNS authority, the CA relation, the WebUI-direct rule, the enrolment scope, the
 break-glass path and the rollout order. [ADR 44](44-authentik-identity-provider.md) is amended in the same

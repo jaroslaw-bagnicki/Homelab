@@ -19,7 +19,7 @@ Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month 
 - **(docs)** Plan a Mistral Large 4 vs DeepSeek V4.1 Flash A/B — one Mistral Pro allowance serves candidate and control, so only task success can decide — [idea 16](docs/ideas/16-ai-model-mistral-large-4.md)
 - **(docs)** Audit the OptiPlex 7050 MFF for `pve2` — 65 W i5-7500, a sound but small 128 GB SSD, MEBx unreachable — [research 52](docs/research/52-optiplex7050-hardware-diagnostic.md)
 - **(fix)** Serve the fleet resolver from the hosts and alert when a `.internal` leaf nears expiry — [ADR 40](docs/decisions/40-internal-dns-proxy-edge.md)
-- **(feat)** Deploy the FreeIPA server on `pve` — external-ca under the fleet root, M1 verified; TPM-backed Dogtag custody parked — [runbook 41](docs/runbooks/41-deploy-freeipa-server.md)
+- **(docs)** Author the FreeIPA M1 runbook and its Ansible roles — external-ca under the fleet root, TPM-backed Dogtag custody parked — [runbook 41](docs/runbooks/41-deploy-freeipa-server.md)
 - **(feat)** Load SSH identities explicitly — empty agent by default, loaders for `automation`, `agent-ai` and break-glass, one preflight that establishes the session — [ADR 41](docs/decisions/41-ssh-certificates-step-ca.md)
 
 ## 2026‑10

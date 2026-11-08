@@ -255,8 +255,9 @@ dig @192.168.2.240 _kpasswd._tcp.ipa.internal SRV +short   # 0 100 464 ipa.inter
 dig @192.168.2.240 _ldap._tcp.ipa.internal SRV +short      # 0 100 389 ipa.internal.
 ```
 
-> **Check the stale record is gone.** VM 216 was removed but its A/PTR records were not, so before this
-> step `ipa.internal` resolved to the dead `192.168.2.216`. Confirm the role replaced them:
+> **Check the stale record is gone.** The `ipa.internal` A and PTR records were published for a planned
+> `pve1` guest (VMID 216) that was never built, so before this step `ipa.internal` resolved to the dead
+> `192.168.2.216`. Confirm the role replaced them:
 >
 > ```sh
 > dig @192.168.2.240 ipa.internal +short      # must be 192.168.2.250, never .216
