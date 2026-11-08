@@ -8,7 +8,9 @@ collections:
   - name: azure.azcollection
     version: ">=1.19.0"
   # OPNsense router (`router`) — manages the FreeBSD appliance over its REST API.
-  # Pin the release matching the router's OPNsense version: the collection has NO
-  # multi-version support (one release per OPNsense release). Needs `httpx` on the controller.
+  # Pinned exactly: the collection has NO multi-version support (one release per OPNsense
+  # release), so an unbounded range would let a fresh install pull modules for a newer
+  # OPNsense against the fixed 26.7 appliance. 26.1.11 is the collection's own
+  # "stable/tested" release. Needs `httpx` on the controller.
   - name: oxlorg.opnsense
-    version: ">=26.1.0"
+    version: "26.1.11"

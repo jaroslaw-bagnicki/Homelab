@@ -5,8 +5,10 @@
 # `ca` is excluded: the CA guest installs root + intermediate for its own TLS (runbook 35 §7).
 # Control node per host: `cloudlab` from the dev container (`--limit cloudlab`), the LAN nodes
 # from a workstation (`--limit 'physical:proxmox_guests'`).
+# `router` is excluded too: it is a FreeBSD appliance driven over its REST API, and this
+# role's trust-store steps are Linux-only (apt / update-ca-certificates).
 - name: Apply the fleet CA root trust
-  hosts: all:!ca
+  hosts: all:!ca:!router
   become: true
   roles:
     - ca_trust

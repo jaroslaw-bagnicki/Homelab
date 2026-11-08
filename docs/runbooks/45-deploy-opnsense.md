@@ -192,8 +192,15 @@ confirm `ping 192.168.99.1`.
 ## 6. Disable `bge` hardware offloading
 
 `bge`'s offload support is weaker than Intel's and can cause packet loss on the 5720 (idea 07):
-**Interfaces → Settings** → **uncheck** *Hardware CRC Checksum Offloading*, *Hardware TCP
-Segmentation Offloading (TSO)* and *Hardware Large Receive Offloading (LRO)* → **Save**.
+**Interfaces → Settings** → leave **checked** *Disable hardware checksum offloading*,
+*Disable hardware TCP segmentation offload* and *Disable hardware large receive offload* →
+**Save**.
+
+> The options are worded as **disable** switches and are **checked by default** — checking them
+> turns offloading **off**, which is what this step wants. Clearing them would *enable* CRC/TSO/LRO
+> and reintroduce the packet-loss problem. Verify after saving with
+> **Interfaces → Diagnostics → Show all** (or `ifconfig bge0`): `txcsum`, `rxcsum`, `tso` and
+> `lro` must **not** appear in the enabled feature list.
 
 ## 7. LAN DHCP, NAT, firewall, DNS
 
@@ -354,10 +361,33 @@ ansible-playbook ansible/playbooks/playbook-router.yml --diff
 
 ### 13d. Netdata — Tier B child
 
-After the plugin installs, configure it as a **child streaming to the Parent** on `pve1` — the
-collection has **no module** for this, so set it in the plugin (**System → Netdata**):
-- stream destination **`192.168.2.201:19996`** with **`:SSL`** (the Parent forces TLS, self-signed);
-- keep it **RAM-only** (no disk `dbengine`) to spare the 24 GB mSATA ([ADR 48](../decisions/48-lan-router-futro-s930.md)).
+The `os-netdata` plugin's GUI (**System → Netdata**) exposes only **Enable**, **Listen address**
+and **Listen port** — it cannot configure streaming. The collection has **no module** for it
+either, so the child configuration is a **persistent `stream.conf`** written over SSH:
+
+1. **Fetch the Parent's shared stream key** from Key Vault `homelab-bysxdb-kv`
+   (`netdata-stream-api-key`) — the same key the `netdata` role renders for `edge`.
+2. **Write `/usr/local/etc/netdata/stream.conf`** (FreeBSD path; the plugin does not manage this
+   file, so it survives plugin changes):
+
+   ```ini
+   [stream]
+       enabled = yes
+       destination = 192.168.2.201:19996:SSL
+       api key = <netdata-stream-api-key>
+       # The Parent's certificate is self-signed: the hop is encrypted, identity unverified.
+       # Pinning it via CAfile is the tracked follow-up (ADR 27).
+       ssl skip certificate verification = yes
+   ```
+
+3. **Restart the service** — `service netdata restart` (or **System → Netdata → Save**, which
+   restarts it) — then confirm the child connects.
+
+> **Storage stays on disk.** The plugin regenerates `netdata.conf` from its own template on every
+> save and that template has no `[db]` section, so a hand-added `mode = ram` would be silently
+> lost. It is also no longer needed: the flash-care concern in research 31 was sized for the
+> **8 GB** Innodisk, and the fitted **24 GB** Kingston plus the `/var/log` RAM disk (§9) leaves
+> ample headroom for a small `dbengine` ([ADR 48](../decisions/48-lan-router-futro-s930.md)).
 
 Verify on the **Netdata dashboard on `pve1`** that `router` appears as a child.
 

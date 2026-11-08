@@ -41,7 +41,12 @@ Hostname **`router`** ([ADR 33](33-fleet-node-hostnames.md)).
   ([idea 08](../ideas/08-lte-wan-failover.md)).
 - **WAN behind the ISP router.** Double-NAT is **accepted for now**; whether the ISP router is
   replaced or put in DMZ/bridge mode stays an open question (issue #96).
-- **Flash care** on the 24 GB mSATA: **RAM disks** for `/var/log` + `/tmp` and ZFS TRIM.
+- **Flash care** on the 24 GB mSATA: **RAM disks** for `/var/log` + `/tmp` and ZFS TRIM. The
+  high-churn write path is covered by the RAM disks, so **Netdata keeps its normal on-disk
+  `dbengine`** — a RAM-only store was considered and dropped: the plugin regenerates
+  `netdata.conf` from a template with no `[db]` section, so the setting would be silently
+  lost, and the 24 GB module (3× the retired 8 GB Innodisk that research 31’s concern was
+  sized for) leaves ample headroom.
 - **`bge` offloading off** — CRC/TSO/LRO disabled, per idea 07 §OPNsense behaviour.
 - **Tenda Nova → bridge mode**, via the Tenda App (documented for MW3/MW5, which disables the
   mesh's guest network, QoS, DNS and DHCP). Bridged, the mesh's ports/Wi-Fi ride the **ISP's

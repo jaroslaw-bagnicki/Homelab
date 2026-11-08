@@ -30,9 +30,10 @@ Deployed by [runbook 45](../../../docs/runbooks/45-deploy-opnsense.md) §13; tra
 
 - **Installs the `os-netdata` plugin** (`oxlorg.opnsense.package`, `action: install`).
   Netdata then runs as a **Tier B child** streaming to the Parent on `pve1`
-  (`192.168.2.201:19996`, TLS). **The streaming configuration itself is made in the plugin**
-  (System → Netdata) — the collection exposes no module for it — so that step is documented in
-  runbook 45 §13 rather than automated here.
+  (`192.168.2.201:19996`, TLS). **The plugin GUI only covers enable/listen/port** — it cannot
+  configure streaming, and the collection exposes no module for it — so the child is
+  configured through a persistent `/usr/local/etc/netdata/stream.conf` (the plugin does not
+  manage that file). The procedure is in runbook 45 §13d rather than automated here.
 - **Configures the syslog-ng remote destination** to the VictoriaLogs syslog listener
   (`oxlorg.opnsense.syslog`, `transport: tls4`) — **gated by `opnsense_syslog_enabled`**, off
   once the store's syslog listener is live (it has been since 2026-10-11, runbook 33 §7). For TLS the module's
