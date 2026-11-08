@@ -15,7 +15,9 @@ operating on its own.
 
 ## Dev Container
 
-- **Default terminal shell is PowerShell (`pwsh`)** — run `.ps1` scripts directly (e.g. `.devcontainer/scripts/setup-azps.ps1`), never wrap with `pwsh -File`
+- **Default terminal shell is PowerShell Core (`pwsh`)** — run `.ps1` scripts directly (e.g. `.devcontainer/scripts/setup-azps.ps1`), never wrap with `pwsh -File`
+- **PowerShell is the primary scripting language in agent sessions** — prefer `pwsh` for commands, one-liners and scripts (including `gh` invocations); use `bash`/`bash -c` only when a task is inherently bash (e.g. `ssh` one-liners, shell-specific syntax) or the script is a `.sh` file
+- **Never wrap a command in a sub-shell (`bash -c '...'`, `pwsh -c '...'`, `pwsh -Command ...`)** to run it — invoke the command directly in the persistent terminal so the operator sees it and its live output. Sub-shell wrapping is explicitly prohibited for agent-issued commands; the only exception is passing a one-liner *to a remote host* over `ssh` (e.g. `ssh host 'cmd'`), which is inherent to SSH, not a local sub-shell
 - Run bash scripts with `bash script.sh` when needed
 
 ## Documentation
@@ -55,9 +57,8 @@ Avoid ADR bloat — reference other ADRs and issues by name, do not restate thei
 ## Git Workflow
 
 - **GitHub repository**: `https://github.com/jaroslaw-bagnicki/Homelab` (owner: `jaroslaw-bagnicki`, repo: `Homelab`)
-- **Always use GitHub MCP tools** for GitHub operations — never GitKraken MCP tools for GitHub
+- **Always use GitHub MCP tools for all GitHub operations — reads and writes** (`search_*`, `list_*`, `pull_request_read`, `issue_read`, `issue_write`, `add_issue_comment`, `update_pull_request`, `create_pull_request`, …) — never GitKraken MCP tools for GitHub, and never the `gh` CLI for GitHub operations
 - **If a GitHub MCP tool call fails**, report the error to the user and do not attempt the operation via any other tool or CLI
-- **Update PRs non-interactively — never via the GitHub MCP form.** The MCP write tools (`update_pull_request`, `issue_write`, …) only apply when a human clicks **Submit**, so an autonomous session silently changes nothing. Use `gh` with a token pulled from the dev container's git credential and never printed: `export GH_TOKEN=$(printf 'protocol=https\nhost=github.com\n\n' | git credential fill 2>/dev/null | sed -n 's/^password=//p')`, then `gh pr edit <N> --body-file <file>`; read the body back to confirm. Read-only MCP tools are unaffected.
 - **Work on a feature branch in a worktree** — see [Worktree Workflow](#worktree-workflow) below; do not commit to `main` from an autonomous session
 - **Never open a PR unless the user explicitly asks** — push the branch and report it, then stop. Opening the PR is the user's call, not the agent's; see [Worktree Workflow](#worktree-workflow).
 - **Commit message format**: `(type) description` with parentheses. Common types: `docs`, `feat`, `fix`, `chore`, `refactor`
@@ -206,6 +207,7 @@ The boundary between planning (read-only) and implementation (build) must be cle
 ## Ansible Verification
 
 - **ansible-lint before commit.** Run `ansible-lint ansible/roles/<role>/` on every changed role before committing. Lint failures are fatal and must be resolved.
+- **Never hide a live playbook run from the operator.** Run `ansible-playbook` bare in the persistent terminal — never pipe it through `tail`, `head`, `grep`, `Out-Null` or any other filter, and never redirect its output to a file to read back. The operator must watch the run scroll live in their own terminal; this is a hard requirement, not a preference. (Pipes are acceptable only on separate read-only inspection commands, never on the playbook itself.)
 - **Deploy after CR, before merge — never before CR.** For non-trivial Ansible changes, run `ansible-playbook playbook.yml --diff` against the target host once the PR has been reviewed, and merge only after that run is clean. An unreviewed change is never deployed. Bugs in tasks (idempotency, output parsing, module parameters) only surface at runtime, so the live run belongs inside the review loop — there is no separate post-merge deployment step.
 - **Pre-flight: fix world-writable workspace.** If the dev container workspace is world-writable (default), Ansible refuses to read `ansible.cfg`. Run `chmod 755 /workspaces/Homelab /workspaces/Homelab/ansible` before `ansible-playbook`.
 - **Never commit `ansible/ansible.log`.** The file is `.gitignore`'d but may have been tracked before. Untrack it with `git rm --cached ansible/ansible.log` if it appears in `git status`.

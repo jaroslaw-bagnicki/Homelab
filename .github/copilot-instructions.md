@@ -10,7 +10,9 @@
 
 ## Dev Container
 
-- **Default terminal shell is PowerShell (`pwsh`)** — run `.ps1` scripts directly (e.g. `.devcontainer/scripts/setup-azps.ps1`), never wrap with `pwsh -File`
+- **Default terminal shell is PowerShell Core (`pwsh`)** — run `.ps1` scripts directly (e.g. `.devcontainer/scripts/setup-azps.ps1`), never wrap with `pwsh -File`
+- **PowerShell is the primary scripting language in agent sessions** — prefer `pwsh` for commands, one-liners and scripts (including `gh` invocations); use `bash`/`bash -c` only when a task is inherently bash (e.g. `ssh` one-liners, shell-specific syntax) or the script is a `.sh` file
+- **Never wrap a command in a sub-shell (`bash -c '...'`, `pwsh -c '...'`, `pwsh -Command ...`)** to run it — invoke the command directly in the persistent terminal so the operator sees it and its live output. Sub-shell wrapping is explicitly prohibited for agent-issued commands; the only exception is passing a one-liner *to a remote host* over `ssh` (e.g. `ssh host 'cmd'`), which is inherent to SSH, not a local sub-shell
 - Run bash scripts with `bash script.sh` when needed
 
 ## Documentation
@@ -52,9 +54,8 @@
 ## Git Workflow
 
 - **GitHub repository**: `https://github.com/jaroslaw-bagnicki/Homelab` (owner: `jaroslaw-bagnicki`, repo: `Homelab`)
-- **Always use GitHub MCP tools** for GitHub operations — never GitKraken MCP tools for GitHub
+- **Always use GitHub MCP tools for all GitHub operations — reads and writes** (`search_*`, `list_*`, `pull_request_read`, `issue_read`, `issue_write`, `add_issue_comment`, `update_pull_request`, `create_pull_request`, …) — never GitKraken MCP tools for GitHub, and never the `gh` CLI for GitHub operations
 - **If a GitHub MCP tool call fails**, report the error to the user and do not attempt the operation via any other tool or CLI
-- **Don't use the PR form in VS Code Copilot sessions.** The GitHub MCP **write** tools (`update_pull_request`, `issue_write`, …) render an interactive form that only applies when it is submitted — never use them here. Update PRs non-interactively with the `gh` CLI, authenticating from the dev container's git credential and never printing the token: `export GH_TOKEN=$(printf 'protocol=https\nhost=github.com\n\n' | git credential fill 2>/dev/null | sed -n 's/^password=//p')`, then `gh pr edit <N> --body-file <file>`; read the body back to confirm. Read-only MCP tools are unaffected.
 - **Default workflow: feature branch → push → PR on request → review (CR) → deploy → merge.** Do not commit to `main` directly — create a feature branch (`fix/…`, `feat/…`, `docs/…`) and push it. **Never open a PR unless the user explicitly asks for one** — push the branch, report it, and stop; opening the PR is the user's call. The user reviews; the change is then deployed to the target host (never before the review, see [Ansible Verification](#ansible-verification)) and merged — never merge the PR yourself.
 - **PRs ship with their `CHANGELOG.md` entry** — a notable PR adds or updates its entry (newest first) in the same PR, so the log merges with the change, not after; a PR that fails the notable bar below needs none
 - **`CHANGELOG.md` is a compact index, not a narrative.** **One line per entry, one entry per workstream** — fold a multi-commit or multi-PR workstream (its ADR, its runbook, follow-up PRs) into one entry, and update that entry rather than adding a row when a later PR continues it. Headline plus at most one qualifying clause, **under ~200 characters**, ending in **one artefact link** — two when an ADR and its runbook are both new — and never `#NNN` issue links when an artefact link exists. Rationale, measurements, alternatives and configuration detail belong in the linked ADR/runbook/report, not here. **State the outcome, not the configuration** — TLS/auth mechanisms, retention windows, ports, hostnames and VMIDs are noise the ADR/runbook already carries: "Adopt VictoriaLogs as the log store in an LXC on pve1", not "VictoriaLogs on vtstack (LXC 214) — HTTPS + AKV basic auth, 30-day retention, LAN-only". **`(type)` describes what the change delivers, not the file list** — a capability shipped in the lab is `feat` even when the PR carries only docs (hand-built work is recorded, not automated), while a decision, research doc or index/state update is `docs`; when a later PR continues a folded workstream, re-type the entry if what it delivers changed. Entries sit under `## YYYY‑MM` headings (non-breaking hyphen, newest month and newest entry first) — if it will not fit on one line, it is not a changelog entry.
@@ -63,6 +64,12 @@
 - **Commit message format**: `(type) description` with parentheses. Common types: `docs`, `feat`, `fix`, `chore`, `refactor`
 - **Never rebase** unless explicitly asked
 - **Hosted CI is deliberately out of scope** — verification is local (`ansible-lint` on changed roles, plus a live `--diff` playbook run after review and before merge, per `AGENTS.md`); do not propose a CI workflow or pipeline. See `docs/decisions/32-no-hosted-ci.md` (ADR 32) — it is scoped to build/test validation and leaves deployment automation to ADR 22.
+
+## Ansible Verification
+
+- **ansible-lint before commit.** Run `ansible-lint ansible/roles/<role>/` on every changed role before committing. Lint failures are fatal and must be resolved.
+- **Never hide a live playbook run from the operator.** Run `ansible-playbook` bare in the persistent terminal — never pipe it through `tail`, `head`, `grep`, `Out-Null` or any other filter, and never redirect its output to a file to read back. The operator must watch the run scroll live in their own terminal; this is a hard requirement, not a preference. (Pipes are acceptable only on separate read-only inspection commands, never on the playbook itself.)
+- **Deploy after CR, before merge — never before CR.** For non-trivial Ansible changes, run `ansible-playbook playbook.yml --diff` against the target host once the PR has been reviewed, and merge only after that run is clean. An unreviewed change is never deployed.
 
 ## Security
 
