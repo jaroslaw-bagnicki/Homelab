@@ -17,7 +17,7 @@ operating on its own.
 
 - **Default terminal shell is PowerShell Core (`pwsh`)** — run `.ps1` scripts directly (e.g. `.devcontainer/scripts/setup-azps.ps1`), never wrap with `pwsh -File`
 - **PowerShell is the primary scripting language in agent sessions** — prefer `pwsh` for commands, one-liners and scripts (including `gh` invocations); use `bash`/`bash -c` only when a task is inherently bash (e.g. `ssh` one-liners, shell-specific syntax) or the script is a `.sh` file
-- **Never wrap a command in a sub-shell (`bash -c '...'`, `pwsh -c '...'`, `pwsh -Command ...`)** to run it — invoke the command directly in the persistent terminal so the operator sees it and its live output. Sub-shell wrapping is explicitly prohibited for agent-issued commands; the only exception is passing a one-liner *to a remote host* over `ssh` (e.g. `ssh host 'cmd'`), which is inherent to SSH, not a local sub-shell
+- **Run agent-issued commands bare in the persistent terminal** — invoke the command directly so the operator sees it and its live output. **Do not wrap state-changing or long-running commands in a sub-shell** (`bash -c '...'`, `pwsh -c '...'`, `pwsh -Command ...`) — no `ansible-playbook`, `git push/commit/merge`, `gh` writes, service restarts, or anything that mutates state or produces output the operator must watch. Harmless read-only plumbing one-liners (e.g. `export GH_TOKEN=$(...)`, piping into `Select-Object`/`ConvertFrom-Json` for inspection) are acceptable; when in doubt, run it bare. The one structural exception is passing a one-liner *to a remote host* over `ssh` (e.g. `ssh host 'cmd'`), which is inherent to SSH, not a local sub-shell
 - Run bash scripts with `bash script.sh` when needed
 
 ## Documentation
