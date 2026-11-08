@@ -156,14 +156,18 @@ thread ([chat 42](https://gemini.google.com/share/b43a9aa2cefe)):
   switch spent on the uplink, 1 Gbps inter‑switch bottleneck, two web panels); a 16‑port fanless
   smart switch (TL‑SG1016DE / ZyXEL GS1200‑16 / HP 1810G‑24) gives all 16 ports, one panel, no
   bottleneck. With the S930's 3 NICs, one switch + one trunk is the natural shape.
+  **Operator leaning (2026‑11‑08): 2× 8‑port** — cheapest purchase and the lowest running cost;
+  used 24‑port server‑grade gear (GS752TS class) is rejected on ~20–35 W continuous draw and fan
+  noise in a living space, not on capability.
 - **Spec checklist for any candidate** (used market included): `Gigabit` (10/100/1000 — skip
   10/100), `IEEE 802.1Q` + `Smart / Web‑Managed / Easy Smart` (never "Unmanaged"/"Plug‑and‑Play").
   Rejected on exactly those grounds: Netgear JGS524, Cudy GS1016, Lanberg RSGE‑16, HP ProCurve
   1410 (HP **18xx** series = the managed ones), HP A3600‑24‑PoE+ (10/100 ports), Dell WW060 (blade
   pass‑through module, not a switch). Conditional: JGS524E only as **v2** (v1 has no web GUI),
   GS752TS only if cheap and placed out of the room (fans, 20–35 W, SFP is 1G not 10G).
-- **GS108E vs the lab's TL‑SG108E**: same 8× 1G fanless metal box; GS108E has 64 VLANs (vs 32) and
-  a ProSAFE lifetime warranty, but **no LAG** (TL‑SG108E has static LAG, up to 2 groups) and a web
+- **GS108E vs the lab's TL‑SG108E**: same 8× 1G fanless metal box; GS108E has 64given the 2×8‑port
+  leaning, a **second TL‑SG108E** is the ecosystem‑consistent pick (same Easy Smart UI, LAG,
+  guaranteed web GUI); GS308E‑400EUS is the always‑web‑GUI new alternative (3‑year EU warrantytic LAG, up to 2 groups) and a web
   GUI **only from hardware v3** — v1/v2 need the Windows ProSAFE Plus Utility. A used GS108E
   (e.g. 109 PLN on Allegro) is only worth it if the rear label says `GS108Ev3`; GS308E‑400EUS is
   the always‑web‑GUI new alternative (3‑year EU warranty instead).
