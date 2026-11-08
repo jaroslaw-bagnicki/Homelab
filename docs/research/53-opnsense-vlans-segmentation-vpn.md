@@ -25,8 +25,9 @@ options. Nothing here is an ADR.
 ## §1 — Do you need a managed switch for VLANs on OPNsense?
 
 **Short answer: yes**, in the vast majority of cases. OPNsense emits 802.1Q‑tagged Ethernet
-frames; a plain unmanaged switch either drops them as malformed or forwards them to all ports
-(**VLAN leaking** — traffic mixing, or no connectivity for endpoints that can't parse tags).
+frames; a plain unmanaged switch forwards the tags transparently (it does not parse them), so the
+real limitation is that it **cannot map tagged traffic to per‑port access VLANs** — every endpoint
+behind it lands in the same flat segment and simply can't use the tags, i.e. no segmentation.
 A managed / "easy smart" switch supporting **IEEE 802.1Q** receives the tagged trunk, splits
 VLANs onto access (untagged) ports (e.g. ports 1‑4 → VLAN 10 DOM, ports 5‑6 → VLAN 20 IoT), and
 lets VLAN‑aware APs broadcast multiple SSIDs mapped to VLANs. Enterprise gear (Cisco/Aruba) is
@@ -95,26 +96,27 @@ LAN `192.168.10.0/24` (OPNsense `192.168.10.1`).
      the FunBox.
   2. **Static route on the FunBox**: destination `192.168.10.0`, mask `255.255.255.0` (/24),
      gateway `192.168.1.2` (verify with `ping 192.168.10.1` from the other floor).
-  3. **OPNsense firewall**: `Firewall → Rules → WAN` — allow inbound from `192.168.1.0/24` to
-     `192.168.10.0/24`; check `Firewall → NAT → Outbound` so return traffic is not NAT‑masked if
-     original source IPs must be preserved.
+  3. **OPNsense WAN + firewall**: with WAN statically on RFC1918 `192.168.1.2`, first **disable
+     *Block private networks*** on the WAN interface (`Interfaces → WAN`) — otherwise OPNsense
+     discards the house→office packets before any rule is evaluated (runbook 45 already requires
+     this for both build and cutover WANs). Then `Firewall → Rules → WAN` — allow inbound from
+     `192.168.1.0/24` to `192.168.10.0/24`; check `Firewall → NAT → Outbound` so return traffic is
+     not NAT‑masked if original source IPs must be preserved.
 - **If the FunBox blocks static routes**: fall back to **port forwarding / DMZ** on the FunBox to
   the OPNsense WAN IP, or put the ISP device in **bridge mode** and make OPNsense the edge router
   for the whole house (the second switch plugged into another OPNsense port or a managed switch) —
   this is the ADR 48 endgame.
 
-## §5 — VPN instead of static routes: the recommended remote-access path
+## §5 — VPN instead of static routes: the remote-access path
 
 Rather than port‑forwarding or fighting the FunBox's routing table, run a **VPN server on
-OPNsense** — one port forward on the ISP router is the only change there, clients get a virtual
-IP with full L3 access to the homelab subnet, and the rest of the house traffic is untouched.
-
-### Protocols
+OPNsense** — clients get a virtual IP with full L3 access to the homelab subnet, and the rest of
+the house traffic is untouched. Which protocol works depends on the ISP connection:
 
 | Protocol | Verdict | Why |
 |---|---|---|
-| **WireGuard** (native in OPNsense, kernel/FreeBSD) | ✅ recommended | fastest, lowest latency, sub‑second handshake; ideal for site‑to‑site and phone/laptop clients |
-| **Tailscale** (`os-tailscale` plugin) / Netmaker | ✅ alternative | WireGuard‑based overlay mesh with NAT traversal/DERP — for when the ISP gives no public IP or blocks inbound traffic; no FunBox changes at all |
+| **WireGuard** (native in OPNsense, kernel/FreeBSD) | ✅ recommended **only with a reachable public address** — needs one UDP port forwarded on the ISP router | fastest, lowest latency, sub‑second handshake; ideal for site‑to‑site and phone/laptop clients. **Under the lab's current CGNAT (ADR 08) the FunBox port‑forward cannot expose it** — the setup sketch below works only once a public/static address is obtained |
+| **Tailscale** (`os-tailscale` plugin) / Netmaker | ✅ **the path that works today** (CGNAT, no inbound possible) | WireGuard‑based overlay mesh with NAT traversal/DERP — no public IP and no FunBox changes needed |
 
 ### WireGuard setup sketch (from the thread)
 
@@ -153,10 +155,11 @@ The lab runs out of ports on the current **TP‑Link TL‑SG108E** (8× GbE Easy
 `192.168.2.230`, [research 24](24-network-topology-design.md)). Essentials from the switch
 thread ([chat 42](https://gemini.google.com/share/b43a9aa2cefe)):
 
-- **2× 8‑port vs one 16‑port**: a second 8‑port switch leaves **14** usable ports (one port per
-  switch spent on the uplink, 1 Gbps inter‑switch bottleneck, two web panels); a 16‑port fanless
-  smart switch (TL‑SG1016DE / ZyXEL GS1200‑16 / HP 1810G‑24) gives all 16 ports, one panel, no
-  bottleneck. With the S930's 3 NICs, one switch + one trunk is the natural shape.
+- **2× 8‑port vs one 16‑port**: with one port per switch spent on the uplink, a second 8‑port switch
+  leaves **14** endpoint ports (1 Gbps inter‑switch bottleneck, two management panels); a single
+  16‑port fanless smart switch (TL‑SG1016DE / ZyXEL GS1200‑16) leaves **15** endpoint ports, one
+  panel, no bottleneck (24‑port class: HP 1810G‑24 / ZyXEL GS1200‑24 → 23). With the S930's
+  3 NICs, one switch + one trunk is the natural shape.
   **Operator leaning (2026‑11‑08): 2× 8‑port** — cheapest purchase and the lowest running cost;
   used 24‑port server‑grade gear (GS752TS class) is rejected on ~20–35 W continuous draw and fan
   noise in a living space, not on capability.
@@ -166,12 +169,15 @@ thread ([chat 42](https://gemini.google.com/share/b43a9aa2cefe)):
   1410 (HP **18xx** series = the managed ones), HP A3600‑24‑PoE+ (10/100 ports), Dell WW060 (blade
   pass‑through module, not a switch). Conditional: JGS524E only as **v2** (v1 has no web GUI),
   GS752TS only if cheap and placed out of the room (fans, 20–35 W, SFP is 1G not 10G).
-- **GS108E vs the lab's TL‑SG108E**: same 8× 1G fanless metal box; GS108E has 64 VLANs (vs 32) and
-  a ProSAFE lifetime warranty, but **no LAG** (TL‑SG108E has static LAG, up to 2 groups) and a web
-  GUI **only from hardware v3** — v1/v2 need the Windows ProSAFE Plus Utility. A used GS108E
-  (e.g. 109 PLN on Allegro) is only worth it if the rear label says `GS108Ev3`; given the 2×8‑port
-  leaning, a **second TL‑SG108E** is the ecosystem‑consistent pick (same Easy Smart UI, LAG,
-  guaranteed web GUI); GS308E‑400EUS is the always‑web‑GUI new alternative (3‑year EU warranty).
+- **GS108E vs the lab's TL‑SG108E**: same 8× 1G fanless metal box class. GS108E: 64 VLANs (vs 32),
+  ProSAFE lifetime warranty, **no LAG** in most Plus revisions, and a web GUI **only from hardware
+  v3** — v1/v2 need the Windows ProSAFE Plus Utility, so a used unit (e.g. 109 PLN on Allegro) is
+  only worth it if the rear label says `GS108Ev3`. TL‑SG108E: static LAG up to 2 groups — **but note
+  the lab's existing TL‑SG108E is HW V1 whose web UI is non‑functional (HTTP 501, EOL line); it is
+  managed via the Easy Smart Configuration Utility**, so a second unit's web GUI depends on its
+  hardware revision, not guaranteed ([research 24](24-network-topology-design.md), runbook 21).
+  Given the 2×8‑port leaning, a second TL‑SG108E keeps the same management model; GS308E‑400EUS is
+  the new always‑web‑GUI alternative (3‑year EU warranty).
 - **SFP 1 Gbps ports** (e.g. ZyXEL GS1200‑10V3: 8× RJ45 + 2× SFP 1G, web GUI, LAG, passive, ~4.4 W,
   default IP `192.168.1.3`): only worth it as "free" uplink ports (SFP‑to‑RJ45 module or DAC frees
   an RJ45 port), for **galvanic isolation over fiber between buildings**, or runs >100 m
