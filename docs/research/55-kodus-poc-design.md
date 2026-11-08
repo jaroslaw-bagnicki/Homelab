@@ -27,9 +27,14 @@ successful pass.
   ([runbook 44](../runbooks/44-copilot-mistral-byok.md)) drops straight in. Self-hosted infers the
   provider from the model name (kodustech/kodus-ai#1687) — set the generic OpenAI-compatible fields
   explicitly.
-- **Self-host** — `kodustech/kodus-installer`: clone, fill `.env`, `./scripts/install.sh` (Compose), or
-  the included **Helm chart** for k8s/OpenShift. Secrets (GitHub App ID/private key, webhook secret,
-  LLM key) stay in your secret store, read at runtime. First deploy 15–30 min per vendor docs.
+- **Self-host** — `kodustech/kodus-installer`: clone, `cp .env.example .env`, run
+  `./scripts/generate-secrets.sh`, then `./scripts/validate-env.sh`, then `./scripts/install.sh`
+  (Compose); the installer exits if `.env` is absent and does not create it. A **Helm chart** is also
+  included for k8s/OpenShift. All variable names come from `.env.example` — do not invent them; the
+  self-hosted LLM config is the env-declared provider path (kodus-ai#1687, #2362), with Mistral as the
+  OpenAI-compatible base URL, not a `MISTRAL_API_KEY`-style guess. Secrets (GitHub App ID/private
+  key, webhook secret, LLM key) stay in your secret store, read at runtime. First deploy 15–30 min per
+  vendor docs.
 - **Depth** — hybrid AST + LLM to cut false positives, codebase context learned over time, custom
   **Kody Rules** (the lever for `AGENTS.md`-style adherence). Benchmarks: 63.4 F1 on Martian's Code
   Review Bench (Oct 2026, via cubic — vendor-adjacent source), vs Greptile 63.2 / CodeRabbit 61.8.
@@ -48,17 +53,23 @@ credits (+ Actions minutes on private repos) after the 2026 billing changes (§1
   Kubernetes Secrets (never in git — ADR 15 / repo Security). `cloudlab` takes **no new workloads**
   (decommission planned). Fallback while the k3s migration ([ADR 22](../decisions/22-k3s-arc-homelab.md))
   is still held: Docker Compose **on `lab`**.
-- **Open question 1 — webhook ingress**: GitHub must reach the webhook URL; public ingress is held
-  ([ADR 24](../decisions/24-edge-ingress-appliance.md)) and the cloudflared tunnel still runs on the
-  outgoing `cloudlab`. Options: edge ingress once decided; temporary `cloudlab` tunnel for the POC
-  window only; or a LAN-only variant (drive reviews from the Kodus UI/CLI — measures cost and quality,
-  not the automated path).
+- **Open question 1 — webhook ingress**: GitHub must reach the webhook URL (`…/github/webhook`); public
+  ingress is held ([ADR 24](../decisions/24-edge-ingress-appliance.md)) and the cloudflared tunnel still
+  runs on the outgoing `cloudlab`. **Network note**: the existing Caddy runs on `homelab_net`
+  (runbook 16) while the Kodus Compose stack publishes the webhooks container on **host port 3332** on
+  `kodus-backend-services` — a Caddy route alone gives no resolvable upstream. Attach Caddy to the
+  Kodus network or route via the host port, and verify with the GitHub App "Ping" (200). Options:
+  edge ingress once decided; temporary `cloudlab` tunnel for the POC window only; or a LAN-only variant
+  (drive reviews from the Kodus UI/CLI — measures cost and quality, not the automated path).
 - **Open question 2 — k3s dependency**: POC rides on the held ADR 22 workstream or uses the Compose
   fallback; decide when starting.
-- **GitHub App for Kody** (separate from the Mistral app): `github.com/settings/apps/new`, webhook
-  secret, events `pull_request` / `issue_comment` / `pull_request_review_comment`; permissions
-  Metadata: read, Contents: read, **Pull requests: read/write**, Issues: read/write; install only on
-  the `Homelab` repo. Private key downloaded once, stored in K8s Secrets/AKV.
+- **GitHub App for Kody** (separate from the Mistral app): `github.com/settings/apps/new`. Webhook URL
+  path is **`/github/webhook`** (the webhooks service), not `/webhooks/github` — with the wrong path the
+  install looks fine but Kody never receives events (kodus-ai#1856). Events: `pull_request`,
+  `pull_request_review_comment`, `issue_comment`, **`push`**. Permissions: Metadata: read, Contents:
+  read, **Pull requests: read/write**, Issues: read/write, **Checks: read/write** (kodus-ai#1923). Set
+  the App's **callback URL and setup URL** to the Kodus web URL. Install only on the `Homelab` repo.
+  Private key downloaded once, stored in K8s Secrets/AKV.
 
 ## §4 Evaluation frame (what the POC must produce)
 

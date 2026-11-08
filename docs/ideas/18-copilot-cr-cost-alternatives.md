@@ -6,7 +6,7 @@
 > × a four-model "Balanced" council, plus Actions minutes on private repos. That is not acceptable, and
 > the reviewer is worth re-examining like the daily model was in [idea 16](16-ai-model-mistral-large-4.md).
 
-**Status**: 🔨 **POC running direction — Kodus (Kody) in K8s on `lab` (k3s) with `mistral-large-4` BYOK**, per [research 55](../research/55-kodus-poc-design.md), tracked in [#190](https://github.com/jaroslaw-bagnicki/Homelab/issues/190) (2026‑11‑08); the analysis is in [research 54](../research/54-external-code-review-delegation.md). No ADR — the POC decides.
+**Status**: 📋 **Planned — POC designed, not started** (Kodus/Kody in K8s on `lab` (k3s) with `mistral-large-4` BYOK), per [research 55](../research/55-kodus-poc-design.md), tracked in [#190](https://github.com/jaroslaw-bagnicki/Homelab/issues/190) (2026‑11‑08); the analysis is in [research 54](../research/54-external-code-review-delegation.md). No ADR — the POC decides.
 **Date**: 2026‑11‑08
 **Sources**: operator report, 2026‑11‑08 ("some CR cost 2–3× of the implementation cost after the rollout of
 changes how it works — not acceptable, seek alternatives") · [research 54](../research/54-external-code-review-delegation.md)
