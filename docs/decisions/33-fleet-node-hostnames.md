@@ -31,6 +31,7 @@ here: Ansible addresses hosts by name, and so do the runbooks and the `fleet-con
 | `pve1` | first virtualisation host (Wyse 5070) |
 | `pve2` | second virtualisation host (OptiPlex 7050) |
 | `edge` | public-ingress appliance (Wyse 3040) |
+| `router` | LAN router / firewall (Futro S930) |
 
 The Wyse 5070 was renamed **`ha` → `pve`** in 2026-09, and **`pve` → `pve1`** on 2026-11-06 when a
 second hypervisor arrived; its address `192.168.2.201` is unchanged ([ADR 31](31-static-address-scheme.md)
