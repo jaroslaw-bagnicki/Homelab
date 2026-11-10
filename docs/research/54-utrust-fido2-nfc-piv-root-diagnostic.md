@@ -212,7 +212,8 @@ this log keeps only the findings that shape that path:
   required for the token ceremony — the key is non-exportable, so workstation signing (WSL/Windows) is
   acceptable with the token plugged in only during the ceremony, per-signature PIN, and CSR
   subject/public-key verification on screen before signing (residual: one rogue 1-year intermediate;
-  the key itself cannot leak). The IronKey *file* ceremony stays air-gapped until retired (runbook 46).
+  the key itself cannot leak). The **IronKey is retired** — transient solution only, destroyed in
+  runbook 46 phase 4; no future IronKey usage.
 - OpenSC must claim the card on Linux — a 2023 report had default `opensc-pkcs11.so` not claiming a
   uTrust under Linux; retest on the actual unit (check 6). Identiv ships no Linux PKCS#11 module of its
   own; Key Manager is Windows-only.

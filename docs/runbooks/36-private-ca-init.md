@@ -1,5 +1,11 @@
 # Private CA — Offline Root and Intermediate Signing (Init + Annual Re-Sign)
 
+> 🪦 **Retired — superseded by [runbook 46](46-adopt-utrust-piv-root-custody.md).** The IronKey /
+> secure-stick flow was a **transient solution only**: once runbook 46 phase 4 completes (new root
+> distributed, both sibling CAs re-signed, old root removed from every trust store, IronKey key file
+> and backups destroyed), this runbook and the stick scripts (`root.sh`/`sign.sh`) are retired with
+> no future usage. Kept visible for history — do not run for new ceremonies.
+>
 > Generate the CA's 10-year **root** on an air-gapped signing machine (a live-USB Linux boot with no
 > network at all), keep it on a **secure USB stick** in a safe, and sign the certificate
 > request the deploy host produced. Step 1 runs once; step 3 repeats every year, before the intermediate

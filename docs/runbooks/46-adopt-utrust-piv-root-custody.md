@@ -134,7 +134,9 @@ Carry back only the public certificates: `root_ca.crt`, `intermediate_ca.crt`, `
    per node, `update-ca-certificates` output on Linux nodes).
 4. Once nothing chains to the old root: **remove the old root from every trust store by hand** — no
    CRL/OCSP covers roots (ADR 38) — and only then **destroy the IronKey `root_ca_key` file and every
-   backup copy**, last.
+   backup copy**, last. This **retires the IronKey completely** — it was a transient solution with no
+   future usage: [runbook 36](36-private-ca-init.md) and the stick flow (`root.sh`/`sign.sh` in the
+   offline kit) are retired with it.
 
 ## Backup token
 
@@ -169,6 +171,6 @@ unchanged. Decide before phase 2 and record the choice in research 54.
 - [research 54](../research/54-utrust-fido2-nfc-piv-root-diagnostic.md) — the diagnostic: capabilities, gates, verified command shapes
 - [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) — amended 2026-11-10: uTrust PIV slot 9C, root reissued
 - [issue #193](https://github.com/jaroslaw-bagnicki/Homelab/issues/193) — adoption tracking
-- [runbook 36](36-private-ca-init.md) — the IronKey ceremony this replaces · [runbook 35 §6–§7](35-deploy-step-ca.md) — CSR + install · [runbook 39](39-trust-private-ca.md) — root distribution · [runbook 41](41-deploy-freeipa-server.md) — FreeIPA CA
+- [runbook 36](36-private-ca-init.md) — 🪦 retired IronKey/stick ceremony this replaces · [runbook 35 §6–§7](35-deploy-step-ca.md) — CSR + install · [runbook 39](39-trust-private-ca.md) — root distribution · [runbook 41](41-deploy-freeipa-server.md) — FreeIPA CA
 - [offline signing kit](../private-ca-offline-signing/README.md) — `check-utrust.sh`, `sign-piv.sh`, `step` + `step-kms-plugin`
 - [research 36 §4–§5](../research/36-step-ca-machine-identity.md) — KMS/custody paths, `step-kms-plugin` requirement
