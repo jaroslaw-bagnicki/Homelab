@@ -13,7 +13,7 @@ software, then writes a self-signed certificate over it.
 
 - [01-setup.md](01-setup.md) is done: `step` and `step-kms-plugin` are in the kit, `pcscd` runs, the
   token is attached to WSL.
-- `./Test-Token.ps1` passes every check.
+- `./Test-Key.ps1` passes every check.
 - **The PIV PIN and PUK are not written down anywhere yet.** Do that first — see step 1.
 
 ## Run it
