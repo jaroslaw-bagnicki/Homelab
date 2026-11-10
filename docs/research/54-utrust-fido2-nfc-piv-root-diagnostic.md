@@ -1,12 +1,12 @@
 # 54 — HIRSCH SECURE uTrust FIDO2 NFC USB-A as offline root custody for `step-ca` — device diagnostic
 
-**Status**: 🔬 Research — in progress, hardware checks pending
-**Date**: 2026-11-08
+**Status**: 🔬 Research — in progress, hardware checks pending  
+**Date**: 2026-11-08  
 **Question**: Can the uTrust FIDO2 NFC USB-A (P/N 905601) hold the offline root CA key in its PIV applet
 (slot 9C) and sign the `step-ca` intermediate CSR via PKCS#11 from a workstation — the token-custody
 upgrade [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) plans (currently IronKey, planned
-YubiKey PIV)?
-**Related**: [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) · [ADR 42](../decisions/42-pki-topology-sibling-cas.md) · [research 36 §4–§5](36-step-ca-machine-identity.md) · [runbook 35](../runbooks/35-deploy-step-ca.md) · [runbook 36](../runbooks/36-private-ca-init.md) · [offline signing kit](../private-ca-offline-signing/README.md) · [issue #193](https://github.com/jaroslaw-bagnicki/Homelab/issues/193)
+YubiKey PIV)?  
+**Related**: [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) · [ADR 42](../decisions/42-pki-topology-sibling-cas.md) · [research 36 §4–§5](36-step-ca-machine-identity.md) · [runbook 35](../runbooks/35-deploy-step-ca.md) · [runbook 36](../runbooks/36-private-ca-init.md) · [offline signing kit](../private-ca-offline-signing/README.md) · [issue #193](https://github.com/jaroslaw-bagnicki/Homelab/issues/193)  
 
 > **This is a diagnostic log, not a deployment recipe.** Nothing has been written to the token yet. The
 > output so far is document analysis plus the FIDO2-side readout from Hirsch SecureFIDO Manager; the
@@ -208,9 +208,11 @@ this log keeps only the findings that shape that path:
 
 ## 6. Constraints and risks
 
-- Root token **never** plugged into `pve1` / the `ca` guest (ADR 38 invariant); workstation signing is
-  acceptable only with the token unplugged outside ceremonies, per-signature PIN, and CSR public-key
-  verification before signing (residual: one rogue 1-year intermediate, key still non-exportable).
+- Root token **never** plugged into `pve1` / the `ca` guest (ADR 38 invariant). Air-gap is **not**
+  required for the token ceremony — the key is non-exportable, so workstation signing (WSL/Windows) is
+  acceptable with the token plugged in only during the ceremony, per-signature PIN, and CSR
+  subject/public-key verification on screen before signing (residual: one rogue 1-year intermediate;
+  the key itself cannot leak). The IronKey *file* ceremony stays air-gapped until retired (runbook 46).
 - OpenSC must claim the card on Linux — a 2023 report had default `opensc-pkcs11.so` not claiming a
   uTrust under Linux; retest on the actual unit (check 6). Identiv ships no Linux PKCS#11 module of its
   own; Key Manager is Windows-only.

@@ -35,9 +35,13 @@ protocol-bound signatures — research 54 §1); FIDO2 passkeys for Authentik/SSH
       (decision rule: research 54 §4)
 - [ ] Firmware version read from uTrust Key Manager on Windows (the manual: firmware decides applet
       enablement) — record it in research 54 §3
-- [ ] Signing machine: air-gapped live-USB Linux (SystemRescue 13 or Ubuntu Live — runbook 36's
-      rules: no non-loopback address, no default route) with `pcscd` running and `opensc`,
-      `pcsc-tools`, `libpcsclite1`, `fido2-tools`, `usbutils` installed
+- [ ] Signing host: the **workstation**. Primary: a WSL distro on it (not the dev container — its
+      device cgroup blocks usbfs, research 54 §3) with the token attached from Windows
+      (`usbipd bind --busid <busid>` + `usbipd attach --wsl --busid <busid>`), `pcscd` running and
+      `opensc`, `pcsc-tools`, `libpcsclite1`, `fido2-tools`, `usbutils` installed. Fallback: Windows
+      native — OpenSC's Windows PKCS#11 DLL with a Windows `step` + `step-kms-plugin`, or
+      `certreq -sign` via the Microsoft PIV minidriver (note: `certreq` applies no template — check
+      the issued extensions by hand)
 - [ ] Offline signing kit copied to `/tmp` on the signing machine, plus two added binaries:
       the kit's stock static `step` v0.31.0 and the CGO **`step-kms-plugin` v0.17.0**
       (smallstep/step-kms-plugin release, verify against `checksums.txt`) on `PATH` — `step` delegates
@@ -143,9 +147,10 @@ unchanged. Decide before phase 2 and record the choice in research 54.
 
 - The token is **never** plugged into `pve1` / the `ca` guest (ADR 38: root not reachable by a server
   compromise); workstation signing only with the token unplugged outside ceremonies.
-- Air-gap holds for every signing run (`sign-piv.sh` refuses a networked machine, like `sign.sh`);
-  verify the CSR's public key before signing (residual risk: one rogue 1-year intermediate; the key
-  itself stays non-exportable).
+- No air-gap for the **token** ceremony (the key is non-exportable — the residual risk is one rogue
+  1-year intermediate signed while the token is plugged in, bounded by the per-signature PIN and the
+  on-screen CSR check). The **IronKey** ceremony stays air-gapped until retired. Verify the CSR's
+  subject and public key on screen before every signing run.
 - No PIN, PUK, management key or `pin-value=` in scripts, Ansible, logs or the repo — PC/SC prompts per
   signature.
 - OpenSC must claim the card on Linux (check 6); Identiv ships no Linux PKCS#11 module of its own and

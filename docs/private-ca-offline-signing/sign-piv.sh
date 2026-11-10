@@ -76,6 +76,11 @@ URI="pkcs11:module-path=$MOD;token=$TOKEN;object=$OBJECT;type=private"
 
 cd "$DIR"
 
+# --- eyeball the exact CSR before signing --------------------------------------
+echo "CSR that will be signed (verify subject + public key now):"
+"$DIR/step" certificate inspect intermediate_ca.csr
+echo
+
 echo "Signing intermediate_ca.csr with the root on the uTrust token (slot 9C)"
 echo "  module : $MOD"
 echo "  token  : $TOKEN"
