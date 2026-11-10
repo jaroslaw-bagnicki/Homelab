@@ -114,22 +114,35 @@ key. What this session settled without hardware:
 - ⚠️ **URI shape correction**: `step-kms-plugin` rejects a URI with only `module-path` + `object` —
   `Error: kms uri 'token', 'serial' or 'slot-id' are required`. The §5 example must carry
   `token=<label>` (or `serial`/`slot-id`) in addition to `object=` (verified against SoftHSM).
-- ❌ **Still pending — needs the physical key**: §4 checks 1–7 on a machine where the token is
-  visible (workstation, or this container after `usbipd attach --wsl` from the Windows host).
+- ⚠️ **usbipd attach works, but not into the dev container**: 2026-11-10 `usbipd attach --wsl --busid
+  2-1` from the Windows host exposed the key at WSL kernel level (`lsusb` in the container shows
+  `Bus 001 Device 002: ID 04e6:5a11` via `vhci_hcd`), but the container's device cgroup blocks usbfs
+  (`open /dev/bus/usb/001/002`: Operation not permitted), so `pcscd` inside the container still sees
+  no readers. Run the §4 checks in a **WSL distro shell directly** (where `/dev/bus/usb` exists after
+  the attach), not inside the dev container — or pass the device into the container
+  (`--device /dev/bus/usb` at container start).
+- ❌ **Still pending — needs the physical key on a Linux userspace**: §4 checks 2–7 (reader, PIV AID
+  `9000`, CPLC, PKCS#11 slot, AAGUID). Check 1 (USB enumeration) ✅ passed via usbipd.
 
 ## 4. Pending hardware checks — resume here (VSCode terminal)
 
 Run on the **Linux workstation** (not `pve1`), key plugged in:
 
 ```sh
-sudo apt install pcscd pcsc-tools opensc libpcsclite1 libfido2-bin   # if missing
-sudo systemctl start pcscd
+sudo apt install pcscd pcsc-tools opensc libpcsclite1 fido2-tools usbutils   # Ubuntu 24.04 names; libfido2-bin on older releases
+sudo systemctl start pcscd        # or: sudo service pcscd start   (no systemd in containers)
 ```
+
+In the WSL2 dev container there is no USB host bus — attach the key from the **Windows host**
+first (Windows PowerShell, not WSL): `usbipd list` → `usbipd bind --busid <busid>` →
+`usbipd attach --wsl --busid <busid>`; the device then appears under `/dev/bus/usb` in the WSL
+**distro** — run the script in a distro shell, not inside the dev container (the container's device
+cgroup blocks usbfs; verified 2026-11-10). On a native Linux workstation the key is simply plugged in.
 
 | # | Command | Expected if OK |
 |---|---|---|
 | 1 | `lsusb \| grep -i 04e6` | Identiv `04e6:5a11` uTrust FIDO2 |
-| 2 | `opensc-tool -r` | one CCID reader |
+| 2 | `opensc-tool -l` | one CCID reader (**`-r` is `--reader` on OpenSC ≥ 0.23**) |
 | 3 | `opensc-tool --name` | driver `PIV-II` |
 | 4 | `opensc-tool -s '00a4040008a000000308000010000000'` | SW **`9000`** → PIV applet enabled on this unit |
 | 5 | `opensc-tool -s '00a4040008a000000151000000' -s '00ca9f7f'` | CPLC starts **`40 90`** → SLE 78 chip (serial follows) |
