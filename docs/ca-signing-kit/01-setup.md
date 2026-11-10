@@ -67,6 +67,49 @@ pgrep -a pcscd                     # must print a process
 journalctl -u pcscd -n 20 --no-pager
 ```
 
+### libccid does not know this reader
+
+If the daemon is running, the interface is free, and the log still shows only
+`get_driver() Looking for a driver for VID: 0x04E6, PID: 0x5A11` with no `Found Vendor/Product` after
+it, libccid's device table lacks this model. Confirm it:
+
+```sh
+python3 -c "
+import plistlib
+d = plistlib.load(open('/usr/lib/pcsc/drivers/ifd-ccid.bundle/Contents/Info.plist','rb'))
+print([(d['ifdVendorID'][i], d['ifdProductID'][i]) for i in range(len(d['ifdProductID'])) if d['ifdProductID'][i]=='0x5A11'])
+"
+```
+
+An empty list means the pair is missing. Add it **with `plistlib`, never with `sed`** — the three
+parallel arrays (`ifdVendorID`, `ifdProductID`, `ifdFriendlyName`) must stay index-aligned, and their
+line numbers differ between libccid versions:
+
+```sh
+sudo cp /usr/lib/pcsc/drivers/ifd-ccid.bundle/Contents/Info.plist{,.bak}
+sudo python3 - <<'EOF'
+import plistlib
+p = '/usr/lib/pcsc/drivers/ifd-ccid.bundle/Contents/Info.plist'
+d = plistlib.load(open(p, 'rb'))
+d['ifdVendorID'].append('0x04E6')
+d['ifdProductID'].append('0x5A11')
+d['ifdFriendlyName'].append('Identiv uTrust FIDO2 Security Key')
+plistlib.dump(d, open(p, 'wb'))
+print('lengths:', len(d['ifdVendorID']), len(d['ifdProductID']), len(d['ifdFriendlyName']))
+EOF
+sudo systemctl restart pcscd
+opensc-tool -l
+```
+
+The three lengths must be equal. The ATR (`3B 96 11 81 21 75 75 54 72 75 73 74 73`) confirms the
+card answers.
+
+**An `init failed` line for `Lun: 10000` is expected and harmless.** libccid probes a second logical
+slot on USB interface 1, which on this key is HID, not CCID — the first slot is the one that works.
+
+**A `libccid` upgrade overwrites this file.** Re-run the check after any `apt upgrade` that touches
+`libccid`; the entry will be gone and the reader will disappear again.
+
 ```sh
 # 4. PowerShell 7 — the scripts run inside WSL
 curl -fsSLO https://github.com/PowerShell/PowerShell/releases/download/v7.6.10/powershell_7.6.10-1.deb_amd64.deb
