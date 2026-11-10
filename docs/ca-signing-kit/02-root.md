@@ -23,7 +23,8 @@ cd ~/ca-signing-kit
 ./New-Root.ps1
 ```
 
-The script walks through five steps and stops if any of them fails.
+The script walks through six steps and stops if any of them fails. It finds the key itself — there is
+nothing to pass in.
 
 ### Step 1 — replace the factory credentials
 

@@ -1,8 +1,6 @@
 #Requires -Version 7.0
 # Signs intermediate_ca.csr with the root key on the uTrust Security Key. Run inside WSL.
 # This is the annual ceremony. Uses --template, never --profile: a profile drops the SANs.
-param([string]$Label)
-
 $ErrorActionPreference = 'Stop'
 if (-not $IsLinux) { throw 'Run this inside WSL, where the key is attached.' }
 
@@ -19,11 +17,9 @@ foreach ($f in $csr, $root, $tpl) {
     if (-not (Test-Path $f)) { throw "missing: $f" }
 }
 
-if (-not $Label) {
-    $m = pkcs11-tool --module $mod --list-slots 2>&1 | Select-String 'token label\s*:\s*(.+)' | Select-Object -First 1
-    if ($m) { $Label = $m.Matches[0].Groups[1].Value.Trim() }
-}
-if (-not $Label) { throw 'No uTrust Security Key found. Pass -Label "<name>" or check that pcscd is running.' }
+$m = pkcs11-tool --module $mod --list-slots 2>&1 | Select-String 'token label\s*:\s*(.+)' | Select-Object -First 1
+if (-not $m) { throw 'No uTrust Security Key found. Is it plugged in, and is pcscd running?' }
+$Label = $m.Matches[0].Groups[1].Value.Trim()
 
 # show what is about to be signed — the guard against signing the wrong request
 "CSR to sign:"

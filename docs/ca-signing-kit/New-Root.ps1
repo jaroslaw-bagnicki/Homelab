@@ -1,7 +1,7 @@
 #Requires -Version 7.0
 # Creates the 10-year root CA key inside the uTrust Security Key. Run inside WSL.
 # ONCE EVER. Replacing a root is a trust rotation, not a re-run. The repeat job is New-Intermediate.ps1.
-param([string]$Label, [switch]$Force)
+param([switch]$Force)
 
 $ErrorActionPreference = 'Stop'
 if (-not $IsLinux) { throw 'Run this inside WSL, where the key is attached.' }
@@ -15,11 +15,9 @@ if ((Test-Path $root) -and -not $Force) {
     throw "root_ca.crt already exists. Creating the root again is a trust rotation, not a re-run. Use New-Intermediate.ps1, or pass -Force if you really are reissuing."
 }
 
-if (-not $Label) {
-    $m = pkcs11-tool --module $mod --list-slots 2>&1 | Select-String 'token label\s*:\s*(.+)' | Select-Object -First 1
-    if ($m) { $Label = $m.Matches[0].Groups[1].Value.Trim() }
-}
-if (-not $Label) { throw 'No uTrust Security Key found. Pass -Label "<name>" or check that pcscd is running.' }
+$m = pkcs11-tool --module $mod --list-slots 2>&1 | Select-String 'token label\s*:\s*(.+)' | Select-Object -First 1
+if (-not $m) { throw 'No uTrust Security Key found. Is it plugged in, and is pcscd running?' }
+$Label = $m.Matches[0].Groups[1].Value.Trim()
 
 "Key: $Label"
 ""

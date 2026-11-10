@@ -73,14 +73,10 @@ Carry back the public certificates and put the uTrust Security Key in the safe:
 
 ## Options
 
-Both signing scripts take one parameter, and it has a working default:
-
-| Parameter | Default |
-|---|---|
-| `-Label` | probed from the key |
+Nothing to pass. Both signing scripts find the key themselves:
 
 ```sh
-./New-Intermediate.ps1 -Label "Identiv uTrust FIDO2 0"
+./New-Intermediate.ps1
 ```
 
 The input and output filenames are fixed — `intermediate_ca.csr` → `intermediate_ca.crt`, and
@@ -91,6 +87,6 @@ The input and output filenames are fixed — `intermediate_ca.csr` → `intermed
 | Symptom | Meaning |
 |---|---|
 | `The intermediate CSR … is missing` | Bring the file the CA host produced — [runbook 35 §6](../runbooks/35-deploy-step-ca.md). |
-| `No uTrust Security Key found` | The key is not attached, or `pcscd` is not running. Pass `-Label "<name>"` to skip the probe. |
+| `No uTrust Security Key found` | The key is not plugged in, or `pcscd` is not running. |
 | `step-kms-plugin was not found on PATH` | The plugin is missing from the kit — [01-setup.md](01-setup.md). |
 | `This certificate is not fit to install` | A check failed. Nothing was trusted; re-signing is safe. |
