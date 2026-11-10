@@ -32,17 +32,21 @@ sudo service pcscd start
 # 3. PowerShell 7 — the scripts run inside WSL
 curl -fsSLO https://github.com/PowerShell/PowerShell/releases/download/v7.4.22/powershell_7.4.22-1.deb_amd64.deb
 sudo dpkg -i powershell_7.4.22-1.deb_amd64.deb
+sudo apt-get install -f -y          # resolves the dependencies dpkg left unconfigured
 rm powershell_7.4.22-1.deb_amd64.deb
 pwsh -v
 ```
+
+**`sudo apt-get install -f -y` is not optional.** `dpkg -i` does not install dependencies, so it
+leaves `powershell` unconfigured and `pwsh` dies with
+`Couldn't find a valid ICU package installed on the system`. `apt-get install -f` pulls in `libicu78`
+and finishes the configuration. Skipping this step is the single most common way this install fails.
 
 **Why not `apt install powershell`.** Microsoft's package repository only publishes a *stable*
 `powershell` package for Ubuntu releases it has built for. On **Ubuntu 26.04 (Resolute)** the feed at
 `packages.microsoft.com/ubuntu/26.04/prod` carries **only `powershell-preview`** — so
 `apt-get install -y powershell` ends in `E: Unable to locate package powershell` even after the
-repository is registered correctly. The `.deb` above is the same LTS build, and its dependencies are
-all satisfied on 26.04 (`libgcc-s1` provides `libgcc1`, `libssl3t64` provides `libssl3`, `libicu78` is
-in the version list).
+repository is registered correctly.
 
 Microsoft documents both methods — the
 [package repository](https://learn.microsoft.com/en-us/powershell/scripting/install/install-ubuntu)
