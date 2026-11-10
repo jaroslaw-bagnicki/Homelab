@@ -3,10 +3,6 @@
 The root CA's private key lives **inside the uTrust FIDO2 NFC Security Key** (PIV slot 9C) and cannot
 be exported. This kit is how you use it: create the root once, then sign the CAs that sit under it.
 
-Nothing here needs an air-gapped machine. The root key cannot leave the uTrust Security Key, so the
-worst case on a networked workstation is one rogue certificate signed while the device is plugged in
-and the PIN entered — not a stolen root. The device is unplugged outside ceremonies.
-
 ## The mental model
 
 ```
