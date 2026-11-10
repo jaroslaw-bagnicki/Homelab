@@ -25,65 +25,48 @@ usbipd attach --wsl --busid <busid>
 ```
 
 ```sh
-# 3. tell pcscd to skip polkit — required in WSL
-echo 'PCSCD_ARGS=--disable-polkit' | sudo tee /etc/default/pcscd
+# 3. make the key reachable by the pcscd user, and lift the systemd sandbox
+sudo tee /etc/udev/rules.d/99-utrust-pcscd.rules > /dev/null <<'EOF'
+SUBSYSTEM=="usb", ATTR{idVendor}=="04e6", ATTR{idProduct}=="5a11", MODE="0660", GROUP="pcscd"
+EOF
+sudo udevadm control --reload-rules
+sudo udevadm trigger --subsystem-match=usb
+
+sudo mkdir -p /etc/systemd/system/pcscd.service.d
+sudo tee /etc/systemd/system/pcscd.service.d/override.conf > /dev/null <<'EOF'
+[Service]
+ProtectSystem=full
+EOF
+
 sudo systemctl daemon-reload
 sudo systemctl restart pcscd
 opensc-tool -l                     # must list the uTrust Security Key
 ```
 
-**`--disable-polkit` is required in WSL.** `pcscd` asks polkit for permission before serving a client.
-WSL has no polkit daemon, so every request is refused and `journalctl -u pcscd` fills with:
+`opensc-tool -l` must print:
 
 ```
-IsClientAuthorized() Process ... (user: 1000) is NOT authorized for action: access_pcsc
-Rejected unauthorized PC/SC client
+# Detected readers (pcsc)
+Nr.  Card  Features  Name
+0    Yes             Identiv uTrust FIDO2 Security Key [uTrust FIDO2 Security Key] 00 00
 ```
 
-The daemon is running and the reader is fine — the client is simply denied. `opensc-tool -l` then
-reports `No smart card readers found`, which points at the wrong problem.
+### The four things that block this key on WSL
 
-The unit reads `$PCSCD_ARGS` from `/etc/default/pcscd`, so the flag belongs there — never edit
-`/usr/lib/systemd/system/pcscd.service`, a package upgrade would overwrite it.
+Each one produces `No smart card readers found`, so they have to be fixed in order. All four were hit
+in practice on 2026-11-10.
 
-**Order also matters.** `pcscd` enumerates readers when it starts, so start it after `usbipd attach`
-and restart it if the key was attached later:
+**1. polkit refuses the client.** `pcscd` asks polkit before serving a client; WSL has no polkit
+daemon, so `journalctl -u pcscd` fills with `IsClientAuthorized() ... NOT authorized for action:
+access_pcsc` / `Rejected unauthorized PC/SC client`. Fix: `PCSCD_ARGS=--disable-polkit` in
+`/etc/default/pcscd` (the unit reads `$PCSCD_ARGS` from there — never edit
+`/usr/lib/systemd/system/pcscd.service`, an upgrade overwrites it).
 
-```sh
-sudo systemctl restart pcscd
-opensc-tool -l
-```
-
-**Do not `service pcscd stop`.** `pcscd.socket` is enabled, so systemd owns the daemon's lifecycle and
-refuses to stop it (`its triggering units are still active: pcscd.socket`). Use `systemctl restart`,
-which keeps the socket and the service in step.
-
-If `opensc-tool -l` still says `No smart card readers found`, check that the CCID interface is free
-and that the daemon is up:
-
-```sh
-lsusb -t                           # the key must show Class=Chip/SmartCard, Driver=[none]
-pgrep -a pcscd                     # must print a process
-journalctl -u pcscd -n 20 --no-pager
-```
-
-### libccid does not know this reader
-
-If the daemon is running, the interface is free, and the log still shows only
-`get_driver() Looking for a driver for VID: 0x04E6, PID: 0x5A11` with no `Found Vendor/Product` after
-it, libccid's device table lacks this model. Confirm it:
-
-```sh
-python3 -c "
-import plistlib
-d = plistlib.load(open('/usr/lib/pcsc/drivers/ifd-ccid.bundle/Contents/Info.plist','rb'))
-print([(d['ifdVendorID'][i], d['ifdProductID'][i]) for i in range(len(d['ifdProductID'])) if d['ifdProductID'][i]=='0x5A11'])
-"
-```
-
-An empty list means the pair is missing. Add it **with `plistlib`, never with `sed`** — the three
-parallel arrays (`ifdVendorID`, `ifdProductID`, `ifdFriendlyName`) must stay index-aligned, and their
-line numbers differ between libccid versions:
+**2. libccid does not know the reader.** The daemon logs `get_driver() Looking for a driver for VID:
+0x04E6, PID: 0x5A11` and nothing after it. libccid matches readers by VID/PID from
+`/usr/lib/pcsc/drivers/ifd-ccid.bundle/Contents/Info.plist`, and this model is not in the table. Add it
+**with `plistlib`, never with `sed`** — the three parallel arrays (`ifdVendorID`, `ifdProductID`,
+`ifdFriendlyName`) must stay index-aligned and their line numbers differ between libccid versions:
 
 ```sh
 sudo cp /usr/lib/pcsc/drivers/ifd-ccid.bundle/Contents/Info.plist{,.bak}
@@ -97,18 +80,52 @@ d['ifdFriendlyName'].append('Identiv uTrust FIDO2 Security Key')
 plistlib.dump(d, open(p, 'wb'))
 print('lengths:', len(d['ifdVendorID']), len(d['ifdProductID']), len(d['ifdFriendlyName']))
 EOF
-sudo systemctl restart pcscd
-opensc-tool -l
 ```
 
-The three lengths must be equal. The ATR (`3B 96 11 81 21 75 75 54 72 75 73 74 73`) confirms the
-card answers.
+All three lengths must be equal. A `libccid` upgrade overwrites this file — re-run the check after any
+`apt upgrade` that touches `libccid`.
+
+**3. the `pcscd` user cannot open the USB device.** The unit runs `User=pcscd`, but `/dev/bus/usb/...`
+is `root:root`, so the log shows `Can't libusb_open(1/2): LIBUSB_ERROR_ACCESS`. Fix: the udev rule in
+step 3 above puts the device in group `pcscd` with mode `0660`.
+
+**4. `ProtectSystem=strict` blocks `/dev`.** With the udev rule in place the access error disappears,
+but the reader still does not appear — the sandbox mounts `/dev` read-only, so `libusb` cannot open the
+device even though permissions are right. Fix: the `ProtectSystem=full` override in step 3.
+
+**Diagnosing which one you are hitting.** Run the daemon by hand, outside systemd:
+
+```sh
+sudo systemctl stop pcscd.socket
+sudo systemctl stop pcscd
+sudo -u pcscd pcscd --foreground --debug --disable-polkit
+```
+
+In a second terminal run `opensc-tool -l`. If the reader appears here but not under systemd, the
+remaining difference is the sandbox — fix 4. If it does not appear here either, read the debug output:
+`NOT authorized` is fix 1, `Looking for a driver` with no `Found Vendor/Product` is fix 2,
+`LIBUSB_ERROR_ACCESS` is fix 3.
 
 **An `init failed` line for `Lun: 10000` is expected and harmless.** libccid probes a second logical
 slot on USB interface 1, which on this key is HID, not CCID — the first slot is the one that works.
 
-**A `libccid` upgrade overwrites this file.** Re-run the check after any `apt upgrade` that touches
-`libccid`; the entry will be gone and the reader will disappear again.
+**Order also matters.** `pcscd` enumerates readers when it starts, so start it after `usbipd attach`
+and restart it if the key was attached later:
+
+```sh
+sudo systemctl restart pcscd
+opensc-tool -l
+```
+
+**Do not `service pcscd stop`.** `pcscd.socket` is enabled, so systemd owns the daemon's lifecycle and
+refuses to stop it (`its triggering units are still active: pcscd.socket`). Use `systemctl restart`,
+which keeps the socket and the service in step. If you need the daemon gone entirely, stop the socket
+first:
+
+```sh
+sudo systemctl stop pcscd.socket
+sudo systemctl stop pcscd
+```
 
 ```sh
 # 4. PowerShell 7 — the scripts run inside WSL
