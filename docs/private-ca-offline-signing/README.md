@@ -35,8 +35,8 @@ discards the bad one, so nothing unfit to install is ever carried away.
 ## Where it runs
 
 **Inside WSL (Ubuntu), on the Windows 11 workstation.** Windows cannot see the uTrust Security Key
-directly — it is handed to WSL with `usbipd`, and WSL is where `pcscd`, OpenSC and `step` run. So the
-scripts run there too.
+directly — it is handed to WSL with `usbipd`. That is the only place the key is reachable, so that is
+where the scripts run.
 
 ```sh
 wsl
@@ -44,8 +44,8 @@ cd ~/ca-kit
 pwsh ./Test-Token.ps1
 ```
 
-The scripts refuse to run anywhere else, because the key is not reachable from anywhere else. See
-[01-setup.md](01-setup.md).
+The scripts need `pcscd`, OpenSC and `step` installed in WSL — [01-setup.md](01-setup.md) does that
+once.
 
 ## The flow
 
