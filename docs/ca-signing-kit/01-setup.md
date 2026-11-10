@@ -12,24 +12,64 @@ Everything below runs **inside WSL**, not in the dev container. The dev containe
 blocks direct USB access, so the uTrust Security Key cannot be reached from there.
 
 ```sh
-# 1. the uTrust Security Key is attached to WSL  (run in an elevated Windows PowerShell)
+# 1. the smart-card stack is installed  (inside WSL)
+sudo apt update
+sudo apt install -y pcscd pcsc-tools opensc libpcsclite1 fido2-tools usbutils
+```
+
+```sh
+# 2. the uTrust Security Key is attached to WSL  (run in an elevated Windows PowerShell)
 usbipd list
 usbipd bind --busid <busid>
 usbipd attach --wsl --busid <busid>
 ```
 
 ```sh
-# 2. the smart-card stack is installed  (inside WSL)
-sudo apt update
-sudo apt install -y pcscd pcsc-tools opensc libpcsclite1 fido2-tools usbutils
-sudo service pcscd start
+# 3. start pcscd AFTER the key is attached, and disable polkit
+sudo service pcscd stop
+sudo pcscd --foreground --disable-polkit &
+sleep 2
+opensc-tool -l                     # must list the uTrust Security Key
 ```
 
-`pcscd` is the daemon that talks to the card. Without it every PIV operation fails with
-`No smart card reader`, no matter how healthy the uTrust Security Key is.
+**`--disable-polkit` is required in WSL.** `pcscd` asks polkit for permission before serving a client.
+WSL has no polkit daemon, so every request is refused and `journalctl -u pcscd` fills with:
+
+```
+IsClientAuthorized() Process ... (user: 1000) is NOT authorized for action: access_pcsc
+Rejected unauthorized PC/SC client
+```
+
+The daemon is running and the reader is fine — the client is simply denied. `opensc-tool -l` then
+reports `No smart card readers found`, which points at the wrong problem.
+
+To make it permanent, add the flag to the service:
 
 ```sh
-# 3. PowerShell 7 — the scripts run inside WSL
+sudo sed -i 's|^ExecStart=/usr/sbin/pcscd --foreground --auto-exit|ExecStart=/usr/sbin/pcscd --foreground --auto-exit --disable-polkit|' \
+  /usr/lib/systemd/system/pcscd.service
+sudo systemctl daemon-reload
+sudo service pcscd restart
+```
+
+**Order also matters.** `pcscd` enumerates readers when it starts, so start it after `usbipd attach`.
+Restart it if the key was attached later:
+
+```sh
+sudo service pcscd restart
+opensc-tool -l
+```
+
+If `opensc-tool -l` still says `No smart card readers found`, confirm the CCID interface is free —
+`lsusb -t` must show `Class=Chip/SmartCard, Driver=[none]` for the key:
+
+```sh
+lsusb -t
+pgrep -a pcscd                     # must print a process
+```
+
+```sh
+# 4. PowerShell 7 — the scripts run inside WSL
 curl -fsSLO https://github.com/PowerShell/PowerShell/releases/download/v7.6.10/powershell_7.6.10-1.deb_amd64.deb
 sudo dpkg -i powershell_7.6.10-1.deb_amd64.deb
 sudo apt-get install -f -y          # resolves the dependencies dpkg left unconfigured
@@ -118,15 +158,16 @@ runs, so a plugin sitting in the kit folder is found automatically.
 cd ~/ca-signing-kit
 ./step version                    # Smallstep CLI/0.31.0 (linux/amd64)
 ./step-kms-plugin --help          # usage text means the CGO build runs
-./Test-Utrust.ps1                 # all checks must pass
+./Test-uTrustKey.ps1              # all checks must pass
 ```
 
 The kit was assembled against **step v0.31.0 + step-kms-plugin v0.17.0**. A newer CLI is fine — the
 ceremonies only use `certificate create`, `sign`, `inspect`, `verify` and `fingerprint` — so read the
 version strings as a sanity check, not a pin.
 
-If `Test-Utrust.ps1` reports `No smart card reader`, the uTrust Security Key is not attached or `pcscd`
-is not running. Fix that before going further; nothing else will work.
+If `Test-uTrustKey.ps1` reports `No smart card reader`, the uTrust Security Key is not attached or
+`pcscd` did not see it — restart the daemon (step 3). Fix that before going further; nothing else
+will work.
 
 ## Running the kit from a USB stick
 
