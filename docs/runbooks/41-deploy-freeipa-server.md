@@ -29,7 +29,7 @@ the server, the realm, the DNS glue and the CA chain before anything depends on 
   key. It replaces `common`/`security`, which are Debian/Ubuntu-only.
 - **Technitium** — `ipa.internal` A, reverse zone + PTR, and the Kerberos/LDAP SRV records.
 - **FreeIPA workload** — `freeipa-server`, external CA two-phase install, `admin` + `m1test`.
-- **Offline kit** — `ipa-ca.tpl` + `sign-ipa-ca.sh` sign the IPA CA CSR with the existing root.
+- **Signing kit** — `ipa-ca.tpl` + `New-IpaCa.ps1` sign the IPA CA CSR with the existing root.
 
 ## Prerequisites
 
@@ -226,15 +226,14 @@ openssl req -in ipa.csr -noout -subject
 # expected: subject=CN = Certificate Authority, O = IPA.INTERNAL
 ```
 
-## 7. External CA — offline signing
+## 7. External CA — signing with the token
 
 On the **workstation**, with the uTrust token attached (WSL via `usbipd`, or Windows — no air-gap
 needed, the root key is non-exportable on the token; [runbook 46](46-adopt-utrust-piv-root-custody.md)):
 
-1. Copy the token signing kit to `/tmp` and make the scripts executable.
+1. Copy the signing kit to a real filesystem and set it up — [01-setup.md](../private-ca-offline-signing/01-setup.md).
 2. Put `ipa.csr` in the kit directory.
-3. Run `SIGN_PIV_ALLOW_NETWORK=1 ./sign-ipa-ca.sh "<token label>"` — the PIV PIN is prompted by PC/SC
-   per signature.
+3. Run `./New-IpaCa.ps1` — the PIV PIN is prompted by PC/SC per signature.
 
 The script signs with `ipa-ca.tpl` for **5 years** and machine-checks:
 
@@ -386,4 +385,4 @@ Write into the runbook/report:
 
 - [ADR 42](../decisions/42-pki-topology-sibling-cas.md) · [ADR 43](../decisions/43-freeipa-domain-realm.md) · [research 51](../research/51-freeipa-dogtag-tpm-custody.md) (parked TPM work)
 - [Runbook 28](28-pve1-proxmox-node.md) (pve1) · [runbook 35](35-deploy-step-ca.md) (TPM LXC pattern) · [runbook 40](40-deploy-ssh-certificates.md) (SSH trust)
-- [Offline signing kit](../private-ca-offline-signing/README.md) · [FreeIPA documentation](https://www.freeipa.org/page/Documentation)
+- [Signing kit](../private-ca-offline-signing/README.md) · [FreeIPA documentation](https://www.freeipa.org/page/Documentation)

@@ -2,7 +2,7 @@
 
 > **Status: authored, NOT yet executed (2026-11-10).** The hardware gates are still pending — run
 > [research 54 §4](../research/54-utrust-fido2-nfc-piv-root-diagnostic.md) first and do not start this
-> runbook until `check-utrust.sh` passes checks 4 (PIV AID `9000`) and 6 (OpenSC PKCS#11 lists the token).
+> runbook until `Test-Token.ps1` passes checks 4 (PIV AID `9000`) and 6 (OpenSC PKCS#11 lists the token).
 >
 > Move the 10-year **root** from the IronKey key file onto the **uTrust FIDO2 NFC USB-A (P/N 905601),
 > PIV applet slot 9C**, by **reissuing** it: the new root key is generated on the token and never
@@ -11,10 +11,11 @@
 > [issue #193](https://github.com/jaroslaw-bagnicki/Homelab/issues/193); [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md)
 > is amended accordingly. Diagnostic evidence: [research 54](../research/54-utrust-fido2-nfc-piv-root-diagnostic.md).
 >
-> ⚠ **The ceremony never touches the network, and the token never touches `pve1` / the `ca` guest.**
-> Signing runs on an air-gapped signing machine (live-USB Linux, same discipline as
-> [runbook 36](36-private-ca-init.md)) with the token plugged in; the token is unplugged and back in
-> the safe outside ceremonies. The live CA is untouched: `ca.json` on the `ca` guest keeps `tpmkms`.
+> ⚠ **The token never touches `pve1` / the `ca` guest.** Signing runs on the **Windows 11 workstation
+> with WSL (Ubuntu)**, where the token is attached via `usbipd`; the token is unplugged and back in the
+> safe outside ceremonies. **No air-gap is required** — the key is non-exportable, so the worst case is
+> one rogue certificate signed while the token is plugged in and the PIN entered, not a stolen root.
+> The live CA is untouched: `ca.json` on the `ca` guest keeps `tpmkms`.
 
 ## Why
 
@@ -28,25 +29,26 @@ protocol-bound signatures — research 54 §1); FIDO2 passkeys for Authentik/SSH
 
 ## Prerequisites
 
-- [ ] `docs/private-ca-offline-signing/check-utrust.sh` run on the signing machine with the token
+- [ ] `docs/private-ca-offline-signing/Test-Token.ps1` run on the signing machine with the token
       attached — checks 1–7 pass: USB `04e6:5a11`, one CCID reader, driver `PIV-II`, PIV AID select
       `9000`, CPLC `40 90` (SLE 78) + serial, `pkcs11-tool --module opensc-pkcs11.so --list-slots`
       lists the token, `fido2-token -L` AAGUID `73402251-f2a8-4f03-873e-3cb6db604b03`
       (decision rule: research 54 §4)
 - [ ] Firmware version read from uTrust Key Manager on Windows (the manual: firmware decides applet
       enablement) — record it in research 54 §3
-- [ ] Signing host: the **workstation**. Primary: a WSL distro on it (not the dev container — its
-      device cgroup blocks usbfs, research 54 §3) with the token attached from Windows
-      (`usbipd bind --busid <busid>` + `usbipd attach --wsl --busid <busid>`), `pcscd` running and
-      `opensc`, `pcsc-tools`, `libpcsclite1`, `fido2-tools`, `usbutils` installed. Fallback: Windows
-      native — OpenSC's Windows PKCS#11 DLL with a Windows `step` + `step-kms-plugin`, or
-      `certreq -sign` via the Microsoft PIV minidriver (note: `certreq` applies no template — check
-      the issued extensions by hand)
-- [ ] Offline signing kit copied to `/tmp` on the signing machine, plus two added binaries:
-      the kit's stock static `step` v0.31.0 and the CGO **`step-kms-plugin` v0.17.0**
-      (smallstep/step-kms-plugin release, verify against `checksums.txt`) on `PATH` — `step` delegates
-      every `pkcs11:` URI to the plugin; without it: `exec: "step-kms-plugin": not found in $PATH`
-      (verified 2026-11-10; the whole PKCS#11 path was proven end-to-end against SoftHSM 2.6)
+- [ ] Signing host: the **Windows 11 workstation** with WSL (Ubuntu) and the token attached from
+      Windows (`usbipd bind --busid <busid>` + `usbipd attach --wsl --busid <busid>`), `pcscd` running
+      and `opensc`, `pcsc-tools`, `libpcsclite1`, `fido2-tools`, `usbutils` installed. The kit's
+      scripts are PowerShell 7 and run either inside WSL or on Windows — both drive the same WSL
+      toolchain. Fallback: Windows native — OpenSC's Windows PKCS#11 DLL with a Windows `step` +
+      `step-kms-plugin`, or `certreq -sign` via the Microsoft PIV minidriver (note: `certreq` applies
+      no template — check the issued extensions by hand)
+- [ ] Signing kit copied to a real filesystem inside WSL (not a USB stick — FAT/exFAT has no executable
+      bit), plus two added binaries: the kit's stock static `step` v0.31.0 and the CGO
+      **`step-kms-plugin` v0.17.0** (smallstep/step-kms-plugin release, verify against `checksums.txt`)
+      — `step` delegates every `pkcs11:` URI to the plugin; without it:
+      `exec: "step-kms-plugin": not found in $PATH` (verified 2026-11-10; the whole PKCS#11 path was
+      proven end-to-end against SoftHSM 2.6). See [01-setup.md](../private-ca-offline-signing/01-setup.md)
 - [ ] The uTrust token, the current `root_ca.crt` (public, from the kit), `intermediate_ca.csr`
       (from runbook 35 §6), `intermediate-ca.tpl`, and `ipa.csr` when the FreeIPA CA is re-signed
 - [ ] A safe for the token; the written-down IronKey passphrase still available until phase 5 finishes
@@ -54,7 +56,7 @@ protocol-bound signatures — research 54 §1); FIDO2 passkeys for Authentik/SSH
 ## Phase 0 — pre-flight health check
 
 ```sh
-bash check-utrust.sh        # all seven checks from research 54 §4, read-only, no PIN login
+./Test-Token.ps1        # all seven checks from research 54 §4, read-only, no PIN login
 ```
 
 All pass → proceed. Check 4 fails → this unit's firmware has PIV disabled for OpenSC; provision/sign
@@ -75,50 +77,36 @@ Record the new PIN/PUK in the safe (never in the repo). Do not log the managemen
 
 ## Phase 2 — reissue the root on the token (slot 9C)
 
-The key is generated **on the card**; `step certificate create` only uses an existing on-token key
-(pointed at a fresh `object=` it fails `getPublicKey failed: key … not found` — verified), so:
+Run the kit's [`New-Root.ps1`](../private-ca-offline-signing/New-Root.ps1) — it replaces the factory
+credentials, generates the key on the card, writes the self-signed root, verifies its shape and proves
+the token can sign. The full walkthrough is [02-root.md](../private-ca-offline-signing/02-root.md).
 
 ```sh
-MOD=/usr/lib/x86_64-linux-gnu/opensc-pkcs11.so
-TOKEN='<token label from pkcs11-tool --list-slots>'
-
-# 2a. P-256 key pair in PIV slot 9C; PIN policy "always" is fixed at generation (manual);
-#     --login prompts for the PIV PIN — never pin-value
-pkcs11-tool --module "$MOD" --keypairgen --key-type EC:prime256v1 \
-  --slot-id 0x9C --label "Homelab Root CA" --login
-
-# 2b. self-signed 10-year root cert over that on-token key (URI must carry token= — verified)
-./step certificate create "Homelab Internal CA" root_ca.crt --profile root-ca --not-after 87600h \
-  --kms "pkcs11:module-path=$MOD;token=$TOKEN" \
-  --key "pkcs11:module-path=$MOD;token=$TOKEN;object=Homelab Root CA;type=private"
+./New-Root.ps1
 ```
 
-- [ ] `./step certificate inspect root_ca.crt` — `CN=Homelab Internal CA`, P-256, `CA:TRUE, pathlen:1`,
-      certSign+crlSign, 10 years
-- [ ] `./step certificate fingerprint root_ca.crt` — record the fingerprint **outside the repo** (safe,
-      password manager)
-- [ ] Test-sign a throwaway CSR with the token, verify it chains to the new root, then discard it:
+The key is generated **on the card**; `step certificate create` only uses an existing on-token key
+(pointed at a fresh `object=` it fails `getPublicKey failed: key … not found` — verified), which is
+why the script generates the pair with `pkcs11-tool` first.
 
-  ```sh
-  ./step certificate sign --not-after 24h probe.csr root_ca.crt \
-    "pkcs11:module-path=$MOD;token=$TOKEN;object=Homelab Root CA;type=private" > probe.crt
-  ./step certificate verify probe.crt --roots root_ca.crt   # PIN is prompted — per signature
-  ```
+- [ ] The script's shape checks all read OK — `CN=Homelab Internal CA`, P-256, `CA:TRUE, pathlen:1`,
+      certSign+crlSign, 10 years
+- [ ] The script's probe signature chains to the new root (it signs a throwaway CSR and discards it)
+- [ ] The fingerprint it prints is recorded **outside the repo** (safe, password manager)
 
 The PIN prompt per signature is the ceremony behaviour wanted for a root (slot 9C, cardholder
 participation). Never put `pin-value=` in a URI, script, Ansible or the repo.
 
 ## Phase 3 — sign the sibling CAs with the token
 
-Use the kit's [`sign-piv.sh`](../private-ca-offline-signing/sign-piv.sh) — machine checks (chains to
-root, `is_ca`, `pathlen:0`, SANs `ca.internal` + `192.168.2.215`, 1 year), with the key argument a
-PKCS#11 URI for slot 9C instead of a key file. Run it on the **workstation** with the token plugged
-in — in WSL:
-
 ```sh
-SIGN_PIV_ALLOW_NETWORK=1 ./sign-piv.sh "<token label>"     # intermediate_ca.csr -> intermediate_ca.crt
-SIGN_PIV_ALLOW_NETWORK=1 ./sign-ipa-ca.sh "<token label>"  # FreeIPA CA — ipa.csr -> ipa-ca.crt (ADR 42)
+./New-Intermediate.ps1     # intermediate_ca.csr -> intermediate_ca.crt
+./New-IpaCa.ps1            # FreeIPA CA — ipa.csr -> ipa-ca.crt (ADR 42)
 ```
+
+Both machine-check the result (chains to root, `is_ca`, `pathlen:0`, key usage, SANs for the
+intermediate, validity) and discard anything that fails. Details:
+[03-sign.md](../private-ca-offline-signing/03-sign.md).
 
 Carry back only the public certificates: `root_ca.crt`, `intermediate_ca.crt`, `ipa-ca.crt`.
 
@@ -149,10 +137,11 @@ unchanged. Decide before phase 2 and record the choice in research 54.
 
 - The token is **never** plugged into `pve1` / the `ca` guest (ADR 38: root not reachable by a server
   compromise); workstation signing only with the token unplugged outside ceremonies.
-- No air-gap for the **token** ceremony (the key is non-exportable — the residual risk is one rogue
-  1-year intermediate signed while the token is plugged in, bounded by the per-signature PIN and the
-  on-screen CSR check). The **IronKey** ceremony stays air-gapped until retired. Verify the CSR's
-  subject and public key on screen before every signing run.
+- **No air-gap is required for the token ceremony.** The key is non-exportable, so the residual risk is
+  one rogue certificate signed while the token is plugged in, bounded by the per-signature PIN and the
+  on-screen CSR check. Verify the CSR's subject and public key on screen before every signing run —
+  the kit's scripts print it for exactly this reason. (The **IronKey** ceremony stayed air-gapped
+  until retired.)
 - No PIN, PUK, management key or `pin-value=` in scripts, Ansible, logs or the repo — PC/SC prompts per
   signature.
 - OpenSC must claim the card on Linux (check 6); Identiv ships no Linux PKCS#11 module of its own and
@@ -160,7 +149,7 @@ unchanged. Decide before phase 2 and record the choice in research 54.
 
 ## Abort criteria
 
-- Any `check-utrust.sh` gate fails → stop before phase 1; nothing has been written to the token yet.
+- Any `Test-Token.ps1` gate fails → stop before phase 1; nothing has been written to the token yet.
 - Phase 2 verification fails → the token can be reset and phase 2 retried; no client has trusted
   anything yet.
 - Phase 4 step 3 shows any node still on the old root after cutover → fix that node before removing the
@@ -172,5 +161,5 @@ unchanged. Decide before phase 2 and record the choice in research 54.
 - [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) — amended 2026-11-10: uTrust PIV slot 9C, root reissued
 - [issue #193](https://github.com/jaroslaw-bagnicki/Homelab/issues/193) — adoption tracking
 - [runbook 36](36-private-ca-init.md) — 🪦 retired IronKey/stick ceremony this replaces · [runbook 35 §6–§7](35-deploy-step-ca.md) — CSR + install · [runbook 39](39-trust-private-ca.md) — root distribution · [runbook 41](41-deploy-freeipa-server.md) — FreeIPA CA
-- [offline signing kit](../private-ca-offline-signing/README.md) — `check-utrust.sh`, `sign-piv.sh`, `step` + `step-kms-plugin`
+- [signing kit](../private-ca-offline-signing/README.md) — `Test-Token.ps1`, `New-Root.ps1`, `New-Intermediate.ps1`, `New-IpaCa.ps1`, `step` + `step-kms-plugin`
 - [research 36 §4–§5](../research/36-step-ca-machine-identity.md) — KMS/custody paths, `step-kms-plugin` requirement

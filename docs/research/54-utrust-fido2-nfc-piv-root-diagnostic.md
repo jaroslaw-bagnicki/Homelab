@@ -95,7 +95,7 @@ key. What this session settled without hardware:
 
 - ✅ **Toolchain staged and baseline-verified**: `pcscd 2.0.3`, `opensc 0.25.0~rc1`, `pcsc-tools
   1.7.1`, `fido2-tools 1.14.0`, `usbutils`, `libpcsclite1`, `softhsm2` installed; `pcscd` running;
-  `check-utrust.sh` runs clean end-to-end and reports the expected "No smart card readers found"
+  `Test-Token.ps1` runs clean end-to-end and reports the expected "No smart card readers found"
   with no device. Note for Ubuntu 24.04: the FIDO2 CLI package is **`fido2-tools`** (not
   `libfido2-bin`), and on OpenSC ≥ 0.23 **`-r` means `--reader` — readers are listed with `-l`**.
 - ✅ **Root key algorithm — the RSA-4096 worry is moot**: `step certificate inspect root_ca.crt`
@@ -155,26 +155,19 @@ Windows cross-check **done 2026-11-08**: `certutil -scinfo` lists the PIV card (
 Key Manager: the **firmware version** (manual: firmware decides applet enablement).
 
 Reference script (same checks, read-only, no PIN login, writes nothing to the token) — saved as
-[`check-utrust.sh`](../private-ca-offline-signing/check-utrust.sh) in the offline signing kit:
+[`Test-Token.ps1`](../private-ca-offline-signing/Test-Token.ps1) in the signing kit. Each gate is one
+`Check` call:
 
-```sh
-#!/usr/bin/env bash
-# check-utrust.sh — READ-ONLY health check for uTrust FIDO2 NFC USB-A (P/N 905601)
-# OpenSC >= 0.23: `opensc-tool -r` now means --reader, readers are listed with -l.
-set -u
-echo "== USB ==";  lsusb 2>/dev/null | grep -iE 'identiv|04e6|utrust' || echo "  !! no Identiv device"
-echo "== reader =="; opensc-tool -l 2>&1
-echo "== driver/ATR =="; opensc-tool --name 2>&1; opensc-tool -a 2>&1 | head -2
-echo "== PIV AID select (want 9000) =="
-opensc-tool -s '00a4040008a000000308000010000000' 2>&1 | tail -1
-echo "== CPLC chip (want 40 90 = SLE78) =="
-opensc-tool -s '00a4040008a000000151000000' -s '00ca9f7f' 2>&1 | tail -4
-MOD="$(find /usr/lib -name 'opensc-pkcs11.so' 2>/dev/null | head -1)"
-echo "== PKCS#11 module: ${MOD:-NOT FOUND} =="
-[ -n "$MOD" ] && pkcs11-tool --module "$MOD" --list-slots 2>&1
-echo "== FIDO2 AAGUID (want 73402251-...) =="
-fido2-token -L 2>&1 || echo "  fido2-token failed (install fido2-tools)"
+```powershell
+Check 'key visible on USB'          { (lsusb | Select-String 'Identiv|04e6|uTrust') -join '; ' }
+Check 'reader claimed (pcscd)'      { opensc-tool -l }                       # OpenSC >= 0.23: -l, not -r
+Check 'PIV applet answers 9000'     { opensc-tool -s '00a4040008a000000308000010000000' }
+Check 'chip is SLE78 (CPLC 40 90)'  { opensc-tool -s '00a4040008a000000151000000' -s '00ca9f7f' }
+Check 'PKCS#11 lists the key'       { pkcs11-tool --module $mod --list-slots }
+Check 'FIDO2 AAGUID is 73402251'    { fido2-token -L }
 ```
+
+The script reports one OK/FAIL line per gate and exits non-zero if any fails.
 
 **Decision rule**: Windows PIV detection ✅ (done, §3). Remaining gates are Linux checks 4 + 6: both
 pass → key cleared for the adoption procedure ([runbook 46](../runbooks/46-adopt-utrust-piv-root-custody.md)).
@@ -186,7 +179,8 @@ Windows via uTrust Key Manager, or switch to an NFC+ SKU.
 The diagnostic answer is **yes, with gates**: reissue the root onto the token's PIV slot 9C — key
 generated on-card, never in software — rather than importing the existing P-256 root, accepting the
 one-time trust rotation (ADR 38 amended on this branch). The executable procedure lives in
-[runbook 46](../runbooks/46-adopt-utrust-piv-root-custody.md) with `sign-piv.sh` in the offline kit;
+[runbook 46](../runbooks/46-adopt-utrust-piv-root-custody.md) with `New-Intermediate.ps1` /
+`New-IpaCa.ps1` in the signing kit;
 this log keeps only the findings that shape that path:
 
 - **Gates**: Windows PIV detection ✅ (`certutil -scinfo`, §3); Linux checks 4 + 6 (§4) still pending
@@ -212,8 +206,9 @@ this log keeps only the findings that shape that path:
   required for the token ceremony — the key is non-exportable, so workstation signing (WSL/Windows) is
   acceptable with the token plugged in only during the ceremony, per-signature PIN, and CSR
   subject/public-key verification on screen before signing (residual: one rogue 1-year intermediate;
-  the key itself cannot leak). The **IronKey is retired** — transient solution only, destroyed in
-  runbook 46 phase 4; no future IronKey usage.
+  the key itself cannot leak). The **signing machine is the Windows 11 workstation with WSL (Ubuntu)**;
+  the kit's scripts are PowerShell 7 and run either inside WSL or on Windows. The **IronKey is
+  retired** — transient solution only, destroyed in runbook 46 phase 4; no future IronKey usage.
 - OpenSC must claim the card on Linux — a 2023 report had default `opensc-pkcs11.so` not claiming a
   uTrust under Linux; retest on the actual unit (check 6). Identiv ships no Linux PKCS#11 module of its
   own; Key Manager is Windows-only.
@@ -234,5 +229,5 @@ this log keeps only the findings that shape that path:
 - [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) — three-tier PKI, root custody (amended 2026-11-10 on this branch: uTrust PIV slot 9C, root **reissued** — issue #193)
 - [research 36 §4–§5](36-step-ca-machine-identity.md) — KMS/custody paths; `step-kms-plugin` (CGO, `libpcsclite1`) needed for `pkcs11:` on the signing machine
 - [runbook 35 §6–§7](../runbooks/35-deploy-step-ca.md) — CSR emission from the TPM key; `ca.json` `tpmkms`
-- [runbook 36](../runbooks/36-private-ca-init.md) — the IronKey ceremony · [runbook 46](../runbooks/46-adopt-utrust-piv-root-custody.md) — the adoption procedure this diagnostic feeds · [offline signing kit](../private-ca-offline-signing/README.md) + [`check-utrust.sh`](../private-ca-offline-signing/check-utrust.sh) + [`sign-piv.sh`](../private-ca-offline-signing/sign-piv.sh) — health check and token signing
+- [runbook 36](../runbooks/36-private-ca-init.md) — the IronKey ceremony · [runbook 46](../runbooks/46-adopt-utrust-piv-root-custody.md) — the adoption procedure this diagnostic feeds · [signing kit](../private-ca-offline-signing/README.md) + [`Test-Token.ps1`](../private-ca-offline-signing/Test-Token.ps1) + [`New-Intermediate.ps1`](../private-ca-offline-signing/New-Intermediate.ps1) — health check and token signing
 - [runbook 39](../runbooks/39-trust-private-ca.md) — root distribution to fleet + workstations (reissue step 4)

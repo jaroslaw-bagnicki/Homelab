@@ -56,7 +56,7 @@
   ansible.builtin.fail:
     msg: >-
       {{ freeipa_csr_path }} exists but the signed chain is incomplete. Sign it on the
-      offline root (docs/private-ca-offline-signing/sign-ipa-ca.sh), copy
+      offline root (docs/private-ca-offline-signing/New-IpaCa.ps1), copy
       {{ freeipa_ipa_ca_cert }} and {{ freeipa_root_cert }} back, then re-run.
 
 - name: Complete the external-ca install

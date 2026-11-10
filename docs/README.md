@@ -15,4 +15,4 @@
 | [Plans](plans/README.md) | Multi-stage rollout plans — the order workstreams are built in, and each stage's exit gate |
 | [Reports](reports/README.md) | Project quality assessments — point-in-time reviews of process, docs, and IaC |
 | [Workloads](workloads.md) | Self-contained Ansible workload recipes — index, conventions, and deployment references |
-| [Private CA token signing kit](private-ca-offline-signing/README.md) | The uTrust token signing kit — provision the root on the token and sign the intermediate CA (no air-gap needed) |
+| [Private CA token signing kit](private-ca-offline-signing/README.md) | The uTrust token signing kit — create the root on the token and sign the CAs under it (PowerShell, WSL or Windows) |
