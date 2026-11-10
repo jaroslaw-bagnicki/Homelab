@@ -23,21 +23,23 @@ root key, and it exists only inside the token.
 
 ## Contents
 
-| File | What it is | Read it |
+| Kind | File | What it is |
 |---|---|---|
-| [`01-building-step.md`](01-building-step.md) | puts the `step` CLI **and** `step-kms-plugin` into this kit | on the connected machine, before the ceremony |
-| [`02-issuing-root-cert.md`](02-issuing-root-cert.md) | provisions the 10-year root **on the token**, slot 9C | **once ever** |
-| [`03-signing-csr.md`](03-signing-csr.md) | signs the intermediate CSR with the token | every signing, incl. the annual re-sign |
-| `step` | the `step` CLI, linux/amd64 — **not stored in git** (42 MB upstream binary), added by 01 | — |
-| `step-kms-plugin` | the CGO KMS plugin — **not stored in git**, added by 01; the stock static `step` execs it for every `pkcs11:` URI | — |
-| [`check-utrust.sh`](check-utrust.sh) | read-only token health check (USB, reader, PIV AID `9000`, CPLC, PKCS#11 slot, AAGUID) | first, on the workstation with the token attached |
-| [`sign-piv.sh`](sign-piv.sh) | signs `intermediate_ca.csr` with the root on the token, then machine-checks the result | every signing |
-| [`sign-ipa-ca.sh`](sign-ipa-ca.sh) | signs FreeIPA's `ipa.csr` with the same token root | the FreeIPA CA ceremony |
-| `intermediate_ca.csr` | the certificate request, created on the CA host by the key in `pve1`'s TPM — **not stored in git**, bring the file the CA host produced | — |
-| `intermediate-ca.tpl` | the signing template — the extensions the finished certificate must carry | — |
-| `ipa-ca.tpl` | the FreeIPA CA signing template — `CN=Certificate Authority,O=IPA.INTERNAL`, CA:TRUE, pathlen:0 | — |
-| `root_ca.crt` | the current root certificate (public); replaced by the new root after the reissue | — |
-| `intermediate_ca.crt` | the last signed intermediate (public) | — |
+| guide | [`01-building-step.md`](01-building-step.md) | assembles the kit: adds `step` + `step-kms-plugin` (checksum-verified) — connected machine, before the ceremony |
+| guide | [`02-issuing-root-cert.md`](02-issuing-root-cert.md) | provisions the 10-year root **on the token** (slot 9C) — **once ever** |
+| guide | [`03-signing-csr.md`](03-signing-csr.md) | signs the intermediate CSR with the token — every signing, incl. the annual re-sign |
+| script | [`check-utrust.sh`](check-utrust.sh) | read-only token health check: USB, reader, PIV AID `9000`, CPLC, PKCS#11 slot, AAGUID |
+| script | [`sign-piv.sh`](sign-piv.sh) | signs `intermediate_ca.csr` with the token root, machine-checks the result |
+| script | [`sign-ipa-ca.sh`](sign-ipa-ca.sh) | signs FreeIPA's `ipa.csr` with the same token root |
+| binary | `step` | `step` CLI linux/amd64 — not in git (42 MB), added by 01 |
+| binary | `step-kms-plugin` | CGO KMS plugin — not in git, added by 01; the static `step` execs it for every `pkcs11:` URI |
+| input | `intermediate_ca.csr` | CSR from the CA host (`pve1` TPM key) — not in git, bring the file runbook 35 §6 produced |
+| input | `ipa.csr` | FreeIPA CA CSR — not in git, bring it from the IPA guest for the M1 ceremony |
+| template | `intermediate-ca.tpl` | signing template — the extensions the finished intermediate must carry |
+| template | `ipa-ca.tpl` | IPA CA template — `CN=Certificate Authority,O=IPA.INTERNAL`, CA:TRUE, pathlen:0 |
+| output | `root_ca.crt` | current root cert (public); replaced by the new root after the reissue |
+| output | `intermediate_ca.crt` | last signed intermediate (public) |
+| output | `ipa-ca.crt` | last signed FreeIPA CA (public), when produced |
 
 `intermediate-ca.tpl` is a **copy** of `ansible/workloads/step-ca/files/intermediate-ca.tpl`, which is
 the versioned source. If you change one, change both — otherwise the signing run uses the old shape.
