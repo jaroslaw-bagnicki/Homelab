@@ -41,14 +41,11 @@ secret. Full procedure: [runbook 46](../runbooks/46-adopt-utrust-piv-root-custod
 
 ## If something fails
 
-| Symptom | Fix |
-|---|---|
-| `Permission denied` running `./step` | kit on a FAT/exFAT stick — copy to `/tmp`, `chmod +x` |
-| `step-kms-plugin: not found in $PATH` | 01 adds the plugin; install `libpcsclite1` |
-| health-check gate 4 ≠ `9000` / gate 6 empty | OpenSC can't drive PIV on Linux — Windows (Key Manager/`certreq`) or NFC+ SKU, research 54 §4 |
-| `kms uri 'token'… required` | `pkcs11:` URI needs `token=`/`serial=`/`slot-id` besides `module-path`+`object=` |
-| `getPublicKey failed: key … not found` | `create` can't generate keys — run the slot-9C keygen in 02 first |
-| a `FAIL` line in the checks | stop; carry nothing away — the token is untouched, re-signing the same CSR is safe |
+Stop. Keep the exact error output and record it in [research 54 §3](../research/54-utrust-fido2-nfc-piv-root-diagnostic.md)
+— including what was verified where, so a probe result is never mistaken for a hardware result. A failed
+run changes nothing on the token (a signed-but-rejected certificate is discarded, never installed), and
+re-signing the same CSR is safe. Do not improvise around a refusal — the network warning, the health-check
+gates (research 54 §4 decision rule) and the `FAIL` checks are deliberate.
 
 ## Reference
 
