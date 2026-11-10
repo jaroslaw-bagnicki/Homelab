@@ -28,7 +28,8 @@ YubiKey PIV)?
 3. **`step-ca` integration is ceremony-only.** The live CA on the `ca` guest is unchanged — intermediate
    stays in the `pve1` TPM (`tpmkms`, stock binary, [runbook 35 §6](../runbooks/35-deploy-step-ca.md)).
    The token is used only in the offline signing ceremony: `step certificate sign … 'pkcs11:…'` on a
-   **CGO-built `step` CLI** on the signing workstation ([research 36 §5](36-step-ca-machine-identity.md)).
+   the stock `step` CLI plus the CGO **`step-kms-plugin`** binary in `PATH` on the signing workstation
+   ([research 36 §5](36-step-ca-machine-identity.md), §5 step 5 below).
    The root token must never be plugged into `pve1` — that would break ADR 38's "root not reachable by a
    server compromise" invariant.
 4. **Hardware so far** (Hirsch SecureFIDO Manager 1.0.0 log, 2026-11-08): genuine device
@@ -183,16 +184,26 @@ drive it on Linux; then either provision/sign on Windows via uTrust Key Manager,
 
 1. Change factory defaults first: PIV PIN, PUK, management key (`piv-tool` / `pkcs11-tool` / Key
    Manager).
-2. **Generate the new 10-year root on the token in slot 9C** — the key never exists in software:
+2. **Generate the new 10-year root on the token in slot 9C** — the key never exists in software.
+   Two steps: key-pair generation **on the card** first, then the self-signed cert referencing it.
+   `step certificate create` only *uses* an existing on-token key — pointed at a not-yet-existing
+   `object=` it fails with `getPublicKey failed: key … not found`, and a `pkcs11:` URI without
+   `token=`/`serial=`/`slot-id` is rejected (both verified 2026-11-10 against SoftHSM):
 
    ```sh
+   # 2a. generate the key pair in PIV slot 9C — OpenSC drives the card; PIN policy "always"
+   #     is fixed at generation (manual); --login prompts for the PIV PIN, never pin-value
+   pkcs11-tool --module /usr/lib/x86_64-linux-gnu/opensc-pkcs11.so --keypairgen \
+     --key-type EC:prime256v1 --slot-id 0x9C --label "Homelab Root CA" --login
+
+   # 2b. self-signed 10-year root cert over that on-token key (shape verified against SoftHSM)
    ./step certificate create "Homelab Internal CA" root_ca.crt --profile root-ca --not-after 87600h \
+     --kms 'pkcs11:module-path=/usr/lib/x86_64-linux-gnu/opensc-pkcs11.so;token=<token label>' \
      --key 'pkcs11:module-path=/usr/lib/x86_64-linux-gnu/opensc-pkcs11.so;token=<token label>;object=Homelab Root CA;type=private'
    ```
 
-   PIN policy **always** is set at key generation (manual: fixed at generation/import); slot 9C asks the
-   PIN immediately before each signature. Algorithm: **P-256** (matches the P-256 intermediate and the
-   old root) or RSA ≤ 3072 — the PIV app has no RSA-4096.
+   Slot 9C asks the PIN immediately before each signature. Algorithm: **P-256** (matches the P-256
+   intermediate and the old root) or RSA ≤ 3072 — the PIV app has no RSA-4096.
 3. Test-sign a throwaway CSR, then export the new `root_ca.crt` (public) for distribution.
 4. **Trust rotation (the accepted cost of reissue):** distribute the new root to the fleet (Ansible) and
    workstations ([runbook 39](../runbooks/39-trust-private-ca.md)); re-sign **both** sibling CAs — the

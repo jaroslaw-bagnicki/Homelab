@@ -47,7 +47,7 @@ Adopt a **three-tier PKI** issued and renewed by **`step-ca`**:
    **root certificate is distributed to the fleet and to workstations** — Ansible for the
    fleet, manually or by script for workstations.
 
-   > **Amendment 2026-11-10 ([issue #193](https://github.com/jaroslaw-bagnicki/Homelab/issues/193), [research 54](../research/54-utrust-fido2-nfc-piv-root-diagnostic.md)):** the planned token is the **uTrust FIDO2 NFC USB-A, PIV slot 9C** — PIV applet confirmed on the hardware (`certutil -scinfo` → `Identity Device (NIST SP 800-73 [PIV])`). The root will be **reissued on the token** (generated in slot 9C, so the key never exists in software) instead of importing the IronKey key. This deliberately accepts the one-time root redistribution the original text rejected: distribute the new root to fleet + workstations ([runbook 39](../runbooks/39-trust-private-ca.md)), re-sign **both** sibling CAs (step-ca intermediate via `sign.sh`, FreeIPA/Dogtag via `sign-ipa-ca.sh` — [ADR 42](42-pki-topology-sibling-cas.md)), dual-trust old+new during cutover, then remove the old root from every trust store by hand (no CRL/OCSP covers roots) and destroy the IronKey key file last. PIV custody on the signing machine still needs the CGO build ([research 36 §5](../research/36-step-ca-machine-identity.md)).
+   > **Amendment 2026-11-10 ([issue #193](https://github.com/jaroslaw-bagnicki/Homelab/issues/193), [research 54](../research/54-utrust-fido2-nfc-piv-root-diagnostic.md)):** the planned token is the **uTrust FIDO2 NFC USB-A, PIV slot 9C** — PIV applet confirmed on the hardware (`certutil -scinfo` → `Identity Device (NIST SP 800-73 [PIV])`). The root will be **reissued on the token** (generated in slot 9C, so the key never exists in software) instead of importing the IronKey key. This deliberately accepts the one-time root redistribution the original text rejected: distribute the new root to fleet + workstations ([runbook 39](../runbooks/39-trust-private-ca.md)), re-sign **both** sibling CAs (step-ca intermediate via `sign.sh`, FreeIPA/Dogtag via `sign-ipa-ca.sh` — [ADR 42](42-pki-topology-sibling-cas.md)), dual-trust old+new during cutover, then remove the old root from every trust store by hand (no CRL/OCSP covers roots) and destroy the IronKey key file last. PIV custody on the signing machine needs the CGO **`step-kms-plugin`** binary plus `libpcsclite1` in `PATH` — the stock static `step` delegates every `pkcs11:` URI to that plugin ([research 36 §5](../research/36-step-ca-machine-identity.md), [research 54 §5](../research/54-utrust-fido2-nfc-piv-root-diagnostic.md)).
 
 2. **Intermediate CA — 1 year**, signed by the root. Its private key is stored in the **TPM 2.0 on
    `pve1`** — the Wyse 5070's **Intel PTT firmware TPM**, not a discrete chip (measured 2026-10-04;
@@ -126,8 +126,9 @@ with the TPM bound through, rather than one all-in-one stack).
   ([research 36 §4](../research/36-step-ca-machine-identity.md)). Rejected for now in favour of local,
   offline custody: it puts a cloud dependency and an internet round-trip into the trust anchor. **Remains
   the fallback** if TPM/YubiKey custody proves impractical.
-- **Root key in a YubiKey PIV immediately** — the stated intent, but sequenced after the IronKey start;
-  PIV custody also needs the CGO build.
+- **Root key in a PIV token immediately** — the stated intent, but sequenced after the IronKey start;
+  PIV custody also needs the CGO `step-kms-plugin` in `PATH` on the signing machine (amended 2026-11-10:
+  the token is the uTrust FIDO2 NFC USB-A, slot 9C — [issue #193](https://github.com/jaroslaw-bagnicki/Homelab/issues/193)).
 - **SPIFFE/SPIRE or HashiCorp Vault as the identity platform** — both evaluated and rejected as heavier
   than a five-node fleet needs; `step-ca` covers ACME, OIDC and SSH certificates in one binary
   ([research 36 §1](../research/36-step-ca-machine-identity.md)).
