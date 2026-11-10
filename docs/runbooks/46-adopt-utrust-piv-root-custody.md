@@ -2,7 +2,7 @@
 
 > **Status: authored, NOT yet executed (2026-11-10).** The hardware gates are still pending — run
 > [research 54 §4](../research/54-utrust-fido2-nfc-piv-root-diagnostic.md) first and do not start this
-> runbook until `Test-Key.ps1` passes checks 4 (PIV AID `9000`) and 6 (OpenSC PKCS#11 lists the token).
+> runbook until `Test-Utrust.ps1` passes checks 4 (PIV AID `9000`) and 6 (OpenSC PKCS#11 lists the token).
 >
 > Move the 10-year **root** from the IronKey key file onto the **uTrust FIDO2 NFC USB-A (P/N 905601),
 > PIV applet slot 9C**, by **reissuing** it: the new root key is generated on the token and never
@@ -29,7 +29,7 @@ protocol-bound signatures — research 54 §1); FIDO2 passkeys for Authentik/SSH
 
 ## Prerequisites
 
-- [ ] `docs/ca-signing-kit/Test-Key.ps1` run on the signing machine with the token
+- [ ] `docs/ca-signing-kit/Test-Utrust.ps1` run on the signing machine with the token
       attached — checks 1–7 pass: USB `04e6:5a11`, one CCID reader, driver `PIV-II`, PIV AID select
       `9000`, CPLC `40 90` (SLE 78) + serial, `pkcs11-tool --module opensc-pkcs11.so --list-slots`
       lists the token, `fido2-token -L` AAGUID `73402251-f2a8-4f03-873e-3cb6db604b03`
@@ -56,7 +56,7 @@ protocol-bound signatures — research 54 §1); FIDO2 passkeys for Authentik/SSH
 ## Phase 0 — pre-flight health check
 
 ```sh
-./Test-Key.ps1        # all seven checks from research 54 §4, read-only, no PIN login
+./Test-Utrust.ps1        # all seven checks from research 54 §4, read-only, no PIN login
 ```
 
 All pass → proceed. Check 4 fails → this unit's firmware has PIV disabled for OpenSC; provision/sign
@@ -149,7 +149,7 @@ unchanged. Decide before phase 2 and record the choice in research 54.
 
 ## Abort criteria
 
-- Any `Test-Key.ps1` gate fails → stop before phase 1; nothing has been written to the token yet.
+- Any `Test-Utrust.ps1` gate fails → stop before phase 1; nothing has been written to the token yet.
 - Phase 2 verification fails → the token can be reset and phase 2 retried; no client has trusted
   anything yet.
 - Phase 4 step 3 shows any node still on the old root after cutover → fix that node before removing the
@@ -161,5 +161,5 @@ unchanged. Decide before phase 2 and record the choice in research 54.
 - [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) — amended 2026-11-10: uTrust PIV slot 9C, root reissued
 - [issue #193](https://github.com/jaroslaw-bagnicki/Homelab/issues/193) — adoption tracking
 - [runbook 36](36-private-ca-init.md) — 🪦 retired IronKey/stick ceremony this replaces · [runbook 35 §6–§7](35-deploy-step-ca.md) — CSR + install · [runbook 39](39-trust-private-ca.md) — root distribution · [runbook 41](41-deploy-freeipa-server.md) — FreeIPA CA
-- [signing kit](../ca-signing-kit/README.md) — `Test-Key.ps1`, `New-Root.ps1`, `New-Intermediate.ps1`, `New-IpaCa.ps1`, `step` + `step-kms-plugin`
+- [signing kit](../ca-signing-kit/README.md) — `Test-Utrust.ps1`, `New-Root.ps1`, `New-Intermediate.ps1`, `New-IpaCa.ps1`, `step` + `step-kms-plugin`
 - [research 36 §4–§5](../research/36-step-ca-machine-identity.md) — KMS/custody paths, `step-kms-plugin` requirement

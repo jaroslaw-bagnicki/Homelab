@@ -23,7 +23,7 @@ Two things follow from that picture, and they explain the whole kit:
 
 | Script | What it does | How often |
 |---|---|---|
-| [`Test-Key.ps1`](Test-Key.ps1) | Read-only health check: USB, reader, PIV applet, chip, PKCS#11, FIDO2 AAGUID, tooling. Enters no PIN, writes nothing to the card. | before every ceremony |
+| [`Test-Utrust.ps1`](Test-Utrust.ps1) | Read-only health check: USB, reader, PIV applet, chip, PKCS#11, FIDO2 AAGUID, tooling. Enters no PIN, writes nothing to the card. | before every ceremony |
 | [`New-Root.ps1`](New-Root.ps1) | Creates the 10-year root on the uTrust Security Key: replaces factory credentials, generates the key in slot 9C, writes and verifies the certificate, proves it can sign. | **once, ever** |
 | [`New-Intermediate.ps1`](New-Intermediate.ps1) | Signs `intermediate_ca.csr` → `intermediate_ca.crt`, then machine-checks the result. | every year |
 | [`New-IpaCa.ps1`](New-IpaCa.ps1) | Signs `ipa.csr` → `ipa-ca.crt`, then machine-checks the result. | when the FreeIPA CA is built or re-signed |
@@ -41,7 +41,7 @@ where the scripts run.
 ```sh
 wsl
 cd ~/ca-signing-kit
-pwsh ./Test-Key.ps1
+pwsh ./Test-Utrust.ps1
 ```
 
 The scripts need `pcscd`, OpenSC and `step` installed in WSL — [01-setup.md](01-setup.md) does that
@@ -51,7 +51,7 @@ once.
 
 1. **Set up** — [01-setup.md](01-setup.md). Install the tooling in WSL, put `step` and
    `step-kms-plugin` in the kit, attach the uTrust Security Key. Do this once.
-2. **Check the uTrust Security Key** — `./Test-Key.ps1`. All checks must pass.
+2. **Check the uTrust Security Key** — `./Test-Utrust.ps1`. All checks must pass.
 3. **Create the root** — `./New-Root.ps1`, **once ever** — [02-root.md](02-root.md).
 4. **Sign the intermediate** — `./New-Intermediate.ps1` — [03-sign.md](03-sign.md). This is the
    repeating ceremony, annual re-sign included.
@@ -86,7 +86,7 @@ All public — none of it is secret:
 |---|---|
 | `step` fails with `Permission denied` | You are running the kit straight off a USB stick. FAT32, exFAT and NTFS have no executable bit, so `chmod` does nothing there. Copy the kit to a real filesystem first — [01-setup.md](01-setup.md). |
 | `step-kms-plugin was not found on PATH` | The plugin is missing from the kit. The stock `step` is a static build that execs it for every `pkcs11:` URI — see [01-setup.md](01-setup.md). |
-| `Test-Key.ps1` fails the PIV or PKCS#11 check | OpenSC cannot drive this card. Provision and sign on Windows instead, or use an NFC+ SKU — [research 54 §2](../research/54-utrust-fido2-nfc-piv-root-diagnostic.md). |
+| `Test-Utrust.ps1` fails the PIV or PKCS#11 check | OpenSC cannot drive this card. Provision and sign on Windows instead, or use an NFC+ SKU — [research 54 §2](../research/54-utrust-fido2-nfc-piv-root-diagnostic.md). |
 | A `FAIL` line appears during signing | Stop and carry nothing away. The uTrust Security Key is untouched and re-signing the same CSR is safe; any certificate already on disk was left as it was. |
 | `No smart card reader` | `pcscd` is not running, or the uTrust Security Key is not attached to WSL. `sudo service pcscd start`; for WSL, `usbipd attach --wsl --busid <busid>`. |
 

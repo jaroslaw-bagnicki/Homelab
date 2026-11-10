@@ -95,7 +95,7 @@ key. What this session settled without hardware:
 
 - ✅ **Toolchain staged and baseline-verified**: `pcscd 2.0.3`, `opensc 0.25.0~rc1`, `pcsc-tools
   1.7.1`, `fido2-tools 1.14.0`, `usbutils`, `libpcsclite1`, `softhsm2` installed; `pcscd` running;
-  `Test-Key.ps1` runs clean end-to-end and reports the expected "No smart card readers found"
+  `Test-Utrust.ps1` runs clean end-to-end and reports the expected "No smart card readers found"
   with no device. Note for Ubuntu 24.04: the FIDO2 CLI package is **`fido2-tools`** (not
   `libfido2-bin`), and on OpenSC ≥ 0.23 **`-r` means `--reader` — readers are listed with `-l`**.
 - ✅ **Root key algorithm — the RSA-4096 worry is moot**: `step certificate inspect root_ca.crt`
@@ -155,7 +155,7 @@ Windows cross-check **done 2026-11-08**: `certutil -scinfo` lists the PIV card (
 Key Manager: the **firmware version** (manual: firmware decides applet enablement).
 
 Reference script (same checks, read-only, no PIN login, writes nothing to the token) — saved as
-[`Test-Key.ps1`](../ca-signing-kit/Test-Key.ps1) in the signing kit. Each gate is one
+[`Test-Utrust.ps1`](../ca-signing-kit/Test-Utrust.ps1) in the signing kit. Each gate is one
 `Check` call:
 
 ```powershell
@@ -229,5 +229,5 @@ this log keeps only the findings that shape that path:
 - [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) — three-tier PKI, root custody (amended 2026-11-10 on this branch: uTrust PIV slot 9C, root **reissued** — issue #193)
 - [research 36 §4–§5](36-step-ca-machine-identity.md) — KMS/custody paths; `step-kms-plugin` (CGO, `libpcsclite1`) needed for `pkcs11:` on the signing machine
 - [runbook 35 §6–§7](../runbooks/35-deploy-step-ca.md) — CSR emission from the TPM key; `ca.json` `tpmkms`
-- [runbook 36](../runbooks/36-private-ca-init.md) — the IronKey ceremony · [runbook 46](../runbooks/46-adopt-utrust-piv-root-custody.md) — the adoption procedure this diagnostic feeds · [signing kit](../ca-signing-kit/README.md) + [`Test-Key.ps1`](../ca-signing-kit/Test-Key.ps1) + [`New-Intermediate.ps1`](../ca-signing-kit/New-Intermediate.ps1) — health check and token signing
+- [runbook 36](../runbooks/36-private-ca-init.md) — the IronKey ceremony · [runbook 46](../runbooks/46-adopt-utrust-piv-root-custody.md) — the adoption procedure this diagnostic feeds · [signing kit](../ca-signing-kit/README.md) + [`Test-Utrust.ps1`](../ca-signing-kit/Test-Utrust.ps1) + [`New-Intermediate.ps1`](../ca-signing-kit/New-Intermediate.ps1) — health check and token signing
 - [runbook 39](../runbooks/39-trust-private-ca.md) — root distribution to fleet + workstations (reissue step 4)
