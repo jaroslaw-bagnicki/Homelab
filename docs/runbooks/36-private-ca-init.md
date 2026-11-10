@@ -133,8 +133,13 @@ year; the root is published to Key Vault as `ca-root-cert`.
 
 - **Deployment** — [runbook 35](35-deploy-step-ca.md) installs the signed intermediate and starts `step-ca`.
 - **Distributing the root** — [#144](https://github.com/jaroslaw-bagnicki/Homelab/issues/144), out of scope.
-- **Moving the root onto a YubiKey** — ADR 38's planned change. It makes the root impossible to copy out
-  and destroys every copy that could be, so it is a ceremony rather than a file move. Out of scope.
+- **Reissuing the root onto a security token** — ADR 38's planned change, amended 2026-11-10: the uTrust
+  FIDO2 NFC USB-A (PIV slot 9C) with a **new root generated on the token**, tracked in
+  [#193](https://github.com/jaroslaw-bagnicki/Homelab/issues/193), diagnostic in
+  [research 54](../research/54-utrust-fido2-nfc-piv-root-diagnostic.md). Because the root is reissued
+  rather than imported, this is a full trust rotation — re-distribute the root
+  ([runbook 39](39-trust-private-ca.md)), re-sign both sibling CAs, remove the old root — not a file
+  move. Out of scope for this runbook.
 
 ## References
 

@@ -46,6 +46,9 @@ Adopt a **three-tier PKI** issued and renewed by **`step-ca`**:
    rejected because it forces the root redistribution the offline-root design exists to avoid.) The
    **root certificate is distributed to the fleet and to workstations** — Ansible for the
    fleet, manually or by script for workstations.
+
+   > **Amendment 2026-11-10 ([issue #193](https://github.com/jaroslaw-bagnicki/Homelab/issues/193), [research 54](../research/54-utrust-fido2-nfc-piv-root-diagnostic.md)):** the planned token is the **uTrust FIDO2 NFC USB-A, PIV slot 9C** — PIV applet confirmed on the hardware (`certutil -scinfo` → `Identity Device (NIST SP 800-73 [PIV])`). The root will be **reissued on the token** (generated in slot 9C, so the key never exists in software) instead of importing the IronKey key. This deliberately accepts the one-time root redistribution the original text rejected: distribute the new root to fleet + workstations ([runbook 39](../runbooks/39-trust-private-ca.md)), re-sign **both** sibling CAs (step-ca intermediate via `sign.sh`, FreeIPA/Dogtag via `sign-ipa-ca.sh` — [ADR 42](42-pki-topology-sibling-cas.md)), dual-trust old+new during cutover, then remove the old root from every trust store by hand (no CRL/OCSP covers roots) and destroy the IronKey key file last. PIV custody on the signing machine still needs the CGO build ([research 36 §5](../research/36-step-ca-machine-identity.md)).
+
 2. **Intermediate CA — 1 year**, signed by the root. Its private key is stored in the **TPM 2.0 on
    `pve1`** — the Wyse 5070's **Intel PTT firmware TPM**, not a discrete chip (measured 2026-10-04;
    [research 37 §5](../research/37-tpm2-hardware-and-fleet.md)) — so signing happens in hardware and the
@@ -92,7 +95,8 @@ with the TPM bound through, rather than one all-in-one stack).
   root. There is **no root re-issue and no client re-trust window**, so a `pve1` failure is contained to
   the intermediate. Short-lived leaves then re-enrol automatically. Only the loss of the *root* key
   forces a new root and a full redistribution — which is exactly why the root is the one key kept offline
-  on the IronKey, with the YubiKey PIV upgrade planned to make it non-exportable.
+  on the IronKey, with the token upgrade planned to make it non-exportable (amended 2026-11-10: uTrust
+  FIDO2 NFC USB-A, PIV slot 9C, root **reissued** on the token — [issue #193](https://github.com/jaroslaw-bagnicki/Homelab/issues/193)).
 - **Root distribution is the adoption cost.** Every client that should trust LAN names needs the root
   installed. The fleet is covered by Ansible; **workstations and personal devices are manual**, and a
   managed/corporate workstation may refuse a private root while Firefox keeps its own trust store — the

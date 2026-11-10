@@ -40,6 +40,7 @@ YubiKey PIV)?
    must drive slot 9C for the ceremony), CPLC chip check (`40 90` = SLE 78), firmware version from Key
    Manager (§4). The 2026-11-10 dev-container session staged the toolchain and settled the non-hardware
    questions: root key is P-256, PKCS#11 sign path proven via SoftHSM, `step-kms-plugin` kit gap (§3).
+6. **Decision 2026-11-10 ([issue #193](https://github.com/jaroslaw-bagnicki/Homelab/issues/193)): reissue the root on the token — do not import.** The new 10-year root is generated **in slot 9C**, so the key never exists in software. (Import would also fit — the current root is P-256, within the PIV app's ECC P-256/P-384 — but it would pass the key through workstation memory once.) Reissue deliberately accepts the one-time trust rotation ADR 38 originally rejected; ADR 38 is amended on this branch, rotation steps in §5.
 
 ## 1. Why the FIDO2 applet is out — and what the PIV applet offers
 
@@ -178,19 +179,30 @@ fido2-token -L 2>&1 || echo "  fido2-token failed (install fido2-tools)"
 pass → key cleared for the provisioning ceremony (§5). Check 4 fails → Windows sees PIV but OpenSC cannot
 drive it on Linux; then either provision/sign on Windows via uTrust Key Manager, or switch to an NFC+ SKU.
 
-## 5. If verified — provisioning ceremony outline (not yet executed)
+## 5. If verified — reissue ceremony outline (decided 2026-11-10, issue #193) — not yet executed
 
 1. Change factory defaults first: PIV PIN, PUK, management key (`piv-tool` / `pkcs11-tool` / Key
    Manager).
-2. Import the **existing** root key into **slot 9C** with PIN policy **always** (policy is fixed at
-   import — manual); install the existing `root_ca.crt` as the slot certificate so the root cert is
-   unchanged and only custody moves (ADR 38). Algorithm must be RSA ≤ 3072 or P-256/P-384 — check
-   `step certificate inspect root_ca.crt` first (**RSA-4096 will not fit**).
-3. Test-sign a throwaway CSR, then **destroy every exportable copy** (IronKey key file + backups) —
-   ADR 38: import alone doesn't give custody. Backup = a **second uTrust** with the same key imported.
-4. Ceremony signing ([runbook 36](../runbooks/36-private-ca-init.md), `sign.sh` delta) — replace the
-   stick's key file with a PKCS#11 URI; PIN is prompted per signature, never put `pin-value=` in the
-   URI/script/repo:
+2. **Generate the new 10-year root on the token in slot 9C** — the key never exists in software:
+
+   ```sh
+   ./step certificate create "Homelab Internal CA" root_ca.crt --profile root-ca --not-after 87600h \
+     --key 'pkcs11:module-path=/usr/lib/x86_64-linux-gnu/opensc-pkcs11.so;token=<token label>;object=Homelab Root CA;type=private'
+   ```
+
+   PIN policy **always** is set at key generation (manual: fixed at generation/import); slot 9C asks the
+   PIN immediately before each signature. Algorithm: **P-256** (matches the P-256 intermediate and the
+   old root) or RSA ≤ 3072 — the PIV app has no RSA-4096.
+3. Test-sign a throwaway CSR, then export the new `root_ca.crt` (public) for distribution.
+4. **Trust rotation (the accepted cost of reissue):** distribute the new root to the fleet (Ansible) and
+   workstations ([runbook 39](../runbooks/39-trust-private-ca.md)); re-sign **both** sibling CAs — the
+   step-ca intermediate ([runbook 36](../runbooks/36-private-ca-init.md), `sign.sh` delta below) and the
+   FreeIPA/Dogtag CA (`sign-ipa-ca.sh` — [ADR 42](../decisions/42-pki-topology-sibling-cas.md));
+   install them; clients dual-trust old+new during cutover; once everything chains to the new root,
+   **remove the old root from every trust store by hand** (no CRL/OCSP covers roots — ADR 38) and
+   destroy the IronKey key file + backups last.
+5. Ceremony signing (`sign.sh` delta) — the key argument becomes a PKCS#11 URI; PIN is prompted per
+   signature, never put `pin-value=` in the URI/script/repo:
 
    ```sh
    ./step certificate sign --template intermediate-ca.tpl --not-after 8760h \
@@ -202,7 +214,7 @@ drive it on Linux; then either provision/sign on Windows via uTrust Key Manager,
    The URI **must** carry `token=` (or `serial=`/`slot-id`) besides `object=` — `step-kms-plugin`
    rejects `module-path`+`object` alone (`kms uri 'token', 'serial' or 'slot-id' are required`;
    verified 2026-11-10 against SoftHSM). PIN is prompted per signature via `pin-source`/interactive
-   prompt, never put `pin-value=` in the URI/script/repo.
+   prompt, never put `pin-value=` in the URI/script/repo. (Applies to step 2's `--key` URI as well.)
 
    Toolchain on the signing machine only ([research 36 §5](36-step-ca-machine-identity.md)): the
    kit's `step` is the **stock static v0.31.0 binary** (no CGO) and delegates every `pkcs11:` URI
@@ -214,6 +226,11 @@ drive it on Linux; then either provision/sign on Windows via uTrust Key Manager,
    CSR signed via the `pkcs11:` URI, result verified). All of `sign.sh`'s machine checks (chains to
    root, `is_ca`, `pathlen:0`, SANs `ca.internal` + `192.168.2.215`, 1 year) run unchanged. `ca.json`
    on the `ca` guest does **not** change.
+
+**Backup note:** an on-card-generated root has no exportable copy — single token. To keep a backup
+token, generate the root key in software once (air-gapped kit), import it into **two** uTrust keys,
+then destroy the software file (the ADR 38 import ceremony applies to the *new* key). Otherwise
+recovery from token loss = another reissue.
 
 ## 6. Constraints and risks
 
@@ -228,13 +245,17 @@ drive it on Linux; then either provision/sign on Windows via uTrust Key Manager,
   (CGO, needs `libpcsclite1`) present in `PATH` on the signing machine — a kit gap found 2026-11-10,
   to be fixed when the ceremony is scheduled (add the binary to the bundle per the kit README's
   "add `step`" step).
+- Reissue = one-time full trust rotation (runbook 39 distribution, re-sign both sibling CAs, manual
+  old-root removal from trust stores — no CRL/OCSP for roots); an on-card-generated root is
+  single-token unless imported into a second token during the ceremony (§5 backup note).
 - FIDO2 applet remains useful for Authentik WebAuthn passkeys / FIDO2 SSH — orthogonal to CA signing.
 
 ## References
 
 - `uTrust_FIDO2_Technical_Manual.pdf` (Identiv/Hirsch) — PIV app, slots, policies, defaults, CPLC/SLE78, AAGUID (uploaded during this diagnostic)
 - `uTrust-FIDO2-NFC-Security-Keys-DS.pdf` rev 2021-08-02 — P/N 905601/905602, PIV in secure-element interface (uploaded during this diagnostic)
-- [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) — three-tier PKI, root custody, PIV-migration ceremony
-- [research 36 §4–§5](36-step-ca-machine-identity.md) — KMS/custody paths; CGO build needed for PKCS#11, signing machine only
+- [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) — three-tier PKI, root custody (amended 2026-11-10 on this branch: uTrust PIV slot 9C, root **reissued** — issue #193)
+- [research 36 §4–§5](36-step-ca-machine-identity.md) — KMS/custody paths; `step-kms-plugin` (CGO, `libpcsclite1`) needed for `pkcs11:` on the signing machine
 - [runbook 35 §6–§7](../runbooks/35-deploy-step-ca.md) — CSR emission from the TPM key; `ca.json` `tpmkms`
-- [runbook 36](../runbooks/36-private-ca-init.md) + [offline signing kit](../private-ca-offline-signing/README.md) — the ceremony this token would serve
+- [runbook 36](../runbooks/36-private-ca-init.md) + [offline signing kit](../private-ca-offline-signing/README.md) + [`check-utrust.sh`](../private-ca-offline-signing/check-utrust.sh) — the ceremony this token serves and its health check
+- [runbook 39](../runbooks/39-trust-private-ca.md) — root distribution to fleet + workstations (reissue step 4)
