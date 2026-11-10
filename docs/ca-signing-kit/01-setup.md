@@ -30,12 +30,15 @@ sudo service pcscd start
 
 ```sh
 # 3. PowerShell 7 — the scripts run inside WSL
-curl -fsSLO https://github.com/PowerShell/PowerShell/releases/download/v7.4.22/powershell_7.4.22-1.deb_amd64.deb
-sudo dpkg -i powershell_7.4.22-1.deb_amd64.deb
+curl -fsSLO https://github.com/PowerShell/PowerShell/releases/download/v7.6.10/powershell_7.6.10-1.deb_amd64.deb
+sudo dpkg -i powershell_7.6.10-1.deb_amd64.deb
 sudo apt-get install -f -y          # resolves the dependencies dpkg left unconfigured
-rm powershell_7.4.22-1.deb_amd64.deb
+rm powershell_7.6.10-1.deb_amd64.deb
 pwsh -v
 ```
+
+**7.6 is the current LTS.** 7.4 is also LTS but older; 7.7 is the newest stable but not LTS. Take the
+newest LTS unless you have a reason not to.
 
 **`sudo apt-get install -f -y` is not optional.** `dpkg -i` does not install dependencies, so it
 leaves `powershell` unconfigured and `pwsh` dies with
