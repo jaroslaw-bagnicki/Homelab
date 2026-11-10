@@ -38,7 +38,8 @@ YubiKey PIV)?
    detects the card as `Identity Device (NIST SP 800-73 [PIV])` → **PIV applet present** (§3).
 5. **Pending**: the Linux-side gates — PIV AID select → `9000` and `pkcs11-tool --list-slots` (OpenSC/PKCS#11
    must drive slot 9C for the ceremony), CPLC chip check (`40 90` = SLE 78), firmware version from Key
-   Manager. Commands and expected values in §4.
+   Manager (§4). The 2026-11-10 dev-container session staged the toolchain and settled the non-hardware
+   questions: root key is P-256, PKCS#11 sign path proven via SoftHSM, `step-kms-plugin` kit gap (§3).
 
 ## 1. Why the FIDO2 applet is out — and what the PIV applet offers
 
@@ -84,6 +85,38 @@ Source: Hirsch SecureFIDO Manager 1.0.0 (Windows), Device Config view + app log.
   non-plus unit**. The trailing `NTE_BAD_KEYSET` / "Missing stored keyset" is certutil's Microsoft CSP
   keyset *analysis* on a fresh card, not a card fault.
 
+### 2026-11-10 — dev-container session (toolchain staged, no key attached)
+
+Run from the WSL2 dev container. The container has **no USB host bus** (`/dev/bus/usb` absent, no
+`usbipd` interop), so the on-device checks below still cannot run here — see §4 for how to attach the
+key. What this session settled without hardware:
+
+- ✅ **Toolchain staged and baseline-verified**: `pcscd 2.0.3`, `opensc 0.25.0~rc1`, `pcsc-tools
+  1.7.1`, `fido2-tools 1.14.0`, `usbutils`, `libpcsclite1`, `softhsm2` installed; `pcscd` running;
+  `check-utrust.sh` runs clean end-to-end and reports the expected "No smart card readers found"
+  with no device. Note for Ubuntu 24.04: the FIDO2 CLI package is **`fido2-tools`** (not
+  `libfido2-bin`), and on OpenSC ≥ 0.23 **`-r` means `--reader` — readers are listed with `-l`**.
+- ✅ **Root key algorithm — the RSA-4096 worry is moot**: `step certificate inspect root_ca.crt`
+  (offline signing kit) → **ECDSA P-256** (also `ECDSA-SHA256` signature, 10-year root). P-256 is
+  within the PIV applet's ECC P-256/P-384 → **slot 9C can hold the existing root key** (§5 step 2).
+  The intermediate CSR is P-256 too.
+- ✅ **PKCS#11 signing path proven end-to-end without hardware** (SoftHSM 2.6 as the stand-in module,
+  throwaway keys): the kit's `step` (v0.31.0, sha256 = official release binary, statically linked)
+  **execs an external `step-kms-plugin`** for `pkcs11:` URIs — with `step-kms-plugin` v0.17.0
+  (smallstep/step-kms-plugin release, checksum-verified, CGO + `libpcsclite.so.1`) in `PATH`,
+  `step certificate create … --kms pkcs11:… --key pkcs11:…` and `step certificate sign …
+  'pkcs11:module-path=…;token=probe;object=probe-ca;type=private?pin-value=…'` both work and the
+  result verifies against the root.
+- ⚠️ **Kit gap found**: the offline signing kit ships only `step`. Without `step-kms-plugin` in
+  `PATH`, the ceremony command fails with `exec: "step-kms-plugin": executable file not found in
+  $PATH` (verified). The token ceremony must add the `step-kms-plugin` binary + `libpcsclite1` on
+  the signing machine (§5 step 4, §6).
+- ⚠️ **URI shape correction**: `step-kms-plugin` rejects a URI with only `module-path` + `object` —
+  `Error: kms uri 'token', 'serial' or 'slot-id' are required`. The §5 example must carry
+  `token=<label>` (or `serial`/`slot-id`) in addition to `object=` (verified against SoftHSM).
+- ❌ **Still pending — needs the physical key**: §4 checks 1–7 on a machine where the token is
+  visible (workstation, or this container after `usbipd attach --wsl` from the Windows host).
+
 ## 4. Pending hardware checks — resume here (VSCode terminal)
 
 Run on the **Linux workstation** (not `pve1`), key plugged in:
@@ -106,24 +139,26 @@ sudo systemctl start pcscd
 Windows cross-check **done 2026-11-08**: `certutil -scinfo` lists the PIV card (§3). Still wanted from
 Key Manager: the **firmware version** (manual: firmware decides applet enablement).
 
-Reference script (same checks, read-only, no PIN login, writes nothing to the token):
+Reference script (same checks, read-only, no PIN login, writes nothing to the token) — saved as
+[`check-utrust.sh`](../private-ca-offline-signing/check-utrust.sh) in the offline signing kit:
 
 ```sh
 #!/usr/bin/env bash
 # check-utrust.sh — READ-ONLY health check for uTrust FIDO2 NFC USB-A (P/N 905601)
+# OpenSC >= 0.23: `opensc-tool -r` now means --reader, readers are listed with -l.
 set -u
-echo "== USB ==";  lsusb | grep -iE 'identiv|04e6|utrust' || echo "  !! no Identiv device"
-echo "== reader =="; opensc-tool -r
-echo "== driver/ATR =="; opensc-tool --name; opensc-tool -a | head -2
+echo "== USB ==";  lsusb 2>/dev/null | grep -iE 'identiv|04e6|utrust' || echo "  !! no Identiv device"
+echo "== reader =="; opensc-tool -l 2>&1
+echo "== driver/ATR =="; opensc-tool --name 2>&1; opensc-tool -a 2>&1 | head -2
 echo "== PIV AID select (want 9000) =="
-opensc-tool -s '00a4040008a000000308000010000000' | tail -1
+opensc-tool -s '00a4040008a000000308000010000000' 2>&1 | tail -1
 echo "== CPLC chip (want 40 90 = SLE78) =="
-opensc-tool -s '00a4040008a000000151000000' -s '00ca9f7f' | tail -4
+opensc-tool -s '00a4040008a000000151000000' -s '00ca9f7f' 2>&1 | tail -4
 MOD="$(find /usr/lib -name 'opensc-pkcs11.so' 2>/dev/null | head -1)"
 echo "== PKCS#11 module: ${MOD:-NOT FOUND} =="
-[ -n "$MOD" ] && pkcs11-tool --module "$MOD" --list-slots
+[ -n "$MOD" ] && pkcs11-tool --module "$MOD" --list-slots 2>&1
 echo "== FIDO2 AAGUID (want 73402251-...) =="
-fido2-token -L 2>/dev/null || echo "  install libfido2-bin"
+fido2-token -L 2>&1 || echo "  fido2-token failed (install fido2-tools)"
 ```
 
 **Decision rule**: Windows PIV detection ✅ (done, §3). Remaining gates are Linux checks 4 + 6: both
@@ -147,13 +182,25 @@ drive it on Linux; then either provision/sign on Windows via uTrust Key Manager,
    ```sh
    ./step certificate sign --template intermediate-ca.tpl --not-after 8760h \
      intermediate_ca.csr "$STICK/root_ca.crt" \
-     'pkcs11:module-path=/usr/lib/x86_64-linux-gnu/opensc-pkcs11.so;object=Homelab Root CA;type=private' \
+     'pkcs11:module-path=/usr/lib/x86_64-linux-gnu/opensc-pkcs11.so;token=<token label>;object=Homelab Root CA;type=private' \
      > "$TMP"
    ```
 
-   Requires the **CGO `step` CLI** on the signing machine only ([research 36 §5](36-step-ca-machine-identity.md));
-   all of `sign.sh`'s machine checks (chains to root, `is_ca`, `pathlen:0`, SANs `ca.internal` +
-   `192.168.2.215`, 1 year) run unchanged. `ca.json` on the `ca` guest does **not** change.
+   The URI **must** carry `token=` (or `serial=`/`slot-id`) besides `object=` — `step-kms-plugin`
+   rejects `module-path`+`object` alone (`kms uri 'token', 'serial' or 'slot-id' are required`;
+   verified 2026-11-10 against SoftHSM). PIN is prompted per signature via `pin-source`/interactive
+   prompt, never put `pin-value=` in the URI/script/repo.
+
+   Toolchain on the signing machine only ([research 36 §5](36-step-ca-machine-identity.md)): the
+   kit's `step` is the **stock static v0.31.0 binary** (no CGO) and delegates every `pkcs11:` URI
+   to an external **`step-kms-plugin`** — add the CGO `step-kms-plugin` v0.17.0 binary
+   (smallstep/step-kms-plugin release, checksum-verified) to the bundle and `PATH`, plus
+   `libpcsclite1` (the plugin links `libpcsclite.so.1`). Without the plugin the command fails with
+   `exec: "step-kms-plugin": executable file not found in $PATH`. The whole path was proven
+   end-to-end on 2026-11-10 with SoftHSM 2.6 as the module (root created with the key in the module,
+   CSR signed via the `pkcs11:` URI, result verified). All of `sign.sh`'s machine checks (chains to
+   root, `is_ca`, `pathlen:0`, SANs `ca.internal` + `192.168.2.215`, 1 year) run unchanged. `ca.json`
+   on the `ca` guest does **not** change.
 
 ## 6. Constraints and risks
 
@@ -164,6 +211,10 @@ drive it on Linux; then either provision/sign on Windows via uTrust Key Manager,
   uTrust under Linux; retest on the actual unit (check 6). Identiv ships no Linux PKCS#11 module of its
   own; Key Manager is Windows-only.
 - `step-ca`'s YubiKey-PIV KMS is YubiKey-specific — the uTrust goes through generic `pkcs11:` URIs only.
+- The offline kit's `step` is static/non-CGO: `pkcs11:` URIs work only with `step-kms-plugin`
+  (CGO, needs `libpcsclite1`) present in `PATH` on the signing machine — a kit gap found 2026-11-10,
+  to be fixed when the ceremony is scheduled (add the binary to the bundle per the kit README's
+  "add `step`" step).
 - FIDO2 applet remains useful for Authentik WebAuthn passkeys / FIDO2 SSH — orthogonal to CA signing.
 
 ## References

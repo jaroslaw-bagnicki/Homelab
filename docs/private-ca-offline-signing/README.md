@@ -40,6 +40,7 @@ the signing machine only on the stick, back into the safe.
 | `root.sh` | creates the root CA on the stick — first run only | — |
 | `sign.sh` | signs the `step-ca` intermediate CSR with that root, then machine-checks the result | — |
 | `sign-ipa-ca.sh` | signs FreeIPA's `ipa.csr` (from `ipa-server-install --external-ca`) with the same root | — |
+| [`check-utrust.sh`](check-utrust.sh) | read-only health check for a uTrust FIDO2 NFC token (PIV applet, CPLC, PKCS#11 slot) — run on the connected workstation, **not** in the air-gapped ceremony | [research 54 §4](../research/54-utrust-fido2-nfc-piv-root-diagnostic.md) |
 
 `intermediate-ca.tpl` is a **copy** of `ansible/workloads/step-ca/files/intermediate-ca.tpl`, which is the
 versioned source. If you change one, change both — otherwise the signing machine uses the old shape.
