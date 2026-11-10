@@ -30,21 +30,24 @@ sudo service pcscd start
 
 ```sh
 # 3. PowerShell 7 — the scripts run inside WSL
-sudo apt-get install -y wget apt-transport-https software-properties-common
-source /etc/os-release
-wget -q https://packages.microsoft.com/config/ubuntu/$VERSION_ID/packages-microsoft-prod.deb
-sudo dpkg -i packages-microsoft-prod.deb
-rm packages-microsoft-prod.deb
-sudo apt-get update
-sudo apt-get install -y powershell
+curl -fsSLO https://github.com/PowerShell/PowerShell/releases/download/v7.4.22/powershell_7.4.22-1.deb_amd64.deb
+sudo dpkg -i powershell_7.4.22-1.deb_amd64.deb
+rm powershell_7.4.22-1.deb_amd64.deb
 pwsh -v
 ```
 
-This is Microsoft's documented method:
-[Install PowerShell 7 on Ubuntu](https://learn.microsoft.com/en-us/powershell/scripting/install/install-ubuntu).
-Ubuntu's own repositories do not carry `powershell`, which is why the plain
-`apt install powershell` fails with `Unable to locate package` — the Microsoft feed has to be
-registered first.
+**Why not `apt install powershell`.** Microsoft's package repository only publishes a *stable*
+`powershell` package for Ubuntu releases it has built for. On **Ubuntu 26.04 (Resolute)** the feed at
+`packages.microsoft.com/ubuntu/26.04/prod` carries **only `powershell-preview`** — so
+`apt-get install -y powershell` ends in `E: Unable to locate package powershell` even after the
+repository is registered correctly. The `.deb` above is the same LTS build, and its dependencies are
+all satisfied on 26.04 (`libgcc-s1` provides `libgcc1`, `libssl3t64` provides `libssl3`, `libicu78` is
+in the version list).
+
+Microsoft documents both methods — the
+[package repository](https://learn.microsoft.com/en-us/powershell/scripting/install/install-ubuntu)
+and the [manual `.deb`](https://learn.microsoft.com/en-us/powershell/scripting/install/install-ubuntu#manually-download-and-install-powershell).
+Use the repository on a release it covers; use the `.deb` on 26.04.
 
 **Do not use `snap install powershell`.** The snap is confined and cannot open the smart-card reader,
 so every PIV check fails with `No smart card reader` — the wrong error for the wrong reason.
