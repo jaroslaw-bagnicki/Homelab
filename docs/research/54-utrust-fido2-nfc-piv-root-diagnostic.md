@@ -6,7 +6,7 @@
 (slot 9C) and sign the `step-ca` intermediate CSR via PKCS#11 from a workstation — the token-custody
 upgrade [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) plans (currently IronKey, planned
 YubiKey PIV)?
-**Related**: [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) · [ADR 42](../decisions/42-pki-topology-sibling-cas.md) · [research 36 §4–§5](36-step-ca-machine-identity.md) · [runbook 35](../runbooks/35-deploy-step-ca.md) · [runbook 36](../runbooks/36-private-ca-init.md) · [offline signing kit](../private-ca-offline-signing/README.md)
+**Related**: [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) · [ADR 42](../decisions/42-pki-topology-sibling-cas.md) · [research 36 §4–§5](36-step-ca-machine-identity.md) · [runbook 35](../runbooks/35-deploy-step-ca.md) · [runbook 36](../runbooks/36-private-ca-init.md) · [offline signing kit](../private-ca-offline-signing/README.md) · [issue #193](https://github.com/jaroslaw-bagnicki/Homelab/issues/193)
 
 > **This is a diagnostic log, not a deployment recipe.** Nothing has been written to the token yet. The
 > output so far is document analysis plus the FIDO2-side readout from Hirsch SecureFIDO Manager; the
