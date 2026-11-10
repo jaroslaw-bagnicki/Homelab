@@ -30,17 +30,24 @@ sudo service pcscd start
 
 ```sh
 # 3. PowerShell 7 — the scripts run inside WSL
-#    Ubuntu has no `powershell` apt package, and the snap is sandboxed — it will not see the USB
-#    device. Install the .deb from the upstream release instead.
-curl -fsSLO https://github.com/PowerShell/PowerShell/releases/download/v7.4.22/powershell_7.4.22-1.deb_amd64.deb
-sudo dpkg -i powershell_7.4.22-1.deb_amd64.deb
-rm powershell_7.4.22-1.deb_amd64.deb
+sudo apt-get install -y wget apt-transport-https software-properties-common
+source /etc/os-release
+wget -q https://packages.microsoft.com/config/ubuntu/$VERSION_ID/packages-microsoft-prod.deb
+sudo dpkg -i packages-microsoft-prod.deb
+rm packages-microsoft-prod.deb
+sudo apt-get update
+sudo apt-get install -y powershell
 pwsh -v
 ```
 
-`apt install powershell` fails with `Unable to locate package` unless Microsoft's repository is added;
-the one-file `.deb` above avoids that setup. **Do not use `snap install powershell`** — the snap is
-confined and cannot open the smart-card reader, so every PIV check fails with `No smart card reader`.
+This is Microsoft's documented method:
+[Install PowerShell 7 on Ubuntu](https://learn.microsoft.com/en-us/powershell/scripting/install/install-ubuntu).
+Ubuntu's own repositories do not carry `powershell`, which is why the plain
+`apt install powershell` fails with `Unable to locate package` — the Microsoft feed has to be
+registered first.
+
+**Do not use `snap install powershell`.** The snap is confined and cannot open the smart-card reader,
+so every PIV check fails with `No smart card reader` — the wrong error for the wrong reason.
 
 Everything runs inside WSL. The key is not reachable from Windows, so there is nothing to gain from
 running the scripts there.
