@@ -15,7 +15,7 @@ The role targets `freeipa_ca_mode: external`:
 
 1. **Phase 1** runs `ipa-server-install --external-ca` and emits `/root/ipa.csr`.
 2. The operator signs that CSR with the offline fleet root
-   ([`New-IpaCa.ps1`](../../../docs/private-ca-offline-signing/New-IpaCa.ps1)) and copies
+   ([`New-IpaCa.ps1`](../../../docs/ca-signing-kit/New-IpaCa.ps1)) and copies
    `ipa-ca.crt` + `root_ca.crt` back to `/root`.
 3. **Phase 2** reruns the installer with both `--external-cert-file` arguments and completes the
    server.

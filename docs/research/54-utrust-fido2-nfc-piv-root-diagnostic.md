@@ -6,7 +6,7 @@
 (slot 9C) and sign the `step-ca` intermediate CSR via PKCS#11 from a workstation — the token-custody
 upgrade [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) plans (currently IronKey, planned
 YubiKey PIV)?  
-**Related**: [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) · [ADR 42](../decisions/42-pki-topology-sibling-cas.md) · [research 36 §4–§5](36-step-ca-machine-identity.md) · [runbook 35](../runbooks/35-deploy-step-ca.md) · [runbook 36](../runbooks/36-private-ca-init.md) · [offline signing kit](../private-ca-offline-signing/README.md) · [issue #193](https://github.com/jaroslaw-bagnicki/Homelab/issues/193)  
+**Related**: [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) · [ADR 42](../decisions/42-pki-topology-sibling-cas.md) · [research 36 §4–§5](36-step-ca-machine-identity.md) · [runbook 35](../runbooks/35-deploy-step-ca.md) · [runbook 36](../runbooks/36-private-ca-init.md) · [signing kit](../ca-signing-kit/README.md) · [issue #193](https://github.com/jaroslaw-bagnicki/Homelab/issues/193)  
 
 > **This is a diagnostic log, not a deployment recipe.** Nothing has been written to the token yet. The
 > output so far is document analysis plus the FIDO2-side readout from Hirsch SecureFIDO Manager; the
@@ -155,7 +155,7 @@ Windows cross-check **done 2026-11-08**: `certutil -scinfo` lists the PIV card (
 Key Manager: the **firmware version** (manual: firmware decides applet enablement).
 
 Reference script (same checks, read-only, no PIN login, writes nothing to the token) — saved as
-[`Test-Token.ps1`](../private-ca-offline-signing/Test-Token.ps1) in the signing kit. Each gate is one
+[`Test-Token.ps1`](../ca-signing-kit/Test-Token.ps1) in the signing kit. Each gate is one
 `Check` call:
 
 ```powershell
@@ -229,5 +229,5 @@ this log keeps only the findings that shape that path:
 - [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) — three-tier PKI, root custody (amended 2026-11-10 on this branch: uTrust PIV slot 9C, root **reissued** — issue #193)
 - [research 36 §4–§5](36-step-ca-machine-identity.md) — KMS/custody paths; `step-kms-plugin` (CGO, `libpcsclite1`) needed for `pkcs11:` on the signing machine
 - [runbook 35 §6–§7](../runbooks/35-deploy-step-ca.md) — CSR emission from the TPM key; `ca.json` `tpmkms`
-- [runbook 36](../runbooks/36-private-ca-init.md) — the IronKey ceremony · [runbook 46](../runbooks/46-adopt-utrust-piv-root-custody.md) — the adoption procedure this diagnostic feeds · [signing kit](../private-ca-offline-signing/README.md) + [`Test-Token.ps1`](../private-ca-offline-signing/Test-Token.ps1) + [`New-Intermediate.ps1`](../private-ca-offline-signing/New-Intermediate.ps1) — health check and token signing
+- [runbook 36](../runbooks/36-private-ca-init.md) — the IronKey ceremony · [runbook 46](../runbooks/46-adopt-utrust-piv-root-custody.md) — the adoption procedure this diagnostic feeds · [signing kit](../ca-signing-kit/README.md) + [`Test-Token.ps1`](../ca-signing-kit/Test-Token.ps1) + [`New-Intermediate.ps1`](../ca-signing-kit/New-Intermediate.ps1) — health check and token signing
 - [runbook 39](../runbooks/39-trust-private-ca.md) — root distribution to fleet + workstations (reissue step 4)

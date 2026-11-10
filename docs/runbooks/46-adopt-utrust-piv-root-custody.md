@@ -29,7 +29,7 @@ protocol-bound signatures — research 54 §1); FIDO2 passkeys for Authentik/SSH
 
 ## Prerequisites
 
-- [ ] `docs/private-ca-offline-signing/Test-Token.ps1` run on the signing machine with the token
+- [ ] `docs/ca-signing-kit/Test-Token.ps1` run on the signing machine with the token
       attached — checks 1–7 pass: USB `04e6:5a11`, one CCID reader, driver `PIV-II`, PIV AID select
       `9000`, CPLC `40 90` (SLE 78) + serial, `pkcs11-tool --module opensc-pkcs11.so --list-slots`
       lists the token, `fido2-token -L` AAGUID `73402251-f2a8-4f03-873e-3cb6db604b03`
@@ -48,7 +48,7 @@ protocol-bound signatures — research 54 §1); FIDO2 passkeys for Authentik/SSH
       **`step-kms-plugin` v0.17.0** (smallstep/step-kms-plugin release, verify against `checksums.txt`)
       — `step` delegates every `pkcs11:` URI to the plugin; without it:
       `exec: "step-kms-plugin": not found in $PATH` (verified 2026-11-10; the whole PKCS#11 path was
-      proven end-to-end against SoftHSM 2.6). See [01-setup.md](../private-ca-offline-signing/01-setup.md)
+      proven end-to-end against SoftHSM 2.6). See [01-setup.md](../ca-signing-kit/01-setup.md)
 - [ ] The uTrust token, the current `root_ca.crt` (public, from the kit), `intermediate_ca.csr`
       (from runbook 35 §6), `intermediate-ca.tpl`, and `ipa.csr` when the FreeIPA CA is re-signed
 - [ ] A safe for the token; the written-down IronKey passphrase still available until phase 5 finishes
@@ -77,9 +77,9 @@ Record the new PIN/PUK in the safe (never in the repo). Do not log the managemen
 
 ## Phase 2 — reissue the root on the token (slot 9C)
 
-Run the kit's [`New-Root.ps1`](../private-ca-offline-signing/New-Root.ps1) — it replaces the factory
+Run the kit's [`New-Root.ps1`](../ca-signing-kit/New-Root.ps1) — it replaces the factory
 credentials, generates the key on the card, writes the self-signed root, verifies its shape and proves
-the token can sign. The full walkthrough is [02-root.md](../private-ca-offline-signing/02-root.md).
+the token can sign. The full walkthrough is [02-root.md](../ca-signing-kit/02-root.md).
 
 ```sh
 ./New-Root.ps1
@@ -106,7 +106,7 @@ participation). Never put `pin-value=` in a URI, script, Ansible or the repo.
 
 Both machine-check the result (chains to root, `is_ca`, `pathlen:0`, key usage, SANs for the
 intermediate, validity) and discard anything that fails. Details:
-[03-sign.md](../private-ca-offline-signing/03-sign.md).
+[03-sign.md](../ca-signing-kit/03-sign.md).
 
 Carry back only the public certificates: `root_ca.crt`, `intermediate_ca.crt`, `ipa-ca.crt`.
 
@@ -161,5 +161,5 @@ unchanged. Decide before phase 2 and record the choice in research 54.
 - [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) — amended 2026-11-10: uTrust PIV slot 9C, root reissued
 - [issue #193](https://github.com/jaroslaw-bagnicki/Homelab/issues/193) — adoption tracking
 - [runbook 36](36-private-ca-init.md) — 🪦 retired IronKey/stick ceremony this replaces · [runbook 35 §6–§7](35-deploy-step-ca.md) — CSR + install · [runbook 39](39-trust-private-ca.md) — root distribution · [runbook 41](41-deploy-freeipa-server.md) — FreeIPA CA
-- [signing kit](../private-ca-offline-signing/README.md) — `Test-Token.ps1`, `New-Root.ps1`, `New-Intermediate.ps1`, `New-IpaCa.ps1`, `step` + `step-kms-plugin`
+- [signing kit](../ca-signing-kit/README.md) — `Test-Token.ps1`, `New-Root.ps1`, `New-Intermediate.ps1`, `New-IpaCa.ps1`, `step` + `step-kms-plugin`
 - [research 36 §4–§5](../research/36-step-ca-machine-identity.md) — KMS/custody paths, `step-kms-plugin` requirement

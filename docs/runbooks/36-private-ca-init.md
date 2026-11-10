@@ -14,7 +14,7 @@
 > ⚠ **The ceremony never touches the network.** This sits between
 > [runbook 35 §6](35-deploy-step-ca.md), which produces the certificate request, and
 > [§7](35-deploy-step-ca.md), which installs the signed certificate. Steps 1 and 2 are carried out by
-> the [signing kit](../private-ca-offline-signing/README.md). The one command that needs a
+> the [signing kit](../ca-signing-kit/README.md). The one command that needs a
 > network is publishing the root to Key Vault at the end of step 1 — it runs on the controller,
 deliberately away from the signing machine. Installing the root on the fleet and on personal
 devices is [runbook 39](39-trust-private-ca.md), not covered here.
@@ -39,7 +39,7 @@ The `pve1` TPM seals the intermediate key so it cannot be copied out
 ## Prerequisites
 
 - [ ] `intermediate_ca.csr` — produced by [runbook 35 §6](35-deploy-step-ca.md)
-- [ ] The [signing kit](../private-ca-offline-signing/README.md), with `step` in place
+- [ ] The [signing kit](../ca-signing-kit/README.md), with `step` in place
 - [ ] A machine to use as the signing machine, booted from the YUMI multiboot stick
 
 ---
@@ -75,7 +75,7 @@ That writes `homelab-bysxdb-kv/ca-root-cert`, the copy every fleet node installs
 the certificate is published: the script refuses a file that carries a private key, and the key never
 leaves the stick. Passphrase handling, the exact refusal messages, and why this step may use
 `--profile root-ca` while step 2 must not:
-[02-root.md](../private-ca-offline-signing/02-root.md).
+[02-root.md](../ca-signing-kit/02-root.md).
 
 ## 2. Sign the certificate request
 
@@ -98,7 +98,7 @@ this deployment records.
 
 Afterwards, unmount the stick and put it back in the safe, and carry `intermediate_ca.crt` and
 `root_ca.crt` back for [runbook 35 §7](35-deploy-step-ca.md). The required contents of the certificate
-and the exact failure messages: [03-sign.md](../private-ca-offline-signing/03-sign.md).
+and the exact failure messages: [03-sign.md](../ca-signing-kit/03-sign.md).
 
 > **Acceptance.** `step certificate inspect intermediate_ca.crt` shows: issuer = the root's CN,
 > ~1-year validity, **`CA:TRUE, pathlen:0`**, and the **Subject Alternative Name**
@@ -112,7 +112,7 @@ key:
 1. Produce a fresh `intermediate_ca.csr` from the existing TPM key — re-run
    [runbook 35 §6](35-deploy-step-ca.md)'s certificate-request task. Do not recreate the key.
 2. Sign it with the kit: `./sign.sh <destination-path>`
-   ([03-sign.md](../private-ca-offline-signing/03-sign.md)).
+   ([03-sign.md](../ca-signing-kit/03-sign.md)).
 3. Install it and restart the service ([runbook 35 §7](35-deploy-step-ca.md)).
 
 Nothing else changes. No new key, no new root, and no client has to be told anything, because every
@@ -154,6 +154,6 @@ year; the root is published to Key Vault as `ca-root-cert`.
 - [Research 37 §5](../research/37-tpm2-hardware-and-fleet.md) — the `pve1` Intel PTT TPM, and why the key can be lost
 - [Issue #141](https://github.com/jaroslaw-bagnicki/Homelab/issues/141) — the TPM test that settled the approach
 - [Runbook 35](35-deploy-step-ca.md) — the deployment this ceremony feeds
-- [signing kit](../private-ca-offline-signing/README.md) — the scripts, and the instructions the signing machine follows
+- [signing kit](../ca-signing-kit/README.md) — the scripts, and the instructions the signing machine follows
 - [Runbook 28](28-pve1-proxmox-node.md) (Proxmox base) · [ADR 34](../decisions/34-lan-tls-only.md) (TLS-only) ·
   [ADR 37](../decisions/37-lan-name-space-internal.md) (`.internal`)

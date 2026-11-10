@@ -108,7 +108,7 @@ Don't. FAT32, exFAT and NTFS have no executable bit, so `chmod +x` silently does
 fails with `Permission denied`. Copy the kit to a real filesystem first:
 
 ```sh
-cp -r /mnt/<stick>/private-ca-offline-signing ~/ca-kit
+cp -r /mnt/<stick>/ca-signing-kit ~/ca-kit
 cd ~/ca-kit
 chmod +x step
 ```
