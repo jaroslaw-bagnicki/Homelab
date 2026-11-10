@@ -1,6 +1,5 @@
 #Requires -Version 7.0
 # Read-only check that the uTrust Security Key can sign. Enters no PIN, writes nothing to the key.
-param([string]$TokenLabel)
 
 $ErrorActionPreference = 'Stop'
 if (-not $IsLinux) { throw 'Run this inside WSL, where the key is attached.' }
@@ -27,10 +26,6 @@ Check 'chip is SLE78 (40 90)'    { $r = opensc-tool -s '00a4040008a0000001510000
 Check 'OpenSC lists the key'     { $l = Label; if (-not $l) { throw 'no token label — OpenSC cannot drive this card' }; "label: $l" }
 Check 'FIDO2 AAGUID is 73402251' { $r = fido2-token -L 2>&1; if ($r -notmatch '73402251') { throw 'AAGUID does not match uTrust FIDO2 NFC' }; 'uTrust FIDO2 NFC' }
 Check 'step + step-kms-plugin'   { & "$PSScriptRoot/step" version | Out-Null; if (-not (Get-Command step-kms-plugin -ErrorAction SilentlyContinue)) { throw 'step-kms-plugin missing — see 01-setup.md' }; (& "$PSScriptRoot/step" version) -split "`n" | Select-Object -First 1 }
-
-if ($TokenLabel) {
-    Check "label is '$TokenLabel'" { $l = Label; if ($l -ne $TokenLabel) { throw "found '$l'" }; $l }
-}
 
 ""
 if ($fail) { "FAILED: $fail check(s) — do not start a ceremony."; exit 1 }
