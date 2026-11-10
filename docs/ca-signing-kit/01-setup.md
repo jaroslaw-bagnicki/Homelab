@@ -30,8 +30,17 @@ sudo service pcscd start
 
 ```sh
 # 3. PowerShell 7 — the scripts run inside WSL
-sudo apt install -y powershell
+#    Ubuntu has no `powershell` apt package, and the snap is sandboxed — it will not see the USB
+#    device. Install the .deb from the upstream release instead.
+curl -fsSLO https://github.com/PowerShell/PowerShell/releases/download/v7.4.22/powershell_7.4.22-1.deb_amd64.deb
+sudo dpkg -i powershell_7.4.22-1.deb_amd64.deb
+rm powershell_7.4.22-1.deb_amd64.deb
+pwsh -v
 ```
+
+`apt install powershell` fails with `Unable to locate package` unless Microsoft's repository is added;
+the one-file `.deb` above avoids that setup. **Do not use `snap install powershell`** — the snap is
+confined and cannot open the smart-card reader, so every PIV check fails with `No smart card reader`.
 
 Everything runs inside WSL. The key is not reachable from Windows, so there is nothing to gain from
 running the scripts there.
@@ -92,14 +101,14 @@ runs, so a plugin sitting in the kit folder is found automatically.
 cd ~/ca-signing-kit
 ./step version                    # Smallstep CLI/0.31.0 (linux/amd64)
 ./step-kms-plugin --help          # usage text means the CGO build runs
-./Test-uTrustKey.ps1              # all checks must pass
+./Test-Utrust.ps1                 # all checks must pass
 ```
 
 The kit was assembled against **step v0.31.0 + step-kms-plugin v0.17.0**. A newer CLI is fine — the
 ceremonies only use `certificate create`, `sign`, `inspect`, `verify` and `fingerprint` — so read the
 version strings as a sanity check, not a pin.
 
-If `Test-uTrustKey.ps1` reports `No smart card reader`, the uTrust Security Key is not attached or `pcscd`
+If `Test-Utrust.ps1` reports `No smart card reader`, the uTrust Security Key is not attached or `pcscd`
 is not running. Fix that before going further; nothing else will work.
 
 ## Running the kit from a USB stick
