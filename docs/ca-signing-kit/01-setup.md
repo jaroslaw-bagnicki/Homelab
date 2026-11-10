@@ -46,8 +46,8 @@ folder, next to the scripts.
 The `ca` guest already has a verified copy, which is the fastest route:
 
 ```sh
-scp fleetadm@192.168.2.215:/usr/local/bin/step ~/ca-kit/step
-chmod +x ~/ca-kit/step
+scp fleetadm@192.168.2.215:/usr/local/bin/step ~/ca-signing-kit/step
+chmod +x ~/ca-signing-kit/step
 ```
 
 Or take it from the upstream release:
@@ -57,7 +57,7 @@ curl -fsSLO https://github.com/smallstep/cli/releases/download/v0.31.0/step_linu
 curl -fsSLO https://github.com/smallstep/cli/releases/download/v0.31.0/checksums.txt
 grep -E ' +step_linux_amd64[.]tar[.]gz$' checksums.txt | sha256sum -c -
 tar -xzf step_linux_amd64.tar.gz          # unpacks to step_0.31.0/
-install -m 755 step_0.31.0/bin/step ~/ca-kit/step
+install -m 755 step_0.31.0/bin/step ~/ca-signing-kit/step
 ```
 
 The archive is not flat — the binary sits under `bin/` inside a `step_0.31.0/` directory.
@@ -80,7 +80,7 @@ curl -fsSLO https://github.com/smallstep/step-kms-plugin/releases/download/v0.17
 curl -fsSLO https://github.com/smallstep/step-kms-plugin/releases/download/v0.17.0/checksums.txt
 grep -E ' +step-kms-plugin_0.17.0_linux_amd64[.]tar[.]gz$' checksums.txt | sha256sum -c -
 tar -xzf step-kms-plugin_0.17.0_linux_amd64.tar.gz   # unpacks to step-kms-plugin_0.17.0/
-install -m 755 step-kms-plugin_0.17.0/step-kms-plugin ~/ca-kit/step-kms-plugin
+install -m 755 step-kms-plugin_0.17.0/step-kms-plugin ~/ca-signing-kit/step-kms-plugin
 ```
 
 You do not have to arrange `PATH` yourself: the kit adds its own folder to `PATH` for every tool it
@@ -89,7 +89,7 @@ runs, so a plugin sitting in the kit folder is found automatically.
 ## Confirm the setup
 
 ```sh
-cd ~/ca-kit
+cd ~/ca-signing-kit
 ./step version                    # Smallstep CLI/0.31.0 (linux/amd64)
 ./step-kms-plugin --help          # usage text means the CGO build runs
 ./Test-Token.ps1                  # all checks must pass
@@ -108,8 +108,8 @@ Don't. FAT32, exFAT and NTFS have no executable bit, so `chmod +x` silently does
 fails with `Permission denied`. Copy the kit to a real filesystem first:
 
 ```sh
-cp -r /mnt/<stick>/ca-signing-kit ~/ca-kit
-cd ~/ca-kit
+cp -r /mnt/<stick>/ca-signing-kit ~/ca-signing-kit
+cd ~/ca-signing-kit
 chmod +x step
 ```
 

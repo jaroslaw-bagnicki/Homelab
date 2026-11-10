@@ -19,7 +19,7 @@ software, then writes a self-signed certificate over it.
 ## Run it
 
 ```sh
-cd ~/ca-kit
+cd ~/ca-signing-kit
 ./New-Root.ps1
 ```
 

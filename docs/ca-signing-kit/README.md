@@ -40,7 +40,7 @@ where the scripts run.
 
 ```sh
 wsl
-cd ~/ca-kit
+cd ~/ca-signing-kit
 pwsh ./Test-Token.ps1
 ```
 

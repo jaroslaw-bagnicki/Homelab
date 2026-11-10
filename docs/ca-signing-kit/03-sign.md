@@ -12,7 +12,7 @@ intermediate expires. Two scripts, one ceremony each.
 ## Sign the step-ca intermediate
 
 ```sh
-cd ~/ca-kit
+cd ~/ca-signing-kit
 ./New-Intermediate.ps1
 ```
 
