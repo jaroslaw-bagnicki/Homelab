@@ -67,22 +67,6 @@ All public — none of it is secret:
 | `intermediate_ca.crt` | [runbook 35 §7](../runbooks/35-deploy-step-ca.md) — the CA serving LAN TLS |
 | `ipa-ca.crt` | [runbook 41](../runbooks/41-deploy-freeipa-server.md) — the FreeIPA CA |
 
-## Rules
-
-1. **The root key never exists outside the uTrust Security Key.** There is no key file to copy, back up
-   or destroy. Never plug the uTrust Security Key into `pve1` or the `ca` guest — a server compromise
-   must not reach the root.
-2. **No PIN, PUK, management key or `pin-value=` in any script, log or the repository.** PC/SC prompts
-   for the PIN immediately before each signature; that prompt is the whole security model.
-3. **Write the PIV PIN and PUK down before the first ceremony** and keep them in the safe. They are
-   the only way back into the uTrust Security Key — lose them and the root is dead.
-4. **Never sign with `--profile intermediate-ca`.** A profile rebuilds the certificate from its own
-   defaults and silently drops the SANs, which are the CA's declared identity shape. The scripts use
-   `--template` and check the SANs afterwards.
-5. **`New-Root.ps1` runs once, ever.** The repeating job is `New-Intermediate.ps1`.
-6. **Look at the CSR on screen before signing.** The scripts print it. That is the guard against
-   signing a request that is not the one the CA host produced.
-
 ## Files
 
 | File | Notes |
