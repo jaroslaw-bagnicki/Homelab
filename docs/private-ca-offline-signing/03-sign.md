@@ -1,4 +1,4 @@
-# 03 — Sign a CA with the security key
+# 03 — Sign a CA with the uTrust Security Key
 
 This is the operation that **repeats** — at every signing, including the annual re-sign before the
 intermediate expires. Two scripts, one ceremony each.
@@ -6,7 +6,7 @@ intermediate expires. Two scripts, one ceremony each.
 ## Before you start
 
 - [01-setup.md](01-setup.md) is done and `./Test-Token.ps1` passes.
-- The root already exists on the security key ([02](02-root.md)) and `root_ca.crt` is in the kit.
+- The root already exists on the uTrust Security Key ([02](02-root.md)) and `root_ca.crt` is in the kit.
 - The CSR is in the kit — `intermediate_ca.csr` from the CA host, or `ipa.csr` from the IPA guest.
 
 ## Sign the step-ca intermediate
@@ -20,8 +20,8 @@ That is the whole annual ceremony. The script:
 
 1. **Prints the CSR.** Check the subject and the public key on screen — this is the guard against
    signing a request that is not the one the CA host produced.
-2. **Signs it** with the root on the security key. PC/SC prompts for the PIV PIN, once, immediately before
-   the signature.
+2. **Signs it** with the root on the uTrust Security Key. PC/SC prompts for the PIV PIN, once,
+   immediately before the signature.
 3. **Checks the result** and only then promotes it to `intermediate_ca.crt`.
 
 ### What it checks
@@ -33,7 +33,8 @@ That is the whole annual ceremony. The script:
 - validity 1 year
 
 A `FAIL` line means: **stop, carry nothing away.** The certificate is discarded, any certificate
-already on disk is left as it was, the security key is untouched, and re-signing the same CSR is safe.
+already on disk is left as it was, the uTrust Security Key is untouched, and re-signing the same CSR
+is safe.
 
 ### Why `--template` and never `--profile`
 
@@ -59,10 +60,10 @@ public, so it can travel by any means.
 ## Afterwards
 
 ```sh
-./Test-Token.ps1        # optional last look before the security key goes away
+./Test-Token.ps1        # optional last look before the uTrust Security Key goes away
 ```
 
-Carry back the public certificates and put the security key in the safe:
+Carry back the public certificates and put the uTrust Security Key in the safe:
 
 | File | Goes to |
 |---|---|
@@ -90,6 +91,6 @@ The input and output filenames are fixed — `intermediate_ca.csr` → `intermed
 | Symptom | Meaning |
 |---|---|
 | `The intermediate CSR … is missing` | Bring the file the CA host produced — [runbook 35 §6](../runbooks/35-deploy-step-ca.md). |
-| `No security key found` | The key is not attached, or `pcscd` is not running. Pass `-Label "<name>"` to skip the probe. |
+| `No uTrust Security Key found` | The key is not attached, or `pcscd` is not running. Pass `-Label "<name>"` to skip the probe. |
 | `step-kms-plugin was not found on PATH` | The plugin is missing from the kit — [01-setup.md](01-setup.md). |
 | `This certificate is not fit to install` | A check failed. Nothing was trusted; re-signing is safe. |

@@ -23,7 +23,7 @@ if (-not $Label) {
     $m = pkcs11-tool --module $mod --list-slots 2>&1 | Select-String 'token label\s*:\s*(.+)' | Select-Object -First 1
     if ($m) { $Label = $m.Matches[0].Groups[1].Value.Trim() }
 }
-if (-not $Label) { throw 'No security key found. Pass -Label "<name>" or check that pcscd is running.' }
+if (-not $Label) { throw 'No uTrust Security Key found. Pass -Label "<name>" or check that pcscd is running.' }
 
 # show what is about to be signed — the guard against signing the wrong request
 "CSR to sign:"
@@ -67,4 +67,4 @@ Move-Item $tmp $out -Force
 ""
 & $step certificate inspect $out
 ""
-"Unplug the security key and put it back in the safe."
+"Unplug the uTrust Security Key and put it back in the safe."
