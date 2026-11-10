@@ -25,10 +25,10 @@ usbipd attach --wsl --busid <busid>
 ```
 
 ```sh
-# 3. start pcscd AFTER the key is attached, and disable polkit
-sudo service pcscd stop
-sudo pcscd --foreground --disable-polkit &
-sleep 2
+# 3. tell pcscd to skip polkit — required in WSL
+echo 'PCSCD_ARGS=--disable-polkit' | sudo tee /etc/default/pcscd
+sudo systemctl daemon-reload
+sudo systemctl restart pcscd
 opensc-tool -l                     # must list the uTrust Security Key
 ```
 
@@ -43,29 +43,28 @@ Rejected unauthorized PC/SC client
 The daemon is running and the reader is fine — the client is simply denied. `opensc-tool -l` then
 reports `No smart card readers found`, which points at the wrong problem.
 
-To make it permanent, add the flag to the service:
+The unit reads `$PCSCD_ARGS` from `/etc/default/pcscd`, so the flag belongs there — never edit
+`/usr/lib/systemd/system/pcscd.service`, a package upgrade would overwrite it.
+
+**Order also matters.** `pcscd` enumerates readers when it starts, so start it after `usbipd attach`
+and restart it if the key was attached later:
 
 ```sh
-sudo sed -i 's|^ExecStart=/usr/sbin/pcscd --foreground --auto-exit|ExecStart=/usr/sbin/pcscd --foreground --auto-exit --disable-polkit|' \
-  /usr/lib/systemd/system/pcscd.service
-sudo systemctl daemon-reload
-sudo service pcscd restart
-```
-
-**Order also matters.** `pcscd` enumerates readers when it starts, so start it after `usbipd attach`.
-Restart it if the key was attached later:
-
-```sh
-sudo service pcscd restart
+sudo systemctl restart pcscd
 opensc-tool -l
 ```
 
-If `opensc-tool -l` still says `No smart card readers found`, confirm the CCID interface is free —
-`lsusb -t` must show `Class=Chip/SmartCard, Driver=[none]` for the key:
+**Do not `service pcscd stop`.** `pcscd.socket` is enabled, so systemd owns the daemon's lifecycle and
+refuses to stop it (`its triggering units are still active: pcscd.socket`). Use `systemctl restart`,
+which keeps the socket and the service in step.
+
+If `opensc-tool -l` still says `No smart card readers found`, check that the CCID interface is free
+and that the daemon is up:
 
 ```sh
-lsusb -t
+lsusb -t                           # the key must show Class=Chip/SmartCard, Driver=[none]
 pgrep -a pcscd                     # must print a process
+journalctl -u pcscd -n 20 --no-pager
 ```
 
 ```sh
