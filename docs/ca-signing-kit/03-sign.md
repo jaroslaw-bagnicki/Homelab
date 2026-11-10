@@ -5,7 +5,7 @@ intermediate expires. Two scripts, one ceremony each.
 
 ## Before you start
 
-- [01-setup.md](01-setup.md) is done and `./Test-Utrust.ps1` passes.
+- [01-setup.md](01-setup.md) is done and `./Test-uTrustKey.ps1` passes.
 - The root already exists on the uTrust Security Key ([02](02-root.md)) and `root_ca.crt` is in the kit.
 - The CSR is in the kit — `intermediate_ca.csr` from the CA host, or `ipa.csr` from the IPA guest.
 
@@ -60,7 +60,7 @@ public, so it can travel by any means.
 ## Afterwards
 
 ```sh
-./Test-Utrust.ps1      # optional last look before the uTrust Security Key goes away
+./Test-uTrustKey.ps1   # optional last look before the uTrust Security Key goes away
 ```
 
 Carry back the public certificates and put the uTrust Security Key in the safe:

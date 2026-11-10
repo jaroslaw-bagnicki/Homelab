@@ -92,14 +92,14 @@ runs, so a plugin sitting in the kit folder is found automatically.
 cd ~/ca-signing-kit
 ./step version                    # Smallstep CLI/0.31.0 (linux/amd64)
 ./step-kms-plugin --help          # usage text means the CGO build runs
-./Test-Utrust.ps1                 # all checks must pass
+./Test-uTrustKey.ps1              # all checks must pass
 ```
 
 The kit was assembled against **step v0.31.0 + step-kms-plugin v0.17.0**. A newer CLI is fine — the
 ceremonies only use `certificate create`, `sign`, `inspect`, `verify` and `fingerprint` — so read the
 version strings as a sanity check, not a pin.
 
-If `Test-Utrust.ps1` reports `No smart card reader`, the uTrust Security Key is not attached or `pcscd`
+If `Test-uTrustKey.ps1` reports `No smart card reader`, the uTrust Security Key is not attached or `pcscd`
 is not running. Fix that before going further; nothing else will work.
 
 ## Running the kit from a USB stick
