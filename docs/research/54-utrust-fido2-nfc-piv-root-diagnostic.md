@@ -34,9 +34,11 @@ YubiKey PIV)?
 4. **Hardware so far** (Hirsch SecureFIDO Manager 1.0.0 log, 2026-11-08): genuine device
    `VID_04E6&PID_5A11`, AAGUID `73402251-f2a8-4f03-873e-3cb6db604b03` (manual's family AAGUID), FIDO_2_0 +
    U2F_V2 + `hmac-secret`, `rk:true`, `clientPin:true`, MIN PIN 4 / 8 retries, no USB serial descriptor,
-   CCID reader enumerates under PC-SC, **no CTAP 2.1 credMgmt** (firmware is FIDO_2_0).
-5. **Pending**: PIV AID select → `9000`, `pkcs11-tool --list-slots`, `certutil -scard`, CPLC chip check
-   (`40 90` = Infineon SLE 78), firmware version from Key Manager. Commands and expected values in §4.
+   CCID reader enumerates under PC-SC, **no CTAP 2.1 credMgmt** (firmware is FIDO_2_0), and `certutil -scinfo`
+   detects the card as `Identity Device (NIST SP 800-73 [PIV])` → **PIV applet present** (§3).
+5. **Pending**: the Linux-side gates — PIV AID select → `9000` and `pkcs11-tool --list-slots` (OpenSC/PKCS#11
+   must drive slot 9C for the ceremony), CPLC chip check (`40 90` = SLE 78), firmware version from Key
+   Manager. Commands and expected values in §4.
 
 ## 1. Why the FIDO2 applet is out — and what the PIV applet offers
 
@@ -77,7 +79,10 @@ Source: Hirsch SecureFIDO Manager 1.0.0 (Windows), Device Config view + app log.
 - ℹ️ PC-SC reader `Identiv uTrust FIDO2 Security Key 0` enumerates → CCID interface present
 - ℹ️ No CTAP 2.1 `credMgmt` (firmware FIDO_2_0) → resident credentials can't be listed/deleted
   individually via CTAP; only a full FIDO2 factory reset clears them
-- ❓ PIV applet: **not yet verified** — this tool only exercises CTAP
+- ✅ `certutil -scinfo` (2026-11-08): card = **`Identity Device (NIST SP 800-73 [PIV])`**, ATR
+  `3b 96 11 81 21 75 75 54 72 75 73 74 73` (`uuTrusts`) → **the PIV applet is present and enabled on this
+  non-plus unit**. The trailing `NTE_BAD_KEYSET` / "Missing stored keyset" is certutil's Microsoft CSP
+  keyset *analysis* on a fresh card, not a card fault.
 
 ## 4. Pending hardware checks — resume here (VSCode terminal)
 
@@ -98,8 +103,8 @@ sudo systemctl start pcscd
 | 6 | `pkcs11-tool --module "$(find /usr/lib -name opensc-pkcs11.so \| head -1)" --list-slots` | token listed → **OpenSC PKCS#11 claims it** (the gate for the ceremony) |
 | 7 | `fido2-token -L` | AAGUID `73402251-f2a8-4f03-873e-3cb6db604b03` |
 
-Windows cross-check: `certutil -scard` (PIV present → card listed, default PIN `123456` on use);
-Key Manager → firmware version (manual: firmware decides applet enablement).
+Windows cross-check **done 2026-11-08**: `certutil -scinfo` lists the PIV card (§3). Still wanted from
+Key Manager: the **firmware version** (manual: firmware decides applet enablement).
 
 Reference script (same checks, read-only, no PIN login, writes nothing to the token):
 
@@ -121,8 +126,9 @@ echo "== FIDO2 AAGUID (want 73402251-...) =="
 fido2-token -L 2>/dev/null || echo "  install libfido2-bin"
 ```
 
-**Decision rule**: checks 4 + 6 pass → key is cleared for the provisioning ceremony (§5). Check 4
-fails → this unit's firmware has PIV disabled; use an NFC+ SKU instead.
+**Decision rule**: Windows PIV detection ✅ (done, §3). Remaining gates are Linux checks 4 + 6: both
+pass → key cleared for the provisioning ceremony (§5). Check 4 fails → Windows sees PIV but OpenSC cannot
+drive it on Linux; then either provision/sign on Windows via uTrust Key Manager, or switch to an NFC+ SKU.
 
 ## 5. If verified — provisioning ceremony outline (not yet executed)
 
