@@ -4,6 +4,7 @@
 $ErrorActionPreference = 'Stop'
 if (-not $IsLinux) { throw 'Run this inside WSL, where the key is attached.' }
 
+$env:PATH = "$PSScriptRoot`:$env:PATH"          # lets step find step-kms-plugin
 $mod = '/usr/lib/x86_64-linux-gnu/opensc-pkcs11.so'
 $fail = 0
 
