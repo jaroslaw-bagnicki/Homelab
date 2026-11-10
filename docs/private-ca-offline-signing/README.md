@@ -1,169 +1,127 @@
-# Private CA — offline signing bundle
+# Private CA — uTrust token signing kit
 
-Everything the air-gapped signing machine needs — **except the secure USB stick**.
+Everything needed to sign with the fleet **root key held on the uTrust FIDO2 NFC USB-A** (PIV applet,
+slot 9C) — **except the token itself**. The root private key never leaves the token: it is generated
+on-card once ([02](02-issuing-root-cert.md), [runbook 46](../runbooks/46-adopt-utrust-piv-root-custody.md)),
+and every signature prompts the PIV PIN on the token.
 
 ## What this is, and is not
 
-The fleet CA's **offline root** is created here, the **`step-ca` intermediate** is signed by it, and
-(for M1) the **FreeIPA CA** CSR is signed by the same root. All of it happens on a machine with no
-network of any kind, because the root's private key lives on the stick and must never touch a
-networked machine. This bundle carries the tool, the requests and the recipes, so the signing machine
-needs **nothing installed and nothing downloaded**.
+The fleet CA's **offline root** lives in the token's PIV slot 9C, the **`step-ca` intermediate** is
+signed by it, and (for M1) the **FreeIPA CA** CSR is signed by the same root. All of it happens on the
+**workstation** — WSL with the token attached via `usbipd`, or Windows native. No air-gap is needed
+because the key is **non-exportable**: the worst case on a networked machine is one rogue intermediate
+signed while the token is plugged in, bounded by the per-signature PIN prompt and the on-screen CSR
+check (ADR 38 amendment; [research 54 §6](../research/54-utrust-fido2-nfc-piv-root-diagnostic.md)).
+The token is plugged in **only during signing** and goes back to the safe afterwards — and it is
+**never** plugged into `pve1` / the `ca` guest.
 
-**Any live Linux will do.** SystemRescue 13 is the default; an Ubuntu Live desktop works just as well.
-Nothing has to be installed: the bundled `step` is statically linked, so it does not care what the host
-distribution is. Only two things matter — **no network**, and a shell to run the steps below.
-
-If you use Ubuntu Live rather than SystemRescue, three differences:
-
-| | SystemRescue 13 | Ubuntu Live |
-|---|---|---|
-| Who you are | `root` | user `ubuntu` with passwordless `sudo` — prefix `sudo` where needed (`mkdir`, `mount`) |
-| Removable media | **not** auto-mounted — run `mountall`, or mount it yourself (step 4) | **auto-mounted** under `/media/ubuntu/<label>` — use that path |
-| Network | nothing brings it up | NetworkManager may connect by itself — **disable Wi-Fi / unplug the cable** before touching the stick. Both scripts abort if they find **any non-loopback address** (or a default route). |
-
-It does **not** start the CA and does **not** distribute trust. Nothing in the bundle is private — the
-CSR and the template are public. The one secret it produces is the **root key**, and that must leave
-the signing machine only on the stick, back into the safe.
+The kit carries the tools, the requests and the recipes, so the workstation needs the smartcard
+packages (`pcscd`, `opensc`, `pcsc-tools`, `libpcsclite1`) and nothing downloaded at ceremony time.
+Nothing in the kit is private — the CSRs, templates and certificates are public. The one secret is the
+root key, and it exists only inside the token.
 
 ## Contents
 
 | File | What it is | Read it |
 |---|---|---|
-| [`01-building-step.md`](01-building-step.md) | puts the `step` CLI into this bundle | on the connected machine, before you leave |
-| [`02-issuing-root-cert.md`](02-issuing-root-cert.md) | creates the 10-year root on the stick | **once ever** |
-| [`03-signing-csr.md`](03-signing-csr.md) | signs the intermediate CSR with that root | every signing |
+| [`01-building-step.md`](01-building-step.md) | puts the `step` CLI **and** `step-kms-plugin` into this kit | on the connected machine, before the ceremony |
+| [`02-issuing-root-cert.md`](02-issuing-root-cert.md) | provisions the 10-year root **on the token**, slot 9C | **once ever** |
+| [`03-signing-csr.md`](03-signing-csr.md) | signs the intermediate CSR with the token | every signing, incl. the annual re-sign |
 | `step` | the `step` CLI, linux/amd64 — **not stored in git** (42 MB upstream binary), added by 01 | — |
-| `intermediate_ca.csr` | the certificate request, created on the CA host by the key that lives in `pve1`'s TPM — **not stored in git**, bring the file the CA host produced | — |
+| `step-kms-plugin` | the CGO KMS plugin — **not stored in git**, added by 01; the stock static `step` execs it for every `pkcs11:` URI | — |
+| [`check-utrust.sh`](check-utrust.sh) | read-only token health check (USB, reader, PIV AID `9000`, CPLC, PKCS#11 slot, AAGUID) | first, on the workstation with the token attached |
+| [`sign-piv.sh`](sign-piv.sh) | signs `intermediate_ca.csr` with the root on the token, then machine-checks the result | every signing |
+| [`sign-ipa-ca.sh`](sign-ipa-ca.sh) | signs FreeIPA's `ipa.csr` with the same token root | the FreeIPA CA ceremony |
+| `intermediate_ca.csr` | the certificate request, created on the CA host by the key in `pve1`'s TPM — **not stored in git**, bring the file the CA host produced | — |
 | `intermediate-ca.tpl` | the signing template — the extensions the finished certificate must carry | — |
 | `ipa-ca.tpl` | the FreeIPA CA signing template — `CN=Certificate Authority,O=IPA.INTERNAL`, CA:TRUE, pathlen:0 | — |
-| `root.sh` | 🪦 transient — creates the root CA on the stick; first run only, retired with [runbook 46](../runbooks/46-adopt-utrust-piv-root-custody.md) | — |
-| `sign.sh` | 🪦 transient — signs the `step-ca` intermediate CSR with the stick root, then machine-checks the result; retired with runbook 46 | — |
-| [`sign-piv.sh`](sign-piv.sh) | the token-custody variant of `sign.sh`: signs with the root **on the uTrust PIV token** (slot 9C) via a `pkcs11:` URI, PIN prompted per signature — needs `step-kms-plugin` in `PATH`, see [runbook 46](../runbooks/46-adopt-utrust-piv-root-custody.md) | — |
-| `sign-ipa-ca.sh` | signs FreeIPA's `ipa.csr` (from `ipa-server-install --external-ca`) with the same root | — |
-| [`check-utrust.sh`](check-utrust.sh) | read-only health check for a uTrust FIDO2 NFC token (PIV applet, CPLC, PKCS#11 slot) — run on the connected workstation, **not** in the air-gapped ceremony | [research 54 §4](../research/54-utrust-fido2-nfc-piv-root-diagnostic.md) |
+| `root_ca.crt` | the current root certificate (public); replaced by the new root after the reissue | — |
+| `intermediate_ca.crt` | the last signed intermediate (public) | — |
 
-`intermediate-ca.tpl` is a **copy** of `ansible/workloads/step-ca/files/intermediate-ca.tpl`, which is the
-versioned source. If you change one, change both — otherwise the signing machine uses the old shape.
+`intermediate-ca.tpl` is a **copy** of `ansible/workloads/step-ca/files/intermediate-ca.tpl`, which is
+the versioned source. If you change one, change both — otherwise the signing run uses the old shape.
 
-## What you must bring (deliberately not in this bundle)
+## What you must bring (deliberately not in this kit)
 
-- **The secure USB stick**, unlocked. **Empty** on the first run — that is where `root.sh` writes
-  the root. On any later run it already holds `root_ca.crt` and `root_ca_key`.
-- The **YUMI multiboot stick**, with this bundle on it. One stick does both jobs: it boots the signing
-  machine (SystemRescue 13, or an Ubuntu Live desktop) *and* carries the bundle, so there is no second
-  USB to keep track of.
+- **The uTrust token**, unplugged except during signing. Empty PIV slot 9C on the first run — that is
+  where [02](02-issuing-root-cert.md) generates the root.
 - `ipa.csr` when the M1 FreeIPA CA ceremony runs — produced on the IPA guest, public, not stored in git.
-- A safe place to keep the stick and the written-down key passphrase.
+- A safe place for the token and the written-down PIV PIN / PUK.
 
 ## Rules
 
-1. **Never put the root on the machine's disk.** It exists only on the mounted stick; unmount and
-   remove the stick before powering the machine off.
-2. **Never copy `root_ca_key` off the stick** — not into this bundle, not onto the YUMI stick, not
-   anywhere on the machine's disk.
-3. **The signing machine must have no network** — no LAN cable, no Wi-Fi, and no default route. Both
-   scripts refuse to run if they find a non-loopback address, and refuse to guess if `ip` is missing.
+1. **The root key never exists outside the token** — there is no key file to copy, back up or destroy.
+   Backing the root up means a second token (import during the ceremony — runbook 46's backup note).
+2. **The token is plugged in only during signing** and back in the safe afterwards; never on `pve1` /
+   the `ca` guest. The live CA's `ca.json` does not change — the intermediate stays in the `pve1` TPM.
+3. **No PIN, PUK, management key or `pin-value=` in scripts, Ansible, logs or the repo** — PC/SC prompts
+   the PIN immediately before each signature.
 4. Never sign with `--profile intermediate-ca`. It silently drops the SANs, which are the CA's declared
-   identity shape — the CA is not left unserved (the serving certificate is a separate self-issued leaf,
-   runbook 35 §7), but the certificate no longer matches the shape the deployment records.
-5. **`root.sh` runs once, ever.** It refuses to touch an existing root, because replacing a root is a
-   trust rotation — every client would have to re-trust — not a re-run. The repeat job is `sign.sh`.
-6. **Write the root key passphrase down before you leave the machine.** It is the only way to use the
-   root again; lose it and the root key is dead.
+   identity shape — [03](03-signing-csr.md) explains.
+5. **[02](02-issuing-root-cert.md) runs once, ever.** Replacing a root is a trust rotation (issue #144:
+   every client must re-trust), not a re-run. The repeat job is [03](03-signing-csr.md).
+6. **Write the PIV PIN/PUK down before the first ceremony.** Lose them and the token's contents are dead.
+7. A networked workstation is accepted risk (the key is non-exportable): the scripts warn and proceed
+   only with `SIGN_PIV_ALLOW_NETWORK=1`, and print the CSR for on-screen verification before signing.
 
 ## The flow, end to end
 
-1. **On the connected machine.** Put this whole folder onto the YUMI stick, alongside the live ISO, and
-   add `step` to it — [01-building-step.md](01-building-step.md).
+1. **On the connected machine.** Assemble the kit — [01-building-step.md](01-building-step.md) adds
+   `step` and `step-kms-plugin` (both checksum-verified).
 
-2. **On the signing machine.** Boot it (SystemRescue 13 or Ubuntu Live) and confirm it is offline:
-
-   ```sh
-   ip -brief addr show   # only `lo` may carry an address — any other one means the machine is networked
-   ip route              # must print nothing — no default route is what "air-gapped" means
-   ```
-
-3. **Copy the bundle off the stick before running anything.** A boot stick is FAT32, exFAT or NTFS —
-   none of which has an executable bit, so `chmod +x` silently does nothing there and `./step` fails
-   with `Permission denied`. `/tmp` is a real filesystem and works:
+2. **On the workstation.** Attach the token — in WSL from Windows PowerShell:
+   `usbipd bind --busid <busid>` + `usbipd attach --wsl --busid <busid>`, then `wsl -d <distro>`;
+   install `pcscd opensc pcsc-tools libpcsclite1 fido2-tools usbutils` and start `pcscd`. Copy the kit
+   to a real filesystem (`/tmp`) — FAT/exFAT sticks have no executable bit — and run the health check:
 
    ```sh
-   cp -r <usb>/private-ca-offline-signing /tmp/bundle
-   cd /tmp/bundle
-   chmod +x step root.sh sign.sh sign-ipa-ca.sh
-   ./step version
+   bash check-utrust.sh        # all checks pass: reader, PIV AID 9000, CPLC 40 90, PKCS#11 slot, AAGUID
    ```
 
-   It must print a `Smallstep CLI/... (linux/amd64)` line. If it prints nothing, the copy is broken —
-   re-copy the bundle from the stick. This is the only integrity check the bundle needs.
+   Gates 4 (PIV AID `9000`) and 6 (OpenSC PKCS#11 lists the token) are the ceremony go/no-go
+   ([research 54 §4](../research/54-utrust-fido2-nfc-piv-root-diagnostic.md)).
 
-4. Plug in the **secure USB stick** and make sure it is mounted, noting the path:
+3. **Provision the root — once ever.** [02-issuing-root-cert.md](02-issuing-root-cert.md): change the
+   factory PIV defaults, generate the P-256 key pair in slot 9C, create the 10-year self-signed root
+   over it, test-sign a throwaway CSR. Record the root fingerprint **outside the repo**.
+
+4. **Sign the intermediate — every time, incl. the annual re-sign.**
+   [03-signing-csr.md](03-signing-csr.md):
 
    ```sh
-   lsblk -o NAME,SIZE,LABEL,FSTYPE      # find the stick's partition
+   SIGN_PIV_ALLOW_NETWORK=1 ./sign-piv.sh "<token label>"
    ```
 
-   - **Ubuntu Live** auto-mounts it — look under `/media/ubuntu/<label>`.
-   - **SystemRescue** — `mountall` mounts every filesystem it finds, bringing up both sticks together:
+   The PIN is prompted by PC/SC per signature; the CSR is printed first — verify subject and public
+   key; the result is machine-checked before it replaces `intermediate_ca.crt`.
 
-     ```sh
-     mountall
-     df -h                                # the stick lands at /mnt/sdXN — note that path
-     ```
+5. **Sign the FreeIPA CA when M1 needs it.** Bring `ipa.csr` from the IPA guest into the kit and run
+   `SIGN_PIV_ALLOW_NETWORK=1 ./sign-ipa-ca.sh "<token label>"` — same token root, `ipa-ca.tpl`, 5 years.
 
-     Use it read-write, never `mountall --readonly`: the root is written to the stick.
-
-     To bring up the secure stick alone instead:
-
-     ```sh
-     mkdir -p /mnt/stick
-     mount /dev/sdX1 /mnt/stick       # replace sdX1 with the real device from lsblk
-     ```
-
-   **Nothing assumes a location.** Wherever the stick lands — `/mnt/sdX1`, `/media/ubuntu/<label>`, or
-   a directory you made — that path is the first argument both scripts take. There is no default, so
-   the commands in 02 and 03 read `<destination-path>`.
-
-5. **Create the root — once ever.** Only if the stick does not already hold one. The full ceremony,
-   its acceptance checks and its refusals: [02-issuing-root-cert.md](02-issuing-root-cert.md).
-
-6. **Sign the intermediate.** This is the operation that repeats — including the annual re-sign:
-   [03-signing-csr.md](03-signing-csr.md).
-
-6b. **Sign the FreeIPA CA when M1 needs it.** Bring `ipa.csr` from the IPA guest to this bundle and run
-   `./sign-ipa-ca.sh <destination-path>`; copy `ipa-ca.crt` back with `root_ca.crt`. The script checks
-   the chain, `CA:TRUE, pathlen:0`, key usage and the `CN=Certificate Authority,O=IPA.INTERNAL`
-   subject. This is a separate ceremony from the `step-ca` intermediate.
-
-7. **Finish.** Unmount and remove the stick and return it to the safe, copy `intermediate_ca.crt`
-   (and, when used, `ipa-ca.crt`) **and** a copy of `root_ca.crt` back onto the YUMI stick (all are
-   public certificates), and power the machine off.
+6. **Finish.** Unplug the token back to the safe; carry back only the public certificates
+   (`intermediate_ca.crt`, `ipa-ca.crt`, `root_ca.crt`).
 
 ## Bring back
 
-- `intermediate_ca.crt` — the signed `step-ca` intermediate
-- `ipa-ca.crt` — the signed FreeIPA CA (when M1 runs its ceremony)
-- `root_ca.crt` — a copy taken from the stick
-
-`intermediate_ca.crt` is installed and the CA started by **runbook 35 §7**; `ipa-ca.crt` is installed
-by the FreeIPA workload ([runbook 41](../runbooks/41-deploy-freeipa-server.md)).
+- `intermediate_ca.crt` — the signed `step-ca` intermediate (installed by [runbook 35 §7](../runbooks/35-deploy-step-ca.md))
+- `ipa-ca.crt` — the signed FreeIPA CA (when M1 runs its ceremony; [runbook 41](../runbooks/41-deploy-freeipa-server.md))
+- `root_ca.crt` — the current root certificate
 
 ## If something goes wrong
 
 | Symptom | What to do |
 |---|---|
-| `./step version` fails with `Permission denied` | You are running it from the stick — FAT32, exFAT and NTFS have no executable bit. Copy the bundle to `/tmp` first (step 3). |
-| `./step version` fails otherwise | The copy is truncated or corrupt. Re-copy it from the stick. |
-| Either script refuses: "has a non-loopback address" or "has a default route" | The signing machine is not air-gapped. Unplug the cable / disable Wi-Fi (`ip link set <dev> down`) before using the stick. |
-| A `FAIL` line appears in the checks | Stop and do not carry the certificate home. No trust has been distributed, the root is untouched and re-signing the same CSR is safe. |
-
-Anything specific to one ceremony — a root that already exists, a missing SAN, a wrong passphrase — is
-in the refusals table of [02](02-issuing-root-cert.md) or [03](03-signing-csr.md).
+| `./step version` fails with `Permission denied` | Running from a FAT/exFAT stick — copy the kit to `/tmp` first and `chmod +x` there. |
+| `exec: "step-kms-plugin": not found in $PATH` | The plugin is missing — [01](01-building-step.md) adds it; the stock `step` delegates every `pkcs11:` URI to it. `libpcsclite1` must be installed too. |
+| `check-utrust.sh` check 4 ≠ `9000` or check 6 lists no token | OpenSC cannot drive the PIV applet on Linux — fall back to Windows (uTrust Key Manager / `certreq`) or an NFC+ SKU; see research 54 §4 decision rule. |
+| `kms uri 'token', 'serial' or 'slot-id' are required` | The `pkcs11:` URI needs `token=` (or `serial=`/`slot-id`) besides `module-path` and `object=`. |
+| `getPublicKey failed: key … not found` on `certificate create` | `create` cannot generate the key — run the slot-9C keygen first ([02](02-issuing-root-cert.md)). |
+| A `FAIL` line in the checks | Stop and do not carry the certificate away. The token is untouched and re-signing the same CSR is safe. |
 
 ## Reference
 
-- Runbook 35 §6 — produced `intermediate_ca.csr` (the CA host)
-- Runbook 36 §2 — creating the 10-year root, in the repo
-- Runbook 36 §3 — signing the intermediate, in the repo
-- ADR 38 — the hierarchy: 10-year offline root, 1-year TPM-bound intermediate
+- [Runbook 46](../runbooks/46-adopt-utrust-piv-root-custody.md) — the adoption runbook (reissue + trust rotation)
+- [Runbook 35 §6](../runbooks/35-deploy-step-ca.md) — produced `intermediate_ca.csr` (the CA host)
+- [Research 54](../research/54-utrust-fido2-nfc-piv-root-diagnostic.md) — the token diagnostic, gates and verified command shapes
+- [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) — the hierarchy: 10-year root on the uTrust token, 1-year TPM-bound intermediate

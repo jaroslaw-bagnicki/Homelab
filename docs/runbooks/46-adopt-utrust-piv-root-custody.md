@@ -110,14 +110,14 @@ participation). Never put `pin-value=` in a URI, script, Ansible or the repo.
 
 ## Phase 3 — sign the sibling CAs with the token
 
-Use the kit's new [`sign-piv.sh`](../private-ca-offline-signing/sign-piv.sh) — the `sign.sh` delta:
-same air-gap refusal and same machine checks (chains to root, `is_ca`, `pathlen:0`, SANs
-`ca.internal` + `192.168.2.215`, 1 year), but the key argument is the PKCS#11 URI above instead of
-`$STICK/root_ca_key`. Run it on the air-gapped signing machine with the token plugged in:
+Use the kit's [`sign-piv.sh`](../private-ca-offline-signing/sign-piv.sh) — machine checks (chains to
+root, `is_ca`, `pathlen:0`, SANs `ca.internal` + `192.168.2.215`, 1 year), with the key argument a
+PKCS#11 URI for slot 9C instead of a key file. Run it on the **workstation** with the token plugged
+in — in WSL:
 
 ```sh
-./sign-piv.sh                  # signs intermediate_ca.csr -> intermediate_ca.crt
-./sign-ipa-ca.sh               # FreeIPA CA — same delta, ipa.csr -> ipa-ca.crt (ADR 42)
+SIGN_PIV_ALLOW_NETWORK=1 ./sign-piv.sh "<token label>"     # intermediate_ca.csr -> intermediate_ca.crt
+SIGN_PIV_ALLOW_NETWORK=1 ./sign-ipa-ca.sh "<token label>"  # FreeIPA CA — ipa.csr -> ipa-ca.crt (ADR 42)
 ```
 
 Carry back only the public certificates: `root_ca.crt`, `intermediate_ca.crt`, `ipa-ca.crt`.
@@ -135,8 +135,8 @@ Carry back only the public certificates: `root_ca.crt`, `intermediate_ca.crt`, `
 4. Once nothing chains to the old root: **remove the old root from every trust store by hand** — no
    CRL/OCSP covers roots (ADR 38) — and only then **destroy the IronKey `root_ca_key` file and every
    backup copy**, last. This **retires the IronKey completely** — it was a transient solution with no
-   future usage: [runbook 36](36-private-ca-init.md) and the stick flow (`root.sh`/`sign.sh` in the
-   offline kit) are retired with it.
+   future usage: [runbook 36](36-private-ca-init.md) and the former stick flow are retired with it, and
+   the offline signing kit is token-only from now on.
 
 ## Backup token
 

@@ -1,6 +1,6 @@
 #!/bin/sh
-# Sign the intermediate CSR with the offline root held in the uTrust FIDO2 NFC token
-# (PIV applet, slot 9C) over PKCS#11. Token-custody variant of sign.sh — see runbook 46.
+# Sign the intermediate CSR with the offline root held on the uTrust FIDO2 NFC token
+# (PIV applet, slot 9C) over PKCS#11 — see runbook 46 and kit doc 03.
 #
 #   ./sign-piv.sh [token-label]        e.g. ./sign-piv.sh "Identiv uTrust FIDO2 0"
 #
@@ -8,7 +8,7 @@
 # PIN is prompted by PC/SC immediately before the signature. Never put pin-value=
 # in the URI, this script, Ansible or the repo.
 #
-# Uses --template, never --profile: same reason as sign.sh — a profile silently
+# Uses --template, never --profile: a profile silently
 # drops the SANs that declare the CA's identity shape (03-signing-csr.md).
 set -eu
 
@@ -23,24 +23,27 @@ OBJECT="${UTRUST_OBJECT:-Homelab Root CA}"
 # never leave a half-written certificate behind for someone to carry home
 trap 'rm -f "$TMP"' EXIT
 
-# --- the signing machine must not have a network -----------------------------
-# Identical to sign.sh: the address test also catches an on-link-only machine.
+# --- network check -------------------------------------------------------------
+# The token's root key is non-exportable, so signing on the networked workstation
+# is accepted residual risk (runbook 46): a compromised machine could get one
+# rogue intermediate signed while the token is plugged in and the PIN is entered;
+# the key itself cannot leak. Warn loudly and require an explicit opt-in.
 if ! command -v ip >/dev/null 2>&1; then
     echo "ABORT: 'ip' is not available, so this machine's network state cannot be checked." >&2
     exit 1
 fi
 NET="$(ip -o addr show 2>/dev/null | awk '{ n = $2; sub(/:$/, "", n); if (n != "lo") print "  " n " " $4 }')"
-if [ -n "$NET" ]; then
-    echo "ABORT: this machine has a non-loopback address:" >&2
-    printf '%s\n' "$NET" >&2
-    echo "       The root token must never be used on a networked machine." >&2
-    echo "       Unplug the cable / disable Wi-Fi (or 'ip link set <dev> down') and re-run." >&2
-    exit 1
-fi
-if ip route 2>/dev/null | grep -q '^default'; then
-    echo "ABORT: this machine has a default route — it is not air-gapped." >&2
-    echo "       The root token must never be used on a networked machine." >&2
-    exit 1
+if [ -n "$NET" ] || ip route 2>/dev/null | grep -q '^default'; then
+    if [ "${SIGN_PIV_ALLOW_NETWORK:-0}" != "1" ]; then
+        echo "WARNING: this machine is networked:" >&2
+        printf '%s\n' "$NET" >&2
+        ip route 2>/dev/null | grep '^default' >&2 || true
+        echo "  Accepted only because the uTrust root key is non-exportable (runbook 46):" >&2
+        echo "  worst case is one rogue intermediate signed while the token is plugged in." >&2
+        echo "  Re-run with SIGN_PIV_ALLOW_NETWORK=1 to proceed on this machine." >&2
+        exit 1
+    fi
+    echo "NOTE: networked machine, SIGN_PIV_ALLOW_NETWORK=1 — residual risk accepted (runbook 46)."
 fi
 
 # --- inputs ------------------------------------------------------------------
@@ -92,7 +95,7 @@ echo
     > "$TMP"
 
 # --- machine checks: does this certificate actually work? --------------------
-# Same checks as sign.sh, run against the temporary file; promoted only when all pass.
+# Run against the temporary file; promoted to intermediate_ca.crt only when all pass.
 echo
 echo "Checking the result. Every line must read OK."
 FAILED=0

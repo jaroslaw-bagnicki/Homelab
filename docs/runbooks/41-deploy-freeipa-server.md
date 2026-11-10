@@ -228,15 +228,17 @@ openssl req -in ipa.csr -noout -subject
 
 ## 7. External CA — offline signing
 
-On the **air-gapped** signing machine, with the secure stick mounted:
+On the **workstation**, with the uTrust token attached (WSL via `usbipd`, or Windows — no air-gap
+needed, the root key is non-exportable on the token; [runbook 46](46-adopt-utrust-piv-root-custody.md)):
 
-1. Copy the offline kit to `/tmp` and make the scripts executable.
-2. Put `ipa.csr` in the bundle directory.
-3. Run `./sign-ipa-ca.sh <stick>` and pass the root-key passphrase.
+1. Copy the token signing kit to `/tmp` and make the scripts executable.
+2. Put `ipa.csr` in the kit directory.
+3. Run `SIGN_PIV_ALLOW_NETWORK=1 ./sign-ipa-ca.sh "<token label>"` — the PIV PIN is prompted by PC/SC
+   per signature.
 
 The script signs with `ipa-ca.tpl` for **5 years** and machine-checks:
 
-- chain to the root on the stick;
+- chain to the root in the kit;
 - `CA:TRUE`, `pathlen:0`;
 - certificate-sign and CRL-sign usage;
 - subject `CN=Certificate Authority,O=IPA.INTERNAL`;
