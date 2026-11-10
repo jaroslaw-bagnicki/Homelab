@@ -1,8 +1,9 @@
 # Private CA — adopt the uTrust FIDO2 NFC token as offline root custody (reissue + trust rotation)
 
-> **Status: authored, NOT yet executed (2026-11-10).** The hardware gates are still pending — run
-> [research 54 §4](../research/54-utrust-fido2-nfc-piv-root-diagnostic.md) first and do not start this
-> runbook until `Test-uTrustKey.ps1` passes checks 4 (PIV AID `9000`) and 6 (OpenSC PKCS#11 lists the token).
+> **Status: hardware gates cleared 2026-11-10; the ceremony itself has not run yet.** The key answers
+> over PKCS#11 (`PIV_II`), so [research 54 §4](../research/54-utrust-fido2-nfc-piv-root-diagnostic.md)
+> is complete and `Test-uTrustKey.ps1` reports the key ready with no root in slot 9C. Getting there
+> needed four WSL fixes, all in [01-setup.md](../ca-signing-kit/01-setup.md).
 >
 > Move the 10-year **root** from the IronKey key file onto the **uTrust FIDO2 NFC USB-A (P/N 905601),
 > PIV applet slot 9C**, by **reissuing** it: the new root key is generated on the token and never
@@ -29,11 +30,11 @@ protocol-bound signatures — research 54 §1); FIDO2 passkeys for Authentik/SSH
 
 ## Prerequisites
 
-- [ ] `docs/ca-signing-kit/Test-uTrustKey.ps1` run on the signing machine with the token
-      attached — checks 1–7 pass: USB `04e6:5a11`, one CCID reader, driver `PIV-II`, PIV AID select
-      `9000`, CPLC `40 90` (SLE 78) + serial, `pkcs11-tool --module opensc-pkcs11.so --list-slots`
-      lists the token, `fido2-token -L` AAGUID `73402251-f2a8-4f03-873e-3cb6db604b03`
-      (decision rule: research 54 §4)
+- [x] `docs/ca-signing-kit/Test-uTrustKey.ps1` run on the signing machine with the token attached —
+      **passes 2026-11-10**: the key answers over PKCS#11 as `PIV_II`, PIV AID select returns `9000`,
+      AAGUID `73402251-f2a8-4f03-873e-3cb6db604b03`. The chip is **NXP JCOP** (CPLC `96 4D … JNET`),
+      not the Infineon SLE 78 the vendor manual claims — irrelevant to the ceremony, so the kit does
+      not check it
 - [ ] Firmware version read from uTrust Key Manager on Windows (the manual: firmware decides applet
       enablement) — record it in research 54 §3
 - [ ] Signing host: the **Windows 11 workstation** with WSL (Ubuntu) and the token attached from
@@ -56,12 +57,19 @@ protocol-bound signatures — research 54 §1); FIDO2 passkeys for Authentik/SSH
 ## Phase 0 — pre-flight health check
 
 ```sh
-./Test-uTrustKey.ps1        # all seven checks from research 54 §4, read-only, no PIN login
+./Test-uTrustKey.ps1        # read-only, no PIN login
 ```
 
-All pass → proceed. Check 4 fails → this unit's firmware has PIV disabled for OpenSC; provision/sign
-on Windows via uTrust Key Manager instead, or switch to an NFC+ SKU (research 54 §2). Check 6 fails
-but 4 passes → OpenSC won't drive it on Linux; do not improvise — same fallback.
+Expected on a key with no root yet:
+
+```
+  key    PIV_II
+  step   Smallstep CLI/0.31.0 (linux/amd64)
+  root   no root key yet — New-Root.ps1 will create it
+```
+
+If the key does not answer over PKCS#11 at all, do not improvise — [01-setup.md](../ca-signing-kit/01-setup.md)
+lists the four things that block it on WSL and how to tell them apart from the daemon log.
 
 ## Phase 1 — change the factory defaults on the token
 

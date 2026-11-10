@@ -8,6 +8,7 @@ step-kms-plugin
 # Ceremony output. The certificates go to the CA host, and the root reaches clients through Key Vault
 # (#144); nothing the ceremony writes belongs in the repo.
 *.crt
+*.crt.*
 *.csr
 *.key
 *.pem

@@ -24,7 +24,7 @@ YubiKey PIV)?
    version decides which applets a given unit has enabled** — so per-unit verification is mandatory.
    The NFC+ SKU is the one where PIV/OTP management via uTrust Key Manager, Windows 10/11 standalone
    auth and the FIPS 140-3 GOV variant are headline features; it adds no cryptographic strength over
-   the plain NFC (same SLE 78 chip, same slots/algorithms).
+   the plain NFC (same secure element, same slots/algorithms).
 3. **`step-ca` integration is ceremony-only.** The live CA on the `ca` guest is unchanged — intermediate
    stays in the `pve1` TPM (`tpmkms`, stock binary, [runbook 35 §6](../runbooks/35-deploy-step-ca.md)).
    The token is used only in the offline signing ceremony: `step certificate sign … 'pkcs11:…'` on a
@@ -37,10 +37,14 @@ YubiKey PIV)?
    U2F_V2 + `hmac-secret`, `rk:true`, `clientPin:true`, MIN PIN 4 / 8 retries, no USB serial descriptor,
    CCID reader enumerates under PC-SC, **no CTAP 2.1 credMgmt** (firmware is FIDO_2_0), and `certutil -scinfo`
    detects the card as `Identity Device (NIST SP 800-73 [PIV])` → **PIV applet present** (§3).
-5. **Pending**: the Linux-side gates — PIV AID select → `9000` and `pkcs11-tool --list-slots` (OpenSC/PKCS#11
-   must drive slot 9C for the ceremony), CPLC chip check (`40 90` = SLE 78), firmware version from Key
-   Manager (§4). The 2026-11-10 dev-container session staged the toolchain and settled the non-hardware
-   questions: root key is P-256, PKCS#11 sign path proven via SoftHSM, `step-kms-plugin` kit gap (§3).
+5. **Hardware gates — all cleared 2026-11-10** (WSL 2, Ubuntu 26.04, key attached with `usbipd`):
+   PIV AID select answers `9000`, `pkcs11-tool --list-slots` lists the token as `PIV_II`, and the
+   AAGUID matches the family value. **The CPLC reads `96 4D` (NXP JCOP), not `40 90` (Infineon SLE 78)**
+   as the manual claims — the chip vendor is irrelevant to the ceremony, so the check was dropped from
+   the kit rather than "fixed". Getting the key this far took four fixes, all recorded in
+   [01-setup.md](../ca-signing-kit/01-setup.md): polkit refusal, a missing libccid device-table entry,
+   USB permissions for the `pcscd` user, and the systemd sandbox. Still wanted from Key Manager: the
+   firmware version.
 6. **Decision 2026-11-10 ([issue #193](https://github.com/jaroslaw-bagnicki/Homelab/issues/193)): reissue the root on the token — do not import.** The new 10-year root is generated **in slot 9C**, so the key never exists in software. (Import would also fit — the current root is P-256, within the PIV app's ECC P-256/P-384 — but it would pass the key through workstation memory once.) Reissue deliberately accepts the one-time trust rotation ADR 38 originally rejected; ADR 38 is amended on this branch; the procedure and rotation steps are in [runbook 46](../runbooks/46-adopt-utrust-piv-root-custody.md).
 
 ## 1. Why the FIDO2 applet is out — and what the PIV applet offers
@@ -60,7 +64,10 @@ YubiKey PIV)?
   Smart Card, and OATH"; "The uTrust FIDO2 NFC/NFC+ presents itself … as a USB smart card reader";
   "it is the **firmware version** that determines which of the more specialized functionalities … are
   available". Defaults: PIV PIN `123456`, PUK `12345678`, management key (3DES)
-  `010203040506070801020304050607080102030405060708`. CPLC first two bytes `40 90` = Infineon SLE 78.
+  `010203040506070801020304050607080102030405060708`. **The manual's CPLC claim (`40 90` = Infineon
+  SLE 78) is wrong for this unit** — the measured CPLC reports `96 4D` (NXP) with `JNET` in the serial
+  field, i.e. an **NXP JCOP** secure element (§4, measured 2026-11-10). JCOP is the conventional chip for
+  PIV tokens; nothing about the ceremony depends on the vendor.
   AAGUID `73402251-f2a8-4f03-873e-3cb6db604b03` for NFC and NFC+.
 - **Datasheet** (`uTrust-FIDO2-NFC-Security-Keys-DS.pdf`, rev 2021-08-02): P/N **905601** (USB-A) /
   905602 (USB-C), "Secure Element Interface: FIDO2, U2F, HOTP, TOTP, **PIV**", "Contactless
@@ -123,8 +130,13 @@ key. What this session settled without hardware:
   no readers. Run the §4 checks in a **WSL distro shell directly** (where `/dev/bus/usb` exists after
   the attach), not inside the dev container — or pass the device into the container
   (`--device /dev/bus/usb` at container start).
-- ❌ **Still pending — needs the physical key on a Linux userspace**: §4 checks 2–7 (reader, PIV AID
-  `9000`, CPLC, PKCS#11 slot, AAGUID). Check 1 (USB enumeration) ✅ passed via usbipd.
+- ✅ **Measured 2026-11-10 — all of §4 passes** on WSL 2 (Ubuntu 26.04) with the key attached through
+  `usbipd`: reader claimed, PIV AID `9000`, OpenSC PKCS#11 lists the token as `PIV_II`, AAGUID matches.
+  Two corrections came out of it: the PIV AID APDU needs `Lc=0B` (11-byte AID — the original
+  diagnostic sent `Lc=08` with 10 bytes and the card rejected it), and the chip is **NXP JCOP**, not the
+  Infineon SLE 78 the manual claims. Four WSL-specific blockers had to be cleared first — polkit, a
+  missing libccid device-table entry, USB permissions for the `pcscd` user, and the systemd sandbox
+  ([01-setup.md](../ca-signing-kit/01-setup.md)).
 
 ## 4. Pending hardware checks — resume here (VSCode terminal)
 
@@ -146,33 +158,26 @@ cgroup blocks usbfs; verified 2026-11-10). On a native Linux workstation the key
 | 1 | `lsusb \| grep -i 04e6` | Identiv `04e6:5a11` uTrust FIDO2 |
 | 2 | `opensc-tool -l` | one CCID reader (**`-r` is `--reader` on OpenSC ≥ 0.23**) |
 | 3 | `opensc-tool --name` | driver `PIV-II` |
-| 4 | `opensc-tool -s '00a4040008a000000308000010000000'` | SW **`9000`** → PIV applet enabled on this unit |
-| 5 | `opensc-tool -s '00a4040008a000000151000000' -s '00ca9f7f'` | CPLC starts **`40 90`** → SLE 78 chip (serial follows) |
+| 4 | `opensc-tool -s '00a404000ba000000308000010000100'` | SW **`9000`** → PIV applet enabled on this unit. `Lc` must be `0B` — the 11-byte AID, not the 8 the original diagnostic used |
+| 5 | `opensc-tool -s '00a4040008a000000151000000' -s '00ca9f7f'` | CPLC — **measured `96 4D … JNET` = NXP JCOP**, not the `40 90` (SLE 78) the manual claims |
 | 6 | `pkcs11-tool --module "$(find /usr/lib -name opensc-pkcs11.so \| head -1)" --list-slots` | token listed → **OpenSC PKCS#11 claims it** (the gate for the ceremony) |
 | 7 | `fido2-token -L` | AAGUID `73402251-f2a8-4f03-873e-3cb6db604b03` |
+
+**All seven measured 2026-11-10** on the real unit: 1 ✅, 2 ✅ (after the four WSL fixes), 3 ✅
+`PIV-II`, 4 ✅ `9000`, 5 ✅ **NXP JCOP** (manual's SLE 78 claim refuted), 6 ✅, 7 ✅.
 
 Windows cross-check **done 2026-11-08**: `certutil -scinfo` lists the PIV card (§3). Still wanted from
 Key Manager: the **firmware version** (manual: firmware decides applet enablement).
 
-Reference script (same checks, read-only, no PIN login, writes nothing to the token) — saved as
-[`Test-uTrustKey.ps1`](../ca-signing-kit/Test-uTrustKey.ps1) in the signing kit. Each gate is one
-`Check` call:
+**The kit's health check is deliberately smaller than this table.** These seven gates were written when
+it was unknown whether the device worked at all — they walk up the stack one layer at a time. Once
+`pkcs11-tool` answers, every layer below it is proven, so
+[`Test-uTrustKey.ps1`](../ca-signing-kit/Test-uTrustKey.ps1) only checks what PKCS#11 cannot tell you:
+that `step` and `step-kms-plugin` are in place, and whether a root key already sits in slot 9C.
 
-```powershell
-Check 'key visible on USB'          { (lsusb | Select-String 'Identiv|04e6|uTrust') -join '; ' }
-Check 'reader claimed (pcscd)'      { opensc-tool -l }                       # OpenSC >= 0.23: -l, not -r
-Check 'PIV applet answers 9000'     { opensc-tool -s '00a4040008a000000308000010000000' }
-Check 'chip is SLE78 (CPLC 40 90)'  { opensc-tool -s '00a4040008a000000151000000' -s '00ca9f7f' }
-Check 'PKCS#11 lists the key'       { pkcs11-tool --module $mod --list-slots }
-Check 'FIDO2 AAGUID is 73402251'    { fido2-token -L }
-```
-
-The script reports one OK/FAIL line per gate and exits non-zero if any fails.
-
-**Decision rule**: Windows PIV detection ✅ (done, §3). Remaining gates are Linux checks 4 + 6: both
-pass → key cleared for the adoption procedure ([runbook 46](../runbooks/46-adopt-utrust-piv-root-custody.md)).
-Check 4 fails → Windows sees PIV but OpenSC cannot drive it on Linux; then either provision/sign on
-Windows via uTrust Key Manager, or switch to an NFC+ SKU.
+**Decision rule — resolved 2026-11-10**: the Linux gates pass, so the key is cleared for the adoption
+procedure ([runbook 46](../runbooks/46-adopt-utrust-piv-root-custody.md)). The fallback paths in this
+section (provision on Windows, or switch to an NFC+ SKU) were not needed.
 
 ## 5. Potential adoption path (decided 2026-11-10, issue #193) — procedure in runbook 46, not yet executed
 
