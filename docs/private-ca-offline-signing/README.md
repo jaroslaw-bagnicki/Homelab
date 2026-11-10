@@ -34,8 +34,9 @@ discards the bad one, so nothing unfit to install is ever carried away.
 
 ## Where it runs
 
-**Inside WSL (Ubuntu), on the Windows 11 workstation.** The key, `pcscd`, OpenSC and `step` all live
-there, so the scripts run there too — no cross-boundary indirection.
+**Inside WSL (Ubuntu), on the Windows 11 workstation.** Windows cannot see the uTrust Security Key
+directly — it is handed to WSL with `usbipd`, and WSL is where `pcscd`, OpenSC and `step` run. So the
+scripts run there too.
 
 ```sh
 wsl
