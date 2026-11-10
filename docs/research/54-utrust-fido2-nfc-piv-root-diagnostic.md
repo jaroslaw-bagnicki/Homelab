@@ -41,7 +41,7 @@ YubiKey PIV)?
    must drive slot 9C for the ceremony), CPLC chip check (`40 90` = SLE 78), firmware version from Key
    Manager (§4). The 2026-11-10 dev-container session staged the toolchain and settled the non-hardware
    questions: root key is P-256, PKCS#11 sign path proven via SoftHSM, `step-kms-plugin` kit gap (§3).
-6. **Decision 2026-11-10 ([issue #193](https://github.com/jaroslaw-bagnicki/Homelab/issues/193)): reissue the root on the token — do not import.** The new 10-year root is generated **in slot 9C**, so the key never exists in software. (Import would also fit — the current root is P-256, within the PIV app's ECC P-256/P-384 — but it would pass the key through workstation memory once.) Reissue deliberately accepts the one-time trust rotation ADR 38 originally rejected; ADR 38 is amended on this branch, rotation steps in §5.
+6. **Decision 2026-11-10 ([issue #193](https://github.com/jaroslaw-bagnicki/Homelab/issues/193)): reissue the root on the token — do not import.** The new 10-year root is generated **in slot 9C**, so the key never exists in software. (Import would also fit — the current root is P-256, within the PIV app's ECC P-256/P-384 — but it would pass the key through workstation memory once.) Reissue deliberately accepts the one-time trust rotation ADR 38 originally rejected; ADR 38 is amended on this branch; the procedure and rotation steps are in [runbook 46](../runbooks/46-adopt-utrust-piv-root-custody.md).
 
 ## 1. Why the FIDO2 applet is out — and what the PIV applet offers
 
@@ -177,71 +177,34 @@ fido2-token -L 2>&1 || echo "  fido2-token failed (install fido2-tools)"
 ```
 
 **Decision rule**: Windows PIV detection ✅ (done, §3). Remaining gates are Linux checks 4 + 6: both
-pass → key cleared for the provisioning ceremony (§5). Check 4 fails → Windows sees PIV but OpenSC cannot
-drive it on Linux; then either provision/sign on Windows via uTrust Key Manager, or switch to an NFC+ SKU.
+pass → key cleared for the adoption procedure ([runbook 46](../runbooks/46-adopt-utrust-piv-root-custody.md)).
+Check 4 fails → Windows sees PIV but OpenSC cannot drive it on Linux; then either provision/sign on
+Windows via uTrust Key Manager, or switch to an NFC+ SKU.
 
-## 5. If verified — reissue ceremony outline (decided 2026-11-10, issue #193) — not yet executed
+## 5. Potential adoption path (decided 2026-11-10, issue #193) — procedure in runbook 46, not yet executed
 
-1. Change factory defaults first: PIV PIN, PUK, management key (`piv-tool` / `pkcs11-tool` / Key
-   Manager).
-2. **Generate the new 10-year root on the token in slot 9C** — the key never exists in software.
-   Two steps: key-pair generation **on the card** first, then the self-signed cert referencing it.
-   `step certificate create` only *uses* an existing on-token key — pointed at a not-yet-existing
-   `object=` it fails with `getPublicKey failed: key … not found`, and a `pkcs11:` URI without
-   `token=`/`serial=`/`slot-id` is rejected (both verified 2026-11-10 against SoftHSM):
+The diagnostic answer is **yes, with gates**: reissue the root onto the token's PIV slot 9C — key
+generated on-card, never in software — rather than importing the existing P-256 root, accepting the
+one-time trust rotation (ADR 38 amended on this branch). The executable procedure lives in
+[runbook 46](../runbooks/46-adopt-utrust-piv-root-custody.md) with `sign-piv.sh` in the offline kit;
+this log keeps only the findings that shape that path:
 
-   ```sh
-   # 2a. generate the key pair in PIV slot 9C — OpenSC drives the card; PIN policy "always"
-   #     is fixed at generation (manual); --login prompts for the PIV PIN, never pin-value
-   pkcs11-tool --module /usr/lib/x86_64-linux-gnu/opensc-pkcs11.so --keypairgen \
-     --key-type EC:prime256v1 --slot-id 0x9C --label "Homelab Root CA" --login
-
-   # 2b. self-signed 10-year root cert over that on-token key (shape verified against SoftHSM)
-   ./step certificate create "Homelab Internal CA" root_ca.crt --profile root-ca --not-after 87600h \
-     --kms 'pkcs11:module-path=/usr/lib/x86_64-linux-gnu/opensc-pkcs11.so;token=<token label>' \
-     --key 'pkcs11:module-path=/usr/lib/x86_64-linux-gnu/opensc-pkcs11.so;token=<token label>;object=Homelab Root CA;type=private'
-   ```
-
-   Slot 9C asks the PIN immediately before each signature. Algorithm: **P-256** (matches the P-256
-   intermediate and the old root) or RSA ≤ 3072 — the PIV app has no RSA-4096.
-3. Test-sign a throwaway CSR, then export the new `root_ca.crt` (public) for distribution.
-4. **Trust rotation (the accepted cost of reissue):** distribute the new root to the fleet (Ansible) and
-   workstations ([runbook 39](../runbooks/39-trust-private-ca.md)); re-sign **both** sibling CAs — the
-   step-ca intermediate ([runbook 36](../runbooks/36-private-ca-init.md), `sign.sh` delta below) and the
-   FreeIPA/Dogtag CA (`sign-ipa-ca.sh` — [ADR 42](../decisions/42-pki-topology-sibling-cas.md));
-   install them; clients dual-trust old+new during cutover; once everything chains to the new root,
-   **remove the old root from every trust store by hand** (no CRL/OCSP covers roots — ADR 38) and
-   destroy the IronKey key file + backups last.
-5. Ceremony signing (`sign.sh` delta) — the key argument becomes a PKCS#11 URI; PIN is prompted per
-   signature, never put `pin-value=` in the URI/script/repo:
-
-   ```sh
-   ./step certificate sign --template intermediate-ca.tpl --not-after 8760h \
-     intermediate_ca.csr "$STICK/root_ca.crt" \
-     'pkcs11:module-path=/usr/lib/x86_64-linux-gnu/opensc-pkcs11.so;token=<token label>;object=Homelab Root CA;type=private' \
-     > "$TMP"
-   ```
-
-   The URI **must** carry `token=` (or `serial=`/`slot-id`) besides `object=` — `step-kms-plugin`
-   rejects `module-path`+`object` alone (`kms uri 'token', 'serial' or 'slot-id' are required`;
-   verified 2026-11-10 against SoftHSM). PIN is prompted per signature via `pin-source`/interactive
-   prompt, never put `pin-value=` in the URI/script/repo. (Applies to step 2's `--key` URI as well.)
-
-   Toolchain on the signing machine only ([research 36 §5](36-step-ca-machine-identity.md)): the
-   kit's `step` is the **stock static v0.31.0 binary** (no CGO) and delegates every `pkcs11:` URI
-   to an external **`step-kms-plugin`** — add the CGO `step-kms-plugin` v0.17.0 binary
-   (smallstep/step-kms-plugin release, checksum-verified) to the bundle and `PATH`, plus
-   `libpcsclite1` (the plugin links `libpcsclite.so.1`). Without the plugin the command fails with
-   `exec: "step-kms-plugin": executable file not found in $PATH`. The whole path was proven
-   end-to-end on 2026-11-10 with SoftHSM 2.6 as the module (root created with the key in the module,
-   CSR signed via the `pkcs11:` URI, result verified). All of `sign.sh`'s machine checks (chains to
-   root, `is_ca`, `pathlen:0`, SANs `ca.internal` + `192.168.2.215`, 1 year) run unchanged. `ca.json`
-   on the `ca` guest does **not** change.
-
-**Backup note:** an on-card-generated root has no exportable copy — single token. To keep a backup
-token, generate the root key in software once (air-gapped kit), import it into **two** uTrust keys,
-then destroy the software file (the ADR 38 import ceremony applies to the *new* key). Otherwise
-recovery from token loss = another reissue.
+- **Gates**: Windows PIV detection ✅ (`certutil -scinfo`, §3); Linux checks 4 + 6 (§4) still pending
+  with the key attached — decision rule in §4.
+- **Algorithm**: the existing root and the intermediate CSR are both P-256, within the PIV app's
+  ECC P-256/P-384 → slot 9C fits either way; reissue is chosen for custody, not because import
+  wouldn't fit.
+- **Toolchain**: the kit's static `step` v0.31.0 delegates every `pkcs11:` URI to the external CGO
+  **`step-kms-plugin`** — add `step-kms-plugin` v0.17.0 (checksum-verified) + `libpcsclite1` to the kit
+  (`exec: "step-kms-plugin": not found in $PATH` otherwise). The PKCS#11 sign path was proven
+  end-to-end against SoftHSM 2.6 on 2026-11-10 (root created with the key in the module, CSR signed
+  via the URI, result verified).
+- **Command shape** (verified): every `pkcs11:` URI needs `token=`/`serial=`/`slot-id` besides
+  `object=`; root creation is keygen-on-card first (`pkcs11-tool --keypairgen --slot-id 0x9C …`),
+  then `step certificate create --kms … --key …` — `create` cannot generate the key itself
+  (`getPublicKey failed: key … not found` on a fresh object).
+- **Backup**: an on-card-generated root is single-token unless generated in software once and
+  imported into a second uTrust during the ceremony (runbook 46's backup note).
 
 ## 6. Constraints and risks
 
@@ -268,5 +231,5 @@ recovery from token loss = another reissue.
 - [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) — three-tier PKI, root custody (amended 2026-11-10 on this branch: uTrust PIV slot 9C, root **reissued** — issue #193)
 - [research 36 §4–§5](36-step-ca-machine-identity.md) — KMS/custody paths; `step-kms-plugin` (CGO, `libpcsclite1`) needed for `pkcs11:` on the signing machine
 - [runbook 35 §6–§7](../runbooks/35-deploy-step-ca.md) — CSR emission from the TPM key; `ca.json` `tpmkms`
-- [runbook 36](../runbooks/36-private-ca-init.md) + [offline signing kit](../private-ca-offline-signing/README.md) + [`check-utrust.sh`](../private-ca-offline-signing/check-utrust.sh) — the ceremony this token serves and its health check
+- [runbook 36](../runbooks/36-private-ca-init.md) — the IronKey ceremony · [runbook 46](../runbooks/46-adopt-utrust-piv-root-custody.md) — the adoption procedure this diagnostic feeds · [offline signing kit](../private-ca-offline-signing/README.md) + [`check-utrust.sh`](../private-ca-offline-signing/check-utrust.sh) + [`sign-piv.sh`](../private-ca-offline-signing/sign-piv.sh) — health check and token signing
 - [runbook 39](../runbooks/39-trust-private-ca.md) — root distribution to fleet + workstations (reissue step 4)

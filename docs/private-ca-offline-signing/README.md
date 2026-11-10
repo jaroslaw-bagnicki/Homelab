@@ -39,6 +39,7 @@ the signing machine only on the stick, back into the safe.
 | `ipa-ca.tpl` | the FreeIPA CA signing template — `CN=Certificate Authority,O=IPA.INTERNAL`, CA:TRUE, pathlen:0 | — |
 | `root.sh` | creates the root CA on the stick — first run only | — |
 | `sign.sh` | signs the `step-ca` intermediate CSR with that root, then machine-checks the result | — |
+| [`sign-piv.sh`](sign-piv.sh) | the token-custody variant of `sign.sh`: signs with the root **on the uTrust PIV token** (slot 9C) via a `pkcs11:` URI, PIN prompted per signature — needs `step-kms-plugin` in `PATH`, see [runbook 46](../runbooks/46-adopt-utrust-piv-root-custody.md) | — |
 | `sign-ipa-ca.sh` | signs FreeIPA's `ipa.csr` (from `ipa-server-install --external-ca`) with the same root | — |
 | [`check-utrust.sh`](check-utrust.sh) | read-only health check for a uTrust FIDO2 NFC token (PIV applet, CPLC, PKCS#11 slot) — run on the connected workstation, **not** in the air-gapped ceremony | [research 54 §4](../research/54-utrust-fido2-nfc-piv-root-diagnostic.md) |
 
