@@ -1,6 +1,6 @@
 # Homelab Setup — Restic Backup (Azure Blob)
 
-> ⚠️ **Superseded target**: [ADR 49](../decisions/49-backblaze-b2-offsite-backup.md) replaced Azure
+> ⚠️ **Superseded target**: [ADR 50](../decisions/50-backblaze-b2-offsite-backup.md) replaced Azure
 > Blob with **Backblaze B2** (S3-compatible) as the off-site backup target on 2026‑11‑11. This runbook
 > still describes the historical Azure Blob deployment; the redo in [#13](https://github.com/jaroslaw-bagnicki/Homelab/issues/13)
 > targets B2 — `s3:s3.<region>.backblazeb2.com/<bucket>` with a bucket-scoped B2 application key from

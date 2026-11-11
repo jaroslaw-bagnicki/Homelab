@@ -1,19 +1,19 @@
 # Changelog
 
-Notable changes to the Homelab repo, newest first. This log supersedes the
-"What's Done" table that used to live in the root `README.md`. Entries carry a
+Notable changes to the Homelab repo, newest first. This log supersedes the  
+"What's Done" table that used to live in the root `README.md`. Entries carry a  
 `(type)` prefix describing what the change delivers — `feat`, `fix`, `docs`, `chore`, `refactor`.
 
 **One line per entry, one entry per workstream.** State what changed and link one artefact — the
-rationale, measurements and configuration detail live in the linked ADR, runbook or report. Headline
-plus at most one clause, under ~200 characters: if it will not fit on one line, it is not a changelog
-entry. Notable changes only: no instruction-file tweaks, typo/link fixes, cross-reference or rename
-corrections, or changelog bookkeeping.
+rationale, measurements and configuration detail live in the linked ADR, runbook or report. Headline  
+plus at most one clause, under ~200 characters: if it will not fit on one line, it is not a changelog  
+entry. Notable changes only: no instruction-file tweaks, typo/link fixes, cross-reference or rename  
+corrections, or changelog bookkeeping.  
 Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month and newest entry first.
 
 ## 2026‑11
 
-- **(docs)** Adopt Backblaze B2 as the off-site backup target and shape the 3‑2‑1 rule around it — NAS local copy + B2 third copy, Restic unchanged — [ADR 49](docs/decisions/49-backblaze-b2-offsite-backup.md) · [idea 20](docs/ideas/20-backup-3-2-1-strategy.md)
+- **(docs)** Adopt the 3‑2‑1 backup rule (NAS local copy + one off-site cloud copy, Restic unchanged) with **Backblaze B2** as the off-site target superseding ADR 02's Azure Blob — [ADR 49](docs/decisions/49-backup-3-2-1-strategy.md) · [ADR 50](docs/decisions/50-backblaze-b2-offsite-backup.md) · [idea 20](docs/ideas/20-backup-3-2-1-strategy.md)
 - **(docs)** Adopt OPNsense on the Futro S930 as the LAN router, routing-first — [ADR 48](docs/decisions/48-lan-router-futro-s930.md)
 - **(feat)** Stand up `pve2` as the second Proxmox node — `pve` → `pve1`, the NAS moved to `.209`, the two-node `homelab` cluster with an `edge` QDevice, and `proxmox.internal` failover — [runbook 42](docs/runbooks/42-pve2-proxmox-node.md) · [runbook 43](docs/runbooks/43-proxmox-cluster-qdevice.md)
 - **(docs)** Plan a Mistral Large 4 vs DeepSeek V4.1 Flash A/B — one Mistral Pro allowance serves candidate and control, so only task success can decide — [idea 16](docs/ideas/16-ai-model-mistral-large-4.md)

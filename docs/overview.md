@@ -118,7 +118,7 @@ ready to start.
 
 | Item | Parked because | Refs |
 |---|---|---|
-| **Restic backup** (redo) | dormant since June; off-site target now **Backblaze B2** ([ADR 49](decisions/49-backblaze-b2-offsite-backup.md), supersedes ADR 02's Azure Blob), 3‑2‑1 shape in [idea 20](ideas/20-backup-3-2-1-strategy.md) | [#13](https://github.com/jaroslaw-bagnicki/Homelab/issues/13) · [ADR 02](decisions/02-backup-strategy-restic-blob.md) · [ADR 49](decisions/49-backblaze-b2-offsite-backup.md) · [runbook 07](runbooks/07-restic-backup.md) |
+| **Restic backup** (redo) | dormant since June; 3‑2‑1 adopted ([ADR 49](decisions/49-backup-3-2-1-strategy.md)), off-site target now **Backblaze B2** ([ADR 50](decisions/50-backblaze-b2-offsite-backup.md), supersedes ADR 02's Azure Blob), shape in [idea 20](ideas/20-backup-3-2-1-strategy.md) | [#13](https://github.com/jaroslaw-bagnicki/Homelab/issues/13) · [ADR 02](decisions/02-backup-strategy-restic-blob.md) · [ADR 49](decisions/49-backup-3-2-1-strategy.md) · [ADR 50](decisions/50-backblaze-b2-offsite-backup.md) · [runbook 07](runbooks/07-restic-backup.md) |
 | **SQL Server Developer Edition** | never started | [#3](https://github.com/jaroslaw-bagnicki/Homelab/issues/3) · [runbook 09](runbooks/09-mssql-dev.md) |
 | **Gitea** | never started | [#4](https://github.com/jaroslaw-bagnicki/Homelab/issues/4) |
 | **Hermes Agent** | most complex — deliberately last | — |
