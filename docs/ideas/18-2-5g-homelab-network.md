@@ -9,12 +9,12 @@
 **Status**: 🧠 Idea — setup selected in research, nothing purchased yet.
 **Date**: 2026-11-11
 **Sources**: [Gemini chat — "Homelab 2.5G net setup"](https://gemini.google.com/share/a9aa0c4028f3)
-(2026‑11‑09 → published 2026‑11‑11, conversation in Polish) · supplementary thread
+(2026‑11‑09 → published 2026‑11‑11, conversation in Polish) · supplementary thread  
 [share.gemini.google/F7UoGx8P36nX](https://share.gemini.google/F7UoGx8P36nX)
 **Related**: [idea 07](07-opnsense-futro-s930.md) (the S930 OPNsense router this would replace —
-[ADR 48](../decisions/48-lan-router-futro-s930.md)) · [research 53](../research/53-opnsense-vlans-segmentation-vpn.md)
-(VLAN/segmentation needs the managed switch must serve) · [research 31](../research/31-futro-s930-hardware-diagnostic.md)
-(S930's PCIe Gen1 ×1 — the reason a 10G NIC cannot live there) · details in
+[ADR 48](../decisions/48-lan-router-futro-s930.md)) · [research 53](../research/53-opnsense-vlans-segmentation-vpn.md)  
+(VLAN/segmentation needs the managed switch must serve) · [research 31](../research/31-futro-s930-hardware-diagnostic.md)  
+(S930's PCIe Gen1 ×1 — the reason a 10G NIC cannot live there) · details in  
 [research 55](../research/55-2-5g-homelab-network.md)
 
 ---
@@ -23,7 +23,7 @@
 
 Every node in the lab (`pve1` Wyse 5070, `pve2` OptiPlex 7050, `lab` M910q, `nas` Beetle M-III) is capped at
 **1 GbE (~110 MB/s)**, which is now the bottleneck for PBS backups, live migration between `pve1`/`pve2`,
-NFS/iSCSI to the NAS and K3s volume traffic. 2.5 GbE gives **~280–300 MB/s** per node — a 2.5× jump — and
+NFS/iSCSI to the NAS and K3s volume traffic. 2.5 GbE gives **~280–300 MB/s** per node — a 2.5× jump — and  
 the single 10G SFP+ port carries the VLAN trunk to the router so inter-VLAN routing is not throttled to
 2.5G. Everything sits in one 10″ rack, so the 10G link is a **passive DAC** (30 PLN, zero heat, zero power)
 — no fiber, no SFP+→RJ45 transceivers.
@@ -39,8 +39,8 @@ the single 10G SFP+ port carries the VLAN trunk to the router so inter-VLAN rout
 | 4× M.2 2.5G NIC RTL8125B (A+E key for Wi-Fi slots, or M key) | 2.5G uplink for `pve1`, `pve2`, `lab`, `nas` | 4× 27 PLN + 37 PLN shipping |
 | **Total** | | **~718 PLN** |
 
-Cheaper variant (651 PLN at earlier prices, 537 PLN with the 129 PLN outlet SODOLA unmanaged switch)
-trades the switch's Web GUI VLANs for host-side tagging on Proxmox/OPNsense — the YuLinca at 199 PLN makes
+Cheaper variant (651 PLN at earlier prices, 537 PLN with the 129 PLN outlet SODOLA unmanaged switch)  
+trades the switch's Web GUI VLANs for host-side tagging on Proxmox/OPNsense — the YuLinca at 199 PLN makes  
 that trade-off pointless.
 
 ## Key findings behind the selection

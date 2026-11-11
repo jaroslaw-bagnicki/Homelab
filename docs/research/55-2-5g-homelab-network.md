@@ -1,8 +1,8 @@
 # 55 — 2.5 GbE homelab network with a 10G SFP+ core: switch, NIC and host selection
 
 **Source**: [Gemini chat — "Homelab 2.5G net setup"](https://gemini.google.com/share/a9aa0c4028f3)
-(thread created 2026‑11‑09, published 2026‑11‑11; conversation in Polish; 24 questions) · supplementary
-thread [share.gemini.google/F7UoGx8P36nX](https://share.gemini.google/F7UoGx8P36nX)
+(thread created 2026‑11‑09, published 2026‑11‑11; conversation in Polish; 24 questions) · supplementary  
+thread [share.gemini.google/F7UoGx8P36nX](https://share.gemini.google/F7UoGx8P36nX)  
 (same conversation mirrored; the NAS aggregation-link and disk-matrix analysis below is folded in from it).
 
 **Scope**: budget 2.5 GbE upgrade of the homelab LAN — unmanaged vs web-managed 2.5G switches, SFP+ vs
@@ -21,8 +21,8 @@ the NAS and an SSD-vs-HDD disk-matrix performance comparison. Feeds [idea 18](..
 
 ## §1 — Managed vs unmanaged 2.5G switches
 
-Price gap is real: budget **unmanaged** 2.5G switches (GiGaPlus GP-S25-0802T, SODOLA, Hasivo, NICGIGA — all
-Realtek RTL8373 + RTL8224 OEM boards) cost ~129–250 PLN; **managed** 2.5G with 802.1Q costs 700–1200+ PLN
+Price gap is real: budget **unmanaged** 2.5G switches (GiGaPlus GP-S25-0802T, SODOLA, Hasivo, NICGIGA — all  
+Realtek RTL8373 + RTL8224 OEM boards) cost ~129–250 PLN; **managed** 2.5G with 802.1Q costs 700–1200+ PLN  
 from Ubiquiti/MikroTik/TP-Link Omada. The middle path is the Chinese **"Easy Web Managed"** class:
 
 | Switch | Ports | Management | Price (2026‑11) | Verdict |
@@ -33,10 +33,10 @@ from Ubiquiti/MikroTik/TP-Link Omada. The middle path is the Chinese **"Easy Web
 | MikroTik CRS310-8G+2S+IN | 8× 2.5G + 2× 10G SFP+ | RouterOS/SwitchOS, HW offload | 850–950 PLN | enterprise, overkill here |
 | **YuLinca 8× 2.5G + 1× 10G SFP+ Easy Web Managed** | 8× 2.5G + 1× SFP+ | Web GUI (default `192.168.2.1`, admin/admin): **802.1Q VLAN, LACP, QoS, IGMP snooping, STP**; backplane 60 Gbps; fanless metal ~160×90×35 mm; 12 V 1 A PSU | **199 PLN** | **selected** — real VLANs under 200 PLN |
 
-Hybrid architecture that works with an unmanaged 2.5G switch anyway: keep a cheap 1G managed switch
-(TL‑SG108E, already owned — [research 24](24-network-topology-design.md)) for IoT/mgmt VLANs and hang the
-unmanaged 2.5G switch off a router **access port** of one dedicated storage VLAN; unmanaged Realtek switches
-pass 802.1Q tags transparently, so host-side tagging on Proxmox/OPNsense also works. The YuLinca makes this
+Hybrid architecture that works with an unmanaged 2.5G switch anyway: keep a cheap 1G managed switch  
+(TL‑SG108E, already owned — [research 24](24-network-topology-design.md)) for IoT/mgmt VLANs and hang the  
+unmanaged 2.5G switch off a router **access port** of one dedicated storage VLAN; unmanaged Realtek switches  
+pass 802.1Q tags transparently, so host-side tagging on Proxmox/OPNsense also works. The YuLinca makes this  
 moot by doing the tagging itself.
 
 ## §2 — SFP+ 10G vs RJ45 10GBASE-T uplink
@@ -50,7 +50,7 @@ moot by doing the tagging itself.
 | Media | DAC (1–5 m), AOC, fiber LC (up to km) | Cat6 ≤30 m / Cat6A ≤100 m only |
 
 **Verdict**: always SFP+ in a homelab when there is a choice. In the same 10″ rack use a **passive DAC**;
-between rooms use SFP+ LR/SR modules + fiber. Only use an SFP+→RJ45 transceiver when a device truly has just
+between rooms use SFP+ LR/SR modules + fiber. Only use an SFP+→RJ45 transceiver when a device truly has just  
 a 10G RJ45 port, and minimize their number (heat).
 
 ## §3 — DAC vs fiber costs (router ↔ switch)
@@ -62,8 +62,8 @@ a 10G RJ45 port, and minimize their number (heat).
 | Multi-mode fiber (OM3/OM4, ≤300 m) | 2× SFP+ SR modules (~90–120 PLN new, 30–40 used) + LC-LC OM3 patchcord 2–5 m (~20–35 PLN) | ~110–155 PLN |
 | Single-mode (OS2, ≤10 km) | 2× SFP+ LR modules (~110–160 PLN) + LC-LC OS2 patchcord (~20–40 PLN) | ~130–200 PLN |
 
-DAC wins for a 10″ rack: passive (0 W, no heat), plug & play, cheapest. Watch the bend radius at the SFP+
-plugs — DACs are stiff. Outlet PSU caveat on cheap switches: the bundled 12 V 1–1.5 A adapter can cause
+DAC wins for a 10″ rack: passive (0 W, no heat), plug & play, cheapest. Watch the bend radius at the SFP+  
+plugs — DACs are stiff. Outlet PSU caveat on cheap switches: the bundled 12 V 1–1.5 A adapter can cause  
 random reboots under load; replace with a branded 12 V ≥2 A if that happens.
 
 ## §4 — 10G SFP+ NIC evaluation (used market)
@@ -79,8 +79,8 @@ random reboots under load; replace with a branded 12 V ≥2 A if that happens.
 | Dell Chelsio T540-BT | Chelsio T5, PCIe 3.0 ×8, **4× 10GBASE-T RJ45** | **19–25 W+** | `cxgbe` | **reject** for a fanless Futro — furnace, kills the 40/65 W PSU, DAC useless |
 | Brocade 1020 (80-1003249) | CNA, PCIe 2.0 ×8 | ~10–12 W | **no driver** (`bfa`/`bna` dropped from FreeBSD) | **reject** — invisible to OPNsense |
 
-PCIe Gen3 NICs exist (X710, ConnectX-4 Lx, BCM57412/57414, Aquantia AQC107) and would negotiate native
-PCIe 3.0 ×4 in the S940 (~3.9 GB/s — both 10G ports full-duplex), but cost 2–3× more; the X520 at PCIe 2.0 ×4
+PCIe Gen3 NICs exist (X710, ConnectX-4 Lx, BCM57412/57414, Aquantia AQC107) and would negotiate native  
+PCIe 3.0 ×4 in the S940 (~3.9 GB/s — both 10G ports full-duplex), but cost 2–3× more; the X520 at PCIe 2.0 ×4  
 (~2.0 GB/s ≈ 16 Gbps) already saturates one 10G port with headroom for the second in real traffic.
 
 ## §5 — Host fit: Futro S930 vs Futro S940
@@ -91,8 +91,8 @@ PCIe 3.0 ×4 in the S940 (~3.9 GB/s — both 10G ports full-duplex), but cost 2�
 | CPU | GX-424CC — weak for 10G stateful filtering | J4105/N4200 class — handles 10G routing + IDS/IPS much better |
 | Fit | card physically needs open-ended riser | D2755 (167 mm) fits on the riser after removing the rear mounting basket; **needs the Fujitsu riser included** (~20–40 PLN if not) |
 
-Using **both** 10G ports on the S940: theoretical full-duplex on both = 40 Gbps > 16 Gbps bus cap, so a
-synthetic iperf on both ports simultaneously caps at ~16 Gbps; real router traffic (one port = 10G trunk to
+Using **both** 10G ports on the S940: theoretical full-duplex on both = 40 Gbps > 16 Gbps bus cap, so a  
+synthetic iperf on both ports simultaneously caps at ~16 Gbps; real router traffic (one port = 10G trunk to  
 the switch) never hits that. A small 40 mm fan (Noctua NF-A4x10/20 or cheap 12 V) over the X520 heatsink is
 **mandatory** in the passively cooled S940 (80–90 °C without airflow).
 
@@ -105,7 +105,7 @@ the switch) never hits that. A small 40 mm fan (Noctua NF-A4x10/20 or cheap 12 V
 
 M.2 keying: **A+E** goes into the Wi-Fi slot (M.2 2230) and keeps the NVMe M-key slot free for the boot SSD;
 **M key** goes into a free NVMe slot. Cards are a small M.2 module + RJ45 jack on a 15–20 cm flex ribbon with
-LP/FH brackets. Selected: 4× M.2 2.5G RTL8125B at 27 PLN each (10Gtek A+E variant ~$18–20) for `pve1`, `pve2`,
+LP/FH brackets. Selected: 4× M.2 2.5G RTL8125B at 27 PLN each (10Gtek A+E variant ~$18–20) for `pve1`, `pve2`,  
 `lab`, `nas`.
 
 Per-node notes (from `docs/hardware.md`):
@@ -135,9 +135,9 @@ Either way the NAS link is no longer the 1 GbE bottleneck; what remains is the d
 
 ### §7.2 Disk matrix: what actually delivers the bandwidth
 
-The Beetle today: SanDisk X600 128 GB SSD (OS/cache) + **2× Seagate ST1000VT001 1 TB 2.5″ HDD in mdadm
-RAID1** over XFS, 5× SATA AHCI ports (3 occupied, mSATA + M.2 SATA free), PCIe 3.0 ×16 + 2× 2.0 ×1 free
-([research 32](32-wincor-beetle-m3-hardware-diagnostic.md)). Sequential numbers that decide what a 2.5G
+The Beetle today: SanDisk X600 128 GB SSD (OS/cache) + **2× Seagate ST1000VT001 1 TB 2.5″ HDD in mdadm  
+RAID1** over XFS, 5× SATA AHCI ports (3 occupied, mSATA + M.2 SATA free), PCIe 3.0 ×16 + 2× 2.0 ×1 free  
+([research 32](32-wincor-beetle-m3-hardware-diagnostic.md)). Sequential numbers that decide what a 2.5G  
 (≈280–300 MB/s) or 5G/10G link can actually carry:
 
 | Matrix | Seq. read | Seq. write | 2.5G link (300 MB/s) | 5G LACP | 10G |
@@ -189,9 +189,9 @@ Conclusions:
 | Shipping (M.2 cards) | 1 | 37 PLN | 37 PLN |
 | **Total** | | | **718 PLN** |
 
-Earlier variants computed in the thread: YuLinca at 243 PLN + 54 PLN cards = **651 PLN**; with the 129 PLN
-outlet SODOLA unmanaged switch instead = **537 PLN**; with 10Gtek A+E cards (~$18–20 each) instead of the
-27 PLN no-name ones ≈ **873–913 PLN**. Side costs: 40 mm fan for the X520 in the S940 (~10–40 PLN), Fujitsu
+Earlier variants computed in the thread: YuLinca at 243 PLN + 54 PLN cards = **651 PLN**; with the 129 PLN  
+outlet SODOLA unmanaged switch instead = **537 PLN**; with 10Gtek A+E cards (~$18–20 each) instead of the  
+27 PLN no-name ones ≈ **873–913 PLN**. Side costs: 40 mm fan for the X520 in the S940 (~10–40 PLN), Fujitsu  
 PCIe riser if the S940 listing lacks it (~20–40 PLN), possibly a 12 V ≥2 A PSU for the switch.
 
 ## §10 — Open questions
