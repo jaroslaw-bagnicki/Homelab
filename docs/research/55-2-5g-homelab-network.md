@@ -10,8 +10,9 @@ thread [share.gemini.google/F7UoGx8P36nX](https://share.gemini.google/F7UoGx8P36
 2.5G M.2 NICs for the nodes, deployment cost calculation, and the NAS-side analysis: link aggregation to
 the NAS and an SSD-vs-HDD disk-matrix performance comparison. Feeds [idea 18](../ideas/18-2-5g-homelab-network.md).
 
-**Status**: 📝 Analysis — the operator selected the setup (Futro S940 + D2755-A11 + YuLinca + EX.2268 DAC +
-4× M.2 RTL8125B, ~718 PLN); nothing purchased or configured yet. No ADR.
+**Status**: 📝 Analysis — the operator selected the setup (Futro S940 + D2755-A11 + YuLinca + 2× EX.2268 DAC +
+3× branded 10Gtek M.2 A+E for `pve1`/`pve2`/`lab` + a 10G SFP+ PCIe card for `nas`, ~990 PLN; corrected  
+2026‑11‑11 to branded node NICs and a PCIe card for the NAS); nothing purchased or configured yet. No ADR.
 
 > ⚠️ **Verification status**: hardware claims (prices, slot speeds, temperatures) are transcribed from the
 > thread and marketplace listings; the PCIe negotiation numbers (S940 riser = PCIe 3.0 ×4, X520 negotiates
@@ -105,8 +106,11 @@ the switch) never hits that. A small 40 mm fan (Noctua NF-A4x10/20 or cheap 12 V
 
 M.2 keying: **A+E** goes into the Wi-Fi slot (M.2 2230) and keeps the NVMe M-key slot free for the boot SSD;
 **M key** goes into a free NVMe slot. Cards are a small M.2 module + RJ45 jack on a 15–20 cm flex ribbon with
-LP/FH brackets. Selected: 4× M.2 2.5G RTL8125B at 27 PLN each (10Gtek A+E variant ~$18–20) for `pve1`, `pve2`,  
-`lab`, `nas`.
+LP/FH brackets. **Selected (operator correction, 2026‑11‑11): 3× branded  
+[10Gtek M.2 A+E Key 2.5G RJ45](https://store.10gtek.com/m-2-a-e-key-2-5g-rj-45-nic-realtek-rtl8125-controller/p-22194)  
+(RTL8125, $18.00 list / $16.20 at qty 50 on store.10gtek.com) for `pve1`, `pve2`, `lab` — the 27 PLN no-name  
+modules from the thread are rejected in favour of the branded card (PCB/signal integrity at 2.5G); `nas`  
+gets a regular PCIe card (§7.1), not an M.2 adapter.
 
 Per-node notes (from `docs/hardware.md`):
 
@@ -116,20 +120,22 @@ Per-node notes (from `docs/hardware.md`):
   replaceable with A+E NIC or use a PCIe slot (MFF riser).
 - `pve1` (Wyse 5070): M.2 SATA boot occupied, CNVi WiFi on M.2 — the A+E NIC may replace the WiFi module;
   otherwise its PCIe slot.
-- `nas` (Beetle M-III): 1× I219-V GbE + **free PCIe 3.0 ×16** — better than an M.2 card: one 10G SFP+ NIC
-  (X520/ConnectX-3 class) puts the NAS directly on the 10G core, no switch port needed.
+- `nas` (Beetle M-III): 1× I219-V GbE + **free PCIe 3.0 ×16** — gets a **regular 10G SFP+ PCIe card**
+  (D2755-A11 or ConnectX-3 class, ~90–130 PLN), not an M.2 adapter: it puts the NAS directly on the 10G
+  core via the router's second SFP+ port, no switch port needed.
 
 ## §7 — NAS: link aggregation and the disk matrix (SSD vs HDD)
 
 ### §7.1 Aggregating the link to the NAS
 
-The YuLinca's single SFP+ port goes to the router as the VLAN trunk, so the NAS reaches 10G either by:
+The YuLinca's single SFP+ port goes to the router as the VLAN trunk, and the router's **second** SFP+ port  
+(D2755 is dual-port) goes straight to the NAS with a second DAC — so the selected design is:
 
-1. **Direct 10G SFP+ NIC in the Beetle's PCIe 3.0 ×16 slot** (preferred — frees a switch port; X520/ConnectX-3
-   class ~90–130 PLN), or
-2. **LACP on the switch**: 2× 2.5G RJ45 ports to the NAS aggregate to **5 Gbps** — but the Beetle has only
-   **one** GbE NIC today (I219-V), so this needs a second 2.5G NIC (M.2 A+E) plus bonding (802.3ad) in OMV,
-   and the YuLinca's Easy Web UI does support LACP.
+1. **Direct 10G SFP+ PCIe NIC in the Beetle's PCIe 3.0 ×16 slot** (D2755-A11 or ConnectX-3 class,
+   ~90–130 PLN) — **chosen**: frees a switch port, no bonding needed, full 10G to the router.
+2. Fallback: **LACP on the switch** — 2× 2.5G RJ45 ports to the NAS aggregate to **5 Gbps**, but the
+   Beetle has only one onboard GbE (I219-V), so this needs a second 2.5G NIC plus bonding (802.3ad) in OMV;
+   the YuLinca's Easy Web UI does support LACP.
 
 Either way the NAS link is no longer the 1 GbE bottleneck; what remains is the disk matrix.
 
@@ -183,22 +189,26 @@ Conclusions:
 |---|---|---|---|
 | Fujitsu Futro S940 (J5005, 4 GB DDR4, 32 GB M.2 SATA SSD, PSU) — replaces the S930 router | 1 | 219 PLN | 219 PLN |
 | YuLinca 8× 2.5G + 1× 10G SFP+ Easy Web Managed switch | 1 | 199 PLN | 199 PLN |
-| Fujitsu D2755-A11 (2× 10G SFP+) for the S940 | 1 | 125 PLN | 125 PLN |
-| Extralink EX.2268 DAC SFP+ 1 m | 1 | 30 PLN | 30 PLN |
-| M.2 2.5G RTL8125B NICs (2× PVE, K3s, NAS) | 4 | 27 PLN | 108 PLN |
-| Shipping (M.2 cards) | 1 | 37 PLN | 37 PLN |
-| **Total** | | | **718 PLN** |
+| Fujitsu D2755-A11 (2× 10G SFP+) for the S940 router | 1 | 125 PLN | 125 PLN |
+| Extralink EX.2268 DAC SFP+ 1 m (router ↔ switch trunk, router ↔ NAS) | 2 | 30 PLN | 60 PLN |
+| [10Gtek M.2 A+E Key 2.5G RJ45](https://store.10gtek.com/m-2-a-e-key-2-5g-rj-45-nic-realtek-rtl8125-controller/p-22194) (`pve1`, `pve2`, `lab`) | 3 | ~$18 ≈ 75 PLN | ~225 PLN |
+| 10G SFP+ PCIe card for `nas` (D2755-A11 or ConnectX-3 class) | 1 | ~110 PLN | ~110 PLN |
+| 10Gtek store shipping | 1 | ~40 PLN (est.) | ~40 PLN |
+| **Total** | | | **~960 PLN** |
 
-Earlier variants computed in the thread: YuLinca at 243 PLN + 54 PLN cards = **651 PLN**; with the 129 PLN  
-outlet SODOLA unmanaged switch instead = **537 PLN**; with 10Gtek A+E cards (~$18–20 each) instead of the  
-27 PLN no-name ones ≈ **873–913 PLN**. Side costs: 40 mm fan for the X520 in the S940 (~10–40 PLN), Fujitsu  
-PCIe riser if the S940 listing lacks it (~20–40 PLN), possibly a 12 V ≥2 A PSU for the switch.
+Thread variants for the record: 651 PLN (YuLinca at 243 PLN + 4× 54 PLN no-name M.2 cards); 537 PLN with the  
+129 PLN outlet SODOLA unmanaged switch; 873–913 PLN with 10Gtek cards + 4th no-name card. **Operator  
+correction 2026‑11‑11**: branded 10Gtek NICs only (no no-name 27 PLN modules), 3× M.2 for the PVE/lab nodes,  
+NAS on a regular PCIe 10G card, second DAC router ↔ NAS. Side costs: 40 mm fan for the X520 in the S940  
+(~10–40 PLN), Fujitsu PCIe riser if the S940 listing lacks it (~20–40 PLN), possibly a 12 V ≥2 A PSU for the  
+switch.
 
 ## §10 — Open questions
 
-- Per-node M.2 keying check (§6) before ordering the 4 cards — A+E for Wi-Fi slots, M for free NVMe slots.
-- NAS: one 10G SFP+ card in the PCIe ×16 (preferred) vs 2× 2.5G LACP — needs a second NIC either way unless
-  the 10G card is used; the switch has only one SFP+.
+- Per-node M.2 A+E keying check (§6) before ordering the 3× 10Gtek cards — A+E for Wi-Fi slots, M for free
+  NVMe slots.
+- NAS NIC choice: second D2755-A11 (~125 PLN) vs ConnectX-3 (~90–130 PLN) in the Beetle's PCIe ×16; LACP
+  2× 2.5G is the fallback (needs a second NIC + bonding in OMV).
 - OPNsense migration S930 → S940: export `config.xml`, restore on the new box, re-map interfaces (`ix0`/`ix1`).
 - RTL8125B on OPNsense needs the `os-realtek-re` plugin; on Proxmox install `realtek-r8125-dkms` for heavy
   sustained loads.
