@@ -30,7 +30,7 @@ paths to the NAS)
 |---|---|
 | **3 copies** | (1) live data on the node, (2) local copy on `nas` (Beetle, `md0` RAID1 1 TB), (3) off-site copy in a **Backblaze B2** bucket |
 | **2 media** | local magnetic/flash storage (node SSD + NAS HDD mirror) vs cloud object storage (B2) |
-| **1 off-site** | B2 bucket in an EU region (Frankfurt/Central Europe) — fire/theft/ransomware-proof copy; **decided by [ADR 50](../decisions/50-backblaze-b2-offsite-backup.md)** |
+| **1 off-site** | B2 bucket in an EU region (Frankfurt/Central Europe), Object Lock governance — fire/theft/ransomware-**resistant** copy; **decided by [ADR 50](../decisions/50-backblaze-b2-offsite-backup.md)** |
 
 ## What backs up what
 
@@ -61,8 +61,10 @@ past ~1 TB.
   storage but decouple local restore from cloud; decide with #13.
 - B2 bucket region: EU‑Central (Frankfurt) for GDPR/Poland proximity — confirm available region at
   bucket creation.
-- Immutability: B2 Object Lock (governance/compliance mode) on the bucket as ransomware protection —
-  cost is the same storage price; enable at creation.
+- Immutability: B2 Object Lock **governance mode with a 30‑day default retention** on the bucket —
+  ransomware-resistant (the bucket key has no `bypassGovernance`; that stays with the offline master
+  key); note `forget --prune` cannot delete locked packs before retention expires, so align the lock
+  window with the Restic retention tiers (ADR 50).
 - Sequencing with [#187](https://github.com/jaroslaw-bagnicki/Homelab/issues/187) (OMV→TrueNAS): the NAS
   copy survives either OS (mdadm→ZFS cutover is destructive — the B2 copy is the safety net during it,
   which is exactly what 3‑2‑1 demands).

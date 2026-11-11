@@ -25,15 +25,19 @@ chain from ADR 02 does not change — only the repository endpoint and credentia
 
 Adopt **Backblaze B2 Cloud Storage** as the lab's off-site backup target, one bucket per backup stream
 (e.g. `homelab-restic`, `homelab-vzdump`), created in the **EU‑Central (Frankfurt) region** with
-**Object Lock enabled in governance mode** (ransomware protection at no extra storage cost).
+**Object Lock in governance mode and a default retention of 30 days** on the bucket (see Consequences
+for the retention/`forget --prune` interaction). The B2 application key is **scoped to the bucket with
+`listKeys`, `readFiles`, `writeFiles` and `deleteFiles`** — Restic needs reads for `snapshots`/`check`/
+restore and list+delete for `forget --prune`; the key must **not** hold `bypassGovernance` (that stays
+with the master key) — that is the actual ransomware guard.
 
 Pricing basis (backblaze.com/cloud-storage/pricing, 2026‑11‑11): **$6.95/TB/month** (~$0.00695/GB) storage,
 first 10 GB free, no minimum file size/duration, **free egress up to 3× average monthly storage**
 (overage $0.01/GB), free Class A/B/C API calls. At the lab's scale (~100–300 GB of deduplicated backups)
 that is **~$0.70–2.10/month** — vs ~$1.80–5.40 for the same volume on Azure Blob hot LRS
 ($0.018/GB) and no per-instance fee. Restic's client‑side encryption (AES‑256) is unchanged, so B2
-never sees plaintext; the B2 application key (scoped to the bucket, write-only for backup) and the
-Restic password live in Azure Key Vault like the current Blob credentials.
+never sees plaintext; the bucket-scoped B2 application key (list/read/write/delete on files, no
+`bypassGovernance`) and the Restic password live in Azure Key Vault like the current Blob credentials.
 
 Retention (daily ×7, weekly ×4, monthly ×6) stays Restic-side (`--keep-*` flags), unchanged from ADR 02.
 
@@ -44,12 +48,18 @@ Retention (daily ×7, weekly ×4, monthly ×6) stays Restic-side (`--keep-*` fla
   restorable" requirement.
 - **Region is EU** (Frankfurt), keeping the off-site copy under EU jurisdiction — better than the
   previous Poland Central Azure account for GDPR posture.
-- Object Lock (governance) makes the bucket tamper‑resistant for its retention window — a real
-  ransomware guard for the third copy.
-- Trade-offs accepted: no archive/cold tier on B2 pay‑as‑you‑go (monthly copies stay at $6.95/TB —
-  fine at this scale; Azure Blob archive was cheaper for >6‑month retention); B2 is a single vendor
-  outside the Azure estate, so Key Vault stays the single place for the B2 key + Restic password, and
-  the DR runbook must document B2 console access separately from Azure.
+- Object Lock (governance, 30‑day default retention) makes the bucket **ransomware‑resistant**, not
+  proof: locked packs cannot be deleted until retention expires, so Restic `forget --prune` will keep
+  them (and their storage cost) for up to 30 days after they leave the snapshot list — size the bucket
+  accordingly and align the Restic retention tiers with the lock window. Governance mode can still be
+  bypassed by the master key, so the master key's custody (separate account, offline) is the real
+  control; the bucket key deliberately lacks `bypassGovernance`.
+- Trade-offs accepted: no archive/cold tier on B2 pay‑as‑you‑go (monthly copies  copy` opens the
+  existing repo with **Azure syntax** and writes to B2 with **S3 syntax**, each with its own
+  credentials — e.g. `restic copy --from-repo azure:homelab:/backups --repo s3:s3.eu-central-003.backblazeb2.com/homelab-restic`
+  (with `AZURE_ACCOUNT_NAME`/`AZURE_ACCOUNT_KEY` for `--from-repo` and `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`
+  for the B2 `--repo`) — then the Blob container is retired. The Ansible redo
+  ([#13](https://github.com/jaroslaw-bagnicki/Homelab/issues/13)) targets B2 the DR runbook must document B2 console access separately from Azure.
 - ADR 02's Azure Blob repo (runbook 07) is **migrated, not duplicated**: `restic` can copy between
   repos (`restic copy --from-repo s3:...azure... --repo s3:...b2...`) before the Blob container is
   retired; the Ansible redo ([#13](https://github.com/jaroslaw-bagnicki/Homelab/issues/13)) targets B2
