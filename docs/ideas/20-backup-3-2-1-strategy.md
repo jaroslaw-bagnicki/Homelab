@@ -2,7 +2,7 @@
 
 > Formalise the lab's backups as the classic **3‑2‑1 rule**: **3 copies** of the data, on **2 different
 > media**, with **1 copy off-site**. The off-site leg is now decided — **Backblaze B2** as the cloud
-> backup target ([ADR 49](../decisions/49-backblaze-b2-offsite-backup.md), amending ADR 02's Azure Blob
+> backup target ([ADR 49](../decisions/49-backblaze-b2-offsite-backup.md), superseding ADR 02's Azure Blob
 > choice); the rest of the rule is mapped onto what the lab already runs: the Beetle NAS as the local
 > second copy, Restic + `vzdump` as the tools.
 
@@ -37,7 +37,9 @@ paths to the NAS)
 - **Host configs & file data** (`lab` SSD, per-node `/etc`, Ansible-managed state): **Restic** → local
   repo on the NAS (SMB/NFS) + **Restic S3 backend → B2** (same repo, two remotes, or a second repo —
   TBD at implementation in [#13](https://github.com/jaroslaw-bagnicki/Homelab/issues/13)). Restic password
-  stays in Azure Key Vault (ADR 06/#6 pattern); B2 key/secret go there too.
+  stays in Azure Key Vault (ADR 06/#6 pattern); the B2 application key/secret go there too. The old
+  Azure Blob repo (runbook 07) is migrated with `restic copy` and then retired — Blob is no longer a
+  backup target (ADR 49).
 - **Proxmox guests on `pve1`/`pve2`**: `vzdump` → NAS (NFS/SMB datastore) as copy 2; the NAS copy then
   replicated to B2 by Restic (or PBS later — research 41) as copy 3.
 - **k3s/Longhorn volumes** (once #44 lands): Longhorn backup target = NFS export on `nas` (#62), then
@@ -48,9 +50,10 @@ paths to the NAS)
 
 ## Retention (carried from ADR 02)
 
-Daily ×7, weekly ×4, monthly ×6 — applied per repo; B2 lifecycle rules can mirror the monthly tier to a  
-cheaper class later if volume grows (B2 has no archive tier yet on pay-as-you-go, unlike Azure Blob —  
-that is one of the trade-offs in ADR 49).
+Daily ×7, weekly ×4, monthly ×6 — applied per repo on the B2 side (Restic `--keep-*` flags). Trade-off  
+vs the old Azure Blob target (superseded by ADR 49): B2 pay-as-you-go has no archive/cold tier, so  
+long-retention monthly snapshots stay at $6.95/TB — fine at lab scale; revisit if the dataset grows  
+past ~1 TB.
 
 ## Open questions
 
