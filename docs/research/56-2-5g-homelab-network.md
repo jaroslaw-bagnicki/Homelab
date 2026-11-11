@@ -1,4 +1,4 @@
-# 55 — 2.5 GbE homelab network with a 10G SFP+ core: switch, NIC and host selection
+# 56 — 2.5 GbE homelab network with a 10G SFP+ core: switch, NIC and host selection
 
 **Source**: [Gemini chat — "Homelab 2.5G net setup"](https://gemini.google.com/share/a9aa0c4028f3)
 (thread created 2026‑11‑09, published 2026‑11‑11; conversation in Polish; 24 questions) · supplementary  
@@ -8,12 +8,12 @@ thread [share.gemini.google/F7UoGx8P36nX](https://share.gemini.google/F7UoGx8P36
 **Scope**: budget 2.5 GbE upgrade of the homelab LAN — unmanaged vs web-managed 2.5G switches, SFP+ vs
 10GBASE-T uplinks, DAC vs fiber costs, used 10G SFP+ NIC evaluation, PCIe-bus fit in the Futro S930/S940,
 2.5G M.2 NICs for the nodes, deployment cost calculation, and the NAS-side analysis: link aggregation to
-the NAS and an SSD-vs-HDD disk-matrix performance comparison. Feeds [idea 18](../ideas/18-2-5g-homelab-network.md).
+the NAS and an SSD-vs-HDD disk-matrix performance comparison. Feeds [idea 19](../ideas/19-2-5g-homelab-network.md).
 
 **Status**: 📝 Analysis — the operator selected the setup (Futro S940 + D2755-A11 + YuLinca + EX.2268 DAC +
 3× branded 10Gtek M.2 A+E for `pve1`/`pve2`/`lab`; corrected 2026‑11‑11 to branded node NICs only); the  
 `nas` NIC is a regular PCIe card with two options compared in §7.1 (2× 2.5G RJ45 vs 2× 10G SFP+),  
-~755–965 PLN total depending on the option. Nothing purchased or configured yet. No ADR.
+~973–978 PLN total depending on the option. Nothing purchased or configured yet. No ADR.
 
 > ⚠️ **Verification status**: hardware claims (prices, slot speeds, temperatures) are transcribed from the
 > thread and marketplace listings; the PCIe negotiation numbers (S940 riser = PCIe 3.0 ×4, X520 negotiates
@@ -40,6 +40,13 @@ Hybrid architecture that works with an unmanaged 2.5G switch anyway: keep a chea
 unmanaged 2.5G switch off a router **access port** of one dedicated storage VLAN; unmanaged Realtek switches  
 pass 802.1Q tags transparently, so host-side tagging on Proxmox/OPNsense also works. The YuLinca makes this  
 moot by doing the tagging itself.
+
+> ⚠️ **Switch bootstrap security**: the YuLinca ships with management IP `192.168.2.1` and
+> `admin/admin` — `192.168.2.1` is the lab's current gateway ([ADR 31](31-static-address-scheme.md),
+> [ADR 48](48-lan-router-futro-s930.md)), so connecting the switch unconfigured creates an address
+> collision and exposes the management plane with known credentials. **First boot on an isolated
+> bench network**: readdress the switch into the management block (away from `.2.1`), change the
+> admin password, *then* connect it to the LAN/trunk.
 
 ## §2 — SFP+ 10G vs RJ45 10GBASE-T uplink
 
@@ -196,9 +203,9 @@ Conclusions:
 | [10Gtek M.2 A+E Key 2.5G RJ45](https://store.10gtek.com/m-2-a-e-key-2-5g-rj-45-nic-realtek-rtl8125-controller/p-22194) (`pve1`, `pve2`, `lab`) | 3 | ~$18 ≈ 75 PLN | ~225 PLN |
 | `nas` PCIe card — **option A**: 2× 2.5G RJ45 (RTL8125B/i225 dual, LACP-able) | 1 | ~90–180 PLN | ~135 PLN |
 | 10Gtek store shipping | 1 | ~40 PLN (est.) | ~40 PLN |
-| **Total (option A, 2.5G NAS)** | | | **~755 PLN** |
+| **Total (option A, 2.5G NAS)** | | | **~973 PLN** |
 | `nas` PCIe card — **option B**: 2× 10G SFP+ (D2755/ConnectX-3) + 2nd DAC router ↔ NAS (§7.1) | 1 | ~110 PLN + 30 PLN | ~140 PLN |
-| **Total (option B, 10G NAS)** | | | **~965 PLN** |
+| **Total (option B, 10G NAS)** | | | **~978 PLN** |
 
 Thread variants for the record: 651 PLN (YuLinca at 243 PLN + 4× 54 PLN no-name M.2 cards); 537 PLN with the  
 129 PLN outlet SODOLA unmanaged switch; 873–913 PLN with 10Gtek cards + 4th no-name card. **Operator  
