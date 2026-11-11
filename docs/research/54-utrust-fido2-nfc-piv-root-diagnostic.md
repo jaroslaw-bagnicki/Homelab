@@ -1,16 +1,17 @@
 # 54 — HIRSCH SECURE uTrust FIDO2 NFC USB-A as offline root custody for `step-ca` — device diagnostic
 
-**Status**: 🔬 Research — in progress, hardware checks pending  
-**Date**: 2026-11-08  
+**Status**: ✅ **Resolved** — the key is verified and cleared for the ceremony; the ceremony itself has not run
+**Date**: 2026-11-08 (hardware verified 2026-11-10/11)
 **Question**: Can the uTrust FIDO2 NFC USB-A (P/N 905601) hold the offline root CA key in its PIV applet
 (slot 9C) and sign the `step-ca` intermediate CSR via PKCS#11 from a workstation — the token-custody
 upgrade [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) plans (currently IronKey, planned
 YubiKey PIV)?  
 **Related**: [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) · [ADR 42](../decisions/42-pki-topology-sibling-cas.md) · [research 36 §4–§5](36-step-ca-machine-identity.md) · [runbook 35](../runbooks/35-deploy-step-ca.md) · [runbook 36](../runbooks/36-private-ca-init.md) · [signing kit](../ca-signing-kit/README.md) · [issue #193](https://github.com/jaroslaw-bagnicki/Homelab/issues/193)  
 
-> **This is a diagnostic log, not a deployment recipe.** Nothing has been written to the token yet. The
-> output so far is document analysis plus the FIDO2-side readout from Hirsch SecureFIDO Manager; the
-> decisive PIV/PKCS#11 checks are still pending on hardware (§4).
+> **This is a diagnostic log, not a deployment recipe.** Nothing has been written to the token yet —
+> the key answers over PKCS#11 and holds no root. The document analysis and the FIDO2-side readout from
+> Hirsch SecureFIDO Manager are in §2–§3; the PIV/PKCS#11 checks were measured on hardware on
+> 2026-11-10/11 (§4), and the five problems that stood in the way are recorded in §7.
 
 ## Executive summary
 
@@ -138,7 +139,7 @@ key. What this session settled without hardware:
   missing libccid device-table entry, USB permissions for the `pcscd` user, and the systemd sandbox
   ([01-setup.md](../ca-signing-kit/01-setup.md)).
 
-## 4. Pending hardware checks — resume here (VSCode terminal)
+## 4. Hardware checks — all measured 2026-11-10/11
 
 Run on the **Linux workstation** (not `pve1`), key plugged in:
 
@@ -179,7 +180,7 @@ that `step` and `step-kms-plugin` are in place, and whether a root key already s
 procedure ([runbook 46](../runbooks/46-adopt-utrust-piv-root-custody.md)). The fallback paths in this
 section (provision on Windows, or switch to an NFC+ SKU) were not needed.
 
-## 5. Potential adoption path (decided 2026-11-10, issue #193) — procedure in runbook 46, not yet executed
+## 5. Adoption path (decided 2026-11-10, issue #193) — procedure in runbook 46, ceremony not yet run
 
 The diagnostic answer is **yes, with gates**: reissue the root onto the token's PIV slot 9C — key
 generated on-card, never in software — rather than importing the existing P-256 root, accepting the
@@ -188,8 +189,8 @@ one-time trust rotation (ADR 38 amended on this branch). The executable procedur
 `New-IpaCa.ps1` in the signing kit;
 this log keeps only the findings that shape that path:
 
-- **Gates**: Windows PIV detection ✅ (`certutil -scinfo`, §3); Linux checks 4 + 6 (§4) still pending
-  with the key attached — decision rule in §4.
+- **Gates**: all cleared — Windows PIV detection ✅ (`certutil -scinfo`, §3) and Linux checks 1–7 ✅
+  (§4). The fallbacks this section once listed (provision on Windows, switch to NFC+) were not needed.
 - **Algorithm**: the existing root and the intermediate CSR are both P-256, within the PIV app's
   ECC P-256/P-384 → slot 9C fits either way; reissue is chosen for custody, not because import
   wouldn't fit.
@@ -214,22 +215,72 @@ this log keeps only the findings that shape that path:
   the key itself cannot leak). The **signing machine is the Windows 11 workstation with WSL (Ubuntu)**;
   the kit's scripts are PowerShell 7 and run either inside WSL or on Windows. The **IronKey is
   retired** — transient solution only, destroyed in runbook 46 phase 4; no future IronKey usage.
-- OpenSC must claim the card on Linux — a 2023 report had default `opensc-pkcs11.so` not claiming a
-  uTrust under Linux; retest on the actual unit (check 6). Identiv ships no Linux PKCS#11 module of its
-  own; Key Manager is Windows-only.
+- OpenSC **does** claim the card on Linux — measured 2026-11-10 as `PIV-II` (§4). The 2023 report of
+  `opensc-pkcs11.so` not claiming a uTrust does not apply to this unit. Identiv ships no Linux PKCS#11
+  module of its own; Key Manager is Windows-only, which is why the whole ceremony runs through OpenSC.
 - `step-ca`'s YubiKey-PIV KMS is YubiKey-specific — the uTrust goes through generic `pkcs11:` URIs only.
-- The offline kit's `step` is static/non-CGO: `pkcs11:` URIs work only with `step-kms-plugin`
-  (CGO, needs `libpcsclite1`) present in `PATH` on the signing machine — a kit gap found 2026-11-10,
-  to be fixed when the ceremony is scheduled (add the binary to the bundle per the kit README's
-  "add `step`" step).
+- The kit's `step` is static/non-CGO: `pkcs11:` URIs work only with `step-kms-plugin` (CGO, needs
+  `libpcsclite1`) present in `PATH`. **That gap is closed** — the plugin is installed in the kit and
+  `01-setup.md` documents how to fetch and verify it; `Test-uTrustKey.ps1` reports it missing if it is
+  absent.
 - Reissue = one-time full trust rotation (runbook 39 distribution, re-sign both sibling CAs, manual
   old-root removal from trust stores — no CRL/OCSP for roots); an on-card-generated root is
   single-token unless imported into a second token during the ceremony (§5 backup note).
 - FIDO2 applet remains useful for Authentik WebAuthn passkeys / FIDO2 SSH — orthogonal to CA signing.
 
+## 7. What went wrong getting the key to answer (2026-11-10/11)
+
+Five problems, each producing the **same** symptom — `opensc-tool -l` → `No smart card readers found`.
+They are recorded because the symptom is useless on its own: it points at the reader when the cause can
+be four layers away. The running fixes live in [01-setup.md](../ca-signing-kit/01-setup.md).
+
+| # | Cause | What the log said | Fix |
+|---|---|---|---|
+| 1 | **polkit refuses the client** — `pcscd` asks polkit before serving; WSL has no polkit daemon, so every request is denied | `IsClientAuthorized() … NOT authorized for action: access_pcsc` / `Rejected unauthorized PC/SC client` | `PCSCD_ARGS=--disable-polkit` in `/etc/default/pcscd` |
+| 2 | **libccid has no entry for this VID/PID** — it matches readers by a table in `Info.plist`, and `04E6:5A11` is absent | `get_driver() Looking for a driver for VID: 0x04E6, PID: 0x5A11` and nothing after it | append the pair to the three parallel arrays with `plistlib` |
+| 3 | **the `pcscd` user cannot open the USB device** — the unit runs `User=pcscd`, but `/dev/bus/usb/…` is `root:root` | `Can't libusb_open(1/2): LIBUSB_ERROR_ACCESS` | udev rule: device → group `pcscd`, mode `0660` |
+| 4 | **`ProtectSystem=strict` blocks `/dev`** — the sandbox mounts it read-only, so `libusb` cannot open the device even with correct permissions | silence — no error at all, reader simply absent | `ProtectSystem=full` override |
+| 5 | **a stray `pcscd` held the interface** — a `--foreground` debug run left in the background | `Can't claim interface 1/3: LIBUSB_ERROR_BUSY` | kill the stray process, then `systemctl restart pcscd` |
+
+Three traps made this slower than it needed to be:
+
+- **`LIBUSB_ERROR_ACCESS` and `LIBUSB_ERROR_BUSY` look like permission problems but are not.** The
+  first was the sandbox (fix 4), the second a competing process (fix 5). `fuser -v /dev/bus/usb/…`
+  names the holder in one line.
+- **`--auto-exit` makes the daemon look broken.** `pcscd` exits after 60 s idle, so `pgrep` finds
+  nothing and the next client start races the reader enumeration. `--force-reader-polling` in
+  `PCSCD_ARGS` makes it notice the key without a restart after every `usbipd attach`.
+- **`usbipd attach` renumbers the device.** The path moved `/dev/bus/usb/001/002` → `…/003` between
+  sessions, so a udev rule keyed to a path (rather than VID/PID) silently stops matching.
+
+Two diagnostic assumptions in this document were also wrong, and were corrected by measurement:
+
+- **The PIV AID APDU was malformed.** The original sent `Lc=08` with a 10-byte AID; the card answers
+  `Invalid APDU`. The correct AID is the 11-byte `A000000308000010000100` with `Lc=0B`.
+- **The chip is not an Infineon SLE 78.** The vendor manual says CPLC `40 90`; the unit reports
+  `96 4D … JNET` — an **NXP JCOP** secure element. Irrelevant to the ceremony, so the kit does not
+  check the chip at all.
+
+## 8. Current status (2026-11-11)
+
+| | State |
+|---|---|
+| Key answers over PKCS#11 | ✅ reader `Identiv uTrust FIDO2 Security Key`, driver `PIV-II` |
+| PIV applet | ✅ AID select returns `9000` |
+| Root in slot 9C | ❌ not created — the token is still blank |
+| `Test-uTrustKey.ps1` | ✅ `key PIV_II` · `step 0.31.0` · `root no root key yet` |
+| Ceremony | ⏸ not run — `New-Root.ps1` stops at step 1 |
+
+**Open item blocking the ceremony:** the script's step 1 calls `piv-tool --admin-mode -k`, which **does
+not exist** in this OpenSC build (`piv-tool --admin <arg>` is the authentication flag; there is no
+change-PIN/change-PUK option). The factory PIN `123456` and PUK `12345678` are published in the vendor
+manual, so the root must not be created until they are replaced — the change has to be made with
+`pkcs11-tool --change-pin` / `--set-pin`, and the exact invocation is still to be settled.
+
 ## References
 
-- `uTrust_FIDO2_Technical_Manual.pdf` (Identiv/Hirsch) — PIV app, slots, policies, defaults, CPLC/SLE78, AAGUID (uploaded during this diagnostic)
+- `uTrust_FIDO2_Technical_Manual.pdf` (Identiv/Hirsch) — PIV app, slots, policies, defaults, AAGUID
+  (uploaded during this diagnostic). Its **CPLC/SLE 78 claim is refuted** for this unit — see §7.
 - `uTrust-FIDO2-NFC-Security-Keys-DS.pdf` rev 2021-08-02 — P/N 905601/905602, PIV in secure-element interface (uploaded during this diagnostic)
 - [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) — three-tier PKI, root custody (amended 2026-11-10 on this branch: uTrust PIV slot 9C, root **reissued** — issue #193)
 - [research 36 §4–§5](36-step-ca-machine-identity.md) — KMS/custody paths; `step-kms-plugin` (CGO, `libpcsclite1`) needed for `pkcs11:` on the signing machine
