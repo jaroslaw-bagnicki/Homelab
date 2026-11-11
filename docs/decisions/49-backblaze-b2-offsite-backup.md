@@ -2,8 +2,8 @@
 
 **Date:** 2026-11-11  
 **Status:** Accepted  
-**Amends:** [ADR 02](02-backup-strategy-restic-blob.md) (Restic tool + retention unchanged; the
-Azure Blob off-site target is replaced)
+**Supersedes:** [ADR 02](02-backup-strategy-restic-blob.md) — off-site target only (Azure Blob →
+Backblaze B2); the Restic tool, retention and local-copy plan are unchanged
 
 ---
 
