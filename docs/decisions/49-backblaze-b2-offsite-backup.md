@@ -1,0 +1,71 @@
+# Backblaze B2 as the Off-Site Cloud Backup Target
+
+**Date:** 2026-11-11  
+**Status:** Accepted  
+**Amends:** [ADR 02](02-backup-strategy-restic-blob.md) (Restic tool + retention unchanged; the
+Azure Blob off-site target is replaced)
+
+---
+
+## Context
+
+[ADR 02](02-backup-strategy-restic-blob.md) chose **Restic → Azure Blob Storage** as the off-site leg  
+(~$0.018/GB/month hot LRS, [research 14](../research/14-backup-cost-comparison.md)) over Azure Backup/MARS  
+(~$10+/month protected instance). That decision predates the NAS build: the lab now has a proper local  
+backup target — the Beetle M‑III on OMV with `md0` RAID1, 1 TB usable ([ADR 29](29-nas-backup-target-beetle-m3-omv.md)) —  
+so the cloud leg only has to be the **third copy**, not also the second. The operator wants to formalise  
+the **3‑2‑1 rule** ([idea 20](../ideas/19-backup-3-2-1-strategy.md)) and asked specifically about
+**Backblaze B2** as the off-site target; B2 was mentioned and set aside in 2026‑05 (#5/ADR 02) without a
+price comparison.
+
+Restic speaks S3 natively (`s3:<endpoint>/<bucket>`), and B2 exposes an **S3‑compatible API**, so the tool  
+chain from ADR 02 does not change — only the repository endpoint and credentials do.
+
+## Decision
+
+Adopt **Backblaze B2 Cloud Storage** as the lab's off-site backup target, one bucket per backup stream  
+(e.g. `homelab-restic`, `homelab-vzdump`), created in the **EU‑Central (Frankfurt) region** with
+**Object Lock enabled in governance mode** (ransomware protection at no extra storage cost).
+
+Pricing basis (backblaze.com/cloud-storage/pricing, 2026‑11‑11): **$6.95/TB/month** (~$0.00695/GB) storage,  
+first 10 GB free, no minimum file size/duration, **free egress up to 3× average monthly storage**  
+(overage $0.01/GB), free Class A/B/C API calls. At the lab's scale (~100–300 GB of deduplicated backups)  
+that is **~$0.70–2.10/month** — vs ~$1.80–5.40 for the same volume on Azure Blob hot LRS  
+($0.018/GB) and no per-instance fee. Restic's client‑side encryption (AES‑256) is unchanged, so B2  
+never sees plaintext; the B2 application key (scoped to the bucket, write-only for backup) and the  
+Restic password live in Azure Key Vault like the current Blob credentials.
+
+Retention (daily ×7, weekly ×4, monthly ×6) stays Restic-side (`--keep-*` flags), unchanged from ADR 02.
+
+## Consequences
+
+- Cheaper off-site copy than Azure Blob at any realistic volume, and egress is free up to 3× storage —
+  a full‑dataset restore costs nothing extra, which matters for the 3‑2‑1 "1 off-site must be
+  restorable" requirement.
+- **Region is EU** (Frankfurt), keeping the off-site copy under EU jurisdiction — better than the
+  previous Poland Central Azure account for GDPR posture.
+- Object Lock (governance) makes the bucket tamper‑resistant for its retention window — a real
+  ransomware guard for the third copy.
+- Trade-offs accepted: no archive/cold tier on B2 pay‑as‑you‑go (monthly copies stay at $6.95/TB —
+  fine at this scale; Azure Blob archive was cheaper for >6‑month retention); B2 is a single vendor
+  outside the Azure estate, so Key Vault stays the single place for the B2 key + Restic password, and
+  the DR runbook must document B2 console access separately from Azure.
+- ADR 02's Azure Blob repo (runbook 07) is **migrated, not duplicated**: `restic` can copy between
+  repos (`restic copy --from-repo s3:...azure... --repo s3:...b2...`) before the Blob container is
+  retired; the Ansible redo ([#13](https://github.com/jaroslaw-bagnicki/Homelab/issues/13)) targets B2
+  directly.
+- The local second copy on the NAS ([ADR 29](29-nas-backup-target-beetle-m3-omv.md)) is unchanged —
+  B2 is purely the off-site third copy of [idea 20](../ideas/19-backup-3-2-1-strategy.md).
+
+### Alternatives Considered
+
+- **Keep Azure Blob as the off-site target (status quo of ADR 02)** — works today and stays in one
+  cloud account, but ~2.6× the per‑GB price of B2 at this scale and US‑region data residency for the
+  existing storage account; rejected on cost and residency, not on function.
+- **Azure Backup / MARS** — already rejected in [research 14](../research/14-backup-cost-comparison.md):
+  $10/month protected‑instance fee alone exceeds the whole B2 bill.
+- **Both Azure Blob and B2 (belt and braces)** — rejected for now: two clouds double the credential
+  surface and the cost for a lab of this size; 3‑2‑1 is already satisfied by NAS + one off-site copy.
+  Revisit if the dataset grows past ~1 TB, where B2 volume discounts vs Blob tiers change the math.
+- **Wasabi / other S3 clouds** — comparable headline price but 90‑day minimum storage duration fees;
+  B2 has no minimums, which suits churning daily snapshots.
