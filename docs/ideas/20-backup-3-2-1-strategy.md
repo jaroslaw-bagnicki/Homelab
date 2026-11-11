@@ -10,16 +10,16 @@
 full 3‑2‑1 rollout not started.
 **Date**: 2026-11-11
 **Sources**: operator request 2026‑11‑11 · [ADR 02](../decisions/02-backup-strategy-restic-blob.md) ·
-[research 10](../research/10-backup-strategy.md) · [research 14](../research/14-backup-cost-comparison.md) ·  
+[research 10](../research/10-backup-strategy.md) · [research 14](../research/14-backup-cost-comparison.md) ·
 Backblaze B2 pricing page (2026‑11)
 **Related**: [#13](https://github.com/jaroslaw-bagnicki/Homelab/issues/13) (Restic Ansible redo — the
-"Not Scheduled" row in [overview](../overview.md)) · [runbook 07](../runbooks/07-restic-backup.md) ·  
-[ADR 29](../decisions/29-nas-backup-target-beetle-m3-omv.md) (NAS backup target) ·  
-[idea 17](17-truenas-vs-omv-nas-os.md) / [#187](https://github.com/jaroslaw-bagnicki/Homelab/issues/187)  
-(OMV→TrueNAS migration — the NAS leg changes shape if it lands) · [#44](https://github.com/jaroslaw-bagnicki/Homelab/issues/44)  
-(k3s/Longhorn backup target on the NAS) · [#164](https://github.com/jaroslaw-bagnicki/Homelab/issues/164)  
-(FreeIPA `ipa-backup` to the NAS) · [#62](https://github.com/jaroslaw-bagnicki/Homelab/issues/62)  
-(Longhorn NFS backup target) · [research 41](../research/41-machine-identity-kerberos.md) (PBS/vzdump  
+"Not Scheduled" row in [overview](../overview.md)) · [runbook 07](../runbooks/07-restic-backup.md) ·
+[ADR 29](../decisions/29-nas-backup-target-beetle-m3-omv.md) (NAS backup target) ·
+[idea 17](17-truenas-vs-omv-nas-os.md) / [#187](https://github.com/jaroslaw-bagnicki/Homelab/issues/187)
+(OMV→TrueNAS migration — the NAS leg changes shape if it lands) · [#44](https://github.com/jaroslaw-bagnicki/Homelab/issues/44)
+(k3s/Longhorn backup target on the NAS) · [#164](https://github.com/jaroslaw-bagnicki/Homelab/issues/164)
+(FreeIPA `ipa-backup` to the NAS) · [#62](https://github.com/jaroslaw-bagnicki/Homelab/issues/62)
+(Longhorn NFS backup target) · [research 41](../research/41-machine-identity-kerberos.md) (PBS/vzdump
 paths to the NAS)
 
 ---
@@ -36,10 +36,10 @@ paths to the NAS)
 
 - **Host configs & file data** (`lab` SSD, per-node `/etc`, Ansible-managed state): **Restic** → local
   repo on the NAS (SMB/NFS) + **Restic S3 backend → B2** (same repo, two remotes, or a second repo —
-  TBD at implementation in [#13](https://github.com/jaroslaw-bagnicki/Homelab/issues/13)). Restic password  
-  stays in Azure Key Vault (ADR 06/#6 pattern); the B2 application key/secret go there too. The old  
-  Azure Blob repo (runbook 07) is migrated with `restic copy` and then retired — Blob is no longer a  
-  backup target (ADR 50).  
+  TBD at implementation in [#13](https://github.com/jaroslaw-bagnicki/Homelab/issues/13)). Restic password
+  stays in Azure Key Vault (ADR 06/#6 pattern); the B2 application key/secret go there too. The old
+  Azure Blob repo (runbook 07) is migrated with `restic copy` and then retired — Blob is no longer a
+  backup target (ADR 50).
 - **Proxmox guests on `pve1`/`pve2`**: `vzdump` → NAS (NFS/SMB datastore) as copy 2; the NAS copy then
   replicated to B2 by Restic (or PBS later — research 41) as copy 3.
 - **k3s/Longhorn volumes** (once #44 lands): Longhorn backup target = NFS export on `nas` (#62), then
@@ -50,9 +50,9 @@ paths to the NAS)
 
 ## Retention (carried from ADR 02)
 
-Daily ×7, weekly ×4, monthly ×6 — applied per repo on the B2 side (Restic `--keep-*` flags). Trade-off  
-vs the old Azure Blob target (superseded by ADR 50): B2 pay-as-you-go has no archive/cold tier, so  
-long-retention monthly snapshots stay at $6.95/TB — fine at lab scale; revisit if the dataset grows  
+Daily ×7, weekly ×4, monthly ×6 — applied per repo on the B2 side (Restic `--keep-*` flags). Trade-off
+vs the old Azure Blob target (superseded by ADR 50): B2 pay-as-you-go has no archive/cold tier, so
+long-retention monthly snapshots stay at $6.95/TB — fine at lab scale; revisit if the dataset grows
 past ~1 TB.
 
 ## Open questions
@@ -65,4 +65,4 @@ past ~1 TB.
   cost is the same storage price; enable at creation.
 - Sequencing with [#187](https://github.com/jaroslaw-bagnicki/Homelab/issues/187) (OMV→TrueNAS): the NAS
   copy survives either OS (mdadm→ZFS cutover is destructive — the B2 copy is the safety net during it,
-  which is exactly what 3‑2‑1 demands).  
+  which is exactly what 3‑2‑1 demands).
