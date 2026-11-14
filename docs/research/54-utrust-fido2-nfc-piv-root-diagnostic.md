@@ -78,8 +78,9 @@ YubiKey PIV)?
   PIV-compatible smart card application"; "The CCID interface provides communication for the PIV /
   Smart Card, and OATH"; "The uTrust FIDO2 NFC/NFC+ presents itself … as a USB smart card reader";
   "it is the **firmware version** that determines which of the more specialized functionalities … are
-  available". Defaults: PIV PIN `123456`, PUK `12345678`, management key (3DES)
-  `010203040506070801020304050607080102030405060708`. **The manual's CPLC claim (`40 90` = Infineon
+  available". Defaults: factory PIV PIN, PUK and a 3DES management key — published in the manual and
+  identical on every unit of the model, which is why runbook 46 replaces all three before the root
+  exists. **The manual's CPLC claim (`40 90` = Infineon
   SLE 78) is wrong for this unit** — the measured CPLC reports `96 4D` (NXP) with `JNET` in the serial
   field, i.e. an **NXP JCOP** secure element (§4, measured 2026-11-10). JCOP is the conventional chip for
   PIV tokens; nothing about the ceremony depends on the vendor.
@@ -223,12 +224,14 @@ this log keeps only the findings that shape that path:
 ## 6. Constraints and risks
 
 - Root token **never** plugged into `pve1` / the `ca` guest (ADR 38 invariant). Air-gap is **not**
-  required for the token ceremony — the key is non-exportable, so workstation signing (WSL/Windows) is
-  acceptable with the token plugged in only during the ceremony, per-signature PIN, and CSR
-  subject/public-key verification on screen before signing (residual: one rogue 1-year intermediate;
-  the key itself cannot leak). The **signing machine is the Windows 11 workstation with WSL (Ubuntu)**;
-  the kit's scripts are PowerShell 7 and run either inside WSL or on Windows. The **IronKey is
-  retired** — transient solution only, destroyed in runbook 46 phase 4; no future IronKey usage.
+  required for the token ceremony — the key is non-exportable, so workstation signing is acceptable with
+  the token plugged in only during the ceremony, per-signature PIN, and CSR subject/public-key
+  verification on screen before signing (residual: one rogue 1-year intermediate; the key itself cannot
+  leak). The **signing machine is the Windows 11 workstation with WSL (Ubuntu)**; the kit's scripts are
+  PowerShell 7 and **run only inside WSL** — they reject native Windows via `$IsLinux` and hard-code the
+  Linux OpenSC module path. **The IronKey remains the active root custody** (2026-11-14, §9): the token
+  upgrade is deferred until an NFC+ is acquired, so [`v1-ironkey/`](../ca-signing-kit/v1-ironkey/README.md)
+  is the kit in use and [`v2-utrust-token/`](../ca-signing-kit/v2-utrust-token/README.md) is dormant.
 - OpenSC **does** claim the card on Linux — measured 2026-11-10 as `PIV-II` (§4). The 2023 report of
   `opensc-pkcs11.so` not claiming a uTrust does not apply to this unit. Identiv ships no Linux PKCS#11
   module of its own; Key Manager is Windows-only, which is why the whole ceremony runs through OpenSC.

@@ -5,15 +5,15 @@ intermediate expires. Two scripts, one ceremony each.
 
 ## Before you start
 
-- [01-setup.md](01-setup.md) is done and `./Test-uTrustKey.ps1` passes.
+- [01-setup.md](01-setup.md) is done and `pwsh ./Test-uTrustKey.ps1` passes.
 - The root already exists on the uTrust Security Key ([02](02-root.md)) and `root_ca.crt` is in the kit.
 - The CSR is in the kit — `intermediate_ca.csr` from the CA host, or `ipa.csr` from the IPA guest.
 
 ## Sign the step-ca intermediate
 
 ```sh
-cd ~/ca-signing-kit
-./New-Intermediate.ps1
+cd ~/ca-signing-kit/v2-utrust-token
+pwsh ./New-Intermediate.ps1
 ```
 
 That is the whole annual ceremony. The script:
@@ -48,7 +48,7 @@ provisioner, so the intermediate carries no TLS role itself. The SANs still have
 ## Sign the FreeIPA CA
 
 ```sh
-./New-IpaCa.ps1
+pwsh ./New-IpaCa.ps1
 ```
 
 Same ceremony, different inputs: `ipa.csr` → `ipa-ca.crt`, `ipa-ca.tpl`, 1 year, subject
@@ -60,7 +60,7 @@ public, so it can travel by any means.
 ## Afterwards
 
 ```sh
-./Test-uTrustKey.ps1   # optional last look before the uTrust Security Key goes away
+pwsh ./Test-uTrustKey.ps1   # optional last look before the uTrust Security Key goes away
 ```
 
 Carry back the public certificates and put the uTrust Security Key in the safe:
@@ -76,7 +76,7 @@ Carry back the public certificates and put the uTrust Security Key in the safe:
 Nothing to pass. Both signing scripts find the key themselves:
 
 ```sh
-./New-Intermediate.ps1
+pwsh ./New-Intermediate.ps1
 ```
 
 The input and output filenames are fixed — `intermediate_ca.csr` → `intermediate_ca.crt`, and

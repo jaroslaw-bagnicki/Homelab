@@ -214,7 +214,7 @@ runs, so a plugin sitting in the kit folder is found automatically.
 ## Confirm the setup
 
 ```sh
-cd ~/ca-signing-kit
+cd ~/ca-signing-kit/v2-utrust-token
 ./step version                    # Smallstep CLI/0.31.0 (linux/amd64)
 ./step-kms-plugin --help          # usage text means the CGO build runs
 pwsh ./Test-uTrustKey.ps1              # all checks must pass
@@ -235,7 +235,7 @@ fails with `Permission denied`. Copy the kit to a real filesystem first:
 
 ```sh
 cp -r /mnt/<stick>/ca-signing-kit ~/ca-signing-kit
-cd ~/ca-signing-kit
+cd ~/ca-signing-kit/v2-utrust-token
 chmod +x step
 ```
 

@@ -19,8 +19,8 @@ software, then writes a self-signed certificate over it.
 ## Run it
 
 ```sh
-cd ~/ca-signing-kit
-./New-Root.ps1
+cd ~/ca-signing-kit/v2-utrust-token
+pwsh ./New-Root.ps1
 ```
 
 The script walks through six steps and stops if any of them fails. It finds the key itself — there is
@@ -28,8 +28,9 @@ nothing to pass in.
 
 ### Step 1 — replace the factory credentials
 
-The token ships with PIN `123456`, PUK `12345678` and a published 3DES management key. All three must
-be replaced before the root exists, or anyone holding the token can use it.
+The token ships with published factory defaults for the PIN, the PUK and the 3DES management key —
+the vendor manual lists them, and every unit of this model has the same values. All three must be
+replaced before the root exists, or anyone holding the token can use it.
 
 `piv-tool` prompts interactively. **Write the new PIN and PUK down and put them in the safe before you
 start** — they are the only way back into the token, and losing them kills the root. The script asks
@@ -38,8 +39,11 @@ you to confirm before it continues.
 ### Step 2 — generate the key inside slot 9C
 
 ```sh
-pkcs11-tool --keypairgen --key-type EC:prime256v1 --slot-id 0x9C --label "Homelab Root CA" --login
+pkcs11-tool --keypairgen --key-type EC:prime256v1 --slot 0 --id 9C --label "Homelab Root CA" --always-auth --login
 ```
+
+`--slot 0` selects the PKCS#11 token; `--id 9C` is the PIV object. `--always-auth` keeps slot 9C's
+PIN-per-signature policy instead of the applet default.
 
 The key is generated **on the card** and is non-exportable: there is no file to copy, back up or
 destroy. The PIN policy ("always") is fixed at generation, so every signature prompts.

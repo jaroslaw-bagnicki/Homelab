@@ -53,9 +53,12 @@ The two kits differ only in **where the root key lives** and therefore **how the
 | [`intermediate-ca.tpl`](intermediate-ca.tpl) | both | the extensions the `step-ca` intermediate must carry |
 | [`ipa-ca.tpl`](ipa-ca.tpl) | both | the FreeIPA CA shape — `CN=Certificate Authority,O=IPA.INTERNAL`, CA:TRUE, pathlen:0 |
 
-Both kits sign the **same** CSRs with the **same** root — only the custody device changes. A certificate
-signed by v1 and one signed by v2 chain to the same root, so switching kits is a custody change, never a
-trust change (unless the root itself is reissued, which is the trust rotation above).
+Both kits sign the **same CSR shapes** with the **same templates** — only the custody device differs.
+
+They do **not** share a root by themselves. v2's documented procedure **reissues** the root on the token,
+which is a full trust rotation ([runbook 46](../runbooks/46-adopt-utrust-piv-root-custody.md) phase 4).
+Switching kits would be a custody-only change **only** if the existing root key were imported into the
+token instead of regenerated — and that is not what v2 does today.
 
 ## Where it runs
 

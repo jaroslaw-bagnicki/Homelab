@@ -226,19 +226,20 @@ openssl req -in ipa.csr -noout -subject
 # expected: subject=CN = Certificate Authority, O = IPA.INTERNAL
 ```
 
-## 7. External CA — signing with the token
+## 7. External CA — signing with the offline root
 
-On the **workstation**, with the uTrust token attached to **WSL** via `usbipd` — the scripts run only
-inside WSL, and no air-gap is needed because the root key is non-exportable on the token
-([runbook 46](46-adopt-utrust-piv-root-custody.md)):
+On the **offline signing machine** — ideally an air-gapped live-USB boot, though a normal workstation
+works too (the script warns and proceeds) — with the IronKey mounted. This is the active custody
+([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md), amended 2026-11-14); the token variant is
+deferred in [runbook 46](46-adopt-utrust-piv-root-custody.md).
 
-1. Copy the signing kit to a real filesystem and set it up — [01-setup.md](../ca-signing-kit/v2-utrust-token/01-setup.md).
-2. Put `ipa.csr` in the kit directory.
-3. Run `pwsh ./New-IpaCa.ps1` — the PIV PIN is prompted by PC/SC per signature.
+1. Assemble the bundle on the connected machine — [`01-building-step.md`](../ca-signing-kit/v1-ironkey/01-building-step.md).
+2. Put `ipa.csr` in the `v1-ironkey/` directory.
+3. Run `./sign-ipa-ca.sh <stick-mount>` — it prompts for the IronKey passphrase.
 
 The script signs with `ipa-ca.tpl` for **1 year** and machine-checks:
 
-- chain to the root in the kit;
+- chain to the root on the stick;
 - `CA:TRUE`, `pathlen:0`;
 - certificate-sign and CRL-sign usage;
 - subject `CN=Certificate Authority,O=IPA.INTERNAL`;
@@ -386,4 +387,4 @@ Write into the runbook/report:
 
 - [ADR 42](../decisions/42-pki-topology-sibling-cas.md) · [ADR 43](../decisions/43-freeipa-domain-realm.md) · [research 51](../research/51-freeipa-dogtag-tpm-custody.md) (parked TPM work)
 - [Runbook 28](28-pve1-proxmox-node.md) (pve1) · [runbook 35](35-deploy-step-ca.md) (TPM LXC pattern) · [runbook 40](40-deploy-ssh-certificates.md) (SSH trust)
-- [Signing kit](../ca-signing-kit/v2-utrust-token/README.md) · [FreeIPA documentation](https://www.freeipa.org/page/Documentation)
+- [Signing kit](../ca-signing-kit/v1-ironkey/README.md) · [FreeIPA documentation](https://www.freeipa.org/page/Documentation)

@@ -50,7 +50,7 @@ where the scripts run.
 
 ```sh
 wsl
-cd ~/ca-signing-kit
+cd ~/ca-signing-kit/v2-utrust-token
 pwsh ./Test-uTrustKey.ps1
 ```
 
@@ -97,7 +97,7 @@ All public — none of it is secret:
 |---|---|
 | `step` fails with `Permission denied` | You are running the kit straight off a USB stick. FAT32, exFAT and NTFS have no executable bit, so `chmod` does nothing there. Copy the kit to a real filesystem first — [01-setup.md](01-setup.md). |
 | `step-kms-plugin was not found on PATH` | The plugin is missing from the kit. The stock `step` is a static build that execs it for every `pkcs11:` URI — see [01-setup.md](01-setup.md). |
-| `Test-uTrustKey.ps1` fails the PIV or PKCS#11 check | OpenSC cannot drive this card. Provision and sign on Windows instead, or use an NFC+ SKU — [research 54 §2](../../research/54-utrust-fido2-nfc-piv-root-diagnostic.md). |
+| `Test-uTrustKey.ps1` fails the PIV or PKCS#11 check | OpenSC cannot drive this card. Fix the WSL setup ([01-setup.md](01-setup.md)) — every script here rejects native Windows and hard-codes the Linux OpenSC module path, so there is no Windows fallback. If the applet itself is the problem, use the active IronKey kit. |
 | A `FAIL` line appears during signing | Stop and carry nothing away. The uTrust Security Key is untouched and re-signing the same CSR is safe; any certificate already on disk was left as it was. |
 | `No smart card reader` | `pcscd` is not running, or the uTrust Security Key is not attached to WSL. `sudo service pcscd start`; for WSL, `usbipd attach --wsl --busid <busid>`. |
 

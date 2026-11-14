@@ -23,7 +23,8 @@ $Label = $m.Matches[0].Groups[1].Value.Trim()
 "Key: $Label"
 ""
 
-# 1. factory PIN 123456, PUK 12345678 and the published 3DES management key must go first
+# 1. the published factory PIN, PUK and 3DES management key must go first — the vendor manual
+# lists the values, and a root guarded by a publicly known secret is not guarded at all
 "STEP 1 - replace the factory PIN, PUK and management key."
 "Write the new PIN and PUK down and put them in the safe BEFORE you start."
 "Lose them and the root is dead."
@@ -43,10 +44,19 @@ if ((Read-Host 'PIN and PUK changed and written down? (yes/no)') -notmatch '^y')
 # 2. the key is generated on the card and cannot be exported
 ""
 "STEP 2 - generate the P-256 key inside slot 9C."
-# --slot selects the PKCS#11 token slot; --id is the PIV object id. --always-auth keeps slot 9C's
-# PIN-per-signature policy instead of the applet default.
-pkcs11-tool --module $mod --keypairgen --key-type EC:prime256v1 --slot 0 --id 9C --label 'Homelab Root CA' --always-auth --login
-if ($LASTEXITCODE) { throw 'generating the root key on the card failed' }
+# The private key lives on the token and survives a failed run, so a retry must NOT generate a
+# second one — pkcs11-tool would fail with 'object already exists'. Reuse an existing 9C object
+# when the certificate is still missing; only generate when the slot is empty.
+$existing = pkcs11-tool --module $mod --list-objects --type privkey 2>&1
+if ($existing -match 'Homelab Root CA') {
+    "  key already present in slot 9C — reusing it (a retry after a failed certificate step)"
+}
+else {
+    # --slot selects the PKCS#11 token slot; --id is the PIV object id. --always-auth keeps slot
+    # 9C's PIN-per-signature policy instead of the applet default.
+    pkcs11-tool --module $mod --keypairgen --key-type EC:prime256v1 --slot 0 --id 9C --label 'Homelab Root CA' --always-auth --login
+    if ($LASTEXITCODE) { throw 'generating the root key on the card failed' }
+}
 
 # 3. self-signed root certificate over that key
 ""

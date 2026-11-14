@@ -91,8 +91,10 @@ lists the four things that block it on WSL and how to tell them apart from the d
 
 ## Phase 1 — change the factory defaults on the token
 
-Factory defaults (technical manual): PIV PIN `123456`, PUK `12345678`, management key (3DES)
-`010203…0708`. Change all three **before** anything else, on the signing machine with OpenSC:
+The token ships with **published factory defaults** for the PIV PIN, the PUK and the 3DES management
+key — the vendor manual lists them, and every unit of this model has the same values. That is exactly
+why they must be replaced before the root exists: a root protected by a publicly known secret is not
+protected at all. Change all three **before** anything else, on the signing machine with OpenSC:
 
 ```sh
 MOD=/usr/lib/x86_64-linux-gnu/opensc-pkcs11.so

@@ -10,11 +10,12 @@ root once and signs the CAs under it.
 ## What this is, and is not
 
 The fleet CA's **offline root** is created here, the **`step-ca` intermediate** is signed by it, and
-(for M1) the **FreeIPA CA** CSR is signed by the same root. The root's private key lives on the stick
-and must never touch a networked machine, so the **recommended** ceremony machine is an air-gapped
-live-USB boot — but that is a recommendation, not a gate. The scripts warn when they find a network and
-carry on; the operator decides. This bundle carries the tool, the requests and the recipes, so the
-signing machine needs **nothing installed and nothing downloaded**.
+(for M1) the **FreeIPA CA** CSR is signed by the same root. The root's private key is an encrypted file
+on the stick, so the **recommended** ceremony machine is an air-gapped live-USB boot: keeping the key off
+a connected host shrinks the window in which it could be exposed. That is a recommendation, not an
+invariant — the scripts warn when they find a network and carry on, and the operator decides. This
+bundle carries the tool, the requests and the recipes, so the signing machine needs **nothing installed
+and nothing downloaded**.
 
 **Any live Linux will do.** SystemRescue 13 is the default; an Ubuntu Live desktop works just as well.
 Nothing has to be installed: the bundled `step` is statically linked, so it does not care what the host
