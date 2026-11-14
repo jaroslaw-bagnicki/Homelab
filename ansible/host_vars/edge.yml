@@ -18,6 +18,15 @@ security_ufw_allow_udp_from: "192.168.2.0/24"
 security_ufw_allow_udp_ports:
   - 53
 
+# Public zone on the edge Caddy (ADR 53) — the cloudflared tunnel on this box
+# proxies these hostnames to the lab origin Caddy, which routes by Host inside
+# the Docker network. Plain HTTP on loopback :80; TLS terminates at the CF edge.
+caddy_public_sites:
+  - name: cloud5.ovh
+    upstream: "http://192.168.2.200:8080"
+  - name: "*.cloud5.ovh"
+    upstream: "http://192.168.2.200:8080"
+
 netdata_role: child
 netdata_stream_target: "192.168.2.201:19996"
 netdata_stream_ssl: true

@@ -17,7 +17,8 @@ Workloads are a separate concern: self-contained recipes run on demand (see [`..
 | `docker_services` | Portainer, Caddy, cloudflared, shared Docker networks | `playbook-lab.yml` | [README](docker_services/README.md) |
 | `edge_host` | Edge appliance host hygiene — unattended upgrades, logrotate, volatile journald | `playbook-edge.yml` | [README](edge_host/README.md) |
 | `technitium` | Technitium DNS Server — authoritative `.internal` zone, fleet resolver (ADR 40) | `playbook-edge.yml`, `playbook-technitium.yml` | [README](technitium/README.md) |
-| `caddy` | Caddy reverse proxy — LAN sites issuing short-lived leaves from `step-ca` | `playbook-edge.yml`, `playbook-caddy.yml` | [README](caddy/README.md) |
+| `caddy` | Caddy reverse proxy — one Caddyfile with two zones: `*.internal` LAN sites (step-ca leaves) + `caddy_public_sites` public zone (ADR 53) | `playbook-edge.yml`, `playbook-caddy.yml` | [README](caddy/README.md) |
+| `cloudflared` | Cloudflare Tunnel public ingress — bare-metal systemd service on `edge`, token from Key Vault (ADR 53) | `playbook-edge.yml` | [README](cloudflared/README.md) |
 | `nut_client` | `nut-client` + `upsmon` fleet clients | `playbook-pve1.yml`, `playbook-pve2.yml`, `playbook-lab.yml`, `playbook-edge.yml` | [README](nut_client/README.md) |
 | `nut_server` | NUT server (`upsd` + `nutdrv_qx`) host-native on `pve1` | `playbook-pve1.yml` | [README](nut_server/README.md) |
 | `netdata` | Netdata agent — parent (stream aggregator) + child modes | `playbook-pve1.yml`, `playbook-pve2.yml`, `playbook-lab.yml`, `playbook-edge.yml`, `playbook-nas.yml`, `playbook-netdata.yml` | [README](netdata/README.md) |

@@ -1,0 +1,18 @@
+---
+# cloudflared on the edge appliance (ADR 53, ADR 24: bare-metal systemd service,
+# no Docker on the edge box). TLS terminates at the Cloudflare edge; the origin
+# hop is plain HTTP on loopback to the edge Caddy (ADR 19 pattern).
+
+cloudflared_deb_url: "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb"
+cloudflared_deb_dest: "/tmp/cloudflared-linux-amd64.deb"
+
+cloudflared_config_dir: /etc/cloudflared
+cloudflared_env_file: "{{ cloudflared_config_dir }}/.env"
+
+arc_keyvault_name: homelab-bysxdb-kv
+# Per-host secret name, matching the docker_services convention.
+cloudflared_token_secret_name: "cloudflared-tunnel-token-{{ inventory_hostname }}"
+
+# The tunnel terminates on the local edge Caddy (loopback :80); the tunnel's
+# public hostnames are configured in the Cloudflare dashboard, not here.
+cloudflared_origin: "http://127.0.0.1:80"

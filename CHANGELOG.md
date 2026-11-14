@@ -13,7 +13,7 @@ Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month 
 
 ## 2026‑11
 
-- **(feat)** Migrate the Docker workload stack from `cloudlab` to `lab` as-is — intermediate step of the k3s migration, which stays postponed — [runbook 47](docs/runbooks/47-migrate-cloudlab-docker-to-lab.md)
+- **(feat)** Docker stack cloudlab → `lab`, public tunnel → `edge`; k3s postponed — [ADR 53](docs/decisions/53-remote-access-cloudflare-tunnel-edge.md) · [runbook 47](docs/runbooks/47-migrate-cloudlab-docker-to-lab.md)
 - **(fix)** Renew SSH host certificates again — `step ssh renew` rejected `-f` before its positional paths, so no certificate ever renewed — [runbook 40](docs/runbooks/40-deploy-ssh-certificates.md)
 - **(docs)** Adopt the two-model split on one Pro account — DS4.1 stays daily via Mistral, ML4 via Vibe — [ADR 51](docs/decisions/51-ai-model-split-deepseek-mistral.md)
 - **(docs)** Adopt the 3‑2‑1 backup rule with Backblaze B2 as the off-site target, superseding ADR 02's Azure Blob — [ADR 49](docs/decisions/49-backup-3-2-1-strategy.md)

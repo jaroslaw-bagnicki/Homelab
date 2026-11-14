@@ -42,8 +42,8 @@ Current state — what's running or in progress. Planned work is under [What's N
 | Workload | Runs on | Purpose | Refs | Status |
 |---|---|---|---|---|
 | **Portainer CE** | `lab` | Docker GUI | [runbook 16](runbooks/16-docker-services-ansible-role.md) | ✅ |
-| **Caddy** | `lab` | reverse proxy + auto-TLS | [ADR 20](decisions/20-caddy-single-routing-layer.md) · [runbook 16](runbooks/16-docker-services-ansible-role.md) | ✅ |
-| **cloudflared** | `lab` | Cloudflare Tunnel public HTTPS | [ADR 19](decisions/19-cloudflare-tunnel-http-origin.md) · [runbook 16](runbooks/16-docker-services-ansible-role.md) | ✅ |
+| **Caddy** | `edge` (public + `*.internal` zones) · `lab` (Docker origin) | one Caddy on `edge` with two zones (ADR 53); lab origin reached on `:8080` | [ADR 20](decisions/20-caddy-single-routing-layer.md) · [ADR 53](decisions/53-remote-access-cloudflare-tunnel-edge.md) · [runbook 16](runbooks/16-docker-services-ansible-role.md) | ✅ |
+| **cloudflared** | `edge` | Cloudflare Tunnel public HTTPS (bare-metal service) | [ADR 53](decisions/53-remote-access-cloudflare-tunnel-edge.md) · [ADR 19](decisions/19-cloudflare-tunnel-http-origin.md) · [runbook 47](runbooks/47-migrate-cloudlab-docker-to-lab.md) | ✅ |
 | **OpenCode instances** (`homelab`, `prospera`) | `lab` | per-project agentic dev servers | [ADR 17](decisions/17-adopt-opencode.md) · [runbook 17](runbooks/17-deploy-opencode-on-lab.md) | ✅ |
 | **Zot** | `lab` | self-hosted OCI registry + pull-through cache | [runbook 20](runbooks/20-deploy-zot.md) | ✅ |
 | **OpenMediaVault** | `omv` | network shares (SMB) + backup target — retained powered off as the emergency NAS ([idea 17](ideas/17-truenas-vs-omv-nas-os.md)) | [ADR 23](decisions/23-nas-on-ml110.md) | 💤 |
@@ -86,7 +86,7 @@ once it is ready to start — a row leaves the table with the PR that completes 
 
 | Item | Effort | Next step | Refs |
 |---|---|---|---|
-| **Docker workload migration cloudlab → `lab`** | ⭐⭐ | **IaC landed** — `docker_services` + OpenCode + Zot repointed to `lab` as-is; next: AKV `cloudflared-tunnel-token-lab`, data copy, live run on `lab`, tunnel cutover, then cloudlab teardown — lab Docker → k3s stays postponed | [#44](https://github.com/jaroslaw-bagnicki/Homelab/issues/44) · [ADR 22](decisions/22-k3s-arc-homelab.md) · [runbook 47](runbooks/47-migrate-cloudlab-docker-to-lab.md) |
+| **Docker workload migration cloudlab → `lab`** | ⭐⭐ | **IaC landed** — `docker_services` + OpenCode + Zot repointed to `lab` as-is, public tunnel + Caddy zone to `edge` (ADR 53); next: AKV `cloudflared-tunnel-token-edge`, edge snapshot, OpenCode DB/data copy, live runs, tunnel cutover, cloudlab teardown — lab Docker → k3s stays postponed | [#44](https://github.com/jaroslaw-bagnicki/Homelab/issues/44) · [ADR 53](decisions/53-remote-access-cloudflare-tunnel-edge.md) · [ADR 22](decisions/22-k3s-arc-homelab.md) · [runbook 47](runbooks/47-migrate-cloudlab-docker-to-lab.md) |
 | **Beetle NAS** | ⭐⭐⭐ | **Phase 1 done** — OMV 8.5 on `nas`, `md0` RAID1 clean + reboot-verified (a failed member was replaced 2026-10-17, [runbook 38](runbooks/38-nas-disk-replacement.md)), fleet-enrolled with the Netdata child and NUT secondary; next: create the share and move the backup target — the ML110 is **kept powered off as the OMV emergency NAS** instead of being retired, so `.210` stays reserved ([idea 17](ideas/17-truenas-vs-omv-nas-os.md)); Memtest86+ and the RTC coin cell stay deferred — [research 32](research/32-wincor-beetle-m3-hardware-diagnostic.md)) | [#98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98) · [ADR 29](decisions/29-nas-backup-target-beetle-m3-omv.md) · [runbook 32](runbooks/32-beetle-m3-omv-setup.md) |
 | **Home Assistant VM + LXCs** | ⭐⭐⭐ | VM 210 (HA OS) + LXC 211/212 (Mosquitto, Zigbee2MQTT) on the `pve1` node (the base from runbook 28), then point HA's NUT integration at `192.168.2.201` for UPS status + power-loss notifications | [#68](https://github.com/jaroslaw-bagnicki/Homelab/issues/68) · [#85](https://github.com/jaroslaw-bagnicki/Homelab/issues/85) · [ADR 25](decisions/25-home-assistant-thin-client.md) · [#122](https://github.com/jaroslaw-bagnicki/Homelab/issues/122) |
 | **FreeIPA M1 — server on `pve1`** | ⭐⭐⭐ | **VM 216 was removed 2026-11-07** — no config remained in `/etc/pve/qemu-server/` and `.216` was unreachable, so M1 restarts from a fresh VM: `ipa.internal`/`IPA.INTERNAL`, Technitium A/PTR/SRV, external-ca under the fleet root, `admin` + test user; next: rebuild the VM, then M2 backup/restore before the first client | [#164](https://github.com/jaroslaw-bagnicki/Homelab/issues/164) · [ADR 43](decisions/43-freeipa-domain-realm.md) · [runbook 41](runbooks/41-deploy-freeipa-server.md) |
@@ -108,7 +108,7 @@ once it is ready to start — a row leaves the table with the PR that completes 
 
 | Item | Waiting on | Refs |
 |---|---|---|
-| **Edge Ingress — service migration** | remote-access decision — public ingress is on hold (VPN / Tailscale under consideration), so cloudflared and the public plane are not moved to the Wyse 3040; the LAN Caddy/DNS stack is live ([runbook 37](runbooks/37-deploy-internal-access-stack.md)) | [#65](https://github.com/jaroslaw-bagnicki/Homelab/issues/65) · [#81](https://github.com/jaroslaw-bagnicki/Homelab/issues/81) · [ADR 24](decisions/24-edge-ingress-appliance.md) · [ADR 40](decisions/40-internal-dns-proxy-edge.md) |
+| **cloudlab decommission record** | remote access decided — Cloudflare Tunnel on `edge` ([ADR 53](decisions/53-remote-access-cloudflare-tunnel-edge.md)), so the VPS's public plane retires with [runbook 47](runbooks/47-migrate-cloudlab-docker-to-lab.md); remaining: record the VPS's post-ingress role and decommission it | [#65](https://github.com/jaroslaw-bagnicki/Homelab/issues/65) · [#81](https://github.com/jaroslaw-bagnicki/Homelab/issues/81) · [ADR 13](decisions/13-cloudlab-staging.md) · [ADR 24](decisions/24-edge-ingress-appliance.md) |
 | **k3s migration** | postponed until the intermediate cloudlab → `lab` Docker migration settles ([runbook 47](runbooks/47-migrate-cloudlab-docker-to-lab.md)) — largest item, gates the Longhorn backup target and #48 | [#44](https://github.com/jaroslaw-bagnicki/Homelab/issues/44) · [ADR 22](decisions/22-k3s-arc-homelab.md) |
 | **Beetle on battery — modified-sine re-test** | replacement UPS unit — OMV now runs on the Beetle ([#98](https://github.com/jaroslaw-bagnicki/Homelab/issues/98)) and its `nut_client` secondary is live (runbook 32 §8), so the active-PFC supply can finally be tested on a real load | [#117](https://github.com/jaroslaw-bagnicki/Homelab/issues/117) · [runbook 29](runbooks/29-nut-ups-shutdown.md) §7 · [report](reports/260919-nut-shutdown-drill.md) |
 
@@ -146,7 +146,7 @@ Tenda Nova mesh — 192.168.2.0/24, gateway 192.168.2.1 (single broadcast domain
 which runs the NUT server **host-native**, with `upsmon` on `pve1`/`pve2`/`lab`/`edge`/`nas`  
 ([ADR 39](decisions/39-nut-host-native.md)).
 
-Cloudlab VPS (Contabo) sits outside the LAN, pending decommission — its Cloudflare Tunnel + Caddy stack moved to `lab` with the Docker workload migration (ADR 19, [runbook 47](runbooks/47-migrate-cloudlab-docker-to-lab.md)).
+Cloudlab VPS (Contabo) sits outside the LAN, pending decommission — its Docker workload stack moved to `lab` and its Cloudflare Tunnel + public Caddy zone moved to `edge` (ADR 53, [runbook 47](runbooks/47-migrate-cloudlab-docker-to-lab.md)).
 
 ## Project Structure
 

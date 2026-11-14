@@ -10,7 +10,7 @@ Per-node hardware detail for the homelab. For the high-level node/workload view 
 | **Lab** | main workload host | Lenovo ThinkCentre M910q Tiny | i5-7500T (4C/4T, 35 W) | 16 GB DDR4 | 256 GB NVMe (+ free 2.5" bay) | 1× GbE `enp0s31f6` |
 | **OMV NAS** | OpenMediaVault **emergency NAS** — powered off, retained as the fallback | HP ProLiant ML110 G5 | Pentium E2160 (2C/2T, 65 W) | 4 GB DDR2 | Goodram 120 GB SSD + RAID1 arrays | 1× GbE BCM5722 |
 | **Beetle NAS** | OMV NAS backup target (successor to ML110) | Wincor Beetle M-III | Pentium G4400 (2C/2T, 3.3 GHz) | 8 GB DDR4 (1×, 1 free slot) | SanDisk 128 GB SSD + 2× Seagate 1 TB 2.5" | 1× GbE Intel I219-V |
-| **Edge Ingress** | LAN DNS + reverse proxy (public ingress held) | Dell Wyse 3040 | Atom x5-Z8350 (2 W TDP) | 2 GB DDR3L | 8 GB eMMC | 1× GbE |
+| **Edge Ingress** | LAN DNS + reverse proxy + public Cloudflare Tunnel (ADR 53) | Dell Wyse 3040 | Atom x5-Z8350 (2 W TDP) | 2 GB DDR3L | 8 GB eMMC | 1× GbE |
 | **Proxmox VE** | virtualisation host — smart-home + always-on services | Dell Wyse 5070 | Celeron J4105 (Gemini Lake, 10 W) | 8 GB DDR4-2400 (2× 4 GB) | M.2 SATA SK hynix 128 GB | 1× GbE + WiFi |
 | **Proxmox VE (second node)** | second virtualisation host — `homelab` cluster member | Dell OptiPlex 7050 MFF | i5-7500 (4C/4T, 65 W) | 8 GB DDR4-2400 (1× 8 GiB, 1 slot free) | M.2 SATA SK hynix 128 GB (+ free 2.5″ bay) | 1× GbE Intel I219-LM |
 | **OPNsense Router** | LAN router / firewall | Fujitsu Futro S930 | GX-424CC (4C/4T, 25 W TDP) | 4 GB DDR3 (1×, 1 free slot) | Kingston 24 GB mSATA | 3× GbE (BCM5720 2× + Realtek 1×) |

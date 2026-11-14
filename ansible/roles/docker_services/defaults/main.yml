@@ -3,9 +3,12 @@ docker_dir: /opt/docker
 
 arc_keyvault_name: homelab-bysxdb-kv
 
-cloudflared_token_secret_name: "cloudflared-tunnel-token-{{ inventory_hostname }}"
-
 portainer_admin_password_secret_name: "portainer-admin-password"
+
+# Origin Caddy publish binding. Loopback by default; `lab` publishes on its LAN
+# IP so the edge Caddy can proxy the public zone to it (ADR 53). The public
+# tunnel itself runs on `edge` (cloudflared role), not here.
+docker_services_caddy_bind: "127.0.0.1:8080:8080"
 
 opencode_public_domain: example.com
 

@@ -13,6 +13,7 @@ Significant architectural and technology choices recorded in
 
 | # | Date | ADR | Status |
 |---|------|-----|--------|
+| 53 | 2026-11-14 | [Remote Access — Cloudflare Tunnel on the Edge Appliance](53-remote-access-cloudflare-tunnel-edge.md) | Accepted |
 | 51 | 2026-11-14 | [AI Model Split — DeepSeek V4.1 Flash Daily via Mistral, Large 4 for Heavy Tasks](51-ai-model-split-deepseek-mistral.md) | Accepted |
 | 50 | 2026-11-11 | [Backblaze B2 as the Off-Site Cloud Backup Target (the "1 off-site" of 3‑2‑1)](50-backblaze-b2-offsite-backup.md) | Accepted |
 | 49 | 2026-11-11 | [Backup Strategy — the 3‑2‑1 Rule for the Homelab](49-backup-3-2-1-strategy.md) | Accepted |

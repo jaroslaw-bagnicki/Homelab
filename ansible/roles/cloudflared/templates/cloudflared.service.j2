@@ -1,0 +1,14 @@
+[Unit]
+Description=cloudflared — Cloudflare Tunnel public ingress (ADR 53)
+After=network-online.target caddy.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile={{ cloudflared_env_file }}
+ExecStart=/usr/local/bin/cloudflared tunnel --no-autoupdate run
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

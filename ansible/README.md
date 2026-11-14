@@ -63,7 +63,7 @@ ansible-playbook ansible/workloads/freeipa/freeipa-playbook.yml
 | `playbooks/playbook.yml` | Base provision: common → security → ca_trust → azure_arc → docker_host (`docker_services` moved to `playbook-lab.yml` — runbook 47; `cloudlab` keeps the fleet key and SSH CA is disabled) |
 | `playbooks/playbook-arc.yml` | Arc enrolment only (for already-configured hosts) |
 | `playbooks/playbook-lab.yml` | M910q base provision: common → ca_trust → security → docker_host → docker_services → azure_arc → nut_client → netdata → fluentbit (`docker_services` runs here since the cloudlab → lab migration — runbook 47) |
-| `playbooks/playbook-edge.yml` | Wyse 3040 edge base provision: common → ca_trust → security → corosync_qnetd → edge_host → technitium → caddy → nut_client → netdata → fluentbit (bare-metal, no Docker/Arc — ADR 24) |
+| `playbooks/playbook-edge.yml` | Wyse 3040 edge base provision: common → ca_trust → security → corosync_qnetd → edge_host → technitium → caddy → cloudflared → nut_client → netdata → fluentbit (bare-metal, no Docker/Arc — ADR 24; `cloudflared` = public tunnel, ADR 53) |
 | `playbooks/playbook-technitium.yml` | Targeted: the `technitium` role only — DNS server and host resolver (runbook 37) |
 | `playbooks/playbook-caddy.yml` | Targeted: the `caddy` role only — LAN reverse proxy and ACME (runbook 37) |
 | `playbooks/playbook-ca-trust.yml` | Targeted: the `ca_trust` role only — fleet CA root and SSH CA public keys, `ca` excluded (runbooks 39/40) |
@@ -98,7 +98,7 @@ Base shared roles live in [`roles/`](roles/README.md). The [roles index](roles/R
 | `playbook.yml` | common → security → ca_trust → azure_arc → docker_host | First-time VPS provision after initial SSH hardening; `cloudlab` keeps the fleet key and SSH CA is disabled; the Docker workload stack moved to `lab` (runbook 47) — see [runbook 10](../docs/runbooks/10-vps-playground.md) |
 | `playbook-arc.yml` | azure_arc | Adding Arc to an already-configured host |
 | `playbook-lab.yml` | common → ca_trust → security → docker_host → docker_services → azure_arc → nut_client → netdata → fluentbit | M910q base provision after the 24.04 reinstall (see [runbook 25](../docs/runbooks/25-m910q-os-refresh.md)); hosts the Docker workload stack migrated from cloudlab (runbook 47) |
-| `playbook-edge.yml` | common → ca_trust → security → corosync_qnetd → edge_host → technitium → caddy → nut_client → netdata → fluentbit | Wyse 3040 edge base provision (see [runbook 24](../docs/runbooks/24-edge-appliance.md)) |
+| `playbook-edge.yml` | common → ca_trust → security → corosync_qnetd → edge_host → technitium → caddy → cloudflared → nut_client → netdata → fluentbit | Wyse 3040 edge base provision + public tunnel (see [runbook 24](../docs/runbooks/24-edge-appliance.md), [ADR 53](../docs/decisions/53-remote-access-cloudflare-tunnel-edge.md)) |
 | `playbook-technitium.yml` | technitium | Re-apply only the DNS server and host resolver on `edge` (see [runbook 37](../docs/runbooks/37-deploy-internal-access-stack.md)) |
 | `playbook-caddy.yml` | caddy | Re-apply only the reverse proxy and its sites on `edge` (see [runbook 37](../docs/runbooks/37-deploy-internal-access-stack.md)) |
 | `playbook-netdata.yml` | netdata | Re-apply only Netdata on `pve1`, `pve2`, `lab`, `nas`, `edge` (see [runbook 31](../docs/runbooks/31-deploy-netdata.md)) |
