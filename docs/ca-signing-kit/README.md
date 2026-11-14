@@ -5,7 +5,7 @@ one that matches the custody device you actually have.
 
 | | Kit | Custody | Status |
 |---|---|---|---|
-| **v1** | [`v1-ironkey/`](v1-ironkey/README.md) | IronKey — encrypted key file on a stick, air-gapped ceremony | ✅ **Active** |
+| **v1** | [`v1-ironkey/`](v1-ironkey/README.md) | IronKey — encrypted key file on a stick, offline ceremony (air-gap recommended) | ✅ **Active** |
 | **v2** | [`v2-utrust-token/`](v2-utrust-token/README.md) | PIV token, key generated on-device, PIN per signature | ⏸ **Dormant** — needs an NFC+ token |
 
 ## Which one
@@ -26,7 +26,7 @@ v1 is retired.
 root key  ── lives offline, never leaves its custody device
    │
    ├── signs ── step-ca intermediate   (1 year, key in pve1's TPM)   ← re-signed annually
-   └── signs ── FreeIPA CA             (5 years, key on the IPA guest)
+   └── signs ── FreeIPA CA             (1 year, key on the IPA guest)
 ```
 
 Two things follow from that picture, and they explain both kits:
@@ -41,7 +41,7 @@ The two kits differ only in **where the root key lives** and therefore **how the
 | | v1 — IronKey | v2 — token |
 |---|---|---|
 | Root key | encrypted file on the stick | generated on the PIV chip, non-exportable |
-| Ceremony machine | air-gapped live-USB boot, network physically off | the workstation, network on |
+| Ceremony machine | live-USB boot with the network off (recommended) | the workstation, network on |
 | Per-signature auth | the stick's passphrase | the PIV PIN |
 | Worst case if the machine is compromised | the key file can be copied | one rogue certificate; the key cannot leave |
 | Scripts | POSIX `sh` | PowerShell 7 |
@@ -59,8 +59,9 @@ trust change (unless the root itself is reissued, which is the trust rotation ab
 
 ## Where it runs
 
-- **v1** — an air-gapped live-USB Linux boot. Nothing installed, nothing downloaded; the bundled static
-  `step` is all it needs. See [`v1-ironkey/README.md`](v1-ironkey/README.md).
+- **v1** — a live-USB Linux boot with the network off, which is the recommended shape. Nothing installed,
+  nothing downloaded; the bundled static `step` is all it needs, and the scripts warn rather than abort
+  when they find a network. See [`v1-ironkey/README.md`](v1-ironkey/README.md).
 - **v2** — WSL (Ubuntu) on the Windows 11 workstation, with the token handed to WSL by `usbipd`. See
   [`v2-utrust-token/README.md`](v2-utrust-token/README.md).
 

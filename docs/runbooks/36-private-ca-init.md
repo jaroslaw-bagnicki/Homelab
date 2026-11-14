@@ -5,12 +5,12 @@
 > ([runbook 46](46-adopt-utrust-piv-root-custody.md)) is deferred until a working PIV token is acquired —
 > the plain-NFC uTrust 905601 was rejected on capability, so nothing here is scheduled for replacement.
 >
-> Generate the CA's 10-year **root** on an air-gapped signing machine (a live-USB Linux boot with no
-> network at all), keep it on a **secure USB stick** in a safe, and sign the certificate
-> request the deploy host produced. Step 1 runs once; step 3 repeats every year, before the intermediate
-> expires.
+> Generate the CA's 10-year **root** on a signing machine — ideally an air-gapped live-USB Linux boot,
+> though a normal workstation works too (the scripts warn and proceed) — keep it on a **secure USB
+> stick** in a safe, and sign the certificate request the deploy host produced. Step 1 runs once; step 3
+> repeats every year, before the intermediate expires.
 >
-> ⚠ **The ceremony never touches the network.** This sits between
+> ⚠ **The ceremony should not touch the network.** This sits between
 > [runbook 35 §6](35-deploy-step-ca.md), which produces the certificate request, and
 > [§7](35-deploy-step-ca.md), which installs the signed certificate. Steps 1 and 2 are carried out by
 > the [IronKey signing kit](../ca-signing-kit/v1-ironkey/README.md). The one command that needs a

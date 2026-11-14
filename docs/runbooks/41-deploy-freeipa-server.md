@@ -40,7 +40,7 @@ the server, the realm, the DNS glue and the CA chain before anything depends on 
 - [ ] `pve1` has ≥ 2.5 GB free RAM and ≥ 20 GB free `local-lvm`; if not, stop — [idea 15](../ideas/15-second-proxmox-node.md)
       is the prerequisite.
 - [ ] Fedora 45 Cloud Base Generic image downloaded and checksum-verified on `pve1`.
-- [ ] The **secure USB stick** and air-gapped signing machine for the CA ceremony.
+- [ ] The **secure USB stick** and a signing machine for the CA ceremony (air-gap recommended).
 - [ ] Controller has `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID` and Ansible collections.
 - [ ] `automation` certificate (or break-glass fleet key) in `ssh-agent`; `ansible-lint` available.
 - [ ] `.216` and VMID 216 are free.
@@ -235,13 +235,13 @@ needed, the root key is non-exportable on the token; [runbook 46](46-adopt-utrus
 2. Put `ipa.csr` in the kit directory.
 3. Run `./New-IpaCa.ps1` — the PIV PIN is prompted by PC/SC per signature.
 
-The script signs with `ipa-ca.tpl` for **5 years** and machine-checks:
+The script signs with `ipa-ca.tpl` for **1 year** and machine-checks:
 
 - chain to the root in the kit;
 - `CA:TRUE`, `pathlen:0`;
 - certificate-sign and CRL-sign usage;
 - subject `CN=Certificate Authority,O=IPA.INTERNAL`;
-- validity **157680000 s** (5 years).
+- validity **31536000 s** (1 year).
 
 Bring back `ipa-ca.crt` and a copy of `root_ca.crt`. If any check fails, stop; nothing has been trusted.
 

@@ -22,7 +22,7 @@ set -eu
 [ $# -ge 1 ] || { echo "usage: $0 <destination-path> [passphrase-file]" >&2; echo "       e.g. $0 /mnt/sdX1" >&2; exit 1; }
 STICK="$1"
 PWFILE="${2:-}"
-DIR="$(cd "$(dirname "DIR="$(cd "$(dirname "$0")" && pwd)"")" && pwd)"
+DIR="$(cd "$(dirname "$0")" && pwd)"
 # step and the shared templates live beside this script in a self-contained bundle, or one level up
 # in the repository (../). Resolve both so either layout works.
 SHARED="$DIR"
@@ -30,24 +30,18 @@ SHARED="$DIR"
 ROOT_CN="Homelab Internal CA"
 ROOT_LIFETIME="87600h"   # 10 years
 
-# --- the signing machine must not have a network -----------------------------
-# Both checks are deliberate: the address test also catches an on-link-only machine.
-if ! command -v ip >/dev/null 2>&1; then
-    echo "ABORT: 'ip' is not available, so this machine's network state cannot be checked." >&2
-    exit 1
-fi
-NET="$(ip -o addr show 2>/dev/null | awk '{ n = $2; sub(/:$/, "", n); if (n != "lo") print "  " n " " $4 }')"
-if [ -n "$NET" ]; then
-    echo "ABORT: this machine has a non-loopback address:" >&2
-    printf '%s\n' "$NET" >&2
-    echo "       The root key must never be created on a networked machine." >&2
-    echo "       Unplug the cable / disable Wi-Fi (or 'ip link set <dev> down') and re-run." >&2
-    exit 1
-fi
-if ip route 2>/dev/null | grep -q '^default'; then
-    echo "ABORT: this machine has a default route — it is not air-gapped." >&2
-    echo "       The root key must never be created on a networked machine." >&2
-    exit 1
+# --- network state: advisory, not a gate -------------------------------------
+# Creating the root is the one irreversible step, so a networked machine is worth a
+# warning — but it is a homelab trade-off the operator makes, not a condition this
+# script can decide.
+if command -v ip >/dev/null 2>&1; then
+    NET="$(ip -o addr show 2>/dev/null | awk '{ n = $2; sub(/:$/, "", n); if (n != "lo") print "  " n " " $4 }')"
+    if [ -n "$NET" ] || ip route 2>/dev/null | grep -q '^default'; then
+        echo "NOTE: this machine is networked — the root key is being created on a connected host." >&2
+        [ -n "$NET" ] && printf '%s\n' "$NET" >&2
+        echo "      Accepted for this homelab. Unplug the network for the strictest run." >&2
+        echo
+    fi
 fi
 
 # --- the tool ---------------------------------------------------------------

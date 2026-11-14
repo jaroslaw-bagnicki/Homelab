@@ -22,24 +22,18 @@ TMP="$OUT.new"
 # never leave a half-written certificate behind for someone to carry home
 trap 'rm -f "$TMP"' EXIT
 
-# --- the signing machine must not have a network -----------------------------
-# Both checks are deliberate: the address test also catches an on-link-only machine.
-if ! command -v ip >/dev/null 2>&1; then
-    echo "ABORT: 'ip' is not available, so this machine's network state cannot be checked." >&2
-    exit 1
-fi
-NET="$(ip -o addr show 2>/dev/null | awk '{ n = $2; sub(/:$/, "", n); if (n != "lo") print "  " n " " $4 }')"
-if [ -n "$NET" ]; then
-    echo "ABORT: this machine has a non-loopback address:" >&2
-    printf '%s\n' "$NET" >&2
-    echo "       The root key must never be used on a networked machine." >&2
-    echo "       Unplug the cable / disable Wi-Fi (or 'ip link set <dev> down') and re-run." >&2
-    exit 1
-fi
-if ip route 2>/dev/null | grep -q '^default'; then
-    echo "ABORT: this machine has a default route — it is not air-gapped." >&2
-    echo "       The root key must never be used on a networked machine." >&2
-    exit 1
+# --- network state: advisory, not a gate -------------------------------------
+# The root key is an encrypted file on the stick, so a networked machine widens the
+# exposure window. That is a homelab trade-off the operator makes, not a condition
+# this script can decide: warn, and carry on.
+if command -v ip >/dev/null 2>&1; then
+    NET="$(ip -o addr show 2>/dev/null | awk '{ n = $2; sub(/:$/, "", n); if (n != "lo") print "  " n " " $4 }')"
+    if [ -n "$NET" ] || ip route 2>/dev/null | grep -q '^default'; then
+        echo "NOTE: this machine is networked — the root key is used on a connected host." >&2
+        [ -n "$NET" ] && printf '%s\n' "$NET" >&2
+        echo "      Accepted for this homelab. Unplug the network for the strictest run." >&2
+        echo
+    fi
 fi
 
 # --- inputs ------------------------------------------------------------------

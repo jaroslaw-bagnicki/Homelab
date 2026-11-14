@@ -1,6 +1,6 @@
 #Requires -Version 7.0
 # Signs FreeIPA's ipa.csr with the root key on the uTrust Security Key. Run inside WSL.
-# Same ceremony as New-Intermediate.ps1, different inputs: 5 years, IPA CA subject.
+# Same ceremony as New-Intermediate.ps1, different inputs: 1 year, IPA CA subject.
 $ErrorActionPreference = 'Stop'
 if (-not $IsLinux) { throw 'Run this inside WSL, where the key is attached.' }
 
@@ -29,7 +29,7 @@ $Label = $m.Matches[0].Groups[1].Value.Trim()
 ""
 
 $key = "pkcs11:module-path=$mod;token=$($Label -replace ' ','%20');object=Homelab%20Root%20CA;type=private"
-& $step certificate sign --template $tpl --not-after 43800h $csr $root $key > $tmp
+& $step certificate sign --template $tpl --not-after 8760h $csr $root $key > $tmp
 if ($LASTEXITCODE) { Remove-Item $tmp -ErrorAction Ignore; throw 'signing failed' }
 
 $fail = 0
@@ -47,7 +47,7 @@ Check 'can sign certificates' $c.extensions.key_usage.certificate_sign
 Check 'can sign CRLs'         $c.extensions.key_usage.crl_sign
 Check 'subject CN'            ($c.subject.common_name -contains 'Certificate Authority')
 Check 'subject O=IPA.INTERNAL' ($c.subject.organization -contains 'IPA.INTERNAL')
-Check 'valid for 5 years'     ($c.validity.length -eq 157680000)
+Check 'valid for 1 year'     ($c.validity.length -eq 31536000)
 
 if ($fail) {
     Remove-Item $tmp -ErrorAction Ignore

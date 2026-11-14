@@ -51,7 +51,7 @@ provisioner, so the intermediate carries no TLS role itself. The SANs still have
 ./New-IpaCa.ps1
 ```
 
-Same ceremony, different inputs: `ipa.csr` → `ipa-ca.crt`, `ipa-ca.tpl`, 5 years, subject
+Same ceremony, different inputs: `ipa.csr` → `ipa-ca.crt`, `ipa-ca.tpl`, 1 year, subject
 `CN=Certificate Authority, O=IPA.INTERNAL` checked.
 
 Bring `ipa.csr` from the IPA guest first — it is produced by `ipa-server-install --external-ca` and is

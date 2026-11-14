@@ -1,7 +1,7 @@
 # v1 — IronKey signing kit (active)
 
-The root CA's private key is an **encrypted key file on a secure USB stick**, used only from an
-air-gapped machine. This kit creates the root once and signs the CAs under it.
+The root CA's private key is an **encrypted key file on a secure USB stick**. This kit creates the
+root once and signs the CAs under it.
 
 > **This is the active kit.** The token kit ([`../v2-utrust-token/`](../v2-utrust-token/README.md)) is the planned
 > upgrade but is dormant until a working PIV token is acquired. See the
@@ -10,14 +10,18 @@ air-gapped machine. This kit creates the root once and signs the CAs under it.
 ## What this is, and is not
 
 The fleet CA's **offline root** is created here, the **`step-ca` intermediate** is signed by it, and
-(for M1) the **FreeIPA CA** CSR is signed by the same root. All of it happens on a machine with no
-network of any kind, because the root's private key lives on the stick and must never touch a
-networked machine. This bundle carries the tool, the requests and the recipes, so the signing machine
-needs **nothing installed and nothing downloaded**.
+(for M1) the **FreeIPA CA** CSR is signed by the same root. The root's private key lives on the stick
+and must never touch a networked machine, so the **recommended** ceremony machine is an air-gapped
+live-USB boot — but that is a recommendation, not a gate. The scripts warn when they find a network and
+carry on; the operator decides. This bundle carries the tool, the requests and the recipes, so the
+signing machine needs **nothing installed and nothing downloaded**.
 
 **Any live Linux will do.** SystemRescue 13 is the default; an Ubuntu Live desktop works just as well.
 Nothing has to be installed: the bundled `step` is statically linked, so it does not care what the host
-distribution is. Only two things matter — **no network**, and a shell to run the steps below.
+distribution is. Only two things matter — **a shell**, and a copy of the bundle on a real filesystem.
+
+Running it on your normal workstation also works. The scripts print a `NOTE:` line when they detect a
+network and then proceed; for the strictest run, unplug the cable or disable Wi-Fi first.
 
 If you use Ubuntu Live rather than SystemRescue, three differences:
 
@@ -25,7 +29,7 @@ If you use Ubuntu Live rather than SystemRescue, three differences:
 |---|---|---|
 | Who you are | `root` | user `ubuntu` with passwordless `sudo` — prefix `sudo` where needed (`mkdir`, `mount`) |
 | Removable media | **not** auto-mounted — run `mountall`, or mount it yourself (step 4) | **auto-mounted** under `/media/ubuntu/<label>` — use that path |
-| Network | nothing brings it up | NetworkManager may connect by itself — **disable Wi-Fi / unplug the cable** before touching the stick. Both scripts abort if they find **any non-loopback address** (or a default route). |
+| Network | nothing brings it up | NetworkManager may connect by itself — the scripts warn but proceed |
 
 It does **not** start the CA and does **not** distribute trust. Nothing in the bundle is private — the
 CSR and the template are public. The one secret it produces is the **root key**, and that must leave
@@ -52,7 +56,7 @@ the signing machine only on the stick, back into the safe.
 ## The flow
 
 1. **Build the bundle** — [`01-building-step.md`](01-building-step.md). Do this on the connected
-   machine, before you leave for the air-gapped one.
+   machine, before you leave for the signing machine.
 2. **Create the root** — `./root.sh <stick-mount>` — [`02-issuing-root-cert.md`](02-issuing-root-cert.md).
    **Once ever.**
 3. **Sign the intermediate** — `./sign.sh <stick-mount>` — [`03-signing-csr.md`](03-signing-csr.md).
