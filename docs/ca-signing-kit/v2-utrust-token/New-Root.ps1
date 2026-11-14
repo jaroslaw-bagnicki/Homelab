@@ -51,41 +51,59 @@ if ($LASTEXITCODE) { throw 'generating the root key on the card failed' }
 # 3. self-signed root certificate over that key
 ""
 "STEP 3 - write the root certificate."
+# Written to a temporary path and promoted only after every check passes, so a failed
+# run cannot leave a half-built root_ca.crt behind to block the next attempt.
+$tmpRoot = "$root.new"
 $token = "pkcs11:module-path=$mod;token=$($Label -replace ' ','%20')"
 $key   = "$token;object=Homelab%20Root%20CA;type=private"
-& $step certificate create 'Homelab Internal CA' $root --profile root-ca --not-after 87600h --kms $token --key $key
-if ($LASTEXITCODE) { throw 'creating the root certificate failed' }
+try {
+    & $step certificate create 'Homelab Internal CA' $tmpRoot --profile root-ca --not-after 87600h --kms $token --key $key
+    if ($LASTEXITCODE) { throw 'creating the root certificate failed' }
 
-# 4. verify the shape
-""
-"STEP 4 - check the root certificate."
-$fail = 0
-function Check($name, $ok) {
-    if ($ok) { "  OK    $name" } else { "  FAIL  $name"; $script:fail++ }
+    # 4. verify the shape
+    ""
+    "STEP 4 - check the root certificate."
+    $fail = 0
+    function Check($name, $ok) {
+        if ($ok) { "  OK    $name" } else { "  FAIL  $name"; $script:fail++ }
+    }
+
+    $c = & $step certificate inspect --format json $tmpRoot | ConvertFrom-Json
+    Check 'CN=Homelab Internal CA' ($c.subject.common_name -contains 'Homelab Internal CA')
+    Check 'key is P-256'           ($c.subject_key_info.ecdsa_public_key.curve -eq 'P-256')
+    Check 'is a CA'                $c.extensions.basic_constraints.is_ca
+    Check 'pathlen 1'              ($c.extensions.basic_constraints.max_path_len -eq 1)
+    Check 'can sign certificates'  $c.extensions.key_usage.certificate_sign
+    Check 'can sign CRLs'          $c.extensions.key_usage.crl_sign
+    Check 'valid for 10 years'     ($c.validity.length -eq 315360000)
+
+    if ($fail) { throw 'The root certificate is not the expected shape. Do not distribute it.' }
+
+    # 5. prove the key can actually sign
+    ""
+    "STEP 5 - prove the key signs. A throwaway request is signed and discarded."
+    # A unique directory per run: a stale probe from an earlier attempt can never be
+    # verified in place of this one, and a failure cannot leave files behind.
+    $probe = Join-Path ([IO.Path]::GetTempPath()) "root-probe-$([guid]::NewGuid().ToString('N'))"
+    New-Item -ItemType Directory -Path $probe -Force | Out-Null
+    try {
+        & $step certificate create probe.internal "$probe/probe.csr" "$probe/probe.key" --csr --no-password
+        if ($LASTEXITCODE) { throw 'creating the probe CSR failed' }
+        & $step certificate sign --not-after 24h "$probe/probe.csr" $tmpRoot $key > "$probe/probe.crt"
+        if ($LASTEXITCODE) { throw 'the key failed to sign the probe CSR' }
+        & $step certificate verify "$probe/probe.crt" --roots $tmpRoot 2>$null
+        if ($LASTEXITCODE) { throw 'The key signed something that does not chain to the root. Do not distribute anything.' }
+        "  OK    the key signs and the result chains to the root"
+    }
+    finally {
+        Remove-Item $probe -Recurse -Force -ErrorAction Ignore
+    }
+
+    Move-Item $tmpRoot $root -Force
 }
-
-$c = & $step certificate inspect --format json $root | ConvertFrom-Json
-Check 'CN=Homelab Internal CA' ($c.subject.common_name -contains 'Homelab Internal CA')
-Check 'key is P-256'           ($c.subject_key_info.ecdsa_public_key.curve -eq 'P-256')
-Check 'is a CA'                $c.extensions.basic_constraints.is_ca
-Check 'pathlen 1'              ($c.extensions.basic_constraints.max_path_len -eq 1)
-Check 'can sign certificates'  $c.extensions.key_usage.certificate_sign
-Check 'can sign CRLs'          $c.extensions.key_usage.crl_sign
-Check 'valid for 10 years'     ($c.validity.length -eq 315360000)
-
-if ($fail) { throw 'The root certificate is not the expected shape. Do not distribute it.' }
-
-# 5. prove the key can actually sign
-""
-"STEP 5 - prove the key signs. A throwaway request is signed and discarded."
-$probe = '/tmp/root-probe'
-& $step certificate create probe.internal "$probe.csr" "$probe.key" --csr --no-password
-& $step certificate sign --not-after 24h "$probe.csr" $root $key > "$probe.crt"
-& $step certificate verify "$probe.crt" --roots $root 2>$null
-$ok = ($LASTEXITCODE -eq 0)
-Remove-Item "$probe.csr", "$probe.key", "$probe.crt" -ErrorAction Ignore
-if (-not $ok) { throw 'The key signed something that does not chain to the root. Do not distribute anything.' }
-"  OK    the key signs and the result chains to the root"
+finally {
+    Remove-Item $tmpRoot -Force -ErrorAction Ignore
+}
 
 # 6. record the fingerprint
 ""
@@ -93,6 +111,6 @@ if (-not $ok) { throw 'The key signed something that does not chain to the root.
 & $step certificate fingerprint $root
 ""
 "Done. root_ca.crt is public — it is the trust anchor for the fleet."
-"Next: ./New-Intermediate.ps1"
+"Next: pwsh ./New-Intermediate.ps1"
 ""
 "Unplug the uTrust Security Key and put it back in the safe."

@@ -217,7 +217,7 @@ runs, so a plugin sitting in the kit folder is found automatically.
 cd ~/ca-signing-kit
 ./step version                    # Smallstep CLI/0.31.0 (linux/amd64)
 ./step-kms-plugin --help          # usage text means the CGO build runs
-./Test-uTrustKey.ps1              # all checks must pass
+pwsh ./Test-uTrustKey.ps1              # all checks must pass
 ```
 
 The kit was assembled against **step v0.31.0 + step-kms-plugin v0.17.0**. A newer CLI is fine — the

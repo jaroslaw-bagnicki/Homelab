@@ -228,12 +228,13 @@ openssl req -in ipa.csr -noout -subject
 
 ## 7. External CA — signing with the token
 
-On the **workstation**, with the uTrust token attached (WSL via `usbipd`, or Windows — no air-gap
-needed, the root key is non-exportable on the token; [runbook 46](46-adopt-utrust-piv-root-custody.md)):
+On the **workstation**, with the uTrust token attached to **WSL** via `usbipd` — the scripts run only
+inside WSL, and no air-gap is needed because the root key is non-exportable on the token
+([runbook 46](46-adopt-utrust-piv-root-custody.md)):
 
 1. Copy the signing kit to a real filesystem and set it up — [01-setup.md](../ca-signing-kit/v2-utrust-token/01-setup.md).
 2. Put `ipa.csr` in the kit directory.
-3. Run `./New-IpaCa.ps1` — the PIV PIN is prompted by PC/SC per signature.
+3. Run `pwsh ./New-IpaCa.ps1` — the PIV PIN is prompted by PC/SC per signature.
 
 The script signs with `ipa-ca.tpl` for **1 year** and machine-checks:
 

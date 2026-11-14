@@ -50,18 +50,21 @@ Key Manager matrix agrees — PIV is ticked for `NFC+` and `GOV` only.
 - [ ] Signing host: the **Windows 11 workstation** with WSL (Ubuntu) and the token attached from
       Windows (`usbipd bind --busid <busid>` + `usbipd attach --wsl --busid <busid>`), `pcscd` running
       and `opensc`, `pcsc-tools`, `libpcsclite1`, `fido2-tools`, `usbutils` installed. The kit's
-      scripts are PowerShell 7 and run either inside WSL or on Windows — both drive the same WSL
-      toolchain. Fallback: Windows native — OpenSC's Windows PKCS#11 DLL with a Windows `step` +
-      `step-kms-plugin`, or `certreq -sign` via the Microsoft PIV minidriver (note: `certreq` applies
-      no template — check the issued extensions by hand)
+      scripts are PowerShell 7 and **run only inside WSL** — they reject native Windows via `$IsLinux`
+      and hard-code the Linux OpenSC module path. Windows does one thing only: `usbipd` hands the token
+      to WSL. There is no Windows-native path.
 - [ ] Signing kit copied to a real filesystem inside WSL (not a USB stick — FAT/exFAT has no executable
       bit), plus two added binaries: the kit's stock static `step` v0.31.0 and the CGO
       **`step-kms-plugin` v0.17.0** (smallstep/step-kms-plugin release, verify against `checksums.txt`)
       — `step` delegates every `pkcs11:` URI to the plugin; without it:
       `exec: "step-kms-plugin": not found in $PATH` (verified 2026-11-10; the whole PKCS#11 path was
       proven end-to-end against SoftHSM 2.6). See [01-setup.md](../ca-signing-kit/v2-utrust-token/01-setup.md)
-- [ ] The uTrust token, the current `root_ca.crt` (public, from the kit), `intermediate_ca.csr`
-      (from runbook 35 §6), `intermediate-ca.tpl`, and `ipa.csr` when the FreeIPA CA is re-signed
+- [ ] The uTrust token, `intermediate_ca.csr` (from runbook 35 §6), `intermediate-ca.tpl`, and
+      `ipa.csr` when the FreeIPA CA is re-signed
+- [ ] **The current `root_ca.crt` staged OUTSIDE the kit** — `New-Root.ps1` refuses to run while
+      `root_ca.crt` exists in the kit directory (it guards against an accidental second root). Move the
+      old public root somewhere safe first: you need it for dual-trust during the rotation, and the
+      script writes the replacement to that same path
 - [ ] A safe for the token; the written-down IronKey passphrase still available until phase 5 finishes
 
 ## Phase 0 — pre-flight health check
@@ -144,9 +147,18 @@ Carry back only the public certificates: `root_ca.crt`, `intermediate_ca.crt`, `
 
 ## Phase 4 — trust rotation (the accepted cost of reissue)
 
+> ⚠ **Prerequisite — `ca_trust` cannot do dual-trust as it stands.** The role reads **one** Key Vault
+> secret (`ca-root-cert`), asserts it against **one** pinned fingerprint (`ca_trust_root_sha256`), and
+> writes **one** fixed path (`/usr/local/share/ca-certificates/homelab-root-ca.crt`). Publishing the new
+> root therefore either fails the old pin or overwrites the old anchor — there is no window where a node
+> trusts both. **Before starting this phase**, extend the role to carry a second anchor (a
+> `ca_trust_previous_*` set: secret name, pin, and a distinct filename), so step 1 can publish both and
+> step 4 removes one. That role change is its own reviewed change, not part of this runbook.
+
 1. Distribute the **new** `root_ca.crt` to the fleet and workstations — [runbook 39](39-trust-private-ca.md)
    (`ca_trust` role on the connected controller, manual procedure for personal devices); publish it to
-   Key Vault as `ca-root-cert` from the controller. Clients now **dual-trust** old + new root.
+   Key Vault as `ca-root-cert` from the controller. With the dual-anchor change above in place, clients
+   now **dual-trust** old + new root.
 2. Re-sign both sibling CAs under the new root (phase 3) and install them: the step-ca intermediate by
    [runbook 35 §7](35-deploy-step-ca.md), the FreeIPA/Dogtag CA by [runbook 41](41-deploy-freeipa-server.md)
    ([ADR 42](../decisions/42-pki-topology-sibling-cas.md)). `ca.json` on the `ca` guest does **not** change.
