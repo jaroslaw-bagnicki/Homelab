@@ -5,7 +5,7 @@
 | | |
 |---|---|
 | **MCP server** | [GitHub Copilot MCP](https://api.githubcopilot.com/mcp/) (remote) · [github-mcp-server](https://github.com/github/github-mcp-server) (local) |
-| **Transport** | Remote HTTP (current) · Local sidecar via k3s (future, [#44](https://github.com/jaroslaw-bagnicki/Homelab/issues/44)) |
+| **Transport** | Remote HTTP (current) · Local sidecar via k3s (future, [#199](https://github.com/jaroslaw-bagnicki/Homelab/issues/44)) |
 | **Used by** | `homelab-oc`, `prospera-oc` |
 
 ## Transport
@@ -15,7 +15,7 @@ GitHub MCP runs as a **remote** HTTP server today. The future path moves to a lo
 | Transport | Supported? | Auth methods | Notes |
 |---|---|---|---|
 | Remote (`type: "remote"`) | **Current** | PAT, OAuth | Hosted by GitHub at `https://api.githubcopilot.com/mcp/`. No local deps — works on Alpine. |
-| Local sidecar (`type: "remote"`) | Planned ([#44](https://github.com/jaroslaw-bagnicki/Homelab/issues/44)) | GitHub App installation token | `ghcr.io/github/github-mcp-server` as k3s sidecar in same pod. Go binary + Debian 12 base (glibc) — no Alpine blocker. |
+| Local sidecar (`type: "remote"`) | Planned ([#199](https://github.com/jaroslaw-bagnicki/Homelab/issues/44)) | GitHub App installation token | `ghcr.io/github/github-mcp-server` as k3s sidecar in same pod. Go binary + Debian 12 base (glibc) — no Alpine blocker. |
 
 The remote server does **not** support GitHub App authentication. GitHub App requires the local server. Until k3s lands, PAT on the remote server is the production path.
 
@@ -67,7 +67,7 @@ The PAT is referenced in the `Authorization` header of the remote MCP request. F
 
 `GH_PAT` is injected from Azure Key Vault at deploy time by the Ansible workload playbook. To upload a PAT to Key Vault, run `scripts/Set-HomelabOcGhPat.ps1`.
 
-**Per ADR 17:** PAT auth is transitional. It ties operations to a personal identity rather than a workload identity. It will be replaced by GitHub App installation tokens when k3s lands ([#44](https://github.com/jaroslaw-bagnicki/Homelab/issues/44)), using the same sidecar pattern as Azure MCP.
+**Per ADR 17:** PAT auth is transitional. It ties operations to a personal identity rather than a workload identity. It will be replaced by GitHub App installation tokens when k3s lands ([#199](https://github.com/jaroslaw-bagnicki/Homelab/issues/44)), using the same sidecar pattern as Azure MCP.
 
 **PAT scope requirements:**
 - Fine-grained: repository-scoped, `Contents: Read/Write`, `Issues: Read/Write`, `Pull requests: Read/Write`, `Metadata: Read`; `Commit statuses: Read` is optional.
@@ -155,7 +155,7 @@ opencode mcp auth github-mcp
 }
 ```
 
-### GitHub App installation tokens — k3s sidecar (future, #44)
+### GitHub App installation tokens — k3s sidecar (future, #199)
 
 The long-term plan. One GitHub App per project (`homelab-oc-app`, `prospera-oc-app`), each installed on its target repo. The official `ghcr.io/github/github-mcp-server` container runs as a k3s sidecar in the same pod as the OC instance. The OC instance connects via `type: "remote"` to `http://localhost:8082`.
 
@@ -227,7 +227,7 @@ The App's private key is injected into the sidecar container as a Kubernetes Sec
 }
 ```
 
-### Future: k3s sidecar + GitHub App (#44)
+### Future: k3s sidecar + GitHub App (#199)
 
 ```jsonc
 {
@@ -251,7 +251,7 @@ The `GH_PAT` is stored in Azure Key Vault (`homelab-bysxdb-kv`) as `opencode-<in
 
 ### Future (GitHub App)
 
-Under k3s ([#44](https://github.com/jaroslaw-bagnicki/Homelab/issues/44)), the App private key will be stored as a Kubernetes Secret and mounted into the sidecar container specification. Installation tokens are generated at runtime with a 1-hour TTL — no long-lived credentials in the cluster or the pod.
+Under k3s ([#199](https://github.com/jaroslaw-bagnicki/Homelab/issues/44)), the App private key will be stored as a Kubernetes Secret and mounted into the sidecar container specification. Installation tokens are generated at runtime with a 1-hour TTL — no long-lived credentials in the cluster or the pod.
 
 ## Context bloat warning
 

@@ -1,22 +1,22 @@
 # Provision a New OpenCode Instance
 
-> Runbook for adding a new per-project OpenCode server instance on Cloudlab — extends the initial deployment from [runbook 17](17-deploy-opencode-on-cloudlab.md).
+> Runbook for adding a new per-project OpenCode server instance on `lab` (migrated from cloudlab — [runbook 47](47-migrate-cloudlab-docker-to-lab.md)) — extends the initial deployment from [runbook 17](17-deploy-opencode-on-lab.md).
 
 > **Note:** `example.com` is a placeholder domain used in this runbook for documentation purposes. Replace with the actual domain when following these steps for a real deployment.
 
 ## Prerequisites
 
-- [ ] At least one OpenCode instance already deployed (see [runbook 17](17-deploy-opencode-on-cloudlab.md))
+- [ ] At least one OpenCode instance already deployed (see [runbook 17](17-deploy-opencode-on-lab.md))
 - [ ] `homelab-bysxdb-kv` Key Vault accessible from the Ansible controller with write access (Key Vault Secrets Officer RBAC role)
 - [ ] Ansible collections installed: `community.docker`, `azure.azcollection`
-- [ ] SSH access to `cloudlab` via `ansible_user: fleetadm`
+- [ ] SSH access to `lab` via `ansible_user: fleetadm` (from a LAN workstation)
 - [ ] A dedicated inference provider API key for the new instance (see [Choosing a provider](#4-choose-a-model-provider))
 
 ---
 
 ## 1. Add instance entry to inventory
 
-Edit `ansible/host_vars/cloudlab.yml` and add a new entry under `opencode_instances`:
+Edit `ansible/host_vars/lab.yml` and add a new entry under `opencode_instances`:
 
 ```yaml
 opencode_instances:
@@ -27,7 +27,7 @@ opencode_instances:
 
 The instance name becomes the container name (`opencode-<name>`), the subdomain (`<name>-oc.example.com`), and the AKV secret name suffix.
 
-The `example.com` literal reflects the cloudlab deployment. The `opencode_public_domain` Ansible var controls it; substitute when targeting a different host. The `oc` suffix is hardcoded in the Caddyfile template.
+The `example.com` literal is a placeholder; the `opencode_public_domain` Ansible var (in `host_vars/lab.yml`) controls the deployed domain. The `oc` suffix is hardcoded in the Caddyfile template.
 
 ---
 
@@ -116,7 +116,7 @@ Future investigation: encrypting selected Docker volumes at rest (e.g., via LUKS
 
 ## Related
 
-- [Runbook 17 — Deploy OpenCode on Cloudlab](17-deploy-opencode-on-cloudlab.md)
+- [Runbook 17 — Deploy OpenCode on Cloudlab](17-deploy-opencode-on-lab.md)
 - [ADR 18 — Host OpenCode Server Instances on Homelab](../decisions/18-opencode-sandbox.md)
 - [Workload README — OpenCode](../../ansible/workloads/opencode/README.md)
 - [Issue #37 — Configure model providers for OpenCode instances](https://github.com/jaroslaw-bagnicki/Homelab/issues/37)

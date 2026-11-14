@@ -15,6 +15,9 @@
     - ca_trust
     - security
     - docker_host
+    # Intermediate migration step (#44, ADR 22): the cloudlab Docker stack runs
+    # as-is on lab; the docker_host → k3s_host role swap is postponed (runbook 47).
+    - docker_services
     - azure_arc
     - nut_client
     - netdata

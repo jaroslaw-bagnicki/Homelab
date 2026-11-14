@@ -1,15 +1,15 @@
-# Zot Container Registry on Cloudlab
+# Zot Container Registry on lab
 
-> Runbook for the `ansible/workloads/zot/` workload — self-hosted OCI registry on cloudlab per [issue #50](https://github.com/jaroslaw-bagnicki/Homelab/issues/50). Workload description, capabilities, services, host layout, secret handling, and idempotency live in [the workload README](../../ansible/workloads/zot/README.md). This runbook covers the operational steps: prerequisites, secret provisioning, deploy invocation, Cloudflare Tunnel routing, and verification.
+> Runbook for the `ansible/workloads/zot/` workload — self-hosted OCI registry on `lab` per [issue #50](https://github.com/jaroslaw-bagnicki/Homelab/issues/50) (migrated from cloudlab as-is — [runbook 47](47-migrate-cloudlab-docker-to-lab.md)). Workload description, capabilities, services, host layout, secret handling, and idempotency live in [the workload README](../../ansible/workloads/zot/README.md). This runbook covers the operational steps: prerequisites, secret provisioning, deploy invocation, Cloudflare Tunnel routing, and verification.
 
 > **Note:** `example.com` is a placeholder domain used throughout this runbook for documentation purposes only — it is **not** the deployed domain. The actual registry hostname is `zot.<domain>`, where `<domain>` is the Ansible `zot_public_domain` var.
 
 ## Prerequisites
 
-- [ ] Runbooks [10](10-vps-playground.md), [16](16-docker-services-ansible-role.md) completed — cloudlab has Docker, the base Compose stack (Caddy, cloudflared), and `homelab_net`.
+- [ ] Runbooks [10](10-vps-playground.md), [16](16-docker-services-ansible-role.md) completed — `lab` has Docker, the base Compose stack (Caddy, cloudflared), and `homelab_net`.
 - [ ] Ansible collections installed: `community.docker`, `community.general`, `azure.azcollection` (`ansible-galaxy collection install -r ansible/requirements.yml`).
 - [ ] `homelab-bysxdb-kv` Key Vault accessible from the Ansible controller identity.
-- [ ] SSH access to `cloudlab` via `ansible_user: fleetadm` (see [fleet-connect skill](../../.github/skills/fleet-connect)).
+- [ ] SSH access to `lab` via `ansible_user: fleetadm` from a LAN workstation on `192.168.2.0/24`.
 - [ ] Cloudflare Tunnel routing to `http://caddy:80` configured (see [ADR 19](../decisions/19-cloudflare-tunnel-http-origin.md)).
 
 ## 1. Provision secrets
@@ -39,11 +39,11 @@ Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name zot-registry-password -A
 The Zot workload is **decoupled** from the main playbook. Run two steps:
 
 ```bash
-ansible-playbook ansible/playbooks/playbook.yml                    # base setup (Caddy, tunnel, homelab_net)
+ansible-playbook ansible/playbooks/playbook-lab.yml                 # base setup (Caddy, tunnel, homelab_net)
 ansible-playbook ansible/workloads/zot/zot-playbook.yml            # Zot workload
 ```
 
-`homelab_net` is self-declared in two places — the base playbook pre_tasks and the `zot_registry` role — both idempotent, first writer wins.
+`homelab_net` is self-declared in two places — the `docker_services` Compose file and the `zot_registry` role — both idempotent, first writer wins.
 
 The `zot.example.com` route lives in the base `docker_services` Caddyfile template (the `# BEGIN/END ZOT ROUTE` block) and is applied whenever the base playbook runs, which also restarts Caddy. This is exposure Option A; the three options (Caddy reverse proxy, zot native HTTPS on host 443, direct Cloudflare Tunnel) are documented in the [workload README — External access](../../ansible/workloads/zot/README.md).
 
@@ -53,7 +53,7 @@ The deploy workflow is idempotent: running the workload twice without changes re
 
 With a token-based (remotely-managed) tunnel, public hostnames are routed in the Cloudflare Zero Trust dashboard:
 
-1. Open [Cloudflare Zero Trust](https://one.dash.cloudflare.com/) → **Networks** → **Tunnels** → the cloudlab tunnel.
+1. Open [Cloudflare Zero Trust](https://one.dash.cloudflare.com/) → **Networks** → **Tunnels** → the tunnel (now served by the `lab` connector — runbook 47).
 2. **Public Hostname** → **Add a public hostname**:
    - **Subdomain**: `zot` · **Domain**: `example.com`
    - **Service**: `HTTP` → `caddy:80`
@@ -77,7 +77,7 @@ Traffic flow: client → Cloudflare edge (TLS) → cloudflared → `http://caddy
 
 - **Auth on everything** — the registry requires the htpasswd credential for push and pull; there is no anonymous access, so the pull-through cache cannot be abused as an open proxy.
 - The `search`/`ui`/`mgmt` extensions are explicitly enabled in `config.json`. The `mgmt` extension ships with a built-in `zot-admin`/`zot-admin` admin identity for its management API — acceptable for a personal homelab, but the registry is otherwise fully authenticated. Review before widening access.
-- Data lives on the NVMe at `/var/lib/zot`; cloudlab is disposable (ADR 13), so no restic coverage is planned for the registry there.
+- Data lives at `/var/lib/zot` on `lab` — the registry moved off the disposable cloudlab VPS (runbook 47), so include it in the 3‑2‑1 backup (ADR 49).
 
 ---
 
@@ -85,7 +85,7 @@ Traffic flow: client → Cloudflare edge (TLS) → cloudflared → `http://caddy
 
 - Point the future k3s cluster (ADR 22) at the registry via containerd mirrors (`/etc/rancher/k3s/registries.yaml`) so the cluster pulls through `zot.example.com`.
 - Route the cloudlab OpenCode instances' base-image pulls through the Zot cache.
-- Port the workload to the physical homelab box after cloudlab validation (ADR 13 pattern).
+- ~~Port the workload to the physical homelab box~~ — done: the registry now runs on `lab` ([runbook 47](47-migrate-cloudlab-docker-to-lab.md)).
 - Entra ID SSO follow-up: dex bridge (interactive SSO) vs OIDC bearer (K8s/CI workload identity, ADR 16 alignment).
 
 ---

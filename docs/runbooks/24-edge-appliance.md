@@ -9,6 +9,12 @@
 > [research 25 — PL-market hardware](../research/25-edge-ingress-sbc.md),
 > [idea 04](../ideas/04-edge-device-tunnel-caddy.md). Tracked in
 > [issue #65](https://github.com/jaroslaw-bagnicki/Homelab/issues/65).
+>
+> The public tunnel (`cloudflared`) is deployed by the dedicated `cloudflared` role in
+> `playbook-edge.yml` per [ADR 53](../decisions/53-remote-access-cloudflare-tunnel-edge.md)
+> (token from AKV `cloudflared-tunnel-token-edge`, origin = this box's Caddy on loopback
+> `:80`). For moving the existing tunnel from cloudlab to edge, see
+> [runbook 47](47-migrate-cloudlab-docker-to-lab.md).
 
 > 🛟 **Snapshot before risky changes** — this box has no reinstall shortcut (the Debian Expert
 > install took ~2 h). Take a full eMMC system snapshot before any change that could break it —

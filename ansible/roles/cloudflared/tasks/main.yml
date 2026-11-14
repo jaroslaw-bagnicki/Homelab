@@ -1,0 +1,56 @@
+---
+- name: Assert inventory_hostname is in supported set
+  ansible.builtin.assert:
+    that:
+      - inventory_hostname in ['edge']
+    fail_msg: >-
+      inventory_hostname '{{ inventory_hostname }}' is not in the supported set {edge}.
+      The public tunnel lives on the edge appliance only (ADR 53).
+      Update the assertion in tasks/main.yml.
+
+- name: Download the cloudflared .deb
+  ansible.builtin.get_url:
+    url: "{{ cloudflared_deb_url }}"
+    dest: "{{ cloudflared_deb_dest }}"
+    mode: "0644"
+
+- name: Install cloudflared
+  ansible.builtin.apt:
+    deb: "{{ cloudflared_deb_dest }}"
+    state: present
+
+- name: Ensure cloudflared config directory exists
+  ansible.builtin.file:
+    path: "{{ cloudflared_config_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Set cloudflared tunnel token from Key Vault
+  vars:
+    vault_url: "https://{{ arc_keyvault_name }}.vault.azure.net"
+  ansible.builtin.set_fact:
+    cloudflared_tunnel_token: "{{ lookup('azure.azcollection.azure_keyvault_secret', cloudflared_token_secret_name, vault_url=vault_url) }}"
+  delegate_to: localhost
+  no_log: true
+
+- name: Write cloudflared .env file
+  ansible.builtin.copy:
+    content: "TUNNEL_TOKEN={{ cloudflared_tunnel_token }}\n"
+    dest: "{{ cloudflared_env_file }}"
+    mode: "0600"
+  no_log: true
+  notify: Restart cloudflared
+
+- name: Template cloudflared systemd unit
+  ansible.builtin.template:
+    src: cloudflared.service.j2
+    dest: /etc/systemd/system/cloudflared.service
+    mode: "0644"
+  notify: Restart cloudflared
+
+- name: Enable and start cloudflared
+  ansible.builtin.systemd_service:
+    name: cloudflared
+    enabled: true
+    state: started
+    daemon_reload: true

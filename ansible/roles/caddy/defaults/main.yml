@@ -23,6 +23,11 @@ caddy_after_service: dns.service
 caddy_ca_health_url: https://ca.internal:9000/health
 caddy_leaf_expiry_check_min_remaining_seconds: 21600
 
+# Public zone (ADR 53): plain-HTTP site blocks on loopback :80 — TLS terminates
+# at the Cloudflare edge, cloudflared proxies to 127.0.0.1:80 (ADR 19 pattern).
+# Each entry proxies to an origin (e.g. the lab Docker Caddy) with Host preserved.
+caddy_public_sites: []
+
 caddy_sites:
   - name: netdata.internal
     upstream: "https://192.168.2.201:19999"

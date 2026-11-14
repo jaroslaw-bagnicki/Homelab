@@ -5,7 +5,7 @@
 | | |
 |---|---|
 | **MCP packages** | PyPI: [`msmcp-azure`](https://pypi.org/project/msmcp-azure/) (recommended) · npm: [`@azure/mcp`](https://www.npmjs.com/package/@azure/mcp) |
-| **Transport** | Remote HTTP via k3s sidecar (pending [#44](https://github.com/jaroslaw-bagnicki/Homelab/issues/44)) |
+| **Transport** | Remote HTTP via k3s sidecar (pending [#199](https://github.com/jaroslaw-bagnicki/Homelab/issues/44)) |
 | **Used by** | `homelab-oc` (has dedicated SP), can be enabled for any instance |
 
 ## Transport
@@ -14,12 +14,12 @@ Azure MCP is deployed as a **remote** HTTP server running in a glibc-based sidec
 
 | Transport | Supported? | Notes |
 |---|---|---|
-| Remote (`type: "remote"`) | Planned ([#44](https://github.com/jaroslaw-bagnicki/Homelab/issues/44)) | `azmcp` sidecar in the same k3s pod, reachable via `localhost` |
+| Remote (`type: "remote"`) | Planned ([#199](https://github.com/jaroslaw-bagnicki/Homelab/issues/44)) | `azmcp` sidecar in the same k3s pod, reachable via `localhost` |
 | Local (`type: "local"`) | No — blocked | Both `msmcp-azure` and `@azure/mcp` ship a glibc binary incompatible with Alpine (musl) |
 
 ### Runtime prerequisite
 
-> **Blocker ([#41](https://github.com/jaroslaw-bagnicki/Homelab/issues/41)): Azure MCP binary is glibc-compiled — incompatible with Alpine (musl).** Both npm (`@azure/mcp`) and PyPI (`msmcp-azure`) ship the same .NET publish binary. The OC container is Alpine-based; `gcompat` starts the binary but it hangs on all MCP requests. Resolution deferred to k3s migration ([#44](https://github.com/jaroslaw-bagnicki/Homelab/issues/44), per ADR 22): `azmcp` will run as a glibc-based sidecar container in the same Kubernetes pod as the OC instance, reachable via `localhost`. No Compose intermediate step. Azure MCP is disabled in `opencode.json` until #44 lands.
+> **Blocker ([#41](https://github.com/jaroslaw-bagnicki/Homelab/issues/41)): Azure MCP binary is glibc-compiled — incompatible with Alpine (musl).** Both npm (`@azure/mcp`) and PyPI (`msmcp-azure`) ship the same .NET publish binary. The OC container is Alpine-based; `gcompat` starts the binary but it hangs on all MCP requests. Resolution deferred to k3s migration ([#199](https://github.com/jaroslaw-bagnicki/Homelab/issues/44), per ADR 22): `azmcp` will run as a glibc-based sidecar container in the same Kubernetes pod as the OC instance, reachable via `localhost`. No Compose intermediate step. Azure MCP is disabled in `opencode.json` until #199 lands.
 > 
 > **Until k3s lands, use [Azure CLI device login](#bootstrap-azure-cli-device-login) as the only Azure access path.** `az login --use-device-code` provides interactive Azure access inside the OC container via `DefaultAzureCredential` → `AzureCliCredential`. Azure MCP tools are not available; `az` commands must be issued directly.
 
@@ -56,7 +56,7 @@ These are read by `EnvironmentCredential` in the `DefaultAzureCredential` chain.
 
 ### Workload Identity (future)
 
-When Cloudlab workloads migrate to k3s + Arc (#44), the SP client-secret path is replaced by UAMI Workload Identity via federated credentials. The `DefaultAzureCredential` chain already includes `WorkloadIdentityCredential` — no MCP config changes needed at cutover.
+When Cloudlab workloads migrate to k3s + Arc (#199), the SP client-secret path is replaced by UAMI Workload Identity via federated credentials. The `DefaultAzureCredential` chain already includes `WorkloadIdentityCredential` — no MCP config changes needed at cutover.
 
 ### Managed Identity
 
@@ -85,13 +85,13 @@ No DNS, no service discovery needed. The port is configured in the sidecar conta
 
 ### SP credentials
 
-Credentials are injected into the **sidecar container**, not the OC instance. Under k3s + Workload Identity ([#44](https://github.com/jaroslaw-bagnicki/Homelab/issues/44)), no secrets are needed — the sidecar authenticates via federated identity. Until then, SP env vars are injected into the sidecar container spec from Azure Key Vault, same pattern as the [current Compose-era path](#credential-injection-homelab).
+Credentials are injected into the **sidecar container**, not the OC instance. Under k3s + Workload Identity ([#199](https://github.com/jaroslaw-bagnicki/Homelab/issues/44)), no secrets are needed — the sidecar authenticates via federated identity. Until then, SP env vars are injected into the sidecar container spec from Azure Key Vault, same pattern as the [current Compose-era path](#credential-injection-homelab).
 
 ## Examples
 
 > Azure MCP is currently **disabled** pending k3s migration. The config below is the target state.
 
-### Production (k3s, post-#44)
+### Production (k3s, post-#199)
 
 ```jsonc
 {
@@ -137,7 +137,7 @@ Credentials are never written to disk inside the container. Rotation is via `scr
 
 ## Troubleshooting
 
-**Azure MCP is disabled pending k3s migration ([#44](https://github.com/jaroslaw-bagnicki/Homelab/issues/44)).**
+**Azure MCP is disabled pending k3s migration ([#199](https://github.com/jaroslaw-bagnicki/Homelab/issues/44)).**
 The `azmcp` binary is incompatible with Alpine (musl). Until k3s lands, use `az login --use-device-code` inside the OC container for interactive Azure access. Azure MCP tools are not available.
 
 **`az login` works but Azure MCP doesn't:**

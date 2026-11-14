@@ -60,10 +60,10 @@ ansible-playbook ansible/workloads/freeipa/freeipa-playbook.yml
 | `inventory.ini` | Target hosts (`cloudlab` → `173.249.27.13`, `lab` → `192.168.2.200`) |
 | `ansible.cfg` | Inventory path, role path, SSH options |
 | `requirements.yml` | Required Ansible Galaxy collections (`ansible.posix`, `community.docker`, `community.general`, `azure.azcollection`) |
-| `playbooks/playbook.yml` | Base provision: common → security → ca_trust → azure_arc → docker_host → docker_services; pre_tasks declares `opencode_net` (`cloudlab` keeps the fleet key and SSH CA is disabled) |
+| `playbooks/playbook.yml` | Base provision: common → security → ca_trust → azure_arc → docker_host (`docker_services` moved to `playbook-lab.yml` — runbook 47; `cloudlab` keeps the fleet key and SSH CA is disabled) |
 | `playbooks/playbook-arc.yml` | Arc enrolment only (for already-configured hosts) |
-| `playbooks/playbook-lab.yml` | M910q base provision: common → ca_trust → security → docker_host → azure_arc → nut_client → netdata → fluentbit (no `docker_services` — see below) |
-| `playbooks/playbook-edge.yml` | Wyse 3040 edge base provision: common → ca_trust → security → corosync_qnetd → edge_host → technitium → caddy → nut_client → netdata → fluentbit (bare-metal, no Docker/Arc — ADR 24) |
+| `playbooks/playbook-lab.yml` | M910q base provision: common → ca_trust → security → docker_host → docker_services → azure_arc → nut_client → netdata → fluentbit (`docker_services` runs here since the cloudlab → lab migration — runbook 47) |
+| `playbooks/playbook-edge.yml` | Wyse 3040 edge base provision: common → ca_trust → security → corosync_qnetd → edge_host → technitium → caddy → cloudflared → nut_client → netdata → fluentbit (bare-metal, no Docker/Arc — ADR 24; `cloudflared` = public tunnel, ADR 53) |
 | `playbooks/playbook-technitium.yml` | Targeted: the `technitium` role only — DNS server and host resolver (runbook 37) |
 | `playbooks/playbook-caddy.yml` | Targeted: the `caddy` role only — LAN reverse proxy and ACME (runbook 37) |
 | `playbooks/playbook-ca-trust.yml` | Targeted: the `ca_trust` role only — fleet CA root and SSH CA public keys, `ca` excluded (runbooks 39/40) |
@@ -85,7 +85,7 @@ ansible-playbook ansible/workloads/freeipa/freeipa-playbook.yml
 
 Each workload in `ansible/workloads/<workload>/` is a self-contained recipe that can run independently of the base playbook (after base setup has been applied). See [`docs/workloads.md`](../docs/workloads.md) for the index and convention rules.
 
-Currently: [OpenCode](workloads/opencode/README.md) — per-project OpenCode server instances on cloudlab; [VictoriaLogs](workloads/victorialogs/README.md) — the Tier B log store on the `vtstack` guest; [step-ca](workloads/step-ca/README.md) — the private CA on the `ca` guest; [FreeIPA](workloads/freeipa/README.md) — the Linux domain on the `ipa` VM.
+Currently: [OpenCode](workloads/opencode/README.md) — per-project OpenCode server instances on `lab`; [VictoriaLogs](workloads/victorialogs/README.md) — the Tier B log store on the `vtstack` guest; [step-ca](workloads/step-ca/README.md) — the private CA on the `ca` guest; [FreeIPA](workloads/freeipa/README.md) — the Linux domain on the `ipa` VM.
 
 ## Roles
 
@@ -95,10 +95,10 @@ Base shared roles live in [`roles/`](roles/README.md). The [roles index](roles/R
 
 | Playbook | Roles | When to use |
 |---|---|---|
-| `playbook.yml` | common → security → ca_trust → azure_arc → docker_host → docker_services | First-time VPS provision after initial SSH hardening; `cloudlab` keeps the fleet key and SSH CA is disabled (see [runbook 10](../docs/runbooks/10-vps-playground.md)) |
+| `playbook.yml` | common → security → ca_trust → azure_arc → docker_host | First-time VPS provision after initial SSH hardening; `cloudlab` keeps the fleet key and SSH CA is disabled; the Docker workload stack moved to `lab` (runbook 47) — see [runbook 10](../docs/runbooks/10-vps-playground.md) |
 | `playbook-arc.yml` | azure_arc | Adding Arc to an already-configured host |
-| `playbook-lab.yml` | common → ca_trust → security → docker_host → azure_arc → nut_client → netdata → fluentbit | M910q base provision after the 24.04 reinstall (see [runbook 25](../docs/runbooks/25-m910q-os-refresh.md)) |
-| `playbook-edge.yml` | common → ca_trust → security → corosync_qnetd → edge_host → technitium → caddy → nut_client → netdata → fluentbit | Wyse 3040 edge base provision (see [runbook 24](../docs/runbooks/24-edge-appliance.md)) |
+| `playbook-lab.yml` | common → ca_trust → security → docker_host → docker_services → azure_arc → nut_client → netdata → fluentbit | M910q base provision after the 24.04 reinstall (see [runbook 25](../docs/runbooks/25-m910q-os-refresh.md)); hosts the Docker workload stack migrated from cloudlab (runbook 47) |
+| `playbook-edge.yml` | common → ca_trust → security → corosync_qnetd → edge_host → technitium → caddy → cloudflared → nut_client → netdata → fluentbit | Wyse 3040 edge base provision + public tunnel (see [runbook 24](../docs/runbooks/24-edge-appliance.md), [ADR 53](../docs/decisions/53-remote-access-cloudflare-tunnel-edge.md)) |
 | `playbook-technitium.yml` | technitium | Re-apply only the DNS server and host resolver on `edge` (see [runbook 37](../docs/runbooks/37-deploy-internal-access-stack.md)) |
 | `playbook-caddy.yml` | caddy | Re-apply only the reverse proxy and its sites on `edge` (see [runbook 37](../docs/runbooks/37-deploy-internal-access-stack.md)) |
 | `playbook-netdata.yml` | netdata | Re-apply only Netdata on `pve1`, `pve2`, `lab`, `nas`, `edge` (see [runbook 31](../docs/runbooks/31-deploy-netdata.md)) |
@@ -109,7 +109,7 @@ Base shared roles live in [`roles/`](roles/README.md). The [roles index](roles/R
 | `playbook-router.yml` | opnsense (REST API — `connection: local`, `gather_facts: false`) | OPNsense router onboarding — `os-netdata` plugin + syslog-ng destination (see [runbook 45](../docs/runbooks/45-deploy-opnsense.md) §13); a FreeBSD per-OS exception |
 | `playbook-ca.yml` | common → security → fluentbit | Private CA guest (`ca`, LXC 215) base provision — Debian 13 LXC on `pve1`; rerun after the CA starts for the host certificate (see [runbook 35](../docs/runbooks/35-deploy-step-ca.md) / [runbook 40](../docs/runbooks/40-deploy-ssh-certificates.md)) |
 | `playbook-ipa.yml` | ipa_host | FreeIPA server VM (`ipa`, VM 216) base provision — Fedora/RHEL-family hostname/FQDN, chrony, firewalld, fleet key, fleet resolver (see [runbook 41](../docs/runbooks/41-deploy-freeipa-server.md)) |
-| `workloads/opencode/opencode-playbook.yml` | docker_opencode_ingress → docker_opencode_instances | Deploy the OpenCode per-project server workload (see [runbook 17](../docs/runbooks/17-deploy-opencode-on-cloudlab.md)) |
+| `workloads/opencode/opencode-playbook.yml` | docker_opencode_ingress → docker_opencode_instances | Deploy the OpenCode per-project server workload on `lab` (see [runbook 17](../docs/runbooks/17-deploy-opencode-on-lab.md)) |
 | `workloads/step-ca/step-ca-playbook.yml` | step_ca | Deploy the private CA (`step-ca`) with a TPM-bound intermediate and SSH CA (see [runbook 35](../docs/runbooks/35-deploy-step-ca.md) / [runbook 36](../docs/runbooks/36-private-ca-init.md) / [runbook 40](../docs/runbooks/40-deploy-ssh-certificates.md)) |
 | `workloads/freeipa/freeipa-playbook.yml` | freeipa_server | Install the FreeIPA server with an external CA (see [runbook 41](../docs/runbooks/41-deploy-freeipa-server.md)) |
 

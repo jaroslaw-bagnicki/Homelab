@@ -13,7 +13,7 @@ supersedes ADR 02's Azure Blob target)
 the lab was a single M910q with no local backup target — the cloud copy was effectively the *only*
 second copy. Since then the lab grew a real local target: the **Beetle M‑III NAS** with `md0` RAID1,
 1 TB usable ([ADR 29](29-nas-backup-target-beetle-m3-omv.md)), plus `vzdump` for the `pve1`/`pve2`
-guests, Longhorn-to-NFS planned for k3s (#44/#62), `ipa-backup` (#164) and Authentik dumps (#165) to
+guests, Longhorn-to-NFS planned for k3s (#199/#62), `ipa-backup` (#164) and Authentik dumps (#165) to
 the NAS. What does not exist anywhere is a stated **rule** — nothing says how many copies must exist
 or where they may live, and ADR 02 still reads *In Progress* while the restic redo sits dormant
 ([#13](https://github.com/jaroslaw-bagnicki/Homelab/issues/13), "Not Scheduled" in
@@ -34,7 +34,7 @@ Adopt the **3‑2‑1 rule** as the lab's backup policy:
 
 Tooling and retention are unchanged from ADR 02: **Restic** (encrypted, deduplicated) for host/file
 data with daily ×7 / weekly ×4 / monthly ×6; **`vzdump`** → NAS for Proxmox guests, the NAS copy then
-replicated to the off-site bucket as copy 3; Longhorn → NFS on `nas` for k3s volumes once #44 lands;
+replicated to the off-site bucket as copy 3; Longhorn → NFS on `nas` for k3s volumes once #199 lands;
 `ipa-backup` and the Authentik dump pair land on the NAS. Logs stay out of backup scope by design
 (#123 — 30‑day VictoriaLogs retention).
 

@@ -16,7 +16,7 @@ Backblaze B2 pricing page (2026‑11)
 "Not Scheduled" row in [overview](../overview.md)) · [runbook 07](../runbooks/07-restic-backup.md) ·
 [ADR 29](../decisions/29-nas-backup-target-beetle-m3-omv.md) (NAS backup target) ·
 [idea 17](17-truenas-vs-omv-nas-os.md) / [#187](https://github.com/jaroslaw-bagnicki/Homelab/issues/187)
-(OMV→TrueNAS migration — the NAS leg changes shape if it lands) · [#44](https://github.com/jaroslaw-bagnicki/Homelab/issues/44)
+(OMV→TrueNAS migration — the NAS leg changes shape if it lands) · [#199](https://github.com/jaroslaw-bagnicki/Homelab/issues/44)
 (k3s/Longhorn backup target on the NAS) · [#164](https://github.com/jaroslaw-bagnicki/Homelab/issues/164)
 (FreeIPA `ipa-backup` to the NAS) · [#62](https://github.com/jaroslaw-bagnicki/Homelab/issues/62)
 (Longhorn NFS backup target) · [research 41](../research/41-machine-identity-kerberos.md) (PBS/vzdump
@@ -42,7 +42,7 @@ paths to the NAS)
   backup target (ADR 50).
 - **Proxmox guests on `pve1`/`pve2`**: `vzdump` → NAS (NFS/SMB datastore) as copy 2; the NAS copy then
   replicated to B2 by Restic (or PBS later — research 41) as copy 3.
-- **k3s/Longhorn volumes** (once #44 lands): Longhorn backup target = NFS export on `nas` (#62), then
+- **k3s/Longhorn volumes** (once #199 lands): Longhorn backup target = NFS export on `nas` (#62), then
   to B2.
 - **FreeIPA** (#164 M2): `ipa-backup` artefact to the NAS. **Authentik** (#165 M6): PostgreSQL dump +
   `AUTHENTIK_SECRET_KEY` pair to the NAS.

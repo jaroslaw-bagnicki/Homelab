@@ -1,18 +1,21 @@
-http://cloud5.ovh {
-    respond "cloudlab — {host} — {time.now}"
+# Origin Caddy for the public zone: the edge Caddy proxies here on :8080 with
+# Host preserved (ADR 53), so all site blocks listen on :8080.
+http://cloud5.ovh:8080 {
+    respond "lab — {host} — {time.now}"
 }
 
-http://hello.cloud5.ovh {
+http://hello.cloud5.ovh:8080 {
     reverse_proxy hello:80
 }
 
-http://portainer.cloud5.ovh {
+http://portainer.cloud5.ovh:8080 {
     reverse_proxy portainer:9000 {
         header_up X-Forwarded-Proto https
     }
 }
 
-:80 {
+# Catch-all on the published origin port: OpenCode wildcard instances.
+:8080 {
     route {
         @oc expression {http.request.host}.endsWith('-oc.{{ opencode_public_domain }}')
         reverse_proxy @oc http://caddy-opencode:80 {
@@ -26,12 +29,13 @@ http://portainer.cloud5.ovh {
     }
 }
 
-:8080 {
+# In-container debug endpoint (not published on the host).
+:80 {
     respond "Caddy debug: OK"
 }
 
 # BEGIN ZOT ROUTE
-http://zot.{{ zot_public_domain }} {
+http://zot.{{ zot_public_domain }}:8080 {
     reverse_proxy zot:5000
 }
 # END ZOT ROUTE
