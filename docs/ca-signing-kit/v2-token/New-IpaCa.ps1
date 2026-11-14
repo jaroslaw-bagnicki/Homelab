@@ -4,14 +4,15 @@
 $ErrorActionPreference = 'Stop'
 if (-not $IsLinux) { throw 'Run this inside WSL, where the key is attached.' }
 
-$env:PATH = "$PSScriptRoot`:$env:PATH"          # lets step find step-kms-plugin
+$kit = if (Test-Path "$PSScriptRoot/step") { $PSScriptRoot } else { Split-Path $PSScriptRoot -Parent }
+$env:PATH = "${kit}:$env:PATH"          # lets step find step-kms-plugin
 $mod  = '/usr/lib/x86_64-linux-gnu/opensc-pkcs11.so'
 $csr  = "$PSScriptRoot/ipa.csr"
 $root = "$PSScriptRoot/root_ca.crt"
 $tpl  = "$PSScriptRoot/ipa-ca.tpl"
 $out  = "$PSScriptRoot/ipa-ca.crt"
 $tmp  = "$out.new"
-$step = "$PSScriptRoot/step"
+$step = "$kit/step"
 
 foreach ($f in $csr, $root, $tpl) {
     if (-not (Test-Path $f)) { throw "missing: $f" }

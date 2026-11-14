@@ -6,7 +6,8 @@
 $ErrorActionPreference = 'Stop'
 if (-not $IsLinux) { throw 'Run this inside WSL, where the key is attached.' }
 
-$env:PATH = "$PSScriptRoot`:$env:PATH"          # lets step find step-kms-plugin
+$kit = if (Test-Path "$PSScriptRoot/step") { $PSScriptRoot } else { Split-Path $PSScriptRoot -Parent }
+$env:PATH = "${kit}:$env:PATH"          # lets step find step-kms-plugin
 $mod = '/usr/lib/x86_64-linux-gnu/opensc-pkcs11.so'
 
 # PKCS#11 answering at all means USB, pcscd, CCID, udev and the sandbox are all fine —
@@ -42,11 +43,11 @@ See research 54 §9.
 }
 "  applet CCC 5FC107 present"
 
-& "$PSScriptRoot/step" version | Out-Null
+& "$kit/step" version | Out-Null
 if (-not (Get-Command step-kms-plugin -ErrorAction SilentlyContinue)) {
     throw 'step-kms-plugin is missing from the kit — see 01-setup.md'
 }
-"  step   $(((& "$PSScriptRoot/step" version) -split "`n")[0].Trim())"
+"  step   $(((& "$kit/step" version) -split "`n")[0].Trim())"
 
 $objects = pkcs11-tool --module $mod --list-objects --type privkey 2>&1
 if ($objects -match 'Homelab Root CA') {

@@ -231,7 +231,7 @@ openssl req -in ipa.csr -noout -subject
 On the **workstation**, with the uTrust token attached (WSL via `usbipd`, or Windows — no air-gap
 needed, the root key is non-exportable on the token; [runbook 46](46-adopt-utrust-piv-root-custody.md)):
 
-1. Copy the signing kit to a real filesystem and set it up — [01-setup.md](../ca-signing-kit/01-setup.md).
+1. Copy the signing kit to a real filesystem and set it up — [01-setup.md](../ca-signing-kit/v2-token/01-setup.md).
 2. Put `ipa.csr` in the kit directory.
 3. Run `./New-IpaCa.ps1` — the PIV PIN is prompted by PC/SC per signature.
 
@@ -385,4 +385,4 @@ Write into the runbook/report:
 
 - [ADR 42](../decisions/42-pki-topology-sibling-cas.md) · [ADR 43](../decisions/43-freeipa-domain-realm.md) · [research 51](../research/51-freeipa-dogtag-tpm-custody.md) (parked TPM work)
 - [Runbook 28](28-pve1-proxmox-node.md) (pve1) · [runbook 35](35-deploy-step-ca.md) (TPM LXC pattern) · [runbook 40](40-deploy-ssh-certificates.md) (SSH trust)
-- [Signing kit](../ca-signing-kit/README.md) · [FreeIPA documentation](https://www.freeipa.org/page/Documentation)
+- [Signing kit](../ca-signing-kit/v2-token/README.md) · [FreeIPA documentation](https://www.freeipa.org/page/Documentation)

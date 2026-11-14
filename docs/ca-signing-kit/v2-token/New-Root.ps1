@@ -6,10 +6,11 @@ param([switch]$Force)
 $ErrorActionPreference = 'Stop'
 if (-not $IsLinux) { throw 'Run this inside WSL, where the key is attached.' }
 
-$env:PATH = "$PSScriptRoot`:$env:PATH"
+$kit = if (Test-Path "$PSScriptRoot/step") { $PSScriptRoot } else { Split-Path $PSScriptRoot -Parent }
+$env:PATH = "${kit}:$env:PATH"
 $mod  = '/usr/lib/x86_64-linux-gnu/opensc-pkcs11.so'
 $root = "$PSScriptRoot/root_ca.crt"
-$step = "$PSScriptRoot/step"
+$step = "$kit/step"
 
 if ((Test-Path $root) -and -not $Force) {
     throw "root_ca.crt already exists. Creating the root again is a trust rotation, not a re-run. Use New-Intermediate.ps1, or pass -Force if you really are reissuing."

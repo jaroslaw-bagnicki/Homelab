@@ -89,7 +89,7 @@ this root later when checking trust stores.
 ## What you end up with
 
 `root_ca.crt` — public, and the trust anchor distributed to the fleet and workstations by
-[runbook 39](../runbooks/39-trust-private-ca.md).
+[runbook 39](../../runbooks/39-trust-private-ca.md).
 
 The private key has **no file anywhere**. The only copy is inside the uTrust Security Key. That is the
 point of the whole design: there is nothing to leak and nothing to destroy.
@@ -100,7 +100,7 @@ An on-card-generated root has no exportable copy, so a single uTrust Security Ke
 another reissue. If you want a backup, generate the root key in software **once**, import it into
 **two** uTrust Security Keys, and destroy the software file immediately. Decide that before running
 this script — it changes the ceremony — and record the choice in
-[research 54](../research/54-utrust-fido2-nfc-piv-root-diagnostic.md).
+[research 54](../../research/54-utrust-fido2-nfc-piv-root-diagnostic.md).
 
 ## When it refuses
 

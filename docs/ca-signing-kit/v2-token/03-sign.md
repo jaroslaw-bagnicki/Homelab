@@ -67,9 +67,9 @@ Carry back the public certificates and put the uTrust Security Key in the safe:
 
 | File | Goes to |
 |---|---|
-| `intermediate_ca.crt` | [runbook 35 §7](../runbooks/35-deploy-step-ca.md) |
-| `ipa-ca.crt` | [runbook 41](../runbooks/41-deploy-freeipa-server.md) |
-| `root_ca.crt` | [runbook 39](../runbooks/39-trust-private-ca.md), if the root changed |
+| `intermediate_ca.crt` | [runbook 35 §7](../../runbooks/35-deploy-step-ca.md) |
+| `ipa-ca.crt` | [runbook 41](../../runbooks/41-deploy-freeipa-server.md) |
+| `root_ca.crt` | [runbook 39](../../runbooks/39-trust-private-ca.md), if the root changed |
 
 ## Options
 
@@ -86,7 +86,7 @@ The input and output filenames are fixed — `intermediate_ca.csr` → `intermed
 
 | Symptom | Meaning |
 |---|---|
-| `The intermediate CSR … is missing` | Bring the file the CA host produced — [runbook 35 §6](../runbooks/35-deploy-step-ca.md). |
+| `The intermediate CSR … is missing` | Bring the file the CA host produced — [runbook 35 §6](../../runbooks/35-deploy-step-ca.md). |
 | `No uTrust Security Key found` | The key is not plugged in, or `pcscd` is not running. |
 | `step-kms-plugin was not found on PATH` | The plugin is missing from the kit — [01-setup.md](01-setup.md). |
 | `This certificate is not fit to install` | A check failed. Nothing was trusted; re-signing is safe. |
