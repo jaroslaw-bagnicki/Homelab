@@ -1,18 +1,19 @@
 # Changelog
 
-Notable changes to the Homelab repo, newest first. This log supersedes the
-"What's Done" table that used to live in the root `README.md`. Entries carry a
+Notable changes to the Homelab repo, newest first. This log supersedes the  
+"What's Done" table that used to live in the root `README.md`. Entries carry a  
 `(type)` prefix describing what the change delivers — `feat`, `fix`, `docs`, `chore`, `refactor`.
 
 **One line per entry, one entry per workstream.** State what changed and link one artefact — the
-rationale, measurements and configuration detail live in the linked ADR, runbook or report. Headline
-plus at most one clause, under ~200 characters: if it will not fit on one line, it is not a changelog
-entry. Notable changes only: no instruction-file tweaks, typo/link fixes, cross-reference or rename
-corrections, or changelog bookkeeping.
+rationale, measurements and configuration detail live in the linked ADR, runbook or report. Headline  
+plus at most one clause, under ~200 characters: if it will not fit on one line, it is not a changelog  
+entry. Notable changes only: no instruction-file tweaks, typo/link fixes, cross-reference or rename  
+corrections, or changelog bookkeeping.  
 Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month and newest entry first.
 
 ## 2026‑11
 
+- **(docs)** Adopt the 3‑2‑1 backup rule with Backblaze B2 as the off-site target, superseding ADR 02's Azure Blob — [ADR 49](docs/decisions/49-backup-3-2-1-strategy.md)
 - **(fix)** Sign the FreeIPA CA for 1 year and make the signing kit's air-gap advisory — the IronKey stays root custody — [runbook 41](docs/runbooks/41-deploy-freeipa-server.md)
 - **(docs)** Adopt OPNsense on the Futro S930 as the LAN router, routing-first — [ADR 48](docs/decisions/48-lan-router-futro-s930.md)
 - **(feat)** Stand up `pve2` as the second Proxmox node — `pve` → `pve1`, the NAS moved to `.209`, the two-node `homelab` cluster with an `edge` QDevice, and `proxmox.internal` failover — [runbook 42](docs/runbooks/42-pve2-proxmox-node.md) · [runbook 43](docs/runbooks/43-proxmox-cluster-qdevice.md)
