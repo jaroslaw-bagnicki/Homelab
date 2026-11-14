@@ -248,6 +248,50 @@ sudo journalctl -u homelab-ssh-host-cert-renew -n 20
 >   **host-side** fault, not a guest one — so the `pve1`/`lab`/`edge`/`nas` certificates carry a `notBefore`
 >   6 h in the past and a slightly short 7-day window. Harmless now; the check that matters is
 >   `timedatectl` on `pve1` (chrony active, `System clock synchronized: yes`), never inside the CA guest.
+
+> **Execution record:** 2026-11-14 — **renewal restored after the `-f` flag-order bug.**
+> Every certificate-enabled node had lapsed (`ca`/`vtstack` since 2026-11-07, `pve1`/`edge`/`pve2` on
+> 2026-11-14) because `step ssh renew -f <cert> <key>` was rejected with `too many positional arguments`
+> on every daily run since the timer shipped. Re-issued one node at a time with `--diff`, in the order
+> `ca` → `vtstack` → `pve2` → `pve1` → `edge` → `lab`:
+>
+> | Node | Playbook | Result |
+> |---|---|---|
+> | `ca` | `playbook-ca.yml` | `ok=63 changed=8 failed=0` |
+> | `vtstack` | `playbook-logs.yml` | `ok=87 changed=8 failed=0` |
+> | `pve2` | `playbook-pve2.yml` | `ok=100 changed=8 failed=0` |
+> | `pve1` | `playbook-pve1.yml` | `ok=121 changed=8 failed=0` |
+> | `edge` | `playbook-edge.yml` | `failed=0` (output truncated; verified on the node) |
+> | `lab` | `playbook-lab.yml` | `ok=51 failed=1` → retry `ok=117 changed=9 failed=0` |
+>
+> All six now carry a certificate valid to **2026-11-21** and the corrected script
+> (`step ssh renew "$CERT" "$KEY" -f`). Stale `failed` states were cleared with
+> `systemctl reset-failed homelab-ssh-host-cert-renew.service`.
+>
+> **The timer's own renewal path is now proven.** The 2026-10-31 record only exercised the *role*, which
+> re-issues on the controller — that is why the flag bug shipped. On the `pve2` canary, forcing
+> `THRESHOLD=999999` and running `/usr/local/sbin/homelab-ssh-host-cert-renew` renewed through SSHPOP
+> (`exit=0`, new expiry, `host certificate renewed` in the journal), then the threshold was restored to
+> `176400` and a no-op run exited 0.
+>
+> Two failures during the rollout, neither caused by the fix:
+>
+> - **`lab` first failed with `REMOTE HOST IDENTIFICATION HAS CHANGED`** — `known_hosts` held a stale
+>   ECDSA key for `192.168.2.200`. Removed with `ssh-keygen -R 192.168.2.200`; the fleet `@cert-authority`
+>   line is unaffected.
+> - **`lab`'s retry then failed the controller CA-health guard** (`step ca health` → non-zero) while the
+>   CA was demonstrably healthy — a transient `ca.internal` resolution blip on the controller, the same
+>   one that intermittently breaks `Get-HomelabSshAgentCert.ps1`. A plain re-run succeeded.
+>
+> **Controller environment note:** `azure.azcollection` **4.2.0** (installed 2026-11-08 in
+> `~/.ansible/collections`) requires `azure-cli-core==2.91.0`, which is not installed, so its
+> `azure_keyvault_secret` lookup dies with `name 'azure_cloud' is not defined` and every playbook that
+> reads a Key Vault secret fails. Until that dependency is installed or 4.2.0 removed, run with the
+> system collection first:
+>
+> ```powershell
+> $env:ANSIBLE_COLLECTIONS_PATH='/usr/lib/python3/dist-packages/ansible_collections:/home/vscode/.ansible/collections/ansible_collections'
+> ```
 > - **Losing `ssh-agent` mid-run** costs a playbook: every task fails `Permission denied (publickey)`.
 >   Start the agent on a fixed socket (`ssh-agent -a /tmp/fleet-ssh-agent.sock`) so it survives terminal
 >   churn, and export `SSH_AUTH_SOCK` in each new shell.
