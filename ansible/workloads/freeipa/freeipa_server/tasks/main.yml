@@ -1,9 +1,9 @@
 ---
-- name: Assert the FreeIPA workload targets a Fedora or RHEL-family guest
+- name: Assert the FreeIPA workload targets a RHEL-family guest
   ansible.builtin.assert:
     that:
-      - ansible_os_family == 'RedHat'
-    fail_msg: "freeipa_server targets Fedora or a RHEL-family host."
+      - ansible_facts['os_family'] == 'RedHat'
+    fail_msg: "freeipa_server targets a RHEL-family host (Rocky Linux 9)."
 
 - name: Install the FreeIPA server packages
   ansible.builtin.dnf:

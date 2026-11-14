@@ -81,8 +81,10 @@ one HBAC rule and one `sudo` rule → the fleet.
 PKCS#11 keys are parked — see [research 51](../research/51-freeipa-dogtag-tpm-custody.md). Revisit a
 Dogtag-supported HSM only if hardware-backed CA custody becomes a requirement.
 
-**Guest OS:** Fedora 45 Cloud, pinned by build. Fedora's ~13-month lifecycle means a major upgrade
-every 6–12 months; major upgrades wait until **M2** (`ipa-backup` + rehearsed restore) has passed.
+**Guest OS:** Rocky Linux 9 Cloud, pinned by build. Python 3.9 is supported by every `ansible-core`
+release — Fedora was dropped because Fedora 45's Python 3.15 breaks every Ansible module, and Rocky is
+supported through 2032, so a major upgrade is not a domain-controller downtime event
+([ADR 43](../decisions/43-freeipa-domain-realm.md) amendment, 2026-11-14).
 
 Decided at install time, not later:
 

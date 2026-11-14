@@ -3,6 +3,7 @@
 **Date:** 2026-10-25  
 **Status:** Accepted  
 **Amended:** 2026-11-07 — the server moves from `pve1` to `pve2` (VM 250, `.250`): `pve1`'s memory cannot carry it beside the Home Assistant guests, which are pinned there by the Zigbee coordinator. See the amendment note below.
+**Amended:** 2026-11-14 — the guest OS is Rocky Linux 9, not Fedora 45: no `ansible-core` release can manage Fedora 45's Python 3.15. See the second amendment note below.
 
 ---
 
@@ -154,6 +155,37 @@ Unchanged: the realm, the DNS authority, the CA relation, the WebUI-direct rule,
 break-glass path and the rollout order. [ADR 44](44-authentik-identity-provider.md) is amended in the same
 change — the IdP follows the domain to `pve2`, because a domain and its IdP on separate nodes buys a
 second failure mode rather than redundancy.
+
+### Amendment — 2026-11-14
+
+**The guest OS is Rocky Linux 9, not Fedora 45.** Fedora 45 cannot be managed by Ansible, at any
+`ansible-core` version.
+
+Fedora 45 ships **only Python 3.15**. `ansible-core` 2.16 through **2.21.6** (the newest release that
+exists) support target Python ≤ 3.14, and every module fails at load:
+
+```
+AttributeError: module 'dataclasses' has no attribute '_is_type'
+```
+
+`dataclasses._is_type` was a private CPython symbol that 3.15 removed, and Ansible's `_patches` module
+imports it. Pointing Ansible at an older interpreter does not rescue it either — Fedora 45 builds both
+package backends **only** for 3.15 (`python(abi) = 3.15`), so `python3.14` runs modules but the `dnf`
+module then fails with `Could not import the libdnf5 python module`. There is no `python3.14-libdnf5`
+package and no PyPI wheel.
+
+Rocky Linux 9 runs **Python 3.9**, which every `ansible-core` supports, and carries **FreeIPA 4.12** in
+AppStream. Two further properties make it the better answer rather than merely the workable one:
+
+- **Supported through 2032**, so a major upgrade is not a domain-controller downtime event every 13
+  months — the lifecycle problem Fedora brought is gone, not deferred.
+- **It is what the research already chose.** [Research 46](../research/46-identity-and-access-stack.md)
+  §4 and [idea 13](../ideas/13-freeipa-domain-controller.md) both name AlmaLinux 9 / Rocky 9. Fedora was
+  the drift, introduced without an ADR.
+
+Unchanged: everything above — placement, VMID, address, realm, DNS authority, CA relation, rollout
+order. Only the distribution changes. The rebuild was free: the VM was hours old and carried nothing
+beyond cloud-init and the base role.
 
 ## References
 

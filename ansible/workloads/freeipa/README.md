@@ -29,7 +29,7 @@ The role refuses to complete Phase 2 until both signed files exist.
 | Variable | Default | Purpose |
 |---|---|---|
 | `freeipa_ca_mode` | `external` | `external` or `selfsigned` |
-| `freeipa_server_package` | `freeipa-server` | Fedora package name; override to `ipa-server` on RHEL/AlmaLinux |
+| `freeipa_server_package` | `ipa-server` | RHEL/AlmaLinux/Rocky package name; override to `freeipa-server` on Fedora |
 | `freeipa_ds_password_secret` | `freeipa-directory-manager-password` | AKV secret for Directory Manager |
 | `freeipa_admin_password_secret` | `freeipa-admin-password` | AKV secret for `admin` |
 | `freeipa_ds_password` / `freeipa_admin_password` | `""` | Override to skip the AKV lookup (tests) |
@@ -40,12 +40,12 @@ The realm, domain, FQDN and address are fixed in `defaults/main.yml` and must ma
 
 ## Base guest
 
-The role assumes `playbook-ipa.yml` has already applied `ipa_host`: Fedora 45, FQDN
+The role assumes `playbook-ipa.yml` has already applied `ipa_host`: Rocky Linux 9, FQDN
 `ipa.internal`, `/etc/hosts`, the Technitium resolver pin, chrony, firewalld LAN rules and the
 `fleetadm` key. It is **not** a Debian guest and does not use `common`/`security`.
 
-Fedora ships the server as `freeipa-server`; the role uses `freeipa_server_package` so an
-AlmaLinux/Rocky host can override it to `ipa-server` without changing the tasks.
+RHEL/AlmaLinux/Rocky ship the server as `ipa-server`; Fedora calls it `freeipa-server`. The role
+uses `freeipa_server_package` so either name works without changing the tasks.
 
 ## Deploy
 

@@ -4,12 +4,22 @@
     that:
       - ansible_os_family == 'RedHat'
     fail_msg: >-
-      ipa_host targets Fedora or a RHEL-family host; the FreeIPA server is not supported
-      on Debian/Ubuntu in this lab.
+      ipa_host targets a RHEL-family host (Rocky Linux 9); the FreeIPA server is not
+      supported on Debian/Ubuntu in this lab.
 
 - name: Set the FreeIPA FQDN
   ansible.builtin.hostname:
     name: "{{ ipa_host_fqdn }}"
+
+# cloud-init with manage_etc_hosts writes the FQDN to 127.0.0.1 and, on a
+# dual-stack guest, to ::1 as well. Both outrank DNS in nsswitch order, so the
+# FQDN would resolve to loopback (or a link-local fe80:: address) instead of the
+# guest's real address. Strip every loopback mapping before writing the real one.
+- name: Remove loopback mappings of the FreeIPA FQDN from /etc/hosts
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    regexp: '^(127\.0\.0\.1|::1)\s+.*\b{{ ipa_host_fqdn | regex_escape }}\b'
+    state: absent
 
 - name: Map the FreeIPA FQDN in /etc/hosts
   ansible.builtin.lineinfile:
@@ -144,9 +154,17 @@
   loop_control:
     label: "{{ item.port }}/{{ item.proto }}"
 
+# Verifies the /etc/hosts mapping this role owns. The Technitium A record is
+# created in §4, so a resolver query is not asserted here — §4 proves the
+# resolver, this proves the file.
+#
+# `getent ahostsv4`, not `getent hosts`: the latter queries AF_UNSPEC and lets
+# the `myhostname` NSS module answer with the interface's link-local fe80::
+# address, which is a true statement about the interface and useless as proof
+# that the FQDN maps to the LAN address.
 - name: Verify the FQDN resolves to the guest address
   ansible.builtin.command:
-    cmd: "getent hosts {{ ipa_host_fqdn }}"
+    cmd: "getent ahostsv4 {{ ipa_host_fqdn }}"
   register: ipa_host_fqdn_lookup
   changed_when: false
   failed_when: ipa_host_ip not in ipa_host_fqdn_lookup.stdout
