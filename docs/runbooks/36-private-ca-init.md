@@ -139,10 +139,12 @@ year; the root is published to Key Vault as `ca-root-cert`.
 
 - **Deployment** — [runbook 35](35-deploy-step-ca.md) installs the signed intermediate and starts `step-ca`.
 - **Distributing the root** — [#144](https://github.com/jaroslaw-bagnicki/Homelab/issues/144), out of scope.
-- **Reissuing the root onto a security token** — ADR 38's planned change, amended 2026-11-10: the uTrust
-  FIDO2 NFC USB-A (PIV slot 9C) with a **new root generated on the token**, tracked in
+- **Reissuing the root onto a security token** — ADR 38's planned change, amended 2026-11-10: a uTrust
+  FIDO2 NFC token (PIV slot 9C) with a **new root generated on the token**, tracked in
   [#193](https://github.com/jaroslaw-bagnicki/Homelab/issues/193), diagnostic in
-  [research 54](../research/54-utrust-fido2-nfc-piv-root-diagnostic.md). Because the root is reissued
+  [research 54](../research/54-utrust-fido2-nfc-piv-root-diagnostic.md). The plain-NFC 905601 was
+  rejected 2026-11-14 (its PIV applet cannot generate a key — research 54 §9); the token is the
+  **uTrust FIDO2 NFC+**. Because the root is reissued
   rather than imported, this is a full trust rotation — re-distribute the root
   ([runbook 39](39-trust-private-ca.md)), re-sign both sibling CAs, remove the old root — not a file
   move. Out of scope for this runbook.

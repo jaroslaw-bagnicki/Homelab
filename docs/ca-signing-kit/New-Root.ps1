@@ -27,7 +27,13 @@ $Label = $m.Matches[0].Groups[1].Value.Trim()
 "Write the new PIN and PUK down and put them in the safe BEFORE you start."
 "Lose them and the root is dead."
 ""
-piv-tool --admin-mode -k
+# Each command prompts for the values itself — no PIN/PUK ever appears on a command line.
+pkcs11-tool --module $mod --change-pin
+if ($LASTEXITCODE) { throw 'changing the PIV PIN failed — the factory PIN must be replaced before the root exists' }
+pkcs15-tool --change-puk
+if ($LASTEXITCODE) { throw 'changing the PIV PUK failed — the factory PUK must be replaced before the root exists' }
+pkcs11-tool --module $mod --login --login-type so --change-pin
+if ($LASTEXITCODE) { throw 'changing the management key failed — the published 3DES key must be replaced before the root exists' }
 ""
 if ((Read-Host 'PIN and PUK changed and written down? (yes/no)') -notmatch '^y') {
     throw 'Stopped. The factory credentials must be replaced before the root exists.'
@@ -36,7 +42,10 @@ if ((Read-Host 'PIN and PUK changed and written down? (yes/no)') -notmatch '^y')
 # 2. the key is generated on the card and cannot be exported
 ""
 "STEP 2 - generate the P-256 key inside slot 9C."
-pkcs11-tool --module $mod --keypairgen --key-type EC:prime256v1 --slot-id 0x9C --label 'Homelab Root CA' --login
+# --slot selects the PKCS#11 token slot; --id is the PIV object id. --always-auth keeps slot 9C's
+# PIN-per-signature policy instead of the applet default.
+pkcs11-tool --module $mod --keypairgen --key-type EC:prime256v1 --slot 0 --id 9C --label 'Homelab Root CA' --always-auth --login
+if ($LASTEXITCODE) { throw 'generating the root key on the card failed' }
 
 # 3. self-signed root certificate over that key
 ""
@@ -55,7 +64,7 @@ function Check($name, $ok) {
 }
 
 $c = & $step certificate inspect --format json $root | ConvertFrom-Json
-Check 'CN=Homelab Internal CA' $c.subject.common_name -contains 'Homelab Internal CA'
+Check 'CN=Homelab Internal CA' ($c.subject.common_name -contains 'Homelab Internal CA')
 Check 'key is P-256'           ($c.subject_key_info.ecdsa_public_key.curve -eq 'P-256')
 Check 'is a CA'                $c.extensions.basic_constraints.is_ca
 Check 'pathlen 1'              ($c.extensions.basic_constraints.max_path_len -eq 1)

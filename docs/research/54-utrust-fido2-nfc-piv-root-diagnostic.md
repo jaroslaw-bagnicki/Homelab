@@ -1,17 +1,23 @@
 # 54 — HIRSCH SECURE uTrust FIDO2 NFC USB-A as offline root custody for `step-ca` — device diagnostic
 
-**Status**: ✅ **Resolved** — the key is verified and cleared for the ceremony; the ceremony itself has not run
-**Date**: 2026-11-08 (hardware verified 2026-11-10/11)
+**Status**: ❌ **Rejected** — the 905601's PIV applet is a stub: it cannot generate a key and has no working
+admin path. Replacement token (uTrust FIDO2 NFC+) to be acquired; the ceremony has not run
+**Date**: 2026-11-08 (hardware verified 2026-11-10/11; applet capability falsified 2026-11-14 — §9)
 **Question**: Can the uTrust FIDO2 NFC USB-A (P/N 905601) hold the offline root CA key in its PIV applet
 (slot 9C) and sign the `step-ca` intermediate CSR via PKCS#11 from a workstation — the token-custody
 upgrade [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) plans (currently IronKey, planned
 YubiKey PIV)?  
+**Answer**: No — the applet cannot generate a key (§9). Acquire the NFC+ instead.  
 **Related**: [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) · [ADR 42](../decisions/42-pki-topology-sibling-cas.md) · [research 36 §4–§5](36-step-ca-machine-identity.md) · [runbook 35](../runbooks/35-deploy-step-ca.md) · [runbook 36](../runbooks/36-private-ca-init.md) · [signing kit](../ca-signing-kit/README.md) · [issue #193](https://github.com/jaroslaw-bagnicki/Homelab/issues/193)  
 
-> **This is a diagnostic log, not a deployment recipe.** Nothing has been written to the token yet —
-> the key answers over PKCS#11 and holds no root. The document analysis and the FIDO2-side readout from
+> **This is a diagnostic log, not a deployment recipe.** Nothing was ever written to the token — the
+> key answers over PKCS#11 and holds no root. The document analysis and the FIDO2-side readout from
 > Hirsch SecureFIDO Manager are in §2–§3; the PIV/PKCS#11 checks were measured on hardware on
 > 2026-11-10/11 (§4), and the five problems that stood in the way are recorded in §7.
+>
+> **⚠ Superseded by §9 (2026-11-14).** §4–§8 record a token that *answered* — AID select `9000`,
+> PKCS#11 `PIV_II`, `certutil -scinfo` seeing the card. None of that proves a usable PIV applet. §9
+> measures what the applet actually implements and rejects the 905601 on capability.
 
 ## Executive summary
 
@@ -38,15 +44,23 @@ YubiKey PIV)?
    U2F_V2 + `hmac-secret`, `rk:true`, `clientPin:true`, MIN PIN 4 / 8 retries, no USB serial descriptor,
    CCID reader enumerates under PC-SC, **no CTAP 2.1 credMgmt** (firmware is FIDO_2_0), and `certutil -scinfo`
    detects the card as `Identity Device (NIST SP 800-73 [PIV])` → **PIV applet present** (§3).
-5. **Hardware gates — all cleared 2026-11-10** (WSL 2, Ubuntu 26.04, key attached with `usbipd`):
+5. **Reachability gates — all cleared 2026-11-10** (WSL 2, Ubuntu 26.04, key attached with `usbipd`):
    PIV AID select answers `9000`, `pkcs11-tool --list-slots` lists the token as `PIV_II`, and the
    AAGUID matches the family value. **The CPLC reads `96 4D` (NXP JCOP), not `40 90` (Infineon SLE 78)**
    as the manual claims — the chip vendor is irrelevant to the ceremony, so the check was dropped from
    the kit rather than "fixed". Getting the key this far took four fixes, all recorded in
    [01-setup.md](../ca-signing-kit/01-setup.md): polkit refusal, a missing libccid device-table entry,
-   USB permissions for the `pcscd` user, and the systemd sandbox. Still wanted from Key Manager: the
-   firmware version.
+   USB permissions for the `pcscd` user, and the systemd sandbox.
+   **These gates proved *reachability*, not *capability* — see item 7 and §9.**
 6. **Decision 2026-11-10 ([issue #193](https://github.com/jaroslaw-bagnicki/Homelab/issues/193)): reissue the root on the token — do not import.** The new 10-year root is generated **in slot 9C**, so the key never exists in software. (Import would also fit — the current root is P-256, within the PIV app's ECC P-256/P-384 — but it would pass the key through workstation memory once.) Reissue deliberately accepts the one-time trust rotation ADR 38 originally rejected; ADR 38 is amended on this branch; the procedure and rotation steps are in [runbook 46](../runbooks/46-adopt-utrust-piv-root-custody.md).
+
+7. **The 905601 cannot do any of this — rejected 2026-11-14 (§9).** An independent probe falsified the
+   assumption every earlier section rests on. The applet exposes AID select, a PIN retry counter and a
+   **non-verifying** GENERAL AUTHENTICATE; it has **no Card Capability Container, no CHUID, no discovery
+   object**, and `GENERATE KEY PAIR` returns `6982` on **every** slot — before *and* after a "successful"
+   management-key authentication. No key can ever be generated on this unit. The 2026-11-11 reading
+   ("keygen disabled") was correct; the 2026-11-14 correction that called it "confounded by the PIN
+   lockout" was wrong. Replacement token required — acquire the **uTrust FIDO2 NFC+** (§9e).
 
 ## 1. Why the FIDO2 applet is out — and what the PIV applet offers
 
@@ -261,21 +275,102 @@ Two diagnostic assumptions in this document were also wrong, and were corrected 
   `96 4D … JNET` — an **NXP JCOP** secure element. Irrelevant to the ceremony, so the kit does not
   check the chip at all.
 
-## 8. Current status (2026-11-11)
+## 8. Status as of 2026-11-11 (superseded by §9)
 
 | | State |
 |---|---|
 | Key answers over PKCS#11 | ✅ reader `Identiv uTrust FIDO2 Security Key`, driver `PIV-II` |
-| PIV applet | ✅ AID select returns `9000` |
+| PIV applet | ⚠️ AID select returns `9000` — proves the applet *exists*, not that it *works* (§9) |
 | Root in slot 9C | ❌ not created — the token is still blank |
 | `Test-uTrustKey.ps1` | ✅ `key PIV_II` · `step 0.31.0` · `root no root key yet` |
-| Ceremony | ⏸ not run — `New-Root.ps1` stops at step 1 |
+| Ceremony | ⏸ not run |
 
-**Open item blocking the ceremony:** the script's step 1 calls `piv-tool --admin-mode -k`, which **does
-not exist** in this OpenSC build (`piv-tool --admin <arg>` is the authentication flag; there is no
-change-PIN/change-PUK option). The factory PIN `123456` and PUK `12345678` are published in the vendor
-manual, so the root must not be created until they are replaced — the change has to be made with
-`pkcs11-tool --change-pin` / `--set-pin`, and the exact invocation is still to be settled.
+**Open item at the time:** the script's step 1 called `piv-tool --admin-mode -k`, which does not exist
+in this OpenSC build (`piv-tool --admin <arg>` is the authentication flag; there is no
+change-PIN/change-PUK option). This turned out to be moot — there is no credential to change and no
+key to protect, because the applet cannot generate one (§9).
+
+## 9. Independent probe — the PIV applet is a stub (2026-11-14)
+
+A fresh session on the same unit, key attached via `usbipd` (busid 2-1), `pcscd` up, reader claimed.
+The probe talks raw APDUs over PC/SC (`ctypes` → `libpcsclite`), bypassing OpenSC's PKCS#11 layer so
+nothing is filtered or cached.
+
+### 9a. Management-key authentication does not verify anything
+
+This is the finding that invalidates the rest of the earlier log. The 2026-11-14 comment in
+[issue #193](https://github.com/jaroslaw-bagnicki/Homelab/issues/193) concluded that management-key auth
+"WORKS with the factory 3DES default key" because `GA 87 03 9B` returned `9000`. It does not work:
+
+| Test | Result |
+|---|---|
+| Witness request `00 87 03 9B 04 7C 02 80 00`, three times in a row | identical witness `f4 f7 d5 80 fe ad dd 88` every time — **not a challenge** |
+| Response = correct `DES-EDE3(witness)` | `9000` |
+| Response = **all zeros** | `9000` |
+| Response = **all `FF`** | `9000` |
+
+A conformant applet returns a fresh random witness per request and rejects a response it cannot
+validate. This one echoes `9000` unconditionally, so **the `9000` in the earlier log was a measurement
+artifact, not proof of admin access** — which is exactly why every admin command after it still failed.
+
+### 9b. The applet has none of the mandatory PIV data objects
+
+SP 800-73 requires these on any PIV applet. All are absent (`GET DATA` with a `5C` tag wrapper):
+
+| Object | Tag | Result |
+|---|---|---|
+| Card Capability Container | `5FC107` | `6A82` file/application not found |
+| Card Holder Unique ID | `5FC102` | `6A82` |
+| Discovery object | `7E` | `6A82` |
+| Card Application AID | `5FC101` | `6A82` |
+| Key History | `5FC10D` | `6A82` |
+| Management Key Template | `5FC109` | `6A82` |
+| `GET METADATA` 9A/9B/9C/9D/9E | — | `6A80` / `6700` — not implemented |
+
+### 9c. Every administrative command is unavailable
+
+| Command | Slots / P1 | Result |
+|---|---|---|
+| `GENERATE KEY PAIR` (`00 47`) | 9A, 9C, 9D, 9E, 82–85, F9 | `6982` on **all nine**, both unauthenticated and after the "successful" auth above |
+| `PUT DATA` (`00 DB`) — import a cert | `5FC105` | `6700` wrong length — body not even parsed |
+| `CHANGE REFERENCE DATA` (`00 24`) | PIN 80 | `6983` authentication method blocked |
+| `RESET RETRY COUNTER` (`00 2C`) | P1=01, 02, 03 | `6A86` incorrect P1/P2 — **only P1=00 exists** |
+| `RESET RETRY COUNTER` (`00 2C`) | P1=00 | `6983` blocked (no PUK keyref: `VERIFY 81` → `6A88`) |
+| GlobalPlatform ISD `A000000003000000` | — | `6A82` — no GP security domain, so no applet reset path |
+
+`6982` on every slot is the decisive line. A conformant applet either generates the key or reports the
+command as unsupported (`6D00`/`6A81`); this one denies on security status and no authentication can
+ever satisfy it, because the applet does not verify the one it offers.
+
+Whether the applet *lacks* these commands or *gates them behind an authentication it never grants* is
+not distinguishable from outside — and does not matter. The practical outcome is identical: **no key
+can be generated, imported or protected on this unit.**
+
+### 9d. What this corrects
+
+- **The 2026-11-11 reading was right.** `GENERATE` → `6982` was recorded then as "keygen disabled",
+  then retracted on 2026-11-14 as "confounded — all probes ran under a locked PIN". It was not
+  confounded: `GENERATE` fails identically on all nine slots whether or not the PIN is locked, and
+  whether or not admin auth was attempted.
+- **The lockout was never the problem.** The PIN counter (`63 C0`) and the missing PUK (`6A88`) are real,
+  but they are symptoms of probing a dead applet, not the cause of the dead end. Even a factory PIN and a
+  working PUK would leave `GENERATE` at `6982`.
+- **The vendor's Key Manager matrix agrees.** It ticks PIV for `NFC+` and `GOV` only — the `NFC` SKU has
+  no PIV administration because **there is no PIV provisioning to administer**. The applet exists only
+  far enough for Windows to enumerate it, which is what `certutil -scinfo` reports and what sent this
+  effort down a PIN-recovery path that could never have succeeded.
+
+### 9e. Consequence — acquire the NFC+
+
+The requirement is unchanged: a non-exportable root key, generated on the token, PIN per signature.
+The 905601 cannot meet it. Replacement per [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md):
+**uTrust FIDO2 NFC+** (PIV provisioning and 9B management key are headline NFC+ features) or the
+**YubiKey 5** originally planned. The FIDO2 applet on the 905601 is healthy and stays useful for
+passkeys/SSH — only PIV is a shell.
+
+**Gate the next token before a ceremony.** [`Test-uTrustKey.ps1`](../ca-signing-kit/Test-uTrustKey.ps1)
+now reads `5FC107` and fails if it is not `9000`. That one check rejects a stub applet in seconds,
+before any PIN is entered — it would have caught this on day one.
 
 ## References
 

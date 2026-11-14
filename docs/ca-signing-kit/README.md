@@ -1,7 +1,11 @@
 # Private CA — signing kit for the uTrust Security Key
 
-The root CA's private key lives **inside the uTrust FIDO2 NFC Security Key** (PIV slot 9C) and cannot
+The root CA's private key lives **inside a uTrust FIDO2 NFC+ Security Key** (PIV slot 9C) and cannot
 be exported. This kit is how you use it: create the root once, then sign the CAs that sit under it.
+
+> **The plain-NFC 905601 does not work** — its PIV applet answers AID select but cannot generate a key
+> ([research 54 §9](../research/54-utrust-fido2-nfc-piv-root-diagnostic.md)). `Test-uTrustKey.ps1`
+> gates this: a missing Card Capability Container (`5FC107`) means stop. Use an **NFC+** or a YubiKey 5.
 
 ## The mental model
 
@@ -23,7 +27,7 @@ Two things follow from that picture, and they explain the whole kit:
 
 | Script | What it does | How often |
 |---|---|---|
-| [`Test-uTrustKey.ps1`](Test-uTrustKey.ps1) | Read-only health check: USB, reader, PIV applet, chip, PKCS#11, FIDO2 AAGUID, tooling. Enters no PIN, writes nothing to the card. | before every ceremony |
+| [`Test-uTrustKey.ps1`](Test-uTrustKey.ps1) | Read-only health check: PKCS#11 token, **PIV applet capability (CCC)**, tooling, and whether a root key exists. Enters no PIN, writes nothing to the card. | before every ceremony |
 | [`New-Root.ps1`](New-Root.ps1) | Creates the 10-year root on the uTrust Security Key: replaces factory credentials, generates the key in slot 9C, writes and verifies the certificate, proves it can sign. | **once, ever** |
 | [`New-Intermediate.ps1`](New-Intermediate.ps1) | Signs `intermediate_ca.csr` → `intermediate_ca.crt`, then machine-checks the result. | every year |
 | [`New-IpaCa.ps1`](New-IpaCa.ps1) | Signs `ipa.csr` → `ipa-ca.crt`, then machine-checks the result. | when the FreeIPA CA is built or re-signed |

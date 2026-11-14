@@ -1,12 +1,13 @@
-# Private CA — adopt the uTrust FIDO2 NFC token as offline root custody (reissue + trust rotation)
+# Private CA — adopt a uTrust FIDO2 NFC+ token as offline root custody (reissue + trust rotation)
 
-> **Status: hardware gates cleared 2026-11-10; the ceremony itself has not run yet.** The key answers
-> over PKCS#11 (`PIV_II`), so [research 54 §4](../research/54-utrust-fido2-nfc-piv-root-diagnostic.md)
-> is complete and `Test-uTrustKey.ps1` reports the key ready with no root in slot 9C. Getting there
-> needed four WSL fixes, all in [01-setup.md](../ca-signing-kit/01-setup.md).
+> **Status: blocked — no usable token.** The plain-NFC **905601 is rejected (2026-11-14)**: its PIV
+> applet answers AID select but cannot generate a key, has none of the mandatory SP 800-73 data
+> objects, and offers no working admin path ([research 54 §9](../research/54-utrust-fido2-nfc-piv-root-diagnostic.md)).
+> **Acquire the uTrust FIDO2 NFC+** (or a YubiKey 5) before starting; every phase below assumes a
+> token whose PIV applet actually works. The procedure itself is unchanged — only the token model is.
 >
-> Move the 10-year **root** from the IronKey key file onto the **uTrust FIDO2 NFC USB-A (P/N 905601),
-> PIV applet slot 9C**, by **reissuing** it: the new root key is generated on the token and never
+> Move the 10-year **root** from the IronKey key file onto a **uTrust FIDO2 NFC+**, PIV applet slot 9C,
+> by **reissuing** it: the new root key is generated on the token and never
 > exists in software. This is a one-time **trust rotation** — new root to every client, both sibling
 > CAs re-signed, old root removed by hand — decided 2026-11-10 in
 > [issue #193](https://github.com/jaroslaw-bagnicki/Homelab/issues/193); [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md)
@@ -21,20 +22,27 @@
 ## Why
 
 ADR 38 keeps the root on an IronKey — a passphrase-protected key *file*; every copy is exportable if
-the passphrase leaks. The uTrust's PIV applet (confirmed on the actual unit: `certutil -scinfo` →
-`Identity Device (NIST SP 800-73 [PIV])`) can hold the root in slot 9C with PIN required immediately
+the passphrase leaks. A PIV token can hold the root in slot 9C with PIN required immediately
 before **each** signature, and the key is non-exportable. Reissue (not import) means the root key
 never exists in software at all; the cost is the one-time root redistribution the original ADR 38
 text rejected — accepted deliberately in #193. The FIDO2 applet cannot serve (no import,
 protocol-bound signatures — research 54 §1); FIDO2 passkeys for Authentik/SSH stay orthogonal.
 
+**Why the NFC+ and not the plain NFC (905601).** The 905601 was trialled and rejected on 2026-11-14.
+It enumerates as a PIV card — AID select `9000`, `certutil -scinfo` sees it, PKCS#11 lists `PIV_II` —
+but that is where it stops: no Card Capability Container, no CHUID, `GENERATE KEY PAIR` → `6982` on
+every slot, and a management-key handshake that returns `9000` to a wrong response. No key can be
+created on it ([research 54 §9](../research/54-utrust-fido2-nfc-piv-root-diagnostic.md)). The vendor's
+Key Manager matrix agrees — PIV is ticked for `NFC+` and `GOV` only.
+
 ## Prerequisites
 
-- [x] `docs/ca-signing-kit/Test-uTrustKey.ps1` run on the signing machine with the token attached —
-      **passes 2026-11-10**: the key answers over PKCS#11 as `PIV_II`, PIV AID select returns `9000`,
-      AAGUID `73402251-f2a8-4f03-873e-3cb6db604b03`. The chip is **NXP JCOP** (CPLC `96 4D … JNET`),
-      not the Infineon SLE 78 the vendor manual claims — irrelevant to the ceremony, so the kit does
-      not check it
+- [ ] **A token whose PIV applet actually works** — uTrust FIDO2 NFC+ (preferred) or YubiKey 5. The
+      plain-NFC 905601 is rejected (§Why). Verify with the gate in phase 0 before going further
+- [ ] `docs/ca-signing-kit/Test-uTrustKey.ps1` run on the signing machine with the token attached —
+      must pass **including the `CCC` gate**: a `6A82` on `5FC107` means the applet is a stub and no
+      ceremony can succeed, whatever else answers. AAGUID `73402251-f2a8-4f03-873e-3cb6db604b03` is
+      the family value for both NFC and NFC+
 - [ ] Firmware version read from uTrust Key Manager on Windows (the manual: firmware decides applet
       enablement) — record it in research 54 §3
 - [ ] Signing host: the **Windows 11 workstation** with WSL (Ubuntu) and the token attached from
@@ -57,16 +65,21 @@ protocol-bound signatures — research 54 §1); FIDO2 passkeys for Authentik/SSH
 ## Phase 0 — pre-flight health check
 
 ```sh
-./Test-uTrustKey.ps1        # read-only, no PIN login
+pwsh ./Test-uTrustKey.ps1        # read-only, no PIN login
 ```
 
-Expected on a key with no root yet:
+Expected on a usable token with no root yet:
 
 ```
   key    PIV_II
+  applet CCC 5FC107 present
   step   Smallstep CLI/0.31.0 (linux/amd64)
   root   no root key yet — New-Root.ps1 will create it
 ```
+
+**If the `applet` line reports the CCC missing, stop.** The token enumerates but cannot hold a key —
+this is the 905601 failure mode. No amount of PIN, PUK or management-key work will change it; return
+the token and get an NFC+ ([research 54 §9](../research/54-utrust-fido2-nfc-piv-root-diagnostic.md)).
 
 If the key does not answer over PKCS#11 at all, do not improvise — [01-setup.md](../ca-signing-kit/01-setup.md)
 lists the four things that block it on WSL and how to tell them apart from the daemon log.
@@ -78,8 +91,17 @@ Factory defaults (technical manual): PIV PIN `123456`, PUK `12345678`, managemen
 
 ```sh
 MOD=/usr/lib/x86_64-linux-gnu/opensc-pkcs11.so
-piv-tool --admin-mode -k   # or: pkcs11-tool --module $MOD --change-pin / --set-pin ...
+pkcs11-tool --module $MOD --change-pin          # interactive: old PIN, then new twice
+pkcs15-tool --change-puk                        # interactive: old PUK, then new twice
+pkcs11-tool --module $MOD --login --login-type so --change-pin   # management key (SO PIN)
 ```
+
+Each command prompts for the values — never pass a PIN/PUK on the command line or store one in a
+script. Confirm each succeeded before continuing; a silent failure here leaves the root protected by a
+published secret.
+
+> **On the 905601 this phase cannot run at all** — `CHANGE REFERENCE DATA` returns `6983` and there is
+> no PUK keyref (`6A88`). That is the stub applet again, not a credential problem.
 
 Record the new PIN/PUK in the safe (never in the repo). Do not log the management key anywhere.
 
@@ -90,7 +112,7 @@ credentials, generates the key on the card, writes the self-signed root, verifie
 the token can sign. The full walkthrough is [02-root.md](../ca-signing-kit/02-root.md).
 
 ```sh
-./New-Root.ps1
+pwsh ./New-Root.ps1
 ```
 
 The key is generated **on the card**; `step certificate create` only uses an existing on-token key
@@ -108,8 +130,8 @@ participation). Never put `pin-value=` in a URI, script, Ansible or the repo.
 ## Phase 3 — sign the sibling CAs with the token
 
 ```sh
-./New-Intermediate.ps1     # intermediate_ca.csr -> intermediate_ca.crt
-./New-IpaCa.ps1            # FreeIPA CA — ipa.csr -> ipa-ca.crt (ADR 42)
+pwsh ./New-Intermediate.ps1     # intermediate_ca.csr -> intermediate_ca.crt
+pwsh ./New-IpaCa.ps1            # FreeIPA CA — ipa.csr -> ipa-ca.crt (ADR 42)
 ```
 
 Both machine-check the result (chains to root, `is_ca`, `pathlen:0`, key usage, SANs for the
