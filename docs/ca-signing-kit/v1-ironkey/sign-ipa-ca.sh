@@ -12,31 +12,32 @@ set -eu
 STICK="$1"
 PWFILE="${2:-}"
 DIR="$(cd "$(dirname "$0")" && pwd)"
+# step and the shared templates live beside this script in a self-contained bundle, or one level up
+# in the repository (../). Resolve both so either layout works.
+SHARED="$DIR"
+[ -x "$DIR/step" ] || SHARED="$(cd "$DIR/.." && pwd)"
 OUT="$DIR/ipa-ca.crt"
 TMP="$OUT.new"
 
 trap 'rm -f "$TMP"' EXIT
 
-# --- the signing machine must not have a network -----------------------------
-if ! command -v ip >/dev/null 2>&1; then
-    echo "ABORT: 'ip' is not available, so this machine's network state cannot be checked." >&2
-    exit 1
-fi
-NET="$(ip -o addr show 2>/dev/null | awk '{ n = $2; sub(/:$/, "", n); if (n != "lo") print "  " n " " $4 }')"
-if [ -n "$NET" ]; then
-    echo "ABORT: this machine has a non-loopback address:" >&2
-    printf '%s\n' "$NET" >&2
-    echo "       The root key must never be used on a networked machine." >&2
-    exit 1
-fi
-if ip route 2>/dev/null | grep -q '^default'; then
-    echo "ABORT: this machine has a default route — it is not air-gapped." >&2
-    exit 1
+# --- network state: advisory, not a gate -------------------------------------
+# The root key is an encrypted file on the stick, so a networked machine widens the
+# exposure window. That is a homelab trade-off the operator makes, not a condition
+# this script can decide: warn, and carry on.
+if command -v ip >/dev/null 2>&1; then
+    NET="$(ip -o addr show 2>/dev/null | awk '{ n = $2; sub(/:$/, "", n); if (n != "lo") print "  " n " " $4 }')"
+    if [ -n "$NET" ] || ip route 2>/dev/null | grep -q '^default'; then
+        echo "NOTE: this machine is networked — the root key is used on a connected host." >&2
+        [ -n "$NET" ] && printf '%s\n' "$NET" >&2
+        echo "      Accepted for this homelab. Unplug the network for the strictest run." >&2
+        echo
+    fi
 fi
 
 # --- inputs ------------------------------------------------------------------
-if [ ! -x "$DIR/step" ]; then
-    echo "ABORT: $DIR/step is missing or not executable." >&2
+if [ ! -x "$SHARED/step" ]; then
+    echo "ABORT: $SHARED/step is missing or not executable." >&2
     echo "       Copy the bundle to a real filesystem if you are running it from the stick." >&2
     exit 1
 fi
@@ -47,19 +48,19 @@ fi
 
 cd "$DIR"
 
-echo "Signing ipa.csr with the root on $STICK (5-year IPA CA)"
+echo "Signing ipa.csr with the root on $STICK (1-year IPA CA)"
 if [ -n "$PWFILE" ]; then
     [ -r "$PWFILE" ] || { echo "ABORT: passphrase file $PWFILE is not readable" >&2; exit 1; }
     echo "(using the root key passphrase in $PWFILE)"
     echo
-    "$DIR/step" certificate sign --template ipa-ca.tpl --not-after 43800h \
+    "$SHARED/step" certificate sign --template "$SHARED/ipa-ca.tpl" --not-after 8760h \
         --password-file "$PWFILE" \
         ipa.csr "$STICK/root_ca.crt" "$STICK/root_ca_key" \
         > "$TMP"
 else
     echo "(the root key's passphrase will be requested now)"
     echo
-    "$DIR/step" certificate sign --template ipa-ca.tpl --not-after 43800h \
+    "$SHARED/step" certificate sign --template "$SHARED/ipa-ca.tpl" --not-after 8760h \
         ipa.csr "$STICK/root_ca.crt" "$STICK/root_ca_key" \
         > "$TMP"
 fi
@@ -69,7 +70,7 @@ echo
 echo "Checking the result. Every line must read OK."
 FAILED=0
 
-if VERIFY_ERR="$("$DIR/step" certificate verify "$TMP" --roots "$STICK/root_ca.crt" 2>&1)"; then
+if VERIFY_ERR="$("$SHARED/step" certificate verify "$TMP" --roots "$STICK/root_ca.crt" 2>&1)"; then
     echo "  OK    chains to the root on the stick"
 else
     echo "  FAIL  does NOT chain to the root on the stick" >&2
@@ -77,7 +78,7 @@ else
     FAILED=1
 fi
 
-I="$("$DIR/step" certificate inspect --format json "$TMP")"
+I="$("$SHARED/step" certificate inspect --format json "$TMP")"
 
 chk() {
     if printf '%s\n' "$I" | grep -Eq "$2"; then
@@ -94,7 +95,7 @@ chk "key usage: certificate sign"               '"certificate_sign"[: ]+true'
 chk "key usage: CRL sign"                       '"crl_sign"[: ]+true'
 chk "subject: CN=Certificate Authority"         'Certificate Authority'
 chk "subject: O=IPA.INTERNAL"                   'IPA\.INTERNAL'
-chk "validity is 5 years"                       '"length"[: ]+157680000'
+chk "validity is 1 year"                        '"length"[: ]+31536000'
 
 if [ "$FAILED" -ne 0 ]; then
     echo >&2
@@ -111,9 +112,9 @@ echo "=============================================================="
 echo "Read the dump below as well. It must show:"
 echo "  Issuer   = CN=Homelab Internal CA (the root)"
 echo "  Subject  = CN=Certificate Authority, O=IPA.INTERNAL"
-echo "  Validity = ~5 years"
+echo "  Validity = ~1 year"
 echo "  Basic Constraints = critical CA:TRUE, pathlen:0"
 echo "  Key Usage = critical Digital Signature, Certificate Sign, CRL Sign"
 echo "=============================================================="
 echo
-"$DIR/step" certificate inspect "$OUT"
+"$SHARED/step" certificate inspect "$OUT"

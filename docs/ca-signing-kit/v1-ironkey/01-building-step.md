@@ -10,8 +10,8 @@ Two routes. Both produce the identical file.
 The `ca` guest already has it at `/usr/local/bin/step`, installed and checksum-verified by runbook 35 §6:
 
 ```sh
-scp fleetadm@192.168.2.215:/usr/local/bin/step docs/private-ca-offline-signing/step
-chmod +x docs/private-ca-offline-signing/step
+scp fleetadm@192.168.2.215:/usr/local/bin/step docs/ca-signing-kit/step
+chmod +x docs/ca-signing-kit/step
 ```
 
 ## From the upstream release
@@ -24,7 +24,7 @@ curl -fsSLO https://github.com/smallstep/cli/releases/download/v0.31.0/step_linu
 curl -fsSLO https://github.com/smallstep/cli/releases/download/v0.31.0/checksums.txt
 grep -E ' +step_linux_amd64[.]tar[.]gz$' checksums.txt | sha256sum -c -
 tar -xzf step_linux_amd64.tar.gz                # unpacks to step_linux_amd64/
-install -m 755 step_linux_amd64/bin/step docs/private-ca-offline-signing/step
+install -m 755 step_linux_amd64/bin/step docs/ca-signing-kit/step
 ```
 
 The archive is not flat — the binary sits under `bin/` inside a `step_linux_amd64/` directory. This
@@ -34,7 +34,7 @@ unmodified upstream release binary.
 ## Confirm it before you carry anything
 
 ```sh
-./docs/private-ca-offline-signing/step version      # Smallstep CLI/0.31.0 (linux/amd64)
+./docs/ca-signing-kit/step version      # Smallstep CLI/0.31.0 (linux/amd64)
 ```
 
 The bundle was assembled with **v0.31.0**. A newer CLI is fine — the ceremonies only use

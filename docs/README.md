@@ -15,4 +15,4 @@
 | [Plans](plans/README.md) | Multi-stage rollout plans — the order workstreams are built in, and each stage's exit gate |
 | [Reports](reports/README.md) | Project quality assessments — point-in-time reviews of process, docs, and IaC |
 | [Workloads](workloads.md) | Self-contained Ansible workload recipes — index, conventions, and deployment references |
-| [Private CA offline signing](private-ca-offline-signing/README.md) | The air-gapped signing kit — create the offline root and sign the intermediate CA |
+| [Private CA signing kit](ca-signing-kit/README.md) | Two kits: **v1 IronKey** (active, air-gapped) and **v2 token** (dormant, needs an NFC+) — create the root once, sign the CAs under it |

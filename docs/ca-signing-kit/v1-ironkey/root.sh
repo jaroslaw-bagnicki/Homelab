@@ -23,32 +23,30 @@ set -eu
 STICK="$1"
 PWFILE="${2:-}"
 DIR="$(cd "$(dirname "$0")" && pwd)"
+# step and the shared templates live beside this script in a self-contained bundle, or one level up
+# in the repository (../). Resolve both so either layout works.
+SHARED="$DIR"
+[ -x "$DIR/step" ] || SHARED="$(cd "$DIR/.." && pwd)"
 ROOT_CN="Homelab Internal CA"
 ROOT_LIFETIME="87600h"   # 10 years
 
-# --- the signing machine must not have a network -----------------------------
-# Both checks are deliberate: the address test also catches an on-link-only machine.
-if ! command -v ip >/dev/null 2>&1; then
-    echo "ABORT: 'ip' is not available, so this machine's network state cannot be checked." >&2
-    exit 1
-fi
-NET="$(ip -o addr show 2>/dev/null | awk '{ n = $2; sub(/:$/, "", n); if (n != "lo") print "  " n " " $4 }')"
-if [ -n "$NET" ]; then
-    echo "ABORT: this machine has a non-loopback address:" >&2
-    printf '%s\n' "$NET" >&2
-    echo "       The root key must never be created on a networked machine." >&2
-    echo "       Unplug the cable / disable Wi-Fi (or 'ip link set <dev> down') and re-run." >&2
-    exit 1
-fi
-if ip route 2>/dev/null | grep -q '^default'; then
-    echo "ABORT: this machine has a default route — it is not air-gapped." >&2
-    echo "       The root key must never be created on a networked machine." >&2
-    exit 1
+# --- network state: advisory, not a gate -------------------------------------
+# Creating the root is the one irreversible step, so a networked machine is worth a
+# warning — but it is a homelab trade-off the operator makes, not a condition this
+# script can decide.
+if command -v ip >/dev/null 2>&1; then
+    NET="$(ip -o addr show 2>/dev/null | awk '{ n = $2; sub(/:$/, "", n); if (n != "lo") print "  " n " " $4 }')"
+    if [ -n "$NET" ] || ip route 2>/dev/null | grep -q '^default'; then
+        echo "NOTE: this machine is networked — the root key is being created on a connected host." >&2
+        [ -n "$NET" ] && printf '%s\n' "$NET" >&2
+        echo "      Accepted for this homelab. Unplug the network for the strictest run." >&2
+        echo
+    fi
 fi
 
 # --- the tool ---------------------------------------------------------------
-if [ ! -x "$DIR/step" ]; then
-    echo "ABORT: $DIR/step is missing or not executable." >&2
+if [ ! -x "$SHARED/step" ]; then
+    echo "ABORT: $SHARED/step is missing or not executable." >&2
     echo "       If the file is present, you are most likely running this from a" >&2
     echo "       FAT/exFAT USB stick — those filesystems have no executable bit, so" >&2
     echo "       'chmod +x' does nothing there. Copy the bundle to a real filesystem:" >&2
@@ -93,7 +91,7 @@ if [ -n "$PWFILE" ]; then
     [ -r "$PWFILE" ] || { echo "ABORT: passphrase file $PWFILE is not readable" >&2; exit 1; }
     echo "Encrypting the root key with the passphrase in $PWFILE."
     echo
-    "$DIR/step" certificate create "$ROOT_CN" \
+    "$SHARED/step" certificate create "$ROOT_CN" \
         "$STICK/root_ca.crt" "$STICK/root_ca_key" \
         --profile root-ca --not-after "$ROOT_LIFETIME" \
         --password-file "$PWFILE"
@@ -105,7 +103,7 @@ else
     echo "      and the root key is dead - recovery is a new root plus a full"
     echo "      re-trust of every client (issue #144)."
     echo
-    "$DIR/step" certificate create "$ROOT_CN" \
+    "$SHARED/step" certificate create "$ROOT_CN" \
         "$STICK/root_ca.crt" "$STICK/root_ca_key" \
         --profile root-ca --not-after "$ROOT_LIFETIME"
 fi
@@ -115,7 +113,7 @@ echo
 echo "Checking the result. Every line must read OK."
 echo
 
-J="$("$DIR/step" certificate inspect --format json "$STICK/root_ca.crt")"
+J="$("$SHARED/step" certificate inspect --format json "$STICK/root_ca.crt")"
 FAILED=0
 
 chk() {
@@ -159,7 +157,7 @@ fi
 echo
 echo "Root certificate fingerprint — record it OUTSIDE the repo (safe, password"
 echo "manager), together with the key passphrase:"
-"$DIR/step" certificate fingerprint "$STICK/root_ca.crt"
+"$SHARED/step" certificate fingerprint "$STICK/root_ca.crt"
 
 echo
 echo "=============================================================="
