@@ -6,7 +6,7 @@
 > would displace it. Mistral Large 4 is close enough on price and stronger on paper in a few dimensions to
 > justify a **bounded comparison**, not a migration.
 
-**Status**: 🪦 Retired — **outcome recorded 2026-11-14** (Outcome section below, tracked in [#179](https://github.com/jaroslaw-bagnicki/Homelab/issues/179)): use both — DeepSeek V4.1 Flash stays the daily driver, Mistral Large 4 grows via Mistral Vibe under the one Pro billing account; no ADR, the model note in ADR 15/17 stands  
+**Status**: 🪦 Retired — **outcome recorded 2026-11-14** (Outcome section below, tracked in [#179](https://github.com/jaroslaw-bagnicki/Homelab/issues/179)): use both on one Mistral Pro account — DeepSeek V4.1 Flash stays the daily driver served via Mistral (the DS direct subscription is retired), Mistral Large 4 grows via Mistral Vibe; the provider note in ADR 15/17 is superseded by this outcome  
 **Date**: 2026-11-06  
 **Sources**: [Mistral pricing](https://mistral.ai/pricing/) · [Mistral Large 4 model card](https://docs.mistral.ai/models/mistral-large-4-0) · [DeepSeek V4.1 Flash 1017 model card](https://docs.mistral.ai/models/deepseek-v4-flash-1017) · [Subscriptions / included usage](https://docs.mistral.ai/admin/billing-usage/subscriptions) · [Vibe CLI configuration](https://docs.mistral.ai/vibe/code/cli/configuration) — all read 2026-11-06  
 **Related**: [ADR 15](../decisions/15-copilot-desktop-agentic.md) (Copilot BYOK provider) · [runbook 44](../runbooks/44-copilot-mistral-byok.md) (Mistral BYOK in Copilot/VS Code for the A/B) · [ADR 17](../decisions/17-adopt-opencode.md) (OpenCode, DeepSeek API + MiniMax plan) · [research 19](../research/19-copilot-desktop-agentic.md) · [docs/opencode-customization](../opencode-customization/README.md) (per-instance LLM key) · [research 02](../research/02-llm-requirements.md) / [research 08](../research/08-llm-server-hardware.md) (why local inference is out of scope)
@@ -200,22 +200,31 @@ as a genuine fallback provider; Mistral Large 4 takes over the heavy tasks (ADR/
 cheaper model handles mechanical edits — the split being the most likely landing point, since cost and
 capability rarely move together.
 
-## Outcome — 2026-11-14: use both, DeepSeek stays the daily driver
+## Outcome — 2026-11-14: use both, on one Mistral billing account
 
 **Decided by the owner and recorded here per step 3, tracked in [#179](https://github.com/jaroslaw-bagnicki/Homelab/issues/179).**
 The split lands where "Possible outcomes" predicted — cost and capability do not move together.
 
-- **DeepSeek V4.1 Flash remains the daily driver** on its own API; the model note in
-  [ADR 15](../decisions/15-copilot-desktop-agentic.md) / [ADR 17](../decisions/17-adopt-opencode.md) stands
-  and no ADR supersedes it. Mistral Large 4's price — 2.3× input, 1.75× output, 10× cached input, and in
-  practice quite expensive on agentic sessions — rules it out as the everyday model at any quality.
+- **DeepSeek V4.1 Flash remains the daily driver — now served through Mistral** as
+  `deepseek-v4-1-flash-1017` on `https://api.mistral.ai/v1`, so its usage bills under the same **Mistral
+  Pro** subscription. The **DeepSeek direct subscription is retired**: the BYOK entry for it
+  ([runbook 13 §2](../runbooks/13-copilot-desktop-setup.md)) is replaced by the Mistral one
+  ([runbook 44](../runbooks/44-copilot-mistral-byok.md)), and the `deepseek` provider in `opencode.json`
+  gives way to the `mistral` provider with both model presets. This supersedes the *provider* note in
+  [ADR 15](../decisions/15-copilot-desktop-agentic.md) / [ADR 17](../decisions/17-adopt-opencode.md); the
+  *model* does not change. Mistral Large 4's price — 2.3× input, 1.75× output, 10× cached input, and in
+  practice quite expensive on agentic sessions — still rules it out as the everyday model.
+- **The preview badge is accepted, with a fallback.** On Mistral's platform the DeepSeek card is badged
+  **public preview** + third-party — the reason the 2026-11-06 decision kept daily work on DeepSeek's own
+  API. The owner accepts the preview endpoint for one billing relationship; if it degrades, re-enable the
+  DeepSeek direct key.
 - **Mistral Large 4 is adopted alongside for the heavy tasks** — long, reasoning-heavy authoring —
   especially through **Mistral Vibe**, whose sessions bill as `mistral-large-4-0` on the same account, and
   through Copilot/VS Code BYOK per [runbook 44](../runbooks/44-copilot-mistral-byok.md). Hands-on, its
   reasoning reads smoother than V4.1 Flash's on exactly those tasks.
-- **One billing relationship carries both.** The Pro plan's $15/mo included usage is shared across
-  Studio, API and Vibe Code, so candidate, control and the production split all sit on one key with one
-  usage report.
+- **One billing relationship carries everything.** The Pro plan's $15/mo included usage is shared
+  across Studio, API and Vibe Code, so the daily driver, ML4 heavy tasks and any future A/B all meter on
+  one key with one usage report.
 
 **Evidence, honestly stated:** the formal four-task side-by-side (step 2) did not run. The decision rests
 on the probes recorded on #179 (2026-11-07/08 — both models reachable on one Pro key, cached and reasoning
