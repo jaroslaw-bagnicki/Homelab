@@ -194,6 +194,19 @@ A renewal failure leaves `homelab-ssh-host-cert-renew.service` in the failed sta
 `systemd_service_unit_failed_state` alarm raises, and the alert unit writes a `crit` journal line that
 Fluent Bit ships to VictoriaLogs. Alarm delivery remains deferred per ADR 27.
 
+> **SSHPOP cannot renew an expired certificate.** `step ssh renew` presents the *existing* certificate
+> to prove its identity, so once it lapses the CA rejects the request with
+> `authorizeSSHRenew: certificate has expired` (HTTP 401) and the timer can never recover on its own —
+> every daily run fails until the certificate is re-issued. Recover by re-running the node's playbook,
+> which signs a fresh certificate through `hosts@internal` on the controller:
+>
+> ```powershell
+> ansible-playbook ansible/playbooks/playbook-pve2.yml --diff
+> ```
+>
+> That path is why the 49 h renewal threshold matters: it leaves ~2 days of margin for the timer to
+> renew *before* expiry. A certificate that has already expired is a playbook run, not a `step` command.
+
 **Renewal proof.** On a canary node, temporarily raise the renewal threshold so the 7-day certificate is
 treated as near expiry, run the role once, then restore the normal threshold:
 
