@@ -19,7 +19,7 @@ be exported. This kit is how you use it: create the root once, then sign the CAs
 root key  ── lives in the uTrust Security Key, never leaves it, PIN per signature
    │
    ├── signs ── step-ca intermediate   (1 year, key in pve1's TPM)   ← re-signed annually
-   └── signs ── FreeIPA CA             (5 years, key on the IPA guest)
+   └── signs ── FreeIPA CA             (1 year, key on the IPA guest)
 ```
 
 Two things follow from that picture, and they explain the whole kit:
