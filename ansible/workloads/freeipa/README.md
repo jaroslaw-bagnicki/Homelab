@@ -15,7 +15,8 @@ The role targets `freeipa_ca_mode: external`:
 
 1. **Phase 1** runs `ipa-server-install --external-ca` and emits `/root/ipa.csr`.
 2. The operator signs that CSR with the offline fleet root
-   ([`sign-ipa-ca.sh`](../../../docs/private-ca-offline-signing/sign-ipa-ca.sh)) and copies
+   ([`sign-ipa-ca.sh`](../../../docs/ca-signing-kit/v1-ironkey/sign-ipa-ca.sh), the active IronKey
+   flow — [runbook 41](../../../docs/runbooks/41-deploy-freeipa-server.md) §7) and copies
    `ipa-ca.crt` + `root_ca.crt` back to `/root`.
 3. **Phase 2** reruns the installer with both `--external-cert-file` arguments and completes the
    server.

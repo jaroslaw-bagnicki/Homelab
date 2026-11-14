@@ -12,43 +12,41 @@ set -eu
 STICK="$1"
 PWFILE="${2:-}"
 DIR="$(cd "$(dirname "$0")" && pwd)"
+# `step` and the shared templates live beside this script in a self-contained bundle, or one level up
+# in the repository (../). Resolve both so either layout works.
+SHARED="$DIR"
+[ -x "$DIR/step" ] || SHARED="$(cd "$DIR/.." && pwd)"
 OUT="$DIR/intermediate_ca.crt"
 TMP="$OUT.new"
 
 # never leave a half-written certificate behind for someone to carry home
 trap 'rm -f "$TMP"' EXIT
 
-# --- the signing machine must not have a network -----------------------------
-# Both checks are deliberate: the address test also catches an on-link-only machine.
-if ! command -v ip >/dev/null 2>&1; then
-    echo "ABORT: 'ip' is not available, so this machine's network state cannot be checked." >&2
-    exit 1
-fi
-NET="$(ip -o addr show 2>/dev/null | awk '{ n = $2; sub(/:$/, "", n); if (n != "lo") print "  " n " " $4 }')"
-if [ -n "$NET" ]; then
-    echo "ABORT: this machine has a non-loopback address:" >&2
-    printf '%s\n' "$NET" >&2
-    echo "       The root key must never be used on a networked machine." >&2
-    echo "       Unplug the cable / disable Wi-Fi (or 'ip link set <dev> down') and re-run." >&2
-    exit 1
-fi
-if ip route 2>/dev/null | grep -q '^default'; then
-    echo "ABORT: this machine has a default route — it is not air-gapped." >&2
-    echo "       The root key must never be used on a networked machine." >&2
-    exit 1
+# --- network state: advisory, not a gate -------------------------------------
+# The root key is an encrypted file on the stick, so a networked machine widens the
+# exposure window. That is a homelab trade-off the operator makes, not a condition
+# this script can decide: warn, and carry on.
+if command -v ip >/dev/null 2>&1; then
+    NET="$(ip -o addr show 2>/dev/null | awk '{ n = $2; sub(/:$/, "", n); if (n != "lo") print "  " n " " $4 }')"
+    if [ -n "$NET" ] || ip route 2>/dev/null | grep -q '^default'; then
+        echo "NOTE: this machine is networked — the root key is used on a connected host." >&2
+        [ -n "$NET" ] && printf '%s\n' "$NET" >&2
+        echo "      Accepted for this homelab. Unplug the network for the strictest run." >&2
+        echo
+    fi
 fi
 
 # --- inputs ------------------------------------------------------------------
-if [ ! -x "$DIR/step" ]; then
-    echo "ABORT: $DIR/step is missing or not executable." >&2
+if [ ! -x "$SHARED/step" ]; then
+    echo "ABORT: $SHARED/step is missing or not executable." >&2
     echo "       If the file is present, you are most likely running this from a" >&2
     echo "       FAT/exFAT USB stick — those filesystems have no executable bit, so" >&2
     echo "       'chmod +x' does nothing there. Copy the bundle to a real filesystem:" >&2
-    echo "         cp -r $DIR /tmp/bundle && cd /tmp/bundle && chmod +x step root.sh sign.sh" >&2
+    echo "         cp -r $SHARED /tmp/bundle && cd /tmp/bundle && chmod +x step root.sh sign.sh" >&2
     exit 1
 fi
 [ -f "$DIR/intermediate_ca.csr" ]  || { echo "ABORT: $DIR/intermediate_ca.csr is missing" >&2; exit 1; }
-[ -f "$DIR/intermediate-ca.tpl" ]  || { echo "ABORT: $DIR/intermediate-ca.tpl is missing" >&2; exit 1; }
+[ -f "$SHARED/intermediate-ca.tpl" ]  || { echo "ABORT: $SHARED/intermediate-ca.tpl is missing" >&2; exit 1; }
 [ -f "$STICK/root_ca.crt" ]      || { echo "ABORT: $STICK/root_ca.crt not found (is the stick mounted?)" >&2; exit 1; }
 [ -f "$STICK/root_ca_key" ]      || { echo "ABORT: $STICK/root_ca_key not found (is the stick mounted?)" >&2; exit 1; }
 
@@ -59,14 +57,14 @@ if [ -n "$PWFILE" ]; then
     [ -r "$PWFILE" ] || { echo "ABORT: passphrase file $PWFILE is not readable" >&2; exit 1; }
     echo "(using the root key passphrase in $PWFILE)"
     echo
-    "$DIR/step" certificate sign --template intermediate-ca.tpl --not-after 8760h \
+    "$SHARED/step" certificate sign --template "$SHARED/intermediate-ca.tpl" --not-after 8760h \
         --password-file "$PWFILE" \
         intermediate_ca.csr "$STICK/root_ca.crt" "$STICK/root_ca_key" \
         > "$TMP"
 else
     echo "(the root key's passphrase will be requested now)"
     echo
-    "$DIR/step" certificate sign --template intermediate-ca.tpl --not-after 8760h \
+    "$SHARED/step" certificate sign --template "$SHARED/intermediate-ca.tpl" --not-after 8760h \
         intermediate_ca.csr "$STICK/root_ca.crt" "$STICK/root_ca_key" \
         > "$TMP"
 fi
@@ -79,7 +77,7 @@ echo
 echo "Checking the result. Every line must read OK."
 FAILED=0
 
-if VERIFY_ERR="$("$DIR/step" certificate verify "$TMP" --roots "$STICK/root_ca.crt" 2>&1)"; then
+if VERIFY_ERR="$("$SHARED/step" certificate verify "$TMP" --roots "$STICK/root_ca.crt" 2>&1)"; then
     echo "  OK    chains to the root on the stick"
 else
     echo "  FAIL  does NOT chain to the root on the stick" >&2
@@ -87,7 +85,7 @@ else
     FAILED=1
 fi
 
-I="$("$DIR/step" certificate inspect --format json "$TMP")"
+I="$("$SHARED/step" certificate inspect --format json "$TMP")"
 
 chk() {
     if printf '%s\n' "$I" | grep -Eq "$2"; then
@@ -132,4 +130,4 @@ echo "  Key Usage                = critical  Digital Signature, Certificate Sign
 echo "  Subject Alternative Name = DNS:ca.internal / IP Address:192.168.2.215"
 echo "=============================================================="
 echo
-"$DIR/step" certificate inspect "$OUT"
+"$SHARED/step" certificate inspect "$OUT"

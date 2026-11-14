@@ -21,7 +21,7 @@
 #   ansible/workloads/freeipa/README.md             ansible-side facts
 #   docs/workloads.md                               general rules + index
 #   docs/runbooks/41-deploy-freeipa-server.md       operational steps
-#   docs/private-ca-offline-signing/                the root ceremony + IPA CA signing
+#   docs/ca-signing-kit/                           the root ceremony + IPA CA signing
 - name: Deploy the FreeIPA server on the ipa guest
   hosts: ipa
   become: true
