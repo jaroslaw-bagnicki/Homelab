@@ -30,7 +30,7 @@ the server, the realm, the DNS glue and the CA chain before anything depends on 
   key. It replaces `common`/`security`, which are Debian/Ubuntu-only.
 - **Technitium** — `ipa.internal` A, reverse zone + PTR, and the Kerberos/LDAP SRV records.
 - **FreeIPA workload** — `freeipa-server`, external CA two-phase install, `admin` + `m1test`.
-- **Offline kit** — `ipa-ca.tpl` + `sign-ipa-ca.sh` sign the IPA CA CSR with the existing root.
+- **Signing kit** — `ipa-ca.tpl` + `New-IpaCa.ps1` sign the IPA CA CSR with the existing root.
 
 ## Prerequisites
 
@@ -44,7 +44,7 @@ the server, the realm, the DNS glue and the CA chain before anything depends on 
       check rather than a gate — `pve1` could not satisfy it beside the Home Assistant guests, which is
       why the server moved here.
 - [ ] Fedora 45 Cloud Base Generic image downloaded and checksum-verified on `pve2`.
-- [ ] The **secure USB stick** and air-gapped signing machine for the CA ceremony.
+- [ ] The **secure USB stick** and a signing machine for the CA ceremony (air-gap recommended).
 - [ ] Controller has `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID` and Ansible collections.
 - [ ] `automation` certificate (or break-glass fleet key) in `ssh-agent`; `ansible-lint` available.
 - [ ] `.250` and VMID 250 are free.
@@ -314,21 +314,24 @@ openssl req -in ipa.csr -noout -subject
 # expected: subject=CN = Certificate Authority, O = IPA.INTERNAL
 ```
 
-## 7. External CA — offline signing
+## 7. External CA — signing with the offline root
 
-On the **air-gapped** signing machine, with the secure stick mounted:
+On the **offline signing machine** — ideally an air-gapped live-USB boot, though a normal workstation
+works too (the script warns and proceeds) — with the IronKey mounted. This is the active custody
+([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md), amended 2026-11-14); the token variant is
+deferred in [runbook 46](46-adopt-utrust-piv-root-custody.md).
 
-1. Copy the offline kit to `/tmp` and make the scripts executable.
-2. Put `ipa.csr` in the bundle directory.
-3. Run `./sign-ipa-ca.sh <stick>` and pass the root-key passphrase.
+1. Assemble the bundle on the connected machine — [`01-building-step.md`](../ca-signing-kit/v1-ironkey/01-building-step.md).
+2. Put `ipa.csr` in the `v1-ironkey/` directory.
+3. Run `./sign-ipa-ca.sh <stick-mount>` — it prompts for the IronKey passphrase.
 
-The script signs with `ipa-ca.tpl` for **5 years** and machine-checks:
+The script signs with `ipa-ca.tpl` for **1 year** and machine-checks:
 
 - chain to the root on the stick;
 - `CA:TRUE`, `pathlen:0`;
 - certificate-sign and CRL-sign usage;
 - subject `CN=Certificate Authority,O=IPA.INTERNAL`;
-- validity **157680000 s** (5 years).
+- validity **31536000 s** (1 year).
 
 Bring back `ipa-ca.crt` and a copy of `root_ca.crt`. If any check fails, stop; nothing has been trusted.
 
@@ -506,4 +509,4 @@ rather than pasted public key, the fleet-key verification path, `getent` vs the 
 
 - [ADR 42](../decisions/42-pki-topology-sibling-cas.md) · [ADR 43](../decisions/43-freeipa-domain-realm.md) · [research 51](../research/51-freeipa-dogtag-tpm-custody.md) (parked TPM work)
 - [Runbook 42](42-pve2-proxmox-node.md) (pve2) · [runbook 43](43-proxmox-cluster-qdevice.md) (cluster + QDevice) · [runbook 35](35-deploy-step-ca.md) (TPM LXC pattern) · [runbook 40](40-deploy-ssh-certificates.md) (SSH trust)
-- [Offline signing kit](../private-ca-offline-signing/README.md) · [FreeIPA documentation](https://www.freeipa.org/page/Documentation)
+- [Signing kit](../ca-signing-kit/v1-ironkey/README.md) · [FreeIPA documentation](https://www.freeipa.org/page/Documentation)
