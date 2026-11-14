@@ -5,8 +5,16 @@ collections:
     version: "3.7.0"
   - name: community.general
     version: ">=7.0.0"
+  # Pinned exactly, for the same reason as oxlorg.opnsense below: an unbounded range
+  # pulls the newest release, and azure.azcollection 4.x requires azure-cli-core==2.91.0
+  # plus ~70 other pinned Python packages that this image does not provide. The result is
+  # not a clean install failure but a runtime one — the azure_keyvault_secret lookup dies
+  # with "name 'azure_cloud' is not defined", breaking every playbook that reads a Key
+  # Vault secret. 1.19.0 is the version the fleet runs and the only surface used here is
+  # Key Vault (azure_keyvault_secret, azure_rm_keyvaultsecret, azure_rm_keyvaultsecret_info).
+  # Bump deliberately, with the collection's requirements.txt installed on the controller.
   - name: azure.azcollection
-    version: ">=1.19.0"
+    version: "1.19.0"
   # OPNsense router (`router`) — manages the FreeBSD appliance over its REST API.
   # Pinned exactly: the collection has NO multi-version support (one release per OPNsense
   # release), so an unbounded range would let a fresh install pull modules for a newer
