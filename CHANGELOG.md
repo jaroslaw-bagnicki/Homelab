@@ -16,7 +16,7 @@ Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month 
 - **(docs)** Adopt OPNsense on the Futro S930 as the LAN router, routing-first — [ADR 48](docs/decisions/48-lan-router-futro-s930.md)
 - **(feat)** Stand up `pve2` as the second Proxmox node — `pve` → `pve1`, the NAS moved to `.209`, the two-node `homelab` cluster with an `edge` QDevice, and `proxmox.internal` failover — [runbook 42](docs/runbooks/42-pve2-proxmox-node.md) · [runbook 43](docs/runbooks/43-proxmox-cluster-qdevice.md)
 - **(docs)** Plan a Mistral Large 4 vs DeepSeek V4.1 Flash A/B — one Mistral Pro allowance serves candidate and control, so only task success can decide — [idea 16](docs/ideas/16-ai-model-mistral-large-4.md)
-- **(docs)** Audit the OptiPlex 7050 MFF for `pve2` — 65 W i5-7500, a sound but small 128 GB SSD, MEBx unreachable — [research 52](docs/research/52-optiplex7050-hardware-diagnostic.md)
+- **(docs)** Audit the OptiPlex 7050 MFF for `pve2` — 65 W i5-7500, a sound but small 128 GB SSD, MEBx unreachable, a discrete Nuvoton TPM — [research 52](docs/research/52-optiplex7050-hardware-diagnostic.md)
 - **(fix)** Serve the fleet resolver from the hosts and alert when a `.internal` leaf nears expiry — [ADR 40](docs/decisions/40-internal-dns-proxy-edge.md)
 - **(feat)** Deploy the FreeIPA server on `pve` — external-ca under the fleet root, M1 verified; TPM-backed Dogtag custody parked — [runbook 41](docs/runbooks/41-deploy-freeipa-server.md)
 - **(feat)** Load SSH identities explicitly — empty agent by default, loaders for `automation`, `agent-ai` and break-glass, one preflight that establishes the session — [ADR 41](docs/decisions/41-ssh-certificates-step-ca.md)

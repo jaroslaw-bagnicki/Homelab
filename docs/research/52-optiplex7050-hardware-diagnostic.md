@@ -4,7 +4,7 @@
 
 **Scope**: Pre-boot hardware audit of the **Dell OptiPlex 7050 Micro (MFF)** bought on 2026-11-04 and delivered 2026-11-05 — the second Proxmox VE node planned in [idea 15](../ideas/15-second-proxmox-node.md) and [research 47](47-second-proxmox-node.md). Same Phase 0 pattern as the Wyse 3040 ([28](28-wyse3040-hardware-diagnostic.md)), Wyse 5070 ([29](29-wyse5070-hardware-diagnostic.md)), Futro S930 ([31](31-futro-s930-hardware-diagnostic.md)) and Beetle M-III ([32](32-wincor-beetle-m3-hardware-diagnostic.md)) audits: capture the exact specs into `docs/hardware.md` and find the surprises **before** committing an OS to the box.
 
-**Status**: 🔨 In progress — hardinfo2 inventory, the F2 BIOS walk, the F12 boot menu, ePSA, the BIOS-level check, **disk SMART**, **ME firmware**, **Memtest86+** and the **NIC MAC** are captured; **TPM vendor, the AMT verdict and the OS-side power/thermal trio are still pending** ([Pending checks](#pending-checks)).
+**Status**: 🔨 In progress — hardinfo2 inventory, the F2 BIOS walk, the F12 boot menu, ePSA, the BIOS-level check, **disk SMART**, **ME firmware**, **Memtest86+**, the **NIC MAC** and the **TPM identity** are captured; **the AMT verdict and the OS-side power/thermal trio are still pending** ([Pending checks](#pending-checks)).
 
 ---
 
@@ -23,6 +23,7 @@
 | Power adapter | **130 W** — a documented 7050 Micro option and the correct brick for a 65 W CPU; bigger brick ≠ bigger draw |
 | Storage | **M.2 2280 SATA** module (SK hynix SC311 S) in the **M.2 slot**, SATA III over AHCI · the **2.5″ bay is free** · 11 134 POH but **~97 % endurance remaining** — sound; **128 GB capacity** is the only argument for a bigger disk |
 | Management | **MEBx not reachable** (Ctrl+P silent, no F12 entry) although CPU, Q270 and the I219-LM all satisfy the AMT platform requirements — the BIOS has **no `Intel AMT Capability` page** and `MEBx Hotkey` is already on, so the answer lies in the ME firmware, not in a setting |
+| TPM | ✅ **Discrete Nuvoton NPCT** TPM 2.0 (`NTC`, `tpm_tis`) — **not** Intel PTT, so a **stronger** key anchor than `pve1` and not lost on a BIOS update; unowned, self-test clean ([measured 2026-11-14](#tpm--a-discrete-nuvoton-npct-not-intel-ptt-measured-2026-11-14-on-the-live-node)) |
 | Address | DHCP `192.168.2.206` today; `192.168.2.202` is the reserved slot ([idea 15](../ideas/15-second-proxmox-node.md), [ADR 31](../decisions/31-static-address-scheme.md)) |
 
 ---
@@ -54,7 +55,7 @@ The 7050 replaces the "OptiPlex 7040 Micro, i5-6500T" that [research 47 §2](47-
 | NIC (GbE) | Intel **I219-LM** (`enp0s31f6`), PCI `00:1f.6`, MAC **`d8:9e:f3:97:3e:d1`** (captured 2026-11-07 at the PVE installer) — the AMT-capable NIC |
 | NIC (WiFi) | Intel **Wireless 8265** (`wlp1s0`, PCI `01:00.0` behind root port `00:1c.0`) + Intel Bluetooth |
 | Audio | HDA Intel PCH (Realtek codec; DP/HDMI outputs + front line-out/headphone) |
-| TPM | **TPM 2.0 present** (ACPI `MSFT0101`) — firmware-vs-discrete still to identify ([research 37](37-tpm2-hardware-and-fleet.md) pattern) |
+| TPM | **Discrete Nuvoton NPCT** TPM 2.0 — `TPM_PT_MANUFACTURER` **`NTC`**, vendor string `NPCT`, driver **`tpm_tis`**, device-id `0xFE`; **not** Intel PTT ([measured 2026-11-14](#tpm--a-discrete-nuvoton-npct-not-intel-ptt-measured-2026-11-14-on-the-live-node)) |
 | Power | AC attached, no battery · **130 W adapter** supplied · BIOS event log carries historical `Unknown AC power adapter` alerts ([below](#bios-event-log--the-adapter-history)) · **23.2 W at the wall in BIOS Setup, 19.7 W at PXE** ([pre-OS, not idle](#power-draw--measured-pre-os)) |
 | Cooling | Fan **2281 RPM at idle**, package **44 °C** (SystemRescue, ~4 min uptime) — audible, compared against the M910q [below](#noise--measured-against-the-m910q) · reconfirmed 2026-11-06: package **42 °C**, `dell_smm` fan **2266 RPM** at idle · **54–55 °C under a full Memtest86+ core load** at 3.4 GHz |
 | Session | SystemRescue 13.02, kernel 6.18.41, DHCP `192.168.2.206` on `enp0s31f6` |
@@ -132,7 +133,7 @@ The BIOS is the 2017-generation layout — relevant because every recent Dell ME
 | System Information | Slot2_M.2 | Network (the 8265 WiFi card) |
 | Security | Admin Password | **set** |
 | Security | **M.2 SATA SSD Password** | present as a menu item — the platform expects an M.2 **SATA** drive |
-| Security → TPM 2.0 Security | TPM On · Attestation Enable · Key Storage Enable · SHA-256 · **Enabled** | TPM 2.0 active; PTT-vs-discrete still to read with `tpm2_getcap` |
+| Security → TPM 2.0 Security | TPM On · Attestation Enable · Key Storage Enable · SHA-256 · **Enabled** | TPM 2.0 active — read as a **discrete Nuvoton NPCT** on 2026-11-14 ([below](#tpm--a-discrete-nuvoton-npct-not-intel-ptt-measured-2026-11-14-on-the-live-node)) |
 | Manageability | **USB Provision** | present |
 | Manageability | **MEBx Hotkey** | **enabled** (checked) |
 | Advanced configurations | ASPM | **Auto** |
@@ -220,6 +221,38 @@ The drive is an **M.2 2280 SATA III module sitting in the M.2 slot**, and the **
 **Verdict: the module is sound.** PASSED, zero reallocated or retired blocks, zero reported uncorrectable errors, zero link CRC errors, and **~97 % of its endurance left** at 11 134 hours. **Capacity is the only reason to change it** — 128 GB is workable (the `pve1` node runs the same drive with a VM and four LXCs) but tight if guests need real disk; a larger disk is a comfort upgrade, not a rescue.
 
 **And it is empty.** `lsblk` on 2026-11-06 shows `sda` with **no partitions at all** — there is no Windows install left to preserve or wipe. That also corrects the 2026-11-05 reading: the "31.7 MiB ESP + ~57.7 GiB encrypted volume, 36.3 GiB used" was the **Ventoy installer stick**, not this disk — Ventoy's layout is exactly a ~58 GB exFAT data partition plus a 32 MiB `VTOYEFI` partition, and it accounts for every number in that description. The `P4: SK hynix … 128GB` entry under `LEGACY BOOT` is a stale BIOS option pointing at a disk that no longer carries a boot image.
+
+### TPM — a discrete Nuvoton NPCT, not Intel PTT (measured 2026-11-14 on the live node)
+
+The F2 walk had already established a **TPM 2.0 that is on and active** (TPM On, SHA-256, Attestation + Key Storage enabled — [above](#firmware-settings-observed-f2-walk-2026-11-06)); what stayed open was **which kind**. The answer is the opposite of `pve1`'s: a **discrete Nuvoton chip**, not an Intel PTT firmware TPM.
+
+| Field | Value |
+|---|---|
+| Manufacturer (`TPM_PT_MANUFACTURER`) | **`NTC`** (`0x4E544300`) — **Nuvoton**, i.e. a **discrete** TPM |
+| Vendor strings | `"rls"` + `"NPCT"` → the **NPCT** family; the strings do not disambiguate NPCT650 vs NPCT750 |
+| Family / spec level | `"2.0"` · level 0 · revision **1.16** |
+| Firmware | DMI `Firmware Revision: 1.3` · `TPM_PT_FIRMWARE_VERSION_1` `0x10003`, `_2` `0x20008` |
+| Driver | **`tpm_tis`** — the SPI/LPC interface, **not** `tpm_crb` |
+| Kernel line | `tpm_tis MSFT0101:00: 2.0 TPM (device-id 0xFE, rev-id 4)` — `0xFE` is Nuvoton's TIS device ID |
+| DMI type 43 | `Description: NUVOTON`, spec 2.0, firmware 1.3 — **`Vendor ID` is blank**, the field `pve1` filled with `CTNI` (= `INTC`) |
+| ACPI | `TPM2` table `DELL CBX3` / `AMI`, v03 · device `\_SB_.TPM_` / `MSFT0101:00` |
+| PCR banks | **sha1 + sha256**, PCRs 0–23 |
+| Device nodes | `/dev/tpm0` **660 `tss:root`** · `/dev/tpmrm0` **660 `tss:tss`** — the `tss` group exists (gid 109) |
+| Ownership | `ownerAuthSet 0` · `endorsementAuthSet 0` · `lockoutAuthSet 1` · `inLockout 0` — **no owner hierarchy taken**, so there is no corporate ownership to clear |
+| Function | `tpm2_selftest --fulltest` **exit 0**, `tpm2_getrandom` returns bytes, PCRs read cleanly |
+
+**`MSFT0101` does not mean PTT.** The 2026-11-05 shorthand — *"TPM 2.0 present (ACPI `MSFT0101`)"* — read the ACPI HID as a firmware-TPM signal. It is not one: `MSFT0101` is the Microsoft-defined **TPM 2.0 ACPI device ID**, carried by discrete TIS and firmware CRB implementations alike, and `pve1` and `pve2` both expose it while being opposite kinds. The **driver** and the **manufacturer property** are the discriminators, exactly as [research 37 §5](37-tpm2-hardware-and-fleet.md) concluded — `tpm_crb` + `INTC` is PTT, `tpm_tis` + a chip vendor is discrete.
+
+**What it changes:**
+
+- **A stronger anchor than `pve1`'s PTT.** A discrete chip's sealed key physically cannot leave the part, and its state is **not firmware-resident** — so a **BIOS update is not a key-loss event** here, and the caveat research 37 attaches to PTT (re-issue the intermediate, do not plan to preserve the key) does not apply to this node.
+- **The fleet's second discrete TPM**, alongside `lab`'s Infineon SLB 9670 — and unlike `lab`, this node is **not** committed to another role.
+- **It does not move the CA.** [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) keeps the CA on `pve1`; this audit records a capability, it does not change custody. It is raised as an open question below, not acted on.
+- **The LXC passthrough recipe is simpler here.** `/dev/tpmrm0` is `0660 tss:tss` with the `tss` group present — the shape `lab` has, not `pve1`'s `0600 root:root` — so the `chown` step in [research 36 §5](36-step-ca-machine-identity.md) would not be needed on this node.
+- **`systemd-cryptenroll` is not installed** on this Proxmox build, so the `--tpm2-device=list` check in [research 37 §4](37-tpm2-hardware-and-fleet.md) is unavailable as shipped; the `tpm2_getcap` route answered instead.
+- **`tpm2-tools` (5.7-1) was installed** on the node to run the audit. Only read-only queries were issued — no owner was taken, no NV index created, no hierarchy auth set.
+
+> **Used/second-hand hardware:** `ownerAuthSet 0` means no owner hierarchy exists, so there is nothing left behind by the corporate deployment that owned this unit. `lockoutAuthSet 1` is the vendor-default lockout auth on Nuvoton parts, not an ownership marker. A **`TPM Clear`** in the BIOS before the node is given any sealed key is still the cheap, no-regret step.
 
 ---
 
@@ -368,9 +401,9 @@ Six items that are either **impossible to recover afterwards** or that **change 
 1. **BIOS walk (F2)** — ✅ **done 2026-11-06** for the MEBx/storage/virtualisation questions: no AMT capability page, `MEBx Hotkey` enabled, **`OROM Keyboard Access` enabled**, admin password set, TPM 2.0 enabled, **AHCI**, **VT-x + VT-d on**, TXT off, ASPM `Auto`, TurboBoost off, wireless radios disabled, UEFI network stack enabled, `SATA-4 = 128 GB SK hynix SC311 SATA`, `SATA-0` and `M.2 PCIe SSD-0` empty. The second pass filled in Power Management (**AC Recovery `Power On`**, **Wake on LAN `LAN Only`**, **Deep Sleep `Disabled`**), POST Behavior (**Fastboot `Thorough`** + non-zero **Extend BIOS POST Time**) and Secure Boot (**off**, per the F12 page). **Still to capture:** SpeedStep / C-States / Multi Core values.
 2. **ME/AMT state** — `mei-amt-version`, `/sys/class/mei/mei0/fw_ver`, `dmesg | grep -i mei`. With the BIOS ruled out and `OROM Keyboard Access` identified, this check runs **after** the retest and only matters if MEBx still will not appear.
 3. **BIOS level** — ✅ **done** — 1.27.0 is Dell's current release (published 2023-11-15, priority Critical) and the 7050 is not on DSA-2025-153, so there is nothing to flash ([gate item 4](#pre-install-gate--do-these-before-the-proxmox-installer-runs)). The `intel-microcode` update inside Proxmox is still outstanding: the live session reports `old_microcode` **Vulnerable**.
-4. **Disk** — ✅ **done 2026-11-06** — model, capacity, POH, wear and health counters recorded ([SMART](#the-module-is-worn-out--and-it-is-empty-smart-2026-11-06)). Verdict: **replace it** rather than plan around it.
+4. **Disk** — ✅ **done 2026-11-06** — model, capacity, POH, wear and health counters recorded ([SMART](#the-module-is-sound-and-it-is-empty-smart-2026-11-06)). Verdict: **sound, keep it** — 128 GB of capacity is the only argument for a bigger disk.
 5. **Visual confirmation** — is the **2.5″ caddy + ribbon present** for a later second disk, is a RAM slot free, and is the CPU heatsink the 35 W design or a retrofit?
-6. **TPM identity** — ✅ enabled and active per the F2 walk (TPM On, SHA-256, Attestation/Key Storage on, `Enabled`); **vendor still open** — the `dmesg`/`tpm2_getcap` output was not captured in the 2026-11-06 session, so Intel PTT vs a discrete chip is unresolved (the [research 37](37-tpm2-hardware-and-fleet.md) pattern: `TPM_PT_MANUFACTURER` = `INTC` → PTT, `IFX`/`NTC` → discrete). A usable TPM 2.0 keeps the option of a second sealed `step-ca` instance open.
+6. **TPM identity** — ✅ **done 2026-11-14.** A **discrete Nuvoton NPCT** TPM 2.0 — `TPM_PT_MANUFACTURER` **`NTC`**, vendor string `NPCT`, driver **`tpm_tis`** (device-id `0xFE`), PCR banks sha1 + sha256, self-test clean, **no owner hierarchy taken**. The opposite of `pve1`'s Intel PTT, and a **stronger** anchor than it ([detail](#tpm--a-discrete-nuvoton-npct-not-intel-ptt-measured-2026-11-14-on-the-live-node)).
 7. **Thermal + power measurement** — pre-OS baselines are in (**23.2 W BIOS Setup, 19.7 W PXE**); still to measure at the wall, same meter and socket: **OS idle**, **OS idle with a guest**, and **all-core load** — with package temperature and fan RPM alongside, so the 65 W decision rests on numbers rather than on the TDP label.
 8. **ePSA diagnostics** — ✅ **ran clean 2026-11-06** (*no problems found*); the System Health readings are recorded [above](#boot-menu-f12-and-epsa-2026-11-06), the memory test is the item left open under the gate.
 9. **MAC addresses** — ✅ captured 2026-11-07 at the PVE installer: `enp0s31f6` = **`d8:9e:f3:97:3e:d1`** (for the DHCP reservation and WoL).
@@ -383,6 +416,7 @@ Six items that are either **impossible to recover afterwards** or that **change 
 2. **Change the boot medium before the Proxmox install?** **Answered 2026-11-06 — not required.** The module is healthy (**~97 % endurance remaining**, [SMART read](#the-module-is-sound-and-it-is-empty-smart-2026-11-06)), so 128 GB of capacity is the only argument — and `pve1` runs the identical drive today. **Optional: an NVMe M.2 2280 (500 GB–1 TB)** for headroom; it drops into the slot the module vacates, needs no caddy, and leaves the 2.5″ bay free for the later ZFS disk ([idea 15](../ideas/15-second-proxmox-node.md) step 7). The 2.5″ SATA route hinges on the caddy and ribbon actually being present.
 3. **Is vPro worth chasing at all?** If the ME firmware is not in AMT mode, no BIOS setting will bring MEBx back. Decide between AC Recovery + WoL, an IP-KVM, or accepting manual power.
 4. **Rename first, or build `pve2` standalone?** Unchanged from idea 15: the `pve` → `pve1` rename must land **before** a cluster exists, but it is not a prerequisite for provisioning this node. The cluster and QDevice are now a separate phase ([ADR 47](../decisions/47-second-proxmox-node-cluster-qdevice.md)).
+5. **Does the discrete TPM move the CA?** No, not on this audit's evidence. `pve2` now carries a **discrete Nuvoton** part while the CA host `pve1` uses **Intel PTT** — a genuinely stronger anchor, and one that survives a BIOS update. But [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) places the CA on `pve1` and this node is the **second** cluster member, i.e. the one expected to absorb guests and failover. Recommendation: **record the capability, change nothing** — revisit only if `pve1`'s PTT anchor becomes a problem, and then as an ADR amendment rather than a migration.
 
 ---
 
