@@ -86,8 +86,8 @@ root** — which is exactly `pve`'s role, and the reason the TPM key-custody ide
 
 ## §4 — Per-node TPM audit (partly measured — **verify the rest on hardware**)
 
-The thread listed what each fleet node should have. **`pve` and `lab` were inspected on 2026-10-04 and `pve2` on
-2026-11-14; the thread was wrong about `pve` and right about `lab` (§5, §5.1). The remaining rows are still
+The thread listed what each fleet node should have. **`pve1` and `lab` were inspected on 2026-10-04 and `pve2` on
+2026-11-14; the thread was wrong about `pve1` and right about `lab` (§5, §5.1). The remaining rows are still
 unconfirmed** — the check procedure is the same for every Debian/Ubuntu/Proxmox node:
 
 ```bash
@@ -107,17 +107,17 @@ systemd-cryptenroll --tpm2-device=list   # enumerates TPM 2.0 devices systemd ca
 
 | Node | Thread's claim | Notes |
 |---|---|---|
-| **`pve`** (Dell Wyse 5070) | ~~**dTPM 2.0** — discrete chip on the board~~ — **refuted in §5** | Measured 2026-10-04: an **Intel PTT firmware TPM (`INTC`)**; no discrete chip is fitted. It is the CA host ([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md)) |
+| **`pve1`** (Dell Wyse 5070) | ~~**dTPM 2.0** — discrete chip on the board~~ — **refuted in §5** | Measured 2026-10-04: an **Intel PTT firmware TPM (`INTC`)**; no discrete chip is fitted. It is the CA host ([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md)) |
 | **`pve2`** (Dell OptiPlex 7050) | not in the thread | Measured 2026-11-14: a **discrete Nuvoton NPCT (`NTC`)**, driver `tpm_tis` — a **second** discrete TPM, and unlike `lab` not committed to another role ([research 52](52-optiplex7050-hardware-diagnostic.md)) |
 | **`lab`** (ThinkCentre M910q) | **dTPM 2.0** on the board — **confirmed in §5.1** | Measured 2026-10-04: a **discrete Infineon SLB 9670 (`IFX`)**, driver `tpm_tis` — the fleet's **first** discrete TPM, but it is the k3s node and is **blocked** on k3s ([ADR 22](../decisions/22-k3s-arc-homelab.md)) |
 | **`edge`** (Dell Wyse 3040) | **No TPM** (Atom x5-Z8350; SoC/BIOS limits) | Identity would be software-only |
 | **Futro S930** (OPNsense candidate) | **TPM 1.2 or none** — older AMD G-series | Not usable for TPM 2.0 features |
 | **Beetle M-III** (the NAS) | **dTPM 1.2 or 2.0 depending on board variant** | Explicitly "verify in BIOS/LSHW" |
 
-> The candidates that could hold a **hardware-backed CA key** are therefore `pve`, `lab` and now `pve2`. For
-> `pve` that aligns with [research 36 §5](36-step-ca-machine-identity.md)'s recommendation; for `lab`
+> The candidates that could hold a **hardware-backed CA key** are therefore `pve1`, `lab` and now `pve2`. For
+> `pve1` that aligns with [research 36 §5](36-step-ca-machine-identity.md)'s recommendation; for `lab`
 > it collides with the k3s plan. `pve2` is the strongest anchor of the three and the least encumbered, but
-> [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) keeps the CA on `pve` — the capability is
+> [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) keeps the CA on `pve1` — the capability is
 > recorded, custody is unchanged. Everything else would need a software key or an external module (§7).
 
 ## §5 — The Wyse 5070's TPM in detail (measured 2026-10-04 — the thread was wrong)
@@ -262,7 +262,7 @@ adds an interceptable layer that defeats the tamper-resistance model. The altern
 ## §8 — Relevance to the lab
 
 - **The private CA** ([research 36](36-step-ca-machine-identity.md)) can use a hardware TPM as key
-  custody **only where one exists** — `pve` (an **Intel PTT firmware TPM**, §5), `pve2` (a **discrete
+  custody **only where one exists** — `pve1` (an **Intel PTT firmware TPM**, §5), `pve2` (a **discrete
   Nuvoton NPCT**, §4) or `lab` (a **discrete Infineon SLB 9670**, §5.1, but committed to k3s). Note
   the distinction: PTT is a real platform TPM and is usable, but it is not a discrete tamper-resistant
   part — and `pve2` is now the only **free** node carrying one.
@@ -276,8 +276,8 @@ adds an interceptable layer that defeats the tamper-resistance model. The altern
 
 ## §9 — Open questions
 
-- **The audit is only partly run — `pve`, `lab` and `pve2` are done, the rest is not.** All three were
-  inspected: `pve` on 2026-10-04 reports an **Intel PTT firmware TPM** (§5), `lab` a **discrete Infineon
+- **The audit is only partly run — `pve1`, `lab` and `pve2` are done, the rest is not.** All three were
+  inspected: `pve1` on 2026-10-04 reports an **Intel PTT firmware TPM** (§5), `lab` a **discrete Infineon
   SLB 9670** (§5.1), and `pve2` on 2026-11-14 a **discrete Nuvoton NPCT** (§4). `edge`, the Futro S930 and
   the Beetle remain unconfirmed until §4's commands are run on each — so those three are the
   **confirmed** hardware-backed hosts, and the rest stay open.
