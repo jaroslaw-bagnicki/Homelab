@@ -1,6 +1,6 @@
-# OpenCode Server Instances on Cloudlab
+# OpenCode Server Instances on lab
 
-> Runbook for the `ansible/workloads/opencode/` workload — per-project OpenCode server instances on Cloudlab. Workload description, capabilities, services, host layout, secret handling, and idempotency live in [the workload README](../../ansible/workloads/opencode/README.md). This runbook covers the operational steps: prerequisites, secret provisioning, deploy invocation, verification, and CF Tunnel prerequisites.
+> Runbook for the `ansible/workloads/opencode/` workload — per-project OpenCode server instances on `lab` (migrated from cloudlab as-is — [runbook 47](47-migrate-cloudlab-docker-to-lab.md)). Workload description, capabilities, services, host layout, secret handling, and idempotency live in [the workload README](../../ansible/workloads/opencode/README.md). This runbook covers the operational steps: prerequisites, secret provisioning, deploy invocation, verification, and CF Tunnel prerequisites.
 
 > **Note:** `example.com` is a placeholder domain used in this runbook for documentation purposes. Replace with the actual domain when following these steps for a real deployment.
 
@@ -9,7 +9,7 @@
 - [ ] Runbooks [1](01-init.md), [2](02-docker.md), [4](04-caddy.md), [5](05-cloudflare-tunnel.md), [10](10-vps-playground.md), [16](16-docker-services-ansible-role.md) completed.
 - [ ] Ansible collections installed: `community.docker`, `community.general`, `azure.azcollection` (`ansible-galaxy collection install -r ansible/requirements.yml`).
 - [ ] `homelab-bysxdb-kv` Key Vault accessible from the Ansible controller identity, with secrets for each instance (see workload README §Secrets).
-- [ ] SSH access to `cloudlab` via `ansible_user: fleetadm` (see [fleet-connect skill](../../.github/skills/fleet-connect)).
+- [ ] SSH access to `lab` via `ansible_user: fleetadm` from a LAN workstation on `192.168.2.0/24`.
 - [ ] Cloudflare Tunnel `*.<domain>` → `http://caddy:80` configured (see [ADR 19](../decisions/19-cloudflare-tunnel-http-origin.md)).
 
 ## 1. Provision secrets
@@ -31,20 +31,20 @@ Naming convention: one secret per instance, named `opencode-<instance-name>-serv
 The OpenCode workload is **decoupled** from the main playbook. Run two steps:
 
 ```bash
-ansible-playbook ansible/playbooks/playbook.yml                    # base setup
+ansible-playbook ansible/playbooks/playbook-lab.yml                 # base setup (incl. docker_services)
 ansible-playbook ansible/workloads/opencode/opencode-playbook.yml  # OpenCode workload
 ```
 
 `opencode_net` is self-declared independently in two places:
 
-1. `ansible/playbooks/playbook.yml` pre_tasks — ensures the network before any role runs.
+1. `ansible/roles/docker_services/tasks/main.yml` — `docker_services_networks` loop, run by `playbook-lab.yml`.
 2. `ansible/workloads/opencode/docker_opencode_ingress/tasks/main.yml` — `community.docker.docker_network` task.
 
 Both declarations are idempotent. First writer wins; the second is a no-op. The network survives both playbook runs.
 
-The OpenCode workload playbook itself has no pre_tasks. The two co-located roles (`docker_opencode_ingress`, `docker_opencode_instances`) handle their own network and KV requirements.
+The OpenCode workload playbook itself has no pre_tasks and targets `hosts: lab`. The two co-located roles (`docker_opencode_ingress`, `docker_opencode_instances`) handle their own network and KV requirements.
 
-The deploy workflow is `bash` shell commands on a host with `ansible-playbook` installed. Inside the dev container or against cloudlab SSH, the two-step order produces an idempotent deployment: running the workload twice without changes reports `changed=0`.
+The deploy workflow is `bash` shell commands on a LAN workstation with `ansible-playbook` installed. Running against `lab`, the two-step order produces an idempotent deployment: running the workload twice without changes reports `changed=0`.
 
 ## 3. Verification Checklist
 
@@ -60,7 +60,7 @@ The deploy workflow is `bash` shell commands on a host with `ansible-playbook` i
 - [ ] Via Cloudflare Tunnel: `curl -u opencode:$PASSWORD https://homelab-oc.example.com/global/health` → `{"healthy":true,...}`
 - [ ] Via Cloudflare Tunnel: same check against `https://prospera-oc.example.com/global/health`
 
-The `example.com` literal in this runbook reflects the cloudlab deployment. The `opencode_public_domain` Ansible var controls it; substitute accordingly when targeting a different host. The `oc` suffix is hardcoded in the Caddyfile template.
+The `example.com` literal in this runbook is a placeholder; the `opencode_public_domain` Ansible var (in `host_vars/lab.yml`) controls the deployed domain. The `oc` suffix is hardcoded in the Caddyfile template.
 
 ## 4. Cloudflare Tunnel DNS prerequisites
 

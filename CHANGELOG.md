@@ -13,6 +13,7 @@ Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month 
 
 ## 2026‑11
 
+- **(feat)** Migrate the Docker workload stack from `cloudlab` to `lab` as-is — intermediate step of the k3s migration, which stays postponed — [runbook 47](docs/runbooks/47-migrate-cloudlab-docker-to-lab.md)
 - **(fix)** Renew SSH host certificates again — `step ssh renew` rejected `-f` before its positional paths, so no certificate ever renewed — [runbook 40](docs/runbooks/40-deploy-ssh-certificates.md)
 - **(docs)** Adopt the two-model split on one Pro account — DS4.1 stays daily via Mistral, ML4 via Vibe — [ADR 51](docs/decisions/51-ai-model-split-deepseek-mistral.md)
 - **(docs)** Adopt the 3‑2‑1 backup rule with Backblaze B2 as the off-site target, superseding ADR 02's Azure Blob — [ADR 49](docs/decisions/49-backup-3-2-1-strategy.md)
@@ -97,7 +98,7 @@ Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month 
 - **(docs)** Add ADR 22 — migrate Homelab workloads to Kubernetes (k3s + Azure Arc) — [ADR 22](docs/decisions/22-k3s-arc-homelab.md)
 - **(docs)** Add ADR 21 — per-project OpenCode container images — [ADR 21](docs/decisions/21-opencode-instance-images.md)
 - **(docs)** Provisioning runbook for new OpenCode instances — inventory, AKV secret, deploy, model providers — [runbook 18](docs/runbooks/18-provision-opencode-instance.md) · [#37](https://github.com/jaroslaw-bagnicki/Homelab/issues/37) · [#42](https://github.com/jaroslaw-bagnicki/Homelab/issues/42)
-- **(feat)** Init server-hosted OpenCode instances on Cloudlab — `docker_opencode_ingress` + `docker_opencode_instances` roles, wildcard `*-oc.<domain>` routing — [runbook 17](docs/runbooks/17-deploy-opencode-on-cloudlab.md) · [#30](https://github.com/jaroslaw-bagnicki/Homelab/issues/30) · [#32](https://github.com/jaroslaw-bagnicki/Homelab/issues/32)
+- **(feat)** Init server-hosted OpenCode instances on Cloudlab — `docker_opencode_ingress` + `docker_opencode_instances` roles, wildcard `*-oc.<domain>` routing — [runbook 17](docs/runbooks/17-deploy-opencode-on-lab.md) · [#30](https://github.com/jaroslaw-bagnicki/Homelab/issues/30) · [#32](https://github.com/jaroslaw-bagnicki/Homelab/issues/32)
 - **(docs)** Research: Infisical for Homelab secret management — [research 22](docs/research/22-infisical-for-homelab-secret-management.md)
 - **(docs)** Research: OpenCode sandboxed homelab architecture — [research 21](docs/research/21-opencode-sandboxed-homelab-architecture.md)
 - **(docs)** Research: OpenCode hosting — Codespaces vs Homelab vs Cloudlab — [research 20](docs/research/20-opencode-hosting-codespaces-vs-homelab.md)

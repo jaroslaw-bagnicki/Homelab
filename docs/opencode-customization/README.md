@@ -67,7 +67,7 @@ Long-term destination: migrate all Cloudlab Compose workloads to k3s on the home
 
 | # | Runbook | Topic |
 |---|---|---|
-| 17 | [17-deploy-opencode-on-cloudlab.md](../runbooks/17-deploy-opencode-on-cloudlab.md) | Base deployment of the per-instance OpenCode workload |
+| 17 | [17-deploy-opencode-on-lab.md](../runbooks/17-deploy-opencode-on-lab.md) | Base deployment of the per-instance OpenCode workload (on `lab` since the cloudlab migration — runbook 47) |
 | 18 | [18-provision-opencode-instance.md](../runbooks/18-provision-opencode-instance.md) | Adding a new OpenCode instance (inventory + password + container) |
 | 19 | [19-azure-sp-for-opencode.md](../runbooks/19-azure-sp-for-opencode.md) | Per-instance Azure SP provisioning + AKV wiring |
 

@@ -1,6 +1,6 @@
 # docker_services
 
-Deploys the core Docker Compose stack on `cloudlab` — Portainer, Caddy (reverse proxy, auto-TLS), and cloudflared (Cloudflare Tunnel) — plus the shared bridge networks. Secrets are read from Key Vault at run time.
+Deploys the core Docker Compose stack on `lab` — Portainer, Caddy (reverse proxy, auto-TLS), and cloudflared (Cloudflare Tunnel) — plus the shared bridge networks. Secrets are read from Key Vault at run time. (Migrated from `cloudlab` as-is — #44 intermediate step, runbook 47.)
 
 ## Files
 
@@ -24,7 +24,7 @@ Deploys the core Docker Compose stack on `cloudlab` — Portainer, Caddy (revers
 
 ## Notes
 
-- Asserts `inventory_hostname` is `lab` or `cloudlab`; in practice only `playbook.yml` (cloudlab) applies it — `playbook-lab.yml` omits it ([ADR 24](../../../docs/decisions/24-edge-ingress-appliance.md)).
+- Asserts `inventory_hostname` is `lab` or `cloudlab`; applied by `playbook-lab.yml` since the cloudlab → lab migration (runbook 47); `playbook.yml` (cloudlab) no longer includes it.
 - The cloudflared `.env` (tunnel token) is written `0600`, `no_log`, and listed in a `.gitignore`.
 - Portainer's admin user is initialised from the Key Vault password and treats `409` (already initialised) as success.
 

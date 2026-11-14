@@ -2,7 +2,7 @@
 
 ## Purpose
 
-A self-contained Ansible recipe that deploys per-project OpenCode server instances on cloudlab. The workload decouples OpenCode deployment from the base host provisioning playbook so adding a new OpenCode project requires no playbook edits, no role inventory changes, and no role resync.
+A self-contained Ansible recipe that deploys per-project OpenCode server instances on `lab` (migrated from cloudlab as-is — runbook 47). The workload decouples OpenCode deployment from the base host provisioning playbook so adding a new OpenCode project requires no playbook edits, no role inventory changes, and no role resync.
 
 Per ADR 18, OpenCode instances are sandboxed: each project (`homelab`, `prospera`, future) gets its own OpenCode server container, its own persistent data volumes, and its own subdomain. The agent's tools (Bash, file edits, MCP servers) run inside the container; the host is untouched by agent execution.
 
@@ -69,7 +69,7 @@ Subsequent runs with no template, image, or KV change report `changed=0`. Passwo
 ## What's in this folder
 
 - `opencode-playbook.yml` — playbook entrypoint.
-- `docker_opencode_ingress/` — role: deploys `caddy-opencode`, renders per-instance Caddyfile from `host_vars.cloudlab.opencode_instances`.
+- `docker_opencode_ingress/` — role: deploys `caddy-opencode`, renders per-instance Caddyfile from `host_vars.lab.opencode_instances`.
 - `docker_opencode_instances/` — role: ensures per-instance data dirs, fetches passwords from `homelab-bysxdb-kv`, deploys containers via `community.docker.docker_container`.
 
 ## Invoke
@@ -78,7 +78,7 @@ Subsequent runs with no template, image, or KV change report `changed=0`. Passwo
 
 ## Hosts
 
-`cloudlab` (configured at `ansible/host_vars/cloudlab.yml`). The workload targets `cloudlab` only; homelab deploy is a future concern.
+`lab` (configured at `ansible/host_vars/lab.yml`). The workload was migrated from `cloudlab` as-is — #44 intermediate step, runbook 47.
 
 ## Roles run
 
@@ -95,5 +95,5 @@ Both roles idempotently declare `opencode_net`. Whichever role runs first create
 
 ## Operational runbook
 
-For deployment steps, secret provisioning, and the verification checklist, see [`docs/runbooks/17-deploy-opencode-on-cloudlab.md`](../../../docs/runbooks/17-deploy-opencode-on-cloudlab.md).
+For deployment steps, secret provisioning, and the verification checklist, see [`docs/runbooks/17-deploy-opencode-on-lab.md`](../../../docs/runbooks/17-deploy-opencode-on-lab.md).
 

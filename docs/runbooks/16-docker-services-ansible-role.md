@@ -1,6 +1,6 @@
 # Homelab Setup — Docker Services Ansible Role
 
-> Runbook for the `docker_services` Ansible role — deploys Portainer, Caddy, Hello World, and Cloudflare Tunnel (`cloudflared`) on Cloudlab via `community.docker.docker_compose_v2`.
+> Runbook for the `docker_services` Ansible role — deploys Portainer, Caddy, Hello World, and Cloudflare Tunnel (`cloudflared`) on `lab` via `community.docker.docker_compose_v2` (migrated from cloudlab as-is — [runbook 47](47-migrate-cloudlab-docker-to-lab.md)).
 
 > **Note:** `example.com` is a placeholder domain used in this runbook for documentation purposes. Replace with the actual domain when following these steps for a real deployment.
 
@@ -15,7 +15,7 @@
   sudo apt install -y python3-pip
   pip3 install --break-system-packages azure-identity azure-keyvault-secrets
   ```
-- [ ] SSH access to `cloudlab` via `ansible_user: fleetadm`
+- [ ] SSH access to `lab` via `ansible_user: fleetadm` (from a LAN workstation on `192.168.2.0/24`)
 - [ ] **Cloudflare dashboard setup completed** — see §6 (one-time, manual)
 
 ---
@@ -59,15 +59,16 @@ Expected second-run output: `changed=0` for all `docker_services` tasks (handler
 
 ## 4. Playbook Integration
 
-The `docker_services` role runs last in `ansible/playbooks/playbook.yml`. The `security` role (run before `docker_host`) must allow outbound UDP/7844 for cloudflared's QUIC connection:
+The `docker_services` role runs in `ansible/playbooks/playbook-lab.yml` (after `docker_host`) since the cloudlab → `lab` migration ([runbook 47](47-migrate-cloudlab-docker-to-lab.md)); it used to run last in cloudlab's `playbook.yml`. The `security` role (run before `docker_host`) must allow outbound UDP/7844 for cloudflared's QUIC connection:
 
 ```yaml
 roles:
   - common
+  - ca_trust
   - security
-  - azure_arc
   - docker_host
   - docker_services
+  - azure_arc
 ```
 
 `security` role defaults that govern inbound hardening (see `ansible/roles/security/defaults/main.yml`):
@@ -80,11 +81,11 @@ roles:
 - [ ] Role is idempotent: second run reports `changed=0` for the `docker_services` tasks
 - [ ] All 4 containers running: `docker ps` shows `portainer`, `caddy`, `cloudflared`, `hello` all `Up`
 - [ ] cloudflared connected: `docker logs cloudflared 2>&1 | grep -i 'connection.*registered'` shows a successful registration
-- [ ] Local Caddy debug endpoint works: from the VPS, `curl -s http://127.0.0.1:8080` returns `Caddy debug: OK`
+- [ ] Local Caddy debug endpoint works: on `lab`, `curl -s http://127.0.0.1:8080` returns `Caddy debug: OK`
 - [ ] HTTPS through Cloudflare Tunnel works: from any internet device, `curl -sI https://example.com` returns `HTTP/2 200` with a valid CF edge cert
 - [ ] Hello service reachable through tunnel: from any internet device, `curl -sI https://hello.example.com` returns `HTTP/2 200` (proxied to `hello` container)
-- [ ] Portainer NOT exposed publicly: `curl -s --connect-timeout 5 http://173.249.27.13:9000` → connection refused or timeout
-- [ ] Direct HTTP blocked: `curl -s --connect-timeout 5 http://173.249.27.13` → connection refused (UFW deny 80)
+- [ ] Portainer NOT exposed publicly: `curl -s --connect-timeout 5 http://192.168.2.200:9000` from another LAN host → connection refused or timeout (loopback-only bind)
+- [ ] Direct HTTP blocked: `curl -s --connect-timeout 5 http://192.168.2.200` → connection refused (UFW deny 80)
 - [ ] `.env` file permissions correct: `ls -la /opt/docker/.env` → mode `0600`
 
 ---
@@ -98,13 +99,13 @@ Before the first `ansible-playbook` run, complete these steps in the [Cloudflare
 Navigate: [**Zero Trust** → **Networks** → **Tunnels**](https://dash.cloudflare.com/b7208cffa068d8f825142ea9fd426558/tunnels/9558d789-1623-4b9e-ac67-3a1170ec9c0b/overview) → **Create a tunnel**
 
 - Connector type: **Cloudflared**
-- Name: `cloudlab-tunnel` (any name works — the role's defaults derive Key Vault secret names from `inventory_hostname` via the `cloudflared_*_secret_name` vars)
+- Name: any (e.g. `lab-tunnel`) — the role's defaults derive Key Vault secret names from `inventory_hostname` via the `cloudflared_*_secret_name` vars, so on `lab` the token secret is **`cloudflared-tunnel-token-lab`**; for the migration, copy the existing `cloudflared-tunnel-token-cloudlab` value so the same tunnel UUID is reused and `cloud5.ovh` DNS is unchanged (see [runbook 47](47-migrate-cloudlab-docker-to-lab.md) §Prerequisites)
 
 Click **Save tunnel**. **Copy the tunnel token** (shown once) — store in a temp file.
 
 
 
-In the CF dashboard, [**Zero Trust** → **Networks** → **Tunnels** → `cloudlab-tunnel` → **Connectors** tab](https://dash.cloudflare.com/b7208cffa068d8f825142ea9fd426558/tunnels/9558d789-1623-4b9e-ac67-3a1170ec9c0b/overview). After the first `ansible-playbook` run, the **Connectors** tab should show `cloudlab` with status **Active**. If **Inactive** or **Down**, debug via `docker logs cloudflared` on the VPS.
+In the CF dashboard, [**Zero Trust** → **Networks** → **Tunnels** → the tunnel → **Connectors** tab](https://dash.cloudflare.com/b7208cffa068d8f825142ea9fd426558/tunnels/9558d789-1623-4b9e-ac67-3a1170ec9c0b/overview). After the first `ansible-playbook` run on `lab`, the **Connectors** tab should show `lab` with status **Active**. If **Inactive** or **Down**, debug via `docker logs cloudflared` on `lab`.
 
 ### 6.2 — Cloudflare Access policy for admin services (recommended)
 

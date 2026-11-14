@@ -56,7 +56,7 @@ The script is parameterless — it reads the tenant and subscription from the cu
 
 ### Step 2 — Opt the instance in via Ansible inventory
 
-Edit `ansible/host_vars/cloudlab.yml` and set `azure_sp: true` on the `homelab` entry:
+Edit `ansible/host_vars/lab.yml` and set `azure_sp: true` on the `homelab` entry:
 
 ```yaml
 opencode_instances:
@@ -163,7 +163,7 @@ Credentials are stored on the App Registration, not the Service Principal (Enter
 | `scripts/Create-HomelabOcAgentAzSp.ps1` | NEW — bootstrap script |
 | `scripts/Rotate-HomelabOcAgentAzSp.ps1` | NEW — credential rotation script |
 | `scripts/Validate-PlaybookPrereqs.ps1` | NEW — pre-flight validation |
-| `ansible/host_vars/cloudlab.yml` | EDIT — adds `azure_sp: true` to the homelab instance |
+| `ansible/host_vars/lab.yml` | EDIT — adds `azure_sp: true` to the homelab instance |
 | `ansible/workloads/opencode/docker_opencode_instances/defaults/main.yml` | EDIT — 3 secret-name templates |
 | `ansible/workloads/opencode/docker_opencode_instances/tasks/provision_instance.yml` | EDIT — optional SP credential fetch + env-var injection |
 | `ansible/workloads/opencode/README.md` | EDIT — §Secrets describes the optional SP flow |
@@ -178,7 +178,7 @@ Credentials are stored on the App Registration, not the Service Principal (Enter
 
 - [ADR 16](../decisions/16-agent-identity-pattern.md) — design rationale
 - [ADR 18](../decisions/18-opencode-sandbox.md) — AKV-as-source-of-truth
-- [Runbook 17](17-deploy-opencode-on-cloudlab.md) — base deployment
+- [Runbook 17](17-deploy-opencode-on-lab.md) — base deployment
 - [Runbook 18](18-provision-opencode-instance.md) — per-instance provisioning
 - [Workload README — OpenCode](../../ansible/workloads/opencode/README.md) — Ansible-side details
 - [OpenCode customization index](../opencode-customization/README.md) — workstream overview

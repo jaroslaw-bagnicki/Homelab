@@ -2,16 +2,12 @@
 - name: Configure cloudlab VPS
   hosts: cloudlab
   become: true
-  pre_tasks:
-    - name: Ensure opencode_net Docker network exists
-      community.docker.docker_network:
-        name: opencode_net
-        state: present
-        driver: bridge
+  # The Docker workload stack (docker_services, OpenCode, Zot) moved to `lab`
+  # as-is — intermediate step before the lab Docker → k3s migration (#44, ADR 22,
+  # runbook 47). cloudlab keeps the base roles + Docker daemon until decommission.
   roles:
     - common
     - security
     - ca_trust
     - azure_arc
     - docker_host
-    - docker_services
