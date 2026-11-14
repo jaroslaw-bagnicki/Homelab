@@ -263,13 +263,14 @@ sudo journalctl -u homelab-ssh-host-cert-renew -n 20
 > | `pve1` | `playbook-pve1.yml` | `ok=121 changed=8 failed=0` |
 > | `edge` | `playbook-edge.yml` | `failed=0` (output truncated; verified on the node) |
 > | `lab` | `playbook-lab.yml` | `ok=51 failed=1` → retry `ok=117 changed=9 failed=0` |
+> | `nas` | `playbook-nas.yml` | `ok=98 changed=8 failed=0` (same day, once the node was reachable again) |
 >
-> All six now carry a certificate valid to **2026-11-21** and the corrected script
+> All seven now carry a certificate valid to **2026-11-21** and the corrected script
 > (`step ssh renew "$CERT" "$KEY" -f`). Stale `failed` states were cleared with
 > `systemctl reset-failed homelab-ssh-host-cert-renew.service`.
 >
 > **The timer's own renewal path is now proven.** The 2026-10-31 record only exercised the *role*, which
-> re-issues on the controller — that is why the flag bug shipped. On the `pve2` canary, forcing
+> re-issues on the controller — that is why the flag bug shipped. On the `pve2` and `nas` canaries, forcing
 > `THRESHOLD=999999` and running `/usr/local/sbin/homelab-ssh-host-cert-renew` renewed through SSHPOP
 > (`exit=0`, new expiry, `host certificate renewed` in the journal), then the threshold was restored to
 > `176400` and a no-op run exited 0.
