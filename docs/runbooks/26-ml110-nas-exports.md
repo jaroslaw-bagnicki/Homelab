@@ -33,7 +33,7 @@
 - [ ] NFS export restricted to `192.168.2.0/24`, options `sync,no_root_squash`
 - [ ] `showmount -e 192.168.2.210` lists the export
 - [ ] NFS mount + write test from the M910q
-- [ ] Longhorn backup target → `nfs://192.168.2.210:/export/backups` + backup/restore verify (blocked by #44)
+- [ ] Longhorn backup target → `nfs://192.168.2.210:/export/backups` + backup/restore verify (blocked by #199)
 - [x] mDNS verified — `omv.local` → `192.168.2.210` from the Windows workstation (2026-08-22)
 
 > **Execution log — 2026-08-22** (driven via the OMV web UI at `https://192.168.2.210`)
@@ -252,12 +252,12 @@ sudo touch /mnt/nas-backups/nfs-write-test && sudo umount /mnt/nas-backups
 
 ---
 
-## 4. Longhorn integration (blocked by #44)
+## 4. Longhorn integration (blocked by #199)
 
 Point the Longhorn backup target at `nfs://192.168.2.210:/export/backups` once k3s + Longhorn
-land on the M910q ([#44](https://github.com/jaroslaw-bagnicki/Homelab/issues/44), ADR 22).
+land on the M910q ([#199](https://github.com/jaroslaw-bagnicki/Homelab/issues/44), ADR 22).
 Verify by creating a volume backup and confirming a restore path. This step is **deferred until
-#44** — the export itself is the unblocking piece here.
+#199** — the export itself is the unblocking piece here.
 
 ---
 
@@ -284,7 +284,7 @@ ping omv.local                 # reply from 192.168.2.210
 - Confirm acceptance criteria from issue #62:
   - `showmount -e 192.168.2.210` lists the export restricted to `192.168.2.0/24`.
   - SMB `\\192.168.2.210\shared` writable with `jarek` credentials (LAN-only).
-  - Longhorn backup target pointed + a backup/restore verified (after #44).
+  - Longhorn backup target pointed + a backup/restore verified (after #199).
   - `omv.local`/`nas.local` resolves on the subnet.
 - Update `docs/overview.md` (OMV NAS shares → ✅, link this runbook), `docs/hardware.md` if
   needed, `docs/ideas/03-nas-backup-target-ml110.md` → ✅ Done, and add a `CHANGELOG.md` entry.

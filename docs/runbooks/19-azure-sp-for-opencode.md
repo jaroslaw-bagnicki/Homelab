@@ -16,7 +16,7 @@
 | **Container env var names** | `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET` (Azure SDK contract — non-renameable) |
 | **Credential type** | Client secret (password credential) on the App Registration — portal-visible under Certificates & secrets |
 | **Default lifetime** | 90 days (rotate via `Rotate-HomelabOcAgentAzSp.ps1`) |
-| **Long-term destination** | UAMI Workload Identity per K8s ServiceAccount (issue #44) |
+| **Long-term destination** | UAMI Workload Identity per K8s ServiceAccount (issue #199) |
 
 > **Note:** The bootstrap script creates a 90-day credential on the App Registration. The auto-generated credential from `New-AzADServicePrincipal` (365-day default) is discarded — only the 90-day credential is stored in AKV. Both script and rotation use `New-AzADAppCredential` (portal-visible) rather than `New-AzADSpCredential` (portal-hidden). See [portal navigation](#portal-navigation).
 

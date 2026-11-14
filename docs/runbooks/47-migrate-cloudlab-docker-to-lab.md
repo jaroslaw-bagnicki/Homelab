@@ -1,6 +1,6 @@
 # Migrate the Docker Workload Stack from cloudlab to lab — with the public tunnel on edge
 
-> Intermediate step of the k3s migration ([#44](https://github.com/jaroslaw-bagnicki/Homelab/issues/44), [ADR 22](../decisions/22-k3s-arc-homelab.md)): the cloudlab Docker stack — `docker_services` (Portainer, origin Caddy, hello), the OpenCode instances, and Zot — moves to `lab` **as-is** ("as is" = same Compose files, same container data, same `cloud5.ovh` public hostnames and AKV secrets; only the host changes). The **public Cloudflare Tunnel moves to `edge`** ([ADR 53](../decisions/53-remote-access-cloudflare-tunnel-edge.md), unblocking #81): one Caddy on `edge` with two zones (`*.internal` + public `*.cloud5.ovh`), proxying the public zone to the lab origin Caddy. The **lab Docker → k3s** step stays postponed (§8).
+> The cloudlab → `lab` Docker host move ([#44](https://github.com/jaroslaw-bagnicki/Homelab/issues/44)) — the step that precedes the k3s initiative ([#199](https://github.com/jaroslaw-bagnicki/Homelab/issues/199), [ADR 22](../decisions/22-k3s-arc-homelab.md)): the cloudlab Docker stack — `docker_services` (Portainer, origin Caddy, hello), the OpenCode instances, and Zot — moves to `lab` **as-is** ("as is" = same Compose files, same container data, same `cloud5.ovh` public hostnames and AKV secrets; only the host changes). The **public Cloudflare Tunnel moves to `edge`** ([ADR 53](../decisions/53-remote-access-cloudflare-tunnel-edge.md), unblocking #81): one Caddy on `edge` with two zones (`*.internal` + public `*.cloud5.ovh`), proxying the public zone to the lab origin Caddy. The **lab Docker → k3s** step stays postponed (§8).
 
 The IaC side is already repointed in the repo:
 
@@ -94,10 +94,10 @@ cloudlab's containers can be restarted manually (`docker compose up -d` in `/opt
 
 ## 8. Postponed: lab Docker → k3s
 
-Deliberately **not** part of this step (ADR 22 decision #5, #44):
+Deliberately **not** part of this step (ADR 22 decision #5; re-planned from scratch in #199):
 
 - swap `docker_host` → `k3s_host` in `playbook-lab.yml` (k3s ships its own containerd — Docker is replaced, not coexisted);
-- install `chrony` on `lab` (the `common` role auto-detects it via `service_facts` — #44 note, runbook 28 §4);
+- install `chrony` on `lab` (the `common` role auto-detects it via `service_facts` — #199 note, runbook 28 §4);
 - repoint Fluent Bit from Docker json-file logs to containerd/`/var/log/pods`;
 - move the public plane into the cluster ingress (removes the ADR 34 edge→lab exception) and re-point the edge `caddy_public_sites` upstreams;
 - open the k3s ports (6443 etc.) in the `security` role UFW rules;
@@ -107,6 +107,6 @@ Deliberately **not** part of this step (ADR 22 decision #5, #44):
 
 ## Related
 
-- [#44 — Migrate Homelab workloads from Docker Compose to Kubernetes (k3s + Arc)](https://github.com/jaroslaw-bagnicki/Homelab/issues/44) · [#81 — move public ingress to edge](https://github.com/jaroslaw-bagnicki/Homelab/issues/81)
+- [#44 — Migrate the Docker workload stack from cloudlab to lab as-is (this runbook)](https://github.com/jaroslaw-bagnicki/Homelab/issues/44) · [#199 — Kubernetes on lab: research/design from scratch](https://github.com/jaroslaw-bagnicki/Homelab/issues/199) · [#81 — move public ingress to edge](https://github.com/jaroslaw-bagnicki/Homelab/issues/81)
 - [ADR 53 — Remote access: Cloudflare Tunnel on edge](../decisions/53-remote-access-cloudflare-tunnel-edge.md) · [ADR 22 — k3s + Arc](../decisions/22-k3s-arc-homelab.md) · [ADR 19 — tunnel HTTP origin](../decisions/19-cloudflare-tunnel-http-origin.md) · [ADR 34 — LAN TLS only](../decisions/34-lan-tls-only.md)
 - [Runbook 16 — docker_services role](16-docker-services-ansible-role.md) · [Runbook 17 — OpenCode on lab](17-deploy-opencode-on-lab.md) · [Runbook 20 — Zot](20-deploy-zot.md) · [Runbook 24 — edge appliance](24-edge-appliance.md)

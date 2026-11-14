@@ -10,7 +10,7 @@
 The M910q currently runs Ubuntu 26.04, which is **not in Azure Arc's supported OS table**
 (research 09 caps at 24.04) — `azcmagent` fails with *"unsupported Linux distribution:
 Ubuntu 26.04"* and Arc enrolment is blocked. Arc is a **hard prerequisite for the k3s
-migration** (ADR 22 / [#44](https://github.com/jaroslaw-bagnicki/Homelab/issues/44)).
+migration** (ADR 22 / [#199](https://github.com/jaroslaw-bagnicki/Homelab/issues/44)).
 The refresh re-aligns the box with ADR 05 and unblocks that track.
 
 ## What changes
@@ -260,13 +260,13 @@ sudo azcmagent show
 
 - **Edge appliance** (#65) takes over DNS/Caddy/tunnel; then runbooks 03/04/05 become
   superseded by runbook 24.
-- **k3s migration** (#44) unblocked by Arc enrolment.
+- **k3s migration** (#199) unblocked by Arc enrolment.
 - **Restic** (#13) and **DR skill** (#16) remain queued downstream.
 
 ## References
 
 - [ADR 05 — OS decision](../decisions/05-os-decision-ubuntu-server.md) · [research 09 — OS decision](../research/09-os-decision.md)
-- [ADR 22 — k3s + Azure Arc](../decisions/22-k3s-arc-homelab.md) · [issue #44](https://github.com/jaroslaw-bagnicki/Homelab/issues/44)
+- [ADR 22 — k3s + Azure Arc](../decisions/22-k3s-arc-homelab.md) · [issue #199](https://github.com/jaroslaw-bagnicki/Homelab/issues/44)
 - [ADR 24 — Edge ingress appliance](../decisions/24-edge-ingress-appliance.md) · [issue #65](https://github.com/jaroslaw-bagnicki/Homelab/issues/65)
 - [Runbook 01](01-init.md) — original install (USB, static IP, SSH, hardening)
 - [Runbook 22](22-ml110-nas-inventory.md) — SystemRescue audit pattern (ML110)
