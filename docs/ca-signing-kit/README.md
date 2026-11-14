@@ -6,7 +6,7 @@ one that matches the custody device you actually have.
 | | Kit | Custody | Status |
 |---|---|---|---|
 | **v1** | [`v1-ironkey/`](v1-ironkey/README.md) | IronKey — encrypted key file on a stick, air-gapped ceremony | ✅ **Active** |
-| **v2** | [`v2-token/`](v2-token/README.md) | PIV token, key generated on-device, PIN per signature | ⏸ **Dormant** — needs an NFC+ token |
+| **v2** | [`v2-utrust-token/`](v2-utrust-token/README.md) | PIV token, key generated on-device, PIN per signature | ⏸ **Dormant** — needs an NFC+ token |
 
 ## Which one
 
@@ -62,7 +62,7 @@ trust change (unless the root itself is reissued, which is the trust rotation ab
 - **v1** — an air-gapped live-USB Linux boot. Nothing installed, nothing downloaded; the bundled static
   `step` is all it needs. See [`v1-ironkey/README.md`](v1-ironkey/README.md).
 - **v2** — WSL (Ubuntu) on the Windows 11 workstation, with the token handed to WSL by `usbipd`. See
-  [`v2-token/README.md`](v2-token/README.md).
+  [`v2-utrust-token/README.md`](v2-utrust-token/README.md).
 
 ## Related
 

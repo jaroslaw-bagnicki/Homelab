@@ -8,7 +8,7 @@ admin path. The **IronKey remains root custody**; the token upgrade is deferred 
 upgrade [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) plans (currently IronKey, planned
 YubiKey PIV)?  
 **Answer**: No — the applet cannot generate a key (§9). Acquire the NFC+ instead.  
-**Related**: [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) · [ADR 42](../decisions/42-pki-topology-sibling-cas.md) · [research 36 §4–§5](36-step-ca-machine-identity.md) · [runbook 35](../runbooks/35-deploy-step-ca.md) · [runbook 36](../runbooks/36-private-ca-init.md) · [signing kit](../ca-signing-kit/v2-token/README.md) · [issue #193](https://github.com/jaroslaw-bagnicki/Homelab/issues/193)  
+**Related**: [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) · [ADR 42](../decisions/42-pki-topology-sibling-cas.md) · [research 36 §4–§5](36-step-ca-machine-identity.md) · [runbook 35](../runbooks/35-deploy-step-ca.md) · [runbook 36](../runbooks/36-private-ca-init.md) · [signing kit](../ca-signing-kit/v2-utrust-token/README.md) · [issue #193](https://github.com/jaroslaw-bagnicki/Homelab/issues/193)  
 
 > **This is a diagnostic log, not a deployment recipe.** Nothing was ever written to the token — the
 > key answers over PKCS#11 and holds no root. The document analysis and the FIDO2-side readout from
@@ -49,7 +49,7 @@ YubiKey PIV)?
    AAGUID matches the family value. **The CPLC reads `96 4D` (NXP JCOP), not `40 90` (Infineon SLE 78)**
    as the manual claims — the chip vendor is irrelevant to the ceremony, so the check was dropped from
    the kit rather than "fixed". Getting the key this far took four fixes, all recorded in
-   [01-setup.md](../ca-signing-kit/v2-token/01-setup.md): polkit refusal, a missing libccid device-table entry,
+   [01-setup.md](../ca-signing-kit/v2-utrust-token/01-setup.md): polkit refusal, a missing libccid device-table entry,
    USB permissions for the `pcscd` user, and the systemd sandbox.
    **These gates proved *reachability*, not *capability* — see item 7 and §9.**
 6. **Decision 2026-11-10 ([issue #193](https://github.com/jaroslaw-bagnicki/Homelab/issues/193)): reissue the root on the token — do not import.** The new 10-year root is generated **in slot 9C**, so the key never exists in software. (Import would also fit — the current root is P-256, within the PIV app's ECC P-256/P-384 — but it would pass the key through workstation memory once.) Reissue deliberately accepts the one-time trust rotation ADR 38 originally rejected; ADR 38 is amended on this branch; the procedure and rotation steps are in [runbook 46](../runbooks/46-adopt-utrust-piv-root-custody.md).
@@ -151,7 +151,7 @@ key. What this session settled without hardware:
   diagnostic sent `Lc=08` with 10 bytes and the card rejected it), and the chip is **NXP JCOP**, not the
   Infineon SLE 78 the manual claims. Four WSL-specific blockers had to be cleared first — polkit, a
   missing libccid device-table entry, USB permissions for the `pcscd` user, and the systemd sandbox
-  ([01-setup.md](../ca-signing-kit/v2-token/01-setup.md)).
+  ([01-setup.md](../ca-signing-kit/v2-utrust-token/01-setup.md)).
 
 ## 4. Hardware checks — all measured 2026-11-10/11
 
@@ -187,7 +187,7 @@ Key Manager: the **firmware version** (manual: firmware decides applet enablemen
 **The kit's health check is deliberately smaller than this table.** These seven gates were written when
 it was unknown whether the device worked at all — they walk up the stack one layer at a time. Once
 `pkcs11-tool` answers, every layer below it is proven, so
-[`Test-uTrustKey.ps1`](../ca-signing-kit/v2-token/Test-uTrustKey.ps1) only checks what PKCS#11 cannot tell you:
+[`Test-uTrustKey.ps1`](../ca-signing-kit/v2-utrust-token/Test-uTrustKey.ps1) only checks what PKCS#11 cannot tell you:
 that `step` and `step-kms-plugin` are in place, and whether a root key already sits in slot 9C.
 
 **Decision rule — resolved 2026-11-10**: the Linux gates pass, so the key is cleared for the adoption
@@ -246,7 +246,7 @@ this log keeps only the findings that shape that path:
 
 Five problems, each producing the **same** symptom — `opensc-tool -l` → `No smart card readers found`.
 They are recorded because the symptom is useless on its own: it points at the reader when the cause can
-be four layers away. The running fixes live in [01-setup.md](../ca-signing-kit/v2-token/01-setup.md).
+be four layers away. The running fixes live in [01-setup.md](../ca-signing-kit/v2-utrust-token/01-setup.md).
 
 | # | Cause | What the log said | Fix |
 |---|---|---|---|
@@ -366,23 +366,36 @@ The requirement is unchanged: a non-exportable root key, generated on the token,
 The 905601 cannot meet it, so **the IronKey remains the accepted root custody** and no trust rotation is
 scheduled ([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md), amended 2026-11-14). The signing
 kit is split accordingly: [`v1-ironkey/`](../ca-signing-kit/v1-ironkey/README.md) is active,
-[`v2-token/`](../ca-signing-kit/v2-token/README.md) is preserved and dormant.
+[`v2-utrust-token/`](../ca-signing-kit/v2-utrust-token/README.md) is preserved and dormant.
 
 The planned upgrade is the **uTrust FIDO2 NFC+** (PIV provisioning and 9B management key are headline
 NFC+ features) or the **YubiKey 5** originally planned. The FIDO2 applet on the 905601 is healthy and
 stays useful for passkeys/SSH — only PIV is a shell.
 
-**Gate the next token before a ceremony.** [`Test-uTrustKey.ps1`](../ca-signing-kit/v2-token/Test-uTrustKey.ps1)
+**Gate the next token before a ceremony.** [`Test-uTrustKey.ps1`](../ca-signing-kit/v2-utrust-token/Test-uTrustKey.ps1)
 now reads `5FC107` and fails if it is not `9000`. That one check rejects a stub applet in seconds,
 before any PIN is entered — it would have caught this on day one.
 
 ## References
 
-- `uTrust_FIDO2_Technical_Manual.pdf` (Identiv/Hirsch) — PIV app, slots, policies, defaults, AAGUID
-  (uploaded during this diagnostic). Its **CPLC/SLE 78 claim is refuted** for this unit — see §7.
-- `uTrust-FIDO2-NFC-Security-Keys-DS.pdf` rev 2021-08-02 — P/N 905601/905602, PIV in secure-element interface (uploaded during this diagnostic)
-- [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) — three-tier PKI, root custody (amended 2026-11-10 on this branch: uTrust PIV slot 9C, root **reissued** — issue #193)
+Vendor documents, committed under [`ca-signing-kit/v2-utrust-token/docs/`](../ca-signing-kit/v2-utrust-token/docs):
+
+- [`FIDO-uTrust-Key-Manager-Software-User-Manual.pdf`](../ca-signing-kit/v2-utrust-token/docs/FIDO-uTrust-Key-Manager-Software-User-Manual.pdf)
+  (Hirsch Secure, rev 1.3.0, 2025-08-18) — the Key Manager **support matrix** is the vendor
+  confirmation for §9d: PIV is ticked for `NFC+` and `GOV` only, so the plain `NFC` SKU has no PIV
+  provisioning to administer. The tool configures "OTP and certain PIV functions", which is why the
+  applet exists on the 905601 but implements nothing.
+- [`uTrust-FIDO2-NFC-Security-Keys-DS.pdf`](../ca-signing-kit/v2-utrust-token/docs/uTrust-FIDO2-NFC-Security-Keys-DS.pdf)
+  rev 2021-08-02 — P/N 905601/905602, lists PIV in "Secure Element Interface". Documents the *family*
+  interface; §9 shows the 905601's implementation does not deliver it.
+- [`uTrust_Secure_Access_Credentials_DS.pdf`](../ca-signing-kit/v2-utrust-token/docs/uTrust_Secure_Access_Credentials_DS.pdf)
+  — the wider credential product line, for context on which SKUs carry PIV provisioning.
+
+The `uTrust_FIDO2_Technical_Manual.pdf` cited in §2 was uploaded during the diagnostic and is **not
+committed** (vendor distribution). Its **CPLC/SLE 78 claim is refuted** for this unit — see §7.
+
+- [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) — three-tier PKI, root custody (amended 2026-11-14: the IronKey stays; the token upgrade is deferred — issue #193)
 - [research 36 §4–§5](36-step-ca-machine-identity.md) — KMS/custody paths; `step-kms-plugin` (CGO, `libpcsclite1`) needed for `pkcs11:` on the signing machine
 - [runbook 35 §6–§7](../runbooks/35-deploy-step-ca.md) — CSR emission from the TPM key; `ca.json` `tpmkms`
-- [runbook 36](../runbooks/36-private-ca-init.md) — the IronKey ceremony · [runbook 46](../runbooks/46-adopt-utrust-piv-root-custody.md) — the adoption procedure this diagnostic feeds · [signing kit](../ca-signing-kit/v2-token/README.md) + [`Test-uTrustKey.ps1`](../ca-signing-kit/v2-token/Test-uTrustKey.ps1) + [`New-Intermediate.ps1`](../ca-signing-kit/v2-token/New-Intermediate.ps1) — health check and token signing
+- [runbook 36](../runbooks/36-private-ca-init.md) — the IronKey ceremony · [runbook 46](../runbooks/46-adopt-utrust-piv-root-custody.md) — the adoption procedure this diagnostic feeds · [signing kit](../ca-signing-kit/v2-utrust-token/README.md) + [`Test-uTrustKey.ps1`](../ca-signing-kit/v2-utrust-token/Test-uTrustKey.ps1) + [`New-Intermediate.ps1`](../ca-signing-kit/v2-utrust-token/New-Intermediate.ps1) — health check and token signing
 - [runbook 39](../runbooks/39-trust-private-ca.md) — root distribution to fleet + workstations (reissue step 4)

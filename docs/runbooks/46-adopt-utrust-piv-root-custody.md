@@ -41,7 +41,7 @@ Key Manager matrix agrees — PIV is ticked for `NFC+` and `GOV` only.
 
 - [ ] **A token whose PIV applet actually works** — uTrust FIDO2 NFC+ (preferred) or YubiKey 5. The
       plain-NFC 905601 is rejected (§Why). Verify with the gate in phase 0 before going further
-- [ ] `docs/ca-signing-kit/v2-token/Test-uTrustKey.ps1` run on the signing machine with the token attached —
+- [ ] `docs/ca-signing-kit/v2-utrust-token/Test-uTrustKey.ps1` run on the signing machine with the token attached —
       must pass **including the `CCC` gate**: a `6A82` on `5FC107` means the applet is a stub and no
       ceremony can succeed, whatever else answers. AAGUID `73402251-f2a8-4f03-873e-3cb6db604b03` is
       the family value for both NFC and NFC+
@@ -59,7 +59,7 @@ Key Manager matrix agrees — PIV is ticked for `NFC+` and `GOV` only.
       **`step-kms-plugin` v0.17.0** (smallstep/step-kms-plugin release, verify against `checksums.txt`)
       — `step` delegates every `pkcs11:` URI to the plugin; without it:
       `exec: "step-kms-plugin": not found in $PATH` (verified 2026-11-10; the whole PKCS#11 path was
-      proven end-to-end against SoftHSM 2.6). See [01-setup.md](../ca-signing-kit/v2-token/01-setup.md)
+      proven end-to-end against SoftHSM 2.6). See [01-setup.md](../ca-signing-kit/v2-utrust-token/01-setup.md)
 - [ ] The uTrust token, the current `root_ca.crt` (public, from the kit), `intermediate_ca.csr`
       (from runbook 35 §6), `intermediate-ca.tpl`, and `ipa.csr` when the FreeIPA CA is re-signed
 - [ ] A safe for the token; the written-down IronKey passphrase still available until phase 5 finishes
@@ -83,7 +83,7 @@ Expected on a usable token with no root yet:
 this is the 905601 failure mode. No amount of PIN, PUK or management-key work will change it; return
 the token and get an NFC+ ([research 54 §9](../research/54-utrust-fido2-nfc-piv-root-diagnostic.md)).
 
-If the key does not answer over PKCS#11 at all, do not improvise — [01-setup.md](../ca-signing-kit/v2-token/01-setup.md)
+If the key does not answer over PKCS#11 at all, do not improvise — [01-setup.md](../ca-signing-kit/v2-utrust-token/01-setup.md)
 lists the four things that block it on WSL and how to tell them apart from the daemon log.
 
 ## Phase 1 — change the factory defaults on the token
@@ -109,9 +109,9 @@ Record the new PIN/PUK in the safe (never in the repo). Do not log the managemen
 
 ## Phase 2 — reissue the root on the token (slot 9C)
 
-Run the kit's [`New-Root.ps1`](../ca-signing-kit/v2-token/New-Root.ps1) — it replaces the factory
+Run the kit's [`New-Root.ps1`](../ca-signing-kit/v2-utrust-token/New-Root.ps1) — it replaces the factory
 credentials, generates the key on the card, writes the self-signed root, verifies its shape and proves
-the token can sign. The full walkthrough is [02-root.md](../ca-signing-kit/v2-token/02-root.md).
+the token can sign. The full walkthrough is [02-root.md](../ca-signing-kit/v2-utrust-token/02-root.md).
 
 ```sh
 pwsh ./New-Root.ps1
@@ -138,7 +138,7 @@ pwsh ./New-IpaCa.ps1            # FreeIPA CA — ipa.csr -> ipa-ca.crt (ADR 42)
 
 Both machine-check the result (chains to root, `is_ca`, `pathlen:0`, key usage, SANs for the
 intermediate, validity) and discard anything that fails. Details:
-[03-sign.md](../ca-signing-kit/v2-token/03-sign.md).
+[03-sign.md](../ca-signing-kit/v2-utrust-token/03-sign.md).
 
 Carry back only the public certificates: `root_ca.crt`, `intermediate_ca.crt`, `ipa-ca.crt`.
 
@@ -193,5 +193,5 @@ unchanged. Decide before phase 2 and record the choice in research 54.
 - [ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md) — amended 2026-11-10: uTrust PIV slot 9C, root reissued
 - [issue #193](https://github.com/jaroslaw-bagnicki/Homelab/issues/193) — adoption tracking
 - [runbook 36](36-private-ca-init.md) — 🪦 retired IronKey/stick ceremony this replaces · [runbook 35 §6–§7](35-deploy-step-ca.md) — CSR + install · [runbook 39](39-trust-private-ca.md) — root distribution · [runbook 41](41-deploy-freeipa-server.md) — FreeIPA CA
-- [signing kit](../ca-signing-kit/v2-token/README.md) — `Test-uTrustKey.ps1`, `New-Root.ps1`, `New-Intermediate.ps1`, `New-IpaCa.ps1`, `step` + `step-kms-plugin`
+- [signing kit](../ca-signing-kit/v2-utrust-token/README.md) — `Test-uTrustKey.ps1`, `New-Root.ps1`, `New-Intermediate.ps1`, `New-IpaCa.ps1`, `step` + `step-kms-plugin`
 - [research 36 §4–§5](../research/36-step-ca-machine-identity.md) — KMS/custody paths, `step-kms-plugin` requirement

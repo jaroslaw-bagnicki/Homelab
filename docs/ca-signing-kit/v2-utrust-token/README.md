@@ -89,6 +89,7 @@ All public — none of it is secret:
 | `intermediate_ca.csr` | produced on the CA host by the key in `pve1`'s TPM ([runbook 35 §6](../../runbooks/35-deploy-step-ca.md)) — **not in git**, bring the file |
 | `ipa.csr` | produced on the IPA guest by `ipa-server-install --external-ca` — **not in git**, bring the file |
 | `root_ca.crt`, `intermediate_ca.crt`, `ipa-ca.crt` | ceremony output — **not in git** |
+| [`docs/`](docs) | vendor documents — the Key Manager manual (its support matrix is why the plain-NFC 905601 cannot work) and the uTrust datasheets; see [research 54 §9](../../research/54-utrust-fido2-nfc-piv-root-diagnostic.md) |
 
 ## If something goes wrong
 

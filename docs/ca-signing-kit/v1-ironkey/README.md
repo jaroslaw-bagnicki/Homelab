@@ -3,7 +3,7 @@
 The root CA's private key is an **encrypted key file on a secure USB stick**, used only from an
 air-gapped machine. This kit creates the root once and signs the CAs under it.
 
-> **This is the active kit.** The token kit ([`../v2-token/`](../v2-token/README.md)) is the planned
+> **This is the active kit.** The token kit ([`../v2-utrust-token/`](../v2-utrust-token/README.md)) is the planned
 > upgrade but is dormant until a working PIV token is acquired. See the
 > [parent README](../README.md).
 
