@@ -1,10 +1,10 @@
-# FreeIPA Server — M1 on `pve2` (Rocky Linux 9 Cloud VM, External CA)
+# FreeIPA Server — M1 on `pve2` (AlmaLinux 9 Cloud VM, External CA)
 
-> Deploy the FreeIPA server for the lab's Linux domain: Rocky Linux 9 Cloud VM **250** on the `pve2` node,
+> Deploy the FreeIPA server for the lab's Linux domain: AlmaLinux 9 Cloud VM **250** on the `pve2` node,
 > FQDN **`ipa.internal`**, realm **`IPA.INTERNAL`**, integrated DNS **off**, CA installed with
 > **`--external-ca`** and signed by the offline fleet root. Decision:
 > [ADR 43](../decisions/43-freeipa-domain-realm.md) (amended 2026-11-07 — the server moved from `pve1`
-> to `pve2`; amended 2026-11-14 — the guest OS moved from Fedora 45 to Rocky Linux 9); CA relation:
+> to `pve2`; amended 2026-11-14 — the guest OS moved from Fedora 45 to AlmaLinux 9); CA relation:
 > [ADR 42](../decisions/42-pki-topology-sibling-cas.md); tracker:
 > [issue #164](https://github.com/jaroslaw-bagnicki/Homelab/issues/164) M1.
 >
@@ -24,7 +24,7 @@ the server, the realm, the DNS glue and the CA chain before anything depends on 
 
 ## What changes
 
-- **VM 250 `ipa`** — Rocky Linux 9, 2 vCPU / 2 GB / 16 GB, static `192.168.2.250`, FQDN `ipa.internal`,
+- **VM 250 `ipa`** — AlmaLinux 9, 2 vCPU / 2 GB / 16 GB, static `192.168.2.250`, FQDN `ipa.internal`,
   `onboot 1`. VMID 250 is the `pve2` guest block's first number, and the ID *is* the address
   ([ADR 31](../decisions/31-static-address-scheme.md)).
 - **`ipa_host` role** — EL hostname/FQDN, `/etc/hosts`, chrony, firewalld LAN rules, `fleetadm` + fleet
@@ -44,7 +44,7 @@ the server, the realm, the DNS glue and the CA chain before anything depends on 
 - [ ] `pve2` has ≥ 2.5 GB free RAM and ≥ 20 GB free `local-lvm`. It carries no guests, so this is a
       check rather than a gate — `pve1` could not satisfy it beside the Home Assistant guests, which is
       why the server moved here.
-- [ ] Rocky Linux 9 Generic Cloud Base image downloaded and checksum-verified on `pve2`.
+- [ ] AlmaLinux 9 Generic Cloud image downloaded and checksum-verified on `pve2`.
 - [ ] The **secure USB stick** and air-gapped signing machine for the CA ceremony.
 - [ ] Controller has `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID` and Ansible collections.
 - [ ] `automation` certificate (or break-glass fleet key) in `ssh-agent`; `ansible-lint` available.
@@ -69,7 +69,7 @@ ls -l /dev/tpmrm0 2>/dev/null || true
 - `local-lvm` must have room for the 16 GiB disk (the `pve2` thin pool is ~57 GB).
 - The TPM line is informational only — **M1 does not use the TPM**.
 
-## 2. Create the Rocky Linux 9 VM
+## 2. Create the AlmaLinux 9 VM
 
 On `pve2` (`ssh fleetadm@192.168.2.202`, then `sudo -i`).
 
@@ -85,17 +85,17 @@ Use the native downloader, which verifies the checksum server-side:
 
 | Field | Value |
 |---|---|
-| URL | `https://download.rockylinux.org/pub/rocky/9/images/x86_64/Rocky-9-GenericCloud-Base-9.8-20260525.0.x86_64.qcow2` |
-| File name | `Rocky-9-GenericCloud-Base-9.8-20260525.0.x86_64.qcow2` |
+| URL | `https://repo.almalinux.org/almalinux/9/cloud/x86_64/images/AlmaLinux-9-GenericCloud-9.8-20261112.x86_64.qcow2` |
+| File name | `AlmaLinux-9-GenericCloud-9.8-20261112.x86_64.qcow2` |
 | Content | **Import** |
 | Checksum algorithm | `sha256` |
-| Checksum | the value from `https://download.rockylinux.org/pub/rocky/9/images/x86_64/CHECKSUM` |
+| Checksum | the value from `https://repo.almalinux.org/almalinux/9/cloud/x86_64/images/CHECKSUM` |
 
-Pin the build (`9.8-20260525.0`) — do not use a floating `latest`. Verify it landed where Proxmox can see it:
+Pin the build (`9.8-20261112`) — do not use a floating `latest`. Verify it landed where Proxmox can see it:
 
 ```sh
 pvesm list local --content import
-# local:import/Rocky-9-GenericCloud-Base-9.8-20260525.0.x86_64.qcow2  qcow2  import  <size>
+# local:import/AlmaLinux-9-GenericCloud-9.8-20261112.x86_64.qcow2  qcow2  import  <size>
 ```
 
 > **Do not `wget` into `template/iso/`.** The file works there — `qm importdisk` takes a filesystem
@@ -110,7 +110,7 @@ qm create 250 \
   --net0 virtio,bridge=vmbr0 \
   --agent enabled=1 --serial0 socket --vga serial0
 
-qm importdisk 250 /var/lib/vz/import/Rocky-9-GenericCloud-Base-9.8-20260525.0.x86_64.qcow2 local-lvm
+qm importdisk 250 /var/lib/vz/import/AlmaLinux-9-GenericCloud-9.8-20261112.x86_64.qcow2 local-lvm
 qm set 250 --scsi0 local-lvm:vm-250-disk-0 --boot order=scsi0 --ide2 local:cloudinit
 qm resize 250 scsi0 16G
 qm set 250 --onboot 1
@@ -121,17 +121,17 @@ qm set 250 --onboot 1
 `local-lvm` (LVM-thin cannot store qcow2), which is why it reports transferring the image's *virtual*
 size (~10 GiB) rather than the 616 MB file.
 
-The Rocky Linux Generic Cloud Base image is BIOS-bootable. If this `qm` configuration does not boot it,
+The AlmaLinux Generic Cloud image is BIOS-bootable. If this `qm` configuration does not boot it,
 switch the VM to OVMF (`--bios ovmf` plus an EFI disk) rather than changing the image.
 
-> **Why Rocky 9 and not Fedora.** The guest was originally specified as Fedora 45. It cannot be
+> **Why AlmaLinux 9 and not Fedora.** The guest was originally specified as Fedora 45. It cannot be
 > managed by Ansible: Fedora 45 ships **only Python 3.15**, and every `ansible-core` release through
 > 2.21.6 supports target Python ≤ 3.14 — the `_patches` module imports `dataclasses._is_type`, which
 > Python 3.15 removed, so *any* module fails at load with
 > `AttributeError: module 'dataclasses' has no attribute '_is_type'`. Pointing Ansible at an older
 > interpreter does not help either: Fedora 45 builds `libdnf5` and `dnf4` bindings **only** for
 > Python 3.15 (`python(abi) = 3.15`), so the `dnf` module then fails with
-> `Could not import the libdnf5 python module`. Rocky 9 runs Python 3.9, which every `ansible-core`
+> `Could not import the libdnf5 python module`. AlmaLinux 9 runs Python 3.9, which every `ansible-core`
 > supports, and carries FreeIPA 4.12 in AppStream. It is also supported through 2032, so the
 > 13-month major-upgrade-as-domain-controller-downtime problem disappears. This is the OS
 > [research 46](../research/46-identity-and-access-stack.md) §4 and
@@ -217,7 +217,7 @@ Expected: `ipa.internal`, `root`, and a synchronised chrony.
 > `AF_UNSPEC` and lets the `myhostname` NSS module answer with the interface's link-local `fe80::`
 > address — a true statement about the interface, and useless as proof that the FQDN maps to the LAN
 > address. Use **`getent ahostsv4 ipa.internal`**, which returns `192.168.2.250`. For the resolver
-> itself, query Technitium directly (§4); note that Rocky 9 ships no `dig` (`bind-utils`), so
+> itself, query Technitium directly (§4); note that AlmaLinux 9 ships no `dig` (`bind-utils`), so
 > `dnf install bind-utils` first if you want it.
 
 `/etc/resolv.conf` is written by cloud-init from the `--nameserver` value at this point. That is not
@@ -479,7 +479,7 @@ Executed on: **2026-11-08** — §1–§2 executed and verified; §3 onward **no
 only adds records, it never deletes), so §4 must create the `.250` records before §6.
 
 - [x] `local` storage carries `iso,vztmpl,backup,import,images,snippets` — `images` is required for the cloud-init ISO
-- [x] Rocky Linux 9 image downloaded into the **`import`** content type; `pvesm list local --content import` shows it
+- [x] AlmaLinux 9 image downloaded into the **`import`** content type; `pvesm list local --content import` shows it
 - [x] Snippet key generated from the key file and fingerprint-checked with `ssh-keygen -lf`
 - [x] VM 250 `ipa` up on `pve2`; `.250` reachable; guest agent responding
 - [x] Guest verified with the **break-glass fleet key** (certificate SSH arrives in §3)
@@ -496,7 +496,7 @@ only adds records, it never deletes), so §4 must create the `.250` records befo
 - [ ] CA mode and fingerprints recorded
 - [ ] M2 remains the gate before the first client
 
-### §1–§3 execution record — 2026-11-08 (Fedora), rebuilt 2026-11-14 (Rocky 9)
+### §1–§3 execution record — 2026-11-08 (Fedora), rebuilt 2026-11-14 (AlmaLinux 9)
 
 | Check | Result |
 |---|---|
@@ -506,11 +506,11 @@ only adds records, it never deletes), so §4 must create the `.250` records befo
 | chrony | stratum 3, **+1.8 ms** |
 | TPM | `/dev/tpmrm0` present (informational — M1 does not use it) |
 | Technitium from `pve2` | `edge.internal` → `192.168.2.240` |
-| Image | Rocky Linux 9.8 Generic Cloud Base (`9.8-20260525.0`), **SHA256 verified** |
+| Image | AlmaLinux 9.8 Generic Cloud (`9.8-20261112`), **SHA256 verified** |
 | VM 250 | **running**, 2 vCPU / 2048 MB, `cpu host`, `onboot 1` |
 | Disk | `local-lvm:vm-250-disk-0`, **16 G** |
 | Network | `eth0` virtio `192.168.2.250/24`, gw `.1` |
-| Guest OS | **Rocky Linux 9.8 (Blue Onyx)**, Python **3.9.25** |
+| Guest OS | **AlmaLinux 9.8 (Olive Jaguar)**, Python **3.9.25** |
 | Guest FQDN | `ipa.internal` |
 | Guest resolver | `nameserver 192.168.2.240`, `search internal` — pinned by `ipa_host`, NetworkManager `dns=none` |
 | Certificate SSH | **fails** — no `TrustedUserCAKeys` yet; break-glass key used |

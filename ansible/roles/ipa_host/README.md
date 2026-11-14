@@ -1,6 +1,6 @@
 # ipa_host
 
-RHEL-family base for the FreeIPA server VM (Rocky Linux 9) — the counterpart to `common` + `security`, which
+RHEL-family base for the FreeIPA server VM (AlmaLinux 9) — the counterpart to `common` + `security`, which
 are Debian/Ubuntu-only. It sets the FQDN from
 [ADR 43](../../../docs/decisions/43-freeipa-domain-realm.md), maps it in `/etc/hosts`, pins the fleet
 resolver (with NetworkManager `dns=none`), installs chrony/firewalld/sudo, re-arms the

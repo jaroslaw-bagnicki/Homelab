@@ -3,7 +3,7 @@
 # domain, hostname and address are fixed by the lab.
 
 # RHEL/AlmaLinux/Rocky ship the server as `ipa-server`; Fedora calls it
-# `freeipa-server`. The M1 guest is Rocky Linux 9, so `ipa-server` is the
+# `freeipa-server`. The M1 guest is AlmaLinux 9, so `ipa-server` is the
 # default and the Fedora name is the override.
 freeipa_server_package: ipa-server
 

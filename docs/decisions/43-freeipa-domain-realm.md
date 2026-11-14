@@ -3,7 +3,7 @@
 **Date:** 2026-10-25  
 **Status:** Accepted  
 **Amended:** 2026-11-07 — the server moves from `pve1` to `pve2` (VM 250, `.250`): `pve1`'s memory cannot carry it beside the Home Assistant guests, which are pinned there by the Zigbee coordinator. See the amendment note below.
-**Amended:** 2026-11-14 — the guest OS is Rocky Linux 9, not Fedora 45: no `ansible-core` release can manage Fedora 45's Python 3.15. See the second amendment note below.
+**Amended:** 2026-11-14 — the guest OS is AlmaLinux 9, not Fedora 45: no `ansible-core` release can manage Fedora 45's Python 3.15. See the second amendment note below.
 
 ---
 
@@ -158,7 +158,7 @@ second failure mode rather than redundancy.
 
 ### Amendment — 2026-11-14
 
-**The guest OS is Rocky Linux 9, not Fedora 45.** Fedora 45 cannot be managed by Ansible, at any
+**The guest OS is AlmaLinux 9, not Fedora 45.** Fedora 45 cannot be managed by Ansible, at any
 `ansible-core` version.
 
 Fedora 45 ships **only Python 3.15**. `ansible-core` 2.16 through **2.21.6** (the newest release that
@@ -174,7 +174,7 @@ package backends **only** for 3.15 (`python(abi) = 3.15`), so `python3.14` runs 
 module then fails with `Could not import the libdnf5 python module`. There is no `python3.14-libdnf5`
 package and no PyPI wheel.
 
-Rocky Linux 9 runs **Python 3.9**, which every `ansible-core` supports, and carries **FreeIPA 4.12** in
+AlmaLinux 9 runs **Python 3.9**, which every `ansible-core` supports, and carries **FreeIPA 4.12** in
 AppStream. Two further properties make it the better answer rather than merely the workable one:
 
 - **Supported through 2032**, so a major upgrade is not a domain-controller downtime event every 13

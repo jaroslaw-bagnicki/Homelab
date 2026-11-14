@@ -4,7 +4,7 @@
     that:
       - ansible_os_family == 'RedHat'
     fail_msg: >-
-      ipa_host targets a RHEL-family host (Rocky Linux 9); the FreeIPA server is not
+      ipa_host targets a RHEL-family host (AlmaLinux 9); the FreeIPA server is not
       supported on Debian/Ubuntu in this lab.
 
 - name: Set the FreeIPA FQDN

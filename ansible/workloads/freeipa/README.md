@@ -40,7 +40,7 @@ The realm, domain, FQDN and address are fixed in `defaults/main.yml` and must ma
 
 ## Base guest
 
-The role assumes `playbook-ipa.yml` has already applied `ipa_host`: Rocky Linux 9, FQDN
+The role assumes `playbook-ipa.yml` has already applied `ipa_host`: AlmaLinux 9, FQDN
 `ipa.internal`, `/etc/hosts`, the Technitium resolver pin, chrony, firewalld LAN rules and the
 `fleetadm` key. It is **not** a Debian guest and does not use `common`/`security`.
 

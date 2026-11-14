@@ -34,7 +34,7 @@ hardware detail see [Hardware Inventory](hardware.md); for change history see
 
 | Guest | Workload | Hostname | Address | Status |
 |---|---|---|---|---|
-| VM 250 | FreeIPA Linux domain (Rocky Linux 9) — the lab's first VM | `ipa` | `.250` | 🔨 |
+| VM 250 | FreeIPA Linux domain (AlmaLinux 9) — the lab's first VM | `ipa` | `.250` | 🔨 |
 
 The NUT server now runs **host-native on `pve1`** ([ADR 39](decisions/39-nut-host-native.md)); LXC 213 is retired and `.213` is free. **VM 250 `ipa` is the lab's first VM** — `pve1` has only ever run containers, and its `/etc/pve/qemu-server/` was empty before this work. It sits on `pve2` because `pve1`'s memory is committed to the Home Assistant guests, which the Zigbee coordinator pins there ([ADR 43](decisions/43-freeipa-domain-realm.md) amendment). `pve2`'s guest block is `25x` (`.250–.254`). `pve1` and `pve2` form the two-node **`homelab`** cluster with a QDevice on `edge` ([ADR 47](decisions/47-second-proxmox-node-cluster-qdevice.md)).
 

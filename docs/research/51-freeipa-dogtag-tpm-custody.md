@@ -179,7 +179,7 @@ Those are architectural and support-lifecycle constraints, not integration bugs.
 A **new, explicit research task** may test the integration in a throwaway guest with a software TPM
 first. It should answer only what desk research cannot:
 
-- which FreeIPA/Dogtag version accepts `--token-name` / `--token-library-path` on Rocky Linux 9;
+- which FreeIPA/Dogtag version accepts `--token-name` / `--token-library-path` on AlmaLinux 9;
 - whether Dogtag uses the token or silently falls back to NSS;
 - whether `tpm2_ptool init` on the host TPM disturbs `step-ca`;
 - what `ipa-backup` actually captures when the CA key is in a token.
