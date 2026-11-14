@@ -22,7 +22,10 @@ if [ $((EXPIRES_EPOCH - NOW)) -gt "$THRESHOLD" ]; then
   exit 0
 fi
 
-if ! step ssh renew -f "$CERT" "$KEY" --ca-url "$CA_URL" --root "$ROOT"; then
+# step's flag parser stops at the first positional argument, so -f must follow
+# the two positional paths — `step ssh renew -f <cert> <key>` is rejected with
+# "too many positional arguments" and the renewal silently never runs.
+if ! step ssh renew "$CERT" "$KEY" -f --ca-url "$CA_URL" --root "$ROOT"; then
   logger -t "$TAG" -p user.crit "host certificate renewal failed"
   exit 1
 fi
