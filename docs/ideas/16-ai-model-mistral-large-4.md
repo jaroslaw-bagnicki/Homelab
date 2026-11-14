@@ -222,6 +222,9 @@ The split lands where "Possible outcomes" predicted — cost and capability do n
   especially through **Mistral Vibe**, whose sessions bill as `mistral-large-4-0` on the same account, and
   through Copilot/VS Code BYOK per [runbook 44](../runbooks/44-copilot-mistral-byok.md). Hands-on, its
   reasoning reads smoother than V4.1 Flash's on exactly those tasks.
+- **Also queued for the same fixed-method check: GLM 5.3 and GLM 5.3 Flash (Mistral-hosted).** Both appear
+  in the Vibe model picker next to Large 4 (confirmed 2026-11-14), and as third-party models they meter on
+  the same Pro account — so they can join the step-2 A/B whenever budget allows.
 - **One billing relationship carries everything.** The Pro plan's $15/mo included usage is shared
   across Studio, API and Vibe Code, so the daily driver, ML4 heavy tasks and any future A/B all meter on
   one key with one usage report.
