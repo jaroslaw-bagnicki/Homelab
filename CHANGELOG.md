@@ -13,7 +13,7 @@ Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month 
 
 ## 2026‑11
 
-- **(docs)** Run both models on one Mistral Pro account — DS4.1 Flash stays daily via Mistral, DS direct subscription retired — [idea 16](docs/ideas/16-ai-model-mistral-large-4.md)
+- **(docs)** Adopt the two-model split on one Pro account — DS4.1 stays daily via Mistral, ML4 via Vibe — [ADR 51](docs/decisions/51-ai-model-split-deepseek-mistral.md)
 - **(docs)** Adopt the 3‑2‑1 backup rule with Backblaze B2 as the off-site target, superseding ADR 02's Azure Blob — [ADR 49](docs/decisions/49-backup-3-2-1-strategy.md)
 - **(fix)** Sign the FreeIPA CA for 1 year and make the signing kit's air-gap advisory — the IronKey stays root custody — [runbook 41](docs/runbooks/41-deploy-freeipa-server.md)
 - **(docs)** Adopt OPNsense on the Futro S930 as the LAN router, routing-first — [ADR 48](docs/decisions/48-lan-router-futro-s930.md)
