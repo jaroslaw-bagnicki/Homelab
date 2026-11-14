@@ -54,16 +54,16 @@ Retention (daily ×7, weekly ×4, monthly ×6) stays Restic-side (`--keep-*` fla
   accordingly and align the Restic retention tiers with the lock window. Governance mode can still be
   bypassed by the master key, so the master key's custody (separate account, offline) is the real
   control; the bucket key deliberately lacks `bypassGovernance`.
-- Trade-offs accepted: no archive/cold tier on B2 pay‑as‑you‑go (monthly copies  copy` opens the
+- Trade-offs accepted: no archive/cold tier on B2 pay‑as‑you‑go (monthly copies stay at $6.95/TB —
+  fine at this scale; Azure Blob archive was cheaper for >6‑month retention); B2 is a single vendor
+  outside the Azure estate, so Key Vault stays the single place for the B2 app keys + Restic password,
+  and the DR runbook must document B2 console access separately from Azure.
+- ADR 02's Azure Blob repo (runbook 07) is **migrated, not duplicated**: `restic copy` opens the
   existing repo with **Azure syntax** and writes to B2 with **S3 syntax**, each with its own
-  credentials — e.g. `restic copy --from-repo azure:homelab:/backups --repo s3:s3.eu-central-003.backblazeb2.com/homelab-restic`
+  credentials — e.g. `restic copy --from-repo azure:backups:/ --repo s3:s3.eu-central-003.backblazeb2.com/homelab-restic`
   (with `AZURE_ACCOUNT_NAME`/`AZURE_ACCOUNT_KEY` for `--from-repo` and `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`
   for the B2 `--repo`) — then the Blob container is retired. The Ansible redo
-  ([#13](https://github.com/jaroslaw-bagnicki/Homelab/issues/13)) targets B2 the DR runbook must document B2 console access separately from Azure.
-- ADR 02's Azure Blob repo (runbook 07) is **migrated, not duplicated**: `restic` can copy between
-  repos (`restic copy --from-repo s3:...azure... --repo s3:...b2...`) before the Blob container is
-  retired; the Ansible redo ([#13](https://github.com/jaroslaw-bagnicki/Homelab/issues/13)) targets B2
-  directly.
+  ([#13](https://github.com/jaroslaw-bagnicki/Homelab/issues/13)) targets B2 directly.
 - The local second copy on the NAS ([ADR 29](29-nas-backup-target-beetle-m3-omv.md)) is unchanged —
   B2 is purely the off-site third copy of [idea 20](../ideas/20-backup-3-2-1-strategy.md).
 

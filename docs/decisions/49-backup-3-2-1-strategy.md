@@ -45,8 +45,9 @@ remain per-runbook, e.g. runbook 27 Rescuezilla images to the NAS).
 
 - Every new workload must declare its three copies at onboarding (NAS share + bucket prefix), instead
   of inheriting "whatever runbook 07 did" — the rule becomes the checklist item in reviews.
-- The off-site leg is a single bucket family (vendor in ADR 50), so credential surface stays small:
-  one app key + one Restic password in Azure Key Vault.
+- The off-site leg is a single vendor (ADR 50) with **one bucket-scoped application key per backup
+  stream** (`homelab-restic`, `homelab-vzdump`, …) plus one Restic password per repo, all in Azure
+  Key Vault — the credential surface grows with streams, not with nodes.
 - Restore drills become meaningful: copy 2 (NAS) for fast local restore, copy 3 (cloud) for site loss —
   the DR runbook must rehearse both paths, not just the cloud one.
 - Cost is bounded: copy 3 at ~100–300 GB deduplicated is ~$0.70–2.10/month on B2 (ADR 50).
