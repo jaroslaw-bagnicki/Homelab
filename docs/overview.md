@@ -1,7 +1,7 @@
 # Homelab at a Glance
 
-High-level view of the current homelab: nodes and workloads. For the full per-node
-hardware detail see [Hardware Inventory](hardware.md); for change history see
+High-level view of the current homelab: nodes and workloads. For the full per-node  
+hardware detail see [Hardware Inventory](hardware.md); for change history see  
 [CHANGELOG](../CHANGELOG.md); for step-by-step setup see the [Runbooks](runbooks/README.md).
 
 **Status legend**: ✅ running · 🔨 in progress · 📋 planned · 🧠 idea · 💤 standby (retained, powered off) · 🪦 retired
@@ -58,7 +58,7 @@ Current state — what's running or in progress. Planned work is under [What's N
 
 ## Observability
 
-Two tiers, split by plane rather than by tool ([ADR 27](decisions/27-monitoring-strategy.md)) — Azure
+Two tiers, split by plane rather than by tool ([ADR 27](decisions/27-monitoring-strategy.md)) — Azure  
 watches the **management plane**, the LAN watches the **real-time plane**. Where each signal is seen:
 
 | Signal | Where you see it | Refs | Status |
@@ -71,13 +71,13 @@ watches the **management plane**, the LAN watches the **real-time plane**. Where
 | **Logs** | VictoriaLogs — the fleet's logs searchable in one place on the `pve1` node, 30d retention | [#84](https://github.com/jaroslaw-bagnicki/Homelab/issues/84) · [ADR 36](decisions/36-log-collector-fluentbit.md) · [runbook 34](runbooks/34-deploy-fluentbit.md) · [runbook 33](runbooks/33-deploy-victorialogs.md) | ✅ |
 
 **Why two tiers**: Arc sees only the nodes enrolled in it, and the Edge appliance and `pve1` are never
-enrolled — so the management plane (policy, compliance, portal, heartbeat) can never show the whole
+enrolled — so the management plane (policy, compliance, portal, heartbeat) can never show the whole  
 fleet. Real-time metrics come from Netdata on **every** LAN node instead.
 
 ## What's Next
 
-Planned and in-progress work only, listed in execution order. The backlog lives in
-[Issues](https://github.com/jaroslaw-bagnicki/Homelab/issues) and is pulled in here
+Planned and in-progress work only, listed in execution order. The backlog lives in  
+[Issues](https://github.com/jaroslaw-bagnicki/Homelab/issues) and is pulled in here  
 once it is ready to start — a row leaves the table with the PR that completes it.
 
 **Effort**: ⭐ one session · ⭐⭐ a few sessions · ⭐⭐⭐ multi-week or hardware-gated
@@ -113,12 +113,12 @@ once it is ready to start — a row leaves the table with the PR that completes 
 
 ## Not Scheduled
 
-Parked work with no start date. An item moves to [What's Next](#whats-next) when it is
+Parked work with no start date. An item moves to [What's Next](#whats-next) when it is  
 ready to start.
 
 | Item | Parked because | Refs |
 |---|---|---|
-| **Restic backup** (redo) | dormant since June; ADR 02 still reads *In Progress* | [#13](https://github.com/jaroslaw-bagnicki/Homelab/issues/13) · [ADR 02](decisions/02-backup-strategy-restic-blob.md) · [runbook 07](runbooks/07-restic-backup.md) |
+| **Restic backup** (redo) | dormant since June; 3‑2‑1 adopted ([ADR 49](decisions/49-backup-3-2-1-strategy.md)), off-site target now **Backblaze B2** ([ADR 50](decisions/50-backblaze-b2-offsite-backup.md), supersedes ADR 02's Azure Blob), shape in [idea 20](ideas/20-backup-3-2-1-strategy.md) | [#13](https://github.com/jaroslaw-bagnicki/Homelab/issues/13) · [ADR 02](decisions/02-backup-strategy-restic-blob.md) · [ADR 49](decisions/49-backup-3-2-1-strategy.md) · [ADR 50](decisions/50-backblaze-b2-offsite-backup.md) · [runbook 07](runbooks/07-restic-backup.md) |
 | **SQL Server Developer Edition** | never started | [#3](https://github.com/jaroslaw-bagnicki/Homelab/issues/3) · [runbook 09](runbooks/09-mssql-dev.md) |
 | **Gitea** | never started | [#4](https://github.com/jaroslaw-bagnicki/Homelab/issues/4) |
 | **Hermes Agent** | most complex — deliberately last | — |
@@ -126,9 +126,9 @@ ready to start.
 
 ## Topology
 
-```
+```  
 ISP fiber router (192.168.1.0/24)
-        │
+        │  
 Tenda Nova mesh — 192.168.2.0/24, gateway 192.168.2.1 (single broadcast domain)
         │
         └── TL-SG108E switch (192.168.2.230)
@@ -138,11 +138,11 @@ Tenda Nova mesh — 192.168.2.0/24, gateway 192.168.2.1 (single broadcast domain
                  ├── OMV NAS          — 192.168.2.210
                  ├── Beetle NAS       — 192.168.2.209
                  ├── Edge Ingress     — 192.168.2.240
-                 └── work laptop dock — DHCP (corporate)
+                 └── work laptop dock — DHCP (corporate)  
 ```
 
 **Power**: both strips sit behind the shared-rail **Green Cell UPSLM600** — USB on the `pve1` node,
-which runs the NUT server **host-native**, with `upsmon` on `pve1`/`pve2`/`lab`/`edge`/`nas`
+which runs the NUT server **host-native**, with `upsmon` on `pve1`/`pve2`/`lab`/`edge`/`nas`  
 ([ADR 39](decisions/39-nut-host-native.md)).
 
 Cloudlab VPS (Contabo) sits outside the LAN with its own Cloudflare Tunnel + Caddy (ADR 19).

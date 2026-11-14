@@ -1,8 +1,10 @@
 # Backup Strategy — Restic to Local SATA + Azure Blob
 
 **Date:** 2026-05-24  
-**Last amended:** 2026-06-13  
-**Status:** In Progress
+**Last amended:** 2026-06-13 · 2026-11-11  
+**Status:** Partially superseded by [ADR 50](50-backblaze-b2-offsite-backup.md) — the Azure Blob
+off-site target is replaced by Backblaze B2; Restic tool, retention and the local-disk plan are  
+unchanged
 
 ---
 
@@ -11,6 +13,10 @@
 The homelab's 256 GB SSD holds all service configurations, Docker volumes, and data. Drive failure means total data loss. A backup strategy is needed that covers off-site protection against fire/theft. Fast local recovery via a secondary SATA disk is planned but the disk has not yet been procured.
 
 ## Decision
+
+> 2026‑11‑11: the off‑site target below is superseded — **Backblaze B2** is now the off‑site leg per
+> [ADR 50](50-backblaze-b2-offsite-backup.md). The tool (Restic), retention and local-disk plan are
+> unchanged.
 
 Use **Restic** as the backup tool, backing up to Azure Blob Storage for off-site protection. A local SATA disk will be added later as a fast local restore target.
 

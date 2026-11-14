@@ -1,5 +1,11 @@
 # Homelab Setup — Restic Backup (Azure Blob)
 
+> ⚠️ **Superseded target**: [ADR 50](../decisions/50-backblaze-b2-offsite-backup.md) replaced Azure
+> Blob with **Backblaze B2** (S3-compatible) as the off-site backup target on 2026‑11‑11. This runbook
+> still describes the historical Azure Blob deployment; the redo in [#13](https://github.com/jaroslaw-bagnicki/Homelab/issues/13)
+> targets B2 — `s3:s3.<region>.backblazeb2.com/<bucket>` with a bucket-scoped B2 application key from
+> Key Vault, instead of the Arc managed identity + Blob RBAC below.
+
 > Runbook for deploying Restic backup to Azure Blob Storage — no local disk required.
 
 ## Prerequisites
@@ -17,15 +23,15 @@ Run from your laptop or a machine with the Az PowerShell module installed.
 
 ### 1.0 Set the correct subscription
 
-```powershell
-Connect-AzAccount -Subscription Cloud5-default
+```powershell  
+Connect-AzAccount -Subscription Cloud5-default  
 ```
 
 ### 1.1 Create the storage account
 
 The resource group `homelab-rg` already exists. Create the storage account inside it:
 
-```powershell
+```powershell  
 New-AzStorageAccount -ResourceGroupName homelab-rg `
   -Name "homelabcloud5" `
   -Location polandcentral `
@@ -42,9 +48,9 @@ Requirements met by this command:
 
 ### 1.2 Create the `backups` container
 
-```powershell
-$ctx = (Get-AzStorageAccount -ResourceGroupName homelab-rg -Name "homelabcloud5").Context
-New-AzStorageContainer -Name backups -Context $ctx -Permission Off
+```powershell  
+$ctx = (Get-AzStorageAccount -ResourceGroupName homelab-rg -Name "homelabcloud5").Context  
+New-AzStorageContainer -Name backups -Context $ctx -Permission Off  
 ```
 
 `-Permission Off` means private — no anonymous access.
@@ -53,9 +59,9 @@ New-AzStorageContainer -Name backups -Context $ctx -Permission Off
 
 The homelab server is enrolled in Azure Arc (see [06-azure-arc.md](06-azure-arc.md)), so it already has a system-assigned managed identity. Grant it access to the storage account:
 
-```powershell
-$connectedMachine = Get-AzConnectedMachine -ResourceGroupName homelab-rg -Name "homelab"
-$sa = Get-AzStorageAccount -ResourceGroupName homelab-rg -Name "homelabcloud5"
+```powershell  
+$connectedMachine = Get-AzConnectedMachine -ResourceGroupName homelab-rg -Name "homelab"  
+$sa = Get-AzStorageAccount -ResourceGroupName homelab-rg -Name "homelabcloud5"  
 New-AzRoleAssignment `
   -ObjectId $connectedMachine.IdentityPrincipalId `
   -RoleDefinitionName "Storage Blob Data Contributor" `
@@ -72,20 +78,20 @@ New-AzRoleAssignment `
 
 SSH into the server and download the latest release:
 
-```bash
+```bash  
 ssh jarek@lab
 
-curl -LO https://github.com/restic/restic/releases/download/v0.18.1/restic_0.18.1_linux_amd64.bz2
-bunzip2 restic_0.18.1_linux_amd64.bz2
-chmod +x restic_0.18.1_linux_amd64
-sudo mv restic_0.18.1_linux_amd64 /usr/local/bin/restic
+curl -LO https://github.com/restic/restic/releases/download/v0.18.1/restic_0.18.1_linux_amd64.bz2  
+bunzip2 restic_0.18.1_linux_amd64.bz2  
+chmod +x restic_0.18.1_linux_amd64  
+sudo mv restic_0.18.1_linux_amd64 /usr/local/bin/restic  
 ```
 
 Verify the correct binary is in use:
 
-```bash
-which restic
-restic version
+```bash  
+which restic  
+restic version  
 ```
 
 Expected: `/usr/local/bin/restic` and version `0.18.1`. See [Azure Blob Storage docs](https://restic.readthedocs.io/en/latest/030_preparing_a_new_repo.html#microsoft-azure-blob-storage) for the backend reference.
@@ -96,26 +102,26 @@ Expected: `/usr/local/bin/restic` and version `0.18.1`. See [Azure Blob Storage 
 
 ### 3.1 Log in with Azure CLI (managed identity)
 
-```bash
-az login --identity
+```bash  
+az login --identity  
 ```
 
 Expected: logged in as `systemAssignedIdentity` with the Arc server's managed identity.
 
 ### 3.2 Create the Restic repo
 
-```bash
+```bash  
 AZURE_ACCOUNT_NAME=homelabcloud5 AZURE_FORCE_CLI_CREDENTIAL=true \
-  restic -r azure:backups:/ init
+  restic -r azure:backups:/ init  
 ```
 
 You'll be prompted for a **repository password**. Choose a strong one and store it in your password manager — you'll need it for every restore.
 
 ### 3.3 Verify
 
-```bash
+```bash  
 AZURE_ACCOUNT_NAME=homelabcloud5 AZURE_FORCE_CLI_CREDENTIAL=true \
-  restic -r azure:backups:/ snapshots
+  restic -r azure:backups:/ snapshots  
 ```
 
 Expected output: `no snapshots found` (or an empty list).
@@ -128,37 +134,37 @@ Create a directory for config and a backup script for scheduled runs.
 
 ### 4.1 Create config file
 
-```bash
-sudo mkdir -p /etc/restic
+```bash  
+sudo mkdir -p /etc/restic  
 ```
 
 Write the config:
 
-```bash
-sudo nano /etc/restic/env
+```bash  
+sudo nano /etc/restic/env  
 ```
 
 Add:
 
-```env
-RESTIC_PASSWORD=your-strong-password
-AZURE_ACCOUNT_NAME=homelabcloud5
-AZURE_FORCE_CLI_CREDENTIAL=true
-RESTIC_REPOSITORY=azure:backups:/
+```env  
+RESTIC_PASSWORD=your-strong-password  
+AZURE_ACCOUNT_NAME=homelabcloud5  
+AZURE_FORCE_CLI_CREDENTIAL=true  
+RESTIC_REPOSITORY=azure:backups:/  
 ```
 
 Then lock the file:
 
-```bash
-sudo chmod 600 /etc/restic/env
+```bash  
+sudo chmod 600 /etc/restic/env  
 ```
 
 > Generate a strong password: `openssl rand -base64 32`. The `chmod 600` ensures only root can read the file.
 
 ### 4.2 Create the backup wrapper script
 
-```bash
-sudo nano /usr/local/bin/homelab-backup
+```bash  
+sudo nano /usr/local/bin/homelab-backup  
 ```
 
 Add:
@@ -167,7 +173,7 @@ Add:
 #!/bin/bash
 set -euo pipefail
 
-set -a; source /etc/restic/env; set +a
+set -a; source /etc/restic/env; set +a  
 restic backup \
   /opt/docker \
   /var/lib/docker/volumes \
@@ -177,8 +183,8 @@ restic backup \
 
 Then make it executable:
 
-```bash
-sudo chmod +x /usr/local/bin/homelab-backup
+```bash  
+sudo chmod +x /usr/local/bin/homelab-backup  
 ```
 
 > `set -a` auto-exports sourced variables, making them available as env vars. **What's backed up**: `/opt/docker/` (compose files, configs) + all Docker volumes. Portainer's internal data is excluded.
@@ -189,71 +195,71 @@ sudo chmod +x /usr/local/bin/homelab-backup
 
 ### 5.1 Create the service unit
 
-```bash
-sudo nano /etc/systemd/system/restic-backup.service
+```bash  
+sudo nano /etc/systemd/system/restic-backup.service  
 ```
 
-```ini
-[Unit]
+```ini  
+[Unit]  
 Description=Restic backup — daily snapshot to Azure Blob
 
-[Service]
-Type=oneshot
-ExecStart=/usr/local/bin/homelab-backup
+[Service]  
+Type=oneshot  
+ExecStart=/usr/local/bin/homelab-backup  
 User=root
 
-[Install]
-WantedBy=multi-user.target
+[Install]  
+WantedBy=multi-user.target  
 ```
 
 ### 5.2 Create the timer unit
 
-```bash
-sudo nano /etc/systemd/system/restic-backup.timer
+```bash  
+sudo nano /etc/systemd/system/restic-backup.timer  
 ```
 
-```ini
-[Unit]
-Description=Daily Restic backup to Azure Blob
+```ini  
+[Unit]  
+Description=Daily Restic backup to Azure Blob  
 Requires=restic-backup.service
 
-[Timer]
-OnCalendar=daily
-RandomizedDelaySec=1h
+[Timer]  
+OnCalendar=daily  
+RandomizedDelaySec=1h  
 Persistent=true
 
-[Install]
-WantedBy=timers.target
+[Install]  
+WantedBy=timers.target  
 ```
 
 > `RandomizedDelaySec=1h` spreads the backup time to avoid predictable schedules. `Persistent=true` runs a missed backup immediately after boot.
 
 ### 5.3 Enable and start the timer
 
-```bash
-sudo systemctl daemon-reload
-sudo systemctl enable restic-backup.timer
-sudo systemctl start restic-backup.timer
+```bash  
+sudo systemctl daemon-reload  
+sudo systemctl enable restic-backup.timer  
+sudo systemctl start restic-backup.timer  
 ```
 
 ### 5.4 Verify
 
-```bash
-sudo systemctl status restic-backup.timer
-sudo systemctl list-timers --all | grep restic
+```bash  
+sudo systemctl status restic-backup.timer  
+sudo systemctl list-timers --all | grep restic  
 ```
 
 ### 5.5 Run a manual backup
 
-```bash
-sudo systemctl start restic-backup.service
+```bash  
+sudo systemctl start restic-backup.service  
 ```
 
 Check status and logs:
 
-```bash
-sudo systemctl status restic-backup.service
-journalctl -u restic-backup.service
+```bash  
+sudo systemctl status restic-backup.service  
+journalctl -u restic-backup.service  
 ```
 
 ---
@@ -262,33 +268,33 @@ journalctl -u restic-backup.service
 
 ### 6.1 List snapshots
 
-```bash
-sudo bash -c 'set -a; source /etc/restic/env; set +a; restic snapshots'
+```bash  
+sudo bash -c 'set -a; source /etc/restic/env; set +a; restic snapshots'  
 ```
 
 ### 6.2 Restore to a temporary directory
 
-```bash
-sudo mkdir -p /tmp/restic-restore
-sudo bash -c 'set -a; source /etc/restic/env; set +a; restic restore latest --target /tmp/restic-restore'
+```bash  
+sudo mkdir -p /tmp/restic-restore  
+sudo bash -c 'set -a; source /etc/restic/env; set +a; restic restore latest --target /tmp/restic-restore'  
 ```
 
 ### 6.3 Verify restored data
 
-```bash
-ls -la /tmp/restic-restore/
+```bash  
+ls -la /tmp/restic-restore/  
 ```
 
 ### 6.4 Clean up
 
-```bash
-sudo rm -rf /tmp/restic-restore
+```bash  
+sudo rm -rf /tmp/restic-restore  
 ```
 
 ### 6.5 Check repository integrity
 
-```bash
-sudo bash -c 'set -a; source /etc/restic/env; set +a; restic check'
+```bash  
+sudo bash -c 'set -a; source /etc/restic/env; set +a; restic check'  
 ```
 
 Run `check` quarterly to detect data corruption.

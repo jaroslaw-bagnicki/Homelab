@@ -4,7 +4,7 @@
 
 ---
 
-Significant architectural and technology choices recorded in
+Significant architectural and technology choices recorded in  
 [MADR](https://adr.github.io/madr/) format.
 
 **Status values:** Proposed · Accepted · Implemented · Deferred · Superseded · Deprecated
@@ -13,6 +13,8 @@ Significant architectural and technology choices recorded in
 
 | # | Date | ADR | Status |
 |---|------|-----|--------|
+| 50 | 2026-11-11 | [Backblaze B2 as the Off-Site Cloud Backup Target (the "1 off-site" of 3‑2‑1)](50-backblaze-b2-offsite-backup.md) | Accepted |
+| 49 | 2026-11-11 | [Backup Strategy — the 3‑2‑1 Rule for the Homelab](49-backup-3-2-1-strategy.md) | Accepted |
 | 48 | 2026-10-09 | [LAN Router — OPNsense on the Futro S930, Routing-First](48-lan-router-futro-s930.md) | Accepted |
 | 47 | 2026-11-06 | [Second Proxmox VE Node — pve2, a Two-Node Cluster and an Edge QDevice](47-second-proxmox-node-cluster-qdevice.md) | Accepted |
 | 46 | 2026-10-31 | [Observability Host — VictoriaLogs, Netdata Parent and Grafana in One LXC](46-grafana-logs-ui-victorialogs.md) | Proposed |
@@ -59,5 +61,5 @@ Significant architectural and technology choices recorded in
 | 5 | 2026‑05‑24 | [OS Decision — Ubuntu Server 24.04 LTS](05-os-decision-ubuntu-server.md) | Implemented |
 | 4 | 2026‑05‑24 | [Hybrid Cloud Strategy — Physical Homelab + Minimal Azure](04-hybrid-cloud-azure-arc.md) | Implemented |
 | 3 | 2026‑05‑24 | [Container Strategy — Docker Compose First, k3s Migration Path](03-container-strategy.md) | Superseded by [ADR 22](22-k3s-arc-homelab.md) |
-| 2 | 2026‑05‑24 | [Backup Strategy — Restic to Local SATA + Azure Blob](02-backup-strategy-restic-blob.md) | In Progress |
+| 2 | 2026‑05‑24 | [Backup Strategy — Restic to Local SATA + Azure Blob](02-backup-strategy-restic-blob.md) | Partially superseded by [ADR 50](50-backblaze-b2-offsite-backup.md) |
 | 1 | 2026‑05‑20 | [Hardware Selection — Lenovo ThinkCentre M910q Tiny](01-hardware-selection-m910q.md) | Implemented |
