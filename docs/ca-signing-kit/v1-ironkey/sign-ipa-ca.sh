@@ -41,27 +41,30 @@ if [ ! -x "$SHARED/step" ]; then
     echo "       Copy the bundle to a real filesystem if you are running it from the stick." >&2
     exit 1
 fi
-[ -f "$DIR/ipa.csr" ] || { echo "ABORT: $DIR/ipa.csr is missing" >&2; exit 1; }
-[ -f "$DIR/ipa-ca.tpl" ] || { echo "ABORT: $DIR/ipa-ca.tpl is missing" >&2; exit 1; }
+# ipa.csr follows the same rule as step and the templates: beside this script in a
+# self-contained bundle, or one level up in the repository.
+CSR="$DIR/ipa.csr"
+[ -f "$CSR" ] || CSR="$SHARED/ipa.csr"
+[ -f "$CSR" ] || { echo "ABORT: ipa.csr is missing (looked in $DIR and $SHARED)" >&2; exit 1; }
+[ -f "$SHARED/ipa-ca.tpl" ] || { echo "ABORT: $SHARED/ipa-ca.tpl is missing" >&2; exit 1; }
 [ -f "$STICK/root_ca.crt" ] || { echo "ABORT: $STICK/root_ca.crt not found (is the stick mounted?)" >&2; exit 1; }
 [ -f "$STICK/root_ca_key" ] || { echo "ABORT: $STICK/root_ca_key not found (is the stick mounted?)" >&2; exit 1; }
-
 cd "$DIR"
 
-echo "Signing ipa.csr with the root on $STICK (1-year IPA CA)"
+echo "Signing $CSR with the root on $STICK (5-year IPA CA)"
 if [ -n "$PWFILE" ]; then
     [ -r "$PWFILE" ] || { echo "ABORT: passphrase file $PWFILE is not readable" >&2; exit 1; }
     echo "(using the root key passphrase in $PWFILE)"
     echo
-    "$SHARED/step" certificate sign --template "$SHARED/ipa-ca.tpl" --not-after 8760h \
+    "$SHARED/step" certificate sign --template "$SHARED/ipa-ca.tpl" --not-after 43800h \
         --password-file "$PWFILE" \
-        ipa.csr "$STICK/root_ca.crt" "$STICK/root_ca_key" \
+        "$CSR" "$STICK/root_ca.crt" "$STICK/root_ca_key" \
         > "$TMP"
 else
     echo "(the root key's passphrase will be requested now)"
     echo
-    "$SHARED/step" certificate sign --template "$SHARED/ipa-ca.tpl" --not-after 8760h \
-        ipa.csr "$STICK/root_ca.crt" "$STICK/root_ca_key" \
+    "$SHARED/step" certificate sign --template "$SHARED/ipa-ca.tpl" --not-after 43800h \
+        "$CSR" "$STICK/root_ca.crt" "$STICK/root_ca_key" \
         > "$TMP"
 fi
 
@@ -95,7 +98,7 @@ chk "key usage: certificate sign"               '"certificate_sign"[: ]+true'
 chk "key usage: CRL sign"                       '"crl_sign"[: ]+true'
 chk "subject: CN=Certificate Authority"         'Certificate Authority'
 chk "subject: O=LAB.INTERNAL"                   'LAB\.INTERNAL'
-chk "validity is 1 year"                        '"length"[: ]+31536000'
+chk "validity is 5 years"                       '"length"[: ]+157680000'
 
 if [ "$FAILED" -ne 0 ]; then
     echo >&2
@@ -112,7 +115,7 @@ echo "=============================================================="
 echo "Read the dump below as well. It must show:"
 echo "  Issuer   = CN=Homelab Internal CA (the root)"
 echo "  Subject  = CN=Certificate Authority, O=LAB.INTERNAL"
-echo "  Validity = ~1 year"
+echo "  Validity = ~5 years"
 echo "  Basic Constraints = critical CA:TRUE, pathlen:0"
 echo "  Key Usage = critical Digital Signature, Certificate Sign, CRL Sign"
 echo "=============================================================="
