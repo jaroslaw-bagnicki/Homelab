@@ -98,8 +98,11 @@
 - name: Install the SSH CA public keys
   when: ca_trust_ssh_enabled | bool
   ansible.builtin.copy:
-    content: "{{ item.content }}
-"
+    # `|+` keeps the trailing newline the key file needs. A multi-line double-quoted scalar
+    # folds its newline into a space, which left the file ending in a space and with no
+    # final newline — sshd tolerates that, but it is not what the file should contain.
+    content: |+
+      {{ item.content }}
     dest: "{{ item.dest }}"
     owner: root
     group: root
