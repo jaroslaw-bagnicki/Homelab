@@ -301,13 +301,10 @@ enrolment. The server itself uses LDAPI/HTTPS locally.
 > | Reverse zone contents | NS + `.250` PTR only |
 > | SOA serial | **5 → 6** — one write |
 >
-> **Two findings from execution, now folded into the step above:**
+> **One finding from execution, now folded into the step above:**
 >
-> 1. **The role only adds records.** The retired `.216` PTR survived the run and had to be deleted
->    through the API by hand — a role run never cleans up after a retired address.
-> 2. **Technitium returns HTTP 200 for API-level errors.** The first delete reported success on the
->    status code while the body said `{"status":"error","errorMessage":"Parameter 'ptrName' missing."}`.
->    PTR deletion needs `ptrName` alongside `domain`/`zone`/`type`; read `status`, never the HTTP code.
+> 1. **The role only adds records.** A retired address has to be removed through the API by hand — a
+>    role run never cleans up after it.
 
 ## 5. Provision the install secrets
 
