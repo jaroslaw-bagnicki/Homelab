@@ -180,6 +180,21 @@ ansible-playbook ansible/playbooks/playbook-logs.yml --diff
 ansible-playbook ansible/playbooks/playbook-ca.yml --diff
 ```
 
+> **For a change that only touches these roles, use `playbook-security.yml`.** Every node playbook
+> targets exactly one host, so applying a `security` change fleet-wide costs one full run per node —
+> ~19 min for seven, measured 2026-11-15. `playbook-security.yml` covers the fleet in **one play**, so
+> `forks` parallelises it and the wall time is the slowest host (~1 min). It applies `ca_trust` then
+> `security` and nothing else; `router` (FreeBSD, REST API) and `ipa` (EL guest, `ipa_host`) are
+> excluded.
+>
+> ```powershell
+> ansible-playbook ansible/playbooks/playbook-security.yml --diff
+> ```
+>
+> `--check` does **not** work on this playbook: `ca_trust` pins the root fingerprint with a `command`
+> task, which check mode skips, so the assert compares against an empty string and fails. Run it for
+> real, or `--limit <host>` first.
+
 **Validate on each node:**
 
 ```sh
