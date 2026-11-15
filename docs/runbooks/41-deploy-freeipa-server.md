@@ -289,6 +289,26 @@ dig @192.168.2.240 _ldap._tcp.ipa.internal SRV +short      # 0 100 389 ipa.inter
 `_ldap._tcp` is published now, but TCP/389 is intentionally closed on the IPA firewall until M3 client
 enrolment. The server itself uses LDAPI/HTTPS locally.
 
+> **Executed 2026-11-15** (issue [#164](https://github.com/jaroslaw-bagnicki/Homelab/issues/164)).
+> The `.250` records are published and the reverse zone is clean. Measured results:
+>
+> | Step | Result |
+> |---|---|
+> | `playbook-technitium.yml` | **`ok=33 changed=2 failed=0`** |
+> | `ipa.internal` A | `192.168.2.250` |
+> | `250.2.168.192.in-addr.arpa` PTR | `ipa.internal.` |
+> | SRV records | all **7** — `_kerberos._tcp`/`_udp`, `_kerberos-master._tcp`/`_udp`, `_kpasswd._tcp`/`_udp`, `_ldap._tcp` |
+> | Reverse zone contents | NS + `.250` PTR only |
+> | SOA serial | **5 → 6** — one write |
+>
+> **Two findings from execution, now folded into the step above:**
+>
+> 1. **The role only adds records.** The retired `.216` PTR survived the run and had to be deleted
+>    through the API by hand — a role run never cleans up after a retired address.
+> 2. **Technitium returns HTTP 200 for API-level errors.** The first delete reported success on the
+>    status code while the body said `{"status":"error","errorMessage":"Parameter 'ptrName' missing."}`.
+>    PTR deletion needs `ptrName` alongside `domain`/`zone`/`type`; read `status`, never the HTTP code.
+
 ## 5. Provision the install secrets
 
 ```powershell
@@ -543,26 +563,6 @@ rather than pasted public key, the fleet-key verification path, `getent` vs the 
    `playbook-ipa.yml`. The guest accepted only the break-glass fleet key, so every later step ran on a 1 h
    root-equivalent credential. Fixed by adding the trust tasks to `ipa_host`, making `ca_trust`
    OS-aware, and running `ca_trust` before `ipa_host` in the playbook.
-
-### §4 execution record — 2026-11-15
-
-| Check | Result |
-|---|---|
-| `playbook-technitium.yml` | **`ok=33 changed=2 failed=0`** |
-| `ipa.internal` A | `192.168.2.250` |
-| `250.2.168.192.in-addr.arpa` PTR | `ipa.internal.` |
-| SRV records | all **7** present — `_kerberos._tcp`/`_udp`, `_kerberos-master._tcp`/`_udp`, `_kpasswd._tcp`/`_udp`, `_ldap._tcp` |
-| Reverse zone contents | NS + `.250` PTR only |
-| SOA serial | **5 → 6** — one write |
-
-**One thing the role could not do.** The `technitium` role only *adds* records, so the retired `.216`
-PTR survived the run and had to be deleted through the API by hand. Worth knowing for the next guest
-move: a role run never cleans up after a retired address.
-
-**Technitium returns HTTP 200 for API-level errors.** The first delete attempt reported success on the
-status code while the body said `{"status":"error","errorMessage":"Parameter 'ptrName' missing."}` —
-PTR deletion needs `ptrName` alongside `domain`/`zone`/`type`. Read `status` in the response, never the
-HTTP code alone.
 
 ## References
 
