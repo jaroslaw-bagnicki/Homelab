@@ -180,6 +180,21 @@ ansible-playbook ansible/playbooks/playbook-logs.yml --diff
 ansible-playbook ansible/playbooks/playbook-ca.yml --diff
 ```
 
+> **For a change that only touches these roles, use `playbook-security.yml`.** Every node playbook
+> targets exactly one host, so applying a `security` change fleet-wide costs one full run per node —
+> ~19 min for seven, measured 2026-11-15. `playbook-security.yml` covers the fleet in **one play**, so
+> `forks` parallelises it and the wall time is the slowest host (~1 min). It applies `ca_trust` then
+> `security` and nothing else; `router` (FreeBSD, REST API) and `ipa` (EL guest, `ipa_host`) are
+> excluded.
+>
+> ```powershell
+> ansible-playbook ansible/playbooks/playbook-security.yml --diff
+> ```
+>
+> `--check` does **not** work on this playbook: `ca_trust` pins the root fingerprint with a `command`
+> task, which check mode skips, so the assert compares against an empty string and fails. Run it for
+> real, or `--limit <host>` first.
+
 **Validate on each node:**
 
 ```sh
@@ -206,6 +221,25 @@ Fluent Bit ships to VictoriaLogs. Alarm delivery remains deferred per ADR 27.
 >
 > That path is why the 49 h renewal threshold matters: it leaves ~2 days of margin for the timer to
 > renew *before* expiry. A certificate that has already expired is a playbook run, not a `step` command.
+
+> **A certificate replaced outside the timer needs an sshd reload.** `sshd` reads the host certificate
+> once, at start, and keeps serving the copy it loaded. Renewing by hand (`step ssh renew`, or copying a
+> certificate back from the CA) writes a valid file that sshd never reads — clients then print
+> `Certificate invalid: expired` while still connecting, so nothing fails loudly. The renewal script
+> guards against this: before its early return it compares the certificate's mtime with the running
+> `sshd`'s start time and restarts the unit when the file is newer. If you renew by hand, run
+> `sudo systemctl restart ssh` yourself, or run the script once to let it notice.
+>
+> **The playbook passes `--no-restart`.** When `security` reissues a certificate it queues a
+> `Restart ssh` handler, and the hardening drop-in queues the same handler again — so the script must
+> not restart on top of that, or one playbook run drops the connection twice. The timer calls the
+> script bare, so an out-of-band replacement stays self-healing. Run it by hand **without** the flag
+> to get that behaviour:
+
+```sh
+sudo /usr/local/sbin/homelab-ssh-host-cert-renew --no-restart   # what the playbook does
+sudo /usr/local/sbin/homelab-ssh-host-cert-renew                # what the timer does
+```
 
 **Renewal proof.** On a canary node, temporarily raise the renewal threshold so the 7-day certificate is
 treated as near expiry, run the role once, then restore the normal threshold:
