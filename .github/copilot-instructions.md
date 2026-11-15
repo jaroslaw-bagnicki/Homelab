@@ -62,7 +62,8 @@
 - **Notable changes only.** Log a capability, a fix, a decision or a state change worth reading in a month. Never log instruction-file or PR-policy tweaks, typo/link/format fixes, single-file doc corrections, cross-reference or rename corrections, review-remark fixes, or changelog/report bookkeeping — including changes to these instruction files.
 - **Direct commits to `main` only when the user explicitly asks** ("commit to main", "no PR", "skip the branch")
 - **Commit message format**: `(type) description` with parentheses. Common types: `docs`, `feat`, `fix`, `chore`, `refactor`
-- **Never rebase** unless explicitly asked
+- **Never rebase** — not to catch up with `main`, not to resolve conflicts, not with any flag. Merge `origin/main` into the feature branch instead.
+- **PRs are squash-merged — never a merge commit.** The operator always squashes, so the PR's commits collapse into one and the **PR title and description become the commit message**: write them to stand alone as the permanent record, and carry the `(type)` prefix into the squash subject at merge time. A merge commit is never used.
 - **Hosted CI is deliberately out of scope** — verification is local (`ansible-lint` on changed roles, plus a live `--diff` playbook run after review and before merge, per `AGENTS.md`); do not propose a CI workflow or pipeline. See `docs/decisions/32-no-hosted-ci.md` (ADR 32) — it is scoped to build/test validation and leaves deployment automation to ADR 22.
 
 ## Ansible Verification

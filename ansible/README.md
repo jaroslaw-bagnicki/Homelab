@@ -67,6 +67,7 @@ ansible-playbook ansible/workloads/freeipa/freeipa-playbook.yml
 | `playbooks/playbook-technitium.yml` | Targeted: the `technitium` role only — DNS server and host resolver (runbook 37) |
 | `playbooks/playbook-caddy.yml` | Targeted: the `caddy` role only — LAN reverse proxy and ACME (runbook 37) |
 | `playbooks/playbook-ca-trust.yml` | Targeted: the `ca_trust` role only — fleet CA root and SSH CA public keys, `ca` excluded (runbooks 39/40) |
+| `playbooks/playbook-security.yml` | Targeted: `ca_trust` + `security` only — SSH certificate trust and host hardening across the whole fleet in one play, so `forks` parallelises it; `router` and `ipa` excluded (runbook 40) |
 | `playbooks/playbook-netdata.yml` | Targeted: the `netdata` role only — parent + children on all five LAN nodes (runbook 31) |
 | `playbooks/playbook-pve1.yml` | Wyse 5070 Proxmox host base provision: common → ca_trust → security → proxmox_cluster → nut_server → nut_client → netdata → fluentbit (UFW LAN allow for SSH + NUT 3493 + Proxmox UI 8006 + Netdata dashboard 19999 / streaming 19996, both TLS-only) |
 | `playbooks/playbook-pve2.yml` | OptiPlex 7050 Proxmox host base provision: common → ca_trust → security → proxmox_cluster → nut_client → netdata → fluentbit (UFW LAN allow for SSH + Proxmox UI 8006; Netdata child streaming to `pve1`) |
@@ -102,6 +103,7 @@ Base shared roles live in [`roles/`](roles/README.md). The [roles index](roles/R
 | `playbook-technitium.yml` | technitium | Re-apply only the DNS server and host resolver on `edge` (see [runbook 37](../docs/runbooks/37-deploy-internal-access-stack.md)) |
 | `playbook-caddy.yml` | caddy | Re-apply only the reverse proxy and its sites on `edge` (see [runbook 37](../docs/runbooks/37-deploy-internal-access-stack.md)) |
 | `playbook-netdata.yml` | netdata | Re-apply only Netdata on `pve1`, `pve2`, `lab`, `nas`, `edge` (see [runbook 31](../docs/runbooks/31-deploy-netdata.md)) |
+| `playbook-security.yml` | ca_trust → security | Re-apply only the SSH certificate trust and host hardening across the fleet — one play, so `forks` parallelises it (see [runbook 40](../docs/runbooks/40-deploy-ssh-certificates.md)) |
 | `playbook-pve1.yml` | common → ca_trust → security → proxmox_cluster → nut_server → nut_client → netdata → fluentbit | Wyse 5070 Proxmox host base provision + NUT server + Netdata Parent (see [runbook 28](../docs/runbooks/28-pve1-proxmox-node.md) / [runbook 29](../docs/runbooks/29-nut-ups-shutdown.md) / [runbook 31](../docs/runbooks/31-deploy-netdata.md)) |
 | `playbook-pve2.yml` | common → ca_trust → security → proxmox_cluster → nut_client → netdata → fluentbit | OptiPlex 7050 Proxmox host base provision — Netdata child, NUT secondary (see [runbook 42](../docs/runbooks/42-pve2-proxmox-node.md)) |
 | `playbook-nas.yml` | common → ca_trust → security → nut_client → netdata → fluentbit | Beetle M-III OMV NAS base provision + Netdata child (see [runbook 32](../docs/runbooks/32-beetle-m3-omv-setup.md)) |

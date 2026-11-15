@@ -1,0 +1,39 @@
+---
+# Targeted run for the SSH certificate trust and host hardening only — the same roles the node
+# playbooks apply, without re-running the base, NUT, Netdata, Fluent Bit, Docker, Proxmox or
+# edge-stack roles.
+#
+# Why this exists: every node playbook targets exactly one host, so a fleet-wide change to
+# `security` costs one full playbook run per node (~19 min for seven, measured 2026-11-15).
+# This play covers the whole fleet in one play, so `forks` parallelises it and the wall time is
+# the slowest host rather than the sum. Use it for role-scoped changes; use the node playbooks
+# when the whole node needs to converge.
+#
+# Needs AZURE_CLIENT_ID / AZURE_CLIENT_SECRET / AZURE_TENANT_ID for the CA lookups.
+#
+# Excluded everywhere:
+#   `router` — a FreeBSD appliance driven over its REST API; both roles are Linux-only
+#              (apt / ufw / update-ca-certificates).
+#   `ipa`    — an EL guest served by `ipa_host` + `ca_trust` (playbook-ipa.yml); `security`
+#              is Debian/Ubuntu-only.
+#
+# Two plays, not one, because `ca_trust` and `security` have different host scopes: the CA guest
+# must not receive `ca_trust` (it installs the fleet root, while `ca` manages its own root and
+# intermediate under /etc/step-ca/certs — see playbook-ca-trust.yml and the role README), but it
+# does need `security`. Same split as the node playbooks, where playbook-ca.yml is
+# common → security → fluentbit with no ca_trust.
+#
+# Control node per host: `cloudlab` from the dev container (`--limit cloudlab`), the LAN nodes
+# from a workstation (`--limit 'physical:proxmox_guests'`).
+
+- name: Trust the fleet CA root on the fleet
+  hosts: all:!ca:!router:!ipa
+  become: true
+  roles:
+    - ca_trust
+
+- name: Apply host hardening and SSH certificate trust
+  hosts: all:!router:!ipa
+  become: true
+  roles:
+    - security
