@@ -5,11 +5,10 @@
 ## Sign
 
 ```powershell
-cd H:\RootCA\ca-signing-kit
-.\step.exe certificate sign --template .\ipa-ca.tpl --not-after 8760h .\ipa.csr ..\root_ca.crt ..\root_ca_key > .\ipa-ca.crt
+.\step.exe certificate sign --template .\ipa-ca.tpl --not-after 8760h .\ipa.csr <stick>\root_ca.crt <stick>\root_ca_key > .\ipa-ca.crt
 ```
 
-`..` is the mounted stick (`H:\`). It prompts for the root key passphrase.
+`<stick>` is the mounted stick. It prompts for the root key passphrase.
 
 ## Check
 
@@ -26,7 +25,7 @@ Expect `Issuer: CN=Homelab Internal CA`, `Subject: CN=Certificate Authority, O=L
 stick.
 
 ```powershell
-scp .\ipa-ca.crt ..\root_ca.crt fleetadm@192.168.2.250:/tmp/
+scp .\ipa-ca.crt <stick>\root_ca.crt fleetadm@192.168.2.250:/tmp/
 ssh fleetadm@192.168.2.250 'sudo install -m 0644 /tmp/ipa-ca.crt /root/ipa-ca.crt; sudo install -m 0644 /tmp/root_ca.crt /root/root_ca.crt'
 ```
 
