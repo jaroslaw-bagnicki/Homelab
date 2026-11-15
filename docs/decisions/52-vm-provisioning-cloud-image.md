@@ -57,8 +57,10 @@ fixed and lives in [runbook 41](../runbooks/41-deploy-freeipa-server.md) §2.
 7. **Verification uses the break-glass key until the host is provisioned.** A fresh guest has no
    `TrustedUserCAKeys`, so certificate SSH fails by design ([ADR 41](41-ssh-certificates-step-ca.md)).
    The fleet key is the step-2 path and is dropped once the provisioning role has run.
-8. **DNS is verified against the resolver, never `getent`.** `manage_etc_hosts: true` writes the FQDN to
-   loopback, so `getent` answers from `/etc/hosts` and proves nothing.
+8. **The snippet sets neither `manage_etc_hosts` nor `fqdn`.** `manage_etc_hosts: true` writes the FQDN
+   to loopback, which outranks DNS in `nsswitch`; `fqdn:` alongside `--searchdomain` appends the domain
+   twice (`ipa.internal.internal`). The provisioning role owns both. Verify DNS against the resolver
+   with `getent ahostsv4` — plain `getent hosts` lets `myhostname` answer with a link-local `fe80::`.
 
 **Scope.** Linux guests on Proxmox VE. Windows guests are out of scope — they use `cloudbase-init`, a
 different mechanism with different `citype` handling. Containers (LXC) are out of scope; they use

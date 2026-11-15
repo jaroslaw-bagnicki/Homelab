@@ -154,7 +154,6 @@ a mistyped key leaves the guest unreachable with no console-free way back in:
 cat > /var/lib/vz/snippets/ipa-user-data.yaml <<'EOF'
 #cloud-config
 hostname: ipa
-fqdn: ipa.internal
 manage_etc_hosts: false
 users:
   - name: fleetadm
@@ -172,6 +171,12 @@ printf '      - %s\n' "$(cat /path/to/fleetadm.pub)" >> /var/lib/vz/snippets/ipa
 > the link-local `fe80::` address — and every FreeIPA preflight check that asks for the host's own
 > address gets the wrong answer. `ipa_host` owns this line instead (§3), writing the real
 > `192.168.2.250` mapping exactly once.
+>
+> **No `fqdn:` key either.** cloud-init derives the FQDN as `hostname` + the search domain it is
+> given, and `qm set --searchdomain internal` already supplies that. Declaring `fqdn: ipa.internal`
+> *as well* appends the search domain a second time, and the guest boots as
+> **`ipa.internal.internal`**. `ipa_host` sets the FQDN explicitly in §3, so the snippet only needs
+> the short `hostname`.
 
 Verify the key before starting the VM — compare the fingerprint against the known fleet key:
 
@@ -518,12 +523,12 @@ only adds records, it never deletes), so §4 must create the `.250` records befo
 | §3 firewalld | 22/88/464/443/636 tcp + 88/464 udp, LAN-scoped rich rules |
 | §3 chrony | stratum 3, synchronised |
 
-**Seven defects found and fixed across these runs** — the corrected sequence is what the runbook now
+**Eight defects found and fixed across these runs** — the corrected sequence is what the runbook now
 carries: the `import` content type for a `.qcow2`, the full `pvesm set --content` list, a generated
 rather than pasted public key, the fleet-key verification path, `getent` vs the resolver, the stale
-`.216` records, and the `manage_etc_hosts` loopback mapping.
+`.216` records, the `manage_etc_hosts` loopback mapping, and the `fqdn:` double-append.
 
-**Two defects found in §3 during this run:**
+**Three defects found in §3 during this run:**
 
 1. **`manage_etc_hosts: true` wrote a loopback FQDN mapping.** cloud-init put
    `127.0.0.1 ipa.internal ipa` in `/etc/hosts`; the role's `lineinfile` replaced only the *last*
@@ -532,6 +537,9 @@ rather than pasted public key, the fleet-key verification path, `getent` vs the 
 2. **`getent hosts` proved nothing.** It queries `AF_UNSPEC`, so the `myhostname` NSS module answers
    with the interface's link-local `fe80::` address — true about the interface, useless as proof of the
    LAN mapping. The verification task now uses `getent ahostsv4`.
+3. **`fqdn: ipa.internal` in the snippet double-appended the search domain.** With
+   `--searchdomain internal` already set, cloud-init computed `ipa.internal` + `internal` and the guest
+   booted as **`ipa.internal.internal`**. The `fqdn:` key is removed; `ipa_host` sets the FQDN in §3.
 
 ## References
 
