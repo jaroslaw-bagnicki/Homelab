@@ -544,6 +544,26 @@ rather than pasted public key, the fleet-key verification path, `getent` vs the 
    root-equivalent credential. Fixed by adding the trust tasks to `ipa_host`, making `ca_trust`
    OS-aware, and running `ca_trust` before `ipa_host` in the playbook.
 
+### §4 execution record — 2026-11-15
+
+| Check | Result |
+|---|---|
+| `playbook-technitium.yml` | **`ok=33 changed=2 failed=0`** |
+| `ipa.internal` A | `192.168.2.250` |
+| `250.2.168.192.in-addr.arpa` PTR | `ipa.internal.` |
+| SRV records | all **7** present — `_kerberos._tcp`/`_udp`, `_kerberos-master._tcp`/`_udp`, `_kpasswd._tcp`/`_udp`, `_ldap._tcp` |
+| Reverse zone contents | NS + `.250` PTR only |
+| SOA serial | **5 → 6** — one write |
+
+**One thing the role could not do.** The `technitium` role only *adds* records, so the retired `.216`
+PTR survived the run and had to be deleted through the API by hand. Worth knowing for the next guest
+move: a role run never cleans up after a retired address.
+
+**Technitium returns HTTP 200 for API-level errors.** The first delete attempt reported success on the
+status code while the body said `{"status":"error","errorMessage":"Parameter 'ptrName' missing."}` —
+PTR deletion needs `ptrName` alongside `domain`/`zone`/`type`. Read `status` in the response, never the
+HTTP code alone.
+
 ## References
 
 - [ADR 42](../decisions/42-pki-topology-sibling-cas.md) · [ADR 43](../decisions/43-freeipa-domain-realm.md) · [research 51](../research/51-freeipa-dogtag-tpm-custody.md) (parked TPM work)
