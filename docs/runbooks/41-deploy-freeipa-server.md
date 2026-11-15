@@ -274,36 +274,20 @@ From the LAN workstation, after CR:
 ansible-playbook ansible/playbooks/playbook-technitium.yml --diff
 ```
 
-The role publishes the A record, the PTR and the seven Kerberos/LDAP SRV records from
-`ansible/roles/technitium/defaults/main.yml`. Verify from a LAN client. **Query Technitium
-directly** — `getent` on the guest answers from `/etc/hosts` and proves nothing:
+Verify from a LAN client. **Query Technitium directly** — `getent` on the guest answers from
+`/etc/hosts` and proves nothing:
 
 ```sh
-dig @192.168.2.240 ipa.internal +short                     # 192.168.2.250
-dig @192.168.2.240 -x 192.168.2.250 +short                 # ipa.internal.
+dig @192.168.2.240 ipa.internal +short                 # 192.168.2.250
+dig @192.168.2.240 -x 192.168.2.250 +short             # ipa.internal.
 dig @192.168.2.240 _kerberos._tcp.ipa.internal SRV +short  # 0 100 88 ipa.internal.
 dig @192.168.2.240 _kerberos._udp.ipa.internal SRV +short
-dig @192.168.2.240 _kerberos-master._tcp.ipa.internal SRV +short
-dig @192.168.2.240 _kerberos-master._udp.ipa.internal SRV +short
 dig @192.168.2.240 _kpasswd._tcp.ipa.internal SRV +short   # 0 100 464 ipa.internal.
-dig @192.168.2.240 _kpasswd._udp.ipa.internal SRV +short
 dig @192.168.2.240 _ldap._tcp.ipa.internal SRV +short      # 0 100 389 ipa.internal.
 ```
 
 `_ldap._tcp` is published now, but TCP/389 is intentionally closed on the IPA firewall until M3 client
 enrolment. The server itself uses LDAPI/HTTPS locally.
-
-### Final DNS state
-
-| Record | Value |
-|---|---|
-| `ipa.internal` A | `192.168.2.250` |
-| `250.2.168.192.in-addr.arpa` PTR | `ipa.internal.` |
-| 7× SRV (Kerberos, kpasswd, LDAP) | `ipa.internal.` on ports 88 / 464 / 389 |
-
-The reverse zone holds **exactly two PTR records** — `.250` for this guest and nothing else. The
-`technitium` role only ever *adds* records, so a retired address has to be removed through the
-Technitium UI or API; check the zone rather than assuming the role converged it.
 
 ## 5. Provision the install secrets
 
