@@ -1,0 +1,10 @@
+version: 2
+updates:
+  # Bumps devcontainer feature versions in .devcontainer/devcontainer.json and
+  # regenerates .devcontainer/devcontainer-lock.json — one grouped PR per week.
+  # The base image tag is NOT covered (Dependabot's devcontainers ecosystem only
+  # handles features); it is reviewed quarterly per ADR 53.
+  - package-ecosystem: "devcontainers"
+    directory: "/"
+    schedule:
+      interval: "weekly"
