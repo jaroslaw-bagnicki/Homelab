@@ -289,7 +289,7 @@ dig @192.168.2.240 _ldap._tcp.ipa.internal SRV +short      # 0 100 389 ipa.inter
 `_ldap._tcp` is published now, but TCP/389 is intentionally closed on the IPA firewall until M3 client
 enrolment. The server itself uses LDAPI/HTTPS locally.
 
-> **Executed 2026-11-15** (issue [#164](https://github.com/jaroslaw-bagnicki/Homelab/issues/164)).
+> **Executed 2026-11-15**.
 > The `.250` records are published and the reverse zone is clean. Measured results:
 >
 > | Step | Result |
@@ -322,7 +322,7 @@ The workload reads the first two at install time; the test-user password is used
 The script never overwrites an existing secret — rotating the IPA admin or Directory Manager password
 is a coordinated `ipa`/`kadmin` operation and is not part of M1.
 
-> **Executed 2026-11-15** (issue [#164](https://github.com/jaroslaw-bagnicki/Homelab/issues/164)).
+> **Executed 2026-11-15**.
 > All three secrets provisioned in `homelab-bysxdb-kv`, enabled:
 >
 > | Secret | Result |
