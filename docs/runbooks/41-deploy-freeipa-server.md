@@ -35,7 +35,8 @@ the server, the realm, the DNS glue and the CA chain before anything depends on 
 - **Technitium** — `ipa.internal` A, reverse zone + PTR, and the Kerberos/LDAP SRV records under the IPA
   domain `lab.internal`.
 - **FreeIPA workload** — `ipa-server`, external CA two-phase install, `admin` + `m1test`.
-- **Offline kit** — `ipa-ca.tpl` + `sign-ipa-ca.sh` sign the IPA CA CSR with the existing root.
+- **Offline kit** — `ipa-ca.tpl` and the `step certificate sign` command sign the IPA CA CSR with the
+  existing root.
 
 ## Prerequisites
 
@@ -399,8 +400,8 @@ and what each abort message means. **Signing on a Windows workstation:** use
 is a Linux binary, so fetch `step.exe` and run the raw `certificate sign` command.
 
 1. Copy the offline kit to `/tmp` and make the scripts executable.
-2. Put `ipa.csr` in the bundle directory (or beside `sign-ipa-ca.sh` — it looks in both).
-3. Run `./sign-ipa-ca.sh <stick>` and pass the root-key passphrase.
+2. Put `ipa.csr` in the bundle directory.
+3. Run the `step certificate sign` command and pass the root-key passphrase.
 
 The script signs with `ipa-ca.tpl` for **1 year** and machine-checks:
 

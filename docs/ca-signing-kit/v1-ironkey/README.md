@@ -17,7 +17,6 @@ then signs the CAs under it.
 | [`05-signing-on-windows.md`](05-signing-on-windows.md) | the IPA CA signing on a **Windows workstation** — `step.exe`, no bash or WSL |
 | `root.sh` | creates the root CA on the stick; first run only |
 | `sign.sh` | signs the intermediate CSR, then verifies the result |
-| `sign-ipa-ca.sh` | signs FreeIPA's `ipa.csr` |
 | `step` | the CLI, linux/amd64 — **not in git** (42 MB), added by 01 |
 | `step.exe` | the CLI, windows/amd64 — **not in git** (45 MB), for [05](05-signing-on-windows.md) |
 | `intermediate_ca.csr` | the request, created on the CA host by `pve1`'s TPM key — **not in git** |
@@ -32,8 +31,8 @@ then signs the CAs under it.
 1. **Build the bundle** — [`01`](01-building-step.md). On the connected machine, before you leave.
 2. **Create the root** — `./root.sh <stick-mount>` — [`02`](02-issuing-root-cert.md). **Once ever.**
 3. **Sign the intermediate** — `./sign.sh <stick-mount>` — [`03`](03-signing-csr.md). The annual job.
-4. **Sign the FreeIPA CA** — `./sign-ipa-ca.sh <stick-mount>` — [`04`](04-signing-ipa-ca.md). Once per
-   IPA CA. On Windows, run the `step.exe` command directly — [`05`](05-signing-on-windows.md).
+4. **Sign the FreeIPA CA** — the `step certificate sign` command in [`04`](04-signing-ipa-ca.md). Once
+   per IPA CA. On Windows, run the `step.exe` command — [`05`](05-signing-on-windows.md).
 
 Both scripts take the stick's mount path as the first argument and an optional passphrase file as the
 second. Neither has a default — the destination is always explicit.
@@ -59,8 +58,9 @@ Running it on your normal workstation also works — that is what [05](05-signin
 
 ## Why `--template` and not `--profile`
 
-`sign.sh` and `sign-ipa-ca.sh` use `--template`, never `--profile`: a profile rebuilds the certificate
-from its own defaults and silently drops the SANs that declare the CA's identity.
+`sign.sh` uses `--template`, never `--profile`: a profile rebuilds the certificate from its own defaults
+and silently drops the SANs that declare the CA's identity. The FreeIPA CA command in
+[`04`](04-signing-ipa-ca.md) uses `--template` for the same reason.
 
 `root.sh` uses `--profile root-ca`, and that is **not** a contradiction. A root has no SANs to drop (it
 is never a TLS server) and inherits nothing from a CSR (it is the trust anchor). Its whole required
