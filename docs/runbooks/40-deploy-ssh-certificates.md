@@ -207,6 +207,14 @@ Fluent Bit ships to VictoriaLogs. Alarm delivery remains deferred per ADR 27.
 > That path is why the 49 h renewal threshold matters: it leaves ~2 days of margin for the timer to
 > renew *before* expiry. A certificate that has already expired is a playbook run, not a `step` command.
 
+> **A certificate replaced outside the timer needs an sshd reload.** `sshd` reads the host certificate
+> once, at start, and keeps serving the copy it loaded. Renewing by hand (`step ssh renew`, or copying a
+> certificate back from the CA) writes a valid file that sshd never reads — clients then print
+> `Certificate invalid: expired` while still connecting, so nothing fails loudly. The renewal script
+> guards against this: before its early return it compares the certificate's mtime with the running
+> `sshd`'s start time and restarts the unit when the file is newer. If you renew by hand, run
+> `sudo systemctl restart ssh` yourself, or run the script once to let it notice.
+
 **Renewal proof.** On a canary node, temporarily raise the renewal threshold so the 7-day certificate is
 treated as near expiry, run the role once, then restore the normal threshold:
 

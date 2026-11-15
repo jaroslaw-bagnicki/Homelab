@@ -18,6 +18,19 @@ if ! EXPIRES_EPOCH=$(date -d "$EXPIRES" +%s); then
 fi
 NOW=$(date +%s)
 
+# sshd reads the host certificate once, at start. A certificate replaced by any path other
+# than this script — a manual `step ssh renew`, a restored backup — leaves sshd serving the
+# old one until it restarts. An expired certificate is served silently: clients warn but the
+# connection still succeeds, so nothing fails loudly. Compare the file's mtime against the
+# running sshd's start time and reload when the file is newer, before the early return below
+# skips the renewal branch entirely.
+SSHD_START=$(systemctl show ssh -p ActiveEnterTimestamp --value 2>/dev/null || true)
+SSHD_START_EPOCH=$(date -d "${SSHD_START:-@0}" +%s 2>/dev/null || echo 0)
+if [ "$(stat -c %Y "$CERT")" -gt "$SSHD_START_EPOCH" ]; then
+  systemctl restart ssh
+  logger -t "$TAG" -p user.warn "sshd was serving a stale host certificate; reloaded"
+fi
+
 if [ $((EXPIRES_EPOCH - NOW)) -gt "$THRESHOLD" ]; then
   exit 0
 fi
