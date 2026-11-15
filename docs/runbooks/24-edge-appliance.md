@@ -11,7 +11,7 @@
 > [issue #65](https://github.com/jaroslaw-bagnicki/Homelab/issues/65).
 >
 > The public tunnel (`cloudflared`) is deployed by the dedicated `cloudflared` role in
-> `playbook-edge.yml` per [ADR 53](../decisions/53-remote-access-cloudflare-tunnel-edge.md)
+> `playbook-edge.yml` per [ADR 24 (2026-11-14 amendment)](../decisions/24-edge-ingress-appliance.md)
 > (token from AKV `cloudflared-tunnel-token-edge`, origin = this box's Caddy on loopback
 > `:80`). For moving the existing tunnel from cloudlab to edge, see
 > [runbook 47](47-migrate-cloudlab-docker-to-lab.md).

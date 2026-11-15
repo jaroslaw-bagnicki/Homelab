@@ -10,7 +10,7 @@
     - edge_host
     - technitium
     - caddy
-    # Public ingress tunnel (ADR 53) — after caddy, its loopback origin.
+    # Public ingress tunnel (ADR 24 (2026-11-14 amendment)) — after caddy, its loopback origin.
     - cloudflared
     - nut_client
     - netdata

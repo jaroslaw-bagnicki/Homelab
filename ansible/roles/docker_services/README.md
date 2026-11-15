@@ -1,6 +1,6 @@
 # docker_services
 
-Deploys the core Docker Compose stack on `lab` — Portainer, the origin Caddy, and hello — plus the shared bridge networks. The public tunnel is **not** here: it runs bare-metal on `edge` (ADR 53, `cloudflared` role); the edge Caddy proxies the public zone to this stack's origin Caddy on `:8080`. (Migrated from `cloudlab` as-is — #44 intermediate step, runbook 47.)
+Deploys the core Docker Compose stack on `lab` — Portainer, the origin Caddy, and hello — plus the shared bridge networks. The public tunnel is **not** here: it runs bare-metal on `edge` (ADR 24 (2026-11-14 amendment), `cloudflared` role); the edge Caddy proxies the public zone to this stack's origin Caddy on `:8080`. (Migrated from `cloudlab` as-is — #44 intermediate step, runbook 47.)
 
 ## Files
 
@@ -17,7 +17,7 @@ Deploys the core Docker Compose stack on `lab` — Portainer, the origin Caddy, 
 | `docker_dir` | `/opt/docker` | Compose project directory. |
 | `arc_keyvault_name` | `homelab-bysxdb-kv` | Key Vault for all secrets. |
 | `portainer_admin_password_secret_name` | `portainer-admin-password` | Portainer admin password. |
-| `docker_services_caddy_bind` | `127.0.0.1:8080:8080` | Origin Caddy publish binding; `lab` sets its LAN IP so the edge Caddy can proxy to it (ADR 53). |
+| `docker_services_caddy_bind` | `127.0.0.1:8080:8080` | Origin Caddy publish binding; `lab` sets its LAN IP so the edge Caddy can proxy to it (ADR 24 (2026-11-14 amendment)). |
 | `docker_services_caddy_port` | `8080` | Host port of the bind (must match `docker_services_caddy_bind`); used for the DOCKER-USER filter. |
 | `docker_services_caddy_allow_from` | `""` | Source IP allowed to reach the published origin port. Enforced in the `DOCKER-USER` chain (host UFW does not filter Docker DNAT traffic, runbook 02 §2); empty = no rule (loopback bind only). Rules persist via `iptables-persistent`. |
 | `opencode_public_domain` | `example.com` | Domain for the OpenCode wildcard routes. |

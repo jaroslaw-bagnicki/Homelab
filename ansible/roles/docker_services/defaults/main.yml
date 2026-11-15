@@ -6,7 +6,7 @@ arc_keyvault_name: homelab-bysxdb-kv
 portainer_admin_password_secret_name: "portainer-admin-password"
 
 # Origin Caddy publish binding. Loopback by default; `lab` publishes on its LAN
-# IP so the edge Caddy can proxy the public zone to it (ADR 53). The public
+# IP so the edge Caddy can proxy the public zone to it (ADR 24 (2026-11-14 amendment)). The public
 # tunnel itself runs on `edge` (cloudflared role), not here.
 docker_services_caddy_bind: "127.0.0.1:8080:8080"
 

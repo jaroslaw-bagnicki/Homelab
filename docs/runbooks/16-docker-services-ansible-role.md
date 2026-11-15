@@ -1,6 +1,6 @@
 # Homelab Setup — Docker Services Ansible Role
 
-> Runbook for the `docker_services` Ansible role — deploys Portainer, the origin Caddy, and Hello World on `lab` via `community.docker.docker_compose_v2` (migrated from cloudlab as-is — [runbook 47](47-migrate-cloudlab-docker-to-lab.md)). The Cloudflare Tunnel (`cloudflared`) is **not** part of this role anymore: it is the bare-metal `cloudflared` role on `edge` (ADR 53), proxying through the edge Caddy to this stack's origin Caddy.
+> Runbook for the `docker_services` Ansible role — deploys Portainer, the origin Caddy, and Hello World on `lab` via `community.docker.docker_compose_v2` (migrated from cloudlab as-is — [runbook 47](47-migrate-cloudlab-docker-to-lab.md)). The Cloudflare Tunnel (`cloudflared`) is **not** part of this role anymore: it is the bare-metal `cloudflared` role on `edge` (ADR 24 (2026-11-14 amendment)), proxying through the edge Caddy to this stack's origin Caddy.
 
 > **Note:** `example.com` is a placeholder domain used in this runbook for documentation purposes. Replace with the actual domain when following these steps for a real deployment.
 
@@ -37,10 +37,10 @@
 | Service | Image | Port binding | Network | Notes |
 |---|---|---|---|---|
 | Portainer | `portainer/portainer-ce:latest` | `127.0.0.1:9000:9000` | `homelab_net` | Localhost-only UI |
-| Caddy | `caddy:2-alpine` | `{{ docker_services_caddy_bind }}` (on `lab`: `192.168.2.200:8080`) | `homelab_net` | Origin Caddy for the public zone — the edge Caddy (ADR 53) proxies public hostnames here on `:8080` with `Host` preserved. Site blocks in the Caddyfile listen on `:8080`; `:80` is an in-container debug endpoint only |
+| Caddy | `caddy:2-alpine` | `{{ docker_services_caddy_bind }}` (on `lab`: `192.168.2.200:8080`) | `homelab_net` | Origin Caddy for the public zone — the edge Caddy (ADR 24 (2026-11-14 amendment)) proxies public hostnames here on `:8080` with `Host` preserved. Site blocks in the Caddyfile listen on `:8080`; `:80` is an in-container debug endpoint only |
 | Hello | `nginxdemos/hello:latest` | none (proxied internally) | `homelab_net` | Reverse-proxied via Caddyfile for `hello.example.com` |
 
-The Cloudflare Tunnel no longer runs here — `cloudflared` is a bare-metal systemd service on `edge` (ADR 53, `cloudflared` role), connecting to the **edge** Caddy on loopback `:80`; the edge Caddy's public zone proxies to this origin Caddy. Cloudflare terminates public TLS at the edge.
+The Cloudflare Tunnel no longer runs here — `cloudflared` is a bare-metal systemd service on `edge` (ADR 24 (2026-11-14 amendment), `cloudflared` role), connecting to the **edge** Caddy on loopback `:80`; the edge Caddy's public zone proxies to this origin Caddy. Cloudflare terminates public TLS at the edge.
 
 ---
 
@@ -81,7 +81,7 @@ roles:
 - [ ] All 3 containers running: `docker ps` shows `portainer`, `caddy`, `hello` all `Up`
 - [ ] Origin Caddy answers on the LAN bind: `curl -s -H 'Host: cloud5.ovh' http://192.168.2.200:8080` returns the `lab — …` body (edge-only UFW rule)
 - [ ] In-container debug endpoint works: `docker exec caddy wget -qO- http://127.0.0.1:80` returns `Caddy debug: OK`
-- [ ] Tunnel connector active on `edge`: `systemctl is-active cloudflared` and `journalctl -u cloudflared | grep -i 'connection.*registered'` (the tunnel lives on edge now, ADR 53)
+- [ ] Tunnel connector active on `edge`: `systemctl is-active cloudflared` and `journalctl -u cloudflared | grep -i 'connection.*registered'` (the tunnel lives on edge now, ADR 24 (2026-11-14 amendment))
 - [ ] HTTPS through Cloudflare Tunnel works: from any internet device, `curl -sI https://example.com` returns `HTTP/2 200` with a valid CF edge cert
 - [ ] Hello service reachable through tunnel: from any internet device, `curl -sI https://hello.example.com` returns `HTTP/2 200` (proxied to `hello` container)
 - [ ] Portainer NOT exposed publicly: `curl -s --connect-timeout 5 http://192.168.2.200:9000` from another LAN host → connection refused or timeout (loopback-only bind)
@@ -92,7 +92,7 @@ roles:
 
 ## 6. Cloudflare Dashboard Setup (manual, one-time)
 
-Before the first `ansible-playbook` run, complete these steps in the [Cloudflare dashboard](https://dash.cloudflare.com/) (navigate to your account and select the relevant domain / tunnel) and [Azure portal](https://portal.azure.com/). The role fails loudly if any KV secret is missing. The tunnel itself now runs on **`edge`** (ADR 53, `cloudflared` role — token secret `cloudflared-tunnel-token-edge`); for moving the existing tunnel from cloudlab to edge, see [runbook 47](47-migrate-cloudlab-docker-to-lab.md).
+Before the first `ansible-playbook` run, complete these steps in the [Cloudflare dashboard](https://dash.cloudflare.com/) (navigate to your account and select the relevant domain / tunnel) and [Azure portal](https://portal.azure.com/). The role fails loudly if any KV secret is missing. The tunnel itself now runs on **`edge`** (ADR 24 (2026-11-14 amendment), `cloudflared` role — token secret `cloudflared-tunnel-token-edge`); for moving the existing tunnel from cloudlab to edge, see [runbook 47](47-migrate-cloudlab-docker-to-lab.md).
 
 ### 6.1 — Create Cloudflare Tunnel
 

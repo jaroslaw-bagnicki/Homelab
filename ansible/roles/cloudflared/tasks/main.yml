@@ -5,7 +5,7 @@
       - inventory_hostname in ['edge']
     fail_msg: >-
       inventory_hostname '{{ inventory_hostname }}' is not in the supported set {edge}.
-      The public tunnel lives on the edge appliance only (ADR 53).
+      The public tunnel lives on the edge appliance only (ADR 24 (2026-11-14 amendment)).
       Update the assertion in tasks/main.yml.
 
 - name: Download the cloudflared .deb

@@ -1,5 +1,5 @@
 ---
-# cloudflared on the edge appliance (ADR 53, ADR 24: bare-metal systemd service,
+# cloudflared on the edge appliance (ADR 24 (2026-11-14 amendment), ADR 24: bare-metal systemd service,
 # no Docker on the edge box). TLS terminates at the Cloudflare edge; the origin
 # hop is plain HTTP on loopback to the edge Caddy (ADR 19 pattern).
 

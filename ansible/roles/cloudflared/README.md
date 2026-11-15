@@ -1,6 +1,6 @@
 # cloudflared
 
-Installs `cloudflared` as a **bare-metal systemd service** on the `edge` appliance — the public Cloudflare Tunnel ingress (ADR 53, deployment model per ADR 24: no Docker on the edge box). The tunnel token comes from Key Vault at run time.
+Installs `cloudflared` as a **bare-metal systemd service** on the `edge` appliance — the public Cloudflare Tunnel ingress (ADR 24 (2026-11-14 amendment), deployment model per ADR 24: no Docker on the edge box). The tunnel token comes from Key Vault at run time.
 
 ## Files
 
@@ -21,7 +21,7 @@ Installs `cloudflared` as a **bare-metal systemd service** on the `edge` applian
 
 ## Notes
 
-- Asserts `inventory_hostname == 'edge'` — the public tunnel lives on the edge appliance only (ADR 53).
+- Asserts `inventory_hostname == 'edge'` — the public tunnel lives on the edge appliance only (ADR 24 (2026-11-14 amendment)).
 - The `.env` is written `0600`, `no_log`. Public hostnames and their service targets are configured in the Cloudflare Zero Trust dashboard, not in this role.
 - The same tunnel token is reused across the cloudlab → edge move (runbook 47), so the `cloud5.ovh` CNAME needs no DNS change; only the connector host changes.
 

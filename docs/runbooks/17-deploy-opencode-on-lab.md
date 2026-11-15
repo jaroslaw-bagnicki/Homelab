@@ -10,7 +10,7 @@
 - [ ] Ansible collections installed: `community.docker`, `community.general`, `azure.azcollection` (`ansible-galaxy collection install -r ansible/requirements.yml`).
 - [ ] `homelab-bysxdb-kv` Key Vault accessible from the Ansible controller identity, with secrets for each instance (see workload README §Secrets).
 - [ ] SSH access to `lab` via `ansible_user: fleetadm` from a LAN workstation on `192.168.2.0/24`.
-- [ ] Cloudflare Tunnel `*.<domain>` → `http://127.0.0.1:80` on the **edge** connector configured (ADR 53; the `lab` Caddy is only the `192.168.2.200:8080` origin) — see [ADR 19](../decisions/19-cloudflare-tunnel-http-origin.md) and [runbook 47](47-migrate-cloudlab-docker-to-lab.md) §4.
+- [ ] Cloudflare Tunnel `*.<domain>` → `http://127.0.0.1:80` on the **edge** connector configured (ADR 24 (2026-11-14 amendment); the `lab` Caddy is only the `192.168.2.200:8080` origin) — see [ADR 19](../decisions/19-cloudflare-tunnel-http-origin.md) and [runbook 47](47-migrate-cloudlab-docker-to-lab.md) §4.
 
 ## 1. Provision secrets
 
@@ -64,7 +64,7 @@ The `example.com` literal in this runbook is a placeholder; the `opencode_public
 
 ## 4. Cloudflare Tunnel DNS prerequisites
 
-The CF tunnel wildcard entry must cover `*.<domain>` (see [ADR 19](../decisions/19-cloudflare-tunnel-http-origin.md)) and point to `http://127.0.0.1:80` on the **edge** connector (ADR 53) — the edge Caddy proxies to the lab origin `192.168.2.200:8080`, which routes `*-oc.<domain>` to `caddy-opencode`. Public hostname entries in the Cloudflare Zero Trust dashboard are not required when the tunnel uses a wildcard rule. If the existing tunnel entry is the apex only, add `*.<domain>` to route agent subdomains through the same tunnel.
+The CF tunnel wildcard entry must cover `*.<domain>` (see [ADR 19](../decisions/19-cloudflare-tunnel-http-origin.md)) and point to `http://127.0.0.1:80` on the **edge** connector (ADR 24 (2026-11-14 amendment)) — the edge Caddy proxies to the lab origin `192.168.2.200:8080`, which routes `*-oc.<domain>` to `caddy-opencode`. Public hostname entries in the Cloudflare Zero Trust dashboard are not required when the tunnel uses a wildcard rule. If the existing tunnel entry is the apex only, add `*.<domain>` to route agent subdomains through the same tunnel.
 
 ---
 
