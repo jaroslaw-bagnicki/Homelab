@@ -16,3 +16,6 @@ netdata_stream_target: "192.168.2.201:19996"
 netdata_stream_ssl: true
 netdata_bind: "127.0.0.1"
 netdata_storage: dbengine
+# The realm requires the system hostname to be the FQDN (ipa.internal), but the dashboard
+# should read like every other node. This decouples the label from the hostname.
+netdata_hostname: ipa
