@@ -131,7 +131,7 @@ ansible/ansible.log ──shipper──► /opt/logs/ansible/YYYY-MM.jsonl ─�
 
 **Yes — better than an index store at this scale.** OpenCode's data is already file-native (SQLite `opencode.db` + JSON, persisted by `setup-opencode-persist.ps1`), so there is no format conversion tax. A "digest" is aggregation — `SELECT session, sum(tokens), count(*) FILTER (tool_call failed) … GROUP BY …` — which is exactly what both candidates do well over structured JSON, and what LogsQL full-text search does poorly. An agent can also read log files directly with its own file tools — **but only files local to the machine it runs on**: an agent in the DevContainer reaches the archive on `lab` via the Datasette JSON API over HTTPS (or SSH), not by direct file reads; direct reads cover only the laptop's own queued/source files. Expected volume (single operator, MBs per day) keeps every query instant on the i5; tens of GB remain comfortable for DuckDB, and Datasette stays fine while queries stay field-filtered. The point where an indexed store would earn its keep — GBs per day of mixed fleet logs — is precisely the volume that stays in VictoriaLogs. Caveats that apply regardless of store: agent prompts and tool output can embed secrets, so the front stays LAN-only behind Caddy basic auth, the served OpenCode copy is a **redacted export** (§3), and `no_log`-style redaction at the shipper is the first line — the redaction boundary is recorded in the future ADR.
 
-## §9 — POC plan and open questions
+## §9 — POC plan and open questions — tracked in [#202](https://github.com/jaroslaw-bagnicki/Homelab/issues/202)
 
 1. Pin `datasetteproject/datasette`, `duckdb/duckdb` and `zincsearch/zincsearch` tags; one compose project on `lab`; measure idle RAM of each.
 2. Generate ~1 GB synthetic JSONL in `/opt/logs/ansible/`; benchmark: Datasette faceted query vs DuckDB `read_json_auto` scan vs ZincSearch full-text query (the i5's NVMe makes all three fast; record numbers).
@@ -150,6 +150,7 @@ ansible/ansible.log ──shipper──► /opt/logs/ansible/YYYY-MM.jsonl ─�
 - [ADR 49](../decisions/49-backup-3-2-1-strategy.md) · [ADR 50](../decisions/50-backblaze-b2-offsite-backup.md) — 3‑2‑1: live + Beetle NAS + B2
 - [ADR 22](../decisions/22-k3s-arc-homelab.md) — k3s is the destination; compose on `lab` is the live substrate
 - [Runbook 41](../runbooks/41-deploy-freeipa-server.md) — the Ansible run logs this archive is for
+- [#202](https://github.com/jaroslaw-bagnicki/Homelab/issues/202) — the POC tracker for the Datasette archive on `lab`
 - [VictoriaLogs #226](https://github.com/VictoriaMetrics/VictoriaLogs/issues/226) — per-stream retention request; per-instance pattern
 - [Datasette docs](https://docs.datasette.io/en/stable/) · [sqlite-utils](https://sqlite-utils.datasette.io/en/stable/) · [DuckDB UI extension](https://duckdb.org/docs/1.5/core_extensions/ui) · [DuckDB JSON](https://duckdb.org/docs/data/json/overview) · [DuckDB sqlite extension](https://duckdb.org/docs/extensions/sqlite) · [ZincSearch](https://docs.zincsearch.com/) — single binary, web UI, no default TTL, S3 tiering
 - [`ansible.cfg`](../../ansible.cfg) · [`.devcontainer/scripts/setup-opencode-persist.ps1`](../../.devcontainer/scripts/setup-opencode-persist.ps1) · [`docs/hardware.md`](../hardware.md) · [`ansible/workloads/`](../../ansible/workloads/)
