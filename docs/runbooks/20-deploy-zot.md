@@ -53,7 +53,7 @@ The deploy workflow is idempotent: running the workload twice without changes re
 
 With a token-based (remotely-managed) tunnel, public hostnames are routed in the Cloudflare Zero Trust dashboard:
 
-1. Open [Cloudflare Zero Trust](https://one.dash.cloudflare.com/) → **Networks** → **Tunnels** → the tunnel (now served by the `lab` connector — runbook 47).
+1. Open [Cloudflare Zero Trust](https://one.dash.cloudflare.com/) → **Networks** → **Tunnels** → the tunnel (now served by the **`edge`** connector — runbook 47 §4; inspect the connector on `edge`, not on `lab`).
 2. **Public Hostname** → **Add a public hostname**:
    - **Subdomain**: `zot` · **Domain**: `example.com`
    - **Service**: `HTTP` → `caddy:80`

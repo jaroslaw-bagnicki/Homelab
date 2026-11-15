@@ -42,11 +42,14 @@ for i in homelab prospera test; do
   [ -n "$db" ] && sqlite3 "$db" ".backup '/var/lib/opencode/instances/$i/data/backup-consistent.db'"
 done
 
-# copy the whole state trees to lab
-rsync -a --info=progress2 /var/lib/opencode/ /var/lib/zot/ fleetadm@192.168.2.200:/var/lib/
+# copy the whole state trees to lab — separate destinations (trailing-slash
+# sources would otherwise flatten into /var/lib/), and remote sudo because
+# fleetadm cannot create root-owned top-level dirs on a fresh lab
+rsync -a --info=progress2 --rsync-path="sudo rsync" /var/lib/opencode/ fleetadm@192.168.2.200:/var/lib/opencode/
+rsync -a --info=progress2 --rsync-path="sudo rsync" /var/lib/zot/ fleetadm@192.168.2.200:/var/lib/zot/
 
-# Portainer volume
-docker run --rm -v portainer_data:/data -v /root:/backup alpine tar czf /backup/portainer-data.tgz /data
+# Portainer volume — archive with /data as the working dir so members are ./...
+docker run --rm -v portainer_data:/data -v /root:/backup alpine tar -C /data -czf /backup/portainer-data.tgz .
 scp /root/portainer-data.tgz fleetadm@192.168.2.200:/root/
 # on lab: create the (empty) volume, then restore
 #   docker volume create portainer_data
@@ -64,7 +67,7 @@ ansible-playbook ansible/workloads/zot/zot-playbook.yml
 ```
 
 - [ ] `docker ps` on `lab`: `portainer`, `caddy`, `hello`, `caddy-opencode`, `opencode-homelab`, `opencode-prospera`, `opencode-test`, `zot` all `Up`
-- [ ] Origin Caddy answers: `curl -s -H 'Host: cloud5.ovh' http://192.168.2.200:8080` → `lab — …`; UFW blocks it from any other LAN host (`ufw status` shows `8080/tcp ALLOW 192.168.2.240`)
+- [ ] Origin Caddy answers: `curl -s -H 'Host: cloud5.ovh' http://192.168.2.200:8080` → `lab — …`; the DOCKER-USER chain blocks every other LAN host (`iptables -L DOCKER-USER -n` shows allow-from-`192.168.2.240` + drop; a `curl` to `192.168.2.200:8080` from another LAN host is refused — host UFW does not filter Docker DNAT traffic, runbook 02 §2)
 - [ ] OpenCode health + migrated sessions: `docker exec caddy-opencode wget -qO- http://opencode-homelab:4096/global/health` → `{"healthy":true,...}`; the WebUI lists the pre-migration sessions (DB intact)
 - [ ] Zot: `curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:5000/v2/` → `401`; catalog shows previously pushed images
 - [ ] Second run of each playbook reports `changed=0` for the workload roles
@@ -74,8 +77,8 @@ ansible-playbook ansible/workloads/zot/zot-playbook.yml
 Same tunnel token, so DNS is untouched — only the connector host changes:
 
 1. Confirm edge's connector is **Active** (§1) and lab's origin answers (§3).
-2. In the CF dashboard, point the tunnel's public hostnames at `http://127.0.0.1:80`.
-3. On cloudlab: `docker stop cloudflared` — public traffic now lands on `edge` only.
+2. On cloudlab: `docker stop cloudflared` — the tunnel's service target is **shared by all connectors**, so the old connector must be down *before* the target change, otherwise requests can land on cloudlab's own loopback (`127.0.0.1:80` there is not its Caddy) and cause an outage.
+3. In the CF dashboard, point the tunnel's public hostnames at `http://127.0.0.1:80` (the edge Caddy's loopback origin).
 4. Verify from the internet: `curl -sI https://cloud5.ovh` → 200 (`lab — …` body), `https://portainer.cloud5.ovh`, `https://homelab-oc.cloud5.ovh/global/health` (basic auth), `https://zot.cloud5.ovh/v2/` → 401. Edge Caddy access log shows the proxied requests; lab origin Caddy logs the `Host`-routed hops.
 
 ## 5. Teardown on cloudlab

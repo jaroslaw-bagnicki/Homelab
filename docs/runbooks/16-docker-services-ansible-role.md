@@ -1,6 +1,6 @@
 # Homelab Setup — Docker Services Ansible Role
 
-> Runbook for the `docker_services` Ansible role — deploys Portainer, Caddy, Hello World, and Cloudflare Tunnel (`cloudflared`) on `lab` via `community.docker.docker_compose_v2` (migrated from cloudlab as-is — [runbook 47](47-migrate-cloudlab-docker-to-lab.md)).
+> Runbook for the `docker_services` Ansible role — deploys Portainer, the origin Caddy, and Hello World on `lab` via `community.docker.docker_compose_v2` (migrated from cloudlab as-is — [runbook 47](47-migrate-cloudlab-docker-to-lab.md)). The Cloudflare Tunnel (`cloudflared`) is **not** part of this role anymore: it is the bare-metal `cloudflared` role on `edge` (ADR 53), proxying through the edge Caddy to this stack's origin Caddy.
 
 > **Note:** `example.com` is a placeholder domain used in this runbook for documentation purposes. Replace with the actual domain when following these steps for a real deployment.
 

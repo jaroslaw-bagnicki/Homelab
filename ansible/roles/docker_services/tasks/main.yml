@@ -18,6 +18,102 @@
     driver: "{{ item.driver | default('bridge') }}"
   loop: "{{ docker_services_networks }}"
 
+# Host UFW does not filter Docker DNAT traffic (runbook 02 §2, ADR 34), so a
+# LAN-published origin port is restricted in the DOCKER-USER chain instead.
+- name: Check DOCKER-USER allow rule for the origin Caddy port
+  ansible.builtin.command:
+    argv:
+      - iptables
+      - -C
+      - DOCKER-USER
+      - -p
+      - tcp
+      - --dport
+      - "{{ docker_services_caddy_port }}"
+      - -s
+      - "{{ docker_services_caddy_allow_from }}"
+      - -j
+      - ACCEPT
+  register: docker_services_allow_check
+  failed_when: false
+  changed_when: false
+  when: docker_services_caddy_allow_from | length > 0
+
+- name: Insert DOCKER-USER allow rule (configured source only) for the origin Caddy port
+  ansible.builtin.command:
+    argv:
+      - iptables
+      - -I
+      - DOCKER-USER
+      - "1"
+      - -p
+      - tcp
+      - --dport
+      - "{{ docker_services_caddy_port }}"
+      - -s
+      - "{{ docker_services_caddy_allow_from }}"
+      - -j
+      - ACCEPT
+  register: docker_services_allow_insert
+  when:
+    - docker_services_caddy_allow_from | length > 0
+    - docker_services_allow_check.rc | default(1) != 0
+
+- name: Check DOCKER-USER drop rule for the origin Caddy port
+  ansible.builtin.command:
+    argv:
+      - iptables
+      - -C
+      - DOCKER-USER
+      - -p
+      - tcp
+      - --dport
+      - "{{ docker_services_caddy_port }}"
+      - "!"
+      - -s
+      - "{{ docker_services_caddy_allow_from }}"
+      - -j
+      - DROP
+  register: docker_services_drop_check
+  failed_when: false
+  changed_when: false
+  when: docker_services_caddy_allow_from | length > 0
+
+- name: Insert DOCKER-USER drop rule (all other sources) for the origin Caddy port
+  ansible.builtin.command:
+    argv:
+      - iptables
+      - -I
+      - DOCKER-USER
+      - "1"
+      - -p
+      - tcp
+      - --dport
+      - "{{ docker_services_caddy_port }}"
+      - "!"
+      - -s
+      - "{{ docker_services_caddy_allow_from }}"
+      - -j
+      - DROP
+  register: docker_services_drop_insert
+  when:
+    - docker_services_caddy_allow_from | length > 0
+    - docker_services_drop_check.rc | default(1) != 0
+
+- name: Install iptables-persistent so DOCKER-USER rules survive a reboot
+  ansible.builtin.apt:
+    name: iptables-persistent
+    state: present
+  environment:
+    DEBIAN_FRONTEND: noninteractive
+  when: docker_services_caddy_allow_from | length > 0
+
+- name: Persist current iptables rules
+  ansible.builtin.command: netfilter-persistent save
+  when:
+    - docker_services_caddy_allow_from | length > 0
+    - docker_services_allow_insert is changed or docker_services_drop_insert is changed
+
 - name: Template docker-compose.yml
   ansible.builtin.template:
     src: docker-compose.yml.j2

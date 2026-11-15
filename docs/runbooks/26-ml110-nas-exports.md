@@ -255,7 +255,7 @@ sudo touch /mnt/nas-backups/nfs-write-test && sudo umount /mnt/nas-backups
 ## 4. Longhorn integration (blocked by #199)
 
 Point the Longhorn backup target at `nfs://192.168.2.210:/export/backups` once k3s + Longhorn
-land on the M910q ([#199](https://github.com/jaroslaw-bagnicki/Homelab/issues/44), ADR 22).
+land on the M910q ([#199](https://github.com/jaroslaw-bagnicki/Homelab/issues/199), ADR 22).
 Verify by creating a volume backup and confirming a restore path. This step is **deferred until
 #199** — the export itself is the unblocking piece here.
 

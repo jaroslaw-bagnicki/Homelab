@@ -10,6 +10,14 @@ portainer_admin_password_secret_name: "portainer-admin-password"
 # tunnel itself runs on `edge` (cloudflared role), not here.
 docker_services_caddy_bind: "127.0.0.1:8080:8080"
 
+# Host port of the origin Caddy bind (must match docker_services_caddy_bind).
+docker_services_caddy_port: "8080"
+
+# Source restriction for the published origin Caddy port, enforced in the
+# DOCKER-USER iptables chain — host UFW does not filter Docker DNAT traffic
+# (runbook 02 §2, ADR 34). Empty = no DOCKER-USER rule (loopback-only bind).
+docker_services_caddy_allow_from: ""
+
 opencode_public_domain: example.com
 
 zot_public_domain: example.com
