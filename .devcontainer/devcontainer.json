@@ -1,13 +1,13 @@
 {
   "name": "Homelab",
-  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu26.04",
 
   // ── Features ──────────────────────────────────────────────────────
   "features": {
     // Docker CLI + Docker Compose (bind-mounts host Docker socket)
     "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {},
     // PowerShell 7 — needed for Az module and repo scripts
-    "ghcr.io/devcontainers/features/powershell:2.0.2": {},
+    "ghcr.io/devcontainers/features/powershell:2.0.4": {},
     // Azure CLI — for Bicep validation and ad-hoc queries
     "ghcr.io/devcontainers/features/azure-cli:1": {},
     // GitHub CLI — for PR/issue management, repo operations
