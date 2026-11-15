@@ -1,3 +1,9 @@
 ---
-ca_trust_file: /usr/local/share/ca-certificates/homelab-root-ca.crt
-ca_trust_bundle: /etc/ssl/certs/ca-certificates.crt
+# Two trust-store layouts. `tasks/main.yml` picks one at runtime from `ansible_facts['os_family']`
+# and publishes it as `ca_trust_file` / `ca_trust_bundle`.
+ca_trust_file_debian: /usr/local/share/ca-certificates/homelab-root-ca.crt
+ca_trust_bundle_debian: /etc/ssl/certs/ca-certificates.crt
+
+# RHEL family (Fedora, RHEL, AlmaLinux, Rocky) — `update-ca-trust` reads anchors from here.
+ca_trust_file_rhel: /etc/pki/ca-trust/source/anchors/homelab-root-ca.crt
+ca_trust_bundle_rhel: /etc/pki/tls/certs/ca-bundle.crt

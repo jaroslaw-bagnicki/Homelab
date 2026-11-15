@@ -168,3 +168,76 @@
   register: ipa_host_fqdn_lookup
   changed_when: false
   failed_when: ipa_host_ip not in ipa_host_fqdn_lookup.stdout
+
+# ── SSH certificate trust (ADR 41) ───────────────────────────────────────────
+# The CA public keys themselves are installed by `ca_trust`, which runs before this role.
+# This half is the sshd wiring: without it the host accepts only the break-glass fleet key.
+- name: Check the SSH user CA public key
+  when: ipa_host_ssh_certs_enabled | bool
+  ansible.builtin.stat:
+    path: "{{ ipa_host_ssh_user_ca_key }}"
+  register: ipa_host_ssh_ca_key_stat
+
+- name: Assert the SSH user CA public key is present
+  when: ipa_host_ssh_certs_enabled | bool
+  ansible.builtin.assert:
+    that:
+      - ipa_host_ssh_ca_key_stat.stat.exists
+      - ipa_host_ssh_ca_key_stat.stat.size > 0
+    fail_msg: >-
+      {{ ipa_host_ssh_user_ca_key }} is missing or empty. The `ca_trust` role installs it
+      and must run before `ipa_host`; without it sshd rejects every certificate.
+    quiet: true
+
+- name: Ensure the authorized principals directory exists
+  when: ipa_host_ssh_certs_enabled | bool
+  ansible.builtin.file:
+    path: "{{ ipa_host_ssh_principals_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Deploy the SSH authorized principals files
+  when: ipa_host_ssh_certs_enabled | bool
+  ansible.builtin.template:
+    src: auth_principals.j2
+    dest: "{{ ipa_host_ssh_principals_dir }}/{{ item.key }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ ipa_host_ssh_authorized_principals | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"
+  notify: Restart sshd
+
+- name: Install the sshd certificate-trust drop-in
+  when: ipa_host_ssh_certs_enabled | bool
+  ansible.builtin.template:
+    src: 99-homelab-ssh-ca.conf.j2
+    dest: /etc/ssh/sshd_config.d/99-homelab-ssh-ca.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart sshd
+
+# SELinux is enforcing on the EL guest. A file created by Ansible inherits the right
+# `etc_t` context under /etc/ssh, but `restorecon` makes it explicit and is a no-op when
+# the context is already correct — cheaper than debugging a silent sshd refusal.
+- name: Restore the SELinux context on the sshd trust files
+  when:
+    - ipa_host_ssh_certs_enabled | bool
+    - ansible_facts['selinux'] | default({}) | length > 0
+  ansible.builtin.command:
+    cmd: >-
+      restorecon -R {{ ipa_host_ssh_principals_dir }}
+      /etc/ssh/sshd_config.d/99-homelab-ssh-ca.conf
+  changed_when: false
+
+# `sshd -t` validates the whole configuration before the handler restarts it, so a bad
+# drop-in fails here with a readable message instead of leaving the host unreachable.
+- name: Validate the sshd configuration
+  when: ipa_host_ssh_certs_enabled | bool
+  ansible.builtin.command:
+    cmd: sshd -t
+  changed_when: false

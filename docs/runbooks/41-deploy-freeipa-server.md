@@ -28,7 +28,8 @@ the server, the realm, the DNS glue and the CA chain before anything depends on 
   `onboot 1`. VMID 250 is the `pve2` guest block's first number, and the ID *is* the address
   ([ADR 31](../decisions/31-static-address-scheme.md)).
 - **`ipa_host` role** — EL hostname/FQDN, `/etc/hosts`, chrony, firewalld LAN rules, `fleetadm` + fleet
-  key. It replaces `common`/`security`, which are Debian/Ubuntu-only.
+  key, and the sshd certificate-trust wiring. It replaces `common`/`security`, which are
+  Debian/Ubuntu-only; the CA keys themselves still come from `ca_trust`, which is OS-aware.
 - **Technitium** — `ipa.internal` A, reverse zone + PTR, and the Kerberos/LDAP SRV records.
 - **FreeIPA workload** — `ipa-server`, external CA two-phase install, `admin` + `m1test`.
 - **Offline kit** — `ipa-ca.tpl` + `sign-ipa-ca.sh` sign the IPA CA CSR with the existing root.
@@ -247,8 +248,10 @@ ssh fleetadm@192.168.2.250 'cat /etc/resolv.conf'
 `/etc/resolv.conf` must be the Ansible-managed file — `nameserver 192.168.2.240`, `search internal` —
 not the cloud-init placeholder and not a `systemd-resolved` symlink.
 
-Certificate SSH now works: `ipa_host` has installed `TrustedUserCAKeys` and `AuthorizedPrincipalsFile`,
-so the `agent-ai` certificate reaches `fleetadm`. Drop the break-glass key and confirm:
+Certificate SSH now works: `ca_trust` installs the fleet CA public keys and the X.509 root, and
+`ipa_host` wires sshd to them (`TrustedUserCAKeys`, `AuthorizedPrincipalsFile`, and
+`/etc/ssh/auth_principals/fleetadm` accepting `automation` and `agent-ai`). Drop the break-glass key
+and confirm the certificate alone is enough:
 
 ```powershell
 ssh-add -D
@@ -256,8 +259,12 @@ ssh-add -D
 ```
 
 ```sh
-ssh fleetadm@192.168.2.250 'sudo -n whoami'    # root, via certificate
+ssh fleetadm@192.168.2.250 'hostname -f; sudo -n whoami'   # ipa.internal / root, via certificate
 ```
+
+> **`playbook-ipa.yml` runs `ca_trust` before `ipa_host`** — the CA public keys have to exist before
+> sshd is pointed at them, and `ipa_host` asserts that they do. The role also validates with `sshd -t`
+> before restarting, so a bad drop-in fails the run instead of locking you out.
 
 ## 4. Add the DNS records in Technitium
 
@@ -489,7 +496,7 @@ only adds records, it never deletes), so §4 must create the `.250` records befo
 - [x] VM 250 `ipa` up on `pve2`; `.250` reachable; guest agent responding
 - [x] Guest verified with the **break-glass fleet key** (certificate SSH arrives in §3)
 - [x] `playbook-ipa.yml` green; firewalld LAN rules; `fleetadm` key-only
-- [ ] Certificate SSH works after §3; break-glass key dropped
+- [x] Certificate SSH works after §3; break-glass key dropped
 - [ ] `dig` A/PTR/SRV records correct — and the stale `.216` A/PTR are gone
 - [ ] `/root/ipa.csr` signed by the root; `ipa-ca.crt` chains to the fleet root
 - [ ] `ipa-server-install` complete; `kinit admin`/`klist`/`ipa ping` pass
@@ -523,12 +530,12 @@ only adds records, it never deletes), so §4 must create the `.250` records befo
 | §3 firewalld | 22/88/464/443/636 tcp + 88/464 udp, LAN-scoped rich rules |
 | §3 chrony | stratum 3, synchronised |
 
-**Eight defects found and fixed across these runs** — the corrected sequence is what the runbook now
+**Nine defects found and fixed across these runs** — the corrected sequence is what the runbook now
 carries: the `import` content type for a `.qcow2`, the full `pvesm set --content` list, a generated
 rather than pasted public key, the fleet-key verification path, `getent` vs the resolver, the stale
 `.216` records, the `manage_etc_hosts` loopback mapping, and the `fqdn:` double-append.
 
-**Three defects found in §3 during this run:**
+**Four defects found in §3 during this run:**
 
 1. **`manage_etc_hosts: true` wrote a loopback FQDN mapping.** cloud-init put
    `127.0.0.1 ipa.internal ipa` in `/etc/hosts`; the role's `lineinfile` replaced only the *last*
@@ -540,6 +547,13 @@ rather than pasted public key, the fleet-key verification path, `getent` vs the 
 3. **`fqdn: ipa.internal` in the snippet double-appended the search domain.** With
    `--searchdomain internal` already set, cloud-init computed `ipa.internal` + `internal` and the guest
    booted as **`ipa.internal.internal`**. The `fqdn:` key is removed; `ipa_host` sets the FQDN in §3.
+4. **`ipa_host` never installed the SSH certificate trust.** It was written to replace
+   `common` + `security` for the EL guest, but only took over the hostname/hosts/resolver/firewall half —
+   `TrustedUserCAKeys`, `AuthorizedPrincipalsFile`, the CA public keys and
+   `/etc/ssh/auth_principals/fleetadm` all live in `security`, which is Debian/Ubuntu-only and was not in
+   `playbook-ipa.yml`. The guest accepted only the break-glass fleet key, so every later step ran on a 1 h
+   root-equivalent credential. Fixed by adding the trust tasks to `ipa_host`, making `ca_trust`
+   OS-aware, and running `ca_trust` before `ipa_host` in the playbook.
 
 ## References
 

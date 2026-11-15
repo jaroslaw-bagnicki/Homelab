@@ -13,6 +13,7 @@ Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month 
 
 ## 2026‑11
 
+- **(fix)** Accept CA-signed SSH on the FreeIPA guest — `ipa_host` never installed the certificate trust, so the host took only the break-glass key — [runbook 41](docs/runbooks/41-deploy-freeipa-server.md)
 - **(fix)** Run the FreeIPA guest on AlmaLinux 9, not Fedora 45 — no `ansible-core` release can manage Fedora's Python 3.15 — [ADR 43](docs/decisions/43-freeipa-domain-realm.md)
 - **(docs)** Provision VMs from a cloud image plus cloud-init, never a hand-clicked installer — [ADR 52](docs/decisions/52-vm-provisioning-cloud-image.md)
 - **(fix)** Renew SSH host certificates again — `step ssh renew` rejected `-f` before its positional paths, so no certificate ever renewed — [runbook 40](docs/runbooks/40-deploy-ssh-certificates.md)

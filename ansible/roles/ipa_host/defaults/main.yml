@@ -26,3 +26,19 @@ ipa_host_firewall_ports:
   - { port: "636", proto: tcp }
 
 ipa_host_timezone: Etc/UTC
+
+# ── SSH certificate trust (ADR 41) ───────────────────────────────────────────
+# `ipa_host` replaces `common` + `security` for this guest, so it owns the certificate-trust
+# half too — without it the host accepts only the break-glass fleet key and every playbook
+# after this one runs on a 1 h root-equivalent credential.
+ipa_host_ssh_certs_enabled: true
+# Written by the ca_trust role; this role only points sshd at it.
+ipa_host_ssh_user_ca_key: /etc/ssh/ssh_user_ca_key.pub
+ipa_host_ssh_principals_dir: /etc/ssh/auth_principals
+# Principals each Unix account accepts. A certificate must carry one of these to log in as
+# that account; the fleet key in `authorized_keys` is unaffected and stays the break-glass path.
+ipa_host_ssh_authorized_principals:
+  fleetadm:
+    - automation
+    - agent-ai
+ipa_host_ssh_authorized_principals_options: "no-port-forwarding,no-agent-forwarding,no-X11-forwarding"

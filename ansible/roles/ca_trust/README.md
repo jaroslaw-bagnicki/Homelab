@@ -10,11 +10,20 @@ Only the **root** is distributed: the intermediate is re-signed yearly and reach
 ordinary way, inside the TLS handshake — shipping it to clients would force an update on every
 re-sign.
 
-- `tasks/main.yml` — Key Vault fetch, `/usr/local/share/ca-certificates/homelab-root-ca.crt`,
-  store rebuild, `openssl verify` against the resulting bundle; then the SSH host/user CA public keys
-  at `/etc/ssh/ssh_host_ca_key.pub` and `/etc/ssh/ssh_user_ca_key.pub`.
-- `handlers/main.yml` — `update-ca-certificates`, fired only when the certificate content changes.
-- `vars/main.yml` — role constants (certificate path, bundle path).
+- `tasks/main.yml` — Key Vault fetch, root into the system trust store, store rebuild, `openssl verify`
+  against the resulting bundle; then the SSH host/user CA public keys at
+  `/etc/ssh/ssh_host_ca_key.pub` and `/etc/ssh/ssh_user_ca_key.pub`.
+- `handlers/main.yml` — `update-ca-certificates` (Debian) or `update-ca-trust extract` (RHEL family),
+  fired only when the certificate content changes.
+- `vars/main.yml` — role constants for both trust-store layouts; the task list selects one from
+  `ansible_facts['os_family']`.
+
+## Trust-store layouts
+
+| Family | Anchor directory | Bundle | Rebuild |
+|---|---|---|---|
+| Debian/Ubuntu | `/usr/local/share/ca-certificates` | `/etc/ssl/certs/ca-certificates.crt` | `update-ca-certificates` |
+| RHEL/AlmaLinux/Rocky | `/etc/pki/ca-trust/source/anchors` | `/etc/pki/tls/certs/ca-bundle.crt` | `update-ca-trust extract` |
 
 ## Parameters
 
