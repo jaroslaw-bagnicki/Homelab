@@ -55,6 +55,7 @@
       - -j
       - ACCEPT
   register: docker_services_allow_insert
+  changed_when: true
   when:
     - docker_services_caddy_allow_from | length > 0
     - docker_services_allow_check.rc | default(1) != 0
@@ -96,6 +97,7 @@
       - -j
       - DROP
   register: docker_services_drop_insert
+  changed_when: true
   when:
     - docker_services_caddy_allow_from | length > 0
     - docker_services_drop_check.rc | default(1) != 0
@@ -110,6 +112,7 @@
 
 - name: Persist current iptables rules
   ansible.builtin.command: netfilter-persistent save
+  changed_when: true
   when:
     - docker_services_caddy_allow_from | length > 0
     - docker_services_allow_insert is changed or docker_services_drop_insert is changed
