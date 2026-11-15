@@ -322,6 +322,18 @@ The workload reads the first two at install time; the test-user password is used
 The script never overwrites an existing secret — rotating the IPA admin or Directory Manager password
 is a coordinated `ipa`/`kadmin` operation and is not part of M1.
 
+> **Executed 2026-11-15** (issue [#164](https://github.com/jaroslaw-bagnicki/Homelab/issues/164)).
+> All three secrets provisioned in `homelab-bysxdb-kv`, enabled:
+>
+> | Secret | Result |
+> |---|---|
+> | `freeipa-directory-manager-password` | created 09:27 UTC |
+> | `freeipa-admin-password` | created 09:27 UTC |
+> | `freeipa-test-user-password` | created 09:27 UTC |
+>
+> A second run reported *"already exists — nothing written"* for all three, so the script is idempotent
+> and will not rotate a live password.
+
 ## 6. External CA — phase 1 (CSR)
 
 ```powershell
@@ -494,7 +506,7 @@ Write into the runbook/report:
 
 ## Verification checklist
 
-Executed on: **2026-11-15** — §1–§4 executed and verified; §5 onward **not yet run**.
+Executed on: **2026-11-15** — §1–§5 executed and verified; §6 onward **not yet run**.
 
 - [x] `local` storage carries `iso,vztmpl,backup,import,images,snippets` — `images` is required for the cloud-init ISO
 - [x] AlmaLinux 9 image downloaded into the **`import`** content type; `pvesm list local --content import` shows it
@@ -504,6 +516,7 @@ Executed on: **2026-11-15** — §1–§4 executed and verified; §5 onward **no
 - [x] `playbook-ipa.yml` green; firewalld LAN rules; `fleetadm` key-only
 - [x] Certificate SSH works after §3; break-glass key dropped
 - [x] `dig` A/PTR/SRV records correct — reverse zone holds `.250` only
+- [x] Three FreeIPA secrets provisioned in `homelab-bysxdb-kv`; script idempotent
 - [ ] `/root/ipa.csr` signed by the root; `ipa-ca.crt` chains to the fleet root
 - [ ] `ipa-server-install` complete; `kinit admin`/`klist`/`ipa ping` pass
 - [ ] `ipa ca-show ipa` and `getcert list` show the external CA
