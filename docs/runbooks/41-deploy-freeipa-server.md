@@ -274,29 +274,36 @@ From the LAN workstation, after CR:
 ansible-playbook ansible/playbooks/playbook-technitium.yml --diff
 ```
 
-Verify from a LAN client. **Query Technitium directly** — `getent` on the guest answers from
-`/etc/hosts` and proves nothing:
+The role publishes the A record, the PTR and the seven Kerberos/LDAP SRV records from
+`ansible/roles/technitium/defaults/main.yml`. Verify from a LAN client. **Query Technitium
+directly** — `getent` on the guest answers from `/etc/hosts` and proves nothing:
 
 ```sh
-dig @192.168.2.240 ipa.internal +short                 # 192.168.2.250
-dig @192.168.2.240 -x 192.168.2.250 +short             # ipa.internal.
+dig @192.168.2.240 ipa.internal +short                     # 192.168.2.250
+dig @192.168.2.240 -x 192.168.2.250 +short                 # ipa.internal.
 dig @192.168.2.240 _kerberos._tcp.ipa.internal SRV +short  # 0 100 88 ipa.internal.
 dig @192.168.2.240 _kerberos._udp.ipa.internal SRV +short
+dig @192.168.2.240 _kerberos-master._tcp.ipa.internal SRV +short
+dig @192.168.2.240 _kerberos-master._udp.ipa.internal SRV +short
 dig @192.168.2.240 _kpasswd._tcp.ipa.internal SRV +short   # 0 100 464 ipa.internal.
+dig @192.168.2.240 _kpasswd._udp.ipa.internal SRV +short
 dig @192.168.2.240 _ldap._tcp.ipa.internal SRV +short      # 0 100 389 ipa.internal.
 ```
 
-> **Check the stale record is gone.** The `ipa.internal` A and PTR records were published for a planned
-> `pve1` guest (VMID 216) that was never built, so before this step `ipa.internal` resolved to the dead
-> `192.168.2.216`. Confirm the role replaced them:
->
-> ```sh
-> dig @192.168.2.240 ipa.internal +short      # must be 192.168.2.250, never .216
-> dig @192.168.2.240 -x 192.168.2.216 +short  # must be empty
-> ```
-
 `_ldap._tcp` is published now, but TCP/389 is intentionally closed on the IPA firewall until M3 client
 enrolment. The server itself uses LDAPI/HTTPS locally.
+
+### Final DNS state
+
+| Record | Value |
+|---|---|
+| `ipa.internal` A | `192.168.2.250` |
+| `250.2.168.192.in-addr.arpa` PTR | `ipa.internal.` |
+| 7× SRV (Kerberos, kpasswd, LDAP) | `ipa.internal.` on ports 88 / 464 / 389 |
+
+The reverse zone holds **exactly two PTR records** — `.250` for this guest and nothing else. The
+`technitium` role only ever *adds* records, so a retired address has to be removed through the
+Technitium UI or API; check the zone rather than assuming the role converged it.
 
 ## 5. Provision the install secrets
 
@@ -486,9 +493,7 @@ Write into the runbook/report:
 
 ## Verification checklist
 
-Executed on: **2026-11-08** — §1–§2 executed and verified; §3 onward **not yet run**. The stale
-`ipa.internal` → `.216` A and PTR records were deleted from Technitium by hand (the `technitium` role
-only adds records, it never deletes), so §4 must create the `.250` records before §6.
+Executed on: **2026-11-15** — §1–§4 executed and verified; §5 onward **not yet run**.
 
 - [x] `local` storage carries `iso,vztmpl,backup,import,images,snippets` — `images` is required for the cloud-init ISO
 - [x] AlmaLinux 9 image downloaded into the **`import`** content type; `pvesm list local --content import` shows it
@@ -497,7 +502,7 @@ only adds records, it never deletes), so §4 must create the `.250` records befo
 - [x] Guest verified with the **break-glass fleet key** (certificate SSH arrives in §3)
 - [x] `playbook-ipa.yml` green; firewalld LAN rules; `fleetadm` key-only
 - [x] Certificate SSH works after §3; break-glass key dropped
-- [ ] `dig` A/PTR/SRV records correct — and the stale `.216` A/PTR are gone
+- [x] `dig` A/PTR/SRV records correct — reverse zone holds `.250` only
 - [ ] `/root/ipa.csr` signed by the root; `ipa-ca.crt` chains to the fleet root
 - [ ] `ipa-server-install` complete; `kinit admin`/`klist`/`ipa ping` pass
 - [ ] `ipa ca-show ipa` and `getcert list` show the external CA
@@ -530,10 +535,10 @@ only adds records, it never deletes), so §4 must create the `.250` records befo
 | §3 firewalld | 22/88/464/443/636 tcp + 88/464 udp, LAN-scoped rich rules |
 | §3 chrony | stratum 3, synchronised |
 
-**Nine defects found and fixed across these runs** — the corrected sequence is what the runbook now
+**Eight defects found and fixed across these runs** — the corrected sequence is what the runbook now
 carries: the `import` content type for a `.qcow2`, the full `pvesm set --content` list, a generated
-rather than pasted public key, the fleet-key verification path, `getent` vs the resolver, the stale
-`.216` records, the `manage_etc_hosts` loopback mapping, and the `fqdn:` double-append.
+rather than pasted public key, the fleet-key verification path, `getent` vs the resolver, the
+`manage_etc_hosts` loopback mapping, the `fqdn:` double-append, and the missing SSH certificate trust.
 
 **Four defects found in §3 during this run:**
 

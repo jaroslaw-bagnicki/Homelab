@@ -1,0 +1,85 @@
+---
+# One-shot: delete the stale PTR for the retired .216 guest.
+#
+# The technitium role only *adds* records — it has no delete task — so the
+# `216.2.168.192.in-addr.arpa` PTR published for the pve1 guest that was never
+# built survives every run. Runbook 41 §4 requires it gone: the address is
+# retired and must not resolve to ipa.internal.
+#
+# Not a permanent playbook. Delete after use.
+- name: Delete the stale .216 PTR
+  hosts: edge
+  become: true
+  vars:
+    technitium_vault_url: "https://homelab-bysxdb-kv.vault.azure.net"
+    technitium_admin_secret_name: technitium-admin-password
+    technitium_api_url: "http://127.0.0.1:5380"
+  tasks:
+    - name: Fetch the Technitium admin password from Key Vault
+      ansible.builtin.set_fact:
+        technitium_admin_password: >-
+          {{ lookup('azure.azcollection.azure_keyvault_secret',
+          technitium_admin_secret_name, vault_url=technitium_vault_url,
+          client_id=lookup('ansible.builtin.env', 'AZURE_CLIENT_ID'),
+          secret=lookup('ansible.builtin.env', 'AZURE_CLIENT_SECRET'),
+          tenant=lookup('ansible.builtin.env', 'AZURE_TENANT_ID')) }}
+      delegate_to: localhost
+      no_log: true
+
+    - name: Log in to Technitium
+      ansible.builtin.uri:
+        url: "{{ technitium_api_url }}/api/user/login"
+        method: POST
+        body_format: form-urlencoded
+        body:
+          user: admin
+          pass: "{{ technitium_admin_password }}"
+        return_content: true
+      register: technitium_login
+      changed_when: false
+      no_log: true
+
+    - name: Read the reverse zone records
+      ansible.builtin.uri:
+        url: "{{ technitium_api_url }}/api/zones/records/get?domain=2.168.192.in-addr.arpa&zone=2.168.192.in-addr.arpa&listZone=true"
+        headers:
+          Authorization: "Bearer {{ technitium_login.json.token }}"
+        return_content: true
+      register: technitium_reverse
+      changed_when: false
+      no_log: true
+
+    - name: Show the PTR records present
+      ansible.builtin.debug:
+        msg: >-
+          {{ technitium_reverse.json.response.records
+             | selectattr('type', 'equalto', 'PTR')
+             | map(attribute='name') | list }}
+
+    - name: Delete the stale .216 PTR
+      when: >-
+        technitium_reverse.json.response.records
+        | selectattr('type', 'equalto', 'PTR')
+        | selectattr('name', 'equalto', '216.2.168.192.in-addr.arpa')
+        | list | length > 0
+      ansible.builtin.uri:
+        url: "{{ technitium_api_url }}/api/zones/records/delete"
+        method: POST
+        body_format: form-urlencoded
+        body:
+          domain: "216.2.168.192.in-addr.arpa"
+          zone: "2.168.192.in-addr.arpa"
+          type: PTR
+        headers:
+          Authorization: "Bearer {{ technitium_login.json.token }}"
+        return_content: true
+      register: technitium_delete
+      changed_when: true
+      no_log: true
+
+    - name: Report
+      ansible.builtin.debug:
+        msg: >-
+          {{ 'deleted the stale .216 PTR'
+             if technitium_delete is changed
+             else 'no .216 PTR present — nothing to do' }}
