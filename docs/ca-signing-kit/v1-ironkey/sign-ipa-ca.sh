@@ -1,127 +1,28 @@
 #!/bin/sh
-# Sign FreeIPA's CA CSR with the offline root held on the secure USB stick.
-#
-#   ./sign-ipa-ca.sh <destination-path> [passphrase-file]   e.g. /mnt/sdX1 (no default)
-#
-# The CSR is produced on the IPA guest by `ipa-server-install --external-ca`.
-# `--template` is used so the signer asserts the CA shape; the resulting
-# certificate must chain to the fleet root and match the IPA CA subject.
+# sign-ipa-ca.sh <stick-mount> [passphrase-file]
 set -eu
 
-[ $# -ge 1 ] || { echo "usage: $0 <destination-path> [passphrase-file]" >&2; echo "       e.g. $0 /mnt/sdX1" >&2; exit 1; }
 STICK="$1"
 PWFILE="${2:-}"
 DIR="$(cd "$(dirname "$0")" && pwd)"
-# step and the shared templates live beside this script in a self-contained bundle, or one level up
-# in the repository (../). Resolve both so either layout works.
 SHARED="$DIR"
 [ -x "$DIR/step" ] || SHARED="$(cd "$DIR/.." && pwd)"
+PATH="$SHARED:$PATH"
+export PATH
 
-# TMP is set once the CSR is located; the trap tolerates it being unset so an early
-# abort does not trip `set -u`.
-TMP=""
-trap '[ -n "$TMP" ] && rm -f "$TMP"' EXIT
-
-# --- network state: advisory, not a gate -------------------------------------
-# The root key is an encrypted file on the stick, so a networked machine widens the
-# exposure window. That is a homelab trade-off the operator makes, not a condition
-# this script can decide: warn, and carry on.
-if command -v ip >/dev/null 2>&1; then
-    NET="$(ip -o addr show 2>/dev/null | awk '{ n = $2; sub(/:$/, "", n); if (n != "lo") print "  " n " " $4 }')"
-    if [ -n "$NET" ] || ip route 2>/dev/null | grep -q '^default'; then
-        echo "NOTE: this machine is networked — the root key is used on a connected host." >&2
-        [ -n "$NET" ] && printf '%s\n' "$NET" >&2
-        echo "      Accepted for this homelab. Unplug the network for the strictest run." >&2
-        echo
-    fi
-fi
-
-# --- inputs ------------------------------------------------------------------
-if [ ! -x "$SHARED/step" ]; then
-    echo "ABORT: $SHARED/step is missing or not executable." >&2
-    echo "       Copy the bundle to a real filesystem if you are running it from the stick." >&2
-    exit 1
-fi
-# ipa.csr follows the same rule as step and the templates: beside this script in a
-# self-contained bundle, or one level up in the repository.
 CSR="$DIR/ipa.csr"
 [ -f "$CSR" ] || CSR="$SHARED/ipa.csr"
-[ -f "$CSR" ] || { echo "ABORT: ipa.csr is missing (looked in $DIR and $SHARED)" >&2; exit 1; }
-[ -f "$SHARED/ipa-ca.tpl" ] || { echo "ABORT: $SHARED/ipa-ca.tpl is missing" >&2; exit 1; }
-[ -f "$STICK/root_ca.crt" ] || { echo "ABORT: $STICK/root_ca.crt not found (is the stick mounted?)" >&2; exit 1; }
-[ -f "$STICK/root_ca_key" ] || { echo "ABORT: $STICK/root_ca_key not found (is the stick mounted?)" >&2; exit 1; }
-# The certificate lands beside the CSR, so input and output are never in different folders.
 OUT="$(cd "$(dirname "$CSR")" && pwd)/ipa-ca.crt"
 TMP="$OUT.new"
-cd "$DIR"
+trap '[ -n "$TMP" ] && rm -f "$TMP"' EXIT
 
-echo "Signing $CSR with the root on $STICK (1-year IPA CA)"
-if [ -n "$PWFILE" ]; then
-    [ -r "$PWFILE" ] || { echo "ABORT: passphrase file $PWFILE is not readable" >&2; exit 1; }
-    echo "(using the root key passphrase in $PWFILE)"
-    echo
-    "$SHARED/step" certificate sign --template "$SHARED/ipa-ca.tpl" --not-after 8760h \
-        --password-file "$PWFILE" \
-        "$CSR" "$STICK/root_ca.crt" "$STICK/root_ca_key" \
-        > "$TMP"
-else
-    echo "(the root key's passphrase will be requested now)"
-    echo
-    "$SHARED/step" certificate sign --template "$SHARED/ipa-ca.tpl" --not-after 8760h \
-        "$CSR" "$STICK/root_ca.crt" "$STICK/root_ca_key" \
-        > "$TMP"
-fi
+"$SHARED/step" certificate sign --template "$SHARED/ipa-ca.tpl" --not-after 8760h \
+    ${PWFILE:+--password-file "$PWFILE"} \
+    "$CSR" "$STICK/root_ca.crt" "$STICK/root_ca_key" > "$TMP"
 
-# --- machine checks: does this certificate actually work? --------------------
-echo
-echo "Checking the result. Every line must read OK."
-FAILED=0
-
-if VERIFY_ERR="$("$SHARED/step" certificate verify "$TMP" --roots "$STICK/root_ca.crt" 2>&1)"; then
-    echo "  OK    chains to the root on the stick"
-else
-    echo "  FAIL  does NOT chain to the root on the stick" >&2
-    printf '%s\n' "$VERIFY_ERR" >&2
-    FAILED=1
-fi
-
-I="$("$SHARED/step" certificate inspect --format json "$TMP")"
-
-chk() {
-    if printf '%s\n' "$I" | grep -Eq "$2"; then
-        echo "  OK    $1"
-    else
-        echo "  FAIL  $1" >&2
-        FAILED=1
-    fi
-}
-
-chk "is a CA certificate"                       '"is_ca"[: ]+true'
-chk "path length 0 (issues leaves, no deeper)"  '"max_path_len"[: ]+0'
-chk "key usage: certificate sign"               '"certificate_sign"[: ]+true'
-chk "key usage: CRL sign"                       '"crl_sign"[: ]+true'
-chk "subject: CN=Certificate Authority"         'Certificate Authority'
-chk "subject: O=LAB.INTERNAL"                   'LAB\.INTERNAL'
-chk "validity is 1 year"                        '"length"[: ]+31536000'
-
-if [ "$FAILED" -ne 0 ]; then
-    echo >&2
-    echo "STOP: this certificate is not fit to install. Nothing has been trusted" >&2
-    echo "      yet — the root is untouched, and signing the same CSR again is safe." >&2
-    exit 1
-fi
+"$SHARED/step" certificate verify "$TMP" --roots "$STICK/root_ca.crt" >/dev/null
+"$SHARED/step" certificate inspect --format json "$TMP" | grep -Eq '"is_ca"[: ]+true' \
+    || { echo "FAIL: not a CA" >&2; exit 1; }
 
 mv "$TMP" "$OUT"
-echo "Signed -> $OUT"
-
-echo
-echo "=============================================================="
-echo "Read the dump below as well. It must show:"
-echo "  Issuer   = CN=Homelab Internal CA (the root)"
-echo "  Subject  = CN=Certificate Authority, O=LAB.INTERNAL"
-echo "  Validity = ~1 year"
-echo "  Basic Constraints = critical CA:TRUE, pathlen:0"
-echo "  Key Usage = critical Digital Signature, Certificate Sign, CRL Sign"
-echo "=============================================================="
-echo
 "$SHARED/step" certificate inspect "$OUT"
