@@ -81,8 +81,9 @@ gh codespace stop --codespace $CODESPACE_NAME
 
 ### Base image
 
-`mcr.microsoft.com/devcontainers/base:ubuntu-24.04` — the same OS version
-running on the homelab server.
+`mcr.microsoft.com/devcontainers/base:ubuntu26.04` — Ubuntu 26.04 LTS (Python 3.14,
+supported to 2031). The lab hosts stay on 24.04; the container only needs SSH access
+to them, not a matching OS.
 
 ### Features (via devcontainers/features)
 
@@ -102,7 +103,7 @@ DeepSeek V4 for Copilot Chat, Azure MCP Server.
 
 | Script | What it installs | Idempotent? |
 |---|---|---|
-| `setup-ansible.sh` | Ansible via `apt` | ✅ skips if `ansible-playbook` exists |
+| `setup-ansible.sh` | `ansible-core==2.22.*` + `ansible-lint==26.*` via a pinned pip venv in `/opt` (apt caps ansible-core per Ubuntu release) | ✅ skips if the pinned versions are already installed |
 | `setup-bicep.sh` | Bicep CLI standalone binary | ✅ skips if `bicep --version` works |
 | `setup-azps.ps1` | Az PowerShell module | ✅ skips if already listed by `Get-Module` |
 
@@ -233,7 +234,7 @@ For the full setup, verification, and Azure Blob backup procedure see
 .devcontainer/
 ├── devcontainer.json          # Main config — image, features, extensions, scripts
 └── scripts/
-    ├── setup-ansible.sh       # Ansible via apt (idempotent)
+    ├── setup-ansible.sh       # pinned pip venv: ansible-core 2.22 + ansible-lint 26 (idempotent)
     ├── setup-bicep.sh         # Bicep CLI binary (idempotent)
     └── setup-azps.ps1         # Az PowerShell module (idempotent, backgrounded)
 ```
