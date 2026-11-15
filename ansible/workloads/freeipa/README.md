@@ -3,7 +3,7 @@
 ## Purpose
 
 A self-contained Ansible recipe that installs the **FreeIPA server** on the `ipa` VM (VMID 250,
-`192.168.2.250`) on the `pve2` node, realm **`IPA.INTERNAL`**, DNS domain **`ipa.internal`**,
+`192.168.2.250`) on the `pve2` node, realm **`LAB.INTERNAL`**, DNS domain **`lab.internal`**,
 integrated DNS **off**. Decision: [ADR 43](../../../docs/decisions/43-freeipa-domain-realm.md);
 CA relation: [ADR 42](../../../docs/decisions/42-pki-topology-sibling-cas.md); implementation:
 [issue #164](https://github.com/jaroslaw-bagnicki/Homelab/issues/164) and
@@ -36,7 +36,9 @@ The role refuses to complete Phase 2 until both signed files exist.
 | `freeipa_test_user` | `m1test` | M1 test user; its password is set interactively in the runbook |
 
 The realm, domain, FQDN and address are fixed in `defaults/main.yml` and must match
-`host_vars/ipa.yml` and Technitium.
+`host_vars/ipa.yml` and Technitium. The hostname (`ipa.internal`) deliberately differs from the
+IPA domain (`lab.internal`) — `ipa-server-install` refuses a hostname equal to the domain, and
+requires the hostname to be fully qualified.
 
 ## Base guest
 

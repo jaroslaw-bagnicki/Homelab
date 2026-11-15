@@ -13,8 +13,11 @@ freeipa_admin_password_secret: freeipa-admin-password
 freeipa_ds_password: ""
 freeipa_admin_password: ""
 
-freeipa_realm: IPA.INTERNAL
-freeipa_domain: ipa.internal
+# The realm and domain differ from the hostname on purpose: `ipa-server-install`
+# rejects a hostname equal to the domain, and the hostname must be fully
+# qualified. `ipa.internal` is the host, `lab.internal` the IPA domain.
+freeipa_realm: LAB.INTERNAL
+freeipa_domain: lab.internal
 freeipa_hostname: ipa.internal
 freeipa_ip: 192.168.2.250
 

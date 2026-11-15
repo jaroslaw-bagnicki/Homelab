@@ -1,10 +1,12 @@
 # FreeIPA Server — M1 on `pve2` (AlmaLinux 9 Cloud VM, External CA)
 
 > Deploy the FreeIPA server for the lab's Linux domain: AlmaLinux 9 Cloud VM **250** on the `pve2` node,
-> FQDN **`ipa.internal`**, realm **`IPA.INTERNAL`**, integrated DNS **off**, CA installed with
-> **`--external-ca`** and signed by the offline fleet root. Decision:
+> FQDN **`ipa.internal`**, IPA domain **`lab.internal`**, realm **`LAB.INTERNAL`**, integrated DNS **off**,
+> CA installed with **`--external-ca`** and signed by the offline fleet root. Decision:
 > [ADR 43](../decisions/43-freeipa-domain-realm.md) (amended 2026-11-07 — the server moved from `pve1`
-> to `pve2`; amended 2026-11-14 — the guest OS moved from Fedora 45 to AlmaLinux 9); CA relation:
+> to `pve2`; amended 2026-11-14 — the guest OS moved from Fedora 45 to AlmaLinux 9; amended 2026-11-15 —
+> the realm and domain were renamed to `LAB.INTERNAL`/`lab.internal` because `ipa-server-install`
+> rejects a hostname equal to the domain); CA relation:
 > [ADR 42](../decisions/42-pki-topology-sibling-cas.md); tracker:
 > [issue #164](https://github.com/jaroslaw-bagnicki/Homelab/issues/164) M1.
 >
@@ -30,7 +32,8 @@ the server, the realm, the DNS glue and the CA chain before anything depends on 
 - **`ipa_host` role** — EL hostname/FQDN, `/etc/hosts`, chrony, firewalld LAN rules, `fleetadm` + fleet
   key, and the sshd certificate-trust wiring. It replaces `common`/`security`, which are
   Debian/Ubuntu-only; the CA keys themselves still come from `ca_trust`, which is OS-aware.
-- **Technitium** — `ipa.internal` A, reverse zone + PTR, and the Kerberos/LDAP SRV records.
+- **Technitium** — `ipa.internal` A, reverse zone + PTR, and the Kerberos/LDAP SRV records under the IPA
+  domain `lab.internal`.
 - **FreeIPA workload** — `ipa-server`, external CA two-phase install, `admin` + `m1test`.
 - **Offline kit** — `ipa-ca.tpl` + `sign-ipa-ca.sh` sign the IPA CA CSR with the existing root.
 
@@ -191,7 +194,7 @@ Apply and start:
 ```sh
 qm set 250 --cicustom user=local:snippets/ipa-user-data.yaml \
   --ipconfig0 ip=192.168.2.250/24,gw=192.168.2.1 \
-  --nameserver 192.168.2.240 --searchdomain ipa.internal
+  --nameserver 192.168.2.240 --searchdomain internal
 qm cloudinit update 250
 qm start 250
 qm status 250
@@ -280,10 +283,10 @@ Verify from a LAN client. **Query Technitium directly** — `getent` on the gues
 ```sh
 dig @192.168.2.240 ipa.internal +short                 # 192.168.2.250
 dig @192.168.2.240 -x 192.168.2.250 +short             # ipa.internal.
-dig @192.168.2.240 _kerberos._tcp.ipa.internal SRV +short  # 0 100 88 ipa.internal.
-dig @192.168.2.240 _kerberos._udp.ipa.internal SRV +short
-dig @192.168.2.240 _kpasswd._tcp.ipa.internal SRV +short   # 0 100 464 ipa.internal.
-dig @192.168.2.240 _ldap._tcp.ipa.internal SRV +short      # 0 100 389 ipa.internal.
+dig @192.168.2.240 _kerberos._tcp.lab.internal SRV +short  # 0 100 88 ipa.internal.
+dig @192.168.2.240 _kerberos._udp.lab.internal SRV +short
+dig @192.168.2.240 _kpasswd._tcp.lab.internal SRV +short   # 0 100 464 ipa.internal.
+dig @192.168.2.240 _ldap._tcp.lab.internal SRV +short      # 0 100 389 ipa.internal.
 ```
 
 `_ldap._tcp` is published now, but TCP/389 is intentionally closed on the IPA firewall until M3 client
@@ -345,7 +348,7 @@ passwords, and runs:
 
 ```sh
 ipa-server-install --external-ca --unattended \
-  --realm=IPA.INTERNAL --domain=ipa.internal \
+  --realm=LAB.INTERNAL --domain=lab.internal \
   --hostname=ipa.internal --ip-address=192.168.2.250 \
   --no-host-dns --no-ntp --no-hbac-allow \
   --ds-password=... --admin-password=...
@@ -361,8 +364,30 @@ incomplete” message — that first-run stop is expected. Fetch the CSR (public
 ```sh
 ssh fleetadm@192.168.2.250 'sudo cat /root/ipa.csr' > ipa.csr
 openssl req -in ipa.csr -noout -subject
-# expected: subject=CN = Certificate Authority, O = IPA.INTERNAL
+# expected: subject=O = LAB.INTERNAL, CN = Certificate Authority
 ```
+
+> **Executed 2026-11-15**. The run stopped at the signing gate as designed — `ok=10 changed=1 failed=1`,
+> the single failure being the deliberate “signed chain is incomplete” assertion. `/root/ipa.csr` is on
+> the guest with subject `O = LAB.INTERNAL, CN = Certificate Authority`, so the realm rename reached the
+> installer.
+>
+> **Three findings from execution:**
+>
+> 1. **The realm/domain rename was forced by the installer, not chosen.** The first real run died with
+>    `ScriptError: hostname cannot be the same as the domain name`. `verify_fqdn()` requires a dotted
+>    hostname and `install_check()` forbids `hostname == domain`, so with the hostname fixed at
+>    `ipa.internal` the domain had to move — to `lab.internal`, realm `LAB.INTERNAL`. Recorded as the
+>    third amendment to [ADR 43](../decisions/43-freeipa-domain-realm.md).
+> 2. **A dropped SSH connection left `dnf` running on the guest.** The first attempt reported
+>    `UNREACHABLE` mid-install and the retry then failed with a `pipewire-session-manager` conflict —
+>    but `ipa-server` had in fact installed. A `dnf` transaction is not cancelled by losing the Ansible
+>    connection; check `rpm -q` before believing a failure. The conflict itself was transient metadata
+>    and did not recur.
+> 3. **The role only adds DNS records.** The seven SRV records moved to `lab.internal`, but the role
+>    left the old `*.ipa.internal` set in place; they were deleted through the API by hand. A SRV delete
+>    needs the **full rData** (`priority`, `weight`, `port`, `target`) or Technitium answers HTTP 200
+>    with `Parameter 'priority' missing.` in the body — the same trap as the PTR delete in §4.
 
 ## 7. External CA — offline signing
 
@@ -377,7 +402,7 @@ The script signs with `ipa-ca.tpl` for **5 years** and machine-checks:
 - chain to the root on the stick;
 - `CA:TRUE`, `pathlen:0`;
 - certificate-sign and CRL-sign usage;
-- subject `CN=Certificate Authority,O=IPA.INTERNAL`;
+- subject `CN=Certificate Authority,O=LAB.INTERNAL`;
 - validity **157680000 s** (5 years).
 
 Bring back `ipa-ca.crt` and a copy of `root_ca.crt`. If any check fails, stop; nothing has been trusted.
@@ -404,7 +429,7 @@ It detects the CSR and the signed chain and runs:
 
 ```sh
 ipa-server-install --unattended \
-  --realm=IPA.INTERNAL --domain=ipa.internal \
+  --realm=LAB.INTERNAL --domain=lab.internal \
   --hostname=ipa.internal --ip-address=192.168.2.250 \
   --no-host-dns --no-ntp --no-hbac-allow \
   --external-cert-file=/root/ipa-ca.crt \
@@ -489,7 +514,7 @@ Write into the runbook/report:
 | Item | Value |
 |---|---|
 | CA mode | `external` (or `selfsigned` if the fallback was used) |
-| IPA CA subject | `CN=Certificate Authority,O=IPA.INTERNAL` |
+| IPA CA subject | `CN=Certificate Authority,O=LAB.INTERNAL` |
 | IPA CA fingerprint | `openssl x509 -in /root/ipa-ca.crt -noout -fingerprint -sha256` |
 | Root fingerprint | compare with `homelab-bysxdb-kv/ca-root-cert` |
 | Clients that imported the IPA root | **none** on the external path; the fleet root is already trusted |
@@ -506,7 +531,7 @@ Write into the runbook/report:
 
 ## Verification checklist
 
-Executed on: **2026-11-15** — §1–§5 executed and verified; §6 onward **not yet run**.
+Executed on: **2026-11-15** — §1–§6 executed and verified; §7 onward **not yet run**.
 
 - [x] `local` storage carries `iso,vztmpl,backup,import,images,snippets` — `images` is required for the cloud-init ISO
 - [x] AlmaLinux 9 image downloaded into the **`import`** content type; `pvesm list local --content import` shows it
@@ -515,8 +540,9 @@ Executed on: **2026-11-15** — §1–§5 executed and verified; §6 onward **no
 - [x] Guest verified with the **break-glass fleet key** (certificate SSH arrives in §3)
 - [x] `playbook-ipa.yml` green; firewalld LAN rules; `fleetadm` key-only
 - [x] Certificate SSH works after §3; break-glass key dropped
-- [x] `dig` A/PTR/SRV records correct — reverse zone holds `.250` only
+- [x] `dig` A/PTR/SRV records correct — reverse zone holds `.250` only; SRVs under `lab.internal`, none under `ipa.internal`
 - [x] Three FreeIPA secrets provisioned in `homelab-bysxdb-kv`; script idempotent
+- [x] `/root/ipa.csr` generated with subject `O = LAB.INTERNAL, CN = Certificate Authority`
 - [ ] `/root/ipa.csr` signed by the root; `ipa-ca.crt` chains to the fleet root
 - [ ] `ipa-server-install` complete; `kinit admin`/`klist`/`ipa ping` pass
 - [ ] `ipa ca-show ipa` and `getcert list` show the external CA

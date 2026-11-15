@@ -94,7 +94,7 @@ chk "path length 0 (issues leaves, no deeper)"  '"max_path_len"[: ]+0'
 chk "key usage: certificate sign"               '"certificate_sign"[: ]+true'
 chk "key usage: CRL sign"                       '"crl_sign"[: ]+true'
 chk "subject: CN=Certificate Authority"         'Certificate Authority'
-chk "subject: O=IPA.INTERNAL"                   'IPA\.INTERNAL'
+chk "subject: O=LAB.INTERNAL"                   'LAB\.INTERNAL'
 chk "validity is 1 year"                        '"length"[: ]+31536000'
 
 if [ "$FAILED" -ne 0 ]; then
@@ -111,7 +111,7 @@ echo
 echo "=============================================================="
 echo "Read the dump below as well. It must show:"
 echo "  Issuer   = CN=Homelab Internal CA (the root)"
-echo "  Subject  = CN=Certificate Authority, O=IPA.INTERNAL"
+echo "  Subject  = CN=Certificate Authority, O=LAB.INTERNAL"
 echo "  Validity = ~1 year"
 echo "  Basic Constraints = critical CA:TRUE, pathlen:0"
 echo "  Key Usage = critical Digital Signature, Certificate Sign, CRL Sign"

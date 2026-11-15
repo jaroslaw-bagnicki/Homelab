@@ -1,9 +1,12 @@
-# FreeIPA as the Lab's Domain — `ipa.internal`, Technitium Keeps DNS
+# FreeIPA as the Lab's Domain — `lab.internal`, Technitium Keeps DNS
 
 **Date:** 2026-10-25  
 **Status:** Accepted  
 **Amended:** 2026-11-07 — the server moves from `pve1` to `pve2` (VM 250, `.250`): `pve1`'s memory cannot carry it beside the Home Assistant guests, which are pinned there by the Zigbee coordinator. See the amendment note below.
 **Amended:** 2026-11-14 — the guest OS is AlmaLinux 9, not Fedora 45: no `ansible-core` release can manage Fedora 45's Python 3.15. See the second amendment note below.
+**Amended:** 2026-11-15 — the realm and DNS domain are `LAB.INTERNAL`/`lab.internal`, not
+`IPA.INTERNAL`/`ipa.internal`: the installer rejects a hostname equal to the domain, and the hostname
+`ipa.internal` must stay. See the third amendment note below.
 
 ---
 
@@ -34,10 +37,12 @@ and host certificates — and the constraints it has to fit:
 **Adopt FreeIPA as the lab's Linux domain, hosted on `pve2`, with Technitium remaining authoritative for
 DNS.**
 
-1. **Realm `IPA.INTERNAL`, DNS domain `ipa.internal`** — a name **inside** the LAN name space, not a
+1. **Realm `LAB.INTERNAL`, DNS domain `lab.internal`** — a name **inside** the LAN name space, not a
    delegated zone. **Amends [ADR 37](37-lan-name-space-internal.md)**: `.internal` stays one authority —
-   Technitium serves the `ipa.internal` records in the same zone, with no NS delegation to another server —
-   and nothing about the rest of the name space changes.
+   Technitium serves the `lab.internal` records in the same zone, with no NS delegation to another server —
+   and nothing about the rest of the name space changes. **Amended 2026-11-15:** the realm and domain
+   were `IPA.INTERNAL`/`ipa.internal`; the server hostname keeps `ipa.internal` and the domain moved to
+   `lab.internal`. See the third amendment note below.
 2. **Integrated DNS off.** Technitium on `edge` keeps authority ([ADR 40](40-internal-dns-proxy-edge.md))
    and carries the `_kerberos._tcp` / `_ldap._tcp` SRV records plus forward and reverse records for every
    member.
@@ -185,6 +190,45 @@ AppStream. Two further properties make it the better answer rather than merely t
 Unchanged: everything above — placement, VMID, address, realm, DNS authority, CA relation, rollout
 order. Only the distribution changes. The rebuild was free: the VM was hours old and carried nothing
 beyond cloud-init and the base role.
+
+### Amendment — 2026-11-15
+
+**The realm and DNS domain are `LAB.INTERNAL` and `lab.internal`; the server keeps the hostname
+`ipa.internal`.**
+
+The first real `ipa-server-install` run stopped with:
+
+```
+ScriptError: hostname cannot be the same as the domain name
+```
+
+Two checks in FreeIPA's own code force this, and both are unavoidable:
+
+- `verify_fqdn()` (`ipaserver/install/installutils.py`) rejects any name without a dot —
+  `if len(host_name.split(".")) < 2: raise BadHostError("... must be fully-qualified.")`. A bare
+  hostname `ipa` is therefore impossible.
+- `install_check()` (`ipaserver/install/server/install.py`) rejects `host_name.lower() == domain_name`.
+
+With the hostname fixed at `ipa.internal`, the domain cannot also be `ipa.internal`. The reason the
+equality is refused is structural: the IPA domain is the DNS zone FreeIPA publishes its own SRV records
+into (`_kerberos._tcp.<domain>`, `_ldap._tcp.<domain>`), and the server is a host **inside** that zone —
+the apex has to stay free for SOA and NS.
+
+The domain becomes `lab.internal` and the realm `LAB.INTERNAL`. The realm follows the domain because
+FreeIPA warns loudly when they differ and **AD trust becomes impossible** — worth keeping open even
+though item 6 declines Windows membership today.
+
+What this changes, and what it does not:
+
+- **The hostname, the address and the WebUI URL are unchanged** — `ipa.internal`, `192.168.2.250`,
+  `https://ipa.internal/ipa/ui`. Nothing a user sees moves.
+- **The SRV records move to `lab.internal`.** `lab.internal` already has an A record for the lab node
+  (`192.168.2.200`); the apex is now both a host name and the IPA domain. That is harmless with
+  integrated DNS off — IPA publishes nothing there — and the SRV targets name `ipa.internal` explicitly.
+- **The IPA CA subject is `CN=Certificate Authority,O=LAB.INTERNAL`**, because `--subject-base` defaults
+  to `O=<realm>`. The offline signing kit checks that subject, so the kit changed with this amendment.
+- **The realm is still effectively permanent** — the consequence above is unchanged. This is the one
+  chance to name it, and it is being taken before any client enrols.
 
 ## References
 

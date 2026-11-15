@@ -46,7 +46,7 @@ Check 'pathlen 0'             ($c.extensions.basic_constraints.max_path_len -eq 
 Check 'can sign certificates' $c.extensions.key_usage.certificate_sign
 Check 'can sign CRLs'         $c.extensions.key_usage.crl_sign
 Check 'subject CN'            ($c.subject.common_name -contains 'Certificate Authority')
-Check 'subject O=IPA.INTERNAL' ($c.subject.organization -contains 'IPA.INTERNAL')
+Check 'subject O=LAB.INTERNAL' ($c.subject.organization -contains 'LAB.INTERNAL')
 Check 'valid for 1 year'     ($c.validity.length -eq 31536000)
 
 if ($fail) {

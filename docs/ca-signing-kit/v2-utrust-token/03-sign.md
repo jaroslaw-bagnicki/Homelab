@@ -52,7 +52,7 @@ pwsh ./New-IpaCa.ps1
 ```
 
 Same ceremony, different inputs: `ipa.csr` → `ipa-ca.crt`, `ipa-ca.tpl`, 1 year, subject
-`CN=Certificate Authority, O=IPA.INTERNAL` checked.
+`CN=Certificate Authority, O=LAB.INTERNAL` checked.
 
 Bring `ipa.csr` from the IPA guest first — it is produced by `ipa-server-install --external-ca` and is
 public, so it can travel by any means.

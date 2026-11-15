@@ -51,7 +51,7 @@ The two kits differ only in **where the root key lives** and therefore **how the
 | File | Used by | What it is |
 |---|---|---|
 | [`intermediate-ca.tpl`](intermediate-ca.tpl) | both | the extensions the `step-ca` intermediate must carry |
-| [`ipa-ca.tpl`](ipa-ca.tpl) | both | the FreeIPA CA shape — `CN=Certificate Authority,O=IPA.INTERNAL`, CA:TRUE, pathlen:0 |
+| [`ipa-ca.tpl`](ipa-ca.tpl) | both | the FreeIPA CA shape — `CN=Certificate Authority,O=LAB.INTERNAL`, CA:TRUE, pathlen:0 |
 
 Both kits sign the **same CSR shapes** with the **same templates** — only the custody device differs.
 
