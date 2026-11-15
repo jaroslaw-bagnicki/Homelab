@@ -24,20 +24,29 @@ if ! EXPIRES_EPOCH=$(date -d "$EXPIRES" +%s); then
 fi
 NOW=$(date +%s)
 
-# sshd reads the host certificate once, at start. A certificate replaced by any path other
-# than this script — a manual `step ssh renew`, a restored backup — leaves sshd serving the
-# old one until it restarts. An expired certificate is served silently: clients warn but the
-# connection still succeeds, so nothing fails loudly. Compare the file's mtime against the
-# running sshd's start time and reload when the file is newer, before the early return below
-# skips the renewal branch entirely.
+# sshd reads the host certificate once, at start, and keeps serving the copy it loaded. A
+# certificate replaced by any path other than this script — a manual `step ssh renew`, a
+# restored backup — is never read, so clients print "Certificate invalid: expired" while still
+# connecting. Nothing fails loudly.
+#
+# The reload lives in the two branches below rather than here, because a certificate can be
+# both stale *and* due for renewal: restarting up front would drop the connection, then the
+# renewal would write a new certificate and restart again. Exactly one restart per run.
 SSHD_START=$(systemctl show ssh -p ActiveEnterTimestamp --value 2>/dev/null || true)
 SSHD_START_EPOCH=$(date -d "${SSHD_START:-@0}" +%s 2>/dev/null || echo 0)
-if [ "$RESTART" = 1 ] && [ "$(stat -c %Y "$CERT")" -gt "$SSHD_START_EPOCH" ]; then
-  systemctl restart ssh
-  logger -t "$TAG" -p user.warn "sshd was serving a stale host certificate; reloaded"
-fi
+
+# Re-read the mtime each call: `step ssh renew` rewrites the file, so a value captured once
+# would be stale by the time the failure path runs.
+reload_if_stale() {
+  if [ "$RESTART" = 1 ] && [ "$(stat -c %Y "$CERT")" -gt "$SSHD_START_EPOCH" ]; then
+    systemctl restart ssh
+    logger -t "$TAG" -p user.warn "sshd was serving a stale host certificate; reloaded"
+  fi
+}
 
 if [ $((EXPIRES_EPOCH - NOW)) -gt "$THRESHOLD" ]; then
+  # Not due for renewal: the only reason to restart is an out-of-band replacement.
+  reload_if_stale
   exit 0
 fi
 
@@ -46,6 +55,9 @@ fi
 # "too many positional arguments" and the renewal silently never runs.
 if ! step ssh renew "$CERT" "$KEY" -f --ca-url "$CA_URL" --root "$ROOT"; then
   logger -t "$TAG" -p user.crit "host certificate renewal failed"
+  # The file on disk may still be a newer out-of-band replacement that sshd never loaded,
+  # so recover what we can before failing.
+  reload_if_stale
   exit 1
 fi
 

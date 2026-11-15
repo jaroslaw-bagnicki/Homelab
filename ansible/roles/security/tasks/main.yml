@@ -449,10 +449,13 @@
     - security_ssh_certs_enabled | bool
     - security_ssh_host_cert_final is defined and security_ssh_host_cert_final.stat.exists
   ansible.builtin.command:
-    # --no-restart: this play already queues `Restart ssh` when it installs a certificate,
-    # and the hardening drop-in below queues it again. Restarting here too would drop the
-    # connection twice in one run. The timer calls the script bare and stays self-healing.
-    cmd: /usr/local/sbin/homelab-ssh-host-cert-renew --no-restart
+    # --no-restart only when this run issued a certificate: the `Restart ssh` handler is then
+    # already queued, and restarting here too would drop the connection twice. On a no-op run
+    # no handler is queued, so the script must own the reload or an out-of-band replacement
+    # would leave sshd serving the old serial.
+    cmd: >-
+      /usr/local/sbin/homelab-ssh-host-cert-renew
+      {{ '--no-restart' if security_ssh_host_cert_needs_issue | default(false) else '' }}
   changed_when: false
 
 - name: Harden SSH — key-only, LAN password for non-root accounts
