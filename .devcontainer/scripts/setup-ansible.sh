@@ -20,7 +20,7 @@ fi
 echo ":: Installing ${ANSIBLE_CORE_PIN} + ${ANSIBLE_LINT_PIN} into ${ANSIBLE_VENV}..."
 # The base image normally ships python3-venv, but do not assume it — without it
 # `python3 -m venv` fails on a fresh container.
-if ! python3 -m venv --help &>/dev/null; then
+if ! python3 -c 'import venv, ensurepip' &>/dev/null; then
   sudo apt-get update
   sudo apt-get install -y python3-venv
 fi

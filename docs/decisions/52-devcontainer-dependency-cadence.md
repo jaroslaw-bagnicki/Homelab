@@ -19,7 +19,10 @@ Analysis and sources: [research 58](../research/58-devcontainer-dependency-maint
 1. **Features + lock file: automated, weekly.** `.github/dependabot.yml` enables the
    `devcontainers` ecosystem (weekly schedule); Dependabot bumps feature versions in
    `.devcontainer/devcontainer.json` and regenerates `devcontainer-lock.json` in one grouped
-   PR. Features are pinned to full versions in `devcontainer.json` so bumps show as clean diffs.
+   PR. `devcontainer.json` references features by major-only tag (`:1`, `:2` — they float
+   within the major, never across it); the committed `devcontainer-lock.json` freezes the
+   exact version and digest, so builds are reproducible and Dependabot bumps surface as
+   lock diffs.
 2. **Base image: floating LTS tag, quarterly manual review.** Keep `ubuntu26.04` (not a digest
    pin — a frozen base gets no security patches). Move only on LTS transitions (26.04 → 28.04 in
    Apr 2028); interim releases are rejected (9-month support, same Python major as the LTS).
