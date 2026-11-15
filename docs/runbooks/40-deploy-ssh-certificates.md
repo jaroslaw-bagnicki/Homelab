@@ -214,6 +214,17 @@ Fluent Bit ships to VictoriaLogs. Alarm delivery remains deferred per ADR 27.
 > guards against this: before its early return it compares the certificate's mtime with the running
 > `sshd`'s start time and restarts the unit when the file is newer. If you renew by hand, run
 > `sudo systemctl restart ssh` yourself, or run the script once to let it notice.
+>
+> **The playbook passes `--no-restart`.** When `security` reissues a certificate it queues a
+> `Restart ssh` handler, and the hardening drop-in queues the same handler again — so the script must
+> not restart on top of that, or one playbook run drops the connection twice. The timer calls the
+> script bare, so an out-of-band replacement stays self-healing. Run it by hand **without** the flag
+> to get that behaviour:
+
+```sh
+sudo /usr/local/sbin/homelab-ssh-host-cert-renew --no-restart   # what the playbook does
+sudo /usr/local/sbin/homelab-ssh-host-cert-renew                # what the timer does
+```
 
 **Renewal proof.** On a canary node, temporarily raise the renewal threshold so the 7-day certificate is
 treated as near expiry, run the role once, then restore the normal threshold:
