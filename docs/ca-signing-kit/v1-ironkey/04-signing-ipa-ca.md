@@ -11,7 +11,7 @@ new CSR.
 | Need | Where it comes from |
 |---|---|
 | `ipa.csr` | the IPA guest, from `ipa-server-install --external-ca` (runbook 41 §6) |
-| `step` + `step-kms-plugin` | this bundle, one level up — [01](01-building-step.md) |
+| `step` | this bundle, one level up — [01](01-building-step.md) |
 | `root_ca.crt` + `root_ca_key` | the stick, created once ever — [02](02-issuing-root-cert.md) |
 | the root key passphrase | Keeper Vault |
 
@@ -34,10 +34,8 @@ Put it in `docs/ca-signing-kit/`.
 From `docs/ca-signing-kit`, with the stick mounted at `<stick>`:
 
 ```sh
-PATH="$PWD:$PATH" ./step certificate sign --template ./ipa-ca.tpl --not-after 8760h ./ipa.csr <stick>/root_ca.crt <stick>/root_ca_key > ./ipa-ca.crt
+./step certificate sign --template ./ipa-ca.tpl --not-after 8760h ./ipa.csr <stick>/root_ca.crt <stick>/root_ca_key > ./ipa-ca.crt
 ```
-
-`PATH="$PWD:$PATH"` is required — `step` shells out to `step-kms-plugin` and will not find it otherwise.
 
 It asks for the root key passphrase.
 
@@ -78,7 +76,6 @@ Then continue with [runbook 41](../../runbooks/41-deploy-freeipa-server.md) §8.
 
 | Symptom | What to do |
 |---|---|
-| `step-kms-plugin: executable file not found` | Prefix the command with `PATH="$PWD:$PATH"` — see Sign. |
 | `ipa.csr` missing | Copy the CSR into `docs/ca-signing-kit/`. |
 | `root_ca.crt not found` | The stick is not mounted, or the path is wrong. |
 | `error decrypting … password incorrect` | Wrong passphrase. Nothing was written; re-run with the right one. |
