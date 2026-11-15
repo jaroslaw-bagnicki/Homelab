@@ -110,25 +110,10 @@
   loop_control:
     label: "{{ item.dest }}"
 
-- name: Select the trust-store layout for this OS family
-  ansible.builtin.set_fact:
-    ca_trust_file: >-
-      {{ ca_trust_file_rhel if ansible_facts['os_family'] == 'RedHat' else ca_trust_file_debian }}
-    ca_trust_bundle: >-
-      {{ ca_trust_bundle_rhel if ansible_facts['os_family'] == 'RedHat' else ca_trust_bundle_debian }}
-
-- name: Install trust-store prerequisites (Debian/Ubuntu)
-  when: ansible_facts['os_family'] == 'Debian'
-  ansible.builtin.apt:
-    name:
-      - ca-certificates
-      - openssl
-    state: present
-    update_cache: true
-
-- name: Install trust-store prerequisites (RHEL family)
-  when: ansible_facts['os_family'] == 'RedHat'
-  ansible.builtin.dnf:
+# `ansible.builtin.package` delegates to apt/dnf per family, so the prerequisites need no
+# per-OS task pair. `update_cache` is Debian-only and would be an unknown argument on dnf.
+- name: Install trust-store prerequisites
+  ansible.builtin.package:
     name:
       - ca-certificates
       - openssl

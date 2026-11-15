@@ -1,10 +1,7 @@
 ---
-# One handler, because `notify` matches by name and cannot choose between two. The command
-# differs per family: Debian rebuilds from /usr/local/share/ca-certificates, the RHEL family
-# extracts from /etc/pki/ca-trust/source/anchors.
+# One handler, because `notify` matches by name and cannot choose between two. The command is
+# read from the same per-family table the task list uses, so the two cannot drift apart.
 - name: Update the system CA certificate store
   ansible.builtin.command:
-    cmd: >-
-      {{ 'update-ca-trust extract' if ansible_facts['os_family'] == 'RedHat'
-         else 'update-ca-certificates' }}
+    cmd: "{{ ca_trust_layouts[ansible_facts['os_family']].rebuild }}"
   changed_when: true
