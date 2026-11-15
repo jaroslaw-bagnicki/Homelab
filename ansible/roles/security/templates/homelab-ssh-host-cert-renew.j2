@@ -8,6 +8,12 @@ CA_URL="{{ security_ssh_ca_url }}"
 THRESHOLD="{{ security_ssh_renew_before_seconds }}"
 TAG="homelab-ssh-host-cert"
 
+# The playbook passes --no-restart: it reissues the certificate itself and already queues a
+# `Restart ssh` handler, so restarting here as well would drop the connection twice in one
+# run. The timer calls the script bare and stays self-healing.
+RESTART=1
+[ "${1:-}" = "--no-restart" ] && RESTART=0
+
 [ -f "$CERT" ] || { logger -t "$TAG" -p user.err "host certificate missing"; exit 1; }
 [ -n "$ROOT" ] && [ -f "$ROOT" ] || { logger -t "$TAG" -p user.err "CA root missing"; exit 1; }
 
@@ -26,7 +32,7 @@ NOW=$(date +%s)
 # skips the renewal branch entirely.
 SSHD_START=$(systemctl show ssh -p ActiveEnterTimestamp --value 2>/dev/null || true)
 SSHD_START_EPOCH=$(date -d "${SSHD_START:-@0}" +%s 2>/dev/null || echo 0)
-if [ "$(stat -c %Y "$CERT")" -gt "$SSHD_START_EPOCH" ]; then
+if [ "$RESTART" = 1 ] && [ "$(stat -c %Y "$CERT")" -gt "$SSHD_START_EPOCH" ]; then
   systemctl restart ssh
   logger -t "$TAG" -p user.warn "sshd was serving a stale host certificate; reloaded"
 fi
@@ -44,5 +50,7 @@ if ! step ssh renew "$CERT" "$KEY" -f --ca-url "$CA_URL" --root "$ROOT"; then
 fi
 
 # A SIGHUP re-exec fails where ssh.socket owns the port, so restart the unit.
-systemctl restart ssh
+if [ "$RESTART" = 1 ]; then
+  systemctl restart ssh
+fi
 logger -t "$TAG" -p user.info "host certificate renewed"
