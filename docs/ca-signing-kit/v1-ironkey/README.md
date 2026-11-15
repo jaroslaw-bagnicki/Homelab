@@ -44,9 +44,11 @@ the signing machine only on the stick, back into the safe.
 | [`02-issuing-root-cert.md`](02-issuing-root-cert.md) | creates the 10-year root on the stick — **once ever** |
 | [`03-signing-csr.md`](03-signing-csr.md) | signs the intermediate CSR with that root — every signing |
 | [`04-signing-ipa-ca.md`](04-signing-ipa-ca.md) | signs FreeIPA's `ipa.csr` with that root — **once per IPA CA** |
+| [`05-signing-on-windows.md`](05-signing-on-windows.md) | the same IPA CA signing, **on a Windows workstation** — `step.exe` + `Sign-IpaCa.ps1`, no bash or WSL |
 | `root.sh` | creates the root CA on the stick; first run only |
 | `sign.sh` | signs the `step-ca` intermediate CSR with the stick root, then machine-checks the result |
 | `sign-ipa-ca.sh` | signs FreeIPA's `ipa.csr` (from `ipa-server-install --external-ca`) with the same root |
+| `Sign-IpaCa.ps1` | the Windows port of `sign-ipa-ca.sh` — same ceremony, same checks |
 | `step` | the `step` CLI, linux/amd64 — **not stored in git** (42 MB upstream binary), added by 01 |
 | `intermediate_ca.csr` | the certificate request, created on the CA host by the key in `pve1`'s TPM — **not stored in git** |
 | `intermediate-ca.tpl` | the signing template — the extensions the finished certificate must carry |
@@ -64,7 +66,8 @@ the signing machine only on the stick, back into the safe.
 3. **Sign the intermediate** — `./sign.sh <stick-mount>` — [`03-signing-csr.md`](03-signing-csr.md).
    This is the annual job.
 4. **Sign the FreeIPA CA** — `./sign-ipa-ca.sh <stick-mount>` — [`04-signing-ipa-ca.md`](04-signing-ipa-ca.md).
-   Once per IPA CA, when FreeIPA is built or its CA re-signed.
+   Once per IPA CA, when FreeIPA is built or its CA re-signed. **On a Windows workstation** use
+   `.\Sign-IpaCa.ps1 -StickPath E:\` instead — [`05-signing-on-windows.md`](05-signing-on-windows.md).
 
 Both scripts take the stick's mount path as their first argument and an optional passphrase file as the
 second. Neither has a default — the destination is always explicit.
