@@ -43,6 +43,7 @@ the signing machine only on the stick, back into the safe.
 | [`01-building-step.md`](01-building-step.md) | puts the `step` CLI into this bundle — on the connected machine, before you leave |
 | [`02-issuing-root-cert.md`](02-issuing-root-cert.md) | creates the 10-year root on the stick — **once ever** |
 | [`03-signing-csr.md`](03-signing-csr.md) | signs the intermediate CSR with that root — every signing |
+| [`04-signing-ipa-ca.md`](04-signing-ipa-ca.md) | signs FreeIPA's `ipa.csr` with that root — **once per IPA CA** |
 | `root.sh` | creates the root CA on the stick; first run only |
 | `sign.sh` | signs the `step-ca` intermediate CSR with the stick root, then machine-checks the result |
 | `sign-ipa-ca.sh` | signs FreeIPA's `ipa.csr` (from `ipa-server-install --external-ca`) with the same root |
@@ -62,7 +63,8 @@ the signing machine only on the stick, back into the safe.
    **Once ever.**
 3. **Sign the intermediate** — `./sign.sh <stick-mount>` — [`03-signing-csr.md`](03-signing-csr.md).
    This is the annual job.
-4. **Sign the FreeIPA CA** — `./sign-ipa-ca.sh <stick-mount>`, when the IPA CA is built or re-signed.
+4. **Sign the FreeIPA CA** — `./sign-ipa-ca.sh <stick-mount>` — [`04-signing-ipa-ca.md`](04-signing-ipa-ca.md).
+   Once per IPA CA, when FreeIPA is built or its CA re-signed.
 
 Both scripts take the stick's mount path as their first argument and an optional passphrase file as the
 second. Neither has a default — the destination is always explicit.

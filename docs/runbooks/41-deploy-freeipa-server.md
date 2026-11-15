@@ -391,10 +391,13 @@ openssl req -in ipa.csr -noout -subject
 
 ## 7. External CA — offline signing
 
-On the **air-gapped** signing machine, with the secure stick mounted:
+On the **air-gapped** signing machine, with the secure stick mounted. **Full instructions:
+[`docs/ca-signing-kit/v1-ironkey/04-signing-ipa-ca.md`](../ca-signing-kit/v1-ironkey/04-signing-ipa-ca.md)** —
+that document covers the prerequisites, the exact command, the acceptance checks, what to carry back,
+and what each abort message means.
 
 1. Copy the offline kit to `/tmp` and make the scripts executable.
-2. Put `ipa.csr` in the bundle directory.
+2. Put `ipa.csr` in the bundle directory (or beside `sign-ipa-ca.sh` — it looks in both).
 3. Run `./sign-ipa-ca.sh <stick>` and pass the root-key passphrase.
 
 The script signs with `ipa-ca.tpl` for **5 years** and machine-checks:

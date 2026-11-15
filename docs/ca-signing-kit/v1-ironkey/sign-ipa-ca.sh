@@ -16,10 +16,11 @@ DIR="$(cd "$(dirname "$0")" && pwd)"
 # in the repository (../). Resolve both so either layout works.
 SHARED="$DIR"
 [ -x "$DIR/step" ] || SHARED="$(cd "$DIR/.." && pwd)"
-OUT="$DIR/ipa-ca.crt"
-TMP="$OUT.new"
 
-trap 'rm -f "$TMP"' EXIT
+# TMP is set once the CSR is located; the trap tolerates it being unset so an early
+# abort does not trip `set -u`.
+TMP=""
+trap '[ -n "$TMP" ] && rm -f "$TMP"' EXIT
 
 # --- network state: advisory, not a gate -------------------------------------
 # The root key is an encrypted file on the stick, so a networked machine widens the
@@ -49,6 +50,9 @@ CSR="$DIR/ipa.csr"
 [ -f "$SHARED/ipa-ca.tpl" ] || { echo "ABORT: $SHARED/ipa-ca.tpl is missing" >&2; exit 1; }
 [ -f "$STICK/root_ca.crt" ] || { echo "ABORT: $STICK/root_ca.crt not found (is the stick mounted?)" >&2; exit 1; }
 [ -f "$STICK/root_ca_key" ] || { echo "ABORT: $STICK/root_ca_key not found (is the stick mounted?)" >&2; exit 1; }
+# The certificate lands beside the CSR, so input and output are never in different folders.
+OUT="$(cd "$(dirname "$CSR")" && pwd)/ipa-ca.crt"
+TMP="$OUT.new"
 cd "$DIR"
 
 echo "Signing $CSR with the root on $STICK (5-year IPA CA)"
