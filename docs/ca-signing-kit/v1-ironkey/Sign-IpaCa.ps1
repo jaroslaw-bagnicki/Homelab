@@ -1,30 +1,4 @@
 #Requires -Version 5.1
-<#
-.SYNOPSIS
-    Sign FreeIPA's ipa.csr with the offline root on the IronKey — natively on Windows.
-
-.DESCRIPTION
-    The Windows counterpart of sign-ipa-ca.sh. Same ceremony, same checks, same
-    output: ipa-ca.crt beside the CSR. Uses step.exe, so no WSL or bash is needed.
-
-    The root key on the stick is an encrypted key file, which step.exe reads
-    directly. The passphrase is requested by step, or read from -PassphraseFile.
-
-.PARAMETER StickPath
-    Mounted stick, e.g. E:\ — must hold root_ca.crt and root_ca_key.
-
-.PARAMETER PassphraseFile
-    Optional file holding the root key passphrase, for a non-interactive run.
-
-.PARAMETER StepPath
-    Optional path to step.exe. Defaults to this folder, then one level up, then PATH.
-
-.EXAMPLE
-    .\Sign-IpaCa.ps1 -StickPath E:\
-
-.EXAMPLE
-    .\Sign-IpaCa.ps1 -StickPath E:\ -PassphraseFile C:\Temp\rootpass.txt
-#>
 param(
     [Parameter(Mandatory)][string]$StickPath,
     [string]$PassphraseFile,
@@ -38,7 +12,6 @@ function Fail($message) {
     exit 1
 }
 
-# --- locate step.exe: beside this script, one level up, or on PATH -------------
 if (-not $StepPath) {
     foreach ($candidate in @(
             (Join-Path $PSScriptRoot 'step.exe'),
@@ -55,7 +28,6 @@ if (-not $StepPath -or -not (Test-Path $StepPath)) {
     Fail "step.exe not found (looked beside this script, one level up, and on PATH). Fetch the Windows build — see 05-signing-on-windows.md step 1."
 }
 
-# --- locate the CSR and the template: beside this script, or one level up ------
 $shared = Split-Path $PSScriptRoot -Parent
 $csr = Join-Path $PSScriptRoot 'ipa.csr'
 if (-not (Test-Path $csr)) { $csr = Join-Path $shared 'ipa.csr' }
@@ -73,7 +45,6 @@ if (-not (Test-Path $rootKey)) { Fail "$rootKey not found — is the stick mount
 $out = Join-Path (Split-Path $csr -Parent) 'ipa-ca.crt'
 $tmp = "$out.new"
 
-# --- network state: advisory, not a gate -------------------------------------
 $net = Get-NetIPConfiguration -ErrorAction SilentlyContinue |
     Where-Object { $_.NetAdapter.Status -eq 'Up' -and $_.IPv4Address } |
     ForEach-Object { "  $($_.InterfaceAlias) $($_.IPv4Address.IPAddress)" }
@@ -84,9 +55,8 @@ if ($net) {
     Write-Host ''
 }
 
-# --- sign ---------------------------------------------------------------------
-Write-Host "Signing $csr with the root on $StickPath (5-year IPA CA)"
-$signArgs = @('certificate', 'sign', '--template', $tpl, '--not-after', '43800h')
+Write-Host "Signing $csr with the root on $StickPath (1-year IPA CA)"
+$signArgs = @('certificate', 'sign', '--template', $tpl, '--not-after', '8760h')
 if ($PassphraseFile) {
     if (-not (Test-Path $PassphraseFile)) { Fail "passphrase file $PassphraseFile is not readable" }
     Write-Host "(using the root key passphrase in $PassphraseFile)"
@@ -100,10 +70,9 @@ $signArgs += @($csr, $rootCert, $rootKey)
 $pem = & $StepPath @signArgs
 if ($LASTEXITCODE -ne 0) { Fail 'signing failed' }
 
-# PowerShell 5.1's `>` writes UTF-16LE and would corrupt the PEM, so write it explicitly.
+# PS 5.1's `>` writes UTF-16LE and corrupts the PEM.
 [IO.File]::WriteAllText($tmp, (($pem -join "`n") + "`n"), (New-Object Text.UTF8Encoding $false))
 
-# --- machine checks: does this certificate actually work? --------------------
 Write-Host ''
 Write-Host 'Checking the result. Every line must read OK.'
 $failed = 0
@@ -124,7 +93,7 @@ Check 'key usage: certificate sign' (($json -match '"certificate_sign"\s*:\s*tru
 Check 'key usage: CRL sign' (($json -match '"crl_sign"\s*:\s*true') -or ($json -match '"crlSign"\s*:\s*true'))
 Check 'subject: CN=Certificate Authority' ($json -match 'Certificate Authority')
 Check 'subject: O=LAB.INTERNAL' ($json -match 'LAB\.INTERNAL')
-Check 'validity is 5 years' ($json -match '"length"\s*:\s*157680000')
+Check 'validity is 1 year' ($json -match '"length"\s*:\s*31536000')
 
 if ($failed -ne 0) {
     Remove-Item $tmp -ErrorAction SilentlyContinue
@@ -142,7 +111,7 @@ Write-Host '=============================================================='
 Write-Host 'Read the dump below as well. It must show:'
 Write-Host '  Issuer   = CN=Homelab Internal CA (the root)'
 Write-Host '  Subject  = CN=Certificate Authority, O=LAB.INTERNAL'
-Write-Host '  Validity = ~5 years'
+Write-Host '  Validity = ~1 year'
 Write-Host '  Basic Constraints = critical CA:TRUE, pathlen:0'
 Write-Host '  Key Usage = critical Digital Signature, Certificate Sign, CRL Sign'
 Write-Host '=============================================================='

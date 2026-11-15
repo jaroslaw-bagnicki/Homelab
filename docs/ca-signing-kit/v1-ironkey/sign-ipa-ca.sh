@@ -55,19 +55,19 @@ OUT="$(cd "$(dirname "$CSR")" && pwd)/ipa-ca.crt"
 TMP="$OUT.new"
 cd "$DIR"
 
-echo "Signing $CSR with the root on $STICK (5-year IPA CA)"
+echo "Signing $CSR with the root on $STICK (1-year IPA CA)"
 if [ -n "$PWFILE" ]; then
     [ -r "$PWFILE" ] || { echo "ABORT: passphrase file $PWFILE is not readable" >&2; exit 1; }
     echo "(using the root key passphrase in $PWFILE)"
     echo
-    "$SHARED/step" certificate sign --template "$SHARED/ipa-ca.tpl" --not-after 43800h \
+    "$SHARED/step" certificate sign --template "$SHARED/ipa-ca.tpl" --not-after 8760h \
         --password-file "$PWFILE" \
         "$CSR" "$STICK/root_ca.crt" "$STICK/root_ca_key" \
         > "$TMP"
 else
     echo "(the root key's passphrase will be requested now)"
     echo
-    "$SHARED/step" certificate sign --template "$SHARED/ipa-ca.tpl" --not-after 43800h \
+    "$SHARED/step" certificate sign --template "$SHARED/ipa-ca.tpl" --not-after 8760h \
         "$CSR" "$STICK/root_ca.crt" "$STICK/root_ca_key" \
         > "$TMP"
 fi
@@ -102,7 +102,7 @@ chk "key usage: certificate sign"               '"certificate_sign"[: ]+true'
 chk "key usage: CRL sign"                       '"crl_sign"[: ]+true'
 chk "subject: CN=Certificate Authority"         'Certificate Authority'
 chk "subject: O=LAB.INTERNAL"                   'LAB\.INTERNAL'
-chk "validity is 5 years"                       '"length"[: ]+157680000'
+chk "validity is 1 year"                        '"length"[: ]+31536000'
 
 if [ "$FAILED" -ne 0 ]; then
     echo >&2
@@ -119,7 +119,7 @@ echo "=============================================================="
 echo "Read the dump below as well. It must show:"
 echo "  Issuer   = CN=Homelab Internal CA (the root)"
 echo "  Subject  = CN=Certificate Authority, O=LAB.INTERNAL"
-echo "  Validity = ~5 years"
+echo "  Validity = ~1 year"
 echo "  Basic Constraints = critical CA:TRUE, pathlen:0"
 echo "  Key Usage = critical Digital Signature, Certificate Sign, CRL Sign"
 echo "=============================================================="

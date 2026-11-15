@@ -76,7 +76,7 @@ powershell -ExecutionPolicy Bypass -File .\Sign-IpaCa.ps1 -StickPath E:\
 It runs exactly this:
 
 ```
-step.exe certificate sign --template ..\ipa-ca.tpl --not-after 43800h `
+step.exe certificate sign --template ..\ipa-ca.tpl --not-after 8760h `
     ipa.csr E:\root_ca.crt E:\root_ca_key > ipa-ca.crt.new
 ```
 
@@ -98,7 +98,7 @@ The script machine-checks the result. **Every line must read OK:**
 | path length | `max_path_len: 0` |
 | key usage | `certificate_sign` and `crl_sign` |
 | subject | `CN=Certificate Authority` and `O=LAB.INTERNAL` |
-| validity | **5 years** — `"length": 157680000` |
+| validity | **1 year** — `"length": 31536000` |
 
 If any check fails it prints `STOP: this certificate is not fit to install` and exits non-zero.
 Nothing has been trusted at that point — fix the cause and re-run; there is no cleanup to do.

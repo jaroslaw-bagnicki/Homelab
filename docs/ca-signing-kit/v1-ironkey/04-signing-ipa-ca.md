@@ -54,7 +54,7 @@ pass the path as the second argument — then **delete that file before powering
 It runs exactly this:
 
 ```sh
-./step certificate sign --template ../ipa-ca.tpl --not-after 43800h \
+./step certificate sign --template ../ipa-ca.tpl --not-after 8760h \
   ipa.csr <stick-mount>/root_ca.crt <stick-mount>/root_ca_key \
   > ipa-ca.crt.new          # checked first, renamed to ipa-ca.crt once it passes
 ```
@@ -77,7 +77,7 @@ The script machine-checks the result. **Every line must read OK:**
 | path length | `max_path_len: 0` — it issues leaves, nothing deeper |
 | key usage | `certificate_sign` and `crl_sign` |
 | subject | `CN=Certificate Authority` and `O=LAB.INTERNAL` |
-| validity | **5 years** — `"length": 157680000` |
+| validity | **1 year** — `"length": 31536000` |
 
 If any check fails it prints `STOP: this certificate is not fit to install` and exits non-zero.
 **Nothing has been trusted at that point** — the root is untouched and signing the same CSR again is
@@ -114,12 +114,11 @@ workload and completes the install.
 | `ABORT: …/step is missing or not executable` | Build it first — [01](01-building-step.md). |
 | `FAIL subject: O=LAB.INTERNAL` | The CSR predates the realm rename. Regenerate it on the guest. |
 | `FAIL does NOT chain to the root` | The stick holds a **different** root than the one the fleet trusts. Stop — do not install this certificate. |
-| `FAIL validity is 5 years` | `--not-after` was edited. Restore `43800h`; do not hand-wave the check. |
+| `FAIL validity is 1 year` | `--not-after` was edited. Restore `8760h`; do not hand-wave the check. |
 
-## Why 5 years, when the intermediate is annual
+## Why 1 year
 
-The `step-ca` intermediate is re-signed every year ([03](03-signing-csr.md)) because it is the CA that
-issues fleet TLS and SSH — rotating it is routine. The IPA CA is different: it signs only FreeIPA's own
-service certificates through `certmonger`, and it is baked into the directory at install time. Re-signing
-it means reinstalling the server, so it is deliberately long-lived. Re-parenting it later is a real
-operation, not an annual chore.
+The IPA CA is signed for **1 year**, the same as the `step-ca` intermediate ([03](03-signing-csr.md)).
+Both are CAs under the same root, and both are re-signed on the same annual cadence — the root is the
+long-lived anchor, not the CAs beneath it. Re-signing the IPA CA is `--external-ca` phase 1 and 2 again
+(runbook 41 §6 and §8), not a server reinstall.

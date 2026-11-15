@@ -402,13 +402,13 @@ and what each abort message means. **Signing on a Windows workstation:** use
 2. Put `ipa.csr` in the bundle directory (or beside `sign-ipa-ca.sh` — it looks in both).
 3. Run `./sign-ipa-ca.sh <stick>` and pass the root-key passphrase.
 
-The script signs with `ipa-ca.tpl` for **5 years** and machine-checks:
+The script signs with `ipa-ca.tpl` for **1 year** and machine-checks:
 
 - chain to the root on the stick;
 - `CA:TRUE`, `pathlen:0`;
 - certificate-sign and CRL-sign usage;
 - subject `CN=Certificate Authority,O=LAB.INTERNAL`;
-- validity **157680000 s** (5 years).
+- validity **31536000 s** (1 year).
 
 Bring back `ipa-ca.crt` and a copy of `root_ca.crt`. If any check fails, stop; nothing has been trusted.
 
