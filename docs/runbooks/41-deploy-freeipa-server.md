@@ -395,8 +395,8 @@ On the **air-gapped** signing machine, with the secure stick mounted. **Full ins
 [`docs/ca-signing-kit/v1-ironkey/04-signing-ipa-ca.md`](../ca-signing-kit/v1-ironkey/04-signing-ipa-ca.md)** —
 that document covers the prerequisites, the exact command, the acceptance checks, what to carry back,
 and what each abort message means. **Signing on a Windows workstation:** use
-[`05-signing-on-windows.md`](../ca-signing-kit/v1-ironkey/05-signing-on-windows.md) and
-`Sign-IpaCa.ps1` — the bundled `step` is a Linux binary and the `.sh` scripts need bash.
+[`05-signing-on-windows.md`](../ca-signing-kit/v1-ironkey/05-signing-on-windows.md) — the bundled `step`
+is a Linux binary, so fetch `step.exe` and run the raw `certificate sign` command.
 
 1. Copy the offline kit to `/tmp` and make the scripts executable.
 2. Put `ipa.csr` in the bundle directory (or beside `sign-ipa-ca.sh` — it looks in both).
