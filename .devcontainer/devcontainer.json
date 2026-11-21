@@ -62,7 +62,9 @@
         "vizards.deepseek-v4-for-copilot",
         "ms-azuretools.vscode-azure-mcp-server",
         // Mistral Vibe (replaces the removed OpenCode extension) — bundles the agent
-        "mistralai.mistral-vibe-code"
+        "mistralai.mistral-vibe-code",
+        // vscode-pdf — view the LFS-hosted PDFs (e.g. docs/ca-signing-kit/) in the editor
+        "tomoki1207.pdf"
       ]
     }
   },
