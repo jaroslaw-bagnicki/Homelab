@@ -38,7 +38,9 @@ later hosted as per-project server instances on cloudlab ([ADR 18](18-opencode-s
      `~/.vibe/config.toml`; any OpenAI-compatible endpoint works as the provider (BYOK,
      runbook 44), and telemetry can be disabled there. In the container the CLI shares
      the extension's `VIBE_HOME` volume; on the host it uses the host's `~/.vibe`.
-   - **Vibe Desktop** app (macOS/Windows) — cloud sessions plus local CLI sessions.
+   - **Vibe Desktop** app — GA for macOS and Windows since 2026-11-17
+     (https://mistral.ai/products/vibe): cloud sessions (same engine as Vibe Code web)
+     plus local, CLI-powered sessions against a local checkout.
 
    `AGENTS.md` no longer points agents at `.opencode/`; repo skills are read from
    `.github/skills/` directly.

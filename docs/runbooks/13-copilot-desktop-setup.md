@@ -83,6 +83,15 @@ endpoint works as provider — see [runbook 44](44-copilot-mistral-byok.md) for 
 the dev container the CLI shares the extension's `VIBE_HOME` volume, so local CLI sessions
 persist across rebuilds too.
 
+#### Vibe Desktop app (GA 2026-11-17)
+
+Mistral also ships **Vibe Desktop** for macOS and Windows — download from
+<https://mistral.ai/products/vibe>. It runs cloud sessions (same engine as Vibe Code
+web) plus local, CLI-powered sessions against a local checkout. Inside this repo the
+devcontainer extension (above) is the in-container surface; the Desktop app is the
+outside-repo one — per [ADR 53](../decisions/53-retire-opencode-use-mistral-vibe.md) both
+are supported Mistral Vibe surfaces.
+
 To probe a key directly from the container:
    ```bash
    curl -sS -X POST https://api.deepseek.com/chat/completions \
