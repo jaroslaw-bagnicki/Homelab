@@ -38,17 +38,17 @@
         "github.copilot",
         "github.copilot-chat",
         "vizards.deepseek-v4-for-copilot",
-        "ms-azuretools.vscode-azure-mcp-server",
-        "sst-dev.opencode"
+        "ms-azuretools.vscode-azure-mcp-server"
       ]
     }
   },
 
   // ── Post-create scripts ──────────────────────────────────────────
-  // Fast steps (Ansible, Bicep) run synchronously.
-  // Az PowerShell is backgrounded — huge module, can take minutes.
+  // All steps run synchronously; only the Az PowerShell install is
+  // backgrounded (huge module, can take minutes). The subshell around
+  // nohup keeps the trailing & from backgrounding the whole && chain.
   // Check Az progress: tail -f /tmp/install-az.log
-  "postCreateCommand": "pwsh -File .devcontainer/scripts/setup-opencode-persist.ps1 && bash .devcontainer/scripts/setup-opencode.sh && bash .devcontainer/scripts/setup-ansible.sh && bash .devcontainer/scripts/setup-bicep.sh && pwsh -File .devcontainer/scripts/setup-step.ps1 && bash .devcontainer/scripts/setup-azure-mcp-prereqs.sh && pwsh -File .devcontainer/scripts/setup-profile.ps1 && nohup pwsh -File .devcontainer/scripts/setup-azps.ps1 > /tmp/install-az.log 2>&1 &",
+  "postCreateCommand": "bash .devcontainer/scripts/setup-ansible.sh && bash .devcontainer/scripts/setup-bicep.sh && pwsh -File .devcontainer/scripts/setup-step.ps1 && bash .devcontainer/scripts/setup-azure-mcp-prereqs.sh && pwsh -File .devcontainer/scripts/setup-profile.ps1 && ( nohup pwsh -File .devcontainer/scripts/setup-azps.ps1 > /tmp/install-az.log 2>&1 & )",
 
   // ── Remote user ───────────────────────────────────────────────────
   "remoteUser": "vscode"
