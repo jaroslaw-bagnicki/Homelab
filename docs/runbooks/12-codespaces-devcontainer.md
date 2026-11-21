@@ -96,8 +96,9 @@ to them, not a matching OS.
 
 ### VS Code extensions
 
-Bicep, PowerShell, Ansible, Mermaid, Docker, GitHub PR, Copilot, Copilot Chat,
-DeepSeek V4 for Copilot Chat, Azure MCP Server.
+Bicep, PowerShell, Ansible, Mermaid, Docker, GitHub PR, DeepSeek V4 for Copilot Chat,
+Azure MCP Server. Copilot and Copilot Chat are built into current VS Code and are
+deliberately not listed (listing them errors with "cannot be downgraded" on rebuild).
 
 ### Post-create scripts (`.devcontainer/scripts/`)
 
@@ -179,6 +180,7 @@ ssh cloudlab
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
+| Rebuild fails instantly with `Docker returned an error code 1` / `failed to connect … npipe:////./pipe/docker_engine` | Docker daemon not running (Rancher Desktop / Docker Desktop stopped) — this is what "crashed" the container on 2026-11-21 | Start the daemon (`rdctl start` for Rancher Desktop), confirm `docker version` shows a Server section, then rebuild |
 | Codespace won't build | `postCreateCommand` timeout | Rebuild container from the command palette: `Dev Containers: Rebuild Container` |
 | Az cmdlets unavailable | Background install not finished | Check `tail -f /tmp/install-az.log` |
 | `bicep` command not found | Script not run yet | Run `bash .devcontainer/scripts/setup-bicep.sh` manually |
