@@ -56,7 +56,9 @@
         "ms-azuretools.vscode-docker",
         "github.vscode-pull-request-github",
         "vizards.deepseek-v4-for-copilot",
-        "ms-azuretools.vscode-azure-mcp-server"
+        "ms-azuretools.vscode-azure-mcp-server",
+        // Mistral Vibe (replaces the removed OpenCode extension) — bundles the agent
+        "mistralai.mistral-vibe-code"
       ]
     }
   },
@@ -67,6 +69,14 @@
   // nohup keeps the trailing & from backgrounding the whole && chain.
   // Check Az progress: tail -f /tmp/install-az.log
   "postCreateCommand": "bash .devcontainer/scripts/setup-ansible.sh && bash .devcontainer/scripts/setup-bicep.sh && pwsh -File .devcontainer/scripts/setup-step.ps1 && bash .devcontainer/scripts/setup-azure-mcp-prereqs.sh && pwsh -File .devcontainer/scripts/setup-profile.ps1 && ( nohup pwsh -File .devcontainer/scripts/setup-azps.ps1 > /tmp/install-az.log 2>&1 & )",
+
+  // ── Persistent mounts ─────────────────────────────────────────────
+  // Mistral Vibe keeps config, logs and sessions under ~/.vibe. The workspace
+  // bind mount only covers /workspaces/…, so a named volume keeps ~/.vibe
+  // across "Rebuild Container" (docker volumes survive container removal).
+  "mounts": [
+    "type=volume,source=homelab-vibe-home,target=/home/vscode/.vibe"
+  ],
 
   // ── Remote user ───────────────────────────────────────────────────
   "remoteUser": "vscode"
