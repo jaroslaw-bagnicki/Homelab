@@ -29,3 +29,12 @@
 
 }
 {% endfor %}
+{% for site in caddy_public_sites %}
+# Public zone (ADR 53) — reached only via the cloudflared tunnel on loopback.
+http://{{ site.name }} {
+    reverse_proxy {{ site.upstream }} {
+        header_up Host {host}
+        header_up X-Forwarded-Proto https
+    }
+}
+{% endfor %}

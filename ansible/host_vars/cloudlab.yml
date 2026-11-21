@@ -1,15 +1,7 @@
 ---
-opencode_public_domain: cloud5.ovh
-zot_public_domain: cloud5.ovh
-
+# The Docker workload stack (opencode_public_domain, zot_public_domain,
+# opencode_instances) moved to `lab` — see host_vars/lab.yml (runbook 47).
 docker_users: []
-
-opencode_instances:
-  - name: homelab
-    azure_sp: true
-    gh_pat: true
-  - name: prospera
-  - name: test
 
 # cloudlab is outside SSH CA scope: no LAN route to ca.internal, so it keeps the
 # fleet key and the pinned host key (ADR 41 amendment, issue #161).

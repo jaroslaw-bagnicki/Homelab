@@ -2,7 +2,7 @@
 
 ## Purpose
 
-A self-contained Ansible recipe that deploys the **Zot OCI container registry** (`ghcr.io/project-zot/zot`) on cloudlab, exposing a public registry at `zot.<domain>` and caching upstream pulls. Per issue #50, Zot replaces the homelab's dependency on external registries (GHCR/ACR) as the destination for its own image pushes, and acts as an on-demand pull-through cache for `ghcr.io`, `mcr.microsoft.com`, and Docker Hub.
+A self-contained Ansible recipe that deploys the **Zot OCI container registry** (`ghcr.io/project-zot/zot`) on `lab` (migrated from cloudlab as-is — runbook 47), exposing a public registry at `zot.<domain>` and caching upstream pulls. Per issue #50, Zot replaces the homelab's dependency on external registries (GHCR/ACR) as the destination for its own image pushes, and acts as an on-demand pull-through cache for `ghcr.io`, `mcr.microsoft.com`, and Docker Hub.
 
 ## Capabilities
 
@@ -31,7 +31,7 @@ By default the zot container listens only on `homelab_net` (`zot:5000`), publish
 
 ### Option A — Reverse proxy via Caddy (repo default)
 
-Routing is declared once in the base `docker_services` Caddyfile template and applied by the base playbook (`ansible/playbooks/playbook.yml`):
+Routing is declared once in the base `docker_services` Caddyfile template and applied by the base playbook (`ansible/playbooks/playbook-lab.yml`):
 
 ```caddyfile
 http://zot.example.com {
@@ -116,7 +116,7 @@ Subsequent runs with no template, image, or KV change report `changed=0`.
 
 ## Hosts
 
-`cloudlab` (configured at `ansible/host_vars/cloudlab.yml`). The workload targets `cloudlab` first per ADR 13 staging; the physical homelab box is a later port.
+`lab` (configured at `ansible/host_vars/lab.yml`) — migrated from `cloudlab` as-is (#44 intermediate step, runbook 47).
 
 ## Roles run
 
