@@ -26,8 +26,20 @@ later hosted as per-project server instances on cloudlab ([ADR 18](18-opencode-s
 ## Decision
 
 1. **OpenCode is retired as this repo's agent solution.** Supersedes ADR 17.
-2. **Mistral Vibe is the only supported agent** — the `mistralai.mistral-vibe-code` VS Code
-   extension in the Dev Container / desktop (runbook 13, runbook 12) and the Vibe CLI.
+2. **Mistral Vibe is the only supported agent — in any of its surfaces:**
+   - **VS Code extension** (`mistralai.mistral-vibe-code`) — preinstalled in the Dev
+     Container and on desktop (runbook 13, runbook 12); in the container its sessions
+     persist on the per-checkout `vibe-home-*` volume (`VIBE_HOME=/home/vscode/.vibe`).
+   - **Vibe Code web** (https://chat.mistral.ai/code) — Mistral-hosted cloud sandbox
+     running the same engine against a GitHub repo, reachable from any browser. Sessions
+     live in the cloud, not on the container volume.
+   - **Self-hosted CLI** — `mistral-vibe` is open source (github.com/mistralai/mistral-vibe):
+     `uv tool install mistral-vibe` or `pip install mistral-vibe`, configured via
+     `~/.vibe/config.toml`; any OpenAI-compatible endpoint works as the provider (BYOK,
+     runbook 44), and telemetry can be disabled there. In the container the CLI shares
+     the extension's `VIBE_HOME` volume; on the host it uses the host's `~/.vibe`.
+   - **Vibe Desktop** app (macOS/Windows) — cloud sessions plus local CLI sessions.
+
    `AGENTS.md` no longer points agents at `.opencode/`; repo skills are read from
    `.github/skills/` directly.
 3. **The cloudlab OpenCode instances (ADR 18/21) are dormant, not torn down.** They keep

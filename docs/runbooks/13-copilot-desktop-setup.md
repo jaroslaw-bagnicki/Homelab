@@ -74,6 +74,15 @@ across rebuilds — `~/.vibe` is a named volume, see runbook 12). If a DeepSeek 
 stale/revoked, `401 Unauthorized` from DeepSeek means re-entering the new `sk-...` key
 from <https://platform.deepseek.com/> in the Vibe panel's provider settings.
 
+Mistral Vibe is not only the extension — per [ADR 53](../decisions/53-retire-opencode-use-mistral-vibe.md)
+the same agent is available as **Vibe Code web** (https://chat.mistral.ai/code — a
+Mistral-hosted cloud sandbox against a GitHub repo, sessions live in the cloud),
+the **Vibe Desktop** app, and the open-source **CLI** (`uv tool install mistral-vibe` or
+`pip install mistral-vibe`, configured via `~/.vibe/config.toml`; any OpenAI-compatible
+endpoint works as provider — see [runbook 44](44-copilot-mistral-byok.md) for BYOK). Inside
+the dev container the CLI shares the extension's `VIBE_HOME` volume, so local CLI sessions
+persist across rebuilds too.
+
 To probe a key directly from the container:
    ```bash
    curl -sS -X POST https://api.deepseek.com/chat/completions \

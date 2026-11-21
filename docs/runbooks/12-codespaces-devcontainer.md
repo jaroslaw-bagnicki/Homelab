@@ -238,6 +238,10 @@ Vibe extension: a named-volume mountpoint is **root-owned** by default, so
 and `containerEnv` pins `VIBE_HOME=/home/vscode/.vibe` — the extension and CLI read
 `$VIBE_HOME` (default `~/.vibe`) to locate config, `logs/` and sessions.
 
+Only in-container sessions (extension + CLI) live on this volume. **Vibe Code web**
+sessions (https://chat.mistral.ai/code) run in Mistral's hosted cloud sandbox and are
+managed there, not in the container — ADR 53 lists all Vibe surfaces.
+
 [Runbook 15](15-opencode-session-persistence.md) is superseded for the Dev Container; its
 backup / web-server sections document the historical Codespaces deployment only. Cloudlab
 OpenCode instances (runbooks 17/18) keep their data under `/var/lib/opencode/instances/<name>/`
