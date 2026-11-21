@@ -69,12 +69,21 @@
     }
   },
 
+  // ── Environment ───────────────────────────────────────────────────
+  // Pin Vibe's home to the persistent volume: the extension/CLI read $VIBE_HOME
+  // (default ~/.vibe) and store config, logs and sessions under it.
+  "containerEnv": {
+    "VIBE_HOME": "/home/vscode/.vibe"
+  },
+
   // ── Post-create scripts ──────────────────────────────────────────
   // All steps run synchronously; only the Az PowerShell install is
   // backgrounded (huge module, can take minutes). The subshell around
   // nohup keeps the trailing & from backgrounding the whole && chain.
   // Check Az progress: tail -f /tmp/install-az.log
-  "postCreateCommand": "bash .devcontainer/scripts/setup-ansible.sh && bash .devcontainer/scripts/setup-bicep.sh && pwsh -File .devcontainer/scripts/setup-step.ps1 && bash .devcontainer/scripts/setup-azure-mcp-prereqs.sh && pwsh -File .devcontainer/scripts/setup-profile.ps1 && ( nohup pwsh -File .devcontainer/scripts/setup-azps.ps1 > /tmp/install-az.log 2>&1 & )",
+  // The named-volume mountpoint is root-owned by default — chown it to the
+  // remote user first, otherwise Vibe gets EACCES writing ~/.vibe/logs.
+  "postCreateCommand": "sudo chown -R vscode:vscode /home/vscode/.vibe && bash .devcontainer/scripts/setup-ansible.sh && bash .devcontainer/scripts/setup-bicep.sh && pwsh -File .devcontainer/scripts/setup-step.ps1 && bash .devcontainer/scripts/setup-azure-mcp-prereqs.sh && pwsh -File .devcontainer/scripts/setup-profile.ps1 && ( nohup pwsh -File .devcontainer/scripts/setup-azps.ps1 > /tmp/install-az.log 2>&1 & )",
 
   // ── Persistent mounts ─────────────────────────────────────────────
   // Mistral Vibe keeps config, logs and sessions under ~/.vibe. The workspace
@@ -83,6 +92,7 @@
   // The volume name is scoped per checkout via ${localWorkspaceFolderBasename}
   // (resolves to vibe-home-Homelab for this repo) so Vibe sessions and provider
   // credentials of other projects on the same Docker host are never shared here.
+  // containerEnv pins VIBE_HOME to this path; postCreateCommand chowns it to vscode.
   "mounts": [
     "type=volume,source=vibe-home-${localWorkspaceFolderBasename},target=/home/vscode/.vibe"
   ],

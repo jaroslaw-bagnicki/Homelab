@@ -232,6 +232,12 @@ would share them with every other project on the same Docker host. The project-l
 `.vibe/` directory lives in the workspace mount and is persistent too. Inspect the volume
 with `docker volume inspect vibe-home-Homelab`.
 
+Two gotchas that otherwise surface as `EACCES ... /home/vscode/.vibe/logs` from the
+Vibe extension: a named-volume mountpoint is **root-owned** by default, so
+`postCreateCommand` starts with `sudo chown -R vscode:vscode /home/vscode/.vibe`;
+and `containerEnv` pins `VIBE_HOME=/home/vscode/.vibe` — the extension and CLI read
+`$VIBE_HOME` (default `~/.vibe`) to locate config, `logs/` and sessions.
+
 [Runbook 15](15-opencode-session-persistence.md) is superseded for the Dev Container; its
 backup / web-server sections document the historical Codespaces deployment only. Cloudlab
 OpenCode instances (runbooks 17/18) keep their data under `/var/lib/opencode/instances/<name>/`
