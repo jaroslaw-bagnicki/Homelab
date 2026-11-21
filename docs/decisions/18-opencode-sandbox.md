@@ -1,7 +1,7 @@
 # Host OpenCode Server Instances on Homelab
 
 **Date:** 2026-07-11
-**Status:** Accepted — dormant per [ADR 53](53-retire-opencode-use-mistral-vibe.md) (2026-11-21); no new instances
+**Status:** Accepted — dormant / on hold per [ADR 53](53-retire-opencode-use-mistral-vibe.md) (2026-11-21): existing cloudlab instances keep running, but no new instances and no further development investment in this agent
 
 ---
 

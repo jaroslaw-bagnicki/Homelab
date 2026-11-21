@@ -45,10 +45,10 @@ Significant architectural and technology choices recorded in
 | 24 | 2026‑08‑09 | [Edge Ingress on a Dedicated Thin-Client Appliance](24-edge-ingress-appliance.md) | Accepted |
 | 23 | 2026‑08‑08 | [NAS on the HP ProLiant ML110 (OpenMediaVault)](23-nas-on-ml110.md) | Superseded by [ADR 29](29-nas-backup-target-beetle-m3-omv.md) |
 | 22 | 2026‑07‑26 | [Migrate Homelab Workloads to Kubernetes (k3s + Azure Arc)](22-k3s-arc-homelab.md) | Accepted |
-| 21 | 2026‑07‑16 | [Per-Project OpenCode Container Images](21-opencode-instance-images.md) | Accepted — dormant (ADR 53) |
+| 21 | 2026‑07‑16 | [Per-Project OpenCode Container Images](21-opencode-instance-images.md) | Accepted — dormant/on hold (ADR 53) |
 | 20 | 2026‑07‑05 | [Caddy as Single Routing Layer on Cloudlab](20-caddy-single-routing-layer.md) | Accepted |
 | 19 | 2026‑07‑05 | [Cloudflare Tunnel HTTP origin with Caddy reverse proxy on Cloudlab](19-cloudflare-tunnel-http-origin.md) | Accepted |
-| 18 | 2026‑07‑11 | [Host OpenCode Server Instances on Homelab](18-opencode-sandbox.md) | Accepted — dormant (ADR 53) |
+| 18 | 2026‑07‑11 | [Host OpenCode Server Instances on Homelab](18-opencode-sandbox.md) | Accepted — dormant/on hold (ADR 53) |
 | 17 | 2026‑06‑28 | [Adopt OpenCode for Agentic Homelab Development](17-adopt-opencode.md) | Superseded by ADR 53 |
 | 16 | 2026‑06‑28 | [Non-Interactive Agent Workload Identity Pattern](16-agent-identity-pattern.md) | Implemented |
 | 15 | 2026‑06‑25 | [Evaluate GitHub Copilot Desktop for Agentic Development](15-copilot-desktop-agentic.md) | Deferred |
