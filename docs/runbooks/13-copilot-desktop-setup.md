@@ -63,7 +63,8 @@ Reference research #19. Capture open questions surfaced in grill session.
 
 ### Alternative: dev container / Mistral Vibe extension
 
-OpenCode is no longer installed in the dev container. For agentic workflows that run
+OpenCode is no longer installed in the dev container — it is retired repo-wide
+([ADR 53](../decisions/53-retire-opencode-use-mistral-vibe.md)). For agentic workflows that run
 inside the dev container, use the **Mistral Vibe** VS Code extension
 (`mistralai.mistral-vibe-code`, preinstalled via `devcontainer.json`), which bundles the
 agent — no separate CLI install needed. The Windows user env var does not propagate into

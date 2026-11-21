@@ -1,7 +1,7 @@
 # Adopt OpenCode for Agentic Homelab Development
 
 **Date:** 2026-06-28  
-**Status:** Implemented
+**Status:** Superseded by [ADR 53](53-retire-opencode-use-mistral-vibe.md) (2026-11-21) — OpenCode retired
 
 ---
 

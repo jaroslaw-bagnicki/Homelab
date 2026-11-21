@@ -1,5 +1,7 @@
 # OpenCode Customization
 
+> ⏸ **Dormant per [ADR 53](../decisions/53-retire-opencode-use-mistral-vibe.md) (2026-11-21):** OpenCode is retired as the agent solution. This directory is the historical record of the per-instance customization workstream on cloudlab — do not extend it; use Mistral Vibe (runbook 13) instead.
+
 > High-level index for the per-instance OpenCode server customization workstream on Cloudlab. The customization layers build on top of the base deployment shipped in PR #32 (issue #30) and are tracked under the parent issue #34.
 
 ## Purpose

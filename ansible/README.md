@@ -43,7 +43,7 @@ ansible-playbook ansible/playbooks/playbook-ca.yml
 # ipa FreeIPA server VM base provision (from a LAN workstation, runbook 41)
 ansible-playbook ansible/playbooks/playbook-ipa.yml
 
-# OpenCode per-project workload (decoupled recipe)
+# OpenCode per-project workload (decoupled recipe) — ⏸ dormant per ADR 53
 ansible-playbook ansible/workloads/opencode/opencode-playbook.yml
 
 # step-ca private CA workload (decoupled recipe, runbook 35)
@@ -77,7 +77,7 @@ ansible-playbook ansible/workloads/freeipa/freeipa-playbook.yml
 | `playbooks/playbook-ca.yml` | Private CA guest (`ca`, LXC 215) base provision: common → security → fluentbit (Debian LXC on `pve1`, no Docker; rerun after the CA starts so the host certificate and SSH CA trust are applied) |
 | `playbooks/playbook-ipa.yml` | FreeIPA server VM (`ipa`, VM 216) base provision: ipa_host — Fedora/RHEL-family hostname/FQDN, chrony, firewalld, fleet key, fleet resolver (runbook 41) |
 | `workloads/` | Self-contained workload recipes — playbook entrypoint, role recipes, ansible-side README, all co-located per workload |
-| `workloads/opencode/` | OpenCode per-project server workload (see [README](workloads/opencode/README.md)) |
+| `workloads/opencode/` | OpenCode per-project server workload — ⏸ dormant per [ADR 53](../docs/decisions/53-retire-opencode-use-mistral-vibe.md) (see [README](workloads/opencode/README.md)) |
 | `workloads/step-ca/` | Private CA — `step-ca` native service on the `ca` guest, TPM-bound intermediate and SSH CA keys (see [README](workloads/step-ca/README.md)) |
 | `workloads/freeipa/` | FreeIPA server — external-ca install, `admin` + test user, M1 verification (see [README](workloads/freeipa/README.md)) |
 | `roles/` | Base shared roles — see the [roles index](roles/README.md) |
@@ -86,7 +86,7 @@ ansible-playbook ansible/workloads/freeipa/freeipa-playbook.yml
 
 Each workload in `ansible/workloads/<workload>/` is a self-contained recipe that can run independently of the base playbook (after base setup has been applied). See [`docs/workloads.md`](../docs/workloads.md) for the index and convention rules.
 
-Currently: [OpenCode](workloads/opencode/README.md) — per-project OpenCode server instances on cloudlab; [VictoriaLogs](workloads/victorialogs/README.md) — the Tier B log store on the `vtstack` guest; [step-ca](workloads/step-ca/README.md) — the private CA on the `ca` guest; [FreeIPA](workloads/freeipa/README.md) — the Linux domain on the `ipa` VM.
+Currently: [OpenCode](workloads/opencode/README.md) — per-project OpenCode server instances on cloudlab (⏸ dormant, ADR 53); [VictoriaLogs](workloads/victorialogs/README.md) — the Tier B log store on the `vtstack` guest; [step-ca](workloads/step-ca/README.md) — the private CA on the `ca` guest; [FreeIPA](workloads/freeipa/README.md) — the Linux domain on the `ipa` VM.
 
 ## Roles
 
@@ -111,7 +111,7 @@ Base shared roles live in [`roles/`](roles/README.md). The [roles index](roles/R
 | `playbook-router.yml` | opnsense (REST API — `connection: local`, `gather_facts: false`) | OPNsense router onboarding — `os-netdata` plugin + syslog-ng destination (see [runbook 45](../docs/runbooks/45-deploy-opnsense.md) §13); a FreeBSD per-OS exception |
 | `playbook-ca.yml` | common → security → fluentbit | Private CA guest (`ca`, LXC 215) base provision — Debian 13 LXC on `pve1`; rerun after the CA starts for the host certificate (see [runbook 35](../docs/runbooks/35-deploy-step-ca.md) / [runbook 40](../docs/runbooks/40-deploy-ssh-certificates.md)) |
 | `playbook-ipa.yml` | ipa_host | FreeIPA server VM (`ipa`, VM 216) base provision — Fedora/RHEL-family hostname/FQDN, chrony, firewalld, fleet key, fleet resolver (see [runbook 41](../docs/runbooks/41-deploy-freeipa-server.md)) |
-| `workloads/opencode/opencode-playbook.yml` | docker_opencode_ingress → docker_opencode_instances | Deploy the OpenCode per-project server workload (see [runbook 17](../docs/runbooks/17-deploy-opencode-on-cloudlab.md)) |
+| `workloads/opencode/opencode-playbook.yml` | docker_opencode_ingress → docker_opencode_instances | Deploy the OpenCode per-project server workload (⏸ dormant, ADR 53 — see [runbook 17](../docs/runbooks/17-deploy-opencode-on-cloudlab.md)) |
 | `workloads/step-ca/step-ca-playbook.yml` | step_ca | Deploy the private CA (`step-ca`) with a TPM-bound intermediate and SSH CA (see [runbook 35](../docs/runbooks/35-deploy-step-ca.md) / [runbook 36](../docs/runbooks/36-private-ca-init.md) / [runbook 40](../docs/runbooks/40-deploy-ssh-certificates.md)) |
 | `workloads/freeipa/freeipa-playbook.yml` | freeipa_server | Install the FreeIPA server with an external CA (see [runbook 41](../docs/runbooks/41-deploy-freeipa-server.md)) |
 

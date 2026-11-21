@@ -3,7 +3,7 @@
 > Session persistence across Dev Container rebuilds, Azure Blob backup,
 > and remote access via web server + Desktop app.
 
-> ⏸ **Superseded for the Dev Container (PR #205):** OpenCode is no longer installed in
+> ⏸ **Retired per [ADR 53](../decisions/53-retire-opencode-use-mistral-vibe.md) (2026-11-21), and superseded for the Dev Container (PR #205):** OpenCode is no longer installed in
 > the Dev Container and `.devcontainer/scripts/setup-opencode-persist.ps1` was deleted —
 > nothing runs from `postCreateCommand` for OpenCode anymore. Use the **Mistral Vibe**
 > extension (`mistralai.mistral-vibe-code`) in the container instead; Vibe sessions
