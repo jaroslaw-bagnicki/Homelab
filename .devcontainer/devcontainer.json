@@ -13,7 +13,20 @@
     // GitHub CLI — for PR/issue management, repo operations
     "ghcr.io/devcontainers/features/github-cli:1": {},
     // Node.js LTS — needed for npx-driven MCP servers (Azure MCP)
-    "ghcr.io/devcontainers/features/node:2": {}
+    "ghcr.io/devcontainers/features/node:2": {},
+    // kubectl + helm for the k3s / Azure Arc cluster (ADR 22) — no minikube
+    "ghcr.io/devcontainers/features/kubectl-helm-minikube:1": {
+      "helm": "latest",
+      "minikube": "none"
+    },
+    // Python + pip — controller env for Ansible collections (azure.azcollection);
+    // toolsToInstall kept minimal (pipx) to avoid the default linter pile-up
+    "ghcr.io/devcontainers/features/python:1": {
+      "installTools": true,
+      "toolsToInstall": "pipx"
+    },
+    // git-lfs — the repo stores PDFs in LFS (see .gitattributes)
+    "ghcr.io/devcontainers/features/git-lfs:1": {}
   },
 
   // ── VS Code customizations ────────────────────────────────────────

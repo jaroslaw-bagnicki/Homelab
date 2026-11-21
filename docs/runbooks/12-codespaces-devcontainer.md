@@ -93,6 +93,10 @@ to them, not a matching OS.
 | `powershell` | PowerShell 7 — default terminal profile |
 | `azure-cli` | Azure CLI for ad-hoc queries |
 | `github-cli` | GitHub CLI for PR/issue management |
+| `node` | Node LTS — npx-driven MCP servers (Azure MCP) |
+| `kubectl-helm-minikube` | kubectl + helm for the k3s / Azure Arc cluster (ADR 22); minikube disabled |
+| `python` | Python + pip — Ansible controller env (collections with Python deps) |
+| `git-lfs` | Git LFS — PDFs are stored in LFS (`.gitattributes`) |
 
 ### VS Code extensions
 
