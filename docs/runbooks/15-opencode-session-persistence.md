@@ -3,14 +3,17 @@
 > Session persistence across Dev Container rebuilds, Azure Blob backup,
 > and remote access via web server + Desktop app.
 
-> ⏸ **Superseded for the Dev Container (PR #204):** OpenCode is no longer installed in
+> ⏸ **Superseded for the Dev Container (PR #205):** OpenCode is no longer installed in
 > the Dev Container and `.devcontainer/scripts/setup-opencode-persist.ps1` was deleted —
 > nothing runs from `postCreateCommand` for OpenCode anymore. Use the **Mistral Vibe**
 > extension (`mistralai.mistral-vibe-code`) in the container instead; Vibe sessions
-> persist via the `homelab-vibe-home` volume on `~/.vibe` (see
-> [runbook 12](12-codespaces-devcontainer.md)). The Azure Blob backup and web-server
-> sections below still apply to OpenCode instances deployed outside the Dev Container
-> (cloudlab, runbooks 17/18).
+> persist via the per-checkout `vibe-home-${localWorkspaceFolderBasename}` volume on
+> `~/.vibe` (see [runbook 12](12-codespaces-devcontainer.md)).
+>
+> Everything below is the **archived Codespaces-era procedure**. It applies neither to
+> the Dev Container (use Vibe there) nor to cloudlab instances (runbooks 17/18), which
+> store data under `/var/lib/opencode/instances/<name>/` and leave backup as a follow-up
+> in runbook 17. It is kept as the historical record of the old Codespaces deployment.
 
 > **Note:** `example.com` is a placeholder domain used in this runbook for documentation purposes. Replace with the actual domain when following these steps for a real deployment.
 
@@ -21,7 +24,7 @@
 | **Trigger** | OpenCode sessions lost on every container rebuild; `/workspaces` destroyed on Codespace deletion |
 | **Persistence** | Symlink `~/.local/{share,state}/opencode`, `~/.config/opencode`, `~/.cache/opencode` → `/workspaces/.opencode/*` |
 | **Backup** | Tarball `/workspaces/.opencode` → `homelabcloud5/opencode-backups/` via Az PowerShell |
-| **Restore** | `Get-AzStorageBlobContent` + `tar -xzf` + re-run symlink script (manual, documented below) |
+| **Restore** | `Get-AzStorageBlobContent` + `tar -xzf` (historical: also re-ran the symlink script, since deleted — see Restore below) |
 | **Trigger points** | Manual invocation only — the `postCreateCommand` symlink hook (`setup-opencode-persist.ps1`) was removed with the Dev Container OpenCode integration (PR #204); backup stays manual |
 | **Storage target** | Azure Blob, region `polandcentral`, container `homelabcloud5/opencode-backups` |
 | **Auth** | Codespaces SP via env vars (`AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`) |
@@ -60,16 +63,22 @@ Why a sibling of the repo (not `/workspaces/Homelab/.opencode`):
 
 ### Setup
 
-> ⏸ Removed in PR #204: the `setup-opencode-persist.ps1` auto-hook no longer exists in the
-> Dev Container. The procedure below is **manual only** and applies to OpenCode instances
-> outside the Dev Container (cloudlab web server, runbooks 17/18). In the Dev Container,
-> use Mistral Vibe instead — its `~/.vibe` is a persistent named volume (runbook 12).
+> ⏸ **Archived (PR #205):** the `setup-opencode-persist.ps1` auto-hook was deleted and
+> nothing runs from `postCreateCommand` for OpenCode anymore. The procedure below is the
+> historical Codespaces setup — do **not** run it in the Dev Container (use Mistral Vibe
+> there, runbook 12) and do not run it for cloudlab instances either (runbooks 17/18
+> manage `/var/lib/opencode/instances/<name>/` directly, no symlinks involved).
 
 - The script used to run automatically on every container create via `postCreateCommand` (chained before the existing setup scripts in `.devcontainer/devcontainer.json`)
 - On the **first** rebuild after that change, the script detected real directories at each container path, copied their contents into `/workspaces/.opencode/<name>/`, then replaced the container paths with symlinks
 - On **subsequent** rebuilds the script detected the symlinks already in place and was a no-op
 
 ### Verification
+
+> ⏸ **Archived with the procedure above** — the symlink layout and the
+> `setup-opencode-persist.ps1` hook no longer exist anywhere. In the Dev Container,
+> verify the Vibe volume instead (runbook 12); on cloudlab, verify the instance dirs
+> per runbooks 17/18. The commands are kept below for the historical record only.
 
 After a rebuild (or after manually running the script):
 
@@ -106,14 +115,17 @@ prove the persistence actually survives a rebuild, perform this round-trip:
 3. **Trigger a rebuild.** In VS Code: `Dev Containers: Rebuild Container`
    (Command Palette → type "Rebuild Container" → select the Dev Containers
    command). This destroys the container and re-creates it from the image,
-   re-running `postCreateCommand` (including `setup-opencode-persist.ps1`).
+   re-running `postCreateCommand` — historically this included
+   `setup-opencode-persist.ps1`; that script no longer exists (PR #205), so a
+   rebuild no longer touches the OpenCode layout at all.
 4. **Re-open OpenCode.** Look in the session picker for your marker session.
    It should be listed with the same title and timestamp.
 5. **If the session is missing:**
    - Check `git -C /workspaces/Homelab log --oneline -5` to confirm the
      persistence commit landed in the branch you're rebuilding from
-   - Verify `setup-opencode-persist.ps1` ran during `postCreateCommand`:
-     look in the Codespaces creation log for `:: linked /home/vscode/.local/...`
+   - Historical check (obsolete): the Codespaces creation log used to show
+     `:: linked /home/vscode/.local/...` when `setup-opencode-persist.ps1` ran
+     during `postCreateCommand` — the script was deleted, so this no longer applies
    - Verify symlinks are in place (the standard verification steps above)
    - If symlinks exist but data is missing in `/workspaces/.opencode/`, the
      first-run migration may have failed; restore from the latest Azure Blob
@@ -123,9 +135,9 @@ prove the persistence actually survives a rebuild, perform this round-trip:
 
 | Symptom | Fix |
 |---|---|
-| Symlink deleted | `pwsh -File .devcontainer/scripts/setup-opencode-persist.ps1` |
-| `/workspaces/.opencode` wiped | Rebuild — OpenCode starts with fresh data, then back up from any blob restore |
-| `opencode.db` corrupted | Restore from backup (see below) or delete `~/.local/share/opencode/` (it will be re-created as a fresh symlink on next run of the persistence script) |
+| Symlink deleted | Historical: was `pwsh -File .devcontainer/scripts/setup-opencode-persist.ps1` — the script was deleted (PR #205). Cloudlab instances recreate their layout via runbooks 17/18; the Dev Container uses Vibe instead |
+| `/workspaces/.opencode` wiped | Historical Codespaces behavior: a rebuild started with fresh data, then restore from any blob backup (below). Not applicable to the Dev Container or cloudlab |
+| `opencode.db` corrupted | Historical: restore from backup (below) or delete `~/.local/share/opencode/` — it was re-created as a fresh symlink on the next run of the persistence script (now deleted) |
 
 ---
 
@@ -206,7 +218,8 @@ Get-AzStorageBlobContent `
 sudo tar -xzf /tmp/opencode-20260628T120000Z.tar.gz -C /workspaces/
 
 # 5. Re-establish symlinks (in case extraction disturbed them)
-pwsh -File .devcontainer/scripts/setup-opencode-persist.ps1
+#    ⏸ Historical: this ran the deleted setup-opencode-persist.ps1 — no longer exists.
+#    Current deployments create their own layout (runbooks 17/18); nothing to re-run.
 ```
 
 ### Verify the restore
@@ -217,7 +230,11 @@ After the four steps above, open OpenCode — the restored session list should i
 
 ## OpenCode Web Server + Desktop App
 
-Launch OpenCode as a web server inside the Dev Container and connect from the
+> ⏸ **Archived Codespaces-era procedure** — OpenCode no longer runs in the Dev
+> Container. On cloudlab, `opencode serve` runs inside the instance container per
+> [runbook 17](17-deploy-opencode-on-cloudlab.md), not in a Dev Container.
+
+Launch OpenCode as a web server inside a Codespace and connect from the
 OpenCode Desktop app (or any browser) on your local machine.
 
 ### Commands
@@ -300,9 +317,9 @@ via an environment variable in `devcontainer.json` rather than hardcoding it.
 
 | Path | Purpose |
 |---|---|
-| `.devcontainer/scripts/setup-opencode-persist.ps1` | Symlink the four OpenCode data dirs to `/workspaces/.opencode/*`; one-time migration + idempotent re-runs |
-| `.devcontainer/scripts/setup-opencode.sh` | Idempotent install of the OpenCode CLI binary via the official installer; skips if `~/.opencode/bin/opencode` already exists, runs `curl -fsSL https://opencode.ai/install \| bash` otherwise, verifies the binary post-install |
-| `.devcontainer/devcontainer.json` | `postCreateCommand` chains `setup-opencode-persist.ps1` then `setup-opencode.sh` then the existing setup scripts |
+| `.devcontainer/scripts/setup-opencode-persist.ps1` | ⏸ Deleted (PR #205) — used to symlink the four OpenCode data dirs to `/workspaces/.opencode/*`; one-time migration + idempotent re-runs |
+| `.devcontainer/scripts/setup-opencode.sh` | ⏸ Deleted (PR #205) — used to install the OpenCode CLI binary via the official installer |
+| `.devcontainer/devcontainer.json` | Historical — `postCreateCommand` used to chain the two scripts above before the existing setup scripts; both are gone (see runbook 12 for the Vibe replacement) |
 | `scripts/Backup-OpencodeData.ps1` | Manual backup to Azure Blob via Az PowerShell |
 | `scripts/Add-HomelabOpencodeBackupStorage.ps1` | One-time deploy: creates `opencode-backups` container + grants SP role |
 

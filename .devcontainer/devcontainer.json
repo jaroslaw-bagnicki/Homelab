@@ -14,9 +14,13 @@
     "ghcr.io/devcontainers/features/github-cli:1": {},
     // Node.js LTS — needed for npx-driven MCP servers (Azure MCP)
     "ghcr.io/devcontainers/features/node:2": {},
-    // kubectl + helm for the k3s / Azure Arc cluster (ADR 22) — no minikube
+    // kubectl + helm for the k3s / Azure Arc cluster (ADR 22) — no minikube.
+    // Versions pinned per ADR 52: the lock file freezes the feature image, but
+    // these tools are downloaded at install time — "latest" would drift on every
+    // rebuild. Tested in this image: kubectl v1.37.2, helm v4.3.2.
     "ghcr.io/devcontainers/features/kubectl-helm-minikube:1": {
-      "helm": "latest",
+      "version": "v1.37.2",
+      "helm": "v4.3.2",
       "minikube": "none"
     },
     // Python + pip — controller env for Ansible collections (azure.azcollection);
@@ -74,8 +78,11 @@
   // Mistral Vibe keeps config, logs and sessions under ~/.vibe. The workspace
   // bind mount only covers /workspaces/…, so a named volume keeps ~/.vibe
   // across "Rebuild Container" (docker volumes survive container removal).
+  // The volume name is scoped per checkout via ${localWorkspaceFolderBasename}
+  // (resolves to vibe-home-Homelab for this repo) so Vibe sessions and provider
+  // credentials of other projects on the same Docker host are never shared here.
   "mounts": [
-    "type=volume,source=homelab-vibe-home,target=/home/vscode/.vibe"
+    "type=volume,source=vibe-home-${localWorkspaceFolderBasename},target=/home/vscode/.vibe"
   ],
 
   // ── Remote user ───────────────────────────────────────────────────

@@ -94,7 +94,7 @@ to them, not a matching OS.
 | `azure-cli` | Azure CLI for ad-hoc queries |
 | `github-cli` | GitHub CLI for PR/issue management |
 | `node` | Node LTS — npx-driven MCP servers (Azure MCP) |
-| `kubectl-helm-minikube` | kubectl + helm for the k3s / Azure Arc cluster (ADR 22); minikube disabled |
+| `kubectl-helm-minikube` | kubectl v1.37.2 + helm v4.3.2 (pinned per ADR 52) for the k3s / Azure Arc cluster (ADR 22); minikube disabled |
 | `python` | Python + pip — Ansible controller env (collections with Python deps) |
 | `git-lfs` | Git LFS — PDFs are stored in LFS (`.gitattributes`) |
 
@@ -224,19 +224,23 @@ and the `/workspaces/.opencode` symlink wiring were removed. Use the **Mistral V
 extension (`mistralai.mistral-vibe-code`, preinstalled) instead; it bundles the agent.
 
 Vibe keeps its config, logs and **sessions** under `~/.vibe`. The container mounts a
-named Docker volume there (`homelab-vibe-home` → `/home/vscode/.vibe`, see
-`devcontainer.json` `mounts`), so Vibe sessions survive `Dev Containers: Rebuild
-Container`. The project-local `.vibe/` directory lives in the workspace mount and is
-persistent too. Inspect the volume with `docker volume inspect homelab-vibe-home`.
+named Docker volume there (`vibe-home-${localWorkspaceFolderBasename}` → `/home/vscode/.vibe`,
+i.e. `vibe-home-Homelab` for this checkout — see `devcontainer.json` `mounts`), so Vibe
+sessions survive `Dev Containers: Rebuild Container`. The volume name is scoped per
+checkout on purpose: Vibe stores provider credentials in `~/.vibe`, and a fixed name
+would share them with every other project on the same Docker host. The project-local
+`.vibe/` directory lives in the workspace mount and is persistent too. Inspect the volume
+with `docker volume inspect vibe-home-Homelab`.
 
-[Runbook 15](15-opencode-session-persistence.md) is superseded for the Dev Container; it
-still documents the Azure Blob backup / web-server procedure for OpenCode instances
-deployed outside the container (cloudlab).
+[Runbook 15](15-opencode-session-persistence.md) is superseded for the Dev Container; its
+backup / web-server sections document the historical Codespaces deployment only. Cloudlab
+OpenCode instances (runbooks 17/18) keep their data under `/var/lib/opencode/instances/<name>/`
+and their backup is a follow-up there (runbook 17) — runbook 15 does not apply to them.
 
 | Persistence layer | What survives | Where it lives |
 |---|---|---|
 | Container filesystem | Nothing — wiped on rebuild | (none) |
-| `homelab-vibe-home` volume | `~/.vibe` — Vibe config, logs, sessions | `/home/vscode/.vibe` |
+| `vibe-home-Homelab` volume (per-checkout name) | `~/.vibe` — Vibe config, logs, sessions | `/home/vscode/.vibe` |
 | `/workspaces` (bind mount / Codespaces disk) | Everything under it | Repo clone + project-local `.vibe/` |
 
 ## Dev Container Architecture
