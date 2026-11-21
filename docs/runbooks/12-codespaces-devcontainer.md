@@ -81,8 +81,9 @@ gh codespace stop --codespace $CODESPACE_NAME
 
 ### Base image
 
-`mcr.microsoft.com/devcontainers/base:ubuntu-24.04` — the same OS version
-running on the homelab server.
+`mcr.microsoft.com/devcontainers/base:ubuntu26.04` — Ubuntu 26.04 LTS (Python 3.14,
+supported to 2031). The lab hosts stay on 24.04; the container only needs SSH access
+to them, not a matching OS.
 
 ### Features (via devcontainers/features)
 
@@ -92,17 +93,23 @@ running on the homelab server.
 | `powershell` | PowerShell 7 — default terminal profile |
 | `azure-cli` | Azure CLI for ad-hoc queries |
 | `github-cli` | GitHub CLI for PR/issue management |
+| `node` | Node LTS — npx-driven MCP servers (Azure MCP) |
+| `kubectl-helm-minikube` | kubectl + helm for the k3s / Azure Arc cluster (ADR 22); minikube disabled |
+| `python` | Python + pip — Ansible controller env (collections with Python deps) |
+| `git-lfs` | Git LFS — PDFs are stored in LFS (`.gitattributes`) |
 
 ### VS Code extensions
 
-Bicep, PowerShell, Ansible, Mermaid, Docker, GitHub PR, Copilot, Copilot Chat,
-DeepSeek V4 for Copilot Chat, Azure MCP Server.
+Bicep, PowerShell, Ansible, Mermaid, Docker, GitHub PR, DeepSeek V4 for Copilot Chat,
+Azure MCP Server, Mistral Vibe (`mistralai.mistral-vibe-code`). Copilot and Copilot
+Chat are built into current VS Code and are deliberately not listed (listing them
+errors with "cannot be downgraded" on rebuild).
 
 ### Post-create scripts (`.devcontainer/scripts/`)
 
 | Script | What it installs | Idempotent? |
 |---|---|---|
-| `setup-ansible.sh` | Ansible via `apt` | ✅ skips if `ansible-playbook` exists |
+| `setup-ansible.sh` | `ansible-core==2.22.*` + `ansible-lint==26.*` via a pinned pip venv in `/opt` (apt caps ansible-core per Ubuntu release) | ✅ skips if the pinned versions are already installed |
 | `setup-bicep.sh` | Bicep CLI standalone binary | ✅ skips if `bicep --version` works |
 | `setup-azps.ps1` | Az PowerShell module | ✅ skips if already listed by `Get-Module` |
 
@@ -178,13 +185,12 @@ ssh cloudlab
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
+| Rebuild fails instantly with `Docker returned an error code 1` / `failed to connect … npipe:////./pipe/docker_engine` | Docker daemon not running (Rancher Desktop / Docker Desktop stopped) — this is what "crashed" the container on 2026-11-21 | Start the daemon (`rdctl start` for Rancher Desktop), confirm `docker version` shows a Server section, then rebuild |
 | Codespace won't build | `postCreateCommand` timeout | Rebuild container from the command palette: `Dev Containers: Rebuild Container` |
 | Az cmdlets unavailable | Background install not finished | Check `tail -f /tmp/install-az.log` |
 | `bicep` command not found | Script not run yet | Run `bash .devcontainer/scripts/setup-bicep.sh` manually |
 | Docker permission denied | Docker socket not mounted | Ensure `docker-outside-of-docker` feature is enabled |
 | Copilot Chat threads disappeared after rebuild | Container filesystem is ephemeral | Session history is stored on the container overlay filesystem, which is wiped on rebuild. Threads cannot be recovered. To preserve threads across rebuilds, see the [Session persistence](#session-persistence) section below. |
-| OpenCode sessions disappeared after rebuild | Symlink persistence not yet applied | OpenCode runtime data is symlinked to `/workspaces/.opencode` on every container create — if sessions vanished, the `setup-opencode-persist.ps1` script in `postCreateCommand` may have been removed. See [runbook 15](15-opencode-session-persistence.md) for the full procedure. |
-| OpenCode sessions survived a rebuild — verify | Working as designed | Confirm via the [runbook 15 verification steps](15-opencode-session-persistence.md#verification) — symlinks point at `/workspaces/.opencode/*`, DB integrity is `ok`. |
 
 ## Session Persistence
 
@@ -210,22 +216,28 @@ ssh cloudlab
   via Settings Sync (gear icon → Settings Sync is On). This preserves your
   environment but not the chat history itself.
 
-### OpenCode sessions ARE persisted
+### OpenCode out, Mistral Vibe in — and Vibe sessions ARE persisted
 
-Unlike Copilot Chat, **OpenCode sessions survive Dev Container rebuilds** by
-default. They are symlinked to `/workspaces/.opencode` (a sibling of the repo on
-the Codespaces persistent disk) by `.devcontainer/scripts/setup-opencode-persist.ps1`,
-which is wired into `postCreateCommand`. The same script runs idempotently on
-every container create — first run migrates data, subsequent runs are no-ops.
+OpenCode is no longer installed or persisted inside the Dev Container — the
+`sst-dev.opencode` extension, the `setup-opencode*.ps1/.sh` post-create steps,
+and the `/workspaces/.opencode` symlink wiring were removed. Use the **Mistral Vibe**
+extension (`mistralai.mistral-vibe-code`, preinstalled) instead; it bundles the agent.
 
-For the full setup, verification, and Azure Blob backup procedure see
-[runbook 15: OpenCode session persistence + backup](15-opencode-session-persistence.md).
+Vibe keeps its config, logs and **sessions** under `~/.vibe`. The container mounts a
+named Docker volume there (`homelab-vibe-home` → `/home/vscode/.vibe`, see
+`devcontainer.json` `mounts`), so Vibe sessions survive `Dev Containers: Rebuild
+Container`. The project-local `.vibe/` directory lives in the workspace mount and is
+persistent too. Inspect the volume with `docker volume inspect homelab-vibe-home`.
+
+[Runbook 15](15-opencode-session-persistence.md) is superseded for the Dev Container; it
+still documents the Azure Blob backup / web-server procedure for OpenCode instances
+deployed outside the container (cloudlab).
 
 | Persistence layer | What survives | Where it lives |
 |---|---|---|
 | Container filesystem | Nothing — wiped on rebuild | (none) |
-| `/workspaces` (Codespaces disk) | Everything under it | `/workspaces/.opencode/{share,state,config,cache}` (symlinked) |
-| `homelabcloud5/opencode-backups` (Azure Blob) | Tarball snapshots | Manual `Backup-OpencodeData.ps1` invocation |
+| `homelab-vibe-home` volume | `~/.vibe` — Vibe config, logs, sessions | `/home/vscode/.vibe` |
+| `/workspaces` (bind mount / Codespaces disk) | Everything under it | Repo clone + project-local `.vibe/` |
 
 ## Dev Container Architecture
 
@@ -233,7 +245,7 @@ For the full setup, verification, and Azure Blob backup procedure see
 .devcontainer/
 ├── devcontainer.json          # Main config — image, features, extensions, scripts
 └── scripts/
-    ├── setup-ansible.sh       # Ansible via apt (idempotent)
+    ├── setup-ansible.sh       # pinned pip venv: ansible-core 2.22 + ansible-lint 26 (idempotent)
     ├── setup-bicep.sh         # Bicep CLI binary (idempotent)
     └── setup-azps.ps1         # Az PowerShell module (idempotent, backgrounded)
 ```

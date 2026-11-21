@@ -3,6 +3,15 @@
 > Session persistence across Dev Container rebuilds, Azure Blob backup,
 > and remote access via web server + Desktop app.
 
+> ⏸ **Superseded for the Dev Container (PR #204):** OpenCode is no longer installed in
+> the Dev Container and `.devcontainer/scripts/setup-opencode-persist.ps1` was deleted —
+> nothing runs from `postCreateCommand` for OpenCode anymore. Use the **Mistral Vibe**
+> extension (`mistralai.mistral-vibe-code`) in the container instead; Vibe sessions
+> persist via the `homelab-vibe-home` volume on `~/.vibe` (see
+> [runbook 12](12-codespaces-devcontainer.md)). The Azure Blob backup and web-server
+> sections below still apply to OpenCode instances deployed outside the Dev Container
+> (cloudlab, runbooks 17/18).
+
 > **Note:** `example.com` is a placeholder domain used in this runbook for documentation purposes. Replace with the actual domain when following these steps for a real deployment.
 
 ## Overview
@@ -13,7 +22,7 @@
 | **Persistence** | Symlink `~/.local/{share,state}/opencode`, `~/.config/opencode`, `~/.cache/opencode` → `/workspaces/.opencode/*` |
 | **Backup** | Tarball `/workspaces/.opencode` → `homelabcloud5/opencode-backups/` via Az PowerShell |
 | **Restore** | `Get-AzStorageBlobContent` + `tar -xzf` + re-run symlink script (manual, documented below) |
-| **Trigger points** | `postCreateCommand` for symlinks; manual invocation for backup |
+| **Trigger points** | Manual invocation only — the `postCreateCommand` symlink hook (`setup-opencode-persist.ps1`) was removed with the Dev Container OpenCode integration (PR #204); backup stays manual |
 | **Storage target** | Azure Blob, region `polandcentral`, container `homelabcloud5/opencode-backups` |
 | **Auth** | Codespaces SP via env vars (`AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`) |
 | **Retention** | None — backups accumulate indefinitely |
@@ -51,9 +60,14 @@ Why a sibling of the repo (not `/workspaces/Homelab/.opencode`):
 
 ### Setup
 
-- `.devcontainer/scripts/setup-opencode-persist.ps1` runs automatically on every container create via `postCreateCommand` (chained before the existing setup scripts in `.devcontainer/devcontainer.json:51`)
-- On the **first** rebuild after this change, the script detects real directories at each container path, copies their contents into `/workspaces/.opencode/<name>/`, then replaces the container paths with symlinks
-- On **subsequent** rebuilds the script detects the symlinks already in place and is a no-op
+> ⏸ Removed in PR #204: the `setup-opencode-persist.ps1` auto-hook no longer exists in the
+> Dev Container. The procedure below is **manual only** and applies to OpenCode instances
+> outside the Dev Container (cloudlab web server, runbooks 17/18). In the Dev Container,
+> use Mistral Vibe instead — its `~/.vibe` is a persistent named volume (runbook 12).
+
+- The script used to run automatically on every container create via `postCreateCommand` (chained before the existing setup scripts in `.devcontainer/devcontainer.json`)
+- On the **first** rebuild after that change, the script detected real directories at each container path, copied their contents into `/workspaces/.opencode/<name>/`, then replaced the container paths with symlinks
+- On **subsequent** rebuilds the script detected the symlinks already in place and was a no-op
 
 ### Verification
 

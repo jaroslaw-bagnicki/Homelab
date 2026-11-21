@@ -61,22 +61,19 @@ Reference research #19. Capture open questions surfaced in grill session.
 
 > **Alternative (VS Code only):** The `vizards.deepseek-v4-for-copilot` extension is already in the devcontainer for Codespaces/VS Code use.
 
-### Alternative: dev container / OpenCode TUI
+### Alternative: dev container / Mistral Vibe extension
 
-For agentic workflows that run inside the dev container (e.g. `sst-dev.opencode` extension),
-the Windows user env var does not propagate. The OpenCode global data dir for this Codespace
-is `/workspaces/.opencode/opencode/` (note: distinct from `~/.local/share/opencode/`), and
-**OpenCode reads its API keys from `/workspaces/.opencode/opencode/auth.json`** — not from
-the host env var. If the key in that file is stale/revoked, DeepSeek returns
-`401 Unauthorized: Authentication Fails (governor)`.
+OpenCode is no longer installed in the dev container. For agentic workflows that run
+inside the dev container, use the **Mistral Vibe** VS Code extension
+(`mistralai.mistral-vibe-code`, preinstalled via `devcontainer.json`), which bundles the
+agent — no separate CLI install needed. The Windows user env var does not propagate into
+the container, so pass the key explicitly, e.g. via `remoteEnv` in `devcontainer.json`
+(`"MISTRAL_API_KEY": "${localEnv:MISTRAL_API_KEY}"`) or `~/.vibe/config.toml` (persisted
+across rebuilds — `~/.vibe` is a named volume, see runbook 12). If a DeepSeek key is
+stale/revoked, `401 Unauthorized` from DeepSeek means re-entering the new `sk-...` key
+from <https://platform.deepseek.com/> in the Vibe panel's provider settings.
 
-To fix without touching the dev container config:
-
-1. In the OpenCode TUI, run `/connect` and search for **DeepSeek**.
-2. Paste the new `sk-...` API key from <https://platform.deepseek.com/>.
-3. TUI writes the key to `/workspaces/.opencode/opencode/auth.json` as the running user.
-4. Restart the OpenCode server (or the TUI) and retry the failing prompt.
-5. Optional: confirm the new key works with a direct probe:
+To probe a key directly from the container:
    ```bash
    curl -sS -X POST https://api.deepseek.com/chat/completions \
      -H "Authorization: Bearer $DEEPSEEK_API_KEY" \
@@ -84,8 +81,7 @@ To fix without touching the dev container config:
      -d '{"model":"deepseek-chat","messages":[{"role":"user","content":"ping"}],"max_tokens":8}' \
      -w "\nHTTP %{http_code}\n"
    ```
-   Expect `HTTP 200`. In `/models`, pick a real DeepSeek model (`deepseek-chat` for V3,
-   `deepseek-reasoner` for R1).
+   Expect `HTTP 200`.
 
 ### Step 3: Test Repo in Copilot Desktop App
 
