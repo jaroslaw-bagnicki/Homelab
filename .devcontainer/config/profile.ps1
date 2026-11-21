@@ -20,7 +20,12 @@ if (-not $env:SSH_AUTH_SOCK -or -not (Test-Path $env:SSH_AUTH_SOCK)) {
 # Key Vault Secrets User on the vault. When the env vars are present,
 # authenticate silently as the SP — no interactive prompt. Otherwise
 # fall back to device auth against the cloud5.ovh tenant.
-if (-not (Get-AzContext)) {
+# The Az module installs in the background on container create (setup-azps.ps1,
+# check /tmp/install-az.log). Until it is present, skip Azure auth quietly instead
+# of erroring on every terminal start.
+if (-not (Get-Module -ListAvailable -Name Az)) {
+  Write-Host ":: Az module not installed yet — skipping Azure auth (background install: tail -f /tmp/install-az.log)" -ForegroundColor DarkGray
+} elseif (-not (Get-AzContext)) {
   if ($env:AZURE_TENANT_ID -and $env:AZURE_CLIENT_ID -and $env:AZURE_CLIENT_SECRET) {
     Write-Host ":: Connecting to Azure as Service Principal homelab-codespaces-sp (tenant $env:AZURE_TENANT_ID)..." -ForegroundColor Cyan
     $secureSecret = ConvertTo-SecureString $env:AZURE_CLIENT_SECRET -AsPlainText -Force
@@ -51,7 +56,7 @@ if (-not (Get-AzContext)) {
 # The fleet's @cert-authority line replaces per-host known_hosts pins for the
 # LAN nodes. The SSH host CA public key is published to Key Vault by the CA
 # workload; cloudlab is out of scope and keeps its pinned host key.
-if ($env:SSH_AUTH_SOCK -and (Get-AzContext -ErrorAction SilentlyContinue)) {
+if ((Get-Module -ListAvailable -Name Az) -and $env:SSH_AUTH_SOCK -and (Get-AzContext -ErrorAction SilentlyContinue)) {
   $caKey = Get-AzKeyVaultSecret -VaultName homelab-bysxdb-kv -Name ssh-host-ca-pub -AsPlainText -ErrorAction SilentlyContinue 2>$null
   if ($caKey) {
     $sshDir = Join-Path $HOME '.ssh'
