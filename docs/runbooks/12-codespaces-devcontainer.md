@@ -101,8 +101,9 @@ to them, not a matching OS.
 ### VS Code extensions
 
 Bicep, PowerShell, Ansible, Mermaid, Docker, GitHub PR, DeepSeek V4 for Copilot Chat,
-Azure MCP Server. Copilot and Copilot Chat are built into current VS Code and are
-deliberately not listed (listing them errors with "cannot be downgraded" on rebuild).
+Azure MCP Server, Mistral Vibe (`mistralai.mistral-vibe-code`). Copilot and Copilot
+Chat are built into current VS Code and are deliberately not listed (listing them
+errors with "cannot be downgraded" on rebuild).
 
 ### Post-create scripts (`.devcontainer/scripts/`)
 
@@ -215,20 +216,28 @@ ssh cloudlab
   via Settings Sync (gear icon → Settings Sync is On). This preserves your
   environment but not the chat history itself.
 
-### OpenCode is NOT part of the Dev Container
+### OpenCode out, Mistral Vibe in — and Vibe sessions ARE persisted
 
 OpenCode is no longer installed or persisted inside the Dev Container — the
 `sst-dev.opencode` extension, the `setup-opencode*.ps1/.sh` post-create steps,
-and the `/workspaces/.opencode` symlink wiring were removed. Like Copilot Chat,
-any OpenCode data created inside the container lives on the ephemeral overlay
-filesystem and is wiped on rebuild. [Runbook 15](15-opencode-session-persistence.md)
-documents the standalone persistence/backup procedure if you run OpenCode
-outside the container.
+and the `/workspaces/.opencode` symlink wiring were removed. Use the **Mistral Vibe**
+extension (`mistralai.mistral-vibe-code`, preinstalled) instead; it bundles the agent.
+
+Vibe keeps its config, logs and **sessions** under `~/.vibe`. The container mounts a
+named Docker volume there (`homelab-vibe-home` → `/home/vscode/.vibe`, see
+`devcontainer.json` `mounts`), so Vibe sessions survive `Dev Containers: Rebuild
+Container`. The project-local `.vibe/` directory lives in the workspace mount and is
+persistent too. Inspect the volume with `docker volume inspect homelab-vibe-home`.
+
+[Runbook 15](15-opencode-session-persistence.md) is superseded for the Dev Container; it
+still documents the Azure Blob backup / web-server procedure for OpenCode instances
+deployed outside the container (cloudlab).
 
 | Persistence layer | What survives | Where it lives |
 |---|---|---|
 | Container filesystem | Nothing — wiped on rebuild | (none) |
-| `/workspaces` (Codespaces disk) | Everything under it | Repo clone only — no OpenCode state is written there anymore |
+| `homelab-vibe-home` volume | `~/.vibe` — Vibe config, logs, sessions | `/home/vscode/.vibe` |
+| `/workspaces` (bind mount / Codespaces disk) | Everything under it | Repo clone + project-local `.vibe/` |
 
 ## Dev Container Architecture
 
