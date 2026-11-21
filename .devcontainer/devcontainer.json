@@ -1,19 +1,36 @@
 {
   "name": "Homelab",
-  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu26.04",
 
   // ── Features ──────────────────────────────────────────────────────
   "features": {
     // Docker CLI + Docker Compose (bind-mounts host Docker socket)
     "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {},
     // PowerShell 7 — needed for Az module and repo scripts
-    "ghcr.io/devcontainers/features/powershell:2.0.2": {},
+    "ghcr.io/devcontainers/features/powershell:2": {},
     // Azure CLI — for Bicep validation and ad-hoc queries
     "ghcr.io/devcontainers/features/azure-cli:1": {},
     // GitHub CLI — for PR/issue management, repo operations
     "ghcr.io/devcontainers/features/github-cli:1": {},
     // Node.js LTS — needed for npx-driven MCP servers (Azure MCP)
-    "ghcr.io/devcontainers/features/node:2": {}
+    "ghcr.io/devcontainers/features/node:2": {},
+    // kubectl + helm for the k3s / Azure Arc cluster (ADR 22) — no minikube.
+    // Versions pinned per ADR 52: the lock file freezes the feature image, but
+    // these tools are downloaded at install time — "latest" would drift on every
+    // rebuild. Tested in this image: kubectl v1.37.2, helm v4.3.2.
+    "ghcr.io/devcontainers/features/kubectl-helm-minikube:1": {
+      "version": "v1.37.2",
+      "helm": "v4.3.2",
+      "minikube": "none"
+    },
+    // Python + pip — controller env for Ansible collections (azure.azcollection);
+    // toolsToInstall kept minimal (pipx) to avoid the default linter pile-up
+    "ghcr.io/devcontainers/features/python:1": {
+      "installTools": true,
+      "toolsToInstall": "pipx"
+    },
+    // git-lfs — the repo stores PDFs in LFS (see .gitattributes)
+    "ghcr.io/devcontainers/features/git-lfs:1": {}
   },
 
   // ── VS Code customizations ────────────────────────────────────────
@@ -26,8 +43,15 @@
           "pwsh": {
             "path": "/usr/bin/pwsh"
           }
+        },
+        // transient git refs/objects make the watcher choke on every rebuild
+        "files.watcherExclude": {
+          "**/.git/refs/**": true,
+          "**/.git/objects/**": true
         }
       },
+      // Copilot + Copilot Chat are built into current VS Code — listing them
+      // only produces "cannot be downgraded" errors on every rebuild.
       "extensions": [
         "ms-azuretools.vscode-bicep",
         "ms-vscode.powershell",
@@ -35,20 +59,43 @@
         "bierner.markdown-mermaid",
         "ms-azuretools.vscode-docker",
         "github.vscode-pull-request-github",
-        "github.copilot",
-        "github.copilot-chat",
         "vizards.deepseek-v4-for-copilot",
         "ms-azuretools.vscode-azure-mcp-server",
-        "sst-dev.opencode"
+        // Mistral Vibe (replaces the removed OpenCode extension) — bundles the agent
+        "mistralai.mistral-vibe-code",
+        // vscode-pdf — view the LFS-hosted PDFs (e.g. docs/ca-signing-kit/) in the editor
+        "tomoki1207.pdf"
       ]
     }
   },
 
+  // ── Environment ───────────────────────────────────────────────────
+  // Pin Vibe's home to the persistent volume: the extension/CLI read $VIBE_HOME
+  // (default ~/.vibe) and store config, logs and sessions under it.
+  "containerEnv": {
+    "VIBE_HOME": "/home/vscode/.vibe"
+  },
+
   // ── Post-create scripts ──────────────────────────────────────────
-  // Fast steps (Ansible, Bicep) run synchronously.
-  // Az PowerShell is backgrounded — huge module, can take minutes.
+  // All steps run synchronously; only the Az PowerShell install is
+  // backgrounded (huge module, can take minutes). The subshell around
+  // nohup keeps the trailing & from backgrounding the whole && chain.
   // Check Az progress: tail -f /tmp/install-az.log
-  "postCreateCommand": "pwsh -File .devcontainer/scripts/setup-opencode-persist.ps1 && bash .devcontainer/scripts/setup-opencode.sh && bash .devcontainer/scripts/setup-ansible.sh && bash .devcontainer/scripts/setup-bicep.sh && pwsh -File .devcontainer/scripts/setup-step.ps1 && bash .devcontainer/scripts/setup-azure-mcp-prereqs.sh && pwsh -File .devcontainer/scripts/setup-profile.ps1 && nohup pwsh -File .devcontainer/scripts/setup-azps.ps1 > /tmp/install-az.log 2>&1 &",
+  // The named-volume mountpoint is root-owned by default — chown it to the
+  // remote user first, otherwise Vibe gets EACCES writing ~/.vibe/logs.
+  "postCreateCommand": "sudo chown -R vscode:vscode /home/vscode/.vibe && bash .devcontainer/scripts/setup-ansible.sh && bash .devcontainer/scripts/setup-bicep.sh && pwsh -File .devcontainer/scripts/setup-step.ps1 && bash .devcontainer/scripts/setup-azure-mcp-prereqs.sh && pwsh -File .devcontainer/scripts/setup-profile.ps1 && ( nohup pwsh -File .devcontainer/scripts/setup-azps.ps1 > /tmp/install-az.log 2>&1 & )",
+
+  // ── Persistent mounts ─────────────────────────────────────────────
+  // Mistral Vibe keeps config, logs and sessions under ~/.vibe. The workspace
+  // bind mount only covers /workspaces/…, so a named volume keeps ~/.vibe
+  // across "Rebuild Container" (docker volumes survive container removal).
+  // The volume name is scoped per checkout via ${localWorkspaceFolderBasename}
+  // (resolves to vibe-home-Homelab for this repo) so Vibe sessions and provider
+  // credentials of other projects on the same Docker host are never shared here.
+  // containerEnv pins VIBE_HOME to this path; postCreateCommand chowns it to vscode.
+  "mounts": [
+    "type=volume,source=vibe-home-${localWorkspaceFolderBasename},target=/home/vscode/.vibe"
+  ],
 
   // ── Remote user ───────────────────────────────────────────────────
   "remoteUser": "vscode"

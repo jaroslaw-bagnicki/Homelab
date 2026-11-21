@@ -1,7 +1,7 @@
 # Per-Project OpenCode Container Images
 
 **Date:** 2026-07-16
-**Status:** Accepted
+**Status:** Accepted — dormant / on hold per [ADR 53](53-retire-opencode-use-mistral-vibe.md) (2026-11-21): existing images keep serving the running instances, but no new images or tooling investment
 
 ---
 

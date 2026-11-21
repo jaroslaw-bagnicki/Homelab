@@ -1,5 +1,7 @@
 # GitHub MCP Server
 
+> ⏸ Dormant per [ADR 53](../../decisions/53-retire-opencode-use-mistral-vibe.md) — historical OpenCode-specific notes.
+
 > Interact with GitHub from OpenCode — manage issues, PRs, releases, search code, and more.
 
 | | |
