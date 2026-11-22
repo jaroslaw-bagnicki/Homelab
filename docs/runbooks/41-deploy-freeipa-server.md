@@ -414,6 +414,35 @@ The command signs with `ipa-ca.tpl` for **1 year**. Confirm the result by hand:
 
 Bring back `ipa-ca.crt` and a copy of `root_ca.crt`. If any check fails, stop; nothing has been trusted.
 
+> **Executed 2026-11-22** — signed on the Windows workstation from the IronKey bundle. The working
+> command, verbatim (stick at `H:\RootCA`, bundle at `H:\RootCA\ca-signing-kit`):
+>
+> ```powershell
+> cd H:\RootCA\ca-signing-kit
+> .\step.exe certificate sign --template .\ipa-ca.tpl --not-after 8760h .\ipa.csr ..\root_ca.crt ..\root_ca_key > .\ipa-ca.crt
+> ```
+>
+> | Result | Value |
+> |---|---|
+> | `ipa-ca.crt` | 1 107 bytes, signed **08:02:15Z** |
+> | Subject / issuer | `O=LAB.INTERNAL, CN=Certificate Authority` / `CN=Homelab Internal CA` |
+> | Validity | 2026-11-22 08:02:15Z → 2027-11-22 08:02:15Z |
+> | Basic constraints | critical `CA:TRUE`, `pathlen:0` |
+> | Signature check | `openssl verify -CAfile root_ca.crt ipa-ca.crt` → **OK** |
+> | Passphrase | prompted interactively, taken from Keeper Vault |
+>
+> **Two findings from execution:**
+>
+> 1. **`step`'s "plugin not found" message is a red herring.** When the key argument is not a readable
+>    *file*, `step` prints
+>    `exec: "step-kms-plugin": executable file not found in %PATH%` and falls back to treating the
+>    argument as a `kms:` URI. Nothing is wrong with the plugins — the **path** is wrong. The
+>    `step-kms-plugin` shipped in the bundle is a Linux ELF and could never run on Windows anyway.
+> 2. **The key must be reached relative to the bundle.** `..\root_ca_key` works because `..` *is* the
+>    stick's root. Drive-letter forms (`H:\root_ca_key`, `D:\…`, `E:\…`) and `..\..` all produce the
+>    plugin message above, which reads as a tooling failure rather than a path error. Resolve the path
+>    before suspecting `step`.
+
 ## 8. External CA — phase 2 (complete)
 
 Copy the two public certificates to the guest:
@@ -453,6 +482,41 @@ M3** a hard gate. Do not hand-edit Dogtag.
 > ceremony (stick + passphrase) has to be repeated. Back up `/root/ipa-ca.crt`, `/root/root_ca.crt`
 > and `/etc/pki/pki-tomcat/alias` before uninstalling, and expect a fresh CSR.
 
+> **Executed 2026-11-22** — `ipa-server-install` completed **`[32/32]`** and logged
+> `The ipa-server-install command was successful` at **08:09:20Z**. The workload is idempotent: an
+> immediate re-run reported **`ok=20 changed=0 failed=0`**.
+>
+> | Check | Result |
+> |---|---|
+> | `ipa-server-install` | **successful**, 32/32 |
+> | FreeIPA version | **4.13.4** on Python 3.9.25 |
+> | Services | Directory Service, krb5kdc, kadmin, httpd, ipa-custodia, pki-tomcatd, ipa-otpd — all `RUNNING` |
+> | `ipa ca-show ipa` | subject `CN=Certificate Authority,O=LAB.INTERNAL`, issuer `CN=Homelab Internal CA` |
+> | `getcert list` | **9** certificates `MONITORING` |
+> | Memory during install | 1 432 MB used of 2 968 — **1 535 MB available** |
+>
+> **Four findings from execution:**
+>
+> 1. **2 GB cannot complete this install.** The first attempt at 2 048 MB reached step 22/32 and then
+>    reported **93 % memory used (1 907 MB), 0 % CPU** — the guest was not hung, it was thrashing, and
+>    certmonger timed out starting tracking of `auditSigningCert cert-pki-ca`. sshd could no longer
+>    fork a banner, so the failure first presented as an unreachable host and was only diagnosed from
+>    the hypervisor. At 3 072 MB the same step completes with ~1.5 GB to spare.
+> 2. **`--uninstall` costs a full re-signing ceremony.** Running the fallback above after the 2 GB
+>    failure removed the CA private key along with the CSR, so the certificate signed in the first §7
+>    pass matched no key that still existed. §6 had to be re-run for a fresh CSR and §7 repeated — the
+>    warning above exists because of this.
+> 3. **Two verification tasks failed on a correct result.** `ipa hbacrule-find` exits `1` when it
+>    matches nothing, which is the desired state, so the task now guards with `failed_when`. And the
+>    389 DS instance is named after the **realm** — `dirsrv@LAB-INTERNAL`, not the pre-rename
+>    `dirsrv@IPA-INTERNAL` — so the service check is now
+>    `dirsrv@{{ freeipa_realm | replace('.', '-') }}`.
+> 4. **The guest had no base layer.** `firewalld` was absent and the SSH user CA trust was gone,
+>    because `playbook-ipa.yml` had never been re-applied after the guest was rebuilt on AlmaLinux 9.
+>    Certificate SSH failed for that reason, not because of FreeIPA. Re-applying it restored firewalld
+>    with the LAN rich rules, `ca_trust`, Netdata and Fluent Bit — **`ok=71 changed=37 failed=0`** —
+>    after which the break-glass key was dropped and certificate SSH worked again.
+
 ## 9. Create the test user
 
 The role creates `m1test` without a password. Set one interactively (the password is in AKV):
@@ -466,6 +530,11 @@ klist
 ```
 
 `admin` is created by the installer; `m1test` is the policy-test identity for M4.
+
+> **Outstanding 2026-11-22.** The account exists — `dn: uid=m1test,cn=users,cn=accounts,dc=lab,dc=internal`,
+> UID/GID `160200003`, inside `LAB.INTERNAL_id_range` (base `160200000`, 200 000 IDs) — but
+> `ipa user-show m1test --all` reports **`Password: False`** and there is no `krbLastPwdChange`, so
+> `kinit m1test` fails until this step is run.
 
 ## 10. Verification
 
@@ -521,18 +590,58 @@ dig @192.168.2.240 ipa.internal SSHFP +short   # empty
 The fleet host-trust path remains `@cert-authority` + `TrustedUserCAKeys` from
 [runbook 40](40-deploy-ssh-certificates.md).
 
+> **Executed 2026-11-22** — measured on the guest and from the LAN:
+>
+> | Check | Result |
+> |---|---|
+> | `kinit admin` / `klist` | ✅ |
+> | `ipa ping` | ✅ `IPA server version 4.13.4. API version 2.257` |
+> | `ipa ca-show ipa` | ✅ IPA CA, issuer `CN=Homelab Internal CA` |
+> | `getcert list` | ✅ 9 × `MONITORING` |
+> | `ipa hbacrule-find` | ✅ `0 HBAC rules matched` — exits `1`, expected |
+> | `systemctl is-active` | ✅ `dirsrv@LAB-INTERNAL`, `krb5kdc`, `httpd`, `pki-tomcatd@pki-tomcat` all `active` |
+> | `firewall-cmd --list-all` | ✅ rich rules for 22, 88/tcp, 88/udp, 464/tcp, 464/udp, 443, 636 from `192.168.2.0/24`; **no** 389, **no** 80 |
+> | WebUI | ✅ `https://ipa.internal/ipa/ui/` → `200`, TLS verify code **0**; `admin` login confirmed in a browser |
+> | Served leaf | `O=LAB.INTERNAL, CN=ipa.internal`, serial `08`, issuer the IPA CA |
+> | `/etc/ipa/ca.crt` | ✅ the **fleet root**, `trust anchor` in the system store |
+> | `dig … SSHFP` | ✅ empty |
+> | PTR `192.168.2.250` | ✅ `ipa.internal.` |
+> | Port 80 | ✅ refused |
+>
+> `/etc/ipa/ca.crt` holds the **fleet root**, not the IPA CA — `ipa-server-install` installs the
+> external chain's top as the anchor, which is why a client already trusting the fleet root needs no
+> IPA-specific certificate. The WebUI leaf's SHA-256 is `981C8807…063457`; its `notAfter` is the CA's,
+> see §11.
+
 ## 11. Record the CA decision and anchors
 
 Write into the runbook/report:
 
 | Item | Value |
 |---|---|
-| CA mode | `external` (or `selfsigned` if the fallback was used) |
-| IPA CA subject | `CN=Certificate Authority,O=LAB.INTERNAL` |
-| IPA CA fingerprint | `openssl x509 -in /root/ipa-ca.crt -noout -fingerprint -sha256` |
-| Root fingerprint | compare with `homelab-bysxdb-kv/ca-root-cert` |
-| Clients that imported the IPA root | **none** on the external path; the fleet root is already trusted |
-| If self-signed | record the interim IPA root; no client imports it before M3; re-parent is the M3 gate |
+| CA mode | **`external`** — `--external-ca`; the `selfsigned` fallback was not used |
+| IPA CA subject | `O=LAB.INTERNAL, CN=Certificate Authority` |
+| IPA CA issuer | `CN=Homelab Internal CA` — the fleet root |
+| IPA CA serial | `368CFCE5393D43159345FC04C42719DC` |
+| IPA CA validity | 2026-11-22 08:02:15Z → **2027-11-22 08:02:15Z** (1 year) |
+| IPA CA SHA-256 | `2F:07:EA:9F:AE:11:EC:A0:0E:6E:88:00:80:33:6E:24:59:DA:98:25:EE:21:F3:56:3F:70:5D:FD:78:BF:A8:96` |
+| Root SHA-256 | `02:83:B2:6B:C2:0C:E7:64:23:FE:23:77:5E:4D:61:98:9F:1D:51:F0:41:5C:6D:75:1D:12:C2:33:B6:74:2C:E0` |
+| Root matches AKV | ✅ `homelab-bysxdb-kv/ca-root-cert` — identical fingerprint, serial `34AA311EE0C3ABE06A000443B6A33D01`, 2026-10-11 → 2036-10-08 |
+| Clients that imported the IPA root | **none** — the external path needs no IPA anchor; the fleet root is already trusted fleet-wide |
+| If self-signed | not applicable — the external path was used |
+
+Reproduce the two fingerprints with:
+
+```sh
+openssl x509 -in ipa-ca.crt -noout -fingerprint -sha256
+openssl x509 -in root_ca.crt -noout -fingerprint -sha256
+```
+
+> **Every leaf under the IPA CA expires with it.** The `ipa.internal` HTTP certificate is issued
+> 2026-11-22 08:08:23Z and expires **2027-11-22 08:02:15Z** — exactly the CA's `notAfter`, because
+> Dogtag caps a leaf at its issuing CA. Nothing can renew past that instant, so the annual §7 re-signing
+> of the IPA CA has to happen **before** the leaves fall due, and every certificate under it is
+> reissued at the same time.
 
 ## 12. Break-glass and next step
 
@@ -546,7 +655,8 @@ Write into the runbook/report:
 ## Verification checklist
 
 Executed on: **2026-11-15** — §1–§6 executed and verified; §7 onward **not yet run**.
-Completed on: **2026-11-22** — §7–§8 done and §10 verified; §9, §11 and §12 outstanding.
+Completed on: **2026-11-22** — §7, §8, §10 and §11 executed and verified. **§9 is outstanding**: the
+`m1test` password is not set, so `kinit m1test` still fails. §12 is a standing note, not a task.
 
 - [x] `local` storage carries `iso,vztmpl,backup,import,images,snippets` — `images` is required for the cloud-init ISO
 - [x] AlmaLinux 9 image downloaded into the **`import`** content type; `pvesm list local --content import` shows it
@@ -565,8 +675,9 @@ Completed on: **2026-11-22** — §7–§8 done and §10 verified; §9, §11 and
 - [x] `ipa hbacrule-find` empty
 - [x] `firewall-cmd --list-all` shows 88/464/443/636 from the LAN; no 389 or 80
 - [x] `dig SSHFP` empty
-- [ ] CA mode and fingerprints recorded
-- [ ] M2 remains the gate before the first client
+- [x] CA mode and fingerprints recorded (§11)
+- [ ] `m1test` has a password and `kinit m1test` succeeds (§9)
+- [x] M2 remains the gate before the first client — stated in §12
 
 ### §1–§3 execution record — 2026-11-08 (Fedora), rebuilt 2026-11-14 (AlmaLinux 9)
 
@@ -614,6 +725,23 @@ rather than pasted public key, the fleet-key verification path, `getent` vs the 
    `playbook-ipa.yml`. The guest accepted only the break-glass fleet key, so every later step ran on a 1 h
    root-equivalent credential. Fixed by adding the trust tasks to `ipa_host`, making `ca_trust`
    OS-aware, and running `ca_trust` before `ipa_host` in the playbook.
+
+### §7–§11 execution record — 2026-11-22
+
+| Step | Outcome |
+|---|---|
+| §7 offline signing | `ipa-ca.crt` signed on the Windows workstation; chains to the fleet root |
+| §8 phase 2 install | **`[32/32]`**, `The ipa-server-install command was successful` at 08:09:20Z |
+| §9 test user | account created — **password not set**, outstanding |
+| §10 verification | every check passes, including a browser login to the WebUI |
+| §11 anchors | IPA CA `2F07EA9F…` under root `0283B26B…`, recorded above |
+
+**Five defects found and fixed across §7–§8:** the 2 GB memory ceiling (now 3 GB), `--uninstall`
+destroying the CA private key, `ipa hbacrule-find`'s exit `1` on a correct result, the realm-derived DS
+instance name, and the missing base layer that had left the guest without firewalld or SSH certificate
+trust. One documentation defect was closed at the same time: the IPA CA ceremony existed twice, and only
+the `step.exe` path ever worked — it now exists once, in
+[`04-signing-ipa-ca.md`](../ca-signing-kit/v1-ironkey/04-signing-ipa-ca.md).
 
 ## References
 
