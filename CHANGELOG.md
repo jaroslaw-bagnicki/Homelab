@@ -13,6 +13,7 @@ Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month 
 
 ## 2026‑11
 
+- **(feat)** Stand up the FreeIPA server on `pve2` — M1 install complete under the fleet root, with DNS, HBAC and the LAN firewall verified — [runbook 41](docs/runbooks/41-deploy-freeipa-server.md)
 - **(docs)** Retire OpenCode as the agent solution — Mistral Vibe (VS Code extension + CLI) is the supported agent; cloudlab OpenCode instances are dormant, no new deployments — [ADR 53](docs/decisions/53-retire-opencode-use-mistral-vibe.md)
 - **(chore)** Modernize the devcontainer — Ubuntu 26.04 base, locked features, Ansible 2.22 venv — and set the weekly Dependabot / quarterly pin-review cadence — [runbook 12](docs/runbooks/12-codespaces-devcontainer.md) · [ADR 52](docs/decisions/52-devcontainer-dependency-cadence.md)
 - **(fix)** Accept CA-signed SSH on the FreeIPA guest — `ipa_host` never installed the certificate trust, so the host took only the break-glass key — [runbook 41](docs/runbooks/41-deploy-freeipa-server.md)

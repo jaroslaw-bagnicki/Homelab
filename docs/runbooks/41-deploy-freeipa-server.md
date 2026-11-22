@@ -395,18 +395,16 @@ openssl req -in ipa.csr -noout -subject
 
 ## 7. External CA — offline signing
 
-On the **air-gapped** signing machine, with the secure stick mounted. **Full instructions:
-[`docs/ca-signing-kit/v1-ironkey/04-signing-ipa-ca.md`](../ca-signing-kit/v1-ironkey/04-signing-ipa-ca.md)** —
+On the **Windows workstation** that holds the secure stick — the path this is proven on. **Full
+instructions: [`docs/ca-signing-kit/v1-ironkey/04-signing-ipa-ca.md`](../ca-signing-kit/v1-ironkey/04-signing-ipa-ca.md)** —
 that document covers the prerequisites, the exact command, the acceptance checks, what to carry back,
-and what each abort message means. **Signing on a Windows workstation:** use
-[`05-signing-on-windows.md`](../ca-signing-kit/v1-ironkey/05-signing-on-windows.md) — the bundled `step`
-is a Linux binary, so fetch `step.exe` and run the raw `certificate sign` command.
+and what each abort message means. In short:
 
-1. Copy the offline kit to `/tmp` and make the scripts executable.
-2. Put `ipa.csr` in the bundle directory.
-3. Run the `step certificate sign` command and pass the root-key passphrase.
+1. Put `ipa.csr` in the bundle directory (`H:\RootCA\ca-signing-kit`).
+2. Run the bundled `step.exe certificate sign` command, pointing the root at `..` (the stick).
+3. Paste the root-key passphrase from **Keeper Vault** — it is not on the stick.
 
-The script signs with `ipa-ca.tpl` for **1 year** and machine-checks:
+The command signs with `ipa-ca.tpl` for **1 year**. Confirm the result by hand:
 
 - chain to the root on the stick;
 - `CA:TRUE`, `pathlen:0`;
@@ -450,6 +448,11 @@ ipa-server-install --unattended \
 `freeipa_ca_mode: selfsigned` in `host_vars/ipa.yml`, rerun the workload, and make **re-parent before
 M3** a hard gate. Do not hand-edit Dogtag.
 
+> **`--uninstall` destroys the CA private key** — `/root/ipa.csr`, `/etc/pki/pki-tomcat/alias` and
+> `/root/.ipa_cache` are removed, so `ipa-ca.crt` becomes unusable and the whole §6–§8 signing
+> ceremony (stick + passphrase) has to be repeated. Back up `/root/ipa-ca.crt`, `/root/root_ca.crt`
+> and `/etc/pki/pki-tomcat/alias` before uninstalling, and expect a fresh CSR.
+
 ## 9. Create the test user
 
 The role creates `m1test` without a password. Set one interactively (the password is in AKV):
@@ -477,7 +480,7 @@ ipa ca-show ipa
 ipa cert-show 1 || true
 getcert list | grep -E 'Request ID|status|MONITORING'
 ipa hbacrule-find
-systemctl is-active ipa dirsrv@IPA-INTERNAL krb5kdc httpd pki-tomcatd@pki-tomcat
+systemctl is-active ipa dirsrv@LAB-INTERNAL krb5kdc httpd pki-tomcatd@pki-tomcat
 firewall-cmd --list-all
 ipa config-show | head
 ```
@@ -490,8 +493,10 @@ Expected:
 - `kinit`/`klist` succeed; `ipa ping` returns `IPA server OK`.
 - `ipa ca-show ipa` shows the IPA CA; its issuer is the fleet root.
 - `getcert list` shows `MONITORING` for the HTTP/LDAP/PKINIT certificates.
-- `ipa hbacrule-find` is **empty** — `--no-hbac-allow` must leave no `allow_all` rule.
-- All five services are `active`.
+- `ipa hbacrule-find` is **empty** — `--no-hbac-allow` must leave no `allow_all` rule. It exits
+  `1` when nothing matches, which is the expected result, not an error.
+- All five services are `active`. The 389 DS instance is named after the **realm**, so for
+  `LAB.INTERNAL` the unit is `dirsrv@LAB-INTERNAL`.
 
 From a LAN client that trusts the fleet root:
 
@@ -541,6 +546,7 @@ Write into the runbook/report:
 ## Verification checklist
 
 Executed on: **2026-11-15** — §1–§6 executed and verified; §7 onward **not yet run**.
+Completed on: **2026-11-22** — §7–§8 done and §10 verified; §9, §11 and §12 outstanding.
 
 - [x] `local` storage carries `iso,vztmpl,backup,import,images,snippets` — `images` is required for the cloud-init ISO
 - [x] AlmaLinux 9 image downloaded into the **`import`** content type; `pvesm list local --content import` shows it
@@ -552,13 +558,13 @@ Executed on: **2026-11-15** — §1–§6 executed and verified; §7 onward **no
 - [x] `dig` A/PTR/SRV records correct — reverse zone holds `.250` only; SRVs under `lab.internal`, none under `ipa.internal`
 - [x] Three FreeIPA secrets provisioned in `homelab-bysxdb-kv`; script idempotent
 - [x] `/root/ipa.csr` generated with subject `O = LAB.INTERNAL, CN = Certificate Authority`
-- [ ] `/root/ipa.csr` signed by the root; `ipa-ca.crt` chains to the fleet root
-- [ ] `ipa-server-install` complete; `kinit admin`/`klist`/`ipa ping` pass
-- [ ] `ipa ca-show ipa` and `getcert list` show the external CA
-- [ ] WebUI direct over TLS, no Caddy
-- [ ] `ipa hbacrule-find` empty
-- [ ] `firewall-cmd --list-all` shows 88/464/443/636 from the LAN; no 389 or 80
-- [ ] `dig SSHFP` empty
+- [x] `/root/ipa.csr` signed by the root; `ipa-ca.crt` chains to the fleet root
+- [x] `ipa-server-install` complete; `kinit admin`/`klist`/`ipa ping` pass
+- [x] `ipa ca-show ipa` and `getcert list` show the external CA
+- [x] WebUI direct over TLS, no Caddy
+- [x] `ipa hbacrule-find` empty
+- [x] `firewall-cmd --list-all` shows 88/464/443/636 from the LAN; no 389 or 80
+- [x] `dig SSHFP` empty
 - [ ] CA mode and fingerprints recorded
 - [ ] M2 remains the gate before the first client
 
