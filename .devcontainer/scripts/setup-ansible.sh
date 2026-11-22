@@ -30,3 +30,20 @@ sudo "$ANSIBLE_VENV/bin/pip" install --quiet "$ANSIBLE_CORE_PIN" "$ANSIBLE_LINT_
 # /usr/local/bin precedes /usr/bin on PATH in every shell (bash and pwsh alike).
 sudo ln -sf "$ANSIBLE_VENV"/bin/ansible* /usr/local/bin/
 echo ":: $(ansible --version | head -n1) — $(ansible-lint --version 2>/dev/null | head -n1)"
+
+# ── Collections ─────────────────────────────────────────────────────
+# $ANSIBLE_VENV is root-owned, so install into the invoking user's collection
+# path (~/.ansible/collections) rather than a path under /opt — writing there
+# fails with PermissionError. azure.azcollection also needs its Python
+# requirements on the controller, or the Key Vault lookups die at runtime with
+# "name 'azure_cloud' is not defined".
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+"$ANSIBLE_VENV/bin/ansible-galaxy" collection install \
+  -r "$REPO_ROOT/ansible/requirements.yml" --force-with-deps
+
+AZ_COLLECTION="$(ls -d "$HOME"/.ansible/collections/ansible_collections/azure/azcollection 2>/dev/null)"
+if [[ -n "$AZ_COLLECTION" && -f "$AZ_COLLECTION/requirements-azure.txt" ]]; then
+  echo ":: Installing azure.azcollection Python requirements..."
+  "$ANSIBLE_VENV/bin/pip" install --quiet -r "$AZ_COLLECTION/requirements-azure.txt"
+fi
+echo ":: Collections ready."

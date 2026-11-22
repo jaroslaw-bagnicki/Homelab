@@ -20,11 +20,12 @@ if (-not $env:SSH_AUTH_SOCK -or -not (Test-Path $env:SSH_AUTH_SOCK)) {
 # Key Vault Secrets User on the vault. When the env vars are present,
 # authenticate silently as the SP — no interactive prompt. Otherwise
 # fall back to device auth against the cloud5.ovh tenant.
-# The Az module installs in the background on container create (setup-azps.ps1,
-# check /tmp/install-az.log). Until it is present, skip Azure auth quietly instead
-# of erroring on every terminal start.
-if (-not (Get-Module -ListAvailable -Name Az)) {
-  Write-Host ":: Az module not installed yet — skipping Azure auth (background install: tail -f /tmp/install-az.log)" -ForegroundColor DarkGray
+# The Az modules install in the background on container create (setup-azps.ps1,
+# check /tmp/install-az.log). Until they are present, skip Azure auth quietly
+# instead of erroring on every terminal start. Checks the modules the repo
+# actually uses rather than the `Az` meta-package, which does not install here.
+if (-not (Get-Module -ListAvailable -Name Az.Accounts)) {
+  Write-Host ":: Az modules not installed yet — skipping Azure auth (background install: tail -f /tmp/install-az.log)" -ForegroundColor DarkGray
 } elseif (-not (Get-AzContext)) {
   if ($env:AZURE_TENANT_ID -and $env:AZURE_CLIENT_ID -and $env:AZURE_CLIENT_SECRET) {
     Write-Host ":: Connecting to Azure as Service Principal homelab-codespaces-sp (tenant $env:AZURE_TENANT_ID)..." -ForegroundColor Cyan
