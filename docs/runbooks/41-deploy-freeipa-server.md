@@ -26,9 +26,12 @@ the server, the realm, the DNS glue and the CA chain before anything depends on 
 
 ## What changes
 
-- **VM 250 `ipa`** — AlmaLinux 9, 2 vCPU / 2 GB / 16 GB, static `192.168.2.250`, FQDN `ipa.internal`,
+- **VM 250 `ipa`** — AlmaLinux 9, 2 vCPU / 3 GB / 16 GB, static `192.168.2.250`, FQDN `ipa.internal`,
   `onboot 1`. VMID 250 is the `pve2` guest block's first number, and the ID *is* the address
-  ([ADR 31](../decisions/31-static-address-scheme.md)).
+  ([ADR 31](../decisions/31-static-address-scheme.md)). **3 GB, not 2** — at 2048 MB the install died at
+  step 22/32 with `Timeout encountered starting tracking of 'auditSigningCert cert-pki-ca'`, and sshd
+  could no longer fork a banner; see the [ADR 43](../decisions/43-freeipa-domain-realm.md) amendment of
+  2026-11-22.
 - **`ipa_host` role** — EL hostname/FQDN, `/etc/hosts`, chrony, firewalld LAN rules, `fleetadm` + fleet
   key, and the sshd certificate-trust wiring. It replaces `common`/`security`, which are
   Debian/Ubuntu-only; the CA keys themselves still come from `ca_trust`, which is OS-aware.
@@ -46,7 +49,7 @@ the server, the realm, the DNS glue and the CA chain before anything depends on 
       [runbook 43](43-proxmox-cluster-qdevice.md)); `pve2` chrony healthy.
 - [ ] Technitium on `edge` reachable — `ipa_host` probes it on `:53` and fails before pointing the VM
       at a resolver that is not there ([runbook 37](37-deploy-internal-access-stack.md), ADR 40/#174).
-- [ ] `pve2` has ≥ 2.5 GB free RAM and ≥ 20 GB free `local-lvm`. It carries no guests, so this is a
+- [ ] `pve2` has ≥ 3.5 GB free RAM and ≥ 20 GB free `local-lvm`. It carries no guests, so this is a
       check rather than a gate — `pve1` could not satisfy it beside the Home Assistant guests, which is
       why the server moved here.
 - [ ] AlmaLinux 9 Generic Cloud image downloaded and checksum-verified on `pve2`.
@@ -69,8 +72,8 @@ chronyc tracking
 ls -l /dev/tpmrm0 2>/dev/null || true
 ```
 
-- Record the memory headroom. The IPA VM is fixed at 2048 MB; do not start it if the host cannot keep
-  at least ~500 MB free.
+- Record the memory headroom. The IPA VM is fixed at 3072 MB; do not start it if the host cannot keep
+  at least ~800 MB free.
 - `local-lvm` must have room for the 16 GiB disk (the `pve2` thin pool is ~57 GB).
 - The TPM line is informational only — **M1 does not use the TPM**.
 
@@ -110,7 +113,7 @@ pvesm list local --content import
 
 ```sh
 qm create 250 \
-  --name ipa --memory 2048 --cores 2 --cpu host \
+  --name ipa --memory 3072 --cores 2 --cpu host \
   --ostype l26 --scsihw virtio-scsi-single \
   --net0 virtio,bridge=vmbr0 \
   --agent enabled=1 --serial0 socket --vga serial0

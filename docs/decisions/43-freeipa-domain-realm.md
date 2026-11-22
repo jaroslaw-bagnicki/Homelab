@@ -7,6 +7,8 @@
 **Amended:** 2026-11-15 — the realm and DNS domain are `LAB.INTERNAL`/`lab.internal`, not
 `IPA.INTERNAL`/`ipa.internal`: the installer rejects a hostname equal to the domain, and the hostname
 `ipa.internal` must stay. See the third amendment note below.
+**Amended:** 2026-11-22 — the guest is **3 GB**, not 2 GB: at 2048 MB the install timed out at step
+22/32 and sshd could no longer accept connections. See the fourth amendment note below.
 
 ---
 
@@ -229,6 +231,39 @@ What this changes, and what it does not:
   to `O=<realm>`. The offline signing kit checks that subject, so the kit changed with this amendment.
 - **The realm is still effectively permanent** — the consequence above is unchanged. This is the one
   chance to name it, and it is being taken before any client enrols.
+
+### Amendment — 2026-11-22
+
+**The guest is 3 GB, not 2 GB.** The original sizing was too small to complete the install.
+
+The external-CA phase 2 run died at step **22/32** with:
+
+```
+ERROR Timeout encountered starting tracking of 'auditSigningCert cert-pki-ca'.
+```
+
+Measurement taken at the failure, from the hypervisor: the guest sat at **93 % memory used (1907 of
+2048 MB) with 0 % CPU**. It was not computing — it was thrashing. certmonger could not start tracking
+the Dogtag audit certificate inside its wait window, and sshd could no longer fork far enough to send
+an SSH banner: TCP 22 accepted the connection, then every attempt timed out at the banner exchange.
+That last symptom is why the failure looked like a network or key problem for a while.
+
+Two things confirm it is a floor rather than a tuning preference:
+
+- **The installer's own guidance.** Upstream `ipa-server-install` refuses to run below ~1.2 GB and
+  recommends 4 GB; [research 46](../research/46-identity-and-access-stack.md) and
+  [idea 13](../ideas/13-freeipa-domain-controller.md) both say "≥ 2 GB, 4 GB recommended". 2 GB was
+  the floor read as the target.
+- **The host has room.** `pve2` carries no other guests and had 3273 MB available, so the extra
+  gigabyte costs nothing that was in use.
+
+**3072 MB** is the new figure — a full gigabyte of headroom over the observed 1907 MB working set,
+without the 4 GB that would leave `pve2` unable to run a second guest later. The memory is not
+hot-pluggable in this configuration, so the change requires a stop/start; it does **not** touch the
+disk, so the signed IPA CA and its CSR survive it and need no second IronKey ceremony.
+
+Unchanged: everything else — placement, VMID, address, realm, DNS authority, CA relation, rollout
+order.
 
 ## References
 
