@@ -42,7 +42,7 @@ The two kits differ only in **where the root key lives** and therefore **how the
 |---|---|---|
 | Root key | encrypted file on the stick | generated on the PIV chip, non-exportable |
 | Ceremony machine | live-USB boot with the network off (recommended) | the workstation, network on |
-| Per-signature auth | the stick's passphrase | the PIV PIN |
+| Per-signature auth | the stick's passphrase (held in **Keeper Vault**) | the PIV PIN |
 | Worst case if the machine is compromised | the key file can be copied | one rogue certificate; the key cannot leave |
 | Scripts | POSIX `sh` | PowerShell 7 |
 
@@ -64,7 +64,9 @@ token instead of regenerated — and that is not what v2 does today.
 
 - **v1** — a live-USB Linux boot with the network off, which is the recommended shape. Nothing installed,
   nothing downloaded; the bundled static `step` is all it needs, and the scripts warn rather than abort
-  when they find a network. See [`v1-ironkey/README.md`](v1-ironkey/README.md).
+  when they find a network. The FreeIPA CA signing in practice runs on the **Windows workstation** with
+  the bundled `step.exe` — see [`v1-ironkey/04-signing-ipa-ca.md`](v1-ironkey/04-signing-ipa-ca.md).
+  The root key passphrase lives in **Keeper Vault**, never on the stick and never in the repo.
 - **v2** — WSL (Ubuntu) on the Windows 11 workstation, with the token handed to WSL by `usbipd`. See
   [`v2-utrust-token/README.md`](v2-utrust-token/README.md).
 

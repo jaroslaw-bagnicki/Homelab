@@ -13,12 +13,11 @@ then signs the CAs under it.
 | [`01-building-step.md`](01-building-step.md) | puts the `step` CLI into this bundle — on the connected machine, before you leave |
 | [`02-issuing-root-cert.md`](02-issuing-root-cert.md) | creates the 10-year root on the stick — **once ever** |
 | [`03-signing-csr.md`](03-signing-csr.md) | signs the `step-ca` intermediate CSR — every year |
-| [`04-signing-ipa-ca.md`](04-signing-ipa-ca.md) | signs FreeIPA's `ipa.csr` — **once per IPA CA** |
-| [`05-signing-on-windows.md`](05-signing-on-windows.md) | the IPA CA signing on a **Windows workstation** — `step.exe`, no bash or WSL |
+| [`04-signing-ipa-ca.md`](04-signing-ipa-ca.md) | signs FreeIPA's `ipa.csr` — **once per IPA CA**, on the Windows workstation |
 | `root.sh` | creates the root CA on the stick; first run only |
 | `sign.sh` | signs the intermediate CSR, then verifies the result |
 | `step` | the CLI, linux/amd64 — **not in git** (42 MB), added by 01 |
-| `step.exe` | the CLI, windows/amd64 — **not in git** (45 MB), for [05](05-signing-on-windows.md) |
+| `step.exe` | the CLI, windows/amd64 — **not in git** (45 MB), for [04](04-signing-ipa-ca.md) |
 | `intermediate_ca.csr` | the request, created on the CA host by `pve1`'s TPM key — **not in git** |
 | `intermediate-ca.tpl` | the intermediate's required extensions |
 | `ipa-ca.tpl` | the FreeIPA CA shape |
@@ -31,11 +30,18 @@ then signs the CAs under it.
 1. **Build the bundle** — [`01`](01-building-step.md). On the connected machine, before you leave.
 2. **Create the root** — `./root.sh <stick-mount>` — [`02`](02-issuing-root-cert.md). **Once ever.**
 3. **Sign the intermediate** — `./sign.sh <stick-mount>` — [`03`](03-signing-csr.md). The annual job.
-4. **Sign the FreeIPA CA** — the `step certificate sign` command in [`04`](04-signing-ipa-ca.md). Once
-   per IPA CA. On Windows, run the `step.exe` command — [`05`](05-signing-on-windows.md).
+4. **Sign the FreeIPA CA** — the `step.exe certificate sign` command in [`04`](04-signing-ipa-ca.md).
+   Once per IPA CA, on the Windows workstation.
 
 Both scripts take the stick's mount path as the first argument and an optional passphrase file as the
 second. Neither has a default — the destination is always explicit.
+
+## The root key passphrase
+
+`root_ca_key` on the stick is **encrypted**. Its passphrase is held in **Keeper Vault** — never on the
+stick, never in this repo. Open the entry before any run that signs, and record the root fingerprint
+beside it when the root is created ([02](02-issuing-root-cert.md)). Lose the passphrase and the root
+key is dead, which means a full trust rotation ([ADR 38](../../decisions/38-private-ca-hierarchy-and-custody.md)).
 
 ## The ceremony machine
 
@@ -54,7 +60,8 @@ desktop works too:
 | Removable media | **not** auto-mounted — run `mountall`, or mount it yourself | auto-mounted under `/media/ubuntu/<label>` |
 | Network | nothing brings it up | NetworkManager may connect by itself |
 
-Running it on your normal workstation also works — that is what [05](05-signing-on-windows.md) does.
+Running it on your normal Windows workstation also works — that is what [04](04-signing-ipa-ca.md) does,
+and it is the proven path for the FreeIPA CA.
 
 ## Why `--template` and not `--profile`
 
