@@ -43,7 +43,14 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
 AZ_COLLECTION="$(ls -d "$HOME"/.ansible/collections/ansible_collections/azure/azcollection 2>/dev/null)"
 if [[ -n "$AZ_COLLECTION" && -f "$AZ_COLLECTION/requirements-azure.txt" ]]; then
-  echo ":: Installing azure.azcollection Python requirements..."
-  "$ANSIBLE_VENV/bin/pip" install --quiet -r "$AZ_COLLECTION/requirements-azure.txt"
+  # Not the full requirements file: it pins azure-cli-core plus ~55 packages,
+  # and one of them (uamqp, for Azure Service Bus) is a C extension with no
+  # wheel for this Python — "Failed to build wheel for uamqp" aborts the install
+  # and leaves azure-* uninstalled, so the Key Vault lookups then die with
+  # "name 'azure_cloud' is not defined". Only the Key Vault surface is used here.
+  echo ":: Installing Key Vault Python requirements..."
+  sudo "$ANSIBLE_VENV/bin/pip" install --quiet \
+    "azure-identity==1.7.0" "azure-core==1.28.0" \
+    "azure-keyvault==4.2.0" "azure-mgmt-keyvault==10.0.0"
 fi
 echo ":: Collections ready."
