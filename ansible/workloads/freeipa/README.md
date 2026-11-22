@@ -2,8 +2,8 @@
 
 ## Purpose
 
-A self-contained Ansible recipe that installs the **FreeIPA server** on the `ipa` VM (VMID 216,
-`192.168.2.216`) on the `pve1` node, realm **`IPA.INTERNAL`**, DNS domain **`ipa.internal`**,
+A self-contained Ansible recipe that installs the **FreeIPA server** on the `ipa` VM (VMID 250,
+`192.168.2.250`) on the `pve2` node, realm **`LAB.INTERNAL`**, DNS domain **`lab.internal`**,
 integrated DNS **off**. Decision: [ADR 43](../../../docs/decisions/43-freeipa-domain-realm.md);
 CA relation: [ADR 42](../../../docs/decisions/42-pki-topology-sibling-cas.md); implementation:
 [issue #164](https://github.com/jaroslaw-bagnicki/Homelab/issues/164) and
@@ -15,7 +15,7 @@ The role targets `freeipa_ca_mode: external`:
 
 1. **Phase 1** runs `ipa-server-install --external-ca` and emits `/root/ipa.csr`.
 2. The operator signs that CSR with the offline fleet root
-   ([`sign-ipa-ca.sh`](../../../docs/ca-signing-kit/v1-ironkey/sign-ipa-ca.sh), the active IronKey
+   ([`04-signing-ipa-ca.md`](../../../docs/ca-signing-kit/v1-ironkey/04-signing-ipa-ca.md), the active IronKey
    flow — [runbook 41](../../../docs/runbooks/41-deploy-freeipa-server.md) §7) and copies
    `ipa-ca.crt` + `root_ca.crt` back to `/root`.
 3. **Phase 2** reruns the installer with both `--external-cert-file` arguments and completes the
@@ -29,23 +29,25 @@ The role refuses to complete Phase 2 until both signed files exist.
 | Variable | Default | Purpose |
 |---|---|---|
 | `freeipa_ca_mode` | `external` | `external` or `selfsigned` |
-| `freeipa_server_package` | `freeipa-server` | Fedora package name; override to `ipa-server` on RHEL/AlmaLinux |
+| `freeipa_server_package` | `ipa-server` | RHEL/AlmaLinux/Rocky package name; override to `freeipa-server` on Fedora |
 | `freeipa_ds_password_secret` | `freeipa-directory-manager-password` | AKV secret for Directory Manager |
 | `freeipa_admin_password_secret` | `freeipa-admin-password` | AKV secret for `admin` |
 | `freeipa_ds_password` / `freeipa_admin_password` | `""` | Override to skip the AKV lookup (tests) |
 | `freeipa_test_user` | `m1test` | M1 test user; its password is set interactively in the runbook |
 
 The realm, domain, FQDN and address are fixed in `defaults/main.yml` and must match
-`host_vars/ipa.yml` and Technitium.
+`host_vars/ipa.yml` and Technitium. The hostname (`ipa.internal`) deliberately differs from the
+IPA domain (`lab.internal`) — `ipa-server-install` refuses a hostname equal to the domain, and
+requires the hostname to be fully qualified.
 
 ## Base guest
 
-The role assumes `playbook-ipa.yml` has already applied `ipa_host`: Fedora 45, FQDN
+The role assumes `playbook-ipa.yml` has already applied `ipa_host`: AlmaLinux 9, FQDN
 `ipa.internal`, `/etc/hosts`, the Technitium resolver pin, chrony, firewalld LAN rules and the
 `fleetadm` key. It is **not** a Debian guest and does not use `common`/`security`.
 
-Fedora ships the server as `freeipa-server`; the role uses `freeipa_server_package` so an
-AlmaLinux/Rocky host can override it to `ipa-server` without changing the tasks.
+RHEL/AlmaLinux/Rocky ship the server as `ipa-server`; Fedora calls it `freeipa-server`. The role
+uses `freeipa_server_package` so either name works without changing the tasks.
 
 ## Deploy
 

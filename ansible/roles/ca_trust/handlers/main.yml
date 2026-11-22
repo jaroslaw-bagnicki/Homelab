@@ -1,5 +1,7 @@
 ---
+# One handler, because `notify` matches by name and cannot choose between two. The command is
+# read from the same per-family table the task list uses, so the two cannot drift apart.
 - name: Update the system CA certificate store
   ansible.builtin.command:
-    cmd: update-ca-certificates
+    cmd: "{{ ca_trust_layouts[ansible_facts['os_family']].rebuild }}"
   changed_when: true

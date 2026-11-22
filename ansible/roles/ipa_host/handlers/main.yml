@@ -3,3 +3,8 @@
   ansible.builtin.service:
     name: NetworkManager
     state: reloaded
+
+- name: Restart sshd
+  ansible.builtin.service:
+    name: sshd
+    state: restarted

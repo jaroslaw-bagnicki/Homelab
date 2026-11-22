@@ -20,8 +20,9 @@ Creates the 10-year root CA on the secure USB stick. **First run only** — once
 already there: replacing a root is a trust rotation — every client would have to re-trust — not a
 re-run.
 
-When it asks for a passphrase, **write it down and put it in the safe before you leave the machine.** It
-is the only way to use this root key again; lose it and the key is dead.
+When it asks for a passphrase, **store it in Keeper Vault before you leave the machine**, together
+with the root fingerprint it prints at the end. It is the only way to use this root key again; lose it
+and the key is dead, which means reissuing the root and re-trusting every client.
 
 To drive it non-interactively, put the passphrase in a file on `/tmp` and pass the path as a second
 argument — then delete that file before powering off:
@@ -54,8 +55,8 @@ inherits nothing from a CSR (it is the trust anchor).
 Ignore `"valid": false` in the JSON — that is normal for a root, since there is no higher authority to
 validate it against. `self_signed: true` is the correct check.
 
-It then prints the root fingerprint. **Record it outside the repo**, in the safe or a password manager,
-together with the passphrase.
+It then prints the root fingerprint. **Record it outside the repo**, in **Keeper Vault**, next to the
+root key passphrase — the two belong together.
 
 ## If it refuses
 

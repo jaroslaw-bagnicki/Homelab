@@ -13,6 +13,7 @@ Significant architectural and technology choices recorded in
 
 | # | Date | ADR | Status |
 |---|------|-----|--------|
+| 54 | 2026-11-08 | [VM Provisioning — Cloud Image + Cloud-Init, Never a Hand-Clicked Installer](54-vm-provisioning-cloud-image.md) | Accepted |
 | 53 | 2026-11-21 | [Retire OpenCode as the Agent Solution — Mistral Vibe Is the Supported Agent](53-retire-opencode-use-mistral-vibe.md) | Accepted |
 | 52 | 2026-11-15 | [DevContainer Dependency Cadence — Weekly Dependabot for Features, Quarterly Review of Base and Pins](52-devcontainer-dependency-cadence.md) | Proposed |
 | 51 | 2026-11-14 | [AI Model Split — DeepSeek V4.1 Flash Daily via Mistral, Large 4 for Heavy Tasks](51-ai-model-split-deepseek-mistral.md) | Accepted |
@@ -23,7 +24,7 @@ Significant architectural and technology choices recorded in
 | 46 | 2026-10-31 | [Observability Host — VictoriaLogs, Netdata Parent and Grafana in One LXC](46-grafana-logs-ui-victorialogs.md) | Proposed |
 | 45 | 2026-10-27 | [Workload Identity — One Mechanism per Protocol, Workloads as Directory Users](45-workload-identity.md) | Accepted |
 | 44 | 2026-10-27 | [Authentik as the Fleet Identity Provider — an LXC on `pve1`, FreeIPA Source, SSO-Exempt Management Planes](44-authentik-identity-provider.md) | Accepted |
-| 43 | 2026-10-25 | [FreeIPA as the Lab's Domain — `ipa.internal`, Technitium Keeps DNS](43-freeipa-domain-realm.md) | Accepted |
+| 43 | 2026-10-25 | [FreeIPA as the Lab's Domain — `lab.internal`, Technitium Keeps DNS](43-freeipa-domain-realm.md) | Accepted |
 | 42 | 2026-10-25 | [PKI Topology — One Offline Root, Sibling Subordinate CAs](42-pki-topology-sibling-cas.md) | Accepted |
 | 41 | 2026-10-18 | [SSH Access — step-ca Certificates, Authentik Identity, Shared AI-Agent Identity](41-ssh-certificates-step-ca.md) | Accepted |
 | 40 | 2026-10-17 | [Internal DNS and Reverse Proxy — Technitium + Caddy on the Edge Node](40-internal-dns-proxy-edge.md) | Accepted |

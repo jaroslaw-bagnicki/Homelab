@@ -26,6 +26,12 @@ netdata_retention_tiers_by_role:
 netdata_retention_tiers: "{{ netdata_retention_tiers_by_role[netdata_role] }}"
 netdata_bind: "127.0.0.1"
 netdata_port: 19999
+# The name Netdata shows in the dashboard and registers with the parent. Defaults to the
+# inventory name, which is also what `common` sets as the system hostname — so the two agree
+# everywhere except a host whose hostname is deliberately an FQDN (the FreeIPA server, whose
+# realm requires it). Overriding here decouples the display label from the system hostname
+# without touching Kerberos or the realm.
+netdata_hostname: "{{ inventory_hostname }}"
 # Serve listeners over TLS. The parent sets this, plus a per-listener `bind to` spec
 # (e.g. `192.168.2.201:19999=dashboard^SSL=force`) so the dashboard is HTTPS-only.
 netdata_tls: false

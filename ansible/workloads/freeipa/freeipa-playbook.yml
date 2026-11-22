@@ -1,13 +1,13 @@
 ---
 # FreeIPA server workload — self-contained recipe.
 #
-# Installs the FreeIPA server on the `ipa` VM (VMID 216 on the `pve1` node),
-# realm IPA.INTERNAL, DNS domain ipa.internal, integrated DNS OFF. The CA is
+# Installs the FreeIPA server on the `ipa` VM (VMID 250 on the `pve2` node),
+# realm LAB.INTERNAL, DNS domain lab.internal, integrated DNS OFF. The CA is
 # installed with --external-ca and its CSR is signed by the offline fleet root;
 # the second run completes the install once the signed chain is on the guest.
 #
 # The base guest (EL hostname, firewalld, fleet key, chrony) is applied by
-# playbook-ipa.yml — this workload assumes a Fedora 45 guest.
+# playbook-ipa.yml — this workload assumes an AlmaLinux 9 guest.
 #
 # Two-phase external-ca run:
 #   1. ansible-playbook .../freeipa-playbook.yml   -> emits /root/ipa.csr

@@ -1,6 +1,14 @@
 ---
-- name: Configure ipa (FreeIPA server VM on pve1) base
+- name: Configure ipa (FreeIPA server VM on pve2) base
   hosts: ipa
   become: true
   roles:
+    # ca_trust first: it installs the SSH user CA public key that ipa_host points sshd at.
+    # Without it the host would accept only the break-glass fleet key.
+    - ca_trust
     - ipa_host
+    # Monitoring and logging come after the base role: the Netdata child needs the
+    # pinned resolver and chrony, and Fluent Bit ships journald records that only
+    # start to matter once the host is a fleet member.
+    - netdata
+    - fluentbit

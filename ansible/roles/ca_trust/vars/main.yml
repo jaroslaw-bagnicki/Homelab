@@ -1,3 +1,17 @@
 ---
-ca_trust_file: /usr/local/share/ca-certificates/homelab-root-ca.crt
-ca_trust_bundle: /etc/ssl/certs/ca-certificates.crt
+# Trust-store layout per OS family. `tasks/main.yml` and `handlers/main.yml` both read this
+# table, so the paths and the rebuild command cannot drift apart.
+ca_trust_layouts:
+  Debian:
+    file: /usr/local/share/ca-certificates/homelab-root-ca.crt
+    bundle: /etc/ssl/certs/ca-certificates.crt
+    rebuild: update-ca-certificates
+  RedHat:
+    file: /etc/pki/ca-trust/source/anchors/homelab-root-ca.crt
+    bundle: /etc/pki/tls/certs/ca-bundle.crt
+    rebuild: update-ca-trust extract
+
+# Derived lazily at first use, when facts are already gathered — so the task list needs no
+# `set_fact` step and reads `ca_trust_file` rather than an index expression.
+ca_trust_file: "{{ ca_trust_layouts[ansible_facts['os_family']].file }}"
+ca_trust_bundle: "{{ ca_trust_layouts[ansible_facts['os_family']].bundle }}"

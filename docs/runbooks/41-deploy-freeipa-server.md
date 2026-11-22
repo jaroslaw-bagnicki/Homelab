@@ -1,9 +1,13 @@
-# FreeIPA Server — M1 on `pve1` (Fedora Cloud VM, External CA)
+# FreeIPA Server — M1 on `pve2` (AlmaLinux 9 Cloud VM, External CA)
 
-> Deploy the FreeIPA server for the lab's Linux domain: Fedora 45 Cloud VM **216** on the `pve1` node,
-> FQDN **`ipa.internal`**, realm **`IPA.INTERNAL`**, integrated DNS **off**, CA installed with
-> **`--external-ca`** and signed by the offline fleet root. Decision:
-> [ADR 43](../decisions/43-freeipa-domain-realm.md); CA relation:
+> Deploy the FreeIPA server for the lab's Linux domain: AlmaLinux 9 Cloud VM **250** on the `pve2` node,
+> FQDN **`ipa.internal`**, IPA domain **`lab.internal`**, realm **`LAB.INTERNAL`**, integrated DNS **off**,
+> CA installed with **`--external-ca`** and signed by the offline fleet root. Decision:
+> [ADR 43](../decisions/43-freeipa-domain-realm.md) (amended 2026-11-07 — the server moved from `pve1`
+> to `pve2`; amended 2026-11-14 — the guest OS moved from Fedora 45 to AlmaLinux 9; amended 2026-11-15 —
+> the realm and domain were renamed to `LAB.INTERNAL`/`lab.internal` because `ipa-server-install`
+> rejects a hostname equal to the domain; amended 2026-11-22 — the guest needs **3 GB, not 2**, because
+> 2 GB cannot finish the install); CA relation:
 > [ADR 42](../decisions/42-pki-topology-sibling-cas.md); tracker:
 > [issue #164](https://github.com/jaroslaw-bagnicki/Homelab/issues/164) M1.
 >
@@ -23,31 +27,43 @@ the server, the realm, the DNS glue and the CA chain before anything depends on 
 
 ## What changes
 
-- **VM 216 `ipa`** — Fedora 45, 2 vCPU / 2 GB / 16 GB, static `192.168.2.216`, FQDN `ipa.internal`,
-  `onboot 1`.
+- **VM 250 `ipa`** — AlmaLinux 9, 2 vCPU / 3 GB / 16 GB, static `192.168.2.250`, FQDN `ipa.internal`,
+  `onboot 1`. VMID 250 is the `pve2` guest block's first number, and the ID *is* the address
+  ([ADR 31](../decisions/31-static-address-scheme.md)). **3 GB, not 2** — at 2048 MB the install died at
+  step 22/32 with `Timeout encountered starting tracking of 'auditSigningCert cert-pki-ca'`, and sshd
+  could no longer fork a banner; see the [ADR 43](../decisions/43-freeipa-domain-realm.md) amendment of
+  2026-11-22.
 - **`ipa_host` role** — EL hostname/FQDN, `/etc/hosts`, chrony, firewalld LAN rules, `fleetadm` + fleet
-  key. It replaces `common`/`security`, which are Debian/Ubuntu-only.
-- **Technitium** — `ipa.internal` A, reverse zone + PTR, and the Kerberos/LDAP SRV records.
-- **FreeIPA workload** — `freeipa-server`, external CA two-phase install, `admin` + `m1test`.
-- **Signing kit** — `ipa-ca.tpl` + `New-IpaCa.ps1` sign the IPA CA CSR with the existing root.
+  key, and the sshd certificate-trust wiring. It replaces `common`/`security`, which are
+  Debian/Ubuntu-only; the CA keys themselves still come from `ca_trust`, which is OS-aware.
+- **Technitium** — `ipa.internal` A, reverse zone + PTR, and the Kerberos/LDAP SRV records under the IPA
+  domain `lab.internal`.
+- **FreeIPA workload** — `ipa-server`, external CA two-phase install, `admin` + `m1test`.
+- **Offline kit** — `ipa-ca.tpl` and the `step certificate sign` command sign the IPA CA CSR with the
+  existing root.
 
 ## Prerequisites
 
-- [ ] ADR 42 and ADR 43 **Accepted** (done, 2026-10-25).
-- [ ] `pve1` base-provisioned ([runbook 28](28-pve1-proxmox-node.md)); `pve1` chrony healthy.
+- [ ] ADR 42 and ADR 43 **Accepted** (done, 2026-10-25; ADR 43 amended 2026-11-07 for the `pve2`
+      placement).
+- [ ] `pve2` base-provisioned and in the `homelab` cluster ([runbook 42](42-pve2-proxmox-node.md),
+      [runbook 43](43-proxmox-cluster-qdevice.md)); `pve2` chrony healthy.
 - [ ] Technitium on `edge` reachable — `ipa_host` probes it on `:53` and fails before pointing the VM
       at a resolver that is not there ([runbook 37](37-deploy-internal-access-stack.md), ADR 40/#174).
-- [ ] `pve1` has ≥ 2.5 GB free RAM and ≥ 20 GB free `local-lvm`; if not, stop — [idea 15](../ideas/15-second-proxmox-node.md)
-      is the prerequisite.
-- [ ] Fedora 45 Cloud Base Generic image downloaded and checksum-verified on `pve1`.
-- [ ] The **secure USB stick** and a signing machine for the CA ceremony (air-gap recommended).
+- [ ] `pve2` has **≥ 4 GB** free RAM and ≥ 20 GB free `local-lvm`. The guest is fixed at 3 072 MB and
+      §1 keeps ~800 MB headroom, so 3.5 GB is not enough — 3 GB of guest plus host room is the floor. It
+      carries no guests, so this is a check rather than a gate — `pve1` could not satisfy it beside the
+      Home Assistant guests, which is why the server moved here.
+- [ ] AlmaLinux 9 Generic Cloud image downloaded and checksum-verified on `pve2`.
+- [ ] The **secure USB stick** and the **Windows workstation** that holds it, for the CA ceremony — the
+      only path proven to work (§7).
 - [ ] Controller has `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID` and Ansible collections.
 - [ ] `automation` certificate (or break-glass fleet key) in `ssh-agent`; `ansible-lint` available.
-- [ ] `.216` and VMID 216 are free.
+- [ ] `.250` and VMID 250 are free.
 
 ---
 
-## 1. Preflight on `pve1`
+## 1. Preflight on `pve2`
 
 ```sh
 free -m
@@ -59,87 +75,170 @@ chronyc tracking
 ls -l /dev/tpmrm0 2>/dev/null || true
 ```
 
-- Record the memory headroom. The IPA VM is fixed at 2048 MB; do not start it if the host cannot keep
-  at least ~500 MB free.
-- `local-lvm` must have room for the 16 GiB disk.
+- Record the memory headroom. The IPA VM is fixed at 3072 MB; do not start it if the host cannot keep
+  at least ~800 MB free.
+- `local-lvm` must have room for the 16 GiB disk (the `pve2` thin pool is ~57 GB).
 - The TPM line is informational only — **M1 does not use the TPM**.
 
-## 2. Create the Fedora 45 VM
+## 2. Create the AlmaLinux 9 VM
 
-On `pve1` (`ssh fleetadm@192.168.2.201`, then `sudo -i`):
+On `pve2` (`ssh fleetadm@192.168.2.202`, then `sudo -i`).
+
+### 2a. Download the image into the `import` content type
+
+A `.qcow2` is a **disk image, not an ISO**. Proxmox files it under the **`import`** content type
+(`.ova`/`.qcow2`/`.raw`/`.vmdk`), not `iso` (`.iso`/`.img` only) — so it belongs in
+`/var/lib/vz/import/` and appears under **Import** in the UI, never under **ISO Images**.
+
+Use the native downloader, which verifies the checksum server-side:
+
+**Datacenter → node `pve2` → Storage → `local` → Import → Download from URL**
+
+| Field | Value |
+|---|---|
+| URL | `https://repo.almalinux.org/almalinux/9/cloud/x86_64/images/AlmaLinux-9-GenericCloud-9.8-20261112.x86_64.qcow2` |
+| File name | `AlmaLinux-9-GenericCloud-9.8-20261112.x86_64.qcow2` |
+| Content | **Import** |
+| Checksum algorithm | `sha256` |
+| Checksum | the value from `https://repo.almalinux.org/almalinux/9/cloud/x86_64/images/CHECKSUM` |
+
+Pin the build (`9.8-20261112`) — do not use a floating `latest`. Verify it landed where Proxmox can see it:
 
 ```sh
-cd /var/lib/vz/template/iso
-# Fedora 45 current stable, pinned to build 1.4. Do not use a floating "latest".
-wget https://download.fedoraproject.org/pub/fedora/linux/releases/45/Cloud/x86_64/images/Fedora-Cloud-Base-Generic-45-1.4.x86_64.qcow2
-wget https://download.fedoraproject.org/pub/fedora/linux/releases/45/Cloud/x86_64/images/Fedora-Cloud-45-1.4-x86_64-CHECKSUM
-sed -n 's/^SHA256 (\(Fedora-Cloud-Base-Generic-45-1.4.x86_64.qcow2\)) = \(.*\)$/\2  \1/p' \
-  Fedora-Cloud-45-1.4-x86_64-CHECKSUM \
-  | sha256sum -c -
+pvesm list local --content import
+# local:import/AlmaLinux-9-GenericCloud-9.8-20261112.x86_64.qcow2  qcow2  import  <size>
+```
 
-qm create 216 \
-  --name ipa --memory 2048 --cores 2 --cpu host \
+> **Do not `wget` into `template/iso/`.** The file works there — `qm importdisk` takes a filesystem
+> path — but Proxmox cannot list it, so the UI shows ISO Images empty and the download looks failed.
+
+### 2b. Create the VM
+
+```sh
+qm create 250 \
+  --name ipa --memory 3072 --cores 2 --cpu host \
   --ostype l26 --scsihw virtio-scsi-single \
   --net0 virtio,bridge=vmbr0 \
   --agent enabled=1 --serial0 socket --vga serial0
 
-qm importdisk 216 /var/lib/vz/template/iso/Fedora-Cloud-Base-Generic-45-1.4.x86_64.qcow2 local-lvm
-qm set 216 --scsi0 local-lvm:vm-216-disk-0 --boot order=scsi0 --ide2 local:cloudinit
-qm resize 216 scsi0 16G
-qm set 216 --onboot 1
+qm importdisk 250 /var/lib/vz/import/AlmaLinux-9-GenericCloud-9.8-20261112.x86_64.qcow2 local-lvm
+qm set 250 --scsi0 local-lvm:vm-250-disk-0 --boot order=scsi0 --ide2 local:cloudinit
+qm resize 250 scsi0 16G
+qm set 250 --onboot 1
 ```
 
-The Fedora Cloud Base Generic image is BIOS-bootable. If this `qm` configuration does not boot it,
+`qm importdisk` takes a **filesystem path**, not a storage volume ID — the `local:import/…` volid from
+`pvesm list` is not what goes here. The import converts the sparse qcow2 into a **raw** volume on
+`local-lvm` (LVM-thin cannot store qcow2), which is why it reports transferring the image's *virtual*
+size (~10 GiB) rather than the 616 MB file.
+
+The AlmaLinux Generic Cloud image is BIOS-bootable. If this `qm` configuration does not boot it,
 switch the VM to OVMF (`--bios ovmf` plus an EFI disk) rather than changing the image.
 
-> **Fedora lifecycle.** Fedora 45 is supported for roughly 13 months. Minor `dnf upgrade` is routine,
-> but **do not run a Fedora major release upgrade before M2** (`ipa-backup` + a rehearsed restore):
-> an upgrade is a domain-controller downtime event, and the backup is the way back. Plan the Fedora 46
-> upgrade only after M2 passes.
+> **Why AlmaLinux 9 and not Fedora.** The guest was originally specified as Fedora 45. It cannot be
+> managed by Ansible: Fedora 45 ships **only Python 3.15**, and every `ansible-core` release through
+> 2.21.6 supports target Python ≤ 3.14 — the `_patches` module imports `dataclasses._is_type`, which
+> Python 3.15 removed, so *any* module fails at load with
+> `AttributeError: module 'dataclasses' has no attribute '_is_type'`. Pointing Ansible at an older
+> interpreter does not help either: Fedora 45 builds `libdnf5` and `dnf4` bindings **only** for
+> Python 3.15 (`python(abi) = 3.15`), so the `dnf` module then fails with
+> `Could not import the libdnf5 python module`. AlmaLinux 9 runs Python 3.9, which every `ansible-core`
+> supports, and carries FreeIPA 4.12 in AppStream. It is also supported through 2032, so the
+> 13-month major-upgrade-as-domain-controller-downtime problem disappears. This is the OS
+> [research 46](../research/46-identity-and-access-stack.md) §4 and
+> [idea 13](../ideas/13-freeipa-domain-controller.md) originally named; Fedora was the drift.
+> Recorded in the [ADR 43](../decisions/43-freeipa-domain-realm.md) amendment of 2026-11-14.
 
-Cloud-init needs a `snippets`-capable storage. If `local` does not already accept snippets:
-**Datacenter → Storage → local → Edit → Content → Snippets**, then create
-`/var/lib/vz/snippets/ipa-user-data.yaml`:
+Cloud-init needs a `snippets`-capable storage. `pvesm set --content` **replaces** the whole list rather
+than appending, so state every type the storage must keep — dropping `images` breaks
+`qm cloudinit update` with `storage 'local' does not support content-type 'images'`, because the
+cloud-init ISO is written as an `images` volume:
 
-```yaml
+```sh
+pvesm set local --content iso,vztmpl,backup,import,images,snippets
+```
+
+Then create `/var/lib/vz/snippets/ipa-user-data.yaml`. **Generate the key line from the key file** —
+a mistyped key leaves the guest unreachable with no console-free way back in:
+
+```sh
+cat > /var/lib/vz/snippets/ipa-user-data.yaml <<'EOF'
 #cloud-config
 hostname: ipa
-fqdn: ipa.internal
-manage_etc_hosts: true
+manage_etc_hosts: false
 users:
   - name: fleetadm
     sudo: ALL=(ALL) NOPASSWD:ALL
     groups: wheel
     shell: /bin/bash
     ssh_authorized_keys:
-      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKAucOXvwvHvSn11uzG49QFvJPxodbOjPEWkvdS9vCVG fleetadm@homelab
+EOF
+printf '      - %s\n' "$(cat /path/to/fleetadm.pub)" >> /var/lib/vz/snippets/ipa-user-data.yaml
+```
+
+> **`manage_etc_hosts` is `false` on purpose.** Setting it `true` makes cloud-init write
+> `127.0.0.1 ipa.internal ipa` into `/etc/hosts`, and a loopback mapping outranks DNS in
+> `nsswitch` (`files dns`). The FQDN then resolves to `127.0.0.1` — or, on a dual-stack host, to
+> the link-local `fe80::` address — and every FreeIPA preflight check that asks for the host's own
+> address gets the wrong answer. `ipa_host` owns this line instead (§3), writing the real
+> `192.168.2.250` mapping exactly once.
+>
+> **No `fqdn:` key either.** cloud-init derives the FQDN as `hostname` + the search domain it is
+> given, and `qm set --searchdomain internal` already supplies that. Declaring `fqdn: ipa.internal`
+> *as well* appends the search domain a second time, and the guest boots as
+> **`ipa.internal.internal`**. `ipa_host` sets the FQDN explicitly in §3, so the snippet only needs
+> the short `hostname`.
+
+Verify the key before starting the VM — compare the fingerprint against the known fleet key:
+
+```sh
+ssh-keygen -lf /path/to/fleetadm.pub
+# 256 SHA256:… fleetadm@homelab
 ```
 
 Apply and start:
 
 ```sh
-qm set 216 --cicustom user=local:snippets/ipa-user-data.yaml \
-  --ipconfig0 ip=192.168.2.216/24,gw=192.168.2.1 \
-  --nameserver 192.168.2.240 --searchdomain ipa.internal
-qm cloudinit update 216
-qm start 216
-qm status 216
-qm guest cmd 216 network-get-interfaces || true
+qm set 250 --cicustom user=local:snippets/ipa-user-data.yaml \
+  --ipconfig0 ip=192.168.2.250/24,gw=192.168.2.1 \
+  --nameserver 192.168.2.240 --searchdomain internal
+qm cloudinit update 250
+qm start 250
+qm status 250
+qm guest cmd 250 network-get-interfaces || true
 ```
 
 The `--nameserver` above is the cloud-init bootstrap only. `ipa_host` owns the durable pin: it sets
 NetworkManager `dns=none`, probes Technitium on `:53`, then writes `/etc/resolv.conf`
 (`nameserver 192.168.2.240`, `search internal`), following the host-owned resolver rule from
-[ADR 40](../decisions/40-internal-dns-proxy-edge.md) / #174. Fedora would otherwise rewrite the file
-from NetworkManager at boot.
+[ADR 40](../decisions/40-internal-dns-proxy-edge.md) / #174. NetworkManager would otherwise rewrite the
+file from DHCP at boot.
 
-Verify from the LAN workstation:
+Verify from the LAN workstation. **Certificate SSH does not work yet** — `TrustedUserCAKeys` and
+`AuthorizedPrincipalsFile` are installed by `ipa_host` in §3, so a fresh guest rejects the `agent-ai`
+certificate with `Permission denied (publickey)`. That is the ADR 41 transition state, not a fault.
+Use the break-glass fleet key for this check:
 
-```sh
-ssh fleetadm@192.168.2.216 'hostname -f; getent hosts ipa.internal; sudo -n whoami; chronyc tracking'
+```powershell
+./scripts/Import-HomelabFleetKey.ps1    # 1 h TTL, root-equivalent — drop it early with ssh-add -D
 ```
 
-Expected: `ipa.internal`, `192.168.2.216 ipa.internal`, `root`, and a synchronised chrony.
+```sh
+ssh fleetadm@192.168.2.250 'hostname -f; sudo -n whoami; chronyc tracking'
+```
+
+Expected: `ipa.internal`, `root`, and a synchronised chrony.
+
+> **Do not use `getent hosts ipa.internal` to verify DNS here.** Plain `getent hosts` queries
+> `AF_UNSPEC` and lets the `myhostname` NSS module answer with the interface's link-local `fe80::`
+> address — a true statement about the interface, and useless as proof that the FQDN maps to the LAN
+> address. Use **`getent ahostsv4 ipa.internal`**, which returns `192.168.2.250`. For the resolver
+> itself, query Technitium directly (§4); note that AlmaLinux 9 ships no `dig` (`bind-utils`), so
+> `dnf install bind-utils` first if you want it.
+
+`/etc/resolv.conf` is written by cloud-init from the `--nameserver` value at this point. That is not
+durable — NetworkManager regenerates it from DHCP at boot — so `ipa_host` sets NetworkManager
+`dns=none` and replaces the file with a static pin in §3 (ADR 40 / #174).
 
 ## 3. Apply the EL base role
 
@@ -151,13 +250,31 @@ ansible-playbook ansible/playbooks/playbook-ipa.yml --diff
 Verify:
 
 ```sh
-ssh fleetadm@192.168.2.216 'hostname -f; sudo -n whoami'
-ssh fleetadm@192.168.2.216 'sudo firewall-cmd --list-rich-rules; sudo systemctl is-active chronyd firewalld'
-ssh fleetadm@192.168.2.216 'cat /etc/resolv.conf; getent hosts ipa.internal'
+ssh fleetadm@192.168.2.250 'hostname -f; sudo -n whoami'
+ssh fleetadm@192.168.2.250 'sudo firewall-cmd --list-rich-rules; sudo systemctl is-active chronyd firewalld'
+ssh fleetadm@192.168.2.250 'cat /etc/resolv.conf'
 ```
 
 `/etc/resolv.conf` must be the Ansible-managed file — `nameserver 192.168.2.240`, `search internal` —
 not the cloud-init placeholder and not a `systemd-resolved` symlink.
+
+Certificate SSH now works: `ca_trust` installs the fleet CA public keys and the X.509 root, and
+`ipa_host` wires sshd to them (`TrustedUserCAKeys`, `AuthorizedPrincipalsFile`, and
+`/etc/ssh/auth_principals/fleetadm` accepting `automation` and `agent-ai`). Drop the break-glass key
+and confirm the certificate alone is enough:
+
+```powershell
+ssh-add -D
+./scripts/Initialize-HomelabFleetSession.ps1 -Agent copilot
+```
+
+```sh
+ssh fleetadm@192.168.2.250 'hostname -f; sudo -n whoami'   # ipa.internal / root, via certificate
+```
+
+> **`playbook-ipa.yml` runs `ca_trust` before `ipa_host`** — the CA public keys have to exist before
+> sshd is pointed at them, and `ipa_host` asserts that they do. The role also validates with `sshd -t`
+> before restarting, so a bad drop-in fails the run instead of locking you out.
 
 ## 4. Add the DNS records in Technitium
 
@@ -167,19 +284,37 @@ From the LAN workstation, after CR:
 ansible-playbook ansible/playbooks/playbook-technitium.yml --diff
 ```
 
-Verify from a LAN client:
+Verify from a LAN client. **Query Technitium directly** — `getent` on the guest answers from
+`/etc/hosts` and proves nothing:
 
 ```sh
-dig @192.168.2.240 ipa.internal +short                 # 192.168.2.216
-dig @192.168.2.240 -x 192.168.2.216 +short             # ipa.internal.
-dig @192.168.2.240 _kerberos._tcp.ipa.internal SRV +short  # 0 100 88 ipa.internal.
-dig @192.168.2.240 _kerberos._udp.ipa.internal SRV +short
-dig @192.168.2.240 _kpasswd._tcp.ipa.internal SRV +short   # 0 100 464 ipa.internal.
-dig @192.168.2.240 _ldap._tcp.ipa.internal SRV +short      # 0 100 389 ipa.internal.
+dig @192.168.2.240 ipa.internal +short                 # 192.168.2.250
+dig @192.168.2.240 -x 192.168.2.250 +short             # ipa.internal.
+dig @192.168.2.240 _kerberos._tcp.lab.internal SRV +short  # 0 100 88 ipa.internal.
+dig @192.168.2.240 _kerberos._udp.lab.internal SRV +short
+dig @192.168.2.240 _kpasswd._tcp.lab.internal SRV +short   # 0 100 464 ipa.internal.
+dig @192.168.2.240 _ldap._tcp.lab.internal SRV +short      # 0 100 389 ipa.internal.
 ```
 
 `_ldap._tcp` is published now, but TCP/389 is intentionally closed on the IPA firewall until M3 client
 enrolment. The server itself uses LDAPI/HTTPS locally.
+
+> **Executed 2026-11-15**.
+> The `.250` records are published and the reverse zone is clean. Measured results:
+>
+> | Step | Result |
+> |---|---|
+> | `playbook-technitium.yml` | **`ok=33 changed=2 failed=0`** |
+> | `ipa.internal` A | `192.168.2.250` |
+> | `250.2.168.192.in-addr.arpa` PTR | `ipa.internal.` |
+> | SRV records | all **7** — `_kerberos._tcp`/`_udp`, `_kerberos-master._tcp`/`_udp`, `_kpasswd._tcp`/`_udp`, `_ldap._tcp` |
+> | Reverse zone contents | NS + `.250` PTR only |
+> | SOA serial | **5 → 6** — one write |
+>
+> **One finding from execution, now folded into the step above:**
+>
+> 1. **The role only adds records.** A retired address has to be removed through the API by hand — a
+>    role run never cleans up after it.
 
 ## 5. Provision the install secrets
 
@@ -197,18 +332,31 @@ The workload reads the first two at install time; the test-user password is used
 The script never overwrites an existing secret — rotating the IPA admin or Directory Manager password
 is a coordinated `ipa`/`kadmin` operation and is not part of M1.
 
+> **Executed 2026-11-15**.
+> All three secrets provisioned in `homelab-bysxdb-kv`, enabled:
+>
+> | Secret | Result |
+> |---|---|
+> | `freeipa-directory-manager-password` | created 09:27 UTC |
+> | `freeipa-admin-password` | created 09:27 UTC |
+> | `freeipa-test-user-password` | created 09:27 UTC |
+>
+> A second run reported *"already exists — nothing written"* for all three, so the script is idempotent
+> and will not rotate a live password.
+
 ## 6. External CA — phase 1 (CSR)
 
 ```powershell
 ansible-playbook ansible/workloads/freeipa/freeipa-playbook.yml --diff
 ```
 
-This installs `freeipa-server`, fetches the passwords, and runs:
+This installs `ipa-server` (the RHEL-family package name; Fedora calls it `freeipa-server`), fetches the
+passwords, and runs:
 
 ```sh
 ipa-server-install --external-ca --unattended \
-  --realm=IPA.INTERNAL --domain=ipa.internal \
-  --hostname=ipa.internal --ip-address=192.168.2.216 \
+  --realm=LAB.INTERNAL --domain=lab.internal \
+  --hostname=ipa.internal --ip-address=192.168.2.250 \
   --no-host-dns --no-ntp --no-hbac-allow \
   --ds-password=... --admin-password=...
 ```
@@ -221,39 +369,90 @@ It stops at the signing gate with `/root/ipa.csr` on the guest and an explicit �
 incomplete” message — that first-run stop is expected. Fetch the CSR (public):
 
 ```sh
-ssh fleetadm@192.168.2.216 'sudo cat /root/ipa.csr' > ipa.csr
+ssh fleetadm@192.168.2.250 'sudo cat /root/ipa.csr' > ipa.csr
 openssl req -in ipa.csr -noout -subject
-# expected: subject=CN = Certificate Authority, O = IPA.INTERNAL
+# expected: subject=O = LAB.INTERNAL, CN = Certificate Authority
 ```
 
-## 7. External CA — signing with the offline root
+> **Executed 2026-11-15**. The run stopped at the signing gate as designed — `ok=10 changed=1 failed=1`,
+> the single failure being the deliberate “signed chain is incomplete” assertion. `/root/ipa.csr` is on
+> the guest with subject `O = LAB.INTERNAL, CN = Certificate Authority`, so the realm rename reached the
+> installer.
+>
+> **Three findings from execution:**
+>
+> 1. **The realm/domain rename was forced by the installer, not chosen.** The first real run died with
+>    `ScriptError: hostname cannot be the same as the domain name`. `verify_fqdn()` requires a dotted
+>    hostname and `install_check()` forbids `hostname == domain`, so with the hostname fixed at
+>    `ipa.internal` the domain had to move — to `lab.internal`, realm `LAB.INTERNAL`. Recorded as the
+>    third amendment to [ADR 43](../decisions/43-freeipa-domain-realm.md).
+> 2. **A dropped SSH connection left `dnf` running on the guest.** The first attempt reported
+>    `UNREACHABLE` mid-install and the retry then failed with a `pipewire-session-manager` conflict —
+>    but `ipa-server` had in fact installed. A `dnf` transaction is not cancelled by losing the Ansible
+>    connection; check `rpm -q` before believing a failure. The conflict itself was transient metadata
+>    and did not recur.
+> 3. **The role only adds DNS records.** The seven SRV records moved to `lab.internal`, but the role
+>    left the old `*.ipa.internal` set in place; they were deleted through the API by hand. A SRV delete
+>    needs the **full rData** (`priority`, `weight`, `port`, `target`) or Technitium answers HTTP 200
+>    with `Parameter 'priority' missing.` in the body — the same trap as the PTR delete in §4.
 
-On the **offline signing machine** — ideally an air-gapped live-USB boot, though a normal workstation
-works too (the script warns and proceeds) — with the IronKey mounted. This is the active custody
-([ADR 38](../decisions/38-private-ca-hierarchy-and-custody.md), amended 2026-11-14); the token variant is
-deferred in [runbook 46](46-adopt-utrust-piv-root-custody.md).
+## 7. External CA — offline signing
 
-1. Assemble the bundle on the connected machine — [`01-building-step.md`](../ca-signing-kit/v1-ironkey/01-building-step.md).
-2. Put `ipa.csr` in the `v1-ironkey/` directory.
-3. Run `./sign-ipa-ca.sh <stick-mount>` — it prompts for the IronKey passphrase.
+On the **Windows workstation** that holds the secure stick — the path this is proven on. **Full
+instructions: [`docs/ca-signing-kit/v1-ironkey/04-signing-ipa-ca.md`](../ca-signing-kit/v1-ironkey/04-signing-ipa-ca.md)** —
+that document covers the prerequisites, the exact command, the acceptance checks, what to carry back,
+and what each abort message means. In short:
 
-The script signs with `ipa-ca.tpl` for **1 year** and machine-checks:
+1. Put `ipa.csr` in the bundle directory (`H:\RootCA\ca-signing-kit`).
+2. Run the bundled `step.exe certificate sign` command, pointing the root at `..` (the stick).
+3. Paste the root-key passphrase from **Keeper Vault** — it is not on the stick.
+
+The command signs with `ipa-ca.tpl` for **1 year**. Confirm the result by hand:
 
 - chain to the root on the stick;
 - `CA:TRUE`, `pathlen:0`;
 - certificate-sign and CRL-sign usage;
-- subject `CN=Certificate Authority,O=IPA.INTERNAL`;
+- subject `CN=Certificate Authority,O=LAB.INTERNAL`;
 - validity **31536000 s** (1 year).
 
 Bring back `ipa-ca.crt` and a copy of `root_ca.crt`. If any check fails, stop; nothing has been trusted.
+
+> **Executed 2026-11-22** — signed on the Windows workstation from the IronKey bundle. The working
+> command, verbatim (stick at `H:\RootCA`, bundle at `H:\RootCA\ca-signing-kit`):
+>
+> ```powershell
+> cd H:\RootCA\ca-signing-kit
+> .\step.exe certificate sign --template .\ipa-ca.tpl --not-after 8760h .\ipa.csr ..\root_ca.crt ..\root_ca_key > .\ipa-ca.crt
+> ```
+>
+> | Result | Value |
+> |---|---|
+> | `ipa-ca.crt` | 1 107 bytes, signed **08:02:15Z** |
+> | Subject / issuer | `O=LAB.INTERNAL, CN=Certificate Authority` / `CN=Homelab Internal CA` |
+> | Validity | 2026-11-22 08:02:15Z → 2027-11-22 08:02:15Z |
+> | Basic constraints | critical `CA:TRUE`, `pathlen:0` |
+> | Signature check | `openssl verify -CAfile root_ca.crt ipa-ca.crt` → **OK** |
+> | Passphrase | prompted interactively, taken from Keeper Vault |
+>
+> **Two findings from execution:**
+>
+> 1. **`step`'s "plugin not found" message is a red herring.** When the key argument is not a readable
+>    *file*, `step` prints
+>    `exec: "step-kms-plugin": executable file not found in %PATH%` and falls back to treating the
+>    argument as a `kms:` URI. Nothing is wrong with the plugins — the **path** is wrong. The
+>    `step-kms-plugin` shipped in the bundle is a Linux ELF and could never run on Windows anyway.
+> 2. **The key must be reached relative to the bundle.** `..\root_ca_key` works because `..` *is* the
+>    stick's root. Drive-letter forms (`H:\root_ca_key`, `D:\…`, `E:\…`) and `..\..` all produce the
+>    plugin message above, which reads as a tooling failure rather than a path error. Resolve the path
+>    before suspecting `step`.
 
 ## 8. External CA — phase 2 (complete)
 
 Copy the two public certificates to the guest:
 
 ```sh
-scp ipa-ca.crt root_ca.crt fleetadm@192.168.2.216:/tmp/
-ssh fleetadm@192.168.2.216 '
+scp ipa-ca.crt root_ca.crt fleetadm@192.168.2.250:/tmp/
+ssh fleetadm@192.168.2.250 '
   sudo install -m 0644 /tmp/ipa-ca.crt /root/ipa-ca.crt
   sudo install -m 0644 /tmp/root_ca.crt /root/root_ca.crt
 '
@@ -269,8 +468,8 @@ It detects the CSR and the signed chain and runs:
 
 ```sh
 ipa-server-install --unattended \
-  --realm=IPA.INTERNAL --domain=ipa.internal \
-  --hostname=ipa.internal --ip-address=192.168.2.216 \
+  --realm=LAB.INTERNAL --domain=lab.internal \
+  --hostname=ipa.internal --ip-address=192.168.2.250 \
   --no-host-dns --no-ntp --no-hbac-allow \
   --external-cert-file=/root/ipa-ca.crt \
   --external-cert-file=/root/root_ca.crt \
@@ -281,12 +480,52 @@ ipa-server-install --unattended \
 `freeipa_ca_mode: selfsigned` in `host_vars/ipa.yml`, rerun the workload, and make **re-parent before
 M3** a hard gate. Do not hand-edit Dogtag.
 
+> **`--uninstall` destroys the CA private key** — `/root/ipa.csr`, `/etc/pki/pki-tomcat/alias` and
+> `/root/.ipa_cache` are removed, so `ipa-ca.crt` becomes unusable and the whole §6–§8 signing
+> ceremony (stick + passphrase) has to be repeated. Back up `/root/ipa-ca.crt`, `/root/root_ca.crt`
+> and `/etc/pki/pki-tomcat/alias` before uninstalling, and expect a fresh CSR.
+
+> **Executed 2026-11-22** — `ipa-server-install` completed **`[32/32]`** and logged
+> `The ipa-server-install command was successful` at **08:09:20Z**. The workload is idempotent: an
+> immediate re-run reported **`ok=20 changed=0 failed=0`**.
+>
+> | Check | Result |
+> |---|---|
+> | `ipa-server-install` | **successful**, 32/32 |
+> | FreeIPA version | **4.13.4** on Python 3.9.25 |
+> | Services | Directory Service, krb5kdc, kadmin, httpd, ipa-custodia, pki-tomcatd, ipa-otpd — all `RUNNING` |
+> | `ipa ca-show ipa` | subject `CN=Certificate Authority,O=LAB.INTERNAL`, issuer `CN=Homelab Internal CA` |
+> | `getcert list` | **9** certificates `MONITORING` |
+> | Memory during install | 1 432 MB used of 2 968 — **1 535 MB available** |
+>
+> **Four findings from execution:**
+>
+> 1. **2 GB cannot complete this install.** The first attempt at 2 048 MB reached step 22/32 and then
+>    reported **93 % memory used (1 907 MB), 0 % CPU** — the guest was not hung, it was thrashing, and
+>    certmonger timed out starting tracking of `auditSigningCert cert-pki-ca`. sshd could no longer
+>    fork a banner, so the failure first presented as an unreachable host and was only diagnosed from
+>    the hypervisor. At 3 072 MB the same step completes with ~1.5 GB to spare.
+> 2. **`--uninstall` costs a full re-signing ceremony.** Running the fallback above after the 2 GB
+>    failure removed the CA private key along with the CSR, so the certificate signed in the first §7
+>    pass matched no key that still existed. §6 had to be re-run for a fresh CSR and §7 repeated — the
+>    warning above exists because of this.
+> 3. **Two verification tasks failed on a correct result.** `ipa hbacrule-find` exits `1` when it
+>    matches nothing, which is the desired state, so the task now guards with `failed_when`. And the
+>    389 DS instance is named after the **realm** — `dirsrv@LAB-INTERNAL`, not the pre-rename
+>    `dirsrv@IPA-INTERNAL` — so the service check is now
+>    `dirsrv@{{ freeipa_realm | replace('.', '-') }}`.
+> 4. **The guest had no base layer.** `firewalld` was absent and the SSH user CA trust was gone,
+>    because `playbook-ipa.yml` had never been re-applied after the guest was rebuilt on AlmaLinux 9.
+>    Certificate SSH failed for that reason, not because of FreeIPA. Re-applying it restored firewalld
+>    with the LAN rich rules, `ca_trust`, Netdata and Fluent Bit — **`ok=71 changed=37 failed=0`** —
+>    after which the break-glass key was dropped and certificate SSH worked again.
+
 ## 9. Create the test user
 
 The role creates `m1test` without a password. Set one interactively (the password is in AKV):
 
 ```sh
-ssh fleetadm@192.168.2.216 'sudo -i'
+ssh fleetadm@192.168.2.250 'sudo -i'
 ipa passwd m1test
 # paste freeipa-test-user-password; complete the forced change with kpasswd
 kinit m1test
@@ -294,6 +533,22 @@ klist
 ```
 
 `admin` is created by the installer; `m1test` is the policy-test identity for M4.
+
+> **Executed 2026-11-22.** The password was set from
+> `homelab-bysxdb-kv/freeipa-test-user-password` (32 characters), fed over **stdin** — never as an
+> argument, and never written to disk on the guest. `ipa passwd m1test` reports `Password: True` and
+> `krbLastPwdChange 20261122200011Z`.
+>
+> The first `kinit m1test` then answered **`Password expired. You must change it now.`** — an
+> admin-set password is a *reset*, so the realm forces a change irrespective of the 90-day maximum
+> lifetime. Completing the change with the same value keeps the Key Vault secret true: the realm's
+> history size is `0`, so reuse is permitted and no separate rotation is required.
+>
+> | Check | Result |
+> |---|---|
+> | `ipa user-show m1test --all` | `Password: True` |
+> | `kinit m1test` after the forced change | ✅ no error |
+> | `klist` | `Default principal: m1test@LAB.INTERNAL`, TGT valid 2026-11-22 20:00:38Z → 2026-11-23 19:28:04Z |
 
 ## 10. Verification
 
@@ -308,7 +563,7 @@ ipa ca-show ipa
 ipa cert-show 1 || true
 getcert list | grep -E 'Request ID|status|MONITORING'
 ipa hbacrule-find
-systemctl is-active ipa dirsrv@IPA-INTERNAL krb5kdc httpd pki-tomcatd@pki-tomcat
+systemctl is-active ipa dirsrv@LAB-INTERNAL krb5kdc httpd pki-tomcatd@pki-tomcat
 firewall-cmd --list-all
 ipa config-show | head
 ```
@@ -321,17 +576,19 @@ Expected:
 - `kinit`/`klist` succeed; `ipa ping` returns `IPA server OK`.
 - `ipa ca-show ipa` shows the IPA CA; its issuer is the fleet root.
 - `getcert list` shows `MONITORING` for the HTTP/LDAP/PKINIT certificates.
-- `ipa hbacrule-find` is **empty** — `--no-hbac-allow` must leave no `allow_all` rule.
-- All five services are `active`.
+- `ipa hbacrule-find` is **empty** — `--no-hbac-allow` must leave no `allow_all` rule. It exits
+  `1` when nothing matches, which is the expected result, not an error.
+- All five services are `active`. The 389 DS instance is named after the **realm**, so for
+  `LAB.INTERNAL` the unit is `dirsrv@LAB-INTERNAL`.
 
 From a LAN client that trusts the fleet root:
 
 ```sh
 openssl verify -CAfile root_ca.crt ipa-ca.crt
-openssl s_client -connect 192.168.2.216:443 -servername ipa.internal \
+openssl s_client -connect 192.168.2.250:443 -servername ipa.internal \
   -CAfile root_ca.crt -showcerts </dev/null 2>/dev/null \
   | openssl x509 -noout -issuer -subject -dates
-curl --resolve ipa.internal:443:192.168.2.216 --cacert root_ca.crt \
+curl --resolve ipa.internal:443:192.168.2.250 --cacert root_ca.crt \
   -sS -o /dev/null -w '%{http_code}\n' https://ipa.internal/ipa/ui/
 ```
 
@@ -347,44 +604,161 @@ dig @192.168.2.240 ipa.internal SSHFP +short   # empty
 The fleet host-trust path remains `@cert-authority` + `TrustedUserCAKeys` from
 [runbook 40](40-deploy-ssh-certificates.md).
 
+> **Executed 2026-11-22** — measured on the guest and from the LAN:
+>
+> | Check | Result |
+> |---|---|
+> | `kinit admin` / `klist` | ✅ |
+> | `ipa ping` | ✅ `IPA server version 4.13.4. API version 2.257` |
+> | `ipa ca-show ipa` | ✅ IPA CA, issuer `CN=Homelab Internal CA` |
+> | `getcert list` | ✅ 9 × `MONITORING` |
+> | `ipa hbacrule-find` | ✅ `0 HBAC rules matched` — exits `1`, expected |
+> | `systemctl is-active` | ✅ `dirsrv@LAB-INTERNAL`, `krb5kdc`, `httpd`, `pki-tomcatd@pki-tomcat` all `active` |
+> | `firewall-cmd --list-all` | ✅ rich rules for 22, 88/tcp, 88/udp, 464/tcp, 464/udp, 443, 636 from `192.168.2.0/24`; **no** 389, **no** 80 |
+> | WebUI | ✅ `https://ipa.internal/ipa/ui/` → `200`, TLS verify code **0**; `admin` login confirmed in a browser |
+> | Served leaf | `O=LAB.INTERNAL, CN=ipa.internal`, serial `08`, issuer the IPA CA |
+> | `/etc/ipa/ca.crt` | ✅ the **fleet root**, `trust anchor` in the system store |
+> | `dig … SSHFP` | ✅ empty |
+> | PTR `192.168.2.250` | ✅ `ipa.internal.` |
+> | Port 80 | ✅ refused |
+>
+> `/etc/ipa/ca.crt` holds the **fleet root**, not the IPA CA — `ipa-server-install` installs the
+> external chain's top as the anchor, which is why a client already trusting the fleet root needs no
+> IPA-specific certificate. The WebUI leaf's SHA-256 is `981C8807…063457`; its `notAfter` is the CA's,
+> see §11.
+
 ## 11. Record the CA decision and anchors
 
 Write into the runbook/report:
 
 | Item | Value |
 |---|---|
-| CA mode | `external` (or `selfsigned` if the fallback was used) |
-| IPA CA subject | `CN=Certificate Authority,O=IPA.INTERNAL` |
-| IPA CA fingerprint | `openssl x509 -in /root/ipa-ca.crt -noout -fingerprint -sha256` |
-| Root fingerprint | compare with `homelab-bysxdb-kv/ca-root-cert` |
-| Clients that imported the IPA root | **none** on the external path; the fleet root is already trusted |
-| If self-signed | record the interim IPA root; no client imports it before M3; re-parent is the M3 gate |
+| CA mode | **`external`** — `--external-ca`; the `selfsigned` fallback was not used |
+| IPA CA subject | `O=LAB.INTERNAL, CN=Certificate Authority` |
+| IPA CA issuer | `CN=Homelab Internal CA` — the fleet root |
+| IPA CA serial | `368CFCE5393D43159345FC04C42719DC` |
+| IPA CA validity | 2026-11-22 08:02:15Z → **2027-11-22 08:02:15Z** (1 year) |
+| IPA CA SHA-256 | `2F:07:EA:9F:AE:11:EC:A0:0E:6E:88:00:80:33:6E:24:59:DA:98:25:EE:21:F3:56:3F:70:5D:FD:78:BF:A8:96` |
+| Root SHA-256 | `02:83:B2:6B:C2:0C:E7:64:23:FE:23:77:5E:4D:61:98:9F:1D:51:F0:41:5C:6D:75:1D:12:C2:33:B6:74:2C:E0` |
+| Root matches AKV | ✅ `homelab-bysxdb-kv/ca-root-cert` — identical fingerprint, serial `34AA311EE0C3ABE06A000443B6A33D01`, 2026-10-11 → 2036-10-08 |
+| Clients that imported the IPA root | **none** — the external path needs no IPA anchor; the fleet root is already trusted fleet-wide |
+| If self-signed | not applicable — the external path was used |
+
+Reproduce the two fingerprints with:
+
+```sh
+openssl x509 -in ipa-ca.crt -noout -fingerprint -sha256
+openssl x509 -in root_ca.crt -noout -fingerprint -sha256
+```
+
+> **Every leaf under the IPA CA expires with it.** The `ipa.internal` HTTP certificate is issued
+> 2026-11-22 08:08:23Z and expires **2027-11-22 08:02:15Z** — exactly the CA's `notAfter`, because
+> Dogtag caps a leaf at its issuing CA. Nothing can renew past that instant, so the annual §7 re-signing
+> of the IPA CA has to happen **before** the leaves fall due, and every certificate under it is
+> reissued at the same time.
 
 ## 12. Break-glass and next step
 
 - The ADR 28 fleet key and every node's local admin account remain; management planes are never behind
   the domain alone.
-- The IPA VM console is reached through Proxmox (`qm terminal 216` / the UI); `fleetadm` is key-only.
+- The IPA VM console is reached through Proxmox (`qm terminal 250` on `pve2` / the UI); `fleetadm` is
+  key-only.
 - **M2 is next:** schedule `ipa-backup`, rehearse a restore into a throwaway guest with the same FQDN,
   and only then enrol the first client (M3).
 
 ## Verification checklist
 
-- [ ] VM 216 `ipa` up; `hostname -f` → `ipa.internal`; `.216` reachable
-- [ ] `playbook-ipa.yml` green; firewalld LAN rules; `fleetadm` key-only
-- [ ] `dig` A/PTR/SRV records correct
-- [ ] `/root/ipa.csr` signed by the root; `ipa-ca.crt` chains to the fleet root
-- [ ] `ipa-server-install` complete; `kinit admin`/`klist`/`ipa ping` pass
-- [ ] `ipa ca-show ipa` and `getcert list` show the external CA
-- [ ] WebUI direct over TLS, no Caddy
-- [ ] `ipa hbacrule-find` empty
-- [ ] `firewall-cmd --list-all` shows 88/464/443/636 from the LAN; no 389 or 80
-- [ ] `dig SSHFP` empty
-- [ ] CA mode and fingerprints recorded
-- [ ] M2 remains the gate before the first client
+Executed on: **2026-11-15** — §1–§6 executed and verified; §7 onward **not yet run**.
+Completed on: **2026-11-22** — **M1 complete**: §1–§12 executed and verified, including the `m1test`
+password and a successful `kinit m1test`. §12 is a standing note, not a task.
+
+- [x] `local` storage carries `iso,vztmpl,backup,import,images,snippets` — `images` is required for the cloud-init ISO
+- [x] AlmaLinux 9 image downloaded into the **`import`** content type; `pvesm list local --content import` shows it
+- [x] Snippet key generated from the key file and fingerprint-checked with `ssh-keygen -lf`
+- [x] VM 250 `ipa` up on `pve2`; `.250` reachable; guest agent responding
+- [x] Guest verified with the **break-glass fleet key** (certificate SSH arrives in §3)
+- [x] `playbook-ipa.yml` green; firewalld LAN rules; `fleetadm` key-only
+- [x] Certificate SSH works after §3; break-glass key dropped
+- [x] `dig` A/PTR/SRV records correct — reverse zone holds `.250` only; SRVs under `lab.internal`, none under `ipa.internal`
+- [x] Three FreeIPA secrets provisioned in `homelab-bysxdb-kv`; script idempotent
+- [x] `/root/ipa.csr` generated with subject `O = LAB.INTERNAL, CN = Certificate Authority`
+- [x] `/root/ipa.csr` signed by the root; `ipa-ca.crt` chains to the fleet root
+- [x] `ipa-server-install` complete; `kinit admin`/`klist`/`ipa ping` pass
+- [x] `ipa ca-show ipa` and `getcert list` show the external CA
+- [x] WebUI direct over TLS, no Caddy
+- [x] `ipa hbacrule-find` empty
+- [x] `firewall-cmd --list-all` shows 88/464/443/636 from the LAN; no 389 or 80
+- [x] `dig SSHFP` empty
+- [x] CA mode and fingerprints recorded (§11)
+- [x] `m1test` has a password and `kinit m1test` succeeds (§9)
+- [x] M2 remains the gate before the first client — stated in §12
+
+### §1–§3 execution record — 2026-11-08 (Fedora), rebuilt 2026-11-14 (AlmaLinux 9)
+
+| Check | Result |
+|---|---|
+| `pve2` RAM | 7648 MB total, **5602 MB available** (needs ≥ 4 GB for the 3 GB guest plus headroom) |
+| `local-lvm` | 56.9 GB total, **0 used** (needs ≥ 20 GB) |
+| Guests before | `qm list` / `pct list` both **empty** |
+| chrony | stratum 3, **+1.8 ms** |
+| TPM | `/dev/tpmrm0` present (informational — M1 does not use it) |
+| Technitium from `pve2` | `edge.internal` → `192.168.2.240` |
+| Image | AlmaLinux 9.8 Generic Cloud (`9.8-20261112`), **SHA256 verified** |
+| VM 250 | **running**, 2 vCPU / **3 072 MB** (raised from 2 048 MB on 2026-11-22 — see §8), `cpu host`, `onboot 1` |
+| Disk | `local-lvm:vm-250-disk-0`, **16 G** |
+| Network | `eth0` virtio `192.168.2.250/24`, gw `.1` |
+| Guest OS | **AlmaLinux 9.8 (Olive Jaguar)**, Python **3.9.25** |
+| Guest FQDN | `ipa.internal` |
+| Guest resolver | `nameserver 192.168.2.240`, `search internal` — pinned by `ipa_host`, NetworkManager `dns=none` |
+| Certificate SSH | **fails** — no `TrustedUserCAKeys` yet; break-glass key used |
+| §3 `playbook-ipa.yml` | **`ok=46 changed=17 failed=0`**, then **`changed=0`** on re-run (idempotent) |
+| §3 firewalld | 22/88/464/443/636 tcp + 88/464 udp, LAN-scoped rich rules |
+| §3 chrony | stratum 3, synchronised |
+
+**Eight defects found and fixed across these runs** — the corrected sequence is what the runbook now
+carries: the `import` content type for a `.qcow2`, the full `pvesm set --content` list, a generated
+rather than pasted public key, the fleet-key verification path, `getent` vs the resolver, the
+`manage_etc_hosts` loopback mapping, the `fqdn:` double-append, and the missing SSH certificate trust.
+
+**Four defects found in §3 during this run:**
+
+1. **`manage_etc_hosts: true` wrote a loopback FQDN mapping.** cloud-init put
+   `127.0.0.1 ipa.internal ipa` in `/etc/hosts`; the role's `lineinfile` replaced only the *last*
+   matching line (the `::1` one), leaving the loopback entry in place. The snippet now sets
+   `manage_etc_hosts: false` and the role strips **every** loopback mapping before writing the real one.
+2. **`getent hosts` proved nothing.** It queries `AF_UNSPEC`, so the `myhostname` NSS module answers
+   with the interface's link-local `fe80::` address — true about the interface, useless as proof of the
+   LAN mapping. The verification task now uses `getent ahostsv4`.
+3. **`fqdn: ipa.internal` in the snippet double-appended the search domain.** With
+   `--searchdomain internal` already set, cloud-init computed `ipa.internal` + `internal` and the guest
+   booted as **`ipa.internal.internal`**. The `fqdn:` key is removed; `ipa_host` sets the FQDN in §3.
+4. **`ipa_host` never installed the SSH certificate trust.** It was written to replace
+   `common` + `security` for the EL guest, but only took over the hostname/hosts/resolver/firewall half —
+   `TrustedUserCAKeys`, `AuthorizedPrincipalsFile`, the CA public keys and
+   `/etc/ssh/auth_principals/fleetadm` all live in `security`, which is Debian/Ubuntu-only and was not in
+   `playbook-ipa.yml`. The guest accepted only the break-glass fleet key, so every later step ran on a 1 h
+   root-equivalent credential. Fixed by adding the trust tasks to `ipa_host`, making `ca_trust`
+   OS-aware, and running `ca_trust` before `ipa_host` in the playbook.
+
+### §7–§11 execution record — 2026-11-22
+
+| Step | Outcome |
+|---|---|
+| §7 offline signing | `ipa-ca.crt` signed on the Windows workstation; chains to the fleet root |
+| §8 phase 2 install | **`[32/32]`**, `The ipa-server-install command was successful` at 08:09:20Z |
+| §9 test user | password set from AKV, forced change completed, `kinit` succeeds |
+| §10 verification | every check passes, including a browser login to the WebUI |
+| §11 anchors | IPA CA `2F07EA9F…` under root `0283B26B…`, recorded above |
+
+**Five defects found and fixed across §7–§8:** the 2 GB memory ceiling (now 3 GB), `--uninstall`
+destroying the CA private key, `ipa hbacrule-find`'s exit `1` on a correct result, the realm-derived DS
+instance name, and the missing base layer that had left the guest without firewalld or SSH certificate
+trust. One documentation defect was closed at the same time: the IPA CA ceremony existed twice, and only
+the `step.exe` path ever worked — it now exists once, in
+[`04-signing-ipa-ca.md`](../ca-signing-kit/v1-ironkey/04-signing-ipa-ca.md).
 
 ## References
 
 - [ADR 42](../decisions/42-pki-topology-sibling-cas.md) · [ADR 43](../decisions/43-freeipa-domain-realm.md) · [research 51](../research/51-freeipa-dogtag-tpm-custody.md) (parked TPM work)
-- [Runbook 28](28-pve1-proxmox-node.md) (pve1) · [runbook 35](35-deploy-step-ca.md) (TPM LXC pattern) · [runbook 40](40-deploy-ssh-certificates.md) (SSH trust)
-- [Signing kit](../ca-signing-kit/v1-ironkey/README.md) · [FreeIPA documentation](https://www.freeipa.org/page/Documentation)
+- [Runbook 42](42-pve2-proxmox-node.md) (pve2) · [runbook 43](43-proxmox-cluster-qdevice.md) (cluster + QDevice) · [runbook 35](35-deploy-step-ca.md) (TPM LXC pattern) · [runbook 40](40-deploy-ssh-certificates.md) (SSH trust)
+- [Offline signing kit](../private-ca-offline-signing/README.md) · [FreeIPA documentation](https://www.freeipa.org/page/Documentation)

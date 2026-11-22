@@ -7,11 +7,11 @@
 
 ## Context
 
-`pve1` is the fleet's only hypervisor: a Wyse 5070 running the Home Assistant VM, LXCs 211/212/214/215,
-VM 216, the Netdata Parent and the host-native NUT server. There is no second hypervisor, no cluster, no
-quorum and no replication target. The hardware for a second node is in hand — a **Dell OptiPlex 7050
-MFF** bought 2026-11-04, audited in [research 52](../research/52-optiplex7050-hardware-diagnostic.md) —
-and the capacity/cluster analysis is in [research 47](../research/47-second-proxmox-node.md).
+`pve1` is the fleet's only hypervisor: a Wyse 5070 running LXCs 214/215, the Netdata Parent and the
+host-native NUT server. There is no second hypervisor, no cluster, no quorum and no replication target.
+The hardware for a second node is in hand — a **Dell OptiPlex 7050 MFF** bought 2026-11-04, audited in
+[research 52](../research/52-optiplex7050-hardware-diagnostic.md) — and the capacity/cluster analysis is
+in [research 47](../research/47-second-proxmox-node.md).
 
 Two upstream constraints shape the decision:
 

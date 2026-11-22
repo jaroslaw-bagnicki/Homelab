@@ -2,9 +2,10 @@
 # FreeIPA server (ADR 42/43, issue #164 M1). Single-host role; the realm,
 # domain, hostname and address are fixed by the lab.
 
-# Fedora ships the server as `freeipa-server`; RHEL/AlmaLinux use `ipa-server`.
-# The M1 guest is Fedora 45, but the override keeps the role usable on EL.
-freeipa_server_package: freeipa-server
+# RHEL/AlmaLinux/Rocky ship the server as `ipa-server`; Fedora calls it
+# `freeipa-server`. The M1 guest is AlmaLinux 9, so `ipa-server` is the
+# default and the Fedora name is the override.
+freeipa_server_package: ipa-server
 
 freeipa_keyvault_name: homelab-bysxdb-kv
 freeipa_ds_password_secret: freeipa-directory-manager-password
@@ -12,10 +13,13 @@ freeipa_admin_password_secret: freeipa-admin-password
 freeipa_ds_password: ""
 freeipa_admin_password: ""
 
-freeipa_realm: IPA.INTERNAL
-freeipa_domain: ipa.internal
+# The realm and domain differ from the hostname on purpose: `ipa-server-install`
+# rejects a hostname equal to the domain, and the hostname must be fully
+# qualified. `ipa.internal` is the host, `lab.internal` the IPA domain.
+freeipa_realm: LAB.INTERNAL
+freeipa_domain: lab.internal
 freeipa_hostname: ipa.internal
-freeipa_ip: 192.168.2.216
+freeipa_ip: 192.168.2.250
 
 # Shared installer arguments. DNS is intentionally not configured; the
 # Technitium records are verified separately. --no-host-dns keeps the install

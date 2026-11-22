@@ -9,7 +9,7 @@ Decision: [ADR 36](../../../docs/decisions/36-log-collector-fluentbit.md); deplo
 ## Files
 
 - `defaults/main.yml` — role parameters (store contract, buffering, source toggles).
-- `tasks/main.yml` — APT repo + install, Key Vault password fetch, runtime directory, config template, service.
+- `tasks/main.yml` — install (APT repo on Debian/Ubuntu, distribution repo on the RHEL family), Key Vault password fetch, runtime directory, config template, service.
 - `handlers/main.yml` — restart `fluent-bit`.
 - `templates/fluent-bit.conf.j2` — `[SERVICE]` plus one `[INPUT]`/`[OUTPUT]` pair per source shape.
   Build each `URI` query string with an inline expression (`{{ '&debug=1' if ... else '' }}`), **never** a
