@@ -6,7 +6,8 @@
 > [ADR 43](../decisions/43-freeipa-domain-realm.md) (amended 2026-11-07 — the server moved from `pve1`
 > to `pve2`; amended 2026-11-14 — the guest OS moved from Fedora 45 to AlmaLinux 9; amended 2026-11-15 —
 > the realm and domain were renamed to `LAB.INTERNAL`/`lab.internal` because `ipa-server-install`
-> rejects a hostname equal to the domain); CA relation:
+> rejects a hostname equal to the domain; amended 2026-11-22 — the guest needs **3 GB, not 2**, because
+> 2 GB cannot finish the install); CA relation:
 > [ADR 42](../decisions/42-pki-topology-sibling-cas.md); tracker:
 > [issue #164](https://github.com/jaroslaw-bagnicki/Homelab/issues/164) M1.
 >
@@ -49,11 +50,13 @@ the server, the realm, the DNS glue and the CA chain before anything depends on 
       [runbook 43](43-proxmox-cluster-qdevice.md)); `pve2` chrony healthy.
 - [ ] Technitium on `edge` reachable — `ipa_host` probes it on `:53` and fails before pointing the VM
       at a resolver that is not there ([runbook 37](37-deploy-internal-access-stack.md), ADR 40/#174).
-- [ ] `pve2` has ≥ 3.5 GB free RAM and ≥ 20 GB free `local-lvm`. It carries no guests, so this is a
-      check rather than a gate — `pve1` could not satisfy it beside the Home Assistant guests, which is
-      why the server moved here.
+- [ ] `pve2` has **≥ 4 GB** free RAM and ≥ 20 GB free `local-lvm`. The guest is fixed at 3 072 MB and
+      §1 keeps ~800 MB headroom, so 3.5 GB is not enough — 3 GB of guest plus host room is the floor. It
+      carries no guests, so this is a check rather than a gate — `pve1` could not satisfy it beside the
+      Home Assistant guests, which is why the server moved here.
 - [ ] AlmaLinux 9 Generic Cloud image downloaded and checksum-verified on `pve2`.
-- [ ] The **secure USB stick** and air-gapped signing machine for the CA ceremony.
+- [ ] The **secure USB stick** and the **Windows workstation** that holds it, for the CA ceremony — the
+      only path proven to work (§7).
 - [ ] Controller has `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID` and Ansible collections.
 - [ ] `automation` certificate (or break-glass fleet key) in `ssh-agent`; `ansible-lint` available.
 - [ ] `.250` and VMID 250 are free.
@@ -690,7 +693,7 @@ Completed on: **2026-11-22** — §7, §8, §10 and §11 executed and verified. 
 | TPM | `/dev/tpmrm0` present (informational — M1 does not use it) |
 | Technitium from `pve2` | `edge.internal` → `192.168.2.240` |
 | Image | AlmaLinux 9.8 Generic Cloud (`9.8-20261112`), **SHA256 verified** |
-| VM 250 | **running**, 2 vCPU / 2048 MB, `cpu host`, `onboot 1` |
+| VM 250 | **running**, 2 vCPU / **3 072 MB** (raised from 2 048 MB on 2026-11-22 — see §8), `cpu host`, `onboot 1` |
 | Disk | `local-lvm:vm-250-disk-0`, **16 G** |
 | Network | `eth0` virtio `192.168.2.250/24`, gw `.1` |
 | Guest OS | **AlmaLinux 9.8 (Olive Jaguar)**, Python **3.9.25** |
