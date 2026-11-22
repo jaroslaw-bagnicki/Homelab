@@ -156,7 +156,7 @@
       changed_when: false
       failed_when: >-
         freeipa_hbac.rc != 0
-        and 'Number of entries returned 0' not in freeipa_hbac.stdout
+        and '0 HBAC rules matched' not in freeipa_hbac.stdout
 
     - name: Assert no allow_all HBAC rule was installed
       ansible.builtin.assert:
