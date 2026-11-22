@@ -6,3 +6,11 @@ security_ufw_allow_ssh_from: "192.168.2.0/24"
 security_ufw_allow_tcp_from: "192.168.2.0/24"
 security_ufw_allow_tcp_ports:
   - 9000
+
+# `ca` is deliberately excluded from `ca_trust`, so the fleet root is never installed under
+# /usr/local/share/ca-certificates here — this host *is* the CA and keeps its own root at
+# /etc/step-ca/certs/root_ca.crt. Point the security role at that root explicitly: leaving the
+# default makes host-certificate issuance and renewal depend on a file that this host does not
+# have (2026-11-22: the renewal timer failed nightly with "CA root missing" and ca's host
+# certificate expired, breaking certificate SSH to the CA).
+security_ssh_ca_root_file: /etc/step-ca/certs/root_ca.crt

@@ -3,7 +3,17 @@ set -eu
 
 CERT="{{ security_ssh_host_cert }}"
 KEY="{{ security_ssh_host_key }}"
-ROOT="{{ security_ssh_resolved_root }}"
+# Candidate roots, best first, resolved at RUN time — never render the winner into this file.
+# The fleet root is installed by `ca_trust`, which deliberately skips `ca` (it manages its own
+# root under /etc/step-ca/certs), so a path that exists while the playbook runs can be gone a
+# minute later. Baking it in is a slow fuse: on 2026-11-15 `ca` rendered the fleet-root path,
+# the file vanished two minutes later, and every nightly run exited "CA root missing" until the
+# host certificate expired on 2026-11-21 and certificate SSH to the CA stopped working.
+ROOTS="{{ [security_ssh_ca_root_file, security_ssh_ca_root_fallback] | unique | join(' ') }}"
+ROOT=""
+for candidate in $ROOTS; do
+  if [ -f "$candidate" ]; then ROOT="$candidate"; break; fi
+done
 CA_URL="{{ security_ssh_ca_url }}"
 THRESHOLD="{{ security_ssh_renew_before_seconds }}"
 TAG="homelab-ssh-host-cert"
@@ -15,7 +25,10 @@ RESTART=1
 [ "${1:-}" = "--no-restart" ] && RESTART=0
 
 [ -f "$CERT" ] || { logger -t "$TAG" -p user.err "host certificate missing"; exit 1; }
-[ -n "$ROOT" ] && [ -f "$ROOT" ] || { logger -t "$TAG" -p user.err "CA root missing"; exit 1; }
+[ -n "$ROOT" ] || {
+  logger -t "$TAG" -p user.err "CA root missing: none of [$ROOTS] exists"
+  exit 1
+}
 
 EXPIRES=$(ssh-keygen -L -f "$CERT" | awk '/Valid:/{print $NF}')
 if ! EXPIRES_EPOCH=$(date -d "$EXPIRES" +%s); then
@@ -54,7 +67,10 @@ fi
 # the two positional paths — `step ssh renew -f <cert> <key>` is rejected with
 # "too many positional arguments" and the renewal silently never runs.
 if ! step ssh renew "$CERT" "$KEY" -f --ca-url "$CA_URL" --root "$ROOT"; then
-  logger -t "$TAG" -p user.crit "host certificate renewal failed"
+  # State the deadline: a renewal failure is only urgent once the remaining validity is short,
+  # and this line is the only signal an unattended host produces.
+  logger -t "$TAG" -p user.crit \
+    "host certificate renewal failed via $ROOT — $(( (EXPIRES_EPOCH - NOW) / 3600 ))h of validity left (expires $EXPIRES)"
   # The file on disk may still be a newer out-of-band replacement that sshd never loaded,
   # so recover what we can before failing.
   reload_if_stale

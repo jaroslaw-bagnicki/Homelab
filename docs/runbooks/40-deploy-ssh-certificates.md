@@ -439,6 +439,44 @@ revocation and should be the only holder of `step-ca-ssh-agent-ai-password`.
 - **`cloudlab`:** stays on the fleet key and the pinned host key. A LAN↔VPS path (tunnel/VPN) is a
   prerequisite for including it; do not add its IP to `@cert-authority` until then.
 
+### When certificate SSH to a node breaks
+
+`ssh` failing with **`Certificate invalid: expired`** means the node is still serving the certificate it
+loaded at `sshd` start — the file on disk may already be newer, or nobody renewed it. Check the order:
+
+```sh
+stat -c '%y' /etc/ssh/ssh_host_ed25519_key-cert.pub   # cert mtime — compare with the line below
+systemctl show ssh -p ActiveEnterTimestamp --value    # earlier than the mtime ⇒ stale, restart ssh
+ssh-keygen -Lf /etc/ssh/ssh_host_ed25519_key-cert.pub | grep -E 'Valid|Principals'
+systemctl show homelab-ssh-host-cert-renew.service -p Result -p ExecMainStatus
+journalctl -u homelab-ssh-host-cert-renew.service -n 20
+```
+
+`CA root missing: none of [...] exists` — the renewal script could not find a CA root. The candidates are
+resolved **at run time** from `security_ssh_ca_root_file` then `security_ssh_ca_root_fallback`, so the
+message lists both. On `ca` the fleet root does not exist by design (`ca_trust` skips the CA), and
+`host_vars/ca.yml` points `security_ssh_ca_root_file` at `/etc/step-ca/certs/root_ca.crt`.
+
+An **expired** certificate cannot be renewed — `step ssh renew` needs a valid one. Re-issue it with the
+`hosts@internal` provisioner password from Key Vault, then restart `sshd`. Substitute the node's
+inventory name, FQDN and inventory address for the three placeholders — they become the principals:
+
+```sh
+sudo step ssh certificate <node> /etc/ssh/ssh_host_ed25519_key.pub --host --sign \
+  --principal <node> --principal <node>.internal --principal <inventory_address> \
+  --provisioner hosts@internal --provisioner-password-file /tmp/hosts.pw \
+  --not-after 168h --ca-url https://ca.internal:9000 \
+  --root <ca_root> --force
+sudo systemctl restart ssh
+```
+
+`<ca_root>` is the fleet root `/usr/local/share/ca-certificates/homelab-root-ca.crt` on every node
+**except `ca`**, which is the CA and uses its own `/etc/step-ca/certs/root_ca.crt` (`ca_trust` skips it
+by design). Drop the password file afterwards: `shred -u /tmp/hosts.pw`.
+
+The principals must cover every name clients use — short hostname, `<node>.internal`, and the inventory
+address — because `@cert-authority` matching fails with `name is not a listed principal` otherwise.
+
 ## Verification checklist
 
 - [x] SSH CA keys created in the TPM; `step-ca` serves both; public keys published to Key Vault
