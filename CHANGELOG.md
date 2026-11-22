@@ -13,6 +13,7 @@ Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month 
 
 ## 2026‑11
 
+- **(fix)** Resolve the CA root at run time in SSH host-certificate renewal — a path rendered on 15 Nov vanished, so `ca` failed nightly until its certificate expired — [runbook 40](docs/runbooks/40-deploy-ssh-certificates.md)
 - **(feat)** Stand up the FreeIPA server on `pve2` — the lab's Linux domain, realm `LAB.INTERNAL` under the fleet root — [runbook 41](docs/runbooks/41-deploy-freeipa-server.md)
 - **(docs)** Retire OpenCode as the agent solution — Mistral Vibe (VS Code extension + CLI) is the supported agent; cloudlab OpenCode instances are dormant, no new deployments — [ADR 53](docs/decisions/53-retire-opencode-use-mistral-vibe.md)
 - **(chore)** Modernize the devcontainer — Ubuntu 26.04 base, locked features, Ansible 2.22 venv — and set the weekly Dependabot / quarterly pin-review cadence — [runbook 12](docs/runbooks/12-codespaces-devcontainer.md) · [ADR 52](docs/decisions/52-devcontainer-dependency-cadence.md)
