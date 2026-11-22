@@ -1,6 +1,6 @@
 # Idea 02 - DevContainers for OpenCode with DevPod
 
-**Status**: 🚧 On Hold
+**Status**: ⛔ Retired per [ADR 53](../decisions/53-retire-opencode-use-mistral-vibe.md) (2026-11-21) — previously 🚧 On Hold; OpenCode is no longer the agent, use Mistral Vibe
 **Date**: 2026-08-07
 **Sources**:
 - [Gemini thread 1](https://share.gemini.google/H5JtxyWxJVTl) - Dev Container standard and K3s orchestration

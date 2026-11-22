@@ -1,4 +1,4 @@
-# Homelab — Opencode Agent Instructions
+# Homelab — Agent Instructions (Mistral Vibe)
 
 Rules for **autonomous, delegated** agent sessions in this repo. Interactive
 sessions under user supervision (e.g. GitHub Copilot Chat) use
@@ -192,7 +192,7 @@ When asked to process PR review remarks, follow this human-in-the-loop flow:
 - **Verify after changes** — run any documented lint, test, or typecheck command before declaring the task done
 - **Commit when work is done** — completed work lands on the feature branch in scoped commits matching the repo convention; do not leave changes uncommitted
 - **Surface findings as concise summaries** — short status with file paths and commit refs; not essays
-- **Discover skills via the skill tool** — repo skills live under `.opencode/skills/` (symlinked to `.github/skills/`); load a skill only when its description matches the current task
+- **Discover skills via the skill tool** — repo skills live under `.github/skills/` (the `.opencode/skills` indirection went away with the OpenCode retirement, [ADR 53](docs/decisions/53-retire-opencode-use-mistral-vibe.md)); load a skill only when its description matches the current task
 - **Do not create issues proactively** — issue creation is reserved for multi-session work the user explicitly asks to track; for one-shot fixes or docs changes, a commit is enough
 - **Issue titles**: no `(type)` prefix (e.g. not `(feat) …`) — use labels to convey the type. The `(type)` prefix convention applies to **commit messages only**.
 - **Never merge a PR, locally or remotely** — opening a PR is the final step of the agent's work; the human reviews and merges via the GitHub UI. This includes `merge_pull_request` calls, `git merge`, and any equivalent. Do not assume implicit merge permission even if the work appears "done". The same rule applies to PRs the agent authored across multiple sessions or that "look ready".

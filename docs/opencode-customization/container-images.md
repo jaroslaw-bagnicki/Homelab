@@ -1,5 +1,7 @@
 # Per-Project OpenCode Container Images
 
+> ⏸ **Dormant per [ADR 53](../decisions/53-retire-opencode-use-mistral-vibe.md):** historical record only — no new images; the existing `docker/opencode-*` builds serve the dormant cloudlab instances.
+
 > Container image hierarchy for per-project OpenCode instances — base image + project-specific tooling baked into layers, not installed at startup. Per ADR 21.
 
 | | |
