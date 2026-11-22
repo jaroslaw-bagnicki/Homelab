@@ -12,6 +12,8 @@ fleet key, allows only the FreeIPA ports from the LAN, and wires sshd to the fle
   SSH certificate trust: `auth_principals/<account>`, the sshd drop-in, `restorecon` and `sshd -t`.
 - `templates/99-homelab-ssh-ca.conf.j2` — `TrustedUserCAKeys` + `AuthorizedPrincipalsFile`.
 - `templates/auth_principals.j2` — one file per account, listing the principals it accepts.
+  Each line is the principal **preceded by key options**, which `sshd_config(5)` permits for
+  `AuthorizedPrincipalsFile` — so `no-port-forwarding` and friends apply to a certificate login.
 - `handlers/main.yml` — restart NetworkManager after the `dns=none` change; restart sshd after a trust change.
 - `defaults/main.yml` — FQDN, address, LAN CIDR, resolver, the port list and the principal map. Port `389`
   is intentionally closed until M3 client enrolment.

@@ -686,7 +686,7 @@ Completed on: **2026-11-22** — §7, §8, §10 and §11 executed and verified. 
 
 | Check | Result |
 |---|---|
-| `pve2` RAM | 7648 MB total, **5602 MB available** (needs ≥ 2.5 GB) |
+| `pve2` RAM | 7648 MB total, **5602 MB available** (needs ≥ 4 GB for the 3 GB guest plus headroom) |
 | `local-lvm` | 56.9 GB total, **0 used** (needs ≥ 20 GB) |
 | Guests before | `qm list` / `pct list` both **empty** |
 | chrony | stratum 3, **+1.8 ms** |

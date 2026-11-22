@@ -41,4 +41,6 @@ ipa_host_ssh_authorized_principals:
   fleetadm:
     - automation
     - agent-ai
+# Key options, as in AUTHORIZED_KEYS FILE FORMAT — sshd_config(5) states that the principals
+# file lists names "preceded by key options", so these apply to a certificate login.
 ipa_host_ssh_authorized_principals_options: "no-port-forwarding,no-agent-forwarding,no-X11-forwarding"

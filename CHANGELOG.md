@@ -13,22 +13,18 @@ Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month 
 
 ## 2026‑11
 
-- **(feat)** Stand up the FreeIPA server on `pve2` — M1 install complete under the fleet root, with DNS, HBAC and the LAN firewall verified — [runbook 41](docs/runbooks/41-deploy-freeipa-server.md)
+- **(feat)** Stand up the FreeIPA server on `pve2` — the lab's Linux domain, realm `LAB.INTERNAL` under the fleet root — [runbook 41](docs/runbooks/41-deploy-freeipa-server.md)
 - **(docs)** Retire OpenCode as the agent solution — Mistral Vibe (VS Code extension + CLI) is the supported agent; cloudlab OpenCode instances are dormant, no new deployments — [ADR 53](docs/decisions/53-retire-opencode-use-mistral-vibe.md)
 - **(chore)** Modernize the devcontainer — Ubuntu 26.04 base, locked features, Ansible 2.22 venv — and set the weekly Dependabot / quarterly pin-review cadence — [runbook 12](docs/runbooks/12-codespaces-devcontainer.md) · [ADR 52](docs/decisions/52-devcontainer-dependency-cadence.md)
-- **(fix)** Accept CA-signed SSH on the FreeIPA guest — `ipa_host` never installed the certificate trust, so the host took only the break-glass key — [runbook 41](docs/runbooks/41-deploy-freeipa-server.md)
-- **(fix)** Run the FreeIPA guest on AlmaLinux 9, not Fedora 45 — no `ansible-core` release can manage Fedora's Python 3.15 — [ADR 43](docs/decisions/43-freeipa-domain-realm.md)
 - **(docs)** Provision VMs from a cloud image plus cloud-init, never a hand-clicked installer — [ADR 54](docs/decisions/54-vm-provisioning-cloud-image.md)
 - **(fix)** Renew SSH host certificates again — `step ssh renew` rejected `-f` before its positional paths, so no certificate ever renewed — [runbook 40](docs/runbooks/40-deploy-ssh-certificates.md)
 - **(docs)** Adopt the two-model split on one Pro account — DS4.1 stays daily via Mistral, ML4 via Vibe — [ADR 51](docs/decisions/51-ai-model-split-deepseek-mistral.md)
 - **(docs)** Adopt the 3‑2‑1 backup rule with Backblaze B2 as the off-site target, superseding ADR 02's Azure Blob — [ADR 49](docs/decisions/49-backup-3-2-1-strategy.md)
 - **(fix)** Sign the FreeIPA CA for 1 year and make the signing kit's air-gap advisory — the IronKey stays root custody — [runbook 41](docs/runbooks/41-deploy-freeipa-server.md)
 - **(docs)** Adopt OPNsense on the Futro S930 as the LAN router, routing-first — [ADR 48](docs/decisions/48-lan-router-futro-s930.md)
-- **(docs)** Move the FreeIPA server to `pve2` — `pve1`'s memory is committed to the Home Assistant guests, which the Zigbee coordinator pins there — [ADR 43](docs/decisions/43-freeipa-domain-realm.md)
 - **(feat)** Stand up `pve2` as the second Proxmox node — `pve` → `pve1`, the NAS moved to `.209`, the two-node `homelab` cluster with an `edge` QDevice, and `proxmox.internal` failover — [runbook 42](docs/runbooks/42-pve2-proxmox-node.md) · [runbook 43](docs/runbooks/43-proxmox-cluster-qdevice.md)
 - **(docs)** Audit the OptiPlex 7050 MFF for `pve2` — 65 W i5-7500, a sound but small 128 GB SSD, MEBx unreachable, a discrete Nuvoton TPM — [research 52](docs/research/52-optiplex7050-hardware-diagnostic.md)
 - **(fix)** Serve the fleet resolver from the hosts and alert when a `.internal` leaf nears expiry — [ADR 40](docs/decisions/40-internal-dns-proxy-edge.md)
-- **(docs)** Author the FreeIPA M1 runbook and its Ansible roles — external-ca under the fleet root, TPM-backed Dogtag custody parked — [runbook 41](docs/runbooks/41-deploy-freeipa-server.md)
 - **(feat)** Load SSH identities explicitly — empty agent by default, loaders for `automation`, `agent-ai` and break-glass, one preflight that establishes the session — [ADR 41](docs/decisions/41-ssh-certificates-step-ca.md)
 
 ## 2026‑10
