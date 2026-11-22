@@ -534,10 +534,21 @@ klist
 
 `admin` is created by the installer; `m1test` is the policy-test identity for M4.
 
-> **Outstanding 2026-11-22.** The account exists — `dn: uid=m1test,cn=users,cn=accounts,dc=lab,dc=internal`,
-> UID/GID `160200003`, inside `LAB.INTERNAL_id_range` (base `160200000`, 200 000 IDs) — but
-> `ipa user-show m1test --all` reports **`Password: False`** and there is no `krbLastPwdChange`, so
-> `kinit m1test` fails until this step is run.
+> **Executed 2026-11-22.** The password was set from
+> `homelab-bysxdb-kv/freeipa-test-user-password` (32 characters), fed over **stdin** — never as an
+> argument, and never written to disk on the guest. `ipa passwd m1test` reports `Password: True` and
+> `krbLastPwdChange 20261122200011Z`.
+>
+> The first `kinit m1test` then answered **`Password expired. You must change it now.`** — an
+> admin-set password is a *reset*, so the realm forces a change irrespective of the 90-day maximum
+> lifetime. Completing the change with the same value keeps the Key Vault secret true: the realm's
+> history size is `0`, so reuse is permitted and no separate rotation is required.
+>
+> | Check | Result |
+> |---|---|
+> | `ipa user-show m1test --all` | `Password: True` |
+> | `kinit m1test` after the forced change | ✅ no error |
+> | `klist` | `Default principal: m1test@LAB.INTERNAL`, TGT valid 2026-11-22 20:00:38Z → 2026-11-23 19:28:04Z |
 
 ## 10. Verification
 
@@ -658,8 +669,8 @@ openssl x509 -in root_ca.crt -noout -fingerprint -sha256
 ## Verification checklist
 
 Executed on: **2026-11-15** — §1–§6 executed and verified; §7 onward **not yet run**.
-Completed on: **2026-11-22** — §7, §8, §10 and §11 executed and verified. **§9 is outstanding**: the
-`m1test` password is not set, so `kinit m1test` still fails. §12 is a standing note, not a task.
+Completed on: **2026-11-22** — **M1 complete**: §1–§12 executed and verified, including the `m1test`
+password and a successful `kinit m1test`. §12 is a standing note, not a task.
 
 - [x] `local` storage carries `iso,vztmpl,backup,import,images,snippets` — `images` is required for the cloud-init ISO
 - [x] AlmaLinux 9 image downloaded into the **`import`** content type; `pvesm list local --content import` shows it
@@ -679,7 +690,7 @@ Completed on: **2026-11-22** — §7, §8, §10 and §11 executed and verified. 
 - [x] `firewall-cmd --list-all` shows 88/464/443/636 from the LAN; no 389 or 80
 - [x] `dig SSHFP` empty
 - [x] CA mode and fingerprints recorded (§11)
-- [ ] `m1test` has a password and `kinit m1test` succeeds (§9)
+- [x] `m1test` has a password and `kinit m1test` succeeds (§9)
 - [x] M2 remains the gate before the first client — stated in §12
 
 ### §1–§3 execution record — 2026-11-08 (Fedora), rebuilt 2026-11-14 (AlmaLinux 9)
@@ -735,7 +746,7 @@ rather than pasted public key, the fleet-key verification path, `getent` vs the 
 |---|---|
 | §7 offline signing | `ipa-ca.crt` signed on the Windows workstation; chains to the fleet root |
 | §8 phase 2 install | **`[32/32]`**, `The ipa-server-install command was successful` at 08:09:20Z |
-| §9 test user | account created — **password not set**, outstanding |
+| §9 test user | password set from AKV, forced change completed, `kinit` succeeds |
 | §10 verification | every check passes, including a browser login to the WebUI |
 | §11 anchors | IPA CA `2F07EA9F…` under root `0283B26B…`, recorded above |
 
