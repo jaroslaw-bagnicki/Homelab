@@ -113,10 +113,21 @@
   loop_control:
     label: "{{ item.dest }}"
 
-# `ansible.builtin.package` delegates to apt/dnf per family, so the prerequisites need no
-# per-OS task pair. `update_cache` is Debian-only and would be an unknown argument on dnf.
-- name: Install trust-store prerequisites
-  ansible.builtin.package:
+# `ansible.builtin.package` cannot refresh APT metadata — `update_cache` is Debian-only and is an
+# unknown argument on dnf — so the Debian path keeps an explicit `apt` task. Without it, installing
+# `ca-certificates`/`openssl` fails on a fresh or stale Ubuntu node with an unusable package index.
+- name: Install trust-store prerequisites (Debian/Ubuntu)
+  when: ansible_facts['os_family'] == 'Debian'
+  ansible.builtin.apt:
+    name:
+      - ca-certificates
+      - openssl
+    state: present
+    update_cache: true
+
+- name: Install trust-store prerequisites (RHEL family)
+  when: ansible_facts['os_family'] == 'RedHat'
+  ansible.builtin.dnf:
     name:
       - ca-certificates
       - openssl

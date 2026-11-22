@@ -62,6 +62,15 @@
     state: present
     update_cache: true
 
+# EPEL is what actually carries `fluent-bit` for EL9 — the AlmaLinux base, AppStream and CRB do not.
+# Relying on another role to have enabled it is not a guarantee: a standalone fluentbit run on a
+# fresh cloud image failed to resolve the package until this task existed.
+- name: Enable EPEL (RHEL family)
+  when: ansible_facts['os_family'] == 'RedHat'
+  ansible.builtin.dnf:
+    name: epel-release
+    state: present
+
 - name: Install Fluent Bit (RHEL family)
   when: ansible_facts['os_family'] == 'RedHat'
   ansible.builtin.dnf:
