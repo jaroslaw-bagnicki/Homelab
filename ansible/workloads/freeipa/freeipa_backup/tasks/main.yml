@@ -1,0 +1,88 @@
+---
+- name: Refuse an unsupported backup mode
+  ansible.builtin.assert:
+    that:
+      - freeipa_backup_mode in ['full', 'data']
+    fail_msg: "freeipa_backup_mode must be 'full' or 'data' (got '{{ freeipa_backup_mode }}')."
+
+- name: Refuse --online outside a data backup
+  ansible.builtin.assert:
+    that:
+      - not (freeipa_backup_online | bool) or freeipa_backup_mode == 'data'
+    fail_msg: >-
+      ipa-backup's --online requires --data (ipa-backup(1)). A full backup is offline by design:
+      it stops IPA services for the run.
+
+- name: Probe a publish path for a live mount
+  when: freeipa_backup_transport == 'path'
+  ansible.builtin.command:
+    cmd: "mountpoint -q {{ freeipa_backup_publish_path }}"
+  register: freeipa_backup_publish_mount
+  changed_when: false
+  failed_when: false
+
+- name: Refuse a publish path that is not mounted
+  when: freeipa_backup_transport == 'path'
+  ansible.builtin.assert:
+    that:
+      - freeipa_backup_publish_path | length > 0
+      - freeipa_backup_publish_mount.rc == 0
+    fail_msg: >-
+      freeipa_backup_transport is 'path' but '{{ freeipa_backup_publish_path }}' is not a mount
+      point. Mount the target first (runbook 47 §7); writing into an unmounted path fills the
+      guest's own disk with a copy that dies with it.
+
+- name: Check the tooling the timer depends on
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop:
+    - /usr/sbin/ipa-backup
+  register: freeipa_backup_tools
+
+- name: Fail loudly when ipa-backup is missing
+  ansible.builtin.assert:
+    that:
+      - freeipa_backup_tools.results[0].stat.exists
+    fail_msg: >-
+      /usr/sbin/ipa-backup is absent on this IPA version. Reassemble the artefact from the
+      per-component tools instead (dsctl db2bak, kdb5_util dump, the PKI backup) and amend
+      runbook 47 §0 before enabling the timer.
+
+- name: Ensure the staging directory exists
+  ansible.builtin.file:
+    path: "{{ freeipa_backup_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Install the backup script
+  ansible.builtin.template:
+    src: freeipa-backup.sh.j2
+    dest: /usr/local/sbin/homelab-freeipa-backup
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Install the backup units
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "/etc/systemd/system/{{ item }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - homelab-freeipa-backup.service
+    - homelab-freeipa-backup.timer
+  notify: Reload systemd
+
+- name: Enable the backup timer
+  ansible.builtin.systemd:
+    name: homelab-freeipa-backup.timer
+    enabled: true
+    state: started
+    daemon_reload: true
+
+- name: Publish the artefact to the storage host
+  when: freeipa_backup_transport == 'relay'
+  ansible.builtin.include_tasks: publish.yml

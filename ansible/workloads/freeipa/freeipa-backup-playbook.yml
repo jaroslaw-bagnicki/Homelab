@@ -1,0 +1,13 @@
+---
+# FreeIPA backup — its own entrypoint, because the server playbook is a two-phase install.
+# Run this one on a schedule or before maintenance; it changes no IPA configuration.
+#
+#   ansible-playbook ansible/workloads/freeipa/freeipa-backup-playbook.yml --diff
+#
+# Runbook: docs/runbooks/47-freeipa-backup-restore.md
+- name: Back up the FreeIPA domain
+  hosts: ipa
+  become: true
+  gather_facts: false
+  roles:
+    - freeipa_backup

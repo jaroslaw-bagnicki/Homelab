@@ -1,0 +1,12 @@
+[Unit]
+Description=Nightly FreeIPA domain backup
+
+[Timer]
+OnCalendar={{ freeipa_backup_oncalendar }}
+RandomizedDelaySec={{ freeipa_backup_randomized_delay }}
+{% if freeipa_backup_persistent | bool %}
+Persistent=true
+{% endif %}
+
+[Install]
+WantedBy=timers.target

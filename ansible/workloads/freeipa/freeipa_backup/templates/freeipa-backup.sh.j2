@@ -1,0 +1,62 @@
+#!/bin/bash
+# FreeIPA backup — rendered by Ansible from the freeipa_backup role. Do not edit on the host.
+#
+# Produces one artefact per run: ipa-backup writes a UTC-timestamped directory under
+# /var/lib/ipa/backup, which is then retained there and, when a mounted target is configured,
+# copied straight into it. Publishing to a *storage host* over SSH is the role's relay
+# transport, not this script's job — the guest holds no credential for it.
+set -euo pipefail
+
+BACKUP_DIR="{{ freeipa_backup_dir }}"
+KEEP="{{ freeipa_backup_keep }}"
+MODE="{{ freeipa_backup_mode }}"
+ONLINE="{{ 'yes' if (freeipa_backup_online | bool) and freeipa_backup_mode == 'data' else 'no' }}"
+GPG="{{ 'yes' if freeipa_backup_gpg | bool else 'no' }}"
+PUBLISH_PATH="{{ freeipa_backup_publish_path }}"
+PUBLISH_KEEP="{{ freeipa_backup_publish_keep }}"
+
+args=()
+[[ "$MODE" == "data" ]] && args+=("--data")
+[[ "$ONLINE" == "yes" ]] && args+=("--online")
+[[ "$GPG" == "yes" ]] && args+=("--gpg")
+
+logger -t homelab-freeipa-backup "starting: mode=$MODE online=$ONLINE gpg=$GPG"
+ipa-backup "${args[@]}"
+
+# The newest artefact of this run — `ipa-full-*` or `ipa-data-*`, UTC-timestamped (ipa-backup(1)).
+latest=$(find "$BACKUP_DIR" -maxdepth 1 -mindepth 1 \
+           \( -name 'ipa-full-*' -o -name 'ipa-data-*' \) -printf '%T@ %p\n' \
+         | sort -n | tail -1 | cut -d' ' -f2-)
+
+if [[ -z "${latest:-}" ]]; then
+    logger -t homelab-freeipa-backup "FAILED: ipa-backup exited 0 but produced no artefact"
+    exit 1
+fi
+logger -t homelab-freeipa-backup "artefact: $latest"
+
+# Mounted target (the NAS shape). A copy that silently does not happen is the failure this
+# whole runbook exists to prevent, so an unset/failed publish path fails the unit loudly.
+if [[ -n "$PUBLISH_PATH" ]]; then
+    if ! mountpoint -q "$PUBLISH_PATH"; then
+        logger -t homelab-freeipa-backup "FAILED: $PUBLISH_PATH is not a mount point"
+        exit 1
+    fi
+    install -d -m 0700 "$PUBLISH_PATH"
+    cp -a "$latest" "$PUBLISH_PATH"/
+    # Retention on the target: newest PUBLISH_KEEP, root-only.
+    mapfile -t old < <(find "$PUBLISH_PATH" -maxdepth 1 -mindepth 1 -type d \
+                         -name 'ipa-*' -printf '%T@ %p\n' | sort -n | head -n -"$PUBLISH_KEEP" | cut -d' ' -f2-)
+    for d in "${old[@]:-}"; do
+        [[ -n "$d" ]] && rm -rf -- "$d"
+    done
+    logger -t homelab-freeipa-backup "published to $PUBLISH_PATH"
+fi
+
+# Staging retention — the guest keeps a short window for the drill and for inspection.
+mapfile -t staged < <(find "$BACKUP_DIR" -maxdepth 1 -mindepth 1 -type d \
+                        -name 'ipa-*' -printf '%T@ %p\n' | sort -n | head -n -"$KEEP" | cut -d' ' -f2-)
+for d in "${staged[@]:-}"; do
+    [[ -n "$d" ]] && rm -rf -- "$d"
+done
+
+logger -t homelab-freeipa-backup "done"

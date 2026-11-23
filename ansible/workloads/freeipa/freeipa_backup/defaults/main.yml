@@ -1,0 +1,49 @@
+---
+# FreeIPA backup — the domain's own artefact (LDAP + Kerberos keys + CA material as one run).
+#
+# The artefact is always produced on the guest. Where it is *published* is a transport, so
+# adding a destination is a variable change, not a rewrite: `relay` today (pve2 `local`), `path`
+# when the NAS lands (the guest writes straight into a mounted NFSv4 krb5p or encrypted SMB3
+# share). [runbook 47](../../../../docs/runbooks/47-freeipa-backup-restore.md)
+
+freeipa_backup_enabled: true
+
+# full — all IPA files plus data, **including the Dogtag CA keys**. Services stop for the run.
+# data — LDAP + Kerberos only, and **not** the CA: restoring it into a rebuilt server cannot
+#        reproduce the same CA, so issued certificates (LDAPS for Authentik included) would need
+#        reissuing through another offline signing ceremony.
+freeipa_backup_mode: full
+
+# --online is only valid with `--data` (ipa-backup(1)); ignored when the mode is `full`.
+freeipa_backup_online: false
+
+# Encrypt the artefact at rest. Off while it stays on the node it came from; turn it on with
+# `path` when the target is not the DC's own disk, unless the target already encrypts.
+freeipa_backup_gpg: false
+
+# Timer — nightly, at a quiet hour. `full` stops IPA services for the duration, so this is the
+# low-traffic slot; expect seconds-to-minutes on this realm size.
+freeipa_backup_oncalendar: "*-*-* 02:30:00"
+freeipa_backup_randomized_delay: "15m"
+freeipa_backup_persistent: true
+
+# Staging on the guest. Never the only copy once a transport is configured.
+freeipa_backup_dir: /var/lib/ipa/backup
+freeipa_backup_keep: 7
+
+# none  — staging only, in-guest. A drill can run from it; it is not a backup.
+# path  — the guest writes into an already-mounted target. The NAS shape, no controller involved.
+# relay — the controller pulls the newest artefact and copies it to a storage host. Credential-free
+#         by design (it reuses the controller's existing identities) but only as hands-off as the
+#         playbook runs that carry it.
+freeipa_backup_transport: relay
+
+# transport: path
+freeipa_backup_publish_path: ""
+freeipa_backup_publish_keep: 7
+
+# transport: relay
+freeipa_backup_relay_host: pve2
+freeipa_backup_relay_path: /var/lib/vz/dump/freeipa
+freeipa_backup_relay_keep: 7
+freeipa_backup_relay_staging: "{{ lookup('env', 'HOME') }}/.cache/homelab/freeipa-backup"

@@ -1,0 +1,103 @@
+---
+# Relay transport — the controller carries the newest artefact from the guest to the storage host.
+#
+# It exists because the guest holds no credential for the storage host, and should not: the
+# controller already authenticates to both with the identities ADR 41 gives it, so nothing new
+# rests anywhere. The cost is honest — this half is only as hands-off as the playbook runs that
+# carry it, which is why the `path` transport takes over once the NAS is mounted.
+
+- name: Find the artefacts staged on the guest
+  ansible.builtin.find:
+    paths: "{{ freeipa_backup_dir }}"
+    file_type: directory
+    patterns:
+      - ipa-full-*
+      - ipa-data-*
+  register: freeipa_backup_staged
+
+- name: Fail when the guest has staged nothing to publish
+  ansible.builtin.assert:
+    that:
+      - freeipa_backup_staged.matched > 0
+    fail_msg: >-
+      No ipa-full-* / ipa-data-* artefact is staged in {{ freeipa_backup_dir }}. Run the unit
+      first (`systemctl start homelab-freeipa-backup`) and read `journalctl -t homelab-freeipa-backup`
+      before publishing a stale or absent copy.
+
+- name: Pick the newest artefact
+  ansible.builtin.set_fact:
+    freeipa_backup_newest: "{{ freeipa_backup_staged.files | sort(attribute='mtime') | last }}"
+
+- name: Drop any bundle left by an interrupted run
+  ansible.builtin.file:
+    path: /var/tmp/{{ freeipa_backup_newest.path | basename }}.tar.gz
+    state: absent
+
+- name: Bundle it as one file
+  # force_archive keeps the artefact's own directory as the top-level entry, so extracting it
+  # into /var/lib/ipa/backup reproduces exactly what ipa-restore expects. Verify with
+  # `tar -tzf` (runbook 47 §4) — a wrong shape shows up there, not at restore time.
+  community.general.archive:
+    path: "{{ freeipa_backup_newest.path }}"
+    dest: /var/tmp/{{ freeipa_backup_newest.path | basename }}.tar.gz
+    format: gz
+    force_archive: true
+    mode: "0600"
+
+- name: Ensure the controller staging directory exists
+  ansible.builtin.file:
+    path: "{{ freeipa_backup_relay_staging }}"
+    state: directory
+    mode: "0700"
+  delegate_to: localhost
+
+- name: Fetch the artefact to the controller
+  ansible.builtin.fetch:
+    src: /var/tmp/{{ freeipa_backup_newest.path | basename }}.tar.gz
+    dest: "{{ freeipa_backup_relay_staging }}/"
+    flat: true
+
+- name: Ensure the storage directory exists on the relay host
+  ansible.builtin.file:
+    path: "{{ freeipa_backup_relay_path }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+  become: true
+  delegate_to: "{{ freeipa_backup_relay_host }}"
+
+- name: Publish the artefact to the relay host
+  ansible.builtin.copy:
+    src: "{{ freeipa_backup_relay_staging }}/{{ freeipa_backup_newest.path | basename }}.tar.gz"
+    dest: "{{ freeipa_backup_relay_path }}/"
+    owner: root
+    group: root
+    mode: "0600"
+  become: true
+  delegate_to: "{{ freeipa_backup_relay_host }}"
+
+- name: Drop the temporary bundle on the guest
+  ansible.builtin.file:
+    path: /var/tmp/{{ freeipa_backup_newest.path | basename }}.tar.gz
+    state: absent
+
+- name: List the artefacts held on the relay host
+  ansible.builtin.find:
+    paths: "{{ freeipa_backup_relay_path }}"
+    patterns:
+      - "*.tar.gz"
+  become: true
+  delegate_to: "{{ freeipa_backup_relay_host }}"
+  register: freeipa_backup_relayed
+
+- name: Prune the relay host to the newest copies
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  become: true
+  delegate_to: "{{ freeipa_backup_relay_host }}"
+  # Newest first, then drop the ones that survive the keep window.
+  loop: "{{ (freeipa_backup_relayed.files | sort(attribute='mtime') | reverse | list)[freeipa_backup_relay_keep:] }}"
+  loop_control:
+    label: "{{ item.path | basename }}"

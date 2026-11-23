@@ -1,0 +1,11 @@
+[Unit]
+Description=Back up the FreeIPA domain (LDAP, Kerberos keys and CA material)
+Documentation=https://github.com/jaroslaw-bagnicki/Homelab/blob/main/docs/runbooks/47-freeipa-backup-restore.md
+After=network-online.target ipa.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/homelab-freeipa-backup
+# A silent failure is the outage: keep the unit's own state visible rather than swallowing it.
+TimeoutStartSec=30min

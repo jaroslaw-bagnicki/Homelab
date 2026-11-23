@@ -65,5 +65,23 @@ Run only after CR ([Ansible Verification](../../../AGENTS.md#ansible-verificatio
 
 ## Scope
 
-M1 only: server, external CA, test user, verification. Backup/restore is M2; clients, HBAC/sudo and
-LDAPS are later milestones.
+M1: server, external CA, test user, verification — **done**. M2: the domain's own artefact and a
+rehearsed restore ([runbook 47](../../../docs/runbooks/47-freeipa-backup-restore.md)). Clients,
+HBAC/sudo and LDAPS are later milestones.
+
+## Backup recipe — `freeipa_backup`
+
+`freeipa-backup-playbook.yml` is a **second entrypoint**, separately runnable, because the server
+playbook is a two-phase install:
+
+```powershell
+ansible-playbook ansible/workloads/freeipa/freeipa-backup-playbook.yml --diff
+```
+
+It installs a nightly timer in the guest (`ipa-backup`, full by default so the artefact carries the CA,
+with staging retention) and publishes the newest artefact — `relay` to a storage host today, `path`
+into a mounted share once the NAS exists. **The destination is a transport, not a rewrite**: adding the
+NAS changes `freeipa_backup_transport`/`freeipa_backup_publish_path`, not the role. The guest holds no
+credential for the storage host by design — the `relay` transport reuses the controller's identities
+([ADR 41](../../../docs/decisions/41-ssh-certificates-step-ca.md)). Full procedure:
+[runbook 47](../../../docs/runbooks/47-freeipa-backup-restore.md).
