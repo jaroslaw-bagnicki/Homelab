@@ -1,6 +1,6 @@
 # Plan 01 — Identity and Access Stack Rollout
 
-**Status**: 🔨 Active — stage 1 delivered; stage 2 starts with the FreeIPA server (M1)
+**Status**: 🔨 Active — stage 1 delivered; stage 2 M1 (the server) delivered, M2 (backup + restore drill) in progress
 **Date**: 2026-10-27
 
 **Workstreams**: [SSH host + agent certs #161](https://github.com/jaroslaw-bagnicki/Homelab/issues/161) · [SSH identity loading #170](https://github.com/jaroslaw-bagnicki/Homelab/issues/170) · [SSH human certs #166](https://github.com/jaroslaw-bagnicki/Homelab/issues/166) · [FreeIPA #164](https://github.com/jaroslaw-bagnicki/Homelab/issues/164) · [Authentik #165](https://github.com/jaroslaw-bagnicki/Homelab/issues/165) · [Workload identity #168](https://github.com/jaroslaw-bagnicki/Homelab/issues/168)
@@ -200,7 +200,8 @@ supplied. Only one engine answers each question, which is why both ADRs can stan
 | Decision | Needed by | Default if it is not taken |
 |---|---|---|
 | ~~`pve1` headroom — 2 GB IPA and accept pressure, or pull [idea 15](../ideas/15-second-proxmox-node.md) forward first~~ **Resolved 2026-11-07** — the server runs on `pve2` | stage 2 | 2 GB guest on `pve2` |
-| CA shape at IPA install — offline ceremony or self-signed interim | stage 2 M1 | **external-ca now** ([runbook 41](../runbooks/41-deploy-freeipa-server.md)); self-signed only as the documented fallback, re-parent before M3 ([ADR 42](../decisions/42-pki-topology-sibling-cas.md) item 6) |
+| ~~CA shape at IPA install — offline ceremony or self-signed interim~~ **Resolved 2026-11-22** — `--external-ca`, signed offline from the IronKey bundle; no client imports an IPA anchor, the fleet root is the anchor ([runbook 41](../runbooks/41-deploy-freeipa-server.md) §11) | stage 2 M1 | — |
+| ~~Where `ipa-backup` lands — the NAS, a second node, or `pve2`'s own storage~~ **Resolved 2026-11-23** — `pve2` `local`, off the guest's own disk, as a **drill** destination ([runbook 47](../runbooks/47-freeipa-backup-restore.md)): the Beetle is being cut over to TrueNAS ([idea 17](../ideas/17-truenas-vs-omv-nas-os.md)) with no in-place conversion, so an OMV share built now would be destroyed before reuse | stage 2 M2 | the NAS becomes the permanent target as a `path` transport once TrueNAS lands, and the drill is re-run once against it; ADR 49's `nas` leg stays **open** until then |
 | Principal naming contract — IPA username as the principal | before stage 4 | IPA username |
 | Authentik outpost placement and the cross-LAN hop | stage 3 | embedded outpost over TLS, else an ADR 34 exception row |
 | Which hosts enrol as FreeIPA clients | stage 2 M6 | Linux hosts whose login policy is worth centralising; `pve2` never ([ADR 43](../decisions/43-freeipa-domain-realm.md) item 7) |
