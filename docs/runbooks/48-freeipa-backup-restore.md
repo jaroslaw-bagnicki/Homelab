@@ -42,13 +42,13 @@ The target below is `pve2`'s **`local`** directory — the hypervisor's own disk
 guest. That is **copy 1 standing in for a backup**, and it is deliberately temporary:
 
 - **It expires when the NAS share exists.** At the OMV → TrueNAS cutover the job's storage is repointed
-  (one property, §7) and the retention returns to ADR 49's window.
+  (one property, **When the NAS exists** below) and the retention returns to ADR 49's window.
 - **Copies 2 and 3 do not exist meanwhile.** [ADR 49](../decisions/49-backup-3-2-1-strategy.md) places the
   guest backups on the NAS and replicates that copy off-site; neither leg is built, so the workload is
   **not** 3‑2‑1 compliant during the bridge.
 - **ADR 49 is not amended for it.** A one-to-two-week bridge with a stated expiry is an operational
   state, not a settled decision — it belongs here and in `overview.md`, not in the decision log. The ADR
-  regains full effect at §7.
+  applies again once the share exists.
 
 ## 1. Preflight
 
@@ -262,7 +262,7 @@ in this runbook does.
 
 ## 6. Failure visibility
 
-A backup nobody checks is a rumour. Until the NAS and its own monitoring exist:
+A backup nobody checks is a rumour. Nothing alerts you yet, so check by hand:
 
 - **Task log** — `pvesh get /nodes/pve2/tasks --limit 20` or UI *pve2 → Task History*; a failed `vzdump`
   is an `ERROR` entry with the reason (usually free space).
@@ -274,46 +274,11 @@ A backup nobody checks is a rumour. Until the NAS and its own monitoring exist:
   watches `pve2`, but wiring either is a follow-up, not part of this bridge. Say so rather than assume
   coverage.
 
-## 7. When the NAS exists
+## When the NAS exists
 
-1. **Add the share as Proxmox storage** on `pve2`. The storage type is `cifs` over the TrueNAS dataset,
-   not `dir` — `dir` is a *local* directory, and the Proxmox NFS/CIFS types are what mount a share:
-
-   ```sh
-   pvesm add cifs nas-backup \
-     --server <truenas-ip> --share vzdump \
-     --username svc-pve-backup --content backup \
-     --options vers=3.0,seal
-   grep nas-backup /proc/mounts           # the mount must carry vers=3.0 and seal
-   pvesm status --storage nas-backup
-   ```
-
-   **Why SMB with `seal` and not NFSv4 with `krb5p`.** [ADR 34](../decisions/34-lan-tls-only.md) admits
-   either, and TrueNAS serves either. `krb5p` needs `pve2` to authenticate to the share as a Kerberos
-   principal — a keytab on the hypervisor — which
-   [ADR 43](../decisions/43-freeipa-domain-realm.md) item 7 rules out: the node runs the domain and is
-   deliberately **not** a client. SMB 3 with `seal` gets the same encryption from a share credential
-   instead, so the requirement is met without making the domain controller's host a member of its own
-   realm.
-
-   Proxmox keeps that credential in `/etc/pve/priv/storage/nas-backup.pw` (`600`) on the node, never in
-   the storage config; it comes from Key Vault and exists only there. If this PVE version refuses an
-   option, **Datacenter → Storage → Add → CIFS** lists what it accepts for `options` — do not assume
-   `vers`/`seal` spelling from this page.
-2. **Repoint the job** — its `storage` property, nothing else. That is the whole bridge exit.
-3. **Restore ADR 49's retention** (`keep-daily=7,keep-weekly=4,keep-monthly=6`) once capacity allows, and
-   drop the manual Protect step.
-4. **Add copy 3** — replicate the NAS copy to the `homelab-vzdump` bucket per
-   [ADR 50](../decisions/50-backblaze-b2-offsite-backup.md) (bucket-scoped key in Key Vault, Object Lock,
-   EU region), via a `vzdump` hook script or the NAS's own replication. **Before** the destructive
-   mdadm → ZFS cutover, which ADR 49 names as the point where the off-site copy is the safety net.
-
-   The artefact is **not encrypted**: `seal` protects the wire, not the file, and `vzdump` has no
-   encryption option on a `dir` target. Whoever holds the share — or the bucket key — can read the
-   server's disk. Encrypt the off-site leg (an encrypted repository such as Restic or rclone's crypt)
-   if that exposure is not acceptable; nothing in this runbook does it for you.
-5. **Re-run §5** against the NAS artefact — same procedure, different source, and it is what proves the
-   new destination rather than assuming it.
+Out of scope here. The share becomes Proxmox storage on `pve2`, the job's `storage` property is
+repointed at it, and retention returns to [ADR 49](../decisions/49-backup-3-2-1-strategy.md)'s window
+(7 daily + 4 weekly + 6 monthly). Nothing else in the job changes.
 
 ## Verification checklist
 
