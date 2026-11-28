@@ -1,4 +1,4 @@
-# FreeIPA Guest Backup and Restore — Native `vzdump` to a Local Directory
+# FreeIPA Guest Backup and Restore — Proxmox `vzdump` to a Local Directory
 
 > Back up and restore the lab's **directory server**: FreeIPA on VM **250** (`ipa.internal`, realm
 > `LAB.INTERNAL`) on the `pve2` node, using Proxmox's own `vzdump` — a full image of the guest, scheduled
