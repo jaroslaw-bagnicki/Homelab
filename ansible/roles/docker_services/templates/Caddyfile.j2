@@ -1,31 +1,28 @@
-# Origin Caddy for both zones. The edge proxy terminates TLS and hands the whole
-# hostname here with `Host` preserved (ADR 24 (2026-11-14 amendment)), so this file
-# routes by *service label* and never names a domain: adding a zone is an edge-side
-# change only (runbook 47 §3a-bis).
+# Origin Caddy for both zones: the edge proxy terminates TLS and hands the whole
+# hostname here with `Host` preserved (ADR 24 (2026-11-14 amendment)), so each service
+# lists its public and its `.internal` address, and the edge proxy decides which of
+# them an outside client ever sees.
 http://cloud5.ovh:8080 {
     respond "lab — {host} — {time.now}"
 }
 
+http://hello.{{ docker_services_public_domain }}:8080, http://hello.{{ docker_services_internal_domain }}:8080 {
+    reverse_proxy hello:80
+}
+
+http://portainer.{{ docker_services_public_domain }}:8080, http://portainer.{{ docker_services_internal_domain }}:8080 {
+    reverse_proxy portainer:9000 {
+        header_up X-Forwarded-Proto https
+    }
+}
+
+http://zot.{{ docker_services_public_domain }}:8080, http://zot.{{ docker_services_internal_domain }}:8080 {
+    reverse_proxy zot:5000
+}
+
+# OpenCode instances — `<inst>-oc.<zone>` in either zone.
 :8080 {
     route {
-        @portainer expression {http.request.host}.startsWith('portainer.')
-        handle @portainer {
-            reverse_proxy portainer:9000 {
-                header_up X-Forwarded-Proto https
-            }
-        }
-
-        @zot expression {http.request.host}.startsWith('zot.')
-        handle @zot {
-            reverse_proxy zot:5000
-        }
-
-        @hello expression {http.request.host}.startsWith('hello.')
-        handle @hello {
-            reverse_proxy hello:80
-        }
-
-        # OpenCode instances — `<inst>-oc.<any zone>`.
         @oc expression {http.request.host}.endsWith('-oc.{{ opencode_public_domain }}') || {http.request.host}.endsWith('-oc.{{ docker_services_internal_domain }}')
         handle @oc {
             reverse_proxy http://caddy-opencode:80 {

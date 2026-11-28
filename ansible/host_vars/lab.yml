@@ -6,6 +6,7 @@ security_ufw_allow_ssh_from: "192.168.2.0/24"
 
 # Docker workload stack migrated from cloudlab as-is (#44 intermediate step, runbook 47).
 opencode_public_domain: cloud5.ovh
+docker_services_public_domain: cloud5.ovh
 
 # Origin Caddy published on the LAN IP for the edge Caddy's public zone (ADR 24 (2026-11-14 amendment)).
 # Host UFW does not filter Docker DNAT traffic (runbook 02 §2), so the edge-only
