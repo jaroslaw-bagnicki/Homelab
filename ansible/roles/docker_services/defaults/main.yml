@@ -18,6 +18,10 @@ docker_services_caddy_port: "8080"
 # (runbook 02 §2, ADR 34). Empty = no DOCKER-USER rule (loopback-only bind).
 docker_services_caddy_allow_from: ""
 
+# LAN name space (ADR 37). The origin Caddy answers to both zones so the edge
+# proxy can hand it `.internal` names unchanged (runbook 47 §3).
+docker_services_internal_domain: internal
+
 opencode_public_domain: example.com
 
 zot_public_domain: example.com

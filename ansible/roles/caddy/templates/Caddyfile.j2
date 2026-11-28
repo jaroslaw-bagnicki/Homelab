@@ -2,7 +2,7 @@
     auto_https disable_redirects
 }
 
-{% for site in caddy_sites %}
+{% for site in caddy_sites + caddy_workload_sites %}
 {% set upstreams = site.upstreams | default([site.upstream]) %}
 {% set needs_block = site.lb_policy is defined or site.health_uri is defined or site.tls_skip_verify | default(false) %}
 {{ site.name }} {

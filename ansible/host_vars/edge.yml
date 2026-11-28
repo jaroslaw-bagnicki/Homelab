@@ -27,6 +27,24 @@ caddy_public_sites:
   - name: "*.cloud5.ovh"
     upstream: "http://192.168.2.200:8080"
 
+# The lab Docker stack's names inside `.internal` (ADR 37). This proxy terminates TLS
+# from the fleet CA and hands the whole hostname to the stack's own Caddy on :8080,
+# which routes by service — so migrating the stack reads as one upstream IP here.
+# Technitium's `*.internal` record already points them at this box; no DNS change.
+caddy_workload_sites:
+  - name: portainer.internal
+    upstream: "http://192.168.2.200:8080"
+  - name: zot.internal
+    upstream: "http://192.168.2.200:8080"
+  - name: hello.internal
+    upstream: "http://192.168.2.200:8080"
+  - name: homelab-oc.internal
+    upstream: "http://192.168.2.200:8080"
+  - name: prospera-oc.internal
+    upstream: "http://192.168.2.200:8080"
+  - name: test-oc.internal
+    upstream: "http://192.168.2.200:8080"
+
 netdata_role: child
 netdata_stream_target: "192.168.2.201:19996"
 netdata_stream_ssl: true
