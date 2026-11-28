@@ -1,12 +1,12 @@
 [Unit]
-Description=cloudflared — Cloudflare Tunnel public ingress (ADR 53)
+Description=cloudflared — Cloudflare Tunnel public ingress (ADR 24 (2026-11-14 amendment))
 After=network-online.target caddy.service
 Wants=network-online.target
 
 [Service]
 Type=simple
 EnvironmentFile={{ cloudflared_env_file }}
-ExecStart=/usr/local/bin/cloudflared tunnel --no-autoupdate run
+ExecStart=/usr/bin/cloudflared tunnel --no-autoupdate run
 Restart=on-failure
 RestartSec=5
 

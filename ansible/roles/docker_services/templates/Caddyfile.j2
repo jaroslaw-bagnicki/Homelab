@@ -1,5 +1,5 @@
 # Origin Caddy for the public zone: the edge Caddy proxies here on :8080 with
-# Host preserved (ADR 53), so all site blocks listen on :8080.
+# Host preserved (ADR 24 (2026-11-14 amendment)), so all site blocks listen on :8080.
 http://cloud5.ovh:8080 {
     respond "lab — {host} — {time.now}"
 }
