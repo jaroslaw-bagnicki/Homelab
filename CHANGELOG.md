@@ -13,6 +13,7 @@ Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month 
 
 ## 2026‑11
 
+- **(feat)** Back up the FreeIPA guest with Proxmox `vzdump` and prove the restore — VM 250 recovered to a throwaway copy with the same CA serial — [runbook 48](docs/runbooks/48-freeipa-backup-restore.md)
 - **(fix)** Resolve the CA root at renewal run time so a moved path can't break host-certificate renewal — [runbook 40](docs/runbooks/40-deploy-ssh-certificates.md)
 - **(feat)** Stand up the FreeIPA server on `pve2` — the lab's Linux domain, realm `LAB.INTERNAL` under the fleet root — [runbook 41](docs/runbooks/41-deploy-freeipa-server.md)
 - **(docs)** Retire OpenCode as the agent solution — Mistral Vibe (VS Code extension + CLI) is the supported agent; cloudlab OpenCode instances are dormant, no new deployments — [ADR 53](docs/decisions/53-retire-opencode-use-mistral-vibe.md)
