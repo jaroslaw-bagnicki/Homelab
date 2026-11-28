@@ -44,7 +44,10 @@ df -h /var/lib/vz                                     # the binding constraint �
 pvesh get /cluster/backup --output-format yaml        # no existing job may already target VM 250
 ```
 
-`vmbr0`'s guest must be on `local-lvm` (LVM-thin) — that is what makes `snapshot` mode cheap. It is.
+VM 250's disk sits on `local-lvm` (LVM-thin). That is **not** a requirement for `snapshot` mode — a
+Proxmox live backup provides snapshot-like semantics on any storage type — but thin, discard-capable
+storage is what makes the optional fleecing scratch space usable if guest I/O during the copy ever
+becomes a problem. The job below does not enable fleecing.
 
 ## 2. Create the job
 
@@ -251,7 +254,7 @@ A backup nobody checks is a rumour. Until the NAS and its own monitoring exist:
 - [ ] `kinit admin` + `kinit m1test` against the restored copy, with `/etc/hosts` and KDC pinned to it (§5c)
 - [ ] `ipa ca-show ipa` serial matches runbook 41 §11 (§5c)
 - [ ] drill guest destroyed the same day (§5d)
-- [ ] bridge stated in `docs/overview.md` with its expiry (§This is a bridge)
+- [ ] bridge and its expiry stated in `docs/overview.md` and plan 01 (see **This is a bridge** above)
 
 ## Execution record
 
