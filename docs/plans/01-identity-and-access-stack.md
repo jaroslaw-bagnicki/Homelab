@@ -200,7 +200,8 @@ supplied. Only one engine answers each question, which is why both ADRs can stan
 | Decision | Needed by | Default if it is not taken |
 |---|---|---|
 | ~~`pve1` headroom — 2 GB IPA and accept pressure, or pull [idea 15](../ideas/15-second-proxmox-node.md) forward first~~ **Resolved 2026-11-07** — the server runs on `pve2` | stage 2 | 2 GB guest on `pve2` |
-| CA shape at IPA install — offline ceremony or self-signed interim | stage 2 M1 | **external-ca now** ([runbook 41](../runbooks/41-deploy-freeipa-server.md)); self-signed only as the documented fallback, re-parent before M3 ([ADR 42](../decisions/42-pki-topology-sibling-cas.md) item 6) |
+| ~~CA shape at IPA install — offline ceremony or self-signed interim~~ **Resolved 2026-11-22** — `--external-ca`, signed offline from the IronKey bundle; no client imports an IPA anchor, the fleet root is the anchor ([runbook 41](../runbooks/41-deploy-freeipa-server.md) §11) | stage 2 M1 | — |
+| Guest backup destination — where VM 250's artefact lives before the NAS exists | stage 2 M2 | **`pve2` `local` directory**, `keep-daily=7`, as an **expiry-bound bridge** ([runbook 47](../runbooks/47-freeipa-backup-restore.md)): it ends when the OMV → TrueNAS share exists, the job's storage is repointed, and [ADR 49](../decisions/49-backup-3-2-1-strategy.md)'s NAS copy plus [ADR 50](../decisions/50-backblaze-b2-offsite-backup.md)'s off-site leg follow. Not amended into ADR 49 — a short-lived bridge is an operational state, not a settled decision |
 | Principal naming contract — IPA username as the principal | before stage 4 | IPA username |
 | Authentik outpost placement and the cross-LAN hop | stage 3 | embedded outpost over TLS, else an ADR 34 exception row |
 | Which hosts enrol as FreeIPA clients | stage 2 M6 | Linux hosts whose login policy is worth centralising; `pve2` never ([ADR 43](../decisions/43-freeipa-domain-realm.md) item 7) |
