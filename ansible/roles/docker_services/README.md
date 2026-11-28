@@ -22,13 +22,15 @@ Deploys the core Docker Compose stack on `lab` — Portainer, the origin Caddy, 
 | `docker_services_caddy_allow_from` | `""` | Source IP allowed to reach the published origin port. Enforced in the `DOCKER-USER` chain (host UFW does not filter Docker DNAT traffic, runbook 02 §2); empty = no rule (loopback bind only). Rules persist via `iptables-persistent`. |
 | `opencode_public_domain` | `example.com` | Domain for the OpenCode wildcard routes. |
 | `zot_public_domain` | `example.com` | Domain for the Zot route. |
+| `docker_services_enabled` | `[portainer, caddy, hello]` | Services rendered into the Compose file. Narrow it to run a subset — the migration deploys `[portainer]` alone as its pilot (runbook 47 §2) before the rest follows. |
 | `docker_services_networks` | `[{name: opencode_net}]` | Bridge networks to ensure. |
 
 ## Notes
 
 - Asserts `inventory_hostname` is `lab` or `cloudlab`; applied by `playbook-lab.yml` since the cloudlab → lab migration (runbook 47); `playbook.yml` (cloudlab) no longer includes it.
 - The Caddyfile site blocks listen on `:8080` (the published origin port); the edge Caddy proxies the public hostnames here with `Host` preserved. Portainer and Zot stay loopback-only, reached through this origin Caddy.
-- Portainer's admin user is initialised from the Key Vault password and treats `409` (already initialised) as success.
+- Portainer's admin user is initialised from the Key Vault password and treats `409` (already initialised) as success — which is also how a cloned database announces itself: a restored `portainer_data` volume yields `409` on the first run, a fresh one `200`.
+- The `portainer_data` volume is pinned by name in the Compose file, so a volume cloned from another host is adopted as-is rather than landing under the compose project prefix.
 
 ---
 

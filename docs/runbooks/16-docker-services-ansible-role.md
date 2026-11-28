@@ -24,10 +24,10 @@
 
 | File | Purpose |
 |---|---|
-| `ansible/roles/docker_services/defaults/main.yml` | Role defaults: `docker_dir`, `arc_*` (tenant/sub/vault), `cloudflared_*_secret_name` |
+| `ansible/roles/docker_services/defaults/main.yml` | Role defaults: `docker_dir`, `arc_keyvault_name`, the `docker_services_caddy_*` publish/filter vars, `docker_services_enabled` |
 | `ansible/roles/docker_services/tasks/main.yml` | Validate host → ensure `docker_dir` → template files → `docker compose up` → Portainer admin init (password from KV) |
 | `ansible/roles/docker_services/handlers/main.yml` | `Restart Caddy` (on Caddyfile change), `Redeploy docker services` (on compose change) |
-| `ansible/roles/docker_services/templates/docker-compose.yml.j2` | Service definitions: portainer, caddy, **cloudflared**, hello + `homelab_net` + `portainer_data` |
+| `ansible/roles/docker_services/templates/docker-compose.yml.j2` | Service definitions, each gated on `docker_services_enabled`: portainer, caddy, hello + `homelab_net` + the name-pinned `portainer_data` volume |
 | `ansible/roles/docker_services/templates/Caddyfile.j2` | Per-host HTTP site blocks + `:8080` local debug endpoint |
 
 ---
@@ -46,7 +46,7 @@ The Cloudflare Tunnel no longer runs here — `cloudflared` is a bare-metal syst
 
 ## 3. Role Idempotency
 
-The role uses `community.docker.docker_compose_v2` with `state: present` and `pull: always`. On first run it deploys all 4 containers. On subsequent runs:
+The role uses `community.docker.docker_compose_v2` with `state: present` and `pull: always`. On first run it deploys the three containers selected by `docker_services_enabled`. On subsequent runs:
 
 - KV fetch tasks re-run but produce the same `register:` value (no actual change in the fetched secret)
 - File-write tasks (`copy: content=...`) are no-ops if file content matches
