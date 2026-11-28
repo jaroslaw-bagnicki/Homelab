@@ -67,5 +67,5 @@ Run only after CR ([Ansible Verification](../../../AGENTS.md#ansible-verificatio
 
 M1: server, external CA, test user, verification — **done**. M2: guest backup, which is **not a role in
 this workload** — it is Proxmox's own `vzdump` job for VM 250, configured by hand per
-[runbook 47](../../../docs/runbooks/47-freeipa-backup-restore.md). Clients, HBAC/sudo and LDAPS are later
+[runbook 48](../../../docs/runbooks/48-freeipa-backup-restore.md). Clients, HBAC/sudo and LDAPS are later
 milestones.
