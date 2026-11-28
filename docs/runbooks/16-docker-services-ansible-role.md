@@ -28,7 +28,7 @@
 | `ansible/roles/docker_services/tasks/main.yml` | Validate host → ensure `docker_dir` → template files → `docker compose up` → Portainer admin init (password from KV) |
 | `ansible/roles/docker_services/handlers/main.yml` | `Restart Caddy` (on Caddyfile change), `Redeploy docker services` (on compose change) |
 | `ansible/roles/docker_services/templates/docker-compose.yml.j2` | Service definitions, each gated on `docker_services_enabled`: portainer, caddy, hello + `homelab_net` + the name-pinned `portainer_data` volume |
-| `ansible/roles/docker_services/templates/Caddyfile.j2` | Per-host HTTP site blocks + `:8080` local debug endpoint |
+| `ansible/roles/docker_services/templates/Caddyfile.j2` | Service-label routing on `:8080` (zone-agnostic, unmatched → 404) + `:80` in-container debug endpoint |
 
 ---
 

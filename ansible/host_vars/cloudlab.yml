@@ -1,6 +1,6 @@
 ---
-# The Docker workload stack (opencode_public_domain, zot_public_domain,
-# opencode_instances) moved to `lab` — see host_vars/lab.yml (runbook 47).
+# The Docker workload stack (opencode_public_domain, opencode_instances) moved
+# to `lab` — see host_vars/lab.yml (runbook 47).
 docker_users: []
 
 # cloudlab is outside SSH CA scope: no LAN route to ca.internal, so it keeps the

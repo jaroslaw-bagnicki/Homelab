@@ -12,7 +12,7 @@ The IaC side is already repointed in the repo:
 - `ansible/playbooks/playbook-lab.yml` includes `docker_services` (after `docker_host`); `playbook.yml` (cloudlab) no longer does. `docker_services` no longer ships `cloudflared` — the origin Caddy publishes on `192.168.2.200:8080` (`docker_services_caddy_bind` in `host_vars/lab.yml`, DOCKER-USER: 8080 from `192.168.2.240` only).
 - `docker_services_enabled` (default: all three) narrows the Compose file to a subset — that is what makes the Portainer pilot a single-service deploy.
 - The `portainer_data` volume is pinned by name in the Compose file, so a volume cloned from another host is adopted as-is instead of landing under the compose project prefix.
-- `ansible/workloads/opencode/opencode-playbook.yml` and `ansible/workloads/zot/zot-playbook.yml` target `hosts: lab`; `opencode_public_domain`, `zot_public_domain`, `opencode_instances` live in `ansible/host_vars/lab.yml`.
+- `ansible/workloads/opencode/opencode-playbook.yml` and `ansible/workloads/zot/zot-playbook.yml` target `hosts: lab`; `opencode_public_domain` and `opencode_instances` live in `ansible/host_vars/lab.yml`. The origin Caddy routes by service label, so no per-service domain lives in the role.
 - `ansible/roles/cloudflared/` (new) installs the tunnel bare-metal on `edge`, wired into `playbook-edge.yml` after `caddy`; the edge Caddy gains the public zone via `caddy_public_sites` in `host_vars/edge.yml`.
 
 ## Prerequisites

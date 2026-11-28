@@ -126,7 +126,6 @@ Subsequent runs with no template, image, or KV change report `changed=0`.
 
 - `zot_keyvault_name`, `zot_registry_user_secret_name`, `zot_registry_password_secret_name`, `zot_dir`, `zot_data_dir`, `zot_image` — role defaults.
 - `zot_registry_user` — htpasswd username, fetched from `zot-registry-user` in Key Vault (default fallback `zot-admin`); the global admin (`adminPolicy`) and `**` repository policy holder, used by `config.json` and the `htpasswd` module.
-- `zot_public_domain` — public DNS suffix for the registry hostname (`zot.<domain>`), default `example.com`, overridden per host; consumed by the base `docker_services` Caddyfile template for the route.
 
 ## Operational runbook
 
