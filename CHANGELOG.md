@@ -18,7 +18,7 @@ Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month 
 - **(docs)** Retire OpenCode as the agent solution — Mistral Vibe (VS Code extension + CLI) is the supported agent; cloudlab OpenCode instances are dormant, no new deployments — [ADR 53](docs/decisions/53-retire-opencode-use-mistral-vibe.md)
 - **(chore)** Modernize the devcontainer — Ubuntu 26.04 base, locked features, Ansible 2.22 venv — and set the weekly Dependabot / quarterly pin-review cadence — [runbook 12](docs/runbooks/12-codespaces-devcontainer.md) · [ADR 52](docs/decisions/52-devcontainer-dependency-cadence.md)
 - **(docs)** Provision VMs from a cloud image plus cloud-init, never a hand-clicked installer — [ADR 54](docs/decisions/54-vm-provisioning-cloud-image.md)
-- **(feat)** Docker stack cloudlab → `lab`, public tunnel → `edge`; k3s postponed — [ADR 24 (2026-11-14 amendment)](docs/decisions/24-edge-ingress-appliance.md) · [runbook 47](docs/runbooks/47-migrate-cloudlab-docker-to-lab.md)
+- **(feat)** Docker stack cloudlab → `lab` with `.internal` names; public tunnel → `edge` — [runbook 47](docs/runbooks/47-migrate-cloudlab-docker-to-lab.md)
 - **(fix)** Renew SSH host certificates again — `step ssh renew` rejected `-f` before its positional paths, so no certificate ever renewed — [runbook 40](docs/runbooks/40-deploy-ssh-certificates.md)
 - **(docs)** Adopt the two-model split on one Pro account — DS4.1 stays daily via Mistral, ML4 via Vibe — [ADR 51](docs/decisions/51-ai-model-split-deepseek-mistral.md)
 - **(docs)** Adopt the 3‑2‑1 backup rule with Backblaze B2 as the off-site target, superseding ADR 02's Azure Blob — [ADR 49](docs/decisions/49-backup-3-2-1-strategy.md)

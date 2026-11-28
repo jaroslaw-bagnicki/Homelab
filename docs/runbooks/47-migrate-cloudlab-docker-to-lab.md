@@ -109,6 +109,21 @@ ansible-playbook ansible/playbooks/playbook-lab.yml
 - [ ] The DOCKER-USER chain allows only the edge IP: `sudo iptables -L DOCKER-USER -n` shows allow-from-`192.168.2.240` plus a drop, and a `curl` to `192.168.2.200:8080` **from another LAN host** is refused (host UFW does not filter Docker DNAT traffic, runbook 02 §2)
 - [ ] `sudo netfilter-persistent save` ran, so the rules survive a reboot: `sudo cat /etc/iptables/rules.v4 | grep -A2 DOCKER-USER`
 
+### 3a-bis. Give the stack its LAN names
+
+The names live on `edge`, but only its Caddy role — the caddy-only playbook stops short of `cloudflared`, so the public plane stays exactly as it is until §4:
+
+```bash
+ansible-playbook ansible/playbooks/playbook-caddy.yml     # edge: caddy role only, no tunnel
+```
+
+`caddy_workload_sites` in `host_vars/edge.yml` proxies `portainer.internal`, `zot.internal`, `hello.internal` and the `*-oc.internal` instance names to the stack's own Caddy on `192.168.2.200:8080`, `Host` preserved, and step-ca issues each leaf on first request. Technitium's existing `*.internal` record already points all of them at `edge` — **no DNS change**.
+
+- [ ] From a LAN client that trusts the fleet root (runbook 39): `curl -sI https://portainer.internal` → `200`
+- [ ] `curl -s -o /dev/null -w '%{http_code}' https://zot.internal/v2/` → `401` (htpasswd challenge, not a proxy error)
+- [ ] `curl -s https://homelab-oc.internal/global/health` → `{"healthy":true,…}`
+- [ ] `https://cloud5.ovh` still answers from **cloudlab** — the public plane has not moved (§4)
+
 ### 3b. OpenCode instance databases
 
 Dormant per [ADR 53](../decisions/53-retire-opencode-use-mistral-vibe.md), but migrated so their session history survives the cloudlab teardown.
@@ -186,6 +201,8 @@ At this point the whole stack runs on `lab` and is reachable from the LAN. **The
 ansible-playbook ansible/playbooks/playbook-edge.yml   # technitium → caddy (public zone) → cloudflared
 ```
 
+The `caddy` role is already converged from §3a-bis, so this run re-applies it idempotently and adds the DNS, tunnel, NUT, Netdata and Fluent Bit roles.
+
 - [ ] `systemctl is-active cloudflared` → `active`; `journalctl -u cloudflared | grep -i 'connection.*registered'`
 - [ ] Zero Trust → Tunnels → Connectors shows `edge` **Active**
 - [ ] The edge Caddy reaches the lab origin: `curl -s -H 'Host: cloud5.ovh' http://127.0.0.1:80` → `lab — …` — a real 200, not the 502 an empty origin would give, because §3 is already done
@@ -213,6 +230,7 @@ Same tunnel token, so DNS is untouched — only the connector host changes.
 ## 7. Post-migration state
 
 - Workload rows in `docs/overview.md` show `lab` (stack) and `edge` (tunnel + public Caddy zone); the lab origin hop is ADR 34's temporary exception (edge→lab :8080, edge-IP-only DOCKER-USER rule).
+- Routing splits on ownership: `edge` owns **zones and TLS** (`*.internal` from step-ca, the public zone on loopback), the stack's own Caddy owns **service routing** inside the workload. Migrating the stack therefore reads as one upstream IP in `caddy_workload_sites` — nothing else on `edge` names a lab service.
 - Fluent Bit on `lab` ships Docker json-file logs (`fluentbit_collect_docker: true`); `edge` ships journald logs of `cloudflared.service` — both flow to VictoriaLogs.
 
 ## 8. Postponed: lab Docker → k3s
