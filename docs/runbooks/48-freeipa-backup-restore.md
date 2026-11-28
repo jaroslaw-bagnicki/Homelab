@@ -42,7 +42,7 @@ The target below is `pve2`'s **`local`** directory — the hypervisor's own disk
 guest. That is **copy 1 standing in for a backup**, and it is deliberately temporary:
 
 - **It expires when the NAS share exists.** At the OMV → TrueNAS cutover the job's storage is repointed
-  (one property, §7) and the retention returns to ADR 02's window.
+  (one property, §7) and the retention returns to ADR 49's window.
 - **Copies 2 and 3 do not exist meanwhile.** [ADR 49](../decisions/49-backup-3-2-1-strategy.md) places the
   guest backups on the NAS and replicates that copy off-site; neither leg is built, so the workload is
   **not** 3‑2‑1 compliant during the bridge.
@@ -80,7 +80,7 @@ UI: **Datacenter → Backup → Add**. One job, these values:
 | Schedule | daily, `02:30` |
 | Selection mode | `snapshot` — live backup; the guest agent calls `guest-fsfreeze-freeze` / `thaw` |
 | Compression | `zstd` (fastest of lzo/gzip/zstd, multi-threaded) |
-| Retention | `prune-backups keep-daily=7` — sized in §4, not ADR 02's window |
+| Retention | `prune-backups keep-daily=7` — sized in §4, not ADR 49's window |
 | Repeat missed | **on** — catches up if `pve2` was off at 02:30 |
 | Notes-template | `{{guestname}} {{node}}` (records what the artefact belongs to) |
 
@@ -115,9 +115,13 @@ Then:
 
 ```sh
 ls -lh /var/lib/vz/dump/vzdump-qemu-250-*
+zstd -t /var/lib/vz/dump/vzdump-qemu-250-<UTC>.vma.zst   # compressed stream reads back whole
 pvesm list local --content backup
 pvesh get /nodes/pve2/tasks --limit 5 --output-format yaml
 ```
+
+`zstd -t` is not a substitute for §5 — it proves the file was not truncated on its way to the target, not
+that the guest inside it is sound. It is the cheap check that fails in seconds instead of at restore time.
 
 Record three things in the execution record at the bottom:
 
@@ -138,7 +142,11 @@ With §3's measured size `S`:
 |---|---|---|
 | `keep-daily=7` | 7 × S | yes if `7S` leaves ≥ 5 GB free |
 | `keep-daily=7,keep-weekly=4` | up to 11 × S | only for a small `S` |
-| ADR 02's window (7 daily + 4 weekly + 6 monthly) | up to 17 × S | **no** — that is the NAS's job |
+| ADR 49's window (7 daily + 4 weekly + 6 monthly) | up to 17 × S | **no** — that is the NAS's job |
+
+Leave room for the run itself, not only for what it leaves behind. A `dir` target cannot snapshot, so
+Proxmox holds guest writes aside while the job copies; a long backup needs free space beyond the finished
+artefact. A backup that dies halfway because the target filled is the same outcome as no backup.
 
 Start with `keep-daily=7` and revisit when the real `S` is known. If 7 copies do not fit, reduce to
 `keep-daily=3` — a shorter window beats a full root filesystem.
@@ -259,6 +267,9 @@ A backup nobody checks is a rumour. Until the NAS and its own monitoring exist:
 - **Task log** — `pvesh get /nodes/pve2/tasks --limit 20` or UI *pve2 → Task History*; a failed `vzdump`
   is an `ERROR` entry with the reason (usually free space).
 - **Freshness** — the newest `vzdump-qemu-250-*` timestamp must be within ~24 h. One `ls -t` a week.
+- **Partials after a failure** — a `vzdump` that dies mid-copy leaves a half-written
+  `vzdump-qemu-250-*` on the target, and `prune-backups` only understands filenames, so it stays. Delete
+  it by hand after any `ERROR`; otherwise it quietly consumes the space §4 counted as headroom.
 - **Not automated yet** — Proxmox's notification system can route job failures and Netdata already
   watches `pve2`, but wiring either is a follow-up, not part of this bridge. Say so rather than assume
   coverage.
@@ -290,12 +301,17 @@ A backup nobody checks is a rumour. Until the NAS and its own monitoring exist:
    option, **Datacenter → Storage → Add → CIFS** lists what it accepts for `options` — do not assume
    `vers`/`seal` spelling from this page.
 2. **Repoint the job** — its `storage` property, nothing else. That is the whole bridge exit.
-3. **Restore ADR 02's retention** (`keep-daily=7,keep-weekly=4,keep-monthly=6`) once capacity allows, and
-   drop the manual Protection step.
+3. **Restore ADR 49's retention** (`keep-daily=7,keep-weekly=4,keep-monthly=6`) once capacity allows, and
+   drop the manual Protect step.
 4. **Add copy 3** — replicate the NAS copy to the `homelab-vzdump` bucket per
    [ADR 50](../decisions/50-backblaze-b2-offsite-backup.md) (bucket-scoped key in Key Vault, Object Lock,
    EU region), via a `vzdump` hook script or the NAS's own replication. **Before** the destructive
    mdadm → ZFS cutover, which ADR 49 names as the point where the off-site copy is the safety net.
+
+   The artefact is **not encrypted**: `seal` protects the wire, not the file, and `vzdump` has no
+   encryption option on a `dir` target. Whoever holds the share — or the bucket key — can read the
+   server's disk. Encrypt the off-site leg (an encrypted repository such as Restic or rclone's crypt)
+   if that exposure is not acceptable; nothing in this runbook does it for you.
 5. **Re-run §5** against the NAS artefact — same procedure, different source, and it is what proves the
    new destination rather than assuming it.
 
@@ -304,8 +320,9 @@ A backup nobody checks is a rumour. Until the NAS and its own monitoring exist:
 - [ ] preflight clean; agent answers; `local` carries `backup` content; no job already targets 250 (§1)
 - [ ] job created: `snapshot`, `zstd`, `keep-daily=7`, `repeat-missed`, VM 250 → `local` (§2)
 - [ ] job visible in `/etc/pve/jobs.cfg` and `pvesh get /cluster/backup` (§2)
-- [ ] first artefact produced by hand; **size recorded**; freeze/thaw visible in the task log (§3)
-- [ ] retention sized against the measured size, with headroom on `/` (§4)
+- [ ] first artefact produced by hand; **size recorded**; `zstd -t` passes; freeze/thaw visible in the
+      task log (§3)
+- [ ] retention sized against the measured size, with headroom on `/` and room for the run itself (§4)
 - [ ] one protected sentinel — rotated only after its replacement is verified, never before (§4)
 - [ ] restore: VM 251, `--unique`, link **down** first, agent confirms `.251` before the link comes up (§5a)
 - [ ] `qm cloudinit update 251` run after `--ipconfig0` and before `qm start` (§5a)
