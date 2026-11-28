@@ -82,6 +82,7 @@ Alerts view and the API ([ADR 27](../../../docs/decisions/27-monitoring-strategy
 | `netdata_retention_tiers_by_role` | `parent` → 14d/5GiB, 30d/2GiB, 365d/2GiB · `child` → 7d/256MiB per tier | The retention **policy**, keyed by role — the parent is the long-term store, a child a short-term forwarder. |
 | `netdata_bind` | `127.0.0.1` | `[web] bind to` — a plain address, or Netdata's per-listener spec (`<ip>:<port>=<service>^SSL=force`); the parent lists two TLS-only listeners. |
 | `netdata_port` | `19999` | Default web port. |
+| `netdata_hostname` | `inventory_hostname` | `[global] hostname` — the dashboard label and the name the parent registers. Only written when it differs from the system hostname. Override on a host whose hostname is deliberately an FQDN (the FreeIPA server: `ipa`). |
 | `netdata_tls` | `false` | Serve listeners over TLS and write the `[web] ssl` paths; the parent sets `true`. |
 | `netdata_tls_cert` / `netdata_tls_key` | `/etc/netdata/ssl/{cert,key}.pem` | Self-signed certificate, generated once on the node when absent. |
 | `netdata_stream_ssl` | `false` | Child only: append `:SSL` to the stream destination. |

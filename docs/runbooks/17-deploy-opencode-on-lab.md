@@ -1,5 +1,7 @@
 # OpenCode Server Instances on lab
 
+> ⏸ **Dormant per [ADR 53](../decisions/53-retire-opencode-use-mistral-vibe.md) (2026-11-21):** OpenCode is retired as the agent solution. Kept as the operational record of the migrated `lab` instances — do **not** deploy new instances; use Mistral Vibe (runbook 13) instead.
+
 > Runbook for the `ansible/workloads/opencode/` workload — per-project OpenCode server instances on `lab` (migrated from cloudlab as-is — [runbook 47](47-migrate-cloudlab-docker-to-lab.md)). Workload description, capabilities, services, host layout, secret handling, and idempotency live in [the workload README](../../ansible/workloads/opencode/README.md). This runbook covers the operational steps: prerequisites, secret provisioning, deploy invocation, verification, and CF Tunnel prerequisites.
 
 > **Note:** `example.com` is a placeholder domain used in this runbook for documentation purposes. Replace with the actual domain when following these steps for a real deployment.

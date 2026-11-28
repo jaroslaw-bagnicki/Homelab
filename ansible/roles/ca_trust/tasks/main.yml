@@ -98,8 +98,11 @@
 - name: Install the SSH CA public keys
   when: ca_trust_ssh_enabled | bool
   ansible.builtin.copy:
-    content: "{{ item.content }}
-"
+    # `|+` keeps the trailing newline the key file needs. A multi-line double-quoted scalar
+    # folds its newline into a space, which left the file ending in a space and with no
+    # final newline — sshd tolerates that, but it is not what the file should contain.
+    content: |+
+      {{ item.content }}
     dest: "{{ item.dest }}"
     owner: root
     group: root
@@ -110,13 +113,25 @@
   loop_control:
     label: "{{ item.dest }}"
 
-- name: Install trust-store prerequisites
+# `ansible.builtin.package` cannot refresh APT metadata — `update_cache` is Debian-only and is an
+# unknown argument on dnf — so the Debian path keeps an explicit `apt` task. Without it, installing
+# `ca-certificates`/`openssl` fails on a fresh or stale Ubuntu node with an unusable package index.
+- name: Install trust-store prerequisites (Debian/Ubuntu)
+  when: ansible_facts['os_family'] == 'Debian'
   ansible.builtin.apt:
     name:
       - ca-certificates
       - openssl
     state: present
     update_cache: true
+
+- name: Install trust-store prerequisites (RHEL family)
+  when: ansible_facts['os_family'] == 'RedHat'
+  ansible.builtin.dnf:
+    name:
+      - ca-certificates
+      - openssl
+    state: present
 
 - name: Ensure the local CA certificate directory exists
   ansible.builtin.file:

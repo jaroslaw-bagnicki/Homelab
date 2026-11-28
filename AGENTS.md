@@ -1,4 +1,4 @@
-# Homelab — Opencode Agent Instructions
+# Homelab — Agent Instructions (Mistral Vibe)
 
 Rules for **autonomous, delegated** agent sessions in this repo. Interactive
 sessions under user supervision (e.g. GitHub Copilot Chat) use
@@ -62,7 +62,8 @@ Avoid ADR bloat — reference other ADRs and issues by name, do not restate thei
 - **Work on a feature branch in a worktree** — see [Worktree Workflow](#worktree-workflow) below; do not commit to `main` from an autonomous session
 - **Never open a PR unless the user explicitly asks** — push the branch and report it, then stop. Opening the PR is the user's call, not the agent's; see [Worktree Workflow](#worktree-workflow).
 - **Commit message format**: `(type) description` with parentheses. Common types: `docs`, `feat`, `fix`, `chore`, `refactor`
-- **Never rebase** unless explicitly asked (the rebase step in [Worktree Workflow](#worktree-workflow) merge-via-PR is the standard carve-out)
+- **Never rebase** — not to catch up with `main`, not to resolve conflicts, not with any flag. Merge `origin/main` into the feature branch instead.
+- **PRs are squash-merged — never a merge commit.** The operator always squashes, so the PR's commits collapse into one and the **PR title and description become the commit message**: write them to stand alone as the permanent record, and carry the `(type)` prefix into the squash subject at merge time. A merge commit is never used.
 - **Always push** after a commit on a feature branch in a worktree — push immediately, don't defer to user
 - **Do not push** to `main`, or after `git commit --amend` — amended commits require user confirmation before force-pushing
 - **Scope commits tightly** — one logical change per commit; do not bundle unrelated edits
@@ -120,12 +121,13 @@ git rev-parse --abbrev-ref HEAD      # current branch
 
 Merges always go through a pull request — the agent never merges to `main` locally unless explicitly asked. The agent **pushes the branch and stops**; the PR is opened **only on an explicit user request**, never on the agent's own initiative.
 
-1. In the worktree: `git fetch origin && git rebase origin/main` — resolve any conflicts
+1. In the worktree: `git fetch origin && git merge origin/main` — **merge, never rebase** (rebase is banned outright); resolve any conflicts
 2. `git push -u origin <branch>` — push immediately
 3. **Stop and report the pushed branch.** Do **not** open the PR on the agent's own initiative — that is the user's call. Only when the user explicitly asks, open it via GitHub MCP tools (`create_pull_request`):
    - **PR title**: no `(type)` prefix (e.g. not `(feat) …`) — use labels to convey the type. The `(type)` prefix convention applies to **commit messages only**.
    - **PR description**: do **not** use the **Why / What / How (WWH)** format — that is **reserved for GitHub Issues only**. PR descriptions are a plain summary of the **Changes** (and any **Notes**) with no WWH headings.
-4. **Stop.** The human reviews (CR). Once the review is done the change is **deployed to the target host** — a live `ansible-playbook … --diff` run for Ansible changes ([Ansible Verification](#ansible-verification)), never before the review — and only then is the PR merged via the GitHub UI. The agent never merges the PR itself
+   - **Write it to survive a squash.** The PR is squash-merged, so the title and description become the single commit message — they are the permanent record, not a wrapper around the individual commits.
+4. **Stop.** The human reviews (CR). Once the review is done the change is **deployed to the target host** — a live `ansible-playbook … --diff` run for Ansible changes ([Ansible Verification](#ansible-verification)), never before the review — and only then is the PR **squash-merged** via the GitHub UI. A merge commit is never used. The agent never merges the PR itself
 5. After the PR is merged, clean up in the primary checkout: `git pull --ff-only origin main`, then `git worktree remove ../Homelab-<short-topic>` and `git branch -d <branch>`
 
 ### Local merge (only on explicit ask)
@@ -190,7 +192,7 @@ When asked to process PR review remarks, follow this human-in-the-loop flow:
 - **Verify after changes** — run any documented lint, test, or typecheck command before declaring the task done
 - **Commit when work is done** — completed work lands on the feature branch in scoped commits matching the repo convention; do not leave changes uncommitted
 - **Surface findings as concise summaries** — short status with file paths and commit refs; not essays
-- **Discover skills via the skill tool** — repo skills live under `.opencode/skills/` (symlinked to `.github/skills/`); load a skill only when its description matches the current task
+- **Discover skills via the skill tool** — repo skills live under `.github/skills/` (the `.opencode/skills` indirection went away with the OpenCode retirement, [ADR 53](docs/decisions/53-retire-opencode-use-mistral-vibe.md)); load a skill only when its description matches the current task
 - **Do not create issues proactively** — issue creation is reserved for multi-session work the user explicitly asks to track; for one-shot fixes or docs changes, a commit is enough
 - **Issue titles**: no `(type)` prefix (e.g. not `(feat) …`) — use labels to convey the type. The `(type)` prefix convention applies to **commit messages only**.
 - **Never merge a PR, locally or remotely** — opening a PR is the final step of the agent's work; the human reviews and merges via the GitHub UI. This includes `merge_pull_request` calls, `git merge`, and any equivalent. Do not assume implicit merge permission even if the work appears "done". The same rule applies to PRs the agent authored across multiple sessions or that "look ready".

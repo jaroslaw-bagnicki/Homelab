@@ -13,6 +13,11 @@ Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month 
 
 ## 2026‑11
 
+- **(fix)** Resolve the CA root at renewal run time so a moved path can't break host-certificate renewal — [runbook 40](docs/runbooks/40-deploy-ssh-certificates.md)
+- **(feat)** Stand up the FreeIPA server on `pve2` — the lab's Linux domain, realm `LAB.INTERNAL` under the fleet root — [runbook 41](docs/runbooks/41-deploy-freeipa-server.md)
+- **(docs)** Retire OpenCode as the agent solution — Mistral Vibe (VS Code extension + CLI) is the supported agent; cloudlab OpenCode instances are dormant, no new deployments — [ADR 53](docs/decisions/53-retire-opencode-use-mistral-vibe.md)
+- **(chore)** Modernize the devcontainer — Ubuntu 26.04 base, locked features, Ansible 2.22 venv — and set the weekly Dependabot / quarterly pin-review cadence — [runbook 12](docs/runbooks/12-codespaces-devcontainer.md) · [ADR 52](docs/decisions/52-devcontainer-dependency-cadence.md)
+- **(docs)** Provision VMs from a cloud image plus cloud-init, never a hand-clicked installer — [ADR 54](docs/decisions/54-vm-provisioning-cloud-image.md)
 - **(feat)** Docker stack cloudlab → `lab`, public tunnel → `edge`; k3s postponed — [ADR 24 (2026-11-14 amendment)](docs/decisions/24-edge-ingress-appliance.md) · [runbook 47](docs/runbooks/47-migrate-cloudlab-docker-to-lab.md)
 - **(fix)** Renew SSH host certificates again — `step ssh renew` rejected `-f` before its positional paths, so no certificate ever renewed — [runbook 40](docs/runbooks/40-deploy-ssh-certificates.md)
 - **(docs)** Adopt the two-model split on one Pro account — DS4.1 stays daily via Mistral, ML4 via Vibe — [ADR 51](docs/decisions/51-ai-model-split-deepseek-mistral.md)
@@ -22,7 +27,6 @@ Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month 
 - **(feat)** Stand up `pve2` as the second Proxmox node — `pve` → `pve1`, the NAS moved to `.209`, the two-node `homelab` cluster with an `edge` QDevice, and `proxmox.internal` failover — [runbook 42](docs/runbooks/42-pve2-proxmox-node.md) · [runbook 43](docs/runbooks/43-proxmox-cluster-qdevice.md)
 - **(docs)** Audit the OptiPlex 7050 MFF for `pve2` — 65 W i5-7500, a sound but small 128 GB SSD, MEBx unreachable, a discrete Nuvoton TPM — [research 52](docs/research/52-optiplex7050-hardware-diagnostic.md)
 - **(fix)** Serve the fleet resolver from the hosts and alert when a `.internal` leaf nears expiry — [ADR 40](docs/decisions/40-internal-dns-proxy-edge.md)
-- **(feat)** Deploy the FreeIPA server on `pve` — external-ca under the fleet root, M1 verified; TPM-backed Dogtag custody parked — [runbook 41](docs/runbooks/41-deploy-freeipa-server.md)
 - **(feat)** Load SSH identities explicitly — empty agent by default, loaders for `automation`, `agent-ai` and break-glass, one preflight that establishes the session — [ADR 41](docs/decisions/41-ssh-certificates-step-ca.md)
 
 ## 2026‑10
@@ -33,7 +37,7 @@ Entries sit under `## YYYY‑MM` headings — non-breaking hyphen, newest month 
 - **(docs)** Decide Authentik as the fleet identity provider — an LXC on `pve`, FreeIPA as its user source, management planes never behind SSO — [ADR 44](docs/decisions/44-authentik-identity-provider.md)
 - **(docs)** Decide the PKI topology — one offline root, `step-ca` and FreeIPA's CA as siblings, never a chain — [ADR 42](docs/decisions/42-pki-topology-sibling-cas.md)
 - **(docs)** Weigh a second Proxmox node — `pve` → `pve1`, HA needs a QDevice, storage is ZFS replication, OptiPlex 7040 leading — [idea 15](docs/ideas/15-second-proxmox-node.md)
-- **(docs)** Decide FreeIPA as the lab's domain — realm `ipa.internal`, Technitium keeps DNS, `step-ca` keeps TLS and SSH — [ADR 43](docs/decisions/43-freeipa-domain-realm.md)
+- **(docs)** Decide FreeIPA as the lab's domain — realm `LAB.INTERNAL`, Technitium keeps DNS, `step-ca` keeps TLS and SSH — [ADR 43](docs/decisions/43-freeipa-domain-realm.md)
 - **(docs)** Scope a self-hosted secret store to replace Azure Key Vault — ten-plus consumers, Vault/OpenBao vs Infisical, TPM unseal — [idea 14](docs/ideas/14-self-hosted-secret-store.md)
 - **(docs)** Scope an ARM travel workstation with a Linux desktop — per-model Linux support; a supplement to the Lenovo, not a replacement — [idea 12](docs/ideas/12-travel-workstation-arm-linux.md)
 - **(docs)** Adopt SSH certificates from the private CA — Authentik for humans, per-agent identities, key demoted to break-glass — [ADR 41](docs/decisions/41-ssh-certificates-step-ca.md)

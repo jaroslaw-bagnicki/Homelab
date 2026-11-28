@@ -1,5 +1,7 @@
 # OpenCode workload
 
+> ⏸ **Dormant per [ADR 53](../../../docs/decisions/53-retire-opencode-use-mistral-vibe.md) (2026-11-21):** OpenCode is retired as the agent solution. The existing cloudlab instances keep running, but do not add new projects or instances — use Mistral Vibe instead. This recipe is kept to operate the dormant instances.
+
 ## Purpose
 
 A self-contained Ansible recipe that deploys per-project OpenCode server instances on `lab` (migrated from cloudlab as-is — runbook 47). The workload decouples OpenCode deployment from the base host provisioning playbook so adding a new OpenCode project requires no playbook edits, no role inventory changes, and no role resync.

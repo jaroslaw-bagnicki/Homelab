@@ -37,7 +37,7 @@ guest's VMID its address's last octet.**
 | `220–229` | LLM server (Phase 2) | — |
 | `230–239` | switch management | TL-SG108E `.230` |
 | `240–249` | edge/ingress appliances | Wyse 3040 `.240` |
-| `250–254` | Proxmox guests on the `pve2` node | reserved — `.255` is the broadcast address, so the block has five usable addresses |
+| `250–254` | Proxmox guests on the `pve2` node | **VM 250** `.250` (FreeIPA, [ADR 43](43-freeipa-domain-realm.md)) · `.251–.254` free — `.255` is the broadcast address, so the block has five usable addresses |
 
 The ID and the address are **the same number** — `VM 210` is `.210`, `LXC 214` is `.214` — so
 neither needs a lookup or an offset. Everything else stays on mesh DHCP. The IDs are assigned while

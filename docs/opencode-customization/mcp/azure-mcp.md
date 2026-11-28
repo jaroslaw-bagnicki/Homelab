@@ -1,5 +1,7 @@
 # Azure MCP Server
 
+> ⏸ Dormant per [ADR 53](../../decisions/53-retire-opencode-use-mistral-vibe.md) — historical OpenCode-specific notes.
+
 > Interact with Azure resources from OpenCode — manage resource groups, query deployments, look up Bicep schemas, and more.
 
 | | |

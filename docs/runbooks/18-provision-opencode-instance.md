@@ -1,5 +1,7 @@
 # Provision a New OpenCode Instance
 
+> ⏸ **Dormant per [ADR 53](../decisions/53-retire-opencode-use-mistral-vibe.md) (2026-11-21):** OpenCode is retired — this procedure is kept for the existing migrated instances only; do not provision new ones. Use Mistral Vibe (runbook 13) instead.
+
 > Runbook for adding a new per-project OpenCode server instance on `lab` (migrated from cloudlab — [runbook 47](47-migrate-cloudlab-docker-to-lab.md)) — extends the initial deployment from [runbook 17](17-deploy-opencode-on-lab.md).
 
 > **Note:** `example.com` is a placeholder domain used in this runbook for documentation purposes. Replace with the actual domain when following these steps for a real deployment.

@@ -43,8 +43,7 @@ replication stay out of scope.
 > |---|---|
 > | `pve1` hostname | still **`pve`** — the rename ([runbook 28 §6](28-pve1-proxmox-node.md)) has **not** run |
 > | `pve1` version | **9.2.26** — match this, not 9.2.2 |
-> | `pve1` guests | LXC 214 `vtstack`, LXC 215 `ca` — both running |
-> | **VM 216 `ipa`** | **absent** — no config in `/etc/pve/qemu-server/`, `.216` unreachable. `docs/overview.md` still lists it as 🔨; reconcile before the rename |
+> | `pve1` guests | LXC 214 `vtstack`, LXC 215 `ca` — both running; **no VMs** (`/etc/pve/qemu-server/` empty) |
 > | `.202` | **free** — the NAS moved to `.209` on 2026-11-07 ([runbook 32 §4c](32-beetle-m3-omv-setup.md)) |
 > | `edge` `corosync-qnetd` | **not installed** (candidate `3.0.3-2`); no 5403 listener, no UFW rule — `playbook-edge.yml` installs it |
 > | CA SSH host policy | regenerated 2026-11-07 — now carries `pve1`, `pve2`, `ipa`, `.209`, `.216` |

@@ -43,7 +43,7 @@ ansible-playbook ansible/playbooks/playbook-ca.yml
 # ipa FreeIPA server VM base provision (from a LAN workstation, runbook 41)
 ansible-playbook ansible/playbooks/playbook-ipa.yml
 
-# OpenCode per-project workload (decoupled recipe)
+# OpenCode per-project workload (decoupled recipe) — ⏸ dormant per ADR 53
 ansible-playbook ansible/workloads/opencode/opencode-playbook.yml
 
 # step-ca private CA workload (decoupled recipe, runbook 35)
@@ -67,6 +67,7 @@ ansible-playbook ansible/workloads/freeipa/freeipa-playbook.yml
 | `playbooks/playbook-technitium.yml` | Targeted: the `technitium` role only — DNS server and host resolver (runbook 37) |
 | `playbooks/playbook-caddy.yml` | Targeted: the `caddy` role only — LAN reverse proxy and ACME (runbook 37) |
 | `playbooks/playbook-ca-trust.yml` | Targeted: the `ca_trust` role only — fleet CA root and SSH CA public keys, `ca` excluded (runbooks 39/40) |
+| `playbooks/playbook-security.yml` | Targeted: `ca_trust` + `security` only — SSH certificate trust and host hardening across the whole fleet in one play, so `forks` parallelises it; `router` and `ipa` excluded (runbook 40) |
 | `playbooks/playbook-netdata.yml` | Targeted: the `netdata` role only — parent + children on all five LAN nodes (runbook 31) |
 | `playbooks/playbook-pve1.yml` | Wyse 5070 Proxmox host base provision: common → ca_trust → security → proxmox_cluster → nut_server → nut_client → netdata → fluentbit (UFW LAN allow for SSH + NUT 3493 + Proxmox UI 8006 + Netdata dashboard 19999 / streaming 19996, both TLS-only) |
 | `playbooks/playbook-pve2.yml` | OptiPlex 7050 Proxmox host base provision: common → ca_trust → security → proxmox_cluster → nut_client → netdata → fluentbit (UFW LAN allow for SSH + Proxmox UI 8006; Netdata child streaming to `pve1`) |
@@ -74,9 +75,9 @@ ansible-playbook ansible/workloads/freeipa/freeipa-playbook.yml
 | `playbooks/playbook-logs.yml` | Victoria stack guest (`vtstack`, LXC 214) base provision: common → ca_trust → security → docker_host → fluentbit (Docker from the official repo, Debian) |
 | `playbooks/playbook-router.yml` | OPNsense router (`router`) onboarding **over its REST API** (`oxlorg.opnsense`): install the `os-netdata` plugin + configure the syslog-ng → VictoriaLogs destination — a FreeBSD per-OS exception, no `common`/`security`/`netdata`/`fluentbit` (runbook 45 §13) |
 | `playbooks/playbook-ca.yml` | Private CA guest (`ca`, LXC 215) base provision: common → security → fluentbit (Debian LXC on `pve1`, no Docker; rerun after the CA starts so the host certificate and SSH CA trust are applied) |
-| `playbooks/playbook-ipa.yml` | FreeIPA server VM (`ipa`, VM 216) base provision: ipa_host — Fedora/RHEL-family hostname/FQDN, chrony, firewalld, fleet key, fleet resolver (runbook 41) |
+| `playbooks/playbook-ipa.yml` | FreeIPA server VM (`ipa`, VM 250) base provision: ipa_host — RHEL-family hostname/FQDN, chrony, firewalld, fleet key, fleet resolver (runbook 41) |
 | `workloads/` | Self-contained workload recipes — playbook entrypoint, role recipes, ansible-side README, all co-located per workload |
-| `workloads/opencode/` | OpenCode per-project server workload (see [README](workloads/opencode/README.md)) |
+| `workloads/opencode/` | OpenCode per-project server workload — ⏸ dormant per [ADR 53](../docs/decisions/53-retire-opencode-use-mistral-vibe.md) (see [README](workloads/opencode/README.md)) |
 | `workloads/step-ca/` | Private CA — `step-ca` native service on the `ca` guest, TPM-bound intermediate and SSH CA keys (see [README](workloads/step-ca/README.md)) |
 | `workloads/freeipa/` | FreeIPA server — external-ca install, `admin` + test user, M1 verification (see [README](workloads/freeipa/README.md)) |
 | `roles/` | Base shared roles — see the [roles index](roles/README.md) |
@@ -85,7 +86,7 @@ ansible-playbook ansible/workloads/freeipa/freeipa-playbook.yml
 
 Each workload in `ansible/workloads/<workload>/` is a self-contained recipe that can run independently of the base playbook (after base setup has been applied). See [`docs/workloads.md`](../docs/workloads.md) for the index and convention rules.
 
-Currently: [OpenCode](workloads/opencode/README.md) — per-project OpenCode server instances on `lab`; [VictoriaLogs](workloads/victorialogs/README.md) — the Tier B log store on the `vtstack` guest; [step-ca](workloads/step-ca/README.md) — the private CA on the `ca` guest; [FreeIPA](workloads/freeipa/README.md) — the Linux domain on the `ipa` VM.
+Currently: [OpenCode](workloads/opencode/README.md) — per-project OpenCode server instances on `lab` (⏸ dormant, ADR 53); [VictoriaLogs](workloads/victorialogs/README.md) — the Tier B log store on the `vtstack` guest; [step-ca](workloads/step-ca/README.md) — the private CA on the `ca` guest; [FreeIPA](workloads/freeipa/README.md) — the Linux domain on the `ipa` VM.
 
 ## Roles
 
@@ -102,14 +103,15 @@ Base shared roles live in [`roles/`](roles/README.md). The [roles index](roles/R
 | `playbook-technitium.yml` | technitium | Re-apply only the DNS server and host resolver on `edge` (see [runbook 37](../docs/runbooks/37-deploy-internal-access-stack.md)) |
 | `playbook-caddy.yml` | caddy | Re-apply only the reverse proxy and its sites on `edge` (see [runbook 37](../docs/runbooks/37-deploy-internal-access-stack.md)) |
 | `playbook-netdata.yml` | netdata | Re-apply only Netdata on `pve1`, `pve2`, `lab`, `nas`, `edge` (see [runbook 31](../docs/runbooks/31-deploy-netdata.md)) |
+| `playbook-security.yml` | ca_trust → security | Re-apply only the SSH certificate trust and host hardening across the fleet — one play, so `forks` parallelises it (see [runbook 40](../docs/runbooks/40-deploy-ssh-certificates.md)) |
 | `playbook-pve1.yml` | common → ca_trust → security → proxmox_cluster → nut_server → nut_client → netdata → fluentbit | Wyse 5070 Proxmox host base provision + NUT server + Netdata Parent (see [runbook 28](../docs/runbooks/28-pve1-proxmox-node.md) / [runbook 29](../docs/runbooks/29-nut-ups-shutdown.md) / [runbook 31](../docs/runbooks/31-deploy-netdata.md)) |
 | `playbook-pve2.yml` | common → ca_trust → security → proxmox_cluster → nut_client → netdata → fluentbit | OptiPlex 7050 Proxmox host base provision — Netdata child, NUT secondary (see [runbook 42](../docs/runbooks/42-pve2-proxmox-node.md)) |
 | `playbook-nas.yml` | common → ca_trust → security → nut_client → netdata → fluentbit | Beetle M-III OMV NAS base provision + Netdata child (see [runbook 32](../docs/runbooks/32-beetle-m3-omv-setup.md)) |
 | `playbook-logs.yml` | common → ca_trust → security → docker_host → fluentbit | Victoria stack guest (`vtstack`, LXC 214) base provision — Debian 13 LXC on `pve1` (see [runbook 33](../docs/runbooks/33-deploy-victorialogs.md)) |
 | `playbook-router.yml` | opnsense (REST API — `connection: local`, `gather_facts: false`) | OPNsense router onboarding — `os-netdata` plugin + syslog-ng destination (see [runbook 45](../docs/runbooks/45-deploy-opnsense.md) §13); a FreeBSD per-OS exception |
 | `playbook-ca.yml` | common → security → fluentbit | Private CA guest (`ca`, LXC 215) base provision — Debian 13 LXC on `pve1`; rerun after the CA starts for the host certificate (see [runbook 35](../docs/runbooks/35-deploy-step-ca.md) / [runbook 40](../docs/runbooks/40-deploy-ssh-certificates.md)) |
-| `playbook-ipa.yml` | ipa_host | FreeIPA server VM (`ipa`, VM 216) base provision — Fedora/RHEL-family hostname/FQDN, chrony, firewalld, fleet key, fleet resolver (see [runbook 41](../docs/runbooks/41-deploy-freeipa-server.md)) |
-| `workloads/opencode/opencode-playbook.yml` | docker_opencode_ingress → docker_opencode_instances | Deploy the OpenCode per-project server workload on `lab` (see [runbook 17](../docs/runbooks/17-deploy-opencode-on-lab.md)) |
+| `playbook-ipa.yml` | ipa_host | FreeIPA server VM (`ipa`, VM 250) base provision — RHEL-family hostname/FQDN, chrony, firewalld, fleet key, fleet resolver (see [runbook 41](../docs/runbooks/41-deploy-freeipa-server.md)) |
+| `workloads/opencode/opencode-playbook.yml` | docker_opencode_ingress → docker_opencode_instances | Deploy the OpenCode per-project server workload on `lab` (⏸ dormant, ADR 53 — see [runbook 17](../docs/runbooks/17-deploy-opencode-on-lab.md)) |
 | `workloads/step-ca/step-ca-playbook.yml` | step_ca | Deploy the private CA (`step-ca`) with a TPM-bound intermediate and SSH CA (see [runbook 35](../docs/runbooks/35-deploy-step-ca.md) / [runbook 36](../docs/runbooks/36-private-ca-init.md) / [runbook 40](../docs/runbooks/40-deploy-ssh-certificates.md)) |
 | `workloads/freeipa/freeipa-playbook.yml` | freeipa_server | Install the FreeIPA server with an external CA (see [runbook 41](../docs/runbooks/41-deploy-freeipa-server.md)) |
 
@@ -129,7 +131,7 @@ nas ansible_host=192.168.2.209 ansible_user=fleetadm
 [proxmox_guests]
 vtstack ansible_host=192.168.2.214 ansible_user=fleetadm
 ca ansible_host=192.168.2.215 ansible_user=fleetadm
-ipa ansible_host=192.168.2.216 ansible_user=fleetadm
+ipa ansible_host=192.168.2.250 ansible_user=fleetadm
 
 [network]
 # OPNsense router — managed over its REST API (connection: local), never SSH.

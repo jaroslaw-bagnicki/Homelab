@@ -1,5 +1,9 @@
 ---
-- name: Install Netdata prerequisites
+# The kickstart script supports Debian/Ubuntu and the RHEL family; only the
+# prerequisite packages differ. `gnupg` is Debian's name for GnuPG — EL ships it as
+# `gnupg2`, and `ca-certificates`/`curl` are common to both.
+- name: Install Netdata prerequisites (Debian/Ubuntu)
+  when: ansible_facts["os_family"] == "Debian"
   ansible.builtin.apt:
     name:
       - curl
@@ -7,6 +11,15 @@
       - gnupg
     state: present
     update_cache: true
+
+- name: Install Netdata prerequisites (RHEL family)
+  when: ansible_facts["os_family"] == "RedHat"
+  ansible.builtin.dnf:
+    name:
+      - curl
+      - ca-certificates
+      - gnupg2
+    state: present
 
 - name: Check whether Netdata is installed
   ansible.builtin.stat:
@@ -68,6 +81,20 @@
       tenant=netdata_azure_tenant_id) }}
   delegate_to: localhost
   no_log: true
+
+# The dashboard label and the parent's child name come from `[global] hostname`, which defaults to
+# gethostname() — Ansible's `nodename` fact, not the short `hostname` fact. (Netdata v2 moved this
+# key from `[host]` to `[global]`; a `[host] hostname` is silently ignored.) Only written when it
+# differs, so hosts that already agree with the default keep a config with no redundant override.
+- name: Configure the Netdata hostname
+  when: netdata_hostname != ansible_facts['nodename']
+  community.general.ini_file:
+    path: /etc/netdata/netdata.conf
+    section: global
+    option: hostname
+    value: "{{ netdata_hostname }}"
+    mode: "0644"
+  notify: Restart netdata
 
 # The [db] schema: a storage mode for every node, plus a time target and a size cap per tier
 # (0 = 1s, 1 = 1m, 2 = 1h) when the node keeps a disk-backed DB. Time and size are combined

@@ -11,9 +11,11 @@ if [ -n "${AZURE_TENANT_ID:-}" ] && [ -n "${AZURE_CLIENT_ID:-}" ] && [ -n "${AZU
   echo ":: AZURE_TENANT_ID     = $(mask "$AZURE_TENANT_ID")" | tee -a "$LOG"
   echo ":: AZURE_CLIENT_ID     = $(mask "$AZURE_CLIENT_ID")" | tee -a "$LOG"
   echo ":: AZURE_CLIENT_SECRET = $(present "${AZURE_CLIENT_SECRET:-}")" | tee -a "$LOG"
-else
+elif [ "${CODESPACES:-}" = "true" ]; then
   echo ":: WARNING: one or more AZURE_* env vars missing — Azure MCP will fail to authenticate." | tee -a "$LOG"
   echo ":: Add them at: https://github.com/jaroslaw-bagnicki/Homelab/settings/secrets/codespaces" | tee -a "$LOG"
+else
+  echo ":: AZURE_* env vars not set — local dev container, expected. Azure sign-in falls back to interactive device auth (profile.ps1); in Codespaces it uses repo secrets." | tee -a "$LOG"
 fi
 
 if command -v npx >/dev/null 2>&1; then

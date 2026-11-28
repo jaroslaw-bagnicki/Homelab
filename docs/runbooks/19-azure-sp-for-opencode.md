@@ -1,5 +1,7 @@
 # Azure Service Principal for OpenCode Instances
 
+> ⏸ **Dormant per [ADR 53](../decisions/53-retire-opencode-use-mistral-vibe.md) (2026-11-21):** OpenCode is retired — this SP pattern is kept for the existing cloudlab instances only; new workloads use the ADR 16 pattern with their own identity.
+
 > One-time bootstrap + ongoing rotation: a Service Principal dedicated to the `homelab-oc` OpenCode instance, stored in `homelab-bysxdb-kv` Key Vault and injected by Ansible as container env vars (`AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`). The Azure SDK + Azure MCP server read these via `DefaultAzureCredential` → `EnvironmentCredential`.
 
 > **Note:** `example.com` is a placeholder domain used in this runbook for documentation purposes. Replace with the actual domain when following these steps for a real deployment.

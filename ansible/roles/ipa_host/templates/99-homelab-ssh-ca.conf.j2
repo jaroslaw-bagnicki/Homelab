@@ -1,0 +1,7 @@
+# Managed by Ansible — SSH certificate trust (ADR 41).
+#
+# Certificates signed by the fleet user CA are accepted, and the principal they carry is
+# checked against /etc/ssh/auth_principals/<account>. The fleet key in authorized_keys is
+# unaffected: it stays the break-glass path when the CA is unreachable.
+TrustedUserCAKeys {{ ipa_host_ssh_user_ca_key }}
+AuthorizedPrincipalsFile {{ ipa_host_ssh_principals_dir }}/%u

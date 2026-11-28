@@ -14,7 +14,9 @@ fluentbit_custom_parsers_file: "{{ fluentbit_conf_dir }}/homelab-parsers.conf"
 # Maps journald PRIORITY to the `level` field VictoriaLogs displays and filters on (ADR 36).
 fluentbit_lua_level_script: "{{ fluentbit_conf_dir }}/priority-level.lua"
 
-# Official Fluent Bit APT repository — Debian/Ubuntu only (asserted in tasks/main.yml).
+# Official Fluent Bit APT repository — Debian/Ubuntu only. The RHEL family installs from
+# its own repository instead (Fedora ships `fluent-bit`; EPEL carries it for RHEL/Alma/Rocky),
+# so none of the variables below apply there.
 # The codename is part of the URI, matching the upstream `deb … /{os}/$codename $codename main`
 # line: APT resolves the release under <uri>/dists/<suite>.
 fluentbit_keyring: /etc/apt/keyrings/fluentbit.asc

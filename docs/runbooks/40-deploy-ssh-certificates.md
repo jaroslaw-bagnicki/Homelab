@@ -180,6 +180,21 @@ ansible-playbook ansible/playbooks/playbook-logs.yml --diff
 ansible-playbook ansible/playbooks/playbook-ca.yml --diff
 ```
 
+> **For a change that only touches these roles, use `playbook-security.yml`.** Every node playbook
+> targets exactly one host, so applying a `security` change fleet-wide costs one full run per node —
+> ~19 min for seven, measured 2026-11-15. `playbook-security.yml` covers the fleet in **one play**, so
+> `forks` parallelises it and the wall time is the slowest host (~1 min). It applies `ca_trust` then
+> `security` and nothing else; `router` (FreeBSD, REST API) and `ipa` (EL guest, `ipa_host`) are
+> excluded.
+>
+> ```powershell
+> ansible-playbook ansible/playbooks/playbook-security.yml --diff
+> ```
+>
+> `--check` does **not** work on this playbook: `ca_trust` pins the root fingerprint with a `command`
+> task, which check mode skips, so the assert compares against an empty string and fails. Run it for
+> real, or `--limit <host>` first.
+
 **Validate on each node:**
 
 ```sh
@@ -206,6 +221,25 @@ Fluent Bit ships to VictoriaLogs. Alarm delivery remains deferred per ADR 27.
 >
 > That path is why the 49 h renewal threshold matters: it leaves ~2 days of margin for the timer to
 > renew *before* expiry. A certificate that has already expired is a playbook run, not a `step` command.
+
+> **A certificate replaced outside the timer needs an sshd reload.** `sshd` reads the host certificate
+> once, at start, and keeps serving the copy it loaded. Renewing by hand (`step ssh renew`, or copying a
+> certificate back from the CA) writes a valid file that sshd never reads — clients then print
+> `Certificate invalid: expired` while still connecting, so nothing fails loudly. The renewal script
+> guards against this: before its early return it compares the certificate's mtime with the running
+> `sshd`'s start time and restarts the unit when the file is newer. If you renew by hand, run
+> `sudo systemctl restart ssh` yourself, or run the script once to let it notice.
+>
+> **The playbook passes `--no-restart`.** When `security` reissues a certificate it queues a
+> `Restart ssh` handler, and the hardening drop-in queues the same handler again — so the script must
+> not restart on top of that, or one playbook run drops the connection twice. The timer calls the
+> script bare, so an out-of-band replacement stays self-healing. Run it by hand **without** the flag
+> to get that behaviour:
+
+```sh
+sudo /usr/local/sbin/homelab-ssh-host-cert-renew --no-restart   # what the playbook does
+sudo /usr/local/sbin/homelab-ssh-host-cert-renew                # what the timer does
+```
 
 **Renewal proof.** On a canary node, temporarily raise the renewal threshold so the 7-day certificate is
 treated as near expiry, run the role once, then restore the normal threshold:
@@ -404,6 +438,44 @@ revocation and should be the only holder of `step-ca-ssh-agent-ai-password`.
   until their next restart.
 - **`cloudlab`:** stays on the fleet key and the pinned host key. A LAN↔VPS path (tunnel/VPN) is a
   prerequisite for including it; do not add its IP to `@cert-authority` until then.
+
+### When certificate SSH to a node breaks
+
+`ssh` failing with **`Certificate invalid: expired`** means the node is still serving the certificate it
+loaded at `sshd` start — the file on disk may already be newer, or nobody renewed it. Check the order:
+
+```sh
+stat -c '%y' /etc/ssh/ssh_host_ed25519_key-cert.pub   # cert mtime — compare with the line below
+systemctl show ssh -p ActiveEnterTimestamp --value    # earlier than the mtime ⇒ stale, restart ssh
+ssh-keygen -Lf /etc/ssh/ssh_host_ed25519_key-cert.pub | grep -E 'Valid|Principals'
+systemctl show homelab-ssh-host-cert-renew.service -p Result -p ExecMainStatus
+journalctl -u homelab-ssh-host-cert-renew.service -n 20
+```
+
+`CA root missing: none of [...] exists` — the renewal script could not find a CA root. The candidates are
+resolved **at run time** from `security_ssh_ca_root_file` then `security_ssh_ca_root_fallback`, so the
+message lists both. On `ca` the fleet root does not exist by design (`ca_trust` skips the CA), and
+`host_vars/ca.yml` points `security_ssh_ca_root_file` at `/etc/step-ca/certs/root_ca.crt`.
+
+An **expired** certificate cannot be renewed — `step ssh renew` needs a valid one. Re-issue it with the
+`hosts@internal` provisioner password from Key Vault, then restart `sshd`. Substitute the node's
+inventory name, FQDN and inventory address for the three placeholders — they become the principals:
+
+```sh
+sudo step ssh certificate <node> /etc/ssh/ssh_host_ed25519_key.pub --host --sign \
+  --principal <node> --principal <node>.internal --principal <inventory_address> \
+  --provisioner hosts@internal --provisioner-password-file /tmp/hosts.pw \
+  --not-after 168h --ca-url https://ca.internal:9000 \
+  --root <ca_root> --force
+sudo systemctl restart ssh
+```
+
+`<ca_root>` is the fleet root `/usr/local/share/ca-certificates/homelab-root-ca.crt` on every node
+**except `ca`**, which is the CA and uses its own `/etc/step-ca/certs/root_ca.crt` (`ca_trust` skips it
+by design). Drop the password file afterwards: `shred -u /tmp/hosts.pw`.
+
+The principals must cover every name clients use — short hostname, `<node>.internal`, and the inventory
+address — because `@cert-authority` matching fails with `name is not a listed principal` otherwise.
 
 ## Verification checklist
 
