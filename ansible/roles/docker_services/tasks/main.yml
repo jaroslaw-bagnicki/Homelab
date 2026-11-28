@@ -37,7 +37,9 @@
   register: docker_services_allow_check
   failed_when: false
   changed_when: false
-  when: docker_services_caddy_allow_from | length > 0
+  when:
+    - "'caddy' in docker_services_enabled"
+    - docker_services_caddy_allow_from | length > 0
 
 - name: Insert DOCKER-USER allow rule (configured source only) for the origin Caddy port
   ansible.builtin.command:
@@ -57,6 +59,7 @@
   register: docker_services_allow_insert
   changed_when: true
   when:
+    - "'caddy' in docker_services_enabled"
     - docker_services_caddy_allow_from | length > 0
     - docker_services_allow_check.rc | default(1) != 0
 
@@ -78,7 +81,9 @@
   register: docker_services_drop_check
   failed_when: false
   changed_when: false
-  when: docker_services_caddy_allow_from | length > 0
+  when:
+    - "'caddy' in docker_services_enabled"
+    - docker_services_caddy_allow_from | length > 0
 
 - name: Insert DOCKER-USER drop rule (all other sources) for the origin Caddy port
   ansible.builtin.command:
@@ -99,6 +104,7 @@
   register: docker_services_drop_insert
   changed_when: true
   when:
+    - "'caddy' in docker_services_enabled"
     - docker_services_caddy_allow_from | length > 0
     - docker_services_drop_check.rc | default(1) != 0
 
@@ -108,12 +114,15 @@
     state: present
   environment:
     DEBIAN_FRONTEND: noninteractive
-  when: docker_services_caddy_allow_from | length > 0
+  when:
+    - "'caddy' in docker_services_enabled"
+    - docker_services_caddy_allow_from | length > 0
 
 - name: Persist current iptables rules
   ansible.builtin.command: netfilter-persistent save
   changed_when: true
   when:
+    - "'caddy' in docker_services_enabled"
     - docker_services_caddy_allow_from | length > 0
     - docker_services_allow_insert is changed or docker_services_drop_insert is changed
 
@@ -129,6 +138,7 @@
     src: Caddyfile.j2
     dest: "{{ docker_dir }}/Caddyfile"
     mode: "0644"
+  when: "'caddy' in docker_services_enabled"
   notify: Restart Caddy
 
 - name: Deploy docker services

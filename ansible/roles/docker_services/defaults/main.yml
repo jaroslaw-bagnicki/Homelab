@@ -24,3 +24,11 @@ zot_public_domain: example.com
 
 docker_services_networks:
   - name: opencode_net
+
+# Services rendered into the compose file. Narrowing this runs a subset: the
+# cloudlab → lab migration deploys `[portainer]` alone as its pilot (runbook 47
+# §2) and lets the full default follow once the clone is proven.
+docker_services_enabled:
+  - portainer
+  - caddy
+  - hello
