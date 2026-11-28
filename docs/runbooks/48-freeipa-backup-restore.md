@@ -1,20 +1,41 @@
 # FreeIPA Guest Backup and Restore — Native `vzdump` to a Local Directory
 
-**Stage**: 2 (FreeIPA domain) · **Issue**: [#164](https://github.com/jaroslaw-bagnicki/Homelab/issues/164) M2 · **Decision**: [ADR 43](../decisions/43-freeipa-domain-realm.md) item 9 · **Backup policy**: [ADR 49](../decisions/49-backup-3-2-1-strategy.md)
-
----
+> Back up and restore the lab's **directory server**: FreeIPA on VM **250** (`ipa.internal`, realm
+> `LAB.INTERNAL`) on the `pve2` node, using Proxmox's own `vzdump` — a full image of the guest, scheduled
+> by `pvescheduler`, retained by `prune-backups` and restored with `qmrestore`. Target for now: `pve2`'s
+> `local` directory, a **temporary** stand-in until the NAS exists — see **This is a bridge** below.
+> Decision: [ADR 43](../decisions/43-freeipa-domain-realm.md) item 9 · Backup policy:
+> [ADR 49](../decisions/49-backup-3-2-1-strategy.md) · Tracker:
+> [#164](https://github.com/jaroslaw-bagnicki/Homelab/issues/164) M2.
+>
+> ⚠ **Scope.** One guest, one job, one drill. **Not** covered: other guests, the NAS and off-site legs,
+> and the application-level `ipa-backup` — ADR 49 places its output on the NAS. Nothing here changes
+> FreeIPA's configuration.
+>
+> ⚠ **Execution note.** §1 lists what to check before creating anything. §5 restores a copy while the
+> real server keeps running, so it is deliberate, bounded work — and the copy is destroyed the same day.
 
 ## Why
 
-M2 is a **gate, not a chore**. Once the first client enrols (M3), every login on it depends on one guest:
-lose VM 250 and the fleet loses *who may log in where*, its `sudo` policy and the CA that signed its
-LDAPS certificate. So this runbook proves the domain can be backed up **and restored** before anyone
-joins.
+**The lab is about to make one virtual machine a single point of failure.** FreeIPA is the directory the
+lab's Linux hosts will authenticate against and take their login policy from. Today only the server
+exists: no host has joined as a client, and no login policy is enforced anywhere.
 
-The backup is Proxmox's own, not a custom pipeline. `vzdump` takes a **full** backup of the guest —
-configuration plus all data, which is exactly the "LDAP, Kerberos keys and CA material as one artefact"
-M2 asks for, because all three live inside the VM. Scheduling, retention and restore are `pvescheduler`,
-`prune-backups` and `qmrestore`: nothing is hand-rolled.
+The step that changes that is enrolment. The first client to join makes every later login depend on this
+guest, so the question to settle *before* it happens is not "can this be backed up" but "can it be brought
+back" — and the only honest answer to that is a restore that has actually been performed.
+
+What is lost if VM 250 is lost and cannot be restored:
+
+| Piece | Consequence |
+|---|---|
+| **User, host, HBAC and `sudo` records** (LDAP) | The accounts *and* the login policy itself. A rebuilt server starts empty |
+| **Kerberos keys** | No tickets. Directory users fail as soon as their cached credentials expire — local break-glass accounts keep working, which is why they stay ([ADR 28](../decisions/28-fleet-admin-account-and-key.md)) |
+| **The Dogtag CA and its private key** | The server's own certificate — and later the LDAPS certificate Authentik binds with — becomes unverifiable, and every leaf under that CA must be reissued through another offline signing ceremony ([runbook 41](41-deploy-freeipa-server.md) §7) |
+
+All three live inside the guest, which is why the artefact is a **full image of the VM**: it captures them
+together rather than as three backups that have to agree with each other. Proxmox supplies that image,
+along with the schedule, the retention and the restore — nothing here is hand-built.
 
 ## This is a bridge
 
@@ -212,7 +233,9 @@ server. Stop and investigate — every certificate under that CA is otherwise un
 qm stop 251 && qm destroy 251
 ```
 
-Record the outcome, then close M2 in [#164](https://github.com/jaroslaw-bagnicki/Homelab/issues/164).
+Record the outcome in the execution record at the bottom. A restore that passed every check above is what
+closes milestone **M2** of [#164](https://github.com/jaroslaw-bagnicki/Homelab/issues/164) — nothing else
+in this runbook does.
 
 ## 6. Failure visibility
 
