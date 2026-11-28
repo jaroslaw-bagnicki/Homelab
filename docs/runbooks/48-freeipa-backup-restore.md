@@ -9,8 +9,8 @@
 > [#164](https://github.com/jaroslaw-bagnicki/Homelab/issues/164) M2.
 >
 > ⚠ **Scope.** One guest, one job, one drill. **Not** covered: other guests, the NAS and off-site legs,
-> and the application-level `ipa-backup` — ADR 49 places its output on the NAS. Nothing here changes
-> FreeIPA's configuration.
+> and `ipa-backup` — ADR 43 item 9 asks for it too, and this gate defers it to the NAS phase; see
+> **What the gate proves** below. Nothing here changes FreeIPA's configuration.
 >
 > ⚠ **Execution note.** §1 lists what to check before creating anything. §5 restores a copy while the
 > real server keeps running, so it is deliberate, bounded work — and the copy is destroyed the same day.
@@ -50,6 +50,27 @@ guest. That is **copy 1 standing in for a backup**, and it is deliberately tempo
 - **ADR 49 is not amended for it.** A one-to-two-week bridge with a stated expiry is an operational
   state, not a settled decision — it belongs here and in `overview.md`, not in the decision log. The ADR
   regains full effect at §7.
+
+## What the gate proves — and what it leaves open
+
+[ADR 43](../decisions/43-freeipa-domain-realm.md) item 9 puts two steps ahead of the first client:
+**`ipa-backup`** and **a rehearsed restore**. This runbook rehearses the restore. It does not exercise
+`ipa-backup`, so item 9 is only **half satisfied** when M2 closes — deliberately, and on the record:
+
+- **The image already contains everything `ipa-backup` would.** That command writes a copy of FreeIPA's
+  own state — the directory database, the CA material, the configuration — into `/var/lib/ipa/backup/`
+  **inside the guest**. Those are files on the virtual disk, so `vzdump` carries them. A restore returns a
+  server that boots and authenticates, which a files restore cannot do on its own.
+- **What `ipa-backup` adds is a way out of Proxmox.** Its output goes back in with `ipa-restore` on a
+  freshly installed server, on any host — not only as VM 250 on `pve2`. It is also far smaller than the
+  image, which is the shape the off-site copy needs ([ADR 50](../decisions/50-backblaze-b2-offsite-backup.md)).
+  Neither the first client nor this drill needs either property.
+- **Until then it is a manual step, not a job.** `sudo ipa-backup` on VM 250 before planned maintenance
+  leaves a fresh artefact inside the guest, and the next nightly image carries it. One command, nothing
+  scheduled — check `ipa-backup --help` on the guest for the mode it defaults to.
+
+Rehearsing `ipa-restore` is **not** part of this gate, and neither is the artefact's final home: ADR 49
+puts it on the NAS (§7 item 6). The evidence that M2 is complete is §5.
 
 ## 1. Preflight
 
@@ -144,8 +165,19 @@ With §3's measured size `S`:
 Start with `keep-daily=7` and revisit when the real `S` is known. If 7 copies do not fit, reduce to
 `keep-daily=3` — a shorter window beats a full root filesystem.
 
-Protect the retained copy so a prune run cannot take the only one: **Datacenter → Storage → local →
-Backups → select the artefact → Protect**. Repeat after each prune cycle until the NAS exists.
+Protect the copy you mean to keep so no prune run can take it — **Datacenter → Storage → local →
+Backups → select the artefact → Protect** — but keep **exactly one** protected artefact. Protection is an
+exemption from `prune-backups`, not a copy of it: every newly protected artefact is one the retention will
+never delete, so protecting afresh each cycle makes the table above wrong within a week. The rotation:
+
+1. let the new artefact finish, and **check it before touching anything** — `pvesm list local --content
+   backup`, and the task log for that run (§3);
+2. **unprotect** the previous sentinel;
+3. **protect** the newest one.
+
+That sentinel is the copy §5 restores from, so the order is not cosmetic: never unprotect before its
+replacement exists and is readable. Count it against free space as well — it sits *outside* the
+`keep-daily` window, so `df -h /var/lib/vz` right after the first rotation is the number to trust.
 
 ## 5. The restore drill
 
@@ -161,8 +193,12 @@ qmrestore /var/lib/vz/dump/vzdump-qemu-250-<UTC>.vma.zst 251 \
   --storage local-lvm --unique                                  # fresh MACs, no identity clash
 qm set 251 --net0 virtio=<MAC from --unique>,bridge=vmbr0,link_down=1
 qm set 251 --ipconfig0 ip=192.168.2.251/24,gw=192.168.2.1      # .251 is inside the 25x block (ADR 31)
+qm cloudinit update 251                                        # rewrite the drive — without this the guest starts as .250
 qm start 251
 ```
+
+`qm set` only edits the pending configuration; `qm cloudinit update` is what regenerates the cloud-init
+drive the guest actually reads. Skipping it is the one failure mode this section cannot absorb.
 
 **Confirm the address before the guest can touch the wire.** The QEMU guest agent runs over
 virtio-serial, not the network, so this works with the link down:
@@ -171,8 +207,9 @@ virtio-serial, not the network, so this works with the link down:
 qm guest cmd 251 network-get-interfaces | grep -A2 '"ip-address"'
 ```
 
-It must report `192.168.2.251`. If it still reports `.250`, the cloud-init re-application did not take —
-`qm shutdown 251`, correct `--ipconfig0`, start again. Nothing leaked: the link is down.
+It must report `192.168.2.251`. If it still reports `.250`, the drive was not regenerated — `qm shutdown
+251`, correct `--ipconfig0`, `qm cloudinit update 251` again, start again. Nothing leaked: the link is
+down.
 
 ### 5b. Enable the link and get in
 
@@ -250,9 +287,30 @@ A backup nobody checks is a rumour. Until the NAS and its own monitoring exist:
 
 ## 7. When the NAS exists
 
-1. **Add the share as Proxmox storage** on `pve2` (`dir` over NFS, or CIFS) on the TrueNAS dataset.
-   [ADR 34](../decisions/34-lan-tls-only.md) admits only NFSv4 with `krb5p` or SMB with encryption —
-   TrueNAS supports both natively, and the FreeIPA realm that Kerberos needs now exists.
+1. **Add the share as Proxmox storage** on `pve2`. The storage type is `cifs` over the TrueNAS dataset,
+   not `dir` — `dir` is a *local* directory, and the Proxmox NFS/CIFS types are what mount a share:
+
+   ```sh
+   pvesm add cifs nas-backup \
+     --server <truenas-ip> --share vzdump \
+     --username svc-pve-backup --content backup \
+     --options vers=3.0,seal
+   grep nas-backup /proc/mounts           # the mount must carry vers=3.0 and seal
+   pvesm status --storage nas-backup
+   ```
+
+   **Why SMB with `seal` and not NFSv4 with `krb5p`.** [ADR 34](../decisions/34-lan-tls-only.md) admits
+   either, and TrueNAS serves either. `krb5p` needs `pve2` to authenticate to the share as a Kerberos
+   principal — a keytab on the hypervisor — which
+   [ADR 43](../decisions/43-freeipa-domain-realm.md) item 7 rules out: the node runs the domain and is
+   deliberately **not** a client. SMB 3 with `seal` gets the same encryption from a share credential
+   instead, so the requirement is met without making the domain controller's host a member of its own
+   realm.
+
+   Proxmox keeps that credential in `/etc/pve/priv/storage/nas-backup.pw` (`600`) on the node, never in
+   the storage config; it comes from Key Vault and exists only there. If this PVE version refuses an
+   option, **Datacenter → Storage → Add → CIFS** lists what it accepts for `options` — do not assume
+   `vers`/`seal` spelling from this page.
 2. **Repoint the job** — its `storage` property, nothing else. That is the whole bridge exit.
 3. **Restore ADR 02's retention** (`keep-daily=7,keep-weekly=4,keep-monthly=6`) once capacity allows, and
    drop the manual Protection step.
@@ -262,8 +320,11 @@ A backup nobody checks is a rumour. Until the NAS and its own monitoring exist:
    mdadm → ZFS cutover, which ADR 49 names as the point where the off-site copy is the safety net.
 5. **Re-run §5** against the NAS artefact — same procedure, different source, and it is what proves the
    new destination rather than assuming it.
-6. **`ipa-backup`** stays available as an app-level consistency check, but ADR 49 places its output on the
-   NAS, so it belongs to step 1–4, not to the bridge.
+6. **`ipa-backup` lands here**, and with it the half of ADR 43 item 9 this gate left open. Point its
+   output at the share (or collect `/var/lib/ipa/backup/` with a `vzdump` hook script), then rehearse
+   `ipa-restore` in a throwaway guest the way §5 rehearses the image — see **What the gate proves**. That
+   rehearsal is what gives the off-site leg something worth shipping: an `ipa-backup` artefact leaves the
+   LAN in minutes, a VM image does not.
 
 ## Verification checklist
 
@@ -272,12 +333,15 @@ A backup nobody checks is a rumour. Until the NAS and its own monitoring exist:
 - [ ] job visible in `/etc/pve/jobs.cfg` and `pvesh get /cluster/backup` (§2)
 - [ ] first artefact produced by hand; **size recorded**; freeze/thaw visible in the task log (§3)
 - [ ] retention sized against the measured size, with headroom on `/` (§4)
-- [ ] retained copy Protected (§4)
+- [ ] one protected sentinel — rotated only after its replacement is verified, never before (§4)
 - [ ] restore: VM 251, `--unique`, link **down** first, agent confirms `.251` before the link comes up (§5a)
+- [ ] `qm cloudinit update 251` run after `--ipconfig0` and before `qm start` (§5a)
 - [ ] `kinit admin` + `kinit m1test` against the restored copy, with `/etc/hosts` and KDC pinned to it (§5c)
 - [ ] `ipa ca-show ipa` serial matches runbook 41 §11 (§5c)
 - [ ] drill guest destroyed the same day (§5d)
 - [ ] bridge and its expiry stated in `docs/overview.md` and plan 01 (see **This is a bridge** above)
+- [ ] `ipa-backup` recorded as deferred to the NAS phase, not silently dropped — ADR 43 item 9 is half
+      carried until §7 item 6 runs (see **What the gate proves**)
 
 ## Execution record
 
