@@ -1,2 +1,5 @@
 ---
 opencode_public_domain: example.com
+
+# LAN name space (ADR 37): the edge proxy hands `<inst>-oc.internal` here too.
+opencode_internal_domain: internal

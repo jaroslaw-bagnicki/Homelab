@@ -4,7 +4,8 @@
 **Status:** Accepted  
 **Amended:** 2026-08-24 — `.home` DNS changed from dnsmasq-on-edge to the **OPNsense router** ([idea 07](../ideas/07-opnsense-futro-s930.md)); see Decision/Consequences.  
 **Amended:** 2026-09-15 — the "ADR 19 pattern applies" bullet corrected: the edge uses the plain-HTTP origin (TLS terminates at the CF edge), not the abandoned Origin CA / Full (Strict) design.  
-**Amended:** 2026-09-29 — the LAN name space is `.internal` and DNSMasq/`.home` are retired ([ADR 37](37-lan-name-space-internal.md)); the `.home` DNS assignment below (and the OPNsense owner in References) no longer stands — which host serves `.internal` is open in [idea 10](../ideas/10-internal-ca-dns-stack.md). See the amendment note at the end.
+**Amended:** 2026-09-29 — the LAN name space is `.internal` and DNSMasq/`.home` are retired ([ADR 37](37-lan-name-space-internal.md)); the `.home` DNS assignment below (and the OPNsense owner in References) no longer stands — which host serves `.internal` is open in [idea 10](../ideas/10-internal-ca-dns-stack.md). See the amendment note at the end.  
+**Amended:** 2026-11-14 — the public plane moves to the edge (held until now): `cloudflared` bare-metal on the appliance + a public zone on the edge Caddy; `lab` keeps only the Docker origin Caddy. Remote-access mechanism unchanged (Cloudflare Tunnel per ADR 19). See the amendment at the end.
 
 ---
 
@@ -77,3 +78,31 @@ Run the homelab's public ingress on a **dedicated, low-power edge appliance** on
 the OPNsense router). Which host serves `.internal` is open in
 [idea 10](../ideas/10-internal-ca-dns-stack.md); everything else — the appliance, the external ingress,
 the bare-metal deployment model and the compute-only M910q — is unchanged.
+
+---
+
+## Amendment — 2026-11-14 (public plane moves to the edge; unblocks #81)
+
+The hold on the public plane recorded in [issue #81](https://github.com/jaroslaw-bagnicki/Homelab/issues/81)
+is lifted. The remote-access **mechanism** is unchanged — Cloudflare Tunnel per [ADR 19](19-cloudflare-tunnel-http-origin.md)
+(ADR 08's alternatives, incl. Tailscale Funnel, remain rejected); a VPN/Tailscale was re-considered and
+set aside — it can be layered on the OPNsense router later ([ADR 48](48-lan-router-futro-s930.md)) without
+touching this. What changes is **placement and topology**, completing this ADR's "owns all inbound
+routing" clause:
+
+- `cloudflared` runs bare-metal on `edge` (new `cloudflared` role, systemd service, token from AKV
+  secret `cloudflared-tunnel-token-edge`; the existing tunnel UUID is reused from cloudlab, so
+  `cloud5.ovh` DNS is unchanged). Origin is the edge Caddy on loopback `127.0.0.1:80` — the ADR 19
+  plain-HTTP origin pattern, unchanged.
+- **One Caddy on `edge`, two zones**: the existing `*.internal` sites (step-ca leaves, ADR 40) plus a
+  new public zone (`caddy_public_sites`: `cloud5.ovh` + `*.cloud5.ovh` → `http://192.168.2.200:8080`,
+  `Host` preserved). No separate public Caddy on `lab` — its Docker Caddy is the origin router inside
+  `homelab_net` only (ADR 20's single-routing-layer rule extends to the edge Caddyfile).
+- `lab` publishes the origin on `192.168.2.200:8080`; the edge-only restriction is enforced in the
+  `DOCKER-USER` iptables chain (host UFW does not filter Docker DNAT traffic, runbook 02 §2), and the
+  plaintext edge→lab hop is the temporary [ADR 34](34-lan-tls-only.md) exception (removal: k3s ingress).
+- `cloudlab` loses its ingress role with the cloudlab → `lab` Docker migration
+  ([#44](https://github.com/jaroslaw-bagnicki/Homelab/issues/44), [runbook 47](../runbooks/47-migrate-cloudlab-docker-to-lab.md));
+  the VPS keeps base management (Ansible + Arc) until its decommission record (ADR 13).
+
+References: [runbook 47](../runbooks/47-migrate-cloudlab-docker-to-lab.md) · [#44](https://github.com/jaroslaw-bagnicki/Homelab/issues/44) · [#81](https://github.com/jaroslaw-bagnicki/Homelab/issues/81) · [#199](https://github.com/jaroslaw-bagnicki/Homelab/issues/199) (k3s re-planning) · [ADR 34](34-lan-tls-only.md)

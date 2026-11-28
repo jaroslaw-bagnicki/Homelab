@@ -18,6 +18,33 @@ security_ufw_allow_udp_from: "192.168.2.0/24"
 security_ufw_allow_udp_ports:
   - 53
 
+# Public zone on the edge Caddy (ADR 24 (2026-11-14 amendment)) — the cloudflared tunnel on this box
+# proxies these hostnames to the lab origin Caddy, which routes by Host inside
+# the Docker network. Plain HTTP on loopback :80; TLS terminates at the CF edge.
+caddy_public_sites:
+  - name: cloud5.ovh
+    upstream: "http://192.168.2.200:8080"
+  - name: "*.cloud5.ovh"
+    upstream: "http://192.168.2.200:8080"
+
+# The lab Docker stack's names inside `.internal` (ADR 37). This proxy terminates TLS
+# from the fleet CA and hands the whole hostname to the stack's own Caddy on :8080,
+# which routes by service — so migrating the stack reads as one upstream IP here.
+# Technitium's `*.internal` record already points them at this box; no DNS change.
+caddy_workload_sites:
+  - name: portainer.internal
+    upstream: "http://192.168.2.200:8080"
+  - name: zot.internal
+    upstream: "http://192.168.2.200:8080"
+  - name: hello.internal
+    upstream: "http://192.168.2.200:8080"
+  - name: homelab-oc.internal
+    upstream: "http://192.168.2.200:8080"
+  - name: prospera-oc.internal
+    upstream: "http://192.168.2.200:8080"
+  - name: test-oc.internal
+    upstream: "http://192.168.2.200:8080"
+
 netdata_role: child
 netdata_stream_target: "192.168.2.201:19996"
 netdata_stream_ssl: true

@@ -6,7 +6,7 @@ Extracted from `edge_host` so the routing layer can run wherever it is needed (e
 
 - `tasks/main.yml` — apt repository, fleet root from Key Vault, Caddyfile, systemd ordering, enable,
   CA monitor.
-- `templates/Caddyfile.j2` — one site per `caddy_sites` entry, TLS-ALPN-01 only, no redirects.
+- `templates/Caddyfile.j2` — one site per `caddy_sites` + `caddy_workload_sites` entry (TLS-ALPN-01 only, no redirects) plus the `caddy_public_sites` public zone (plain `http://` blocks on loopback :80, reached via the cloudflared tunnel, ADR 24 (2026-11-14 amendment)).
 - `templates/homelab-leaf-expiry-check.j2` — hourly probe of the CA health and of the leaf each site
   serves.
 - `handlers/main.yml` — reload on Caddyfile change, restart on root-certificate or unit change.
@@ -22,6 +22,8 @@ Extracted from `edge_host` so the routing layer can run wherever it is needed (e
 | `caddy_ca_root_secret_name` | `ca-root-cert` | Secret name. |
 | `caddy_ca_root` | `""` | Override to skip the AKV lookup (tests). |
 | `caddy_sites` | `dns`, `netdata`, `logs`, `proxmox`, `omv` | `name` + `upstream` (or `upstreams` list), optional `lb_policy`, `health_uri`/`health_interval`/`health_timeout`/`fail_duration`/`max_fails`, and `tls_skip_verify`. |
+| `caddy_public_sites` | `[]` | Public zone (ADR 24 (2026-11-14 amendment)): `name` (may be a wildcard) + `upstream` origin, rendered as `http://` blocks on loopback :80 for the cloudflared tunnel. |
+| `caddy_workload_sites` | `[]` | Names inside `.internal` whose routing belongs to a workload (the lab Docker stack's own Caddy): same shape as `caddy_sites`, concatenated after it so a host extends the fleet list instead of replacing it. The migration's names live in `host_vars/edge.yml` (runbook 47 §3a-bis). |
 | `caddy_after_service` | `dns.service` | Systemd unit Caddy starts after. |
 | `caddy_require_technitium` | `true` | Refuse to run when the local resolver role is absent. |
 | `caddy_ca_health_url` | `https://ca.internal:9000/health` | Health endpoint the monitor probes. |

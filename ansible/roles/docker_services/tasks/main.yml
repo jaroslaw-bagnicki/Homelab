@@ -18,13 +18,113 @@
     driver: "{{ item.driver | default('bridge') }}"
   loop: "{{ docker_services_networks }}"
 
-- name: Set cloudflared tunnel token from Key Vault
-  vars:
-    vault_url: "https://{{ arc_keyvault_name }}.vault.azure.net"
-  ansible.builtin.set_fact:
-    cloudflared_tunnel_token: "{{ lookup('azure.azcollection.azure_keyvault_secret', cloudflared_token_secret_name, vault_url=vault_url) }}"
-  delegate_to: localhost
-  no_log: true
+# Host UFW does not filter Docker DNAT traffic (runbook 02 §2, ADR 34), so a
+# LAN-published origin port is restricted in the DOCKER-USER chain instead.
+- name: Check DOCKER-USER allow rule for the origin Caddy port
+  ansible.builtin.command:
+    argv:
+      - iptables
+      - -C
+      - DOCKER-USER
+      - -p
+      - tcp
+      - --dport
+      - "{{ docker_services_caddy_port }}"
+      - -s
+      - "{{ docker_services_caddy_allow_from }}"
+      - -j
+      - ACCEPT
+  register: docker_services_allow_check
+  failed_when: false
+  changed_when: false
+  when:
+    - "'caddy' in docker_services_enabled"
+    - docker_services_caddy_allow_from | length > 0
+
+- name: Insert DOCKER-USER allow rule (configured source only) for the origin Caddy port
+  ansible.builtin.command:
+    argv:
+      - iptables
+      - -I
+      - DOCKER-USER
+      - "1"
+      - -p
+      - tcp
+      - --dport
+      - "{{ docker_services_caddy_port }}"
+      - -s
+      - "{{ docker_services_caddy_allow_from }}"
+      - -j
+      - ACCEPT
+  register: docker_services_allow_insert
+  changed_when: true
+  when:
+    - "'caddy' in docker_services_enabled"
+    - docker_services_caddy_allow_from | length > 0
+    - docker_services_allow_check.rc | default(1) != 0
+
+- name: Check DOCKER-USER drop rule for the origin Caddy port
+  ansible.builtin.command:
+    argv:
+      - iptables
+      - -C
+      - DOCKER-USER
+      - -p
+      - tcp
+      - --dport
+      - "{{ docker_services_caddy_port }}"
+      - "!"
+      - -s
+      - "{{ docker_services_caddy_allow_from }}"
+      - -j
+      - DROP
+  register: docker_services_drop_check
+  failed_when: false
+  changed_when: false
+  when:
+    - "'caddy' in docker_services_enabled"
+    - docker_services_caddy_allow_from | length > 0
+
+- name: Insert DOCKER-USER drop rule (all other sources) for the origin Caddy port
+  ansible.builtin.command:
+    argv:
+      - iptables
+      - -I
+      - DOCKER-USER
+      - "1"
+      - -p
+      - tcp
+      - --dport
+      - "{{ docker_services_caddy_port }}"
+      - "!"
+      - -s
+      - "{{ docker_services_caddy_allow_from }}"
+      - -j
+      - DROP
+  register: docker_services_drop_insert
+  changed_when: true
+  when:
+    - "'caddy' in docker_services_enabled"
+    - docker_services_caddy_allow_from | length > 0
+    - docker_services_drop_check.rc | default(1) != 0
+
+- name: Install iptables-persistent so DOCKER-USER rules survive a reboot
+  ansible.builtin.apt:
+    name: iptables-persistent
+    state: present
+  environment:
+    DEBIAN_FRONTEND: noninteractive
+  when:
+    - "'caddy' in docker_services_enabled"
+    - docker_services_caddy_allow_from | length > 0
+
+- name: Persist current iptables rules
+  ansible.builtin.command: netfilter-persistent save
+  changed_when: true
+  when:
+    - "'caddy' in docker_services_enabled"
+    - docker_services_caddy_allow_from | length > 0
+    - docker_services_allow_insert is changed or docker_services_drop_insert is changed
 
 - name: Template docker-compose.yml
   ansible.builtin.template:
@@ -38,23 +138,8 @@
     src: Caddyfile.j2
     dest: "{{ docker_dir }}/Caddyfile"
     mode: "0644"
+  when: "'caddy' in docker_services_enabled"
   notify: Restart Caddy
-
-- name: Write cloudflared .env file
-  ansible.builtin.copy:
-    content: "TUNNEL_TOKEN={{ cloudflared_tunnel_token }}\n"
-    dest: "{{ docker_dir }}/.env"
-    mode: "0600"
-  no_log: true
-  notify: Restart cloudflared
-
-- name: Ensure .env is excluded from any future git init
-  ansible.builtin.lineinfile:
-    path: "{{ docker_dir }}/.gitignore"
-    line: ".env"
-    create: true
-    state: present
-    mode: "0600"
 
 - name: Deploy docker services
   community.docker.docker_compose_v2:

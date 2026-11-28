@@ -3,13 +3,35 @@ docker_dir: /opt/docker
 
 arc_keyvault_name: homelab-bysxdb-kv
 
-cloudflared_token_secret_name: "cloudflared-tunnel-token-{{ inventory_hostname }}"
-
 portainer_admin_password_secret_name: "portainer-admin-password"
+
+# Origin Caddy publish binding. Loopback by default; `lab` publishes on its LAN
+# IP so the edge Caddy can proxy the public zone to it (ADR 24 (2026-11-14 amendment)). The public
+# tunnel itself runs on `edge` (cloudflared role), not here.
+docker_services_caddy_bind: "127.0.0.1:8080:8080"
+
+# Host port of the origin Caddy bind (must match docker_services_caddy_bind).
+docker_services_caddy_port: "8080"
+
+# Source restriction for the published origin Caddy port, enforced in the
+# DOCKER-USER iptables chain — host UFW does not filter Docker DNAT traffic
+# (runbook 02 §2, ADR 34). Empty = no DOCKER-USER rule (loopback-only bind).
+docker_services_caddy_allow_from: ""
+
+# The two zones the origin Caddy answers to. Each service lists both addresses in
+# the Caddyfile, so the dual-zone routing is visible in one glance (runbook 47 §3).
+docker_services_public_domain: example.com
+docker_services_internal_domain: internal
 
 opencode_public_domain: example.com
 
-zot_public_domain: example.com
-
 docker_services_networks:
   - name: opencode_net
+
+# Services rendered into the compose file. Narrowing this runs a subset: the
+# cloudlab → lab migration deploys `[portainer]` alone as its pilot (runbook 47
+# §2) and lets the full default follow once the clone is proven.
+docker_services_enabled:
+  - portainer
+  - caddy
+  - hello
