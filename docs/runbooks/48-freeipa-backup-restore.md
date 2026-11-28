@@ -186,23 +186,33 @@ qm start 251
 `qm set` only edits the pending configuration; `qm cloudinit update` is what regenerates the cloud-init
 drive the guest actually reads. Skipping it is the one failure mode this section cannot absorb.
 
-**Confirm the address before the guest can touch the wire.** The QEMU guest agent runs over
-virtio-serial, not the network, so this works with the link down:
+**Confirm the address before the guest can touch the wire — from the drive, not the agent.** The agent
+runs over virtio-serial and answers with the link down, but NetworkManager does not activate a
+carrier-less profile, so `network-get-interfaces` reports `eth0` with **no address at all**. The check
+that does work is the drive itself:
 
 ```sh
-qm guest cmd 251 network-get-interfaces | grep -A2 '"ip-address"'
+qm cloudinit dump 251 network     # must carry 192.168.2.251 and the --unique MAC
 ```
 
-It must report `192.168.2.251`. If it still reports `.250`, the drive was not regenerated — `qm shutdown
-251`, correct `--ipconfig0`, `qm cloudinit update 251` again, start again. Nothing leaked: the link is
-down.
+If it still carries `.250`, the drive was not regenerated — `qm shutdown 251`, correct `--ipconfig0`,
+`qm cloudinit update 251` again, start again. Nothing leaked: the link is down.
 
 ### 5b. Enable the link and get in
 
 ```sh
 qm set 251 --net0 virtio=<same MAC>,bridge=vmbr0     # drops link_down
-ssh fleetadm@192.168.2.251                            # certificate identity (ADR 41)
+ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no fleetadm@192.168.2.251
 ```
+
+Two failures to expect here, both artefacts of the drill rather than of the restore:
+
+- **`Host key verification failed`** — the guest's host certificate names `.250`, not the drill address.
+  Bypass the check; this is a throwaway LAN copy, not a fleet node whose identity matters.
+- **`pki-tomcatd@pki-tomcat` is `failed`** — its post-start probe (`ipa-pki-wait-running` →
+  `ipa.internal:8080`) ran while the NIC had no carrier and logged `Network is unreachable`, so systemd
+  timed it out. The CA is intact; restart the unit once the link is up:
+  `systemctl restart pki-tomcatd@pki-tomcat`.
 
 ### 5c. Prove the directory — against itself only
 
@@ -221,6 +231,7 @@ sudo tee /root/drill-krb5.conf >/dev/null <<'EOF'
   dns_lookup_realm = false
   dns_lookup_kdc = false
   rdns = false
+  forwardable = true
 [realms]
   LAB.INTERNAL = {
     kdc = 192.168.2.251
@@ -229,14 +240,27 @@ sudo tee /root/drill-krb5.conf >/dev/null <<'EOF'
 [domain_realm]
   .lab.internal = LAB.INTERNAL
   lab.internal = LAB.INTERNAL
+  ipa.internal = LAB.INTERNAL
 EOF
 
-sudo KRB5_CONFIG=/root/drill-krb5.conf kinit admin && sudo KRB5_CONFIG=/root/drill-krb5.conf klist
-sudo KRB5_CONFIG=/root/drill-krb5.conf kinit m1test     # password from AKV freeipa-test-user-password
-sudo ipa user-find --pkey-only | head
-sudo ipa ca-show ipa | grep -iE 'serial|subject|issuer'
+# the drill ccache is its own file: RHEL's system krb5.conf defaults to KEYRING
+DRILL="env KRB5_CONFIG=/root/drill-krb5.conf KRB5CCNAME=FILE:/tmp/drill-ccache"
+sudo $DRILL kinit admin && sudo $DRILL klist
+sudo $DRILL kinit m1test          # password from AKV freeipa-test-user-password, fed on stdin
+sudo $DRILL ipa user-find --pkey-only | head
+sudo $DRILL ipa ca-show ipa | grep -iE 'Subject DN|Issuer DN'
+sudo $DRILL ipa ca-show ipa | sed -n 's/^ *Certificate: //p' | base64 -d | openssl x509 -noout -serial
 sudo getcert list | grep -c MONITORING
 ```
+
+Both drill-config additions are load-bearing, and omitting either fails *late* with a misleading error:
+
+- **`forwardable = true`** — the IPA WebUI authenticates the user, then binds to LDAP by constrained
+delegation on the user's own ticket. A non-forwardable TGT makes the server answer
+`401 Unauthorized` while `krb5kdc.log` reports `EVIDENCE_TKT_NOT_FORWARDABLE`.
+- **`ipa.internal = LAB.INTERNAL`** — without it the SPN realm falls back to the domain's last label,
+so the client asks for `HTTP/ipa.internal@INTERNAL` and the KDC has no such realm
+(`ccselect can't find appropriate cache`), which also surfaces as a 401.
 
 Pass conditions:
 
@@ -244,7 +268,7 @@ Pass conditions:
 |---|---|
 | `kinit admin` / `kinit m1test` | succeed against `.251` |
 | `ipa user-find` | returns the directory users (`admin`, `m1test`) |
-| `ipa ca-show ipa` | serial **identical** to runbook 41 §11 — the CA came back, not a new one |
+| `ipa ca-show ipa` | serial, decoded from the certificate, **identical** to runbook 41 §11 — the CA came back, not a new one |
 | `getcert list` | the same `MONITORING` count as the source (9 at M1) |
 
 A different CA serial means the artefact predates the signed CA or was taken from a differently-configured
@@ -289,7 +313,8 @@ repointed at it, and retention returns to [ADR 49](../decisions/49-backup-3-2-1-
       task log (§3)
 - [ ] retention sized against the measured size, with headroom on `/` and room for the run itself (§4)
 - [ ] one protected sentinel — rotated only after its replacement is verified, never before (§4)
-- [ ] restore: VM 251, `--unique`, link **down** first, agent confirms `.251` before the link comes up (§5a)
+- [ ] restore: VM 251, `--unique`, link **down** first, `qm cloudinit dump 251 network` confirms `.251`
+      before the link comes up (§5a)
 - [ ] `qm cloudinit update 251` run after `--ipconfig0` and before `qm start` (§5a)
 - [ ] `kinit admin` + `kinit m1test` against the restored copy, with `/etc/hosts` and KDC pinned to it (§5c)
 - [ ] `ipa ca-show ipa` serial matches runbook 41 §11 (§5c)
@@ -298,6 +323,33 @@ repointed at it, and retention returns to [ADR 49](../decisions/49-backup-3-2-1-
 
 ## Execution record
 
-_Not yet executed._ Fill in on the first live run: PVE version, artefact filename and **size**, task-log
-freeze/thaw lines, the retention decided from that size, restore result, `kinit` outcomes, CA serial
-before/after, date.
+**Executed 2026-11-28** against `pve2` (PVE `9.2.26`, kernel `7.0.14-28-pve`).
+
+| Item | Result |
+|---|---|
+| §1 preflight | ✅ agent on and answering, cloud-init drive present, `local` active with `backup` content, `/var/lib/vz` 26.8 GiB free, `local-lvm` 50.5 GiB free, no job on 250 |
+| §3 artefact | `vzdump-qemu-250-2026_11_28-11_56_38.vma.zst`, **1,834,807,297 bytes (1.71 GiB)**, `zstd -t` clean, 76% sparse, 33 s |
+| Freeze/thaw | ✅ `issuing guest-agent 'fs-freeze'` … `'fs-thaw'` in the task log, task status `OK` |
+| §4 retention | `keep-daily=7` — 8 × 1.71 GiB ≈ 14 GB against 26 G free, well inside the 5 G headroom rule |
+| Sentinel | the 11:56 artefact protected; no other protected copy existed (`local` was empty) |
+| §2 job | `cb498751-e59c-4355-8636-912f1001cbbd`, `snapshot`/`zstd`/`keep-daily=7`/`repeat-missed`, next run 02:30 |
+| §5a restore | ✅ VM 251 from the artefact, `--unique` MAC `BC:24:11:35:A7:30`, `local-lvm`, 60 s |
+| §5c `kinit` | ✅ `admin` and `m1test` both succeed against `.251` with the KDC pinned |
+| §5c directory | ✅ `ipa user-find` → `admin`, `m1test`; `getcert list` → 9 × `MONITORING` |
+| §5c CA serial | ✅ `368CFCE5393D43159345FC04C42719DC` — identical to runbook 41 §11, not re-keyed |
+| §5d destroy | ✅ VM 251 destroyed same day; `local-lvm` back to 3,915,114 KiB used; VM 250 untouched |
+
+Four defects the dry run exposed, all fixed above:
+
+1. **`forwardable = true` was missing** from the drill `krb5.conf` — `ipa` answered 401 while
+   `krb5kdc.log` said `EVIDENCE_TKT_NOT_FORWARDABLE` (§5c).
+2. **No `ipa.internal` → `LAB.INTERNAL` mapping** — the SPN realm resolved to `INTERNAL`, so the client
+   never found a cache and `ipa ping` fell back to 401 (§5c).
+3. **The agent cannot confirm the address with the link down** — NetworkManager keeps a carrier-less
+   profile inactive, so the check is `qm cloudinit dump 251 network`, not `network-get-interfaces` (§5a).
+4. **`pki-tomcatd` fails its post-start probe** while the NIC is down (`Network is unreachable` → systemd
+   timeout); restart it after the link comes up (§5b).
+
+Host memory is the tight constraint: with the live guest running, `pve2` sat at ~7.0/7.5 GiB used with
+swap engaged while the drill guest ran. It completed, but a second 3 GB guest is close to the node's
+limit — note it before scheduling a drill on a busier `pve2`.
