@@ -4,13 +4,12 @@
 > `LAB.INTERNAL`) on the `pve2` node, using Proxmox's own `vzdump` — a full image of the guest, scheduled
 > by `pvescheduler`, retained by `prune-backups` and restored with `qmrestore`. Target for now: `pve2`'s
 > `local` directory, a **temporary** stand-in until the NAS exists — see **This is a bridge** below.
-> Decision: [ADR 43](../decisions/43-freeipa-domain-realm.md) item 9 · Backup policy:
+> Decision: [ADR 43](../decisions/43-freeipa-domain-realm.md) · Backup policy:
 > [ADR 49](../decisions/49-backup-3-2-1-strategy.md) · Tracker:
 > [#164](https://github.com/jaroslaw-bagnicki/Homelab/issues/164) M2.
 >
-> ⚠ **Scope.** One guest, one job, one drill. **Not** covered: other guests, the NAS and off-site legs,
-> and `ipa-backup` — ADR 43 item 9 asks for it too, and this gate defers it to the NAS phase; see
-> **What the gate proves** below. Nothing here changes FreeIPA's configuration.
+> ⚠ **Scope.** One guest, one job, one drill. **Not** covered: other guests, and the NAS and off-site
+> legs — see **This is a bridge**. Nothing here changes FreeIPA's configuration.
 >
 > ⚠ **Execution note.** §1 lists what to check before creating anything. §5 restores a copy while the
 > real server keeps running, so it is deliberate, bounded work — and the copy is destroyed the same day.
@@ -50,27 +49,6 @@ guest. That is **copy 1 standing in for a backup**, and it is deliberately tempo
 - **ADR 49 is not amended for it.** A one-to-two-week bridge with a stated expiry is an operational
   state, not a settled decision — it belongs here and in `overview.md`, not in the decision log. The ADR
   regains full effect at §7.
-
-## What the gate proves — and what it leaves open
-
-[ADR 43](../decisions/43-freeipa-domain-realm.md) item 9 puts two steps ahead of the first client:
-**`ipa-backup`** and **a rehearsed restore**. This runbook rehearses the restore. It does not exercise
-`ipa-backup`, so item 9 is only **half satisfied** when M2 closes — deliberately, and on the record:
-
-- **The image already contains everything `ipa-backup` would.** That command writes a copy of FreeIPA's
-  own state — the directory database, the CA material, the configuration — into `/var/lib/ipa/backup/`
-  **inside the guest**. Those are files on the virtual disk, so `vzdump` carries them. A restore returns a
-  server that boots and authenticates, which a files restore cannot do on its own.
-- **What `ipa-backup` adds is a way out of Proxmox.** Its output goes back in with `ipa-restore` on a
-  freshly installed server, on any host — not only as VM 250 on `pve2`. It is also far smaller than the
-  image, which is the shape the off-site copy needs ([ADR 50](../decisions/50-backblaze-b2-offsite-backup.md)).
-  Neither the first client nor this drill needs either property.
-- **Until then it is a manual step, not a job.** `sudo ipa-backup` on VM 250 before planned maintenance
-  leaves a fresh artefact inside the guest, and the next nightly image carries it. One command, nothing
-  scheduled — check `ipa-backup --help` on the guest for the mode it defaults to.
-
-Rehearsing `ipa-restore` is **not** part of this gate, and neither is the artefact's final home: ADR 49
-puts it on the NAS (§7 item 6). The evidence that M2 is complete is §5.
 
 ## 1. Preflight
 
@@ -320,11 +298,6 @@ A backup nobody checks is a rumour. Until the NAS and its own monitoring exist:
    mdadm → ZFS cutover, which ADR 49 names as the point where the off-site copy is the safety net.
 5. **Re-run §5** against the NAS artefact — same procedure, different source, and it is what proves the
    new destination rather than assuming it.
-6. **`ipa-backup` lands here**, and with it the half of ADR 43 item 9 this gate left open. Point its
-   output at the share (or collect `/var/lib/ipa/backup/` with a `vzdump` hook script), then rehearse
-   `ipa-restore` in a throwaway guest the way §5 rehearses the image — see **What the gate proves**. That
-   rehearsal is what gives the off-site leg something worth shipping: an `ipa-backup` artefact leaves the
-   LAN in minutes, a VM image does not.
 
 ## Verification checklist
 
@@ -340,8 +313,6 @@ A backup nobody checks is a rumour. Until the NAS and its own monitoring exist:
 - [ ] `ipa ca-show ipa` serial matches runbook 41 §11 (§5c)
 - [ ] drill guest destroyed the same day (§5d)
 - [ ] bridge and its expiry stated in `docs/overview.md` and plan 01 (see **This is a bridge** above)
-- [ ] `ipa-backup` recorded as deferred to the NAS phase, not silently dropped — ADR 43 item 9 is half
-      carried until §7 item 6 runs (see **What the gate proves**)
 
 ## Execution record
 
